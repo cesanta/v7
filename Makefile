@@ -1,3 +1,4 @@
+CFLAGS = -DEJS_UNIT_TEST -W -Wall -g -O0 $(CFLAGS_EXTRA)
+
 all:
-	$(CC) ejs.c -o ejs -DEJS_UNIT_TEST -W -Wall
-	./ejs
+	g++ unit_test.c -o ejs $(CFLAGS) && ./ejs
