@@ -58,6 +58,7 @@ struct str {
 };
 #define EMPTY_STR { NULL, 0, 0 }
 
+#if 0
 struct tok {
   //struct ll link;           // Linkage in expression
   struct str str;           // Points to the source code
@@ -76,6 +77,7 @@ enum {
   TOK_IDENTIFIER, TOK_INTEGER, TOK_FLOAT, TOK_STRING,
   TOK_END
 };
+#endif
 
 // Variable types
 enum { TYPE_OBJ, TYPE_INT, TYPE_DBL, TYPE_STR, TYPE_FUNC };
@@ -88,17 +90,18 @@ struct var {
 };
 
 struct ejs {
-  const char *source_code;
-  const char *cursor;
+  const char *source_code;  // Pointer to the source code string
+  const char *cursor;       // Current parsing position
   int line_no;              // Line number
+  const char *tok;          // Parsed terminal token (ident, number, string)
+  int tok_len;
 
   struct ll symbol_table;
-  struct ll tokens_head;    // List of parsed tokens
   jmp_buf exception_env;    // Exception environment
   char error_msg[100];      // Error message placeholder
 };
 
-static int parse_expr(struct ejs *ejs);  // Forward declaration
+static void parse_expression(struct ejs *ejs);  // Forward declaration
 
 static void die(struct ejs *vm, const char *fmt, ...) {
   va_list ap;
@@ -107,7 +110,7 @@ static void die(struct ejs *vm, const char *fmt, ...) {
   vsnprintf(vm->error_msg, sizeof(vm->error_msg), fmt, ap);
   va_end(ap);
   vm->error_msg[sizeof(vm->error_msg) - 1] = '\0';  // If vsnprintf fails
-  fprintf(stderr, "%s\n", vm->error_msg);
+  DBG(("%s", vm->error_msg));
 
   longjmp(vm->exception_env, 1);
 }
@@ -116,7 +119,6 @@ struct ejs *ejs_create(void) {
   struct ejs *ejs = NULL;
 
   if ((ejs = (struct ejs *) calloc(1, sizeof(*ejs))) != NULL) {
-    LINKED_LIST_INIT(&ejs->tokens_head);
     LINKED_LIST_INIT(&ejs->symbol_table);
   }
 
@@ -130,28 +132,51 @@ void ejs_destroy(struct ejs **ejs) {
   }
 }
 
-// Delimiters for source code tokenization. 0 means invalid character,
-// 1: delimiters, 2: digits, 3: hex digits, 4: letters
-static const unsigned char s_delims[128] = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, //   0-15
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  16-31
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  32-47   !"#$%&'()*+,-./
-  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, //  48-62  0122456789:;<=>?
-  1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  63-79  @ABCDEFGHIJKLMNO
-  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 1, //  80-95  PQRSTUVWXYZ[\]^_
-  1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  96-111 `abcdefghijklmno
-  4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 0, // 114-147 pqrstuvwzyz{|}~
+static int char_class(const char *s) {
+  // Character classes for source code tokenization.
+  // 0 means invalid character, 1: delimiters, 2: digits,
+  // 3: hex digits, 4: letters
+  static const unsigned char tab[256] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, //   0-15
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  16-31
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  32-47   !"#$%&'()*+,-./
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, //  48-62  0122456789:;<=>?
+    1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  63-79  @ABCDEFGHIJKLMNO
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 1, //  80-95  PQRSTUVWXYZ[\]^_
+    1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  96-111 `abcdefghijklmno
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 0, // 114-147 pqrstuvwzyz{|}~
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  };
+  return tab[* (unsigned char *) s];
+}
+static int is_alpha(const char *s) { return char_class(s) > 2;  };
+static int is_alnum(const char *s) { return char_class(s) > 1;  };
+static int is_digit(const char *s) { return char_class(s) == 2; };
+static int is_space(const char *s) {
+  return *s == ' ' || *s == '\t' || *s == '\r' || *s == '\n';
 };
-#define DELIM(s)    (s_delims[* (unsigned char *) s])
-#define IS_ALPHA(s) (* (unsigned char *) s < 128 && DELIM(s) > 2)
-#define IS_ALNUM(s) (* (unsigned char *) s < 128 && DELIM(s) > 1)
-#define IS_DIGIT(s) (* (unsigned char *) s < 128 && DELIM(s) == 2)
-#define IS_SPACE(s) (*(s)==' ' || *(s)=='\t' || *(s)=='\r' || *(s)=='\n')
 
+#if 0
 // Return a pointer to the next token, or NULL
 static const char *skip_to_delimiter(const char *s, int len) {
   if (s == NULL || len <= 0) return NULL;
   for (; len > 0; s++, len--) {
+    if (char_class(s) == 0) return NULL;
+    if (char_class(s) == 1) break;
+  }
+  return s;
+}
+
+// Return a pointer to the next token, or NULL
+static const char *skip_to_next_token(const char *s) {
+  for (; s != NULL && *s != '\0'; s++) {
     if (DELIM(s) == 0) return NULL;
     if (DELIM(s) == 1) break;
   }
@@ -177,14 +202,14 @@ static int match_long_token(const char *str, int len, int *value) {
     if (toks[i].len > 0 && len == toks[i].len && !memcmp(toks[i].s, str, len)) {
       *value = toks[i].value;
       return len;
-    } else if (toks[i].s[0] == 'V' && (str[0] == '_' || IS_ALPHA(str))) {
+    } else if (toks[i].s[0] == 'V' && (str[0] == '_' || is_alpha(str))) {
       int k = 1;
-      while (k < len && (str[k] == '_' || IS_ALNUM(str + k))) k++;
+      while (k < len && (str[k] == '_' || is_alnum(str + k))) k++;
       *value = TOK_IDENTIFIER;
       return k;
-    } else if (toks[i].s[0] == 'D' && IS_DIGIT(str)) {
+    } else if (toks[i].s[0] == 'D' && is_digit(str)) {
       int k = 1;
-      while (k < len && IS_DIGIT(str + k)) k++;
+      while (k < len && is_digit(str + k)) k++;
       *value = TOK_INTEGER;
       return k;
     }
@@ -253,21 +278,28 @@ static struct tok *tokenize(const char *s, int len) {
   return (struct tok *) str.buf;
 }
 
+static int get_next_token(const char *s) {
+  const char *next = skip_to_next_token(s);
+}
+#endif
+
 #define EXPECT(ejs, cond) do { if (!(cond)) \
   die((ejs), "[%.*s]: %s", 10, (ejs)->cursor, #cond); } while (0)
 #define IS(ejs, ch) (*(ejs)->cursor == (ch))
 
 static void skip_whitespaces_and_comments(struct ejs *ejs) {
-  if (IS_SPACE(ejs->cursor)) {
-    while (ejs->cursor != '\0' && IS_SPACE(ejs->cursor)) {
-      if (*ejs->cursor == '\n') ejs->line_no++;
-      ejs->cursor++;
+  const char *s = ejs->cursor;
+  if (is_space(s)) {
+    while (*s != '\0' && is_space(s)) {
+      if (*s == '\n') ejs->line_no++;
+      s++;
     }
-    if (ejs->cursor[0] == '/' && ejs->cursor[1] == '/') {
-      ejs->cursor += 2;
-      while (*ejs->cursor != '\0' && *ejs->cursor != '\n') ejs->cursor++;
+    if (s[0] == '/' && s[1] == '/') {
+      s += 2;
+      while (*s != '\0' && *s != '\n') s++;
     }
   }
+  ejs->cursor = s;
 }
 
 static void match(struct ejs *ejs, int ch) {
@@ -275,99 +307,125 @@ static void match(struct ejs *ejs, int ch) {
   skip_whitespaces_and_comments(ejs);
 }
 
+static int test_and_skip(struct ejs *ejs, const char *kw, int kwlen) {
+  if (memcmp(ejs->cursor, kw, kwlen) == 0) {
+    ejs->cursor += kwlen;
+    skip_whitespaces_and_comments(ejs);
+    return 1;
+  }
+  return 0;
+}
+
 static int parse_num(struct ejs *ejs) {
   int result = 0;
 
-  EXPECT(ejs, IS_DIGIT(ejs->cursor));
-  while (IS_DIGIT(ejs->cursor)) {
+  EXPECT(ejs, is_digit(ejs->cursor));
+  ejs->tok = ejs->cursor;
+  while (is_digit(ejs->cursor)) {
     result *= 10;
     result += *ejs->cursor++ - '0';
   }
+  ejs->tok_len = ejs->cursor - ejs->tok;
   skip_whitespaces_and_comments(ejs);
 
   return result;
 }
 
-static int parse_factor(struct ejs *ejs) {
-  int result;
+static void parse_identifier(struct ejs *ejs) {
+  EXPECT(ejs, is_alpha(ejs->cursor) || *ejs->cursor == '_');
+  ejs->tok = ejs->cursor;
+  ejs->cursor++;
+  while (is_alnum(ejs->cursor) || *ejs->cursor == '_') ejs->cursor++;
+  ejs->tok_len = ejs->cursor - ejs->tok;
+  skip_whitespaces_and_comments(ejs);
+}
 
+static void parse_function_call(struct ejs *ejs) {
+  match(ejs, '(');
+  while (*ejs->cursor != ')') {
+    parse_expression(ejs);
+    if (*ejs->cursor == ',') match(ejs, ',');
+  }
+  match(ejs, ')');
+}
+
+static void parse_factor(struct ejs *ejs) {
   if (*ejs->cursor == '(') {
     match(ejs, '(');
-    result = parse_expr(ejs);
+    parse_expression(ejs);
     match(ejs, ')');
+  } else if (is_alpha(ejs->cursor)) {
+    parse_identifier(ejs);
+    if (*ejs->cursor == '(') {
+      parse_function_call(ejs);
+    }
   } else {
-    result = parse_num(ejs);
-    while (*ejs->cursor == '*' || *ejs->cursor == '/') {
-      if (*ejs->cursor == '*') {
-        match(ejs, '*');
-        result *= parse_num(ejs);
-      } else if (*ejs->cursor == '/') {
-        match(ejs, '/');
-        result /= parse_num(ejs);
-      }
-    }
+    parse_num(ejs);
   }
-
-  return result;
 }
 
-static int parse_identifier(struct ejs *ejs) {
-  EXPECT(ejs, IS_ALPHA(ejs->cursor) || *ejs->cursor == '_');
-  ejs->cursor++;
-  while (IS_ALNUM(ejs->cursor) || *ejs->cursor == '_') ejs->cursor++;
-  return 0;
+static void parse_term(struct ejs *ejs) {
+  parse_factor(ejs);
+  while (*ejs->cursor == '*' || *ejs->cursor == '/') {
+    match(ejs, *ejs->cursor);
+    parse_factor(ejs);
+  }
 }
 
-static int parse_expr(struct ejs *ejs) {
-  int result = parse_factor(ejs);
-
+static void parse_expression(struct ejs *ejs) {
+  parse_term(ejs);
   while (*ejs->cursor == '-' || *ejs->cursor == '+') {
-    if (*ejs->cursor == '+') {
-      match(ejs, '+');
-      result += parse_factor(ejs);
-    } else if (*ejs->cursor == '-') {
-      match(ejs, '-');
-      result -= parse_factor(ejs);
-    }
+    match(ejs, *ejs->cursor);
+    parse_term(ejs);
   }
-
-  return result;
 }
 
-static int parse_statement(struct ejs *ejs) {
-  int result = parse_expr(ejs);
+static void parse_declaration(struct ejs *ejs) {
+  do {
+    parse_identifier(ejs);
+    match(ejs, '=');
+    parse_expression(ejs);
+  } while (test_and_skip(ejs, ",", 1));
+}
+
+static void parse_assignment(struct ejs *ejs) {
+  parse_identifier(ejs);
+  match(ejs, '=');
+  parse_expression(ejs);
+}
+
+static void parse_statement(struct ejs *ejs) {
+  if (test_and_skip(ejs, "var", 3)) {
+    parse_declaration(ejs);
+  } else if (is_alpha(ejs->cursor)) {
+    parse_assignment(ejs);
+  } else {
+    parse_expression(ejs);
+  }
   match(ejs, ';');
-  return result;
 }
 
 //                              GRAMMAR
 //
 //  code        =   { statement } ;
-//  statement   =   [ "var" identifier assign_op ] expression ";"
-//  expression  =   term { addop term }
-//  term        =   factor { mulop factor }
-//  factor      =   number | string_literal | "(" expression ")" | identifier
+//  statement   =   declaration | assignment | expression ";"
+//  declaration =   "var" assignment [ "," {assignment} ] ";"
+//  assignment  =   identifier "=" expression
+//  expression  =   term { add_op term }
+//  term        =   factor { mul_op factor }
+//  factor      =   number | string | call | "(" expression ")" | identifier
+//  call        =   identifier "(" { expression} ")"
 //  mul_op      =   "*" | "/"
 //  add_op      =   "+" | "-"
 //  assign_op   =   "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^="
 //  identifier  =   letter { letter | digit }
 //  number      =   [ "-" ] { digit }
-int ejs_exec2(struct ejs *ejs, const char *source_code, int *result) {
+int ejs_exec(struct ejs *ejs, const char *source_code) {
   ejs->source_code = ejs->cursor = source_code;
   skip_whitespaces_and_comments(ejs);
   if (setjmp(ejs->exception_env) != 0) return 0;  // Catches exception
   while (*ejs->cursor != '\0') {
-    *result = parse_statement(ejs);
+    parse_statement(ejs);
   }
-  return 1;
-}
-
-int ejs_exec(struct ejs *ejs, const char *str, int size) {
-  struct tok *arr;
-
-  if (setjmp(ejs->exception_env) != 0) return 0;  // Catches exception
-  arr = tokenize(str, size);
-  die(ejs, "[%.*s]: %s", size, str, "ejs_exec is not implemented");
-
   return 1;
 }

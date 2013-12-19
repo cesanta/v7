@@ -32,6 +32,7 @@
 
 static int static_num_tests = 0;
 
+#if 0
 static const char *test_tokenize(void) {
   struct tok *arr;
 
@@ -50,27 +51,19 @@ static const char *test_tokenize(void) {
 
   return NULL;
 }
+#endif
 
 static const char *test_ejs_exec(void) {
-  int result = 0;
   struct ejs *ejs = ejs_create();
 
-  ASSERT(ejs_exec2(ejs, "", &result) == 1);
-  ASSERT(ejs_exec2(ejs, "-2;", &result) == 0);
-  //ASSERT(result == -2);
-
-  ASSERT(ejs_exec2(ejs, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ", &result) == 1);
-  ASSERT(result == 7);
+  ASSERT(ejs_exec(ejs, "") == 1);
+  ASSERT(ejs_exec(ejs, "-2;") == 0);
+  ASSERT(ejs_exec(ejs, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == 1);
   ASSERT(ejs->line_no == 1);
-
-  ASSERT(ejs_exec2(ejs, "( (5  ) );", &result) == 1);
-  ASSERT(result == 5);
-
-  ASSERT(ejs_exec2(ejs, "(2 + (12 / 4));", &result) == 1);
-  ASSERT(result == 5);
-
-  ASSERT(ejs_exec2(ejs, "1;2;", &result) == 1);
-  ASSERT(result == 2);
+  ASSERT(ejs_exec(ejs, "( (5  ) );") == 1);
+  ASSERT(ejs_exec(ejs, "(2 + (12 / 4));") == 1);
+  ASSERT(ejs_exec(ejs, "1;2;") == 1);
+  ASSERT(ejs_exec(ejs, "var x = 12 + 2 - z() + foo (2,3)+ 3 / 4 * y;") == 1);
 
   ejs_destroy(&ejs);
 
@@ -80,7 +73,6 @@ static const char *test_ejs_exec(void) {
 static const char *test_ejs_destroy(void) {
   struct ejs *ejs = ejs_create();
   ASSERT(ejs != NULL);
-  ASSERT(LINKED_LIST_IS_EMPTY(&ejs->tokens_head));
   ejs_destroy(&ejs);
   ASSERT(ejs == NULL);
   ejs_destroy(NULL);
@@ -90,7 +82,7 @@ static const char *test_ejs_destroy(void) {
 static const char *run_all_tests(void) {
   RUN_TEST(test_ejs_destroy);
   RUN_TEST(test_ejs_exec);
-  RUN_TEST(test_tokenize);
+  //RUN_TEST(test_tokenize);
   return NULL;
 }
 
