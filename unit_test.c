@@ -15,7 +15,7 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
-#include "ejs.c"
+#include "v7.c"
 
 #define FAIL(str, line) do {                    \
   printf("Fail on line %d: [%s]\n", line, str); \
@@ -53,35 +53,35 @@ static const char *test_tokenize(void) {
 }
 #endif
 
-static const char *test_ejs_exec(void) {
-  struct ejs *ejs = ejs_create();
+static const char *test_v7_exec(void) {
+  struct v7 *v7 = v7_create();
 
-  ASSERT(ejs_exec(ejs, "") == 1);
-  ASSERT(ejs_exec(ejs, "-2;") == 0);
-  ASSERT(ejs_exec(ejs, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == 1);
-  ASSERT(ejs->line_no == 1);
-  ASSERT(ejs_exec(ejs, "( (5  ) );") == 1);
-  ASSERT(ejs_exec(ejs, "(2 + (12 / 4));") == 1);
-  ASSERT(ejs_exec(ejs, "1;2;") == 1);
-  ASSERT(ejs_exec(ejs, "var x = 12 + 2 - z() + foo (2,3)+ 3 / 4 * y;") == 1);
+  ASSERT(v7_exec(v7, "") == 1);
+  ASSERT(v7_exec(v7, "-2;") == 0);
+  ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == 1);
+  ASSERT(v7->line_no == 1);
+  ASSERT(v7_exec(v7, "( (5  ) );") == 1);
+  ASSERT(v7_exec(v7, "(2 + (12 / 4));") == 1);
+  ASSERT(v7_exec(v7, "1;2;") == 1);
+  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo (2,3)+ 3 / 4 * y;") == 1);
 
-  ejs_destroy(&ejs);
+  v7_destroy(&v7);
 
   return NULL;
 }
 
-static const char *test_ejs_destroy(void) {
-  struct ejs *ejs = ejs_create();
-  ASSERT(ejs != NULL);
-  ejs_destroy(&ejs);
-  ASSERT(ejs == NULL);
-  ejs_destroy(NULL);
+static const char *test_v7_destroy(void) {
+  struct v7 *v7 = v7_create();
+  ASSERT(v7 != NULL);
+  v7_destroy(&v7);
+  ASSERT(v7 == NULL);
+  v7_destroy(NULL);
   return NULL;
 }
 
 static const char *run_all_tests(void) {
-  RUN_TEST(test_ejs_destroy);
-  RUN_TEST(test_ejs_exec);
+  RUN_TEST(test_v7_destroy);
+  RUN_TEST(test_v7_exec);
   //RUN_TEST(test_tokenize);
   return NULL;
 }

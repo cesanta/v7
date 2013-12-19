@@ -15,7 +15,7 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
-#include "ejs.h"
+#include "v7.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -86,10 +86,10 @@ struct var {
   struct ll link;
   char *name;
   unsigned char type;
-  union { struct str s; long i; double d; };
+  union { struct str s; long i; double d; } value;
 };
 
-struct ejs {
+struct v7 {
   const char *source_code;  // Pointer to the source code string
   const char *cursor;       // Current parsing position
   int line_no;              // Line number
@@ -101,9 +101,9 @@ struct ejs {
   char error_msg[100];      // Error message placeholder
 };
 
-static void parse_expression(struct ejs *ejs);  // Forward declaration
+static void parse_expression(struct v7 *v7);  // Forward declaration
 
-static void die(struct ejs *vm, const char *fmt, ...) {
+static void die(struct v7 *vm, const char *fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);
@@ -115,21 +115,33 @@ static void die(struct ejs *vm, const char *fmt, ...) {
   longjmp(vm->exception_env, 1);
 }
 
-struct ejs *ejs_create(void) {
-  struct ejs *ejs = NULL;
+struct v7 *v7_create(void) {
+  struct v7 *v7 = NULL;
 
-  if ((ejs = (struct ejs *) calloc(1, sizeof(*ejs))) != NULL) {
-    LINKED_LIST_INIT(&ejs->symbol_table);
+  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+    LINKED_LIST_INIT(&v7->symbol_table);
   }
 
-  return ejs;
+  return v7;
 }
 
-void ejs_destroy(struct ejs **ejs) {
-  if (ejs && *ejs) {
-    free(*ejs);
-    *ejs = NULL;
+void v7_destroy(struct v7 **v7) {
+  if (v7 && *v7) {
+    free(*v7);
+    *v7 = NULL;
   }
+}
+
+struct var *lookup(struct ll *head, const char *name) {
+  struct ll *lp, *tmp;
+  struct var *var = NULL;
+
+  LINKED_LIST_FOREACH(head, lp, tmp) {
+    var = LINKED_LIST_ENTRY(lp, struct var, link);
+    if (!strcmp(var->name, name)) return var;
+  }
+
+  return NULL;
 }
 
 static int char_class(const char *s) {
@@ -144,15 +156,7 @@ static int char_class(const char *s) {
     1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  63-79  @ABCDEFGHIJKLMNO
     4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 1, //  80-95  PQRSTUVWXYZ[\]^_
     1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  96-111 `abcdefghijklmno
-    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 0, // 114-147 pqrstuvwzyz{|}~
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 0  // 114-147 pqrstuvwzyz{|}~
   };
   return tab[* (unsigned char *) s];
 }
@@ -283,15 +287,15 @@ static int get_next_token(const char *s) {
 }
 #endif
 
-#define EXPECT(ejs, cond) do { if (!(cond)) \
-  die((ejs), "[%.*s]: %s", 10, (ejs)->cursor, #cond); } while (0)
-#define IS(ejs, ch) (*(ejs)->cursor == (ch))
+#define EXPECT(v7, cond) do { if (!(cond)) \
+  die((v7), "[%.*s]: %s", 10, (v7)->cursor, #cond); } while (0)
+#define IS(v7, ch) (*(v7)->cursor == (ch))
 
-static void skip_whitespaces_and_comments(struct ejs *ejs) {
-  const char *s = ejs->cursor;
+static void skip_whitespaces_and_comments(struct v7 *v7) {
+  const char *s = v7->cursor;
   if (is_space(s)) {
     while (*s != '\0' && is_space(s)) {
-      if (*s == '\n') ejs->line_no++;
+      if (*s == '\n') v7->line_no++;
       s++;
     }
     if (s[0] == '/' && s[1] == '/') {
@@ -299,110 +303,110 @@ static void skip_whitespaces_and_comments(struct ejs *ejs) {
       while (*s != '\0' && *s != '\n') s++;
     }
   }
-  ejs->cursor = s;
+  v7->cursor = s;
 }
 
-static void match(struct ejs *ejs, int ch) {
-  EXPECT(ejs, *ejs->cursor++ == ch);
-  skip_whitespaces_and_comments(ejs);
+static void match(struct v7 *v7, int ch) {
+  EXPECT(v7, *v7->cursor++ == ch);
+  skip_whitespaces_and_comments(v7);
 }
 
-static int test_and_skip(struct ejs *ejs, const char *kw, int kwlen) {
-  if (memcmp(ejs->cursor, kw, kwlen) == 0) {
-    ejs->cursor += kwlen;
-    skip_whitespaces_and_comments(ejs);
+static int test_and_skip(struct v7 *v7, const char *kw, int kwlen) {
+  if (memcmp(v7->cursor, kw, kwlen) == 0) {
+    v7->cursor += kwlen;
+    skip_whitespaces_and_comments(v7);
     return 1;
   }
   return 0;
 }
 
-static int parse_num(struct ejs *ejs) {
+static int parse_num(struct v7 *v7) {
   int result = 0;
 
-  EXPECT(ejs, is_digit(ejs->cursor));
-  ejs->tok = ejs->cursor;
-  while (is_digit(ejs->cursor)) {
+  EXPECT(v7, is_digit(v7->cursor));
+  v7->tok = v7->cursor;
+  while (is_digit(v7->cursor)) {
     result *= 10;
-    result += *ejs->cursor++ - '0';
+    result += *v7->cursor++ - '0';
   }
-  ejs->tok_len = ejs->cursor - ejs->tok;
-  skip_whitespaces_and_comments(ejs);
+  v7->tok_len = v7->cursor - v7->tok;
+  skip_whitespaces_and_comments(v7);
 
   return result;
 }
 
-static void parse_identifier(struct ejs *ejs) {
-  EXPECT(ejs, is_alpha(ejs->cursor) || *ejs->cursor == '_');
-  ejs->tok = ejs->cursor;
-  ejs->cursor++;
-  while (is_alnum(ejs->cursor) || *ejs->cursor == '_') ejs->cursor++;
-  ejs->tok_len = ejs->cursor - ejs->tok;
-  skip_whitespaces_and_comments(ejs);
+static void parse_identifier(struct v7 *v7) {
+  EXPECT(v7, is_alpha(v7->cursor) || *v7->cursor == '_');
+  v7->tok = v7->cursor;
+  v7->cursor++;
+  while (is_alnum(v7->cursor) || *v7->cursor == '_') v7->cursor++;
+  v7->tok_len = v7->cursor - v7->tok;
+  skip_whitespaces_and_comments(v7);
 }
 
-static void parse_function_call(struct ejs *ejs) {
-  match(ejs, '(');
-  while (*ejs->cursor != ')') {
-    parse_expression(ejs);
-    if (*ejs->cursor == ',') match(ejs, ',');
+static void parse_function_call(struct v7 *v7) {
+  match(v7, '(');
+  while (*v7->cursor != ')') {
+    parse_expression(v7);
+    if (*v7->cursor == ',') match(v7, ',');
   }
-  match(ejs, ')');
+  match(v7, ')');
 }
 
-static void parse_factor(struct ejs *ejs) {
-  if (*ejs->cursor == '(') {
-    match(ejs, '(');
-    parse_expression(ejs);
-    match(ejs, ')');
-  } else if (is_alpha(ejs->cursor)) {
-    parse_identifier(ejs);
-    if (*ejs->cursor == '(') {
-      parse_function_call(ejs);
+static void parse_factor(struct v7 *v7) {
+  if (*v7->cursor == '(') {
+    match(v7, '(');
+    parse_expression(v7);
+    match(v7, ')');
+  } else if (is_alpha(v7->cursor)) {
+    parse_identifier(v7);
+    if (*v7->cursor == '(') {
+      parse_function_call(v7);
     }
   } else {
-    parse_num(ejs);
+    parse_num(v7);
   }
 }
 
-static void parse_term(struct ejs *ejs) {
-  parse_factor(ejs);
-  while (*ejs->cursor == '*' || *ejs->cursor == '/') {
-    match(ejs, *ejs->cursor);
-    parse_factor(ejs);
+static void parse_term(struct v7 *v7) {
+  parse_factor(v7);
+  while (*v7->cursor == '*' || *v7->cursor == '/') {
+    match(v7, *v7->cursor);
+    parse_factor(v7);
   }
 }
 
-static void parse_expression(struct ejs *ejs) {
-  parse_term(ejs);
-  while (*ejs->cursor == '-' || *ejs->cursor == '+') {
-    match(ejs, *ejs->cursor);
-    parse_term(ejs);
+static void parse_expression(struct v7 *v7) {
+  parse_term(v7);
+  while (*v7->cursor == '-' || *v7->cursor == '+') {
+    match(v7, *v7->cursor);
+    parse_term(v7);
   }
 }
 
-static void parse_declaration(struct ejs *ejs) {
+static void parse_declaration(struct v7 *v7) {
   do {
-    parse_identifier(ejs);
-    match(ejs, '=');
-    parse_expression(ejs);
-  } while (test_and_skip(ejs, ",", 1));
+    parse_identifier(v7);
+    match(v7, '=');
+    parse_expression(v7);
+  } while (test_and_skip(v7, ",", 1));
 }
 
-static void parse_assignment(struct ejs *ejs) {
-  parse_identifier(ejs);
-  match(ejs, '=');
-  parse_expression(ejs);
+static void parse_assignment(struct v7 *v7) {
+  parse_identifier(v7);
+  match(v7, '=');
+  parse_expression(v7);
 }
 
-static void parse_statement(struct ejs *ejs) {
-  if (test_and_skip(ejs, "var", 3)) {
-    parse_declaration(ejs);
-  } else if (is_alpha(ejs->cursor)) {
-    parse_assignment(ejs);
+static void parse_statement(struct v7 *v7) {
+  if (test_and_skip(v7, "var", 3)) {
+    parse_declaration(v7);
+  } else if (is_alpha(v7->cursor)) {
+    parse_assignment(v7);
   } else {
-    parse_expression(ejs);
+    parse_expression(v7);
   }
-  match(ejs, ';');
+  match(v7, ';');
 }
 
 //                              GRAMMAR
@@ -420,12 +424,12 @@ static void parse_statement(struct ejs *ejs) {
 //  assign_op   =   "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^="
 //  identifier  =   letter { letter | digit }
 //  number      =   [ "-" ] { digit }
-int ejs_exec(struct ejs *ejs, const char *source_code) {
-  ejs->source_code = ejs->cursor = source_code;
-  skip_whitespaces_and_comments(ejs);
-  if (setjmp(ejs->exception_env) != 0) return 0;  // Catches exception
-  while (*ejs->cursor != '\0') {
-    parse_statement(ejs);
+int v7_exec(struct v7 *v7, const char *source_code) {
+  v7->source_code = v7->cursor = source_code;
+  skip_whitespaces_and_comments(v7);
+  if (setjmp(v7->exception_env) != 0) return 0;  // Catches exception
+  while (*v7->cursor != '\0') {
+    parse_statement(v7);
   }
   return 1;
 }

@@ -1,4 +1,4 @@
-ejs
+V7
 ===
 
-Embedded JavaScript
+Embedded JavaScript engine

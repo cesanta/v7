@@ -15,21 +15,21 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
-#ifndef EJS_HEADER_INCLUDED
-#define  EJS_HEADER_INCLUDED
+#ifndef V7_HEADER_INCLUDED
+#define  V7_HEADER_INCLUDED
 
-#define EJS_VERSION "1.0"
+#define V7_VERSION "1.0"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-struct ejs *ejs_create(void);
-void ejs_destroy(struct ejs **);
-int ejs_exec(struct ejs *, const char *str, int str_len);
+struct v7 *v7_create(void);
+void v7_destroy(struct v7 **);
+int v7_exec(struct v7 *, const char *source_code);
 
 #ifdef __cplusplus
 }
 #endif // __cplusplus
 
-#endif // EJS_HEADER_INCLUDED
+#endif // V7_HEADER_INCLUDED
