@@ -32,27 +32,6 @@
 
 static int static_num_tests = 0;
 
-#if 0
-static const char *test_tokenize(void) {
-  struct tok *arr;
-
-  ASSERT((arr = tokenize("", 0)) != NULL);
-  ASSERT(arr[0].value == TOK_END);
-  free(arr);
-
-  ASSERT((arr = tokenize("var foo =23;", 13)) != NULL);
-  ASSERT(arr[0].value == TOK_VAR);
-  ASSERT(arr[1].value == TOK_IDENTIFIER);
-  ASSERT(arr[2].value == '=');
-  ASSERT(arr[3].value == TOK_INTEGER);
-  ASSERT(arr[4].value == ';');
-  ASSERT(arr[5].value == TOK_END);
-  free(arr);
-
-  return NULL;
-}
-#endif
-
 static const char *test_v7_exec(void) {
   struct v7 *v7 = v7_create();
 
@@ -62,8 +41,8 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == NULL);
   ASSERT(v7_exec(v7, "( (5  ) );") == NULL);
   ASSERT(v7_exec(v7, "(2 + (12 / 4));") == NULL);
-  ASSERT(v7_exec(v7, "1;2;") == NULL);
-  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo (2,3)+ 3 / 4 * y;") == NULL);
+  ASSERT(v7_exec(v7, "1;2 7") == NULL);
+  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo(2,3)+ 3 / 4 * y;") == NULL);
   ASSERT(v7_exec(v7, "y + 2; x + 3 + 1 z = y() -2;") == NULL);
   ASSERT(v7_exec(v7, "1 2 3") == NULL);
 
@@ -84,7 +63,6 @@ static const char *test_v7_destroy(void) {
 static const char *run_all_tests(void) {
   RUN_TEST(test_v7_destroy);
   RUN_TEST(test_v7_exec);
-  //RUN_TEST(test_tokenize);
   return NULL;
 }
 

@@ -24,14 +24,14 @@
 extern "C" {
 #endif // __cplusplus
 
+typedef void (*v7_func_t)(struct v7 *, int num_params);
+
 struct v7 *v7_create(void);
 void v7_destroy(struct v7 **);
-
 const char *v7_exec(struct v7 *, const char *source_code);
-
-int v7_set_func(struct v7 *, const char *name, void (*func)(struct v7 *));
-int v7_set_num(struct v7 *, const char *name, double num);
-int v7_set_str(struct v7 *, const char *name, const char *str, int str_len);
+const char *v7_define_func(struct v7 *, const char *name, v7_func_t func);
+int v7_define_num(struct v7 *, const char *name, double num);
+int v7_define_str(struct v7 *, const char *name, const char *str, int len);
 
 #ifdef __cplusplus
 }

@@ -31,6 +31,7 @@
 #define vsnprintf _vsnprintf
 #endif
 
+#if 0
 // Linked list interface
 struct ll { struct ll *prev, *next; };
 #define LINKED_LIST_INIT(N)  ((N)->next = (N)->prev = (N))
@@ -44,6 +45,7 @@ struct ll { struct ll *prev, *next; };
   (N)->prev = ((H)->prev); (N)->next = (H); (H)->prev = (N); } while (0)
 #define LINKED_LIST_REMOVE(N) do { ((N)->next)->prev = ((N)->prev); \
   ((N)->prev)->next = ((N)->next); LINKED_LIST_INIT(N); } while (0)
+#endif
 
 #ifdef ENABLE_DBG
 #define DBG(x) do { printf("%-20s ", __func__); printf x; putchar('\n'); \
@@ -53,46 +55,26 @@ struct ll { struct ll *prev, *next; };
 #endif
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#define EXPECT(l, cond) do { if (!(cond)) \
+  raise_exception((l)->v7, "[%.*s]: %s", 10, (l)->cursor, #cond); } while (0)
 
-// a string.
+// A string.
 struct str {
   char *buf;        // Pointer to buffer with string data
   int len;          // String length
-  int buf_size;     // Buffer size, should be equal or larger then len
 };
-#define EMPTY_STR { NULL, 0, 0 }
+#define EMPTY_STR { NULL, 0 }
 
-#if 0
-struct tok {
-  //struct ll link;           // Linkage in expression
-  struct str str;           // Points to the source code
-  int value;                // Token value, one of the TOK_*
-  int line_no;              // Line number
-  //struct tok *left;
-  //struct tok *right;
-  //struct tok *parent;
-};
-
-// Long tokens that are > 1 character in length
-enum {
-  TOK_VAR, TOK_EQUAL, TOK_TYPE_EQUAL, TOK_FUNCTION,
-  TOK_IF, TOK_ELSE, TOK_ADD_EQUAL, TOK_SUB_EQUAL, TOK_MULTIPLY_EQUAL,
-  TOK_DIVIDE_EQUAL, TOK_NULL, TOK_NOT, TOK_AND, TOK_OR, TOK_UNDEFINED,
-  TOK_IDENTIFIER, TOK_INTEGER, TOK_FLOAT, TOK_STRING,
-  TOK_END
-};
-#endif
-
-// Variable types
-enum { TYPE_OBJ, TYPE_INT, TYPE_DBL, TYPE_STR, TYPE_FUNC, TYPE_C_FUNC };
+enum { TYPE_NIL, TYPE_OBJ, TYPE_DBL, TYPE_STR, TYPE_FUNC, TYPE_C_FUNC };
 
 struct value {
   unsigned char type;
-  union { struct str s; long i; double d; } value;
+  union { struct str str; double num; v7_func_t func; } v;
 };
 
 struct var {
-  struct ll link;
+  struct var *next;
+  //struct ll link;
   char *name;
   struct value value;
 };
@@ -106,33 +88,40 @@ struct lexer {
   int tok_len;              // Length of the parsed terminal token
 };
 
-struct v7 {
-  struct value stack[100];  // Stack, used to pass function params & values
+struct scope {
+  struct var *vars;         // Variables currently present in this scope
+  struct value stack[50];   // Stack, used to calculate expressions
   int sp;                   // Stack pointer
-  struct ll symbol_table;   // Top level scope
+};
+
+struct v7 {
+  struct scope scopes[20];
+  int current_scope;
   jmp_buf exception_env;    // Exception environment
   char error_msg[100];      // Error message placeholder
 };
 
 static void parse_expression(struct lexer *);  // Forward declaration
 
-static void die(struct lexer *l, const char *fmt, ...) {
+static void raise_exception(struct v7 *v7, const char *fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);
-  vsnprintf(l->v7->error_msg, sizeof(l->v7->error_msg), fmt, ap);
+  vsnprintf(v7->error_msg, sizeof(v7->error_msg), fmt, ap);
   va_end(ap);
-  l->v7->error_msg[sizeof(l->v7->error_msg) - 1] = '\0';  // If vsnprintf fails
-  DBG(("%s", l->v7->error_msg));
+  v7->error_msg[sizeof(v7->error_msg) - 1] = '\0';  // If vsnprintf fails
+  DBG(("%s", v7->error_msg));
 
-  longjmp(l->v7->exception_env, 1);
+  // Reset scope to top level to make subsequent v7_exec() valid
+  v7->current_scope = 0;
+  longjmp(v7->exception_env, 1);
 }
 
 struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
-    LINKED_LIST_INIT(&v7->symbol_table);
+    //LINKED_LIST_INIT(&v7->symbol_table);
   }
 
   return v7;
@@ -145,13 +134,52 @@ void v7_destroy(struct v7 **v7) {
   }
 }
 
-struct var *lookup(struct ll *head, const char *name) {
-  struct ll *lp, *tmp;
+static int inc_stack(struct v7 *v7, int incr) {
+  return v7->scopes[v7->current_scope].sp += incr;
+}
+
+static char *v7_strdup(struct v7 *v7, const char *ptr, size_t len) {
+  char *p = (char *) malloc(len + 1);
+  if (p == NULL) raise_exception(v7, "%s", "oom");
+  memcpy(p, ptr, len);
+  p[len] = '\0';
+  return p;
+}
+
+static struct var *lookup(struct v7 *v7, const char *name, int allocate) {
+  struct var *var = NULL;
+  int i;
+
+  // Search for the name, traversing scopes up to the top level scope
+  for (i = v7->current_scope; i >= 0; i--) {
+    for (var = v7->scopes[i].vars; var != NULL; var = var->next) {
+      if (strcmp(var->name, name) == 0) return var;
+    }
+  }
+
+  // Not found, create a new variable
+  if (allocate && (var = (struct var *) calloc(1, sizeof(*var))) == NULL) {
+    raise_exception(v7, "oom");
+  }
+
+  // Initialize new variable
+  var->value.type = TYPE_NIL;
+  var->name = v7_strdup(v7, name, strlen(name));
+
+  // Add it to the scope
+  var->next = v7->scopes[v7->current_scope].vars;
+  v7->scopes[v7->current_scope].vars = var;
+
+  return var;
+}
+
+const char *v7_define_func(struct v7 *v7, const char *name, v7_func_t func) {
   struct var *var = NULL;
 
-  LINKED_LIST_FOREACH(head, lp, tmp) {
-    var = LINKED_LIST_ENTRY(lp, struct var, link);
-    if (!strcmp(var->name, name)) return var;
+  if (setjmp(v7->exception_env) != 0) return v7->error_msg;
+  if ((var = lookup(v7, name, 1)) != NULL) {
+    var->value.type = TYPE_C_FUNC;
+    var->value.v.func = func;
   }
 
   return NULL;
@@ -179,130 +207,6 @@ static int is_digit(const char *s) { return char_class(s) == 2; };
 static int is_space(const char *s) {
   return *s == ' ' || *s == '\t' || *s == '\r' || *s == '\n';
 };
-
-#if 0
-// Return a pointer to the next token, or NULL
-static const char *skip_to_delimiter(const char *s, int len) {
-  if (s == NULL || len <= 0) return NULL;
-  for (; len > 0; s++, len--) {
-    if (char_class(s) == 0) return NULL;
-    if (char_class(s) == 1) break;
-  }
-  return s;
-}
-
-// Return a pointer to the next token, or NULL
-static const char *skip_to_next_token(const char *s) {
-  for (; s != NULL && *s != '\0'; s++) {
-    if (DELIM(s) == 0) return NULL;
-    if (DELIM(s) == 1) break;
-  }
-  return s;
-}
-
-static int match_long_token(const char *str, int len, int *value) {
-  static const struct { const char *s; int len; int value; } toks[] = {
-    { "var",      3, TOK_VAR },
-    { "==",       2, TOK_EQUAL },
-    { "===",      2, TOK_TYPE_EQUAL },
-    { "if",       2, TOK_IF },
-    { "else",     4, TOK_ELSE },
-    { "function", 8, TOK_FUNCTION },
-    { "V",        0, TOK_IDENTIFIER },
-    { "D",        0, TOK_INTEGER },
-    { NULL,      -1, -1 },
-  };
-  int i;
-
-  //DBG(("%s: [%.*s]", __func__, len, str));
-  for (i = 0; toks[i].s != NULL; i++) {
-    if (toks[i].len > 0 && len == toks[i].len && !memcmp(toks[i].s, str, len)) {
-      *value = toks[i].value;
-      return len;
-    } else if (toks[i].s[0] == 'V' && (str[0] == '_' || is_alpha(str))) {
-      int k = 1;
-      while (k < len && (str[k] == '_' || is_alnum(str + k))) k++;
-      *value = TOK_IDENTIFIER;
-      return k;
-    } else if (toks[i].s[0] == 'D' && is_digit(str)) {
-      int k = 1;
-      while (k < len && is_digit(str + k)) k++;
-      *value = TOK_INTEGER;
-      return k;
-    }
-  }
-
-  *value = TOK_END;
-  return 0;
-}
-
-static int resize_str(struct str *str, int increment) {
-  char *p;
-  if (str->buf_size < 0 || increment < 0) return 0;
-  if (increment == 0) return 1;
-  p = (char *) realloc(str->buf, str->buf_size + increment);
-  if (p == NULL) return 0;
-  str->buf = p;
-  str->buf_size += increment;
-  return 1;
-}
-
-// Parse the buffer, link all tokens into the list head.
-// Return total number of tokens, including last TOK_END
-static struct tok *tokenize(const char *s, int len) {
-  const char *p, *eof = s + len;
-  int num_tokens = 0, line_no = 1, increment = 1000 * sizeof(struct tok);
-  struct str str = EMPTY_STR;
-  struct tok *tok = NULL;
-
-  //for (; (p = skip(s, eof - s)) != NULL; s = p + 1) {
-  while (s != NULL && s <= eof) {
-    if (s[0] == '\n') line_no++;
-    if (s[0] == ' ' || s[0] == '\t' || s[0] == '\r' || s[0] == '\n') {
-      s++;
-      continue;
-    }
-
-    // Resize tokens array if necessary. We keep it in a string.
-    assert(str.len <= str.buf_size);
-    if (str.len >= str.buf_size && !resize_str(&str, increment)) {
-      free(str.buf);
-      return NULL;
-    }
-
-    // Initialize token
-    tok = (struct tok *) (str.buf + num_tokens * sizeof(*tok));
-    tok->str.buf = (char *) s;
-    tok->line_no = line_no;
-    num_tokens++;
-    str.len = num_tokens * sizeof(*tok);
-
-    // Find where next token starts
-    p = skip_to_delimiter(s, eof - s);
-    //DBG(("skip(%.*s) -> [%.*s]", eof - s, s, p ? p - s : eof - s, s));
-
-    if (p == s) {
-      tok->str.len = 1;
-      tok->value = *s++;
-    } else {
-      tok->str.len = match_long_token(s, p ? p - s : eof - s, &tok->value);
-      s += tok->str.len;
-    }
-    //DBG(("[%.*s] -> %d", tok->str.len, tok->str.buf, tok->value));
-    if (tok->value == TOK_END) break;
-  }
-
-  return (struct tok *) str.buf;
-}
-
-static int get_next_token(const char *s) {
-  const char *next = skip_to_next_token(s);
-}
-#endif
-
-#define EXPECT(l, cond) do { if (!(cond)) \
-  die((l), "[%.*s]: %s", 10, (l)->cursor, #cond); } while (0)
-#define IS(l, ch) (*(l)->cursor == (ch))
 
 static void skip_whitespaces_and_comments(struct lexer *l) {
   const char *s = l->cursor;
@@ -337,19 +241,35 @@ static int test_token(struct lexer *l, const char *kw, int kwlen) {
   return kwlen == l->tok_len && memcmp(l->tok, kw, kwlen) == 0;
 }
 
-static int parse_num(struct lexer *l) {
-  int result = 0;
+static struct scope *current_scope(struct v7 *v7) {
+  return &v7->scopes[v7->current_scope];
+}
+
+static struct value *current_stack_top(struct v7 *v7) {
+  struct scope *scope = current_scope(v7);
+  return &scope->stack[scope->sp];
+}
+
+static void parse_num(struct lexer *l) {
+  struct scope *scope = current_scope(l->v7);
+  struct value *value = current_stack_top(l->v7);
+
+  if (scope->sp >= (int) ARRAY_SIZE(scope->stack)) {
+    raise_exception(l->v7, "%s", "stack overflow");
+  }
+  inc_stack(l->v7, 1);
+
+  value->type = TYPE_DBL;
+  value->v.num = 0;
 
   EXPECT(l, is_digit(l->cursor));
   l->tok = l->cursor;
   while (is_digit(l->cursor)) {
-    result *= 10;
-    result += *l->cursor++ - '0';
+    value->v.num *= 10;
+    value->v.num += *l->cursor++ - '0';
   }
   l->tok_len = l->cursor - l->tok;
   skip_whitespaces_and_comments(l);
-
-  return result;
 }
 
 static void parse_identifier(struct lexer *l) {
@@ -381,6 +301,7 @@ static void parse_factor(struct lexer *l) {
     if (*l->cursor == '(') {
       parse_function_call(l);
     }
+    inc_stack(l->v7, 1);
   } else {
     parse_num(l);
   }
@@ -391,6 +312,7 @@ static void parse_term(struct lexer *l) {
   while (*l->cursor == '*' || *l->cursor == '/') {
     match(l, *l->cursor);
     parse_factor(l);
+    inc_stack(l->v7, -1);
   }
 }
 
@@ -399,6 +321,7 @@ static void parse_expression(struct lexer *l) {
   while (*l->cursor == '-' || *l->cursor == '+') {
     match(l, *l->cursor);
     parse_term(l);
+    inc_stack(l->v7, -1);
   }
 }
 
@@ -413,9 +336,24 @@ static void parse_declaration(struct lexer *l) {
 }
 
 static void parse_assignment(struct lexer *l) {
+  char name[256];
+  struct var *var;
+
   parse_identifier(l);
+
+  // Save variable name
+  //EXPECT(l, l->tok_len < sizeof(name) - 1);
+  memcpy(name, l->tok, l->tok_len);
+  name[l->tok_len] = '\0';
+
   match(l, '=');
   parse_expression(l);
+
+  // Do the assignment: get the value from the top of the stack,
+  // where parse_expression() should have left calculated value.
+  EXPECT(l, current_scope(l->v7)->sp > 0);
+  var = lookup(l->v7, name, 1);
+  var->value = current_stack_top(l->v7)[-1];
 }
 
 static void parse_statement(struct lexer *l) {
@@ -444,9 +382,9 @@ static void parse_statement(struct lexer *l) {
 
 //                              GRAMMAR
 //
-//  code        =   { statement } ;
-//  statement   =   declaration | assignment | expression ";"
-//  declaration =   "var" assignment [ "," {assignment} ] ";"
+//  code        =   { statement }
+//  statement   =   declaration | assignment | expression [ ";" ]
+//  declaration =   "var" assignment [ "," {assignment} ]
 //  assignment  =   identifier "=" expression
 //  expression  =   term { add_op term }
 //  term        =   factor { mul_op factor }
@@ -454,9 +392,8 @@ static void parse_statement(struct lexer *l) {
 //  call        =   identifier "(" { expression} ")"
 //  mul_op      =   "*" | "/"
 //  add_op      =   "+" | "-"
-//  assign_op   =   "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^="
 //  identifier  =   letter { letter | digit }
-//  number      =   [ "-" ] { digit }
+//  number      =   { digit }
 const char *v7_exec(struct v7 *v7, const char *source_code) {
   struct lexer lexer;
 
@@ -466,13 +403,20 @@ const char *v7_exec(struct v7 *v7, const char *source_code) {
   skip_whitespaces_and_comments(&lexer);
   lexer.v7 = v7;
 
-  // Setup exception environment.
+  // Setup exception environment. This is the exception catching point.
   if (setjmp(v7->exception_env) != 0) return v7->error_msg;
 
   // The following code may raise an exception and jump back to after setjmp()
+  v7->current_scope = 0;
+  v7->scopes[0].sp = 1;
+  v7->scopes[0].stack[0].type = TYPE_NIL;
+
   while (*lexer.cursor != '\0') {
+    inc_stack(v7, -1);
+    assert(inc_stack(v7, 0) == 0);
+    //printf("%d [%s]\n", inc_stack(v7, 0), lexer.cursor);
     parse_statement(&lexer);
   }
 
-  return NULL;  // No error
+  return NULL;  // No error, no exception has been raised
 }
