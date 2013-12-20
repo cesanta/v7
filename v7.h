@@ -32,7 +32,7 @@ void v7_destroy(struct v7 **);
 // All functions declared below return these error codes:
 enum {
   V7_OK, V7_PARSE_ERROR, V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR,
-  V7_STACK_OVERFLOW
+  V7_STACK_OVERFLOW, V7_UNDEFINED_VARIABLE
 };
 
 int v7_exec(struct v7 *, const char *source_code);

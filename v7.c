@@ -118,8 +118,18 @@ struct v7 *v7_create(void) {
   return v7;
 }
 
+static void free_scope(struct v7 *v7, int scope_index) {
+  struct var *var, *tmp;
+  for (var = v7->scopes[scope_index].vars; var != NULL; var = tmp) {
+    tmp = var->next;
+    free(var);
+  }
+  v7->scopes[scope_index].vars = NULL;
+}
+
 void v7_destroy(struct v7 **v7) {
   if (v7 && *v7) {
+    free_scope(*v7, 0);
     free(*v7);
     *v7 = NULL;
   }
@@ -152,6 +162,7 @@ static struct var *lookup(struct v7 *v7, const char *name, int allocate) {
   if (allocate && (var = (struct var *) calloc(1, sizeof(*var))) == NULL) {
     raise_exception(v7, V7_OUT_OF_MEMORY);
   }
+  if (var == NULL) raise_exception(v7, V7_UNDEFINED_VARIABLE);
 
   // Initialize new variable
   var->value.type = TYPE_NIL;
@@ -242,6 +253,16 @@ static struct value *current_stack_top(struct v7 *v7) {
   return &scope->stack[scope->sp];
 }
 
+struct var *lookup_current_token(struct lexer *l, int allocate) {
+  char name[256];
+
+  EXPECT(l, l->tok_len < (int) sizeof(name) - 1, V7_OUT_OF_MEMORY);
+  memcpy(name, l->tok, l->tok_len);
+  name[l->tok_len] = '\0';
+
+  return lookup(l->v7, name, allocate);
+}
+
 static void parse_num(struct lexer *l) {
   struct scope *scope = current_scope(l->v7);
   struct value *value = current_stack_top(l->v7);
@@ -270,17 +291,22 @@ static void parse_identifier(struct lexer *l) {
   l->cursor++;
   while (is_alnum(l->cursor) || *l->cursor == '_') l->cursor++;
   l->tok_len = l->cursor - l->tok;
-  //printf("IDENT: [%.*s]\n", l->tok_len, l->tok);
   skip_whitespaces_and_comments(l);
 }
 
 static void parse_function_call(struct lexer *l) {
+  struct var *func = lookup_current_token(l, 0);
   match(l, '(');
   while (*l->cursor != ')') {
     parse_expression(l);
     if (*l->cursor == ',') match(l, ',');
   }
   match(l, ')');
+
+  // Perform a call
+  if (func != NULL && func->value.type == TYPE_C_FUNC) {
+    func->value.v.func(l->v7, 0);
+  }
 }
 
 static void parse_factor(struct lexer *l) {
@@ -328,23 +354,17 @@ static void parse_declaration(struct lexer *l) {
 }
 
 static void parse_assignment(struct lexer *l) {
-  char name[256];
   struct var *var;
 
   parse_identifier(l);
-
-  // Save variable name
-  EXPECT(l, l->tok_len < (int) sizeof(name) - 1, V7_OUT_OF_MEMORY);
-  memcpy(name, l->tok, l->tok_len);
-  name[l->tok_len] = '\0';
-
+  // NOTE(lsm): Important to lookup just after parse_identifier()
+  var = lookup_current_token(l, 1);
   match(l, '=');
   parse_expression(l);
 
   // Do the assignment: get the value from the top of the stack,
   // where parse_expression() should have left calculated value.
   EXPECT(l, current_scope(l->v7)->sp > 0, V7_INTERNAL_ERROR);
-  var = lookup(l->v7, name, 1);
   var->value = current_stack_top(l->v7)[-1];
 }
 

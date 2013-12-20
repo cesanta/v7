@@ -42,12 +42,27 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "( (5  ) );") == V7_OK);
   ASSERT(v7_exec(v7, "(2 + (12 / 4));") == V7_OK);
   ASSERT(v7_exec(v7, "1;2 7") == V7_OK);
-  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo(2,3)+ 3 / 4 * y;") == V7_OK);
-  ASSERT(v7_exec(v7, "y + 2; x + 3 + 1 z = y() -2;") == V7_OK);
+  ASSERT(v7_exec(v7, "var x = 12 + 2 - z + foo+ 3 / 4 * y;") == V7_OK);
+  ASSERT(v7_exec(v7, "y + 2; x + 3 + 1 z = y -2;") == V7_OK);
   ASSERT(v7_exec(v7, "1 2 3") == V7_OK);
 
   v7_destroy(&v7);
 
+  return NULL;
+}
+
+static void adder(struct v7 *v7, int num_params) {
+  printf("%s: called, num_params: %d\n", __func__, num_params);
+  (void) num_params;
+  (void) v7;
+}
+
+static const char *test_native_functions(void) {
+  struct v7 *v7 = v7_create();
+  ASSERT(v7_define_func(v7, "adder", adder) == V7_OK);
+  ASSERT(v7_exec(v7, "adder(1, 2, 3)") == V7_OK);
+  //ASSERT(current_stack_top(v7)->type == TYPE_DBL);
+  v7_destroy(&v7);
   return NULL;
 }
 
@@ -63,6 +78,7 @@ static const char *test_v7_destroy(void) {
 static const char *run_all_tests(void) {
   RUN_TEST(test_v7_destroy);
   RUN_TEST(test_v7_exec);
+  RUN_TEST(test_native_functions);
   return NULL;
 }
 
