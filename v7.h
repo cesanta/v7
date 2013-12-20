@@ -26,7 +26,12 @@ extern "C" {
 
 struct v7 *v7_create(void);
 void v7_destroy(struct v7 **);
-int v7_exec(struct v7 *, const char *source_code);
+
+const char *v7_exec(struct v7 *, const char *source_code);
+
+int v7_set_func(struct v7 *, const char *name, void (*func)(struct v7 *));
+int v7_set_num(struct v7 *, const char *name, double num);
+int v7_set_str(struct v7 *, const char *name, const char *str, int str_len);
 
 #ifdef __cplusplus
 }

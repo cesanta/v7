@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#endif
+
 // Linked list interface
 struct ll { struct ll *prev, *next; };
 #define LINKED_LIST_INIT(N)  ((N)->next = (N)->prev = (N))
@@ -80,39 +84,48 @@ enum {
 #endif
 
 // Variable types
-enum { TYPE_OBJ, TYPE_INT, TYPE_DBL, TYPE_STR, TYPE_FUNC };
+enum { TYPE_OBJ, TYPE_INT, TYPE_DBL, TYPE_STR, TYPE_FUNC, TYPE_C_FUNC };
 
-struct var {
-  struct ll link;
-  char *name;
+struct value {
   unsigned char type;
   union { struct str s; long i; double d; } value;
 };
 
-struct v7 {
+struct var {
+  struct ll link;
+  char *name;
+  struct value value;
+};
+
+struct lexer {
+  struct v7 *v7;            // Pointer to v7 context
   const char *source_code;  // Pointer to the source code string
   const char *cursor;       // Current parsing position
   int line_no;              // Line number
   const char *tok;          // Parsed terminal token (ident, number, string)
-  int tok_len;
+  int tok_len;              // Length of the parsed terminal token
+};
 
-  struct ll symbol_table;
+struct v7 {
+  struct value stack[100];  // Stack, used to pass function params & values
+  int sp;                   // Stack pointer
+  struct ll symbol_table;   // Top level scope
   jmp_buf exception_env;    // Exception environment
   char error_msg[100];      // Error message placeholder
 };
 
-static void parse_expression(struct v7 *v7);  // Forward declaration
+static void parse_expression(struct lexer *);  // Forward declaration
 
-static void die(struct v7 *vm, const char *fmt, ...) {
+static void die(struct lexer *l, const char *fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);
-  vsnprintf(vm->error_msg, sizeof(vm->error_msg), fmt, ap);
+  vsnprintf(l->v7->error_msg, sizeof(l->v7->error_msg), fmt, ap);
   va_end(ap);
-  vm->error_msg[sizeof(vm->error_msg) - 1] = '\0';  // If vsnprintf fails
-  DBG(("%s", vm->error_msg));
+  l->v7->error_msg[sizeof(l->v7->error_msg) - 1] = '\0';  // If vsnprintf fails
+  DBG(("%s", l->v7->error_msg));
 
-  longjmp(vm->exception_env, 1);
+  longjmp(l->v7->exception_env, 1);
 }
 
 struct v7 *v7_create(void) {
@@ -287,15 +300,15 @@ static int get_next_token(const char *s) {
 }
 #endif
 
-#define EXPECT(v7, cond) do { if (!(cond)) \
-  die((v7), "[%.*s]: %s", 10, (v7)->cursor, #cond); } while (0)
-#define IS(v7, ch) (*(v7)->cursor == (ch))
+#define EXPECT(l, cond) do { if (!(cond)) \
+  die((l), "[%.*s]: %s", 10, (l)->cursor, #cond); } while (0)
+#define IS(l, ch) (*(l)->cursor == (ch))
 
-static void skip_whitespaces_and_comments(struct v7 *v7) {
-  const char *s = v7->cursor;
+static void skip_whitespaces_and_comments(struct lexer *l) {
+  const char *s = l->cursor;
   if (is_space(s)) {
     while (*s != '\0' && is_space(s)) {
-      if (*s == '\n') v7->line_no++;
+      if (*s == '\n') l->line_no++;
       s++;
     }
     if (s[0] == '/' && s[1] == '/') {
@@ -303,110 +316,130 @@ static void skip_whitespaces_and_comments(struct v7 *v7) {
       while (*s != '\0' && *s != '\n') s++;
     }
   }
-  v7->cursor = s;
+  l->cursor = s;
 }
 
-static void match(struct v7 *v7, int ch) {
-  EXPECT(v7, *v7->cursor++ == ch);
-  skip_whitespaces_and_comments(v7);
+static void match(struct lexer *l, int ch) {
+  EXPECT(l, *l->cursor++ == ch);
+  skip_whitespaces_and_comments(l);
 }
 
-static int test_and_skip(struct v7 *v7, const char *kw, int kwlen) {
-  if (memcmp(v7->cursor, kw, kwlen) == 0) {
-    v7->cursor += kwlen;
-    skip_whitespaces_and_comments(v7);
+static int test_and_skip_char(struct lexer *l, int ch) {
+  if (*l->cursor == ch) {
+    l->cursor++;
+    skip_whitespaces_and_comments(l);
     return 1;
   }
   return 0;
 }
 
-static int parse_num(struct v7 *v7) {
+static int test_token(struct lexer *l, const char *kw, int kwlen) {
+  return kwlen == l->tok_len && memcmp(l->tok, kw, kwlen) == 0;
+}
+
+static int parse_num(struct lexer *l) {
   int result = 0;
 
-  EXPECT(v7, is_digit(v7->cursor));
-  v7->tok = v7->cursor;
-  while (is_digit(v7->cursor)) {
+  EXPECT(l, is_digit(l->cursor));
+  l->tok = l->cursor;
+  while (is_digit(l->cursor)) {
     result *= 10;
-    result += *v7->cursor++ - '0';
+    result += *l->cursor++ - '0';
   }
-  v7->tok_len = v7->cursor - v7->tok;
-  skip_whitespaces_and_comments(v7);
+  l->tok_len = l->cursor - l->tok;
+  skip_whitespaces_and_comments(l);
 
   return result;
 }
 
-static void parse_identifier(struct v7 *v7) {
-  EXPECT(v7, is_alpha(v7->cursor) || *v7->cursor == '_');
-  v7->tok = v7->cursor;
-  v7->cursor++;
-  while (is_alnum(v7->cursor) || *v7->cursor == '_') v7->cursor++;
-  v7->tok_len = v7->cursor - v7->tok;
-  skip_whitespaces_and_comments(v7);
+static void parse_identifier(struct lexer *l) {
+  EXPECT(l, is_alpha(l->cursor) || *l->cursor == '_');
+  l->tok = l->cursor;
+  l->cursor++;
+  while (is_alnum(l->cursor) || *l->cursor == '_') l->cursor++;
+  l->tok_len = l->cursor - l->tok;
+  //printf("IDENT: [%.*s]\n", l->tok_len, l->tok);
+  skip_whitespaces_and_comments(l);
 }
 
-static void parse_function_call(struct v7 *v7) {
-  match(v7, '(');
-  while (*v7->cursor != ')') {
-    parse_expression(v7);
-    if (*v7->cursor == ',') match(v7, ',');
+static void parse_function_call(struct lexer *l) {
+  match(l, '(');
+  while (*l->cursor != ')') {
+    parse_expression(l);
+    if (*l->cursor == ',') match(l, ',');
   }
-  match(v7, ')');
+  match(l, ')');
 }
 
-static void parse_factor(struct v7 *v7) {
-  if (*v7->cursor == '(') {
-    match(v7, '(');
-    parse_expression(v7);
-    match(v7, ')');
-  } else if (is_alpha(v7->cursor)) {
-    parse_identifier(v7);
-    if (*v7->cursor == '(') {
-      parse_function_call(v7);
+static void parse_factor(struct lexer *l) {
+  if (*l->cursor == '(') {
+    match(l, '(');
+    parse_expression(l);
+    match(l, ')');
+  } else if (is_alpha(l->cursor)) {
+    parse_identifier(l);
+    if (*l->cursor == '(') {
+      parse_function_call(l);
     }
   } else {
-    parse_num(v7);
+    parse_num(l);
   }
 }
 
-static void parse_term(struct v7 *v7) {
-  parse_factor(v7);
-  while (*v7->cursor == '*' || *v7->cursor == '/') {
-    match(v7, *v7->cursor);
-    parse_factor(v7);
+static void parse_term(struct lexer *l) {
+  parse_factor(l);
+  while (*l->cursor == '*' || *l->cursor == '/') {
+    match(l, *l->cursor);
+    parse_factor(l);
   }
 }
 
-static void parse_expression(struct v7 *v7) {
-  parse_term(v7);
-  while (*v7->cursor == '-' || *v7->cursor == '+') {
-    match(v7, *v7->cursor);
-    parse_term(v7);
+static void parse_expression(struct lexer *l) {
+  parse_term(l);
+  while (*l->cursor == '-' || *l->cursor == '+') {
+    match(l, *l->cursor);
+    parse_term(l);
   }
 }
 
-static void parse_declaration(struct v7 *v7) {
+static void parse_declaration(struct lexer *l) {
+  parse_identifier(l);
+  EXPECT(l, l->tok_len == 3 && memcmp(l->tok, "var", 3) == 0);
   do {
-    parse_identifier(v7);
-    match(v7, '=');
-    parse_expression(v7);
-  } while (test_and_skip(v7, ",", 1));
+    parse_identifier(l);
+    match(l, '=');
+    parse_expression(l);
+  } while (test_and_skip_char(l, ','));
 }
 
-static void parse_assignment(struct v7 *v7) {
-  parse_identifier(v7);
-  match(v7, '=');
-  parse_expression(v7);
+static void parse_assignment(struct lexer *l) {
+  parse_identifier(l);
+  match(l, '=');
+  parse_expression(l);
 }
 
-static void parse_statement(struct v7 *v7) {
-  if (test_and_skip(v7, "var", 3)) {
-    parse_declaration(v7);
-  } else if (is_alpha(v7->cursor)) {
-    parse_assignment(v7);
+static void parse_statement(struct lexer *l) {
+  const char *next_tok;
+
+  if (is_alpha(l->cursor)) {
+    // Identifier is ahead of us.
+    parse_identifier(l);    // Load identifier into l->tok, l->tok_len
+    next_tok = l->cursor;   // Remember the next token
+    l->cursor = l->tok;     // Jump back
+
+    if (test_token(l, "var", 3)) {
+      parse_declaration(l);
+    } else if (*next_tok == '=') {
+      parse_assignment(l);
+    } else {
+      parse_expression(l);
+    }
   } else {
-    parse_expression(v7);
+    parse_expression(l);
   }
-  match(v7, ';');
+
+  // Skip optional semicolons
+  while (*l->cursor == ';') match(l, *l->cursor);
 }
 
 //                              GRAMMAR
@@ -424,12 +457,22 @@ static void parse_statement(struct v7 *v7) {
 //  assign_op   =   "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "^="
 //  identifier  =   letter { letter | digit }
 //  number      =   [ "-" ] { digit }
-int v7_exec(struct v7 *v7, const char *source_code) {
-  v7->source_code = v7->cursor = source_code;
-  skip_whitespaces_and_comments(v7);
-  if (setjmp(v7->exception_env) != 0) return 0;  // Catches exception
-  while (*v7->cursor != '\0') {
-    parse_statement(v7);
+const char *v7_exec(struct v7 *v7, const char *source_code) {
+  struct lexer lexer;
+
+  // Initialize lexer
+  memset(&lexer, 0, sizeof(lexer));
+  lexer.source_code = lexer.cursor = source_code;
+  skip_whitespaces_and_comments(&lexer);
+  lexer.v7 = v7;
+
+  // Setup exception environment.
+  if (setjmp(v7->exception_env) != 0) return v7->error_msg;
+
+  // The following code may raise an exception and jump back to after setjmp()
+  while (*lexer.cursor != '\0') {
+    parse_statement(&lexer);
   }
-  return 1;
+
+  return NULL;  // No error
 }

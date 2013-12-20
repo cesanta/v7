@@ -56,14 +56,16 @@ static const char *test_tokenize(void) {
 static const char *test_v7_exec(void) {
   struct v7 *v7 = v7_create();
 
-  ASSERT(v7_exec(v7, "") == 1);
-  ASSERT(v7_exec(v7, "-2;") == 0);
-  ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == 1);
-  ASSERT(v7->line_no == 1);
-  ASSERT(v7_exec(v7, "( (5  ) );") == 1);
-  ASSERT(v7_exec(v7, "(2 + (12 / 4));") == 1);
-  ASSERT(v7_exec(v7, "1;2;") == 1);
-  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo (2,3)+ 3 / 4 * y;") == 1);
+  ASSERT(v7_exec(v7, "") == NULL);
+  ASSERT(v7_exec(v7, "-2;") != NULL);
+  ASSERT(v7_exec(v7, "2()") != NULL);
+  ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == NULL);
+  ASSERT(v7_exec(v7, "( (5  ) );") == NULL);
+  ASSERT(v7_exec(v7, "(2 + (12 / 4));") == NULL);
+  ASSERT(v7_exec(v7, "1;2;") == NULL);
+  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo (2,3)+ 3 / 4 * y;") == NULL);
+  ASSERT(v7_exec(v7, "y + 2; x + 3 + 1 z = y() -2;") == NULL);
+  ASSERT(v7_exec(v7, "1 2 3") == NULL);
 
   v7_destroy(&v7);
 
