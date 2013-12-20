@@ -55,8 +55,8 @@ struct ll { struct ll *prev, *next; };
 #endif
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
-#define EXPECT(l, cond) do { if (!(cond)) \
-  raise_exception((l)->v7, "[%.*s]: %s", 10, (l)->cursor, #cond); } while (0)
+#define EXPECT(l, cond, code) do { if (!(cond)) \
+  raise_exception((l)->v7, (code)); } while (0)
 
 // A string.
 struct str {
@@ -98,23 +98,14 @@ struct v7 {
   struct scope scopes[20];
   int current_scope;
   jmp_buf exception_env;    // Exception environment
-  char error_msg[100];      // Error message placeholder
 };
 
 static void parse_expression(struct lexer *);  // Forward declaration
 
-static void raise_exception(struct v7 *v7, const char *fmt, ...) {
-  va_list ap;
-
-  va_start(ap, fmt);
-  vsnprintf(v7->error_msg, sizeof(v7->error_msg), fmt, ap);
-  va_end(ap);
-  v7->error_msg[sizeof(v7->error_msg) - 1] = '\0';  // If vsnprintf fails
-  DBG(("%s", v7->error_msg));
-
+static void raise_exception(struct v7 *v7, int error_code) {
   // Reset scope to top level to make subsequent v7_exec() valid
   v7->current_scope = 0;
-  longjmp(v7->exception_env, 1);
+  longjmp(v7->exception_env, error_code);
 }
 
 struct v7 *v7_create(void) {
@@ -140,7 +131,7 @@ static int inc_stack(struct v7 *v7, int incr) {
 
 static char *v7_strdup(struct v7 *v7, const char *ptr, size_t len) {
   char *p = (char *) malloc(len + 1);
-  if (p == NULL) raise_exception(v7, "%s", "oom");
+  if (p == NULL) raise_exception(v7, V7_OUT_OF_MEMORY);
   memcpy(p, ptr, len);
   p[len] = '\0';
   return p;
@@ -159,7 +150,7 @@ static struct var *lookup(struct v7 *v7, const char *name, int allocate) {
 
   // Not found, create a new variable
   if (allocate && (var = (struct var *) calloc(1, sizeof(*var))) == NULL) {
-    raise_exception(v7, "oom");
+    raise_exception(v7, V7_OUT_OF_MEMORY);
   }
 
   // Initialize new variable
@@ -173,16 +164,17 @@ static struct var *lookup(struct v7 *v7, const char *name, int allocate) {
   return var;
 }
 
-const char *v7_define_func(struct v7 *v7, const char *name, v7_func_t func) {
+int v7_define_func(struct v7 *v7, const char *name, v7_func_t func) {
+  int error_code = V7_OK;
   struct var *var = NULL;
 
-  if (setjmp(v7->exception_env) != 0) return v7->error_msg;
+  if ((error_code = setjmp(v7->exception_env)) != 0) return error_code;
   if ((var = lookup(v7, name, 1)) != NULL) {
     var->value.type = TYPE_C_FUNC;
     var->value.v.func = func;
   }
 
-  return NULL;
+  return error_code;
 }
 
 static int char_class(const char *s) {
@@ -224,7 +216,7 @@ static void skip_whitespaces_and_comments(struct lexer *l) {
 }
 
 static void match(struct lexer *l, int ch) {
-  EXPECT(l, *l->cursor++ == ch);
+  EXPECT(l, *l->cursor++ == ch, V7_PARSE_ERROR);
   skip_whitespaces_and_comments(l);
 }
 
@@ -255,14 +247,14 @@ static void parse_num(struct lexer *l) {
   struct value *value = current_stack_top(l->v7);
 
   if (scope->sp >= (int) ARRAY_SIZE(scope->stack)) {
-    raise_exception(l->v7, "%s", "stack overflow");
+    raise_exception(l->v7, V7_STACK_OVERFLOW);
   }
   inc_stack(l->v7, 1);
 
   value->type = TYPE_DBL;
   value->v.num = 0;
 
-  EXPECT(l, is_digit(l->cursor));
+  EXPECT(l, is_digit(l->cursor), V7_PARSE_ERROR);
   l->tok = l->cursor;
   while (is_digit(l->cursor)) {
     value->v.num *= 10;
@@ -273,7 +265,7 @@ static void parse_num(struct lexer *l) {
 }
 
 static void parse_identifier(struct lexer *l) {
-  EXPECT(l, is_alpha(l->cursor) || *l->cursor == '_');
+  EXPECT(l, is_alpha(l->cursor) || *l->cursor == '_', V7_PARSE_ERROR);
   l->tok = l->cursor;
   l->cursor++;
   while (is_alnum(l->cursor) || *l->cursor == '_') l->cursor++;
@@ -327,7 +319,7 @@ static void parse_expression(struct lexer *l) {
 
 static void parse_declaration(struct lexer *l) {
   parse_identifier(l);
-  EXPECT(l, l->tok_len == 3 && memcmp(l->tok, "var", 3) == 0);
+  EXPECT(l, l->tok_len == 3 && memcmp(l->tok, "var", 3) == 0, V7_PARSE_ERROR);
   do {
     parse_identifier(l);
     match(l, '=');
@@ -342,7 +334,7 @@ static void parse_assignment(struct lexer *l) {
   parse_identifier(l);
 
   // Save variable name
-  //EXPECT(l, l->tok_len < sizeof(name) - 1);
+  EXPECT(l, l->tok_len < (int) sizeof(name) - 1, V7_OUT_OF_MEMORY);
   memcpy(name, l->tok, l->tok_len);
   name[l->tok_len] = '\0';
 
@@ -351,7 +343,7 @@ static void parse_assignment(struct lexer *l) {
 
   // Do the assignment: get the value from the top of the stack,
   // where parse_expression() should have left calculated value.
-  EXPECT(l, current_scope(l->v7)->sp > 0);
+  EXPECT(l, current_scope(l->v7)->sp > 0, V7_INTERNAL_ERROR);
   var = lookup(l->v7, name, 1);
   var->value = current_stack_top(l->v7)[-1];
 }
@@ -394,7 +386,8 @@ static void parse_statement(struct lexer *l) {
 //  add_op      =   "+" | "-"
 //  identifier  =   letter { letter | digit }
 //  number      =   { digit }
-const char *v7_exec(struct v7 *v7, const char *source_code) {
+int v7_exec(struct v7 *v7, const char *source_code) {
+  int error_code = V7_OK;
   struct lexer lexer;
 
   // Initialize lexer
@@ -404,7 +397,7 @@ const char *v7_exec(struct v7 *v7, const char *source_code) {
   lexer.v7 = v7;
 
   // Setup exception environment. This is the exception catching point.
-  if (setjmp(v7->exception_env) != 0) return v7->error_msg;
+  if ((error_code = setjmp(v7->exception_env)) != 0) return error_code;
 
   // The following code may raise an exception and jump back to after setjmp()
   v7->current_scope = 0;
@@ -418,5 +411,5 @@ const char *v7_exec(struct v7 *v7, const char *source_code) {
     parse_statement(&lexer);
   }
 
-  return NULL;  // No error, no exception has been raised
+  return error_code;
 }

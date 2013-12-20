@@ -35,16 +35,16 @@ static int static_num_tests = 0;
 static const char *test_v7_exec(void) {
   struct v7 *v7 = v7_create();
 
-  ASSERT(v7_exec(v7, "") == NULL);
-  ASSERT(v7_exec(v7, "-2;") != NULL);
-  ASSERT(v7_exec(v7, "2()") != NULL);
-  ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == NULL);
-  ASSERT(v7_exec(v7, "( (5  ) );") == NULL);
-  ASSERT(v7_exec(v7, "(2 + (12 / 4));") == NULL);
-  ASSERT(v7_exec(v7, "1;2 7") == NULL);
-  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo(2,3)+ 3 / 4 * y;") == NULL);
-  ASSERT(v7_exec(v7, "y + 2; x + 3 + 1 z = y() -2;") == NULL);
-  ASSERT(v7_exec(v7, "1 2 3") == NULL);
+  ASSERT(v7_exec(v7, "") == V7_OK);
+  ASSERT(v7_exec(v7, "-2;") == V7_PARSE_ERROR);
+  ASSERT(v7_exec(v7, "2()") == V7_PARSE_ERROR);
+  ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == V7_OK);
+  ASSERT(v7_exec(v7, "( (5  ) );") == V7_OK);
+  ASSERT(v7_exec(v7, "(2 + (12 / 4));") == V7_OK);
+  ASSERT(v7_exec(v7, "1;2 7") == V7_OK);
+  ASSERT(v7_exec(v7, "var x = 12 + 2 - z() + foo(2,3)+ 3 / 4 * y;") == V7_OK);
+  ASSERT(v7_exec(v7, "y + 2; x + 3 + 1 z = y() -2;") == V7_OK);
+  ASSERT(v7_exec(v7, "1 2 3") == V7_OK);
 
   v7_destroy(&v7);
 
