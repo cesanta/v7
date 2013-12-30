@@ -393,7 +393,6 @@ static void parse_statement(struct lexer *l) {
 }
 
 //                              GRAMMAR
-//
 //  code        =   { statement }
 //  statement   =   declaration | assignment | expression [ ";" ]
 //  declaration =   "var" assignment [ "," {assignment} ]
