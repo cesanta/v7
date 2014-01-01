@@ -188,26 +188,26 @@ int v7_define_func(struct v7 *v7, const char *name, v7_func_t func) {
   return error_code;
 }
 
-static int is_alpha(const char *s) {
-  return (*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z');
+static int is_alpha(int ch) {
+  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
 
-static int is_digit(const char *s) {
-  return *s >= '0' && *s <= '9';
+static int is_digit(int ch) {
+  return ch >= '0' && ch <= '9';
 };
 
-static int is_alnum(const char *s) {
-  return is_digit(s) || is_alpha(s);
+static int is_alnum(int ch) {
+  return is_digit(ch) || is_alpha(ch);
 }
 
-static int is_space(const char *s) {
-  return *s == ' ' || *s == '\t' || *s == '\r' || *s == '\n';
+static int is_space(int ch) {
+  return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 };
 
 static void skip_whitespaces_and_comments(struct lexer *l) {
   const char *s = l->cursor;
-  if (is_space(s)) {
-    while (*s != '\0' && is_space(s)) {
+  if (is_space(*s)) {
+    while (*s != '\0' && is_space(*s)) {
       if (*s == '\n') l->line_no++;
       s++;
     }
@@ -268,9 +268,9 @@ static void parse_num(struct lexer *l) {
   value->type = TYPE_DBL;
   value->v.num = 0;
 
-  EXPECT(l, is_digit(l->cursor), V7_PARSE_ERROR);
+  EXPECT(l, is_digit(*l->cursor), V7_PARSE_ERROR);
   l->tok = l->cursor;
-  while (is_digit(l->cursor)) {
+  while (is_digit(*l->cursor)) {
     value->v.num *= 10;
     value->v.num += *l->cursor++ - '0';
   }
@@ -279,10 +279,10 @@ static void parse_num(struct lexer *l) {
 }
 
 static void parse_identifier(struct lexer *l) {
-  EXPECT(l, is_alpha(l->cursor) || *l->cursor == '_', V7_PARSE_ERROR);
+  EXPECT(l, is_alpha(*l->cursor) || *l->cursor == '_', V7_PARSE_ERROR);
   l->tok = l->cursor;
   l->cursor++;
-  while (is_alnum(l->cursor) || *l->cursor == '_') l->cursor++;
+  while (is_alnum(*l->cursor) || *l->cursor == '_') l->cursor++;
   l->tok_len = l->cursor - l->tok;
   skip_whitespaces_and_comments(l);
 }
@@ -307,7 +307,7 @@ static void parse_factor(struct lexer *l) {
     match(l, '(');
     parse_expression(l);
     match(l, ')');
-  } else if (is_alpha(l->cursor)) {
+  } else if (is_alpha(*l->cursor)) {
     parse_identifier(l);
     if (*l->cursor == '(') {
       parse_function_call(l);
@@ -364,7 +364,7 @@ static void parse_assignment(struct lexer *l) {
 static void parse_statement(struct lexer *l) {
   const char *next_tok;
 
-  if (is_alpha(l->cursor)) {
+  if (is_alpha(*l->cursor)) {
     // Identifier is ahead of us.
     parse_identifier(l);    // Load identifier into l->tok, l->tok_len
     next_tok = l->cursor;   // Remember the next token
