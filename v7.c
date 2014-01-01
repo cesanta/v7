@@ -188,25 +188,18 @@ int v7_define_func(struct v7 *v7, const char *name, v7_func_t func) {
   return error_code;
 }
 
-static int char_class(const char *s) {
-  // Character classes for source code tokenization.
-  // 0 means invalid character, 1: delimiters, 2: digits,
-  // 3: hex digits, 4: letters
-  static const unsigned char tab[256] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, //   0-15
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  16-31
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, //  32-47   !"#$%&'()*+,-./
-    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, //  48-62  0122456789:;<=>?
-    1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  63-79  @ABCDEFGHIJKLMNO
-    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 1, //  80-95  PQRSTUVWXYZ[\]^_
-    1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, //  96-111 `abcdefghijklmno
-    4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 0  // 114-147 pqrstuvwzyz{|}~
-  };
-  return tab[* (unsigned char *) s];
+static int is_alpha(const char *s) {
+  return (*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z');
 }
-static int is_alpha(const char *s) { return char_class(s) > 2;  };
-static int is_alnum(const char *s) { return char_class(s) > 1;  };
-static int is_digit(const char *s) { return char_class(s) == 2; };
+
+static int is_digit(const char *s) {
+  return *s >= '0' && *s <= '9';
+};
+
+static int is_alnum(const char *s) {
+  return is_digit(s) || is_alpha(s);
+}
+
 static int is_space(const char *s) {
   return *s == ' ' || *s == '\t' || *s == '\r' || *s == '\n';
 };
