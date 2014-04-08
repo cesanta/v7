@@ -36,15 +36,45 @@ static const char *test_v7_exec(void) {
   struct v7 *v7 = v7_create();
 
   ASSERT(v7_exec(v7, "") == V7_OK);
-  ASSERT(v7_exec(v7, "-2;") == V7_PARSE_ERROR);
-  ASSERT(v7_exec(v7, "2()") == V7_PARSE_ERROR);
+  ASSERT(v7_top(v7) - v7_bottom(v7) == 1);
+  ASSERT(v7_top(v7)[-1].type == V7_NULL);
+
+  ASSERT(v7_exec(v7, "-2;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
+  ASSERT(v7_top(v7)[-1].v.num == -2);
+
+  ASSERT(v7_exec(v7, "3 + 4") == V7_OK);
+  ASSERT(v7_top(v7)[-1].v.num == 7);
+
+  ASSERT(v7_exec(v7, "2()") == V7_SYNTAX_ERROR);
   ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == V7_OK);
+
   ASSERT(v7_exec(v7, "( (5  ) );") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
+  ASSERT(v7_top(v7)[-1].v.num == 5);
+
   ASSERT(v7_exec(v7, "(2 + (12 / 4));") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
+  ASSERT(v7_top(v7)[-1].v.num == 5);
+
   ASSERT(v7_exec(v7, "1;2 7") == V7_OK);
-  ASSERT(v7_exec(v7, "var x = 12 + 2 - z + foo+ 3 / 4 * y;") == V7_OK);
-  ASSERT(v7_exec(v7, "y + 2; x + 3 + 1 z = y -2;") == V7_OK);
+  ASSERT(v7_exec(v7, "a + 5") == V7_UNDEFINED_VARIABLE);
+
+  ASSERT(v7_exec(v7, "a = 7;") == V7_OK);
+  ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].v.num == 10);
+
+  ASSERT(v7_exec(v7, "c = b * (a + 3) / 2;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].v.num == 50);
+
+  ASSERT(v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a;") == V7_OK);
+  ASSERT(v7_exec(v7, "b + 2; x + 3 + 1 z = x -2;") == V7_OK);
+  ASSERT(v7_exec(v7, "x; var y, z;") == V7_OK);
   ASSERT(v7_exec(v7, "1 2 3") == V7_OK);
+
+  ASSERT(v7_exec(v7, "var k = true;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_BOOL);
+  ASSERT(v7_top(v7)[-1].v.num != 0);
 
   v7_destroy(&v7);
 
@@ -52,16 +82,20 @@ static const char *test_v7_exec(void) {
 }
 
 static void adder(struct v7 *v7, int num_params) {
-  printf("%s: called, num_params: %d\n", __func__, num_params);
-  (void) num_params;
-  (void) v7;
+  double sum = 0;
+  inc_stack(v7, -num_params);
+  while (num_params-- > 0) {
+    sum += v7_top(v7)[num_params].v.num;
+  }
+  v7_push_double(v7, sum);
 }
 
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
   ASSERT(v7_define_func(v7, "adder", adder) == V7_OK);
-  ASSERT(v7_exec(v7, "adder(1, 2, 3)") == V7_OK);
-  //ASSERT(current_stack_top(v7)->type == TYPE_DBL);
+  ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
+  ASSERT(v7_top(v7)[-1].v.num == 10);
   v7_destroy(&v7);
   return NULL;
 }

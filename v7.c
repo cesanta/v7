@@ -1,5 +1,5 @@
 // Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
-// Copyright (c) 2013 Cesanta Software Limited
+// Copyright (c) 2013-2014 Cesanta Software Limited
 // All rights reserved
 //
 // This library is dual-licensed: you can redistribute it and/or modify
@@ -47,7 +47,7 @@ struct ll { struct ll *prev, *next; };
   ((N)->prev)->next = ((N)->next); LINKED_LIST_INIT(N); } while (0)
 #endif
 
-#ifdef ENABLE_DBG
+#ifdef V7_DEBUG
 #define DBG(x) do { printf("%-20s ", __func__); printf x; putchar('\n'); \
   fflush(stdout); } while(0)
 #else
@@ -58,25 +58,10 @@ struct ll { struct ll *prev, *next; };
 #define EXPECT(l, cond, code) do { if (!(cond)) \
   raise_exception((l)->v7, (code)); } while (0)
 
-// A string.
-struct str {
-  char *buf;        // Pointer to buffer with string data
-  int len;          // String length
-};
-#define EMPTY_STR { NULL, 0 }
-
-enum { TYPE_NIL, TYPE_OBJ, TYPE_DBL, TYPE_STR, TYPE_FUNC, TYPE_C_FUNC };
-
-struct value {
-  unsigned char type;
-  union { struct str str; double num; v7_func_t func; } v;
-};
-
 struct var {
   struct var *next;
-  //struct ll link;
   char *name;
-  struct value value;
+  struct v7_value value;
 };
 
 struct lexer {
@@ -90,7 +75,7 @@ struct lexer {
 
 struct scope {
   struct var *vars;         // Variables currently present in this scope
-  struct value stack[50];   // Stack, used to calculate expressions
+  struct v7_value stack[50];   // Stack, used to calculate expressions
   int sp;                   // Stack pointer
 };
 
@@ -135,9 +120,51 @@ void v7_destroy(struct v7 **v7) {
   }
 }
 
-static int inc_stack(struct v7 *v7, int incr) {
-  return v7->scopes[v7->current_scope].sp += incr;
+static struct scope *current_scope(struct v7 *v7) {
+  return &v7->scopes[v7->current_scope];
 }
+
+static struct v7_value *inc_stack(struct v7 *v7, int incr) {
+  struct scope *scope = current_scope(v7);
+
+  scope->sp += incr;
+  if (scope->sp >= (int) ARRAY_SIZE(scope->stack)) {
+    raise_exception(v7, V7_STACK_OVERFLOW);
+  } else if (scope->sp < 0) {
+    raise_exception(v7, V7_STACK_UNDERFLOW);
+  }
+
+  return &scope->stack[scope->sp - incr];
+}
+
+struct v7_value *v7_bottom(struct v7 *v7) {
+  return current_scope(v7)->stack;
+}
+
+struct v7_value *v7_top(struct v7 *v7) {
+  struct scope *scope = current_scope(v7);
+  return &scope->stack[scope->sp];
+}
+
+#ifdef V7_DEBUG
+static const char *v7_to_str(const struct v7_value *v) {
+  static char buf[100];
+
+  switch (v->type) {
+    case V7_NUM:
+      snprintf(buf, sizeof(buf), "(number) %.0lf", v->v.num);
+      break;
+    case V7_BOOL:
+      snprintf(buf, sizeof(buf), "(boolean) %s", v->v.num ? "true" : "false");
+      break;
+    default:
+      snprintf(buf, sizeof(buf), "??");
+      break;
+  }
+
+  return buf;
+}
+#endif
 
 static char *v7_strdup(struct v7 *v7, const char *ptr, size_t len) {
   char *p = (char *) malloc(len + 1);
@@ -147,14 +174,53 @@ static char *v7_strdup(struct v7 *v7, const char *ptr, size_t len) {
   return p;
 }
 
-static struct var *lookup(struct v7 *v7, const char *name, int allocate) {
+struct v7_value *v7_push_double(struct v7 *v7, double num) {
+  struct v7_value *v = inc_stack(v7, 1);
+  v->type = V7_NUM;
+  v->v.num = num;
+  return v;
+}
+
+struct v7_value *v7_push_null(struct v7 *v7) {
+  struct v7_value *v = inc_stack(v7, 1);
+  v->type = V7_NULL;
+  return v;
+}
+
+struct v7_value *v7_push_boolean(struct v7 *v7, int val) {
+  struct v7_value *v = inc_stack(v7, 1);
+  v->type = V7_BOOL;
+  v->v.num = val;
+  return v;
+}
+
+static void do_arithmetic_op(struct v7 *v7, int op) {
+  struct v7_value *v = v7_top(v7) - 2;
+
+  if (v->type != V7_NUM || v[1].type != V7_NUM) {
+    raise_exception(v7, V7_TYPE_MISMATCH);
+  }
+
+  switch (op) {
+    case '+': v[0].v.num += v[1].v.num; break;
+    case '-': v[0].v.num -= v[1].v.num; break;
+    case '*': v[0].v.num *= v[1].v.num; break;
+    case '/': v[0].v.num /= v[1].v.num; break;
+  }
+
+  inc_stack(v7, -1);
+}
+
+static struct var *lookup(struct v7 *v7, const char *name, size_t len,
+                          int allocate) {
   struct var *var = NULL;
   int i;
 
   // Search for the name, traversing scopes up to the top level scope
   for (i = v7->current_scope; i >= 0; i--) {
     for (var = v7->scopes[i].vars; var != NULL; var = var->next) {
-      if (strcmp(var->name, name) == 0) return var;
+      if (strlen(var->name) == len &&
+          memcmp(var->name, name, len) == 0) return var;
     }
   }
 
@@ -162,11 +228,14 @@ static struct var *lookup(struct v7 *v7, const char *name, int allocate) {
   if (allocate && (var = (struct var *) calloc(1, sizeof(*var))) == NULL) {
     raise_exception(v7, V7_OUT_OF_MEMORY);
   }
-  if (var == NULL) raise_exception(v7, V7_UNDEFINED_VARIABLE);
+
+  if (var == NULL) {
+    raise_exception(v7, V7_UNDEFINED_VARIABLE);
+  }
 
   // Initialize new variable
-  var->value.type = TYPE_NIL;
-  var->name = v7_strdup(v7, name, strlen(name));
+  var->value.type = V7_NULL;
+  var->name = v7_strdup(v7, name, len);
 
   // Add it to the scope
   var->next = v7->scopes[v7->current_scope].vars;
@@ -175,14 +244,14 @@ static struct var *lookup(struct v7 *v7, const char *name, int allocate) {
   return var;
 }
 
-int v7_define_func(struct v7 *v7, const char *name, v7_func_t func) {
+int v7_define_func(struct v7 *v7, const char *name, v7_func_t c_func) {
   int error_code = V7_OK;
   struct var *var = NULL;
 
   if ((error_code = setjmp(v7->exception_env)) != 0) return error_code;
-  if ((var = lookup(v7, name, 1)) != NULL) {
-    var->value.type = TYPE_C_FUNC;
-    var->value.v.func = func;
+  if ((var = lookup(v7, name, strlen(name), 1)) != NULL) {
+    var->value.type = V7_C_FUNC;
+    var->value.v.c_func = c_func;
   }
 
   return error_code;
@@ -220,7 +289,7 @@ static void skip_whitespaces_and_comments(struct lexer *l) {
 }
 
 static void match(struct lexer *l, int ch) {
-  EXPECT(l, *l->cursor++ == ch, V7_PARSE_ERROR);
+  EXPECT(l, *l->cursor++ == ch, V7_SYNTAX_ERROR);
   skip_whitespaces_and_comments(l);
 }
 
@@ -237,49 +306,37 @@ static int test_token(struct lexer *l, const char *kw, int kwlen) {
   return kwlen == l->tok_len && memcmp(l->tok, kw, kwlen) == 0;
 }
 
-static struct scope *current_scope(struct v7 *v7) {
-  return &v7->scopes[v7->current_scope];
-}
-
-static struct value *current_stack_top(struct v7 *v7) {
-  struct scope *scope = current_scope(v7);
-  return &scope->stack[scope->sp];
-}
-
-struct var *lookup_current_token(struct lexer *l, int allocate) {
-  char name[256];
-
-  EXPECT(l, l->tok_len < (int) sizeof(name) - 1, V7_OUT_OF_MEMORY);
-  memcpy(name, l->tok, l->tok_len);
-  name[l->tok_len] = '\0';
-
-  return lookup(l->v7, name, allocate);
-}
-
+//  number      =   { digit }
 static void parse_num(struct lexer *l) {
-  struct scope *scope = current_scope(l->v7);
-  struct value *value = current_stack_top(l->v7);
+  struct v7_value *value = inc_stack(l->v7, 1);
+  int is_negative = 0;
 
-  if (scope->sp >= (int) ARRAY_SIZE(scope->stack)) {
-    raise_exception(l->v7, V7_STACK_OVERFLOW);
-  }
-  inc_stack(l->v7, 1);
-
-  value->type = TYPE_DBL;
+  value->type = V7_NUM;
   value->v.num = 0;
 
-  EXPECT(l, is_digit(*l->cursor), V7_PARSE_ERROR);
+  if (*l->cursor == '-') {
+    is_negative = 1;
+    match(l, *l->cursor);
+  }
+
+  EXPECT(l, is_digit(*l->cursor), V7_SYNTAX_ERROR);
   l->tok = l->cursor;
   while (is_digit(*l->cursor)) {
     value->v.num *= 10;
     value->v.num += *l->cursor++ - '0';
   }
+
+  if (is_negative) {
+    value->v.num = -value->v.num;
+  }
+
   l->tok_len = l->cursor - l->tok;
   skip_whitespaces_and_comments(l);
 }
 
+//  identifier  =   letter { letter | digit }
 static void parse_identifier(struct lexer *l) {
-  EXPECT(l, is_alpha(*l->cursor) || *l->cursor == '_', V7_PARSE_ERROR);
+  EXPECT(l, is_alpha(*l->cursor) || *l->cursor == '_', V7_SYNTAX_ERROR);
   l->tok = l->cursor;
   l->cursor++;
   while (is_alnum(*l->cursor) || *l->cursor == '_') l->cursor++;
@@ -287,82 +344,121 @@ static void parse_identifier(struct lexer *l) {
   skip_whitespaces_and_comments(l);
 }
 
+//  call        =   identifier "(" { expression} ")"
 static void parse_function_call(struct lexer *l) {
-  struct var *func = lookup_current_token(l, 0);
+  int num_arguments = 0;
+  struct var *func = lookup(l->v7, l->tok, l->tok_len, 0);
+
+  EXPECT(l, func != NULL, V7_UNDEFINED_VARIABLE);
+  EXPECT(l, func->value.type == V7_FUNC || func->value.type == V7_C_FUNC,
+         V7_TYPE_MISMATCH);
+
   match(l, '(');
   while (*l->cursor != ')') {
     parse_expression(l);
     if (*l->cursor == ',') match(l, ',');
+    num_arguments++;
   }
   match(l, ')');
 
   // Perform a call
-  if (func != NULL && func->value.type == TYPE_C_FUNC) {
-    func->value.v.func(l->v7, 0);
+  if (func != NULL && func->value.type == V7_C_FUNC) {
+    func->value.v.c_func(l->v7, num_arguments);
   }
 }
 
+//  factor      =   number | string | call | "(" expression ")" | identifier |
+//                  this | null | true | false |
+//                  "{" object_literal "}" |
+//                  "[" array_literal "]"
 static void parse_factor(struct lexer *l) {
   if (*l->cursor == '(') {
     match(l, '(');
     parse_expression(l);
     match(l, ')');
-  } else if (is_alpha(*l->cursor)) {
+  } else if (is_alpha(*l->cursor) || *l->cursor == '_') {
     parse_identifier(l);
-    if (*l->cursor == '(') {
+    if (test_token(l, "this", 4)) {
+    } else if (test_token(l, "null", 4)) {
+      v7_push_null(l->v7);
+    } else if (test_token(l, "true", 4)) {
+      v7_push_boolean(l->v7, 1);
+    } else if (test_token(l, "false", 5)) {
+      v7_push_boolean(l->v7, 0);
+    } else if (*l->cursor == '(') {
       parse_function_call(l);
+    } else {
+      struct var *var = lookup(l->v7, l->tok, l->tok_len, 0);
+      inc_stack(l->v7, 1)[0] = var->value;
     }
-    inc_stack(l->v7, 1);
   } else {
     parse_num(l);
   }
 }
 
+//  term        =   factor { mul_op factor }
+//  mul_op      =   "*" | "/"
 static void parse_term(struct lexer *l) {
   parse_factor(l);
   while (*l->cursor == '*' || *l->cursor == '/') {
-    match(l, *l->cursor);
+    int ch = *l->cursor;
+    match(l, ch);
     parse_factor(l);
-    inc_stack(l->v7, -1);
+    do_arithmetic_op(l->v7, ch);
   }
 }
 
+//  expression  =   term { add_op term }
+//  add_op      =   "+" | "-"
 static void parse_expression(struct lexer *l) {
   parse_term(l);
   while (*l->cursor == '-' || *l->cursor == '+') {
-    match(l, *l->cursor);
+    int ch = *l->cursor;
+    match(l, ch);
     parse_term(l);
-    inc_stack(l->v7, -1);
+    do_arithmetic_op(l->v7, ch);
   }
 }
 
-static void parse_declaration(struct lexer *l) {
-  parse_identifier(l);
-  EXPECT(l, l->tok_len == 3 && memcmp(l->tok, "var", 3) == 0, V7_PARSE_ERROR);
-  do {
-    parse_identifier(l);
-    match(l, '=');
-    parse_expression(l);
-  } while (test_and_skip_char(l, ','));
-}
-
+//  assignment  =   identifier "=" expression
 static void parse_assignment(struct lexer *l) {
   struct var *var;
 
   parse_identifier(l);
   // NOTE(lsm): Important to lookup just after parse_identifier()
-  var = lookup_current_token(l, 1);
+  var = lookup(l->v7, l->tok, l->tok_len, 1);
   match(l, '=');
   parse_expression(l);
 
   // Do the assignment: get the value from the top of the stack,
   // where parse_expression() should have left calculated value.
   EXPECT(l, current_scope(l->v7)->sp > 0, V7_INTERNAL_ERROR);
-  var->value = current_stack_top(l->v7)[-1];
+  var->value = v7_top(l->v7)[-1];
 }
 
+//  declaration =   "var" identifier [ "=" expression ] [ "," { i [ "=" e ] } ]
+static void parse_declaration(struct lexer *l) {
+  struct var *var;
+  parse_identifier(l);
+  EXPECT(l, l->tok_len == 3 && memcmp(l->tok, "var", 3) == 0, V7_SYNTAX_ERROR);
+  do {
+    parse_identifier(l);
+    var = lookup(l->v7, l->tok, l->tok_len, 1);
+    if (*l->cursor == '=') {
+      match(l, '=');
+      parse_expression(l);
+      var->value = v7_top(l->v7)[-1];
+      //inc_stack(l->v7, -1);
+    }
+  } while (test_and_skip_char(l, ','));
+}
+
+//  statement   =   declaration | assignment | expression [ ";" ]
 static void parse_statement(struct lexer *l) {
   const char *next_tok;
+#ifdef V7_DEBUG
+  const char *stmt_str = l->cursor;
+#endif
 
   if (is_alpha(*l->cursor)) {
     // Identifier is ahead of us.
@@ -383,21 +479,13 @@ static void parse_statement(struct lexer *l) {
 
   // Skip optional semicolons
   while (*l->cursor == ';') match(l, *l->cursor);
+
+  DBG(("[%.*s] %d [%s]", (int) (l->cursor - stmt_str), stmt_str,
+       (int) (v7_top(l->v7) - v7_bottom(l->v7)),
+       v7_to_str(v7_top(l->v7) - 1)));
 }
 
-//                              GRAMMAR
 //  code        =   { statement }
-//  statement   =   declaration | assignment | expression [ ";" ]
-//  declaration =   "var" assignment [ "," {assignment} ]
-//  assignment  =   identifier "=" expression
-//  expression  =   term { add_op term }
-//  term        =   factor { mul_op factor }
-//  factor      =   number | string | call | "(" expression ")" | identifier
-//  call        =   identifier "(" { expression} ")"
-//  mul_op      =   "*" | "/"
-//  add_op      =   "+" | "-"
-//  identifier  =   letter { letter | digit }
-//  number      =   { digit }
 int v7_exec(struct v7 *v7, const char *source_code) {
   int error_code = V7_OK;
   struct lexer lexer;
@@ -411,15 +499,15 @@ int v7_exec(struct v7 *v7, const char *source_code) {
   // Setup exception environment. This is the exception catching point.
   if ((error_code = setjmp(v7->exception_env)) != 0) return error_code;
 
-  // The following code may raise an exception and jump back to after setjmp()
+  // The following code may raise an exception and jump to the previous line,
+  // returning non-zero from the setjmp() call
   v7->current_scope = 0;
-  v7->scopes[0].sp = 1;
-  v7->scopes[0].stack[0].type = TYPE_NIL;
+  current_scope(v7)->sp = 0;
+  v7_push_null(v7);
 
   while (*lexer.cursor != '\0') {
     inc_stack(v7, -1);
-    assert(inc_stack(v7, 0) == 0);
-    //printf("%d [%s]\n", inc_stack(v7, 0), lexer.cursor);
+    if (current_scope(v7)->sp != 0) raise_exception(v7, V7_INTERNAL_ERROR);
     parse_statement(&lexer);
   }
 
