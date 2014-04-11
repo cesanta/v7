@@ -46,13 +46,18 @@ struct v7_str {
 enum { V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC };
 struct v7_value {
   unsigned char type;
-  union { struct v7_str str; double num; v7_func_t c_func; char *func; } v;
+  union {
+    struct v7_str str;
+    double num;
+    v7_func_t c_func;
+    char *func;
+    void *obj;
+  } v;
 };
 
 int v7_exec(struct v7 *, const char *source_code);
 int v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
 
-//int v7_push(struct v7 *, struct v7_value *);  // Push on top of the stack
 struct v7_value *v7_bottom(struct v7 *);      // Return bottom of the stack
 struct v7_value *v7_top(struct v7 *);         // Return top of the stack
 
@@ -61,6 +66,7 @@ struct v7_value *v7_push_undefined(struct v7 *);
 struct v7_value *v7_push_double(struct v7 *, double val);
 struct v7_value *v7_push_boolean(struct v7 *, int val);
 struct v7_value *v7_push_string(struct v7 *, const char *str, int len);
+struct v7_value *v7_push_object(struct v7 *);
 
 #ifdef __cplusplus
 }

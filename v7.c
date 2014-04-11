@@ -31,22 +31,6 @@
 #define vsnprintf _vsnprintf
 #endif
 
-#if 0
-// Linked list interface
-struct ll { struct ll *prev, *next; };
-#define LINKED_LIST_INIT(N)  ((N)->next = (N)->prev = (N))
-#define LINKED_LIST_ENTRY(P,T,N)  ((T *)((char *)(P) - offsetof(T, N)))
-#define LINKED_LIST_IS_EMPTY(N)  ((N)->next == (N))
-#define LINKED_LIST_FOREACH(H,N,T) \
-  for (N = (H)->next, T = (N)->next; N != (H); N = (T), T = (N)->next)
-#define LINKED_LIST_ADD_TO_FRONT(H,N) do { ((H)->next)->prev = (N); \
-  (N)->next = ((H)->next);  (N)->prev = (H); (H)->next = (N); } while (0)
-#define LINKED_LIST_ADD_TO_TAIL(H,N) do { ((H)->prev)->next = (N); \
-  (N)->prev = ((H)->prev); (N)->next = (H); (H)->prev = (N); } while (0)
-#define LINKED_LIST_REMOVE(N) do { ((N)->next)->prev = ((N)->prev); \
-  ((N)->prev)->next = ((N)->next); LINKED_LIST_INIT(N); } while (0)
-#endif
-
 #ifdef V7_DEBUG
 #define DBG(x) do { printf("%-20s ", __func__); printf x; putchar('\n'); \
   fflush(stdout); } while(0)
@@ -60,7 +44,7 @@ struct ll { struct ll *prev, *next; };
 
 struct var {
   struct var *next;
-  char *name;
+  struct v7_value name;
   struct v7_value value;
 };
 
@@ -74,9 +58,9 @@ struct lexer {
 };
 
 struct scope {
-  struct var *vars;         // Variables currently present in this scope
-  struct v7_value stack[50];   // Stack, used to calculate expressions
-  int sp;                   // Stack pointer
+  struct var *vars;           // Namespace (variables) of this scope
+  struct v7_value stack[50];  // Stack, used to calculate expressions
+  int sp;                     // Stack pointer
 };
 
 struct v7 {
@@ -104,10 +88,10 @@ struct v7 *v7_create(void) {
 }
 
 static void free_scope(struct v7 *v7, int scope_index) {
-  struct var *var, *tmp;
-  for (var = v7->scopes[scope_index].vars; var != NULL; var = tmp) {
-    tmp = var->next;
-    free(var);
+  struct var *p, *tmp;
+  for (p = v7->scopes[scope_index].vars; p != NULL; p = tmp) {
+    tmp = p->next;
+    free(p);
   }
   v7->scopes[scope_index].vars = NULL;
 }
@@ -157,6 +141,19 @@ static const char *v7_to_str(const struct v7_value *v) {
     case V7_BOOL:
       snprintf(buf, sizeof(buf), "(boolean) %s", v->v.num ? "true" : "false");
       break;
+    case V7_UNDEF:
+      snprintf(buf, sizeof(buf), "%s", "undefined");
+      break;
+    case V7_NULL:
+      snprintf(buf, sizeof(buf), "%s", "null");
+      break;
+    case V7_OBJ:
+        snprintf(buf, sizeof(buf), "%s", "(object)");
+        break;
+    case V7_STR:
+        snprintf(buf, sizeof(buf), "(string) [%.*s]",
+                 v->v.str.len, v->v.str.buf);
+        break;
     default:
       snprintf(buf, sizeof(buf), "??");
       break;
@@ -164,11 +161,30 @@ static const char *v7_to_str(const struct v7_value *v) {
 
   return buf;
 }
+
+static void dump_var(const struct var *var, int depth) {
+  const struct var *v;
+  int i;
+
+  for (v = var; v != NULL; v = v->next) {
+    for (i = 0; i < depth; i++) putchar(' ');
+    printf("[%.*s]: ", v->name.v.str.len, v->name.v.str.buf);
+    if (v->value.type == V7_OBJ) {
+      printf("%s", "{\n");
+      dump_var((struct var *) v->value.v.obj, depth + 2);
+      for (i = 0; i < depth; i++) putchar(' ');
+      printf("%s", "}");
+    } else {
+      printf("[%s]", v7_to_str(&v->value));
+    }
+    putchar('\n');
+  }
+}
 #endif
 
-static char *v7_strdup(struct v7 *v7, const char *ptr, size_t len) {
+static char *v7_strdup(const char *ptr, size_t len) {
   char *p = (char *) malloc(len + 1);
-  if (p == NULL) raise_exception(v7, V7_OUT_OF_MEMORY);
+  if (p == NULL) return NULL;
   memcpy(p, ptr, len);
   p[len] = '\0';
   return p;
@@ -194,6 +210,25 @@ struct v7_value *v7_push_boolean(struct v7 *v7, int val) {
   return v;
 }
 
+struct v7_value *v7_push_object(struct v7 *v7) {
+  struct v7_value *v = inc_stack(v7, 1);
+  v->type = V7_OBJ;
+  v->v.obj = NULL;
+  return v;
+}
+
+struct v7_value *v7_push_string(struct v7 *v7, const char *str, int len) {  
+  struct v7_value *v = inc_stack(v7, 1);
+  v->type = V7_STR;
+  v->v.str.len = v->v.str.buf_size = 0;
+  v->v.str.buf = NULL;
+  if (len > 0 && str != NULL) {
+    v->v.str.len = v->v.str.buf_size = len;
+    v->v.str.buf = v7_strdup(str, len);
+  }
+  return v;
+}
+
 static void do_arithmetic_op(struct v7 *v7, int op) {
   struct v7_value *v = v7_top(v7) - 2;
 
@@ -211,6 +246,43 @@ static void do_arithmetic_op(struct v7 *v7, int op) {
   inc_stack(v7, -1);
 }
 
+static int cmp_strings(const struct v7_value *a, const struct v7_value *b) {
+  return a->type == V7_STR &&
+    a->type == b->type &&
+    a->v.str.len == b->v.str.len &&
+    memcmp(a->v.str.buf, b->v.str.buf, a->v.str.len) == 0;
+}
+
+static int cmp_strings2(const struct v7_value *a, const char *s, int len) {
+  struct v7_value tmp = { V7_STR, { { (char *) s, len, len } } };
+  return cmp_strings(a, &tmp);
+}
+
+static struct var *vlookup(struct var *v, const char *name, size_t len) {
+  for (; v != NULL; v = v->next) {
+    if (cmp_strings2(&v->name, name, len)) return v;
+  }
+  return NULL;
+}
+
+static struct var *vinsert(struct var **head, const char *name, size_t len) {
+  struct var *var;
+
+  if ((var = (struct var *) calloc(1, sizeof(*var))) == NULL) return NULL;
+
+  // Initialize new variable
+  var->value.type = V7_UNDEF;
+  var->name.type = V7_STR;
+  var->name.v.str.buf = v7_strdup(name, len);
+  var->name.v.str.len = var->name.v.str.buf_size = len;
+
+  // Add it to the namespace
+  var->next = *head;
+  *head = var;
+  
+  return var;
+}
+
 static struct var *lookup(struct v7 *v7, const char *name, size_t len,
                           int allocate) {
   struct var *var = NULL;
@@ -218,30 +290,45 @@ static struct var *lookup(struct v7 *v7, const char *name, size_t len,
 
   // Search for the name, traversing scopes up to the top level scope
   for (i = v7->current_scope; i >= 0; i--) {
-    for (var = v7->scopes[i].vars; var != NULL; var = var->next) {
-      if (strlen(var->name) == len &&
-          memcmp(var->name, name, len) == 0) return var;
-    }
+    if ((var = vlookup(v7->scopes[i].vars, name, len)) != NULL) return var;
   }
 
   // Not found, create a new variable
-  if (allocate && (var = (struct var *) calloc(1, sizeof(*var))) == NULL) {
-    raise_exception(v7, V7_OUT_OF_MEMORY);
+  if (allocate) {
+    var = vinsert(&v7->scopes[v7->current_scope].vars, name, len);
   }
 
   if (var == NULL) {
     raise_exception(v7, V7_UNDEFINED_VARIABLE);
   }
 
-  // Initialize new variable
-  var->value.type = V7_NULL;
-  var->name = v7_strdup(v7, name, len);
-
-  // Add it to the scope
-  var->next = v7->scopes[v7->current_scope].vars;
-  v7->scopes[v7->current_scope].vars = var;
-
   return var;
+}
+
+int v7_assign(struct v7 *v7) {
+  struct v7_value *value = v7_top(v7) - 1;
+  struct v7_str *name = &value[-1].v.str;
+  //struct obj = { value[-2].v.obj };
+  struct var *var, **vars = (struct var **) &value[-2].v.obj;
+  
+  if (&value[-2] < v7_bottom(v7)) return V7_STACK_UNDERFLOW;
+  if (value[-2].type != V7_OBJ) return V7_TYPE_MISMATCH;
+  if (value[-1].type != V7_STR) return V7_TYPE_MISMATCH;
+
+  // Find attribute inside object
+  if ((var = vlookup(*vars, name->buf, name->len)) == NULL) {
+    var = vinsert(vars, name->buf, name->len);
+  }
+  
+  // Deallocate previously held value
+  assert(var->value.type == V7_UNDEF);
+  DBG(("%p [%.*s] -> [%s]", &value[-2], name->len, name->buf, v7_to_str(value)));
+  
+  // Assign new value
+  var->value = *value;
+  
+  inc_stack(v7, -2);
+  return V7_OK;
 }
 
 int v7_define_func(struct v7 *v7, const char *name, v7_func_t c_func) {
@@ -367,15 +454,46 @@ static void parse_function_call(struct lexer *l) {
   }
 }
 
-//  factor      =   number | string | call | "(" expression ")" | identifier |
-//                  this | null | true | false |
-//                  "{" object_literal "}" |
-//                  "[" array_literal "]"
+
+static void parse_string(struct lexer *l) {
+  const char *begin = l->cursor++;
+  while (*l->cursor != *begin && *l->cursor != '\0') l->cursor++;
+  v7_push_string(l->v7, begin + 1, l->cursor - (begin + 1));
+  match(l, *begin);
+  skip_whitespaces_and_comments(l);
+}
+
+static void parse_object_literal(struct lexer *l) {
+  v7_push_object(l->v7);
+  match(l, '{');
+  while (*l->cursor != '}') {
+    if (*l->cursor == '\'' || *l->cursor == '"') {
+      parse_string(l);
+    } else {
+      parse_identifier(l);
+      v7_push_string(l->v7, l->tok, l->tok_len);
+    }
+    match(l, ':');
+    parse_expression(l);
+    v7_assign(l->v7);
+    test_and_skip_char(l, ',');
+  }
+  match(l, '}');
+}
+
+//  factor  =   number | string | call | "(" expression ")" | identifier |
+//              this | null | true | false |
+//              "{" object_literal "}" |
+//              "[" array_literal "]"
 static void parse_factor(struct lexer *l) {
   if (*l->cursor == '(') {
     match(l, '(');
     parse_expression(l);
     match(l, ')');
+  } else if (*l->cursor == '\'' || *l->cursor == '"') {
+    parse_string(l);
+  } else if (*l->cursor == '{') {
+    parse_object_literal(l);
   } else if (is_alpha(*l->cursor) || *l->cursor == '_') {
     parse_identifier(l);
     if (test_token(l, "this", 4)) {

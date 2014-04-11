@@ -76,6 +76,16 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1].type == V7_BOOL);
   ASSERT(v7_top(v7)[-1].v.num != 0);
 
+  ASSERT(v7_exec(v7, "var blah = 'kuku';") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_STR);
+
+  ASSERT(v7_exec(v7, "k = { key1: 12, key2: ':-)' };") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_OBJ);
+
+#ifdef V7_DEBUG
+  dump_var(v7->scopes[0].vars, 0);
+#endif
+
   v7_destroy(&v7);
 
   return NULL;
