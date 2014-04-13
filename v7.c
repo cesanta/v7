@@ -69,7 +69,8 @@ struct v7 {
   jmp_buf exception_env;    // Exception environment
 };
 
-static void parse_expression(struct lexer *);  // Forward declaration
+// Forward declarations
+static void parse_expression(struct lexer *);
 
 static void raise_exception(struct v7 *v7, int error_code) {
   // Reset scope to top level to make subsequent v7_exec() valid
@@ -279,7 +280,7 @@ static struct var *vinsert(struct var **head, const char *name, size_t len) {
   // Add it to the namespace
   var->next = *head;
   *head = var;
-  
+
   return var;
 }
 
@@ -308,9 +309,8 @@ static struct var *lookup(struct v7 *v7, const char *name, size_t len,
 int v7_assign(struct v7 *v7) {
   struct v7_value *value = v7_top(v7) - 1;
   struct v7_str *name = &value[-1].v.str;
-  //struct obj = { value[-2].v.obj };
   struct var *var, **vars = (struct var **) &value[-2].v.obj;
-  
+
   if (&value[-2] < v7_bottom(v7)) return V7_STACK_UNDERFLOW;
   if (value[-2].type != V7_OBJ) return V7_TYPE_MISMATCH;
   if (value[-1].type != V7_STR) return V7_TYPE_MISMATCH;
@@ -319,14 +319,14 @@ int v7_assign(struct v7 *v7) {
   if ((var = vlookup(*vars, name->buf, name->len)) == NULL) {
     var = vinsert(vars, name->buf, name->len);
   }
-  
+
   // Deallocate previously held value
   assert(var->value.type == V7_UNDEF);
   DBG(("%p [%.*s] -> [%s]", &value[-2], name->len, name->buf, v7_to_str(value)));
-  
+
   // Assign new value
   var->value = *value;
-  
+
   inc_stack(v7, -2);
   return V7_OK;
 }
@@ -455,7 +455,7 @@ static void parse_function_call(struct lexer *l) {
 }
 
 
-static void parse_string(struct lexer *l) {
+static void parse_string_literal(struct lexer *l) {
   const char *begin = l->cursor++;
   while (*l->cursor != *begin && *l->cursor != '\0') l->cursor++;
   v7_push_string(l->v7, begin + 1, l->cursor - (begin + 1));
@@ -468,7 +468,7 @@ static void parse_object_literal(struct lexer *l) {
   match(l, '{');
   while (*l->cursor != '}') {
     if (*l->cursor == '\'' || *l->cursor == '"') {
-      parse_string(l);
+      parse_string_literal(l);
     } else {
       parse_identifier(l);
       v7_push_string(l->v7, l->tok, l->tok_len);
@@ -485,13 +485,13 @@ static void parse_object_literal(struct lexer *l) {
 //              this | null | true | false |
 //              "{" object_literal "}" |
 //              "[" array_literal "]"
-static void parse_factor(struct lexer *l) {
+static void parse_factor2(struct lexer *l) {
   if (*l->cursor == '(') {
     match(l, '(');
     parse_expression(l);
     match(l, ')');
   } else if (*l->cursor == '\'' || *l->cursor == '"') {
-    parse_string(l);
+    parse_string_literal(l);
   } else if (*l->cursor == '{') {
     parse_object_literal(l);
   } else if (is_alpha(*l->cursor) || *l->cursor == '_') {
@@ -511,6 +511,23 @@ static void parse_factor(struct lexer *l) {
     }
   } else {
     parse_num(l);
+  }
+}
+
+static void parse_factor(struct lexer *l) {
+  struct var *v;
+  parse_factor2(l);
+  while (test_and_skip_char(l, '.')) {
+    struct v7_value *val = &v7_top(l->v7)[-1];
+    struct var *v, *obj = (struct var *) val->v.obj;
+    EXPECT(l, val->type == V7_OBJ, V7_SYNTAX_ERROR);
+    parse_identifier(l);
+    v = vlookup(obj, l->tok, l->tok_len);
+    if (v != NULL) {
+      *val = v->value;
+    } else {
+      val->type = V7_UNDEF;
+    }
   }
 }
 
