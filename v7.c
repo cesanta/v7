@@ -71,6 +71,7 @@ struct v7 {
 
 // Forward declarations
 static void parse_expression(struct lexer *);
+static void parse_statement(struct lexer *);
 
 static void raise_exception(struct v7 *v7, int error_code) {
   // Reset scope to top level to make subsequent v7_exec() valid
@@ -481,10 +482,26 @@ static void parse_object_literal(struct lexer *l) {
   match(l, '}');
 }
 
+// function_defition = "function" "(" func_params ")" "{" func_body "}"
+static void parse_function_definition(struct lexer *l) {
+  match(l, '(');
+  while (*l->cursor != ')') {
+    parse_identifier(l);
+    if (!test_and_skip_char(l, ',')) break;
+  }
+  match(l, ')');
+  match(l, '{');
+  while (*l->cursor != '}') {
+    parse_statement(l);
+  }
+  match(l, '}');
+}
+
 //  factor  =   number | string | call | "(" expression ")" | identifier |
 //              this | null | true | false |
 //              "{" object_literal "}" |
-//              "[" array_literal "]"
+//              "[" array_literal "]" |
+//              function_defition
 static void parse_factor2(struct lexer *l) {
   if (*l->cursor == '(') {
     match(l, '(');
@@ -503,6 +520,8 @@ static void parse_factor2(struct lexer *l) {
       v7_push_boolean(l->v7, 1);
     } else if (test_token(l, "false", 5)) {
       v7_push_boolean(l->v7, 0);
+    } else if (test_token(l, "function", 8)) {
+      parse_function_definition(l);
     } else if (*l->cursor == '(') {
       parse_function_call(l);
     } else {
@@ -517,7 +536,6 @@ static void parse_factor2(struct lexer *l) {
 // factor = factor2 { '.' factor2 } |
 //          factor2 { '[' factor2 ']' }
 static void parse_factor(struct lexer *l) {
-  struct var *v;
   parse_factor2(l);
   while (*l->cursor == '.' || *l->cursor == '[') {
     struct v7_value *val = &v7_top(l->v7)[-1];
@@ -619,6 +637,10 @@ static void parse_statement(struct lexer *l) {
 
     if (test_token(l, "var", 3)) {
       parse_declaration(l);
+    } else if (test_token(l, "return", 6)) {
+      DBG(("******"));
+      parse_identifier(l);
+      parse_expression(l);
     } else if (*next_tok == '=') {
       parse_assignment(l);
     } else {

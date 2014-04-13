@@ -92,6 +92,9 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var z = 'key1'; k[z]['x']") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 3);
+  
+  ASSERT(v7_exec(v7, "var f1 = function(x, y) { };") == V7_OK);
+  ASSERT(v7_exec(v7, "var f1 = function(x, y) { return 1 + 3; };") == V7_OK);
 
 #ifdef V7_DEBUG
   dump_var(v7->scopes[0].vars, 0);
