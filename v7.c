@@ -514,15 +514,31 @@ static void parse_factor2(struct lexer *l) {
   }
 }
 
+// factor = factor2 { '.' factor2 } |
+//          factor2 { '[' factor2 ']' }
 static void parse_factor(struct lexer *l) {
   struct var *v;
   parse_factor2(l);
-  while (test_and_skip_char(l, '.')) {
+  while (*l->cursor == '.' || *l->cursor == '[') {
     struct v7_value *val = &v7_top(l->v7)[-1];
     struct var *v, *obj = (struct var *) val->v.obj;
+    int ch = *l->cursor;
+
+    match(l, ch);
     EXPECT(l, val->type == V7_OBJ, V7_SYNTAX_ERROR);
-    parse_identifier(l);
-    v = vlookup(obj, l->tok, l->tok_len);
+
+    if (ch == '.') {
+      parse_identifier(l);
+      v = vlookup(obj, l->tok, l->tok_len);
+    } else {
+      parse_expression(l);
+      match(l, ']');
+      EXPECT(l, val == &v7_top(l->v7)[-2], V7_INTERNAL_ERROR);
+      EXPECT(l, val[1].type == V7_STR, V7_TYPE_MISMATCH);
+      v = vlookup(obj, val[1].v.str.buf, val[1].v.str.len);
+      inc_stack(l->v7, -1);
+    }
+
     if (v != NULL) {
       *val = v->value;
     } else {
