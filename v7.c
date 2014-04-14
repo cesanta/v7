@@ -42,7 +42,6 @@
 #define EXPECT(v7, cond, code) do { if (!(cond)) \
   raise_exception((v7), (code)); } while (0)
 
-// enum { OP_ASSIGN, OP_PUSH };
 struct var {
   struct var *next;
   struct v7_value name;
@@ -62,14 +61,13 @@ struct v7 {
   const char *source_code;  // Pointer to the source code string
   const char *cursor;       // Current parsing position
   int line_no;              // Line number
-  unsigned int flags;
-#define NO_EXEC   1         // No-execute flag. For parsing conditionals,
-                            // function definitions.
+  int no_exec;              // No-execute flag. For parsing function defs
   const char *tok;          // Parsed terminal token (ident, number, string)
   int tok_len;              // Length of the parsed terminal token
 
   jmp_buf exception_env;    // Exception environment
 };
+enum { NO_EXEC = 1, COPY_SOURCE = 2 };
 
 // Forward declarations
 static void parse_expression(struct v7 *);
@@ -105,10 +103,6 @@ void v7_destroy(struct v7 **v7) {
     free(*v7);
     *v7 = NULL;
   }
-}
-
-static int v7_no_exec(const struct v7 *v7) {
-  return v7->flags & NO_EXEC;
 }
 
 static struct scope *current_scope(struct v7 *v7) {
@@ -164,6 +158,9 @@ static const char *v7_to_str(const struct v7_value *v) {
     case V7_STR:
         snprintf(buf, sizeof(buf), "(string) [%.*s]",
                  v->v.str.len, v->v.str.buf);
+        break;
+    case V7_FUNC:
+        snprintf(buf, sizeof(buf), "(function) [%s]", v->v.func);
         break;
     default:
       snprintf(buf, sizeof(buf), "??");
@@ -250,7 +247,7 @@ struct v7_value *v7_push_string(struct v7 *v7, const char *str, int len) {
 static void do_arithmetic_op(struct v7 *v7, int op) {
   struct v7_value *v = v7_top(v7) - 2;
 
-  if (v7->flags & NO_EXEC) return;
+  if (v7->no_exec) return;
   if (v->type != V7_NUM || v[1].type != V7_NUM) {
     raise_exception(v7, V7_TYPE_MISMATCH);
   }
@@ -307,7 +304,7 @@ static struct var *lookup(struct v7 *v7, const char *name, size_t len,
   struct var *var = NULL;
   int i;
 
-  if (v7_no_exec(v7)) return NULL;
+  if (v7->no_exec) return NULL;
 
   // Search for the name, traversing scopes up to the top level scope
   for (i = v7->current_scope; i >= 0; i--) {
@@ -332,7 +329,7 @@ int v7_assign(struct v7 *v7) {
   struct v7_str *name = &value[-1].v.str;
   struct var *var, **vars = (struct var **) &value[-2].v.obj;
 
-  if (v7_no_exec(v7)) return V7_OK;
+  if (v7->no_exec) return V7_OK;
   if (&value[-2] < v7_bottom(v7)) return V7_STACK_UNDERFLOW;
   if (value[-2].type != V7_OBJ) return V7_TYPE_MISMATCH;
   if (value[-1].type != V7_STR) return V7_TYPE_MISMATCH;
@@ -469,7 +466,7 @@ static void parse_function_call(struct v7 *v7) {
   match(v7, ')');
 
   // Perform a call
-  if (func != NULL && func->value.type == V7_C_FUNC && !v7_no_exec(v7)) {
+  if (func != NULL && func->value.type == V7_C_FUNC && !v7->no_exec) {
     func->value.v.c_func(v7, num_arguments);
   }
 }
@@ -502,9 +499,10 @@ static void parse_object_literal(struct v7 *v7) {
 
 // function_defition = "function" "(" func_params ")" "{" func_body "}"
 static void parse_function_definition(struct v7 *v7) {
-  unsigned old_flags = v7->flags;
-  v7->flags |= NO_EXEC;
-  v7_push_function(v7, (char *) v7->cursor);
+  int old_no_exec = v7->no_exec;
+  const char *src = v7->cursor;
+
+  v7->no_exec = 1;
   match(v7, '(');
   while (*v7->cursor != ')') {
     parse_identifier(v7);
@@ -515,8 +513,11 @@ static void parse_function_definition(struct v7 *v7) {
   while (*v7->cursor != '}') {
     parse_statement(v7);
   }
+  if (!old_no_exec) {
+    v7_push_function(v7, v7_strdup(src, (v7->cursor + 1) - src));
+  }
   match(v7, '}');
-  v7->flags = old_flags;
+  v7->no_exec = old_no_exec;
 }
 
 //  factor  =   number | string | call | "(" expression ")" | identifier |
@@ -547,7 +548,7 @@ static void parse_factor2(struct v7 *v7) {
       parse_function_definition(v7);
     } else if (*v7->cursor == '(') {
       parse_function_call(v7);
-    } else {
+    } else if (!v7->no_exec) {
       struct var *var = lookup(v7, v7->tok, v7->tok_len, 0);
       inc_stack(v7, 1)[0] = var->value;
     }
@@ -556,7 +557,7 @@ static void parse_factor2(struct v7 *v7) {
   }
 
   // Don't leave anything on stack if no execution flag is set
-  if (v7_no_exec(v7)) {
+  if (v7->no_exec) {
     current_scope(v7)->sp = sp;
   }
 }
@@ -571,19 +572,19 @@ static void parse_factor(struct v7 *v7) {
     int ch = *v7->cursor;
 
     match(v7, ch);
-    if (!v7_no_exec(v7)) {
+    if (!v7->no_exec) {
       EXPECT(v7, val->type == V7_OBJ, V7_SYNTAX_ERROR);
     }
 
     if (ch == '.') {
       parse_identifier(v7);
-      if (!v7_no_exec(v7)) {
+      if (!v7->no_exec) {
         v = vlookup(obj, v7->tok, v7->tok_len);
       }
     } else {
       parse_expression(v7);
       match(v7, ']');
-      if (!v7_no_exec(v7)) {
+      if (!v7->no_exec) {
         EXPECT(v7, val == &v7_top(v7)[-2], V7_INTERNAL_ERROR);
         EXPECT(v7, val[1].type == V7_STR, V7_TYPE_MISMATCH);
         v = vlookup(obj, val[1].v.str.buf, val[1].v.str.len);
@@ -591,7 +592,7 @@ static void parse_factor(struct v7 *v7) {
       }
     }
 
-    if (!v7_no_exec(v7)){
+    if (!v7->no_exec){
       if (v != NULL) {
         *val = v->value;
       } else {
@@ -635,8 +636,10 @@ static void parse_assignment(struct v7 *v7) {
 
   // Do the assignment: get the value from the top of the stack,
   // where parse_expression() should have left calculated value.
-  EXPECT(v7, current_scope(v7)->sp > 0, V7_INTERNAL_ERROR);
-  var->value = v7_top(v7)[-1];
+  if (!v7->no_exec) {
+    EXPECT(v7, current_scope(v7)->sp > 0, V7_INTERNAL_ERROR);
+    var->value = v7_top(v7)[-1];
+  }
 }
 
 //  declaration =   "var" identifier [ "=" expression ] [ "," { i [ "=" e ] } ]
@@ -660,7 +663,42 @@ static void parse_declaration(struct v7 *v7) {
   } while (test_and_skip_char(v7, ','));
 }
 
-//  statement   =   declaration | assignment | expression [ ";" ]
+static void parse_return_statement(struct v7 *v7) {
+  parse_expression(v7);
+}
+
+static void parse_compound_statement(struct v7 *v7) {
+  if (*v7->cursor == '{') { 
+    match(v7, '{');
+    while (*v7->cursor != '}') {
+      parse_statement(v7);
+    }
+    match(v7, '}');
+  } else {
+    parse_statement(v7);
+  }
+}
+
+static int v7_is_true(const struct v7_value *v) {
+  return (v->type == V7_BOOL || v->type == V7_NUM) && v->v.num != 0;
+}
+
+static void parse_if_statement(struct v7 *v7) {
+  int old_no_exec = v7->no_exec;
+
+  match(v7, '(');
+  parse_expression(v7);
+  match(v7, ')');
+  if (!v7_is_true(&v7_top(v7)[-1])) {
+    v7->no_exec = 1;
+    DBG(("OOOOO"));
+  }
+  parse_compound_statement(v7);
+  v7->no_exec = old_no_exec;
+}
+
+//  statement  =  declaration | return_statement | if_statement
+//                assignment | expression [ ";" ]
 static void parse_statement(struct v7 *v7) {
 #ifdef V7_DEBUG
   const char *stmt_str = v7->cursor;
@@ -671,7 +709,9 @@ static void parse_statement(struct v7 *v7) {
     if (test_token(v7, "var", 3)) {
       parse_declaration(v7);
     } else if (test_token(v7, "return", 6)) {
-      parse_expression(v7);
+      parse_return_statement(v7);
+    } else if (test_token(v7, "if", 2)) {
+      parse_if_statement(v7);
     } else if (*v7->cursor == '=') {
       parse_assignment(v7);
     } else {
@@ -693,7 +733,7 @@ static void parse_statement(struct v7 *v7) {
 //  code        =   { statement }
 int v7_exec(struct v7 *v7, const char *source_code) {
   int error_code = V7_OK;
-  
+
   v7->source_code = v7->cursor = source_code;
   skip_whitespaces_and_comments(v7);
 
@@ -702,13 +742,11 @@ int v7_exec(struct v7 *v7, const char *source_code) {
 
   // The following code may raise an exception and jump to the previous line,
   // returning non-zero from the setjmp() call
+  // Prior calls to v7_exec() may have left current_scope modified, reset now
   v7->current_scope = 0;
-  current_scope(v7)->sp = 0;
-  v7_push_null(v7);
 
   while (*v7->cursor != '\0') {
-    inc_stack(v7, -1);
-    if (current_scope(v7)->sp != 0) raise_exception(v7, V7_INTERNAL_ERROR);
+    current_scope(v7)->sp = 0;  // Reset stack on each statement
     parse_statement(v7);
   }
 
