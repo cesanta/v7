@@ -135,6 +135,10 @@ int v7_sp(struct v7 *v7) {
   return v7_top(v7) - v7_bottom(v7);
 }
 
+static int v7_is_true(const struct v7_value *v) {
+  return (v->type == V7_BOOL || v->type == V7_NUM) && v->v.num != 0;
+}
+
 #ifdef V7_DEBUG
 static const char *v7_to_str(const struct v7_value *v) {
   static char buf[100];
@@ -614,7 +618,8 @@ static void parse_term(struct v7 *v7) {
   }
 }
 
-//  expression  =   term { add_op term }
+//  expression  =   term { add_op term } |
+//                  expression "?" expression ":" expression
 //  add_op      =   "+" | "-"
 static void parse_expression(struct v7 *v7) {
   parse_term(v7);
@@ -623,6 +628,20 @@ static void parse_expression(struct v7 *v7) {
     match(v7, ch);
     parse_term(v7);
     do_arithmetic_op(v7, ch);
+  }
+
+  // Parse ternary operator
+  if (*v7->cursor == '?') {
+    int condition_true = v7_is_true(&v7_top(v7)[-1]);
+    int old_no_exec = v7->no_exec;
+
+    match(v7, '?');
+    v7->no_exec = old_no_exec || !condition_true;
+    parse_expression(v7);
+    match(v7, ':');
+    v7->no_exec = old_no_exec || condition_true;
+    parse_expression(v7);
+    v7->no_exec = old_no_exec;
   }
 }
 
@@ -677,10 +696,6 @@ static void parse_compound_statement(struct v7 *v7) {
   } else {
     parse_statement(v7);
   }
-}
-
-static int v7_is_true(const struct v7_value *v) {
-  return (v->type == V7_BOOL || v->type == V7_NUM) && v->v.num != 0;
 }
 
 static void parse_if_statement(struct v7 *v7) {

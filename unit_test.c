@@ -129,6 +129,11 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "if (0) f1 = 2; ") == V7_OK);
   ASSERT(v7_exec(v7, "if (5) { f1 = 3; f2 = function(){}; } ") == V7_OK);
 
+  ASSERT(v7_exec(v7, "k = 0 ? 1 : 2;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].v.num == 2);
+
+  ASSERT(v7_exec(v7, "k = true ? 1 : 2;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].v.num == 1);
 
 #ifdef V7_DEBUG
   dump_var(v7->scopes[0].vars, 0);
