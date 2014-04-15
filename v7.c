@@ -71,7 +71,7 @@ enum { NO_EXEC = 1, COPY_SOURCE = 2 };
 
 // Forward declarations
 static void parse_expression(struct v7 *);
-static void parse_statement(struct v7 *);
+static int parse_statement(struct v7 *);
 
 static void raise_exception(struct v7 *v7, int error_code) {
   // Reset scope to top level to make subsequent v7_exec() valid
@@ -202,49 +202,9 @@ static char *v7_strdup(const char *ptr, size_t len) {
   return p;
 }
 
-struct v7_value *v7_push_double(struct v7 *v7, double num) {
+struct v7_value *v7_push(struct v7 *v7, unsigned char type) {
   struct v7_value *v = inc_stack(v7, 1);
-  v->type = V7_NUM;
-  v->v.num = num;
-  return v;
-}
-
-struct v7_value *v7_push_null(struct v7 *v7) {
-  struct v7_value *v = inc_stack(v7, 1);
-  v->type = V7_NULL;
-  return v;
-}
-
-struct v7_value *v7_push_boolean(struct v7 *v7, int val) {
-  struct v7_value *v = inc_stack(v7, 1);
-  v->type = V7_BOOL;
-  v->v.num = val;
-  return v;
-}
-
-struct v7_value *v7_push_object(struct v7 *v7) {
-  struct v7_value *v = inc_stack(v7, 1);
-  v->type = V7_OBJ;
-  v->v.obj = NULL;
-  return v;
-}
-
-struct v7_value *v7_push_function(struct v7 *v7, char *code) {
-  struct v7_value *v = inc_stack(v7, 1);
-  v->type = V7_FUNC;
-  v->v.func = code;
-  return v;
-}
-
-struct v7_value *v7_push_string(struct v7 *v7, const char *str, int len) {  
-  struct v7_value *v = inc_stack(v7, 1);
-  v->type = V7_STR;
-  v->v.str.len = v->v.str.buf_size = 0;
-  v->v.str.buf = NULL;
-  if (len > 0 && str != NULL) {
-    v->v.str.len = v->v.str.buf_size = len;
-    v->v.str.buf = v7_strdup(str, len);
-  }
+  v->type = type;
   return v;
 }
 
@@ -419,7 +379,7 @@ static int test_token(struct v7 *v7, const char *kw, int kwlen) {
 
 //  number      =   { digit }
 static void parse_num(struct v7 *v7) {
-  struct v7_value *value = v7_push_double(v7, 0);
+  struct v7_value *value = v7_push(v7, V7_NUM);
   int is_negative = 0;
 
   if (*v7->cursor == '-') {
@@ -429,6 +389,7 @@ static void parse_num(struct v7 *v7) {
 
   EXPECT(v7, is_digit(*v7->cursor), V7_SYNTAX_ERROR);
   v7->tok = v7->cursor;
+  value->v.num = 0;
   while (is_digit(*v7->cursor)) {
     value->v.num *= 10;
     value->v.num += *v7->cursor++ - '0';
@@ -452,46 +413,120 @@ static void parse_identifier(struct v7 *v7) {
   skip_whitespaces_and_comments(v7);
 }
 
-//  call        =   identifier "(" { expression} ")"
+static void parse_return_statement(struct v7 *v7) {
+  if (*v7->cursor == ';' || *v7->cursor == '}') {
+    if (!v7->no_exec) v7_push(v7, V7_UNDEF);
+  } else {
+    parse_expression(v7);
+  }
+}
+
+static void parse_compound_statement(struct v7 *v7) {
+  if (*v7->cursor == '{') { 
+    int old_sp = v7_sp(v7);
+    match(v7, '{');
+    while (*v7->cursor != '}') {
+      if (v7_sp(v7) > old_sp) current_scope(v7)->sp = old_sp;
+      parse_statement(v7);
+    }
+    match(v7, '}');
+  } else {
+    parse_statement(v7);
+  }
+}
+
+// function_defition = "function" "(" func_params ")" "{" func_body "}"
+static void parse_function_definition(struct v7 *v7, int no_exec) {
+  int old_no_exec = v7->no_exec;
+  int old_sp = v7_sp(v7);
+  const char *src = v7->cursor;
+
+  v7->no_exec = no_exec;
+  match(v7, '(');
+  while (*v7->cursor != ')') {
+    parse_identifier(v7);
+    if (!test_and_skip_char(v7, ',')) break;
+  }
+  match(v7, ')');
+  match(v7, '{');
+  while (*v7->cursor != '}') {
+    if (v7_sp(v7) > old_sp) current_scope(v7)->sp = old_sp;
+    if (parse_statement(v7)) break;
+  }
+  if (no_exec) {
+    v7_push(v7, V7_FUNC)->v.func = v7_strdup(src, (v7->cursor + 1) - src);
+  }
+  match(v7, '}');
+  v7->no_exec = old_no_exec;
+}
+
+//  function_call  = identifier "(" { expression} ")"
 static void parse_function_call(struct v7 *v7) {
-  int num_arguments = 0;
-  struct var *func = lookup(v7, v7->tok, v7->tok_len, 0);
+  struct var *var = lookup(v7, v7->tok, v7->tok_len, 0);
+  struct v7_value *v, *rv, *f = var == NULL ? NULL : &var->value;
+  int old_sp = v7_sp(v7);
 
-  EXPECT(v7, func != NULL, V7_UNDEFINED_VARIABLE);
-  EXPECT(v7, func->value.type == V7_FUNC || func->value.type == V7_C_FUNC,
-         V7_TYPE_MISMATCH);
+  if (!v7->no_exec) {
+    EXPECT(v7, f != NULL, V7_UNDEFINED_VARIABLE);
+    EXPECT(v7, f->type == V7_FUNC || f->type == V7_C_FUNC, V7_TYPE_MISMATCH);
 
+    // Push return value, frame pointer, return address on stack
+    rv = v7_push(v7, V7_UNDEF);                // Return value
+    //current_scope(v7)->fp = v7_sp(v7);    // Frame pointer
+    //v7_push(v7, V7_NUM)->v.num = current_scope(v7)->fp;
+    //ra = v7_push(v7, V7_FUNC);            // Return address
+  }
+
+  // Push arguments on stack
   match(v7, '(');
   while (*v7->cursor != ')') {
     parse_expression(v7);
-    if (*v7->cursor == ',') match(v7, ',');
-    num_arguments++;
+    test_and_skip_char(v7, ',');
   }
   match(v7, ')');
+  if (v7->no_exec) return;
 
-  // Perform a call
-  if (func != NULL && func->value.type == V7_C_FUNC && !v7->no_exec) {
-    func->value.v.c_func(v7, num_arguments);
+  // Perform the call
+  if (f == NULL || v7->no_exec) {
+    // No action
+  } else if (f->type == V7_FUNC) {
+    v = v7_top(v7);
+    v7->cursor = f->v.func;
+    parse_function_definition(v7, 0);
+    DBG(("%d", v7_top(v7) - v));
+    if (v7_top(v7) > v) {
+      // Function body pushed some value on stack, use it as return value
+      *rv = *v;
+    }
+  } else if (f->type == V7_C_FUNC) {
+    // C function, it must clean up the stack and push the result
+    f->v.c_func(v7, v7_sp(v7) - old_sp);
   }
+  current_scope(v7)->sp = old_sp + 1;
 }
 
 static void parse_string_literal(struct v7 *v7) {
   const char *begin = v7->cursor++;
+  struct v7_value *v = v7_push(v7, V7_STR);
   while (*v7->cursor != *begin && *v7->cursor != '\0') v7->cursor++;
-  v7_push_string(v7, begin + 1, v7->cursor - (begin + 1));
+  v->v.str.len = v->v.str.buf_size = v7->cursor - (begin + 1);
+  v->v.str.buf = v7_strdup(begin + 1, v->v.str.len);
   match(v7, *begin);
   skip_whitespaces_and_comments(v7);
 }
 
 static void parse_object_literal(struct v7 *v7) {
-  v7_push_object(v7);
+  v7_push(v7, V7_OBJ)->v.obj = NULL;
   match(v7, '{');
   while (*v7->cursor != '}') {
     if (*v7->cursor == '\'' || *v7->cursor == '"') {
       parse_string_literal(v7);
     } else {
+      struct v7_value *v;
       parse_identifier(v7);
-      v7_push_string(v7, v7->tok, v7->tok_len);
+      v = v7_push(v7, V7_STR);
+      v->v.str.len = v->v.str.buf_size = v7->tok_len;
+      v->v.str.buf = (char *) v7->tok;
     }
     match(v7, ':');
     parse_expression(v7);
@@ -501,34 +536,11 @@ static void parse_object_literal(struct v7 *v7) {
   match(v7, '}');
 }
 
-// function_defition = "function" "(" func_params ")" "{" func_body "}"
-static void parse_function_definition(struct v7 *v7) {
-  int old_no_exec = v7->no_exec;
-  const char *src = v7->cursor;
-
-  v7->no_exec = 1;
-  match(v7, '(');
-  while (*v7->cursor != ')') {
-    parse_identifier(v7);
-    if (!test_and_skip_char(v7, ',')) break;
-  }
-  match(v7, ')');
-  match(v7, '{');
-  while (*v7->cursor != '}') {
-    parse_statement(v7);
-  }
-  if (!old_no_exec) {
-    v7_push_function(v7, v7_strdup(src, (v7->cursor + 1) - src));
-  }
-  match(v7, '}');
-  v7->no_exec = old_no_exec;
-}
-
-//  factor  =   number | string | call | "(" expression ")" | identifier |
-//              this | null | true | false |
+//  factor  =   number | string | function_call | "(" expression ")" |
+//              identifier | "this" | "null" | "true" | "false" |
 //              "{" object_literal "}" |
 //              "[" array_literal "]" |
-//              function_defition
+//              function_definition
 static void parse_factor2(struct v7 *v7) {
   int sp = v7_sp(v7);
   if (*v7->cursor == '(') {
@@ -543,13 +555,13 @@ static void parse_factor2(struct v7 *v7) {
     parse_identifier(v7);
     if (test_token(v7, "this", 4)) {
     } else if (test_token(v7, "null", 4)) {
-      v7_push_null(v7);
+      v7_push(v7, V7_NULL);
     } else if (test_token(v7, "true", 4)) {
-      v7_push_boolean(v7, 1);
+      v7_push(v7, V7_BOOL)->v.num = 1;
     } else if (test_token(v7, "false", 5)) {
-      v7_push_boolean(v7, 0);
+      v7_push(v7, V7_BOOL)->v.num = 0;
     } else if (test_token(v7, "function", 8)) {
-      parse_function_definition(v7);
+      parse_function_definition(v7, 1);
     } else if (*v7->cursor == '(') {
       parse_function_call(v7);
     } else if (!v7->no_exec) {
@@ -682,22 +694,6 @@ static void parse_declaration(struct v7 *v7) {
   } while (test_and_skip_char(v7, ','));
 }
 
-static void parse_return_statement(struct v7 *v7) {
-  parse_expression(v7);
-}
-
-static void parse_compound_statement(struct v7 *v7) {
-  if (*v7->cursor == '{') { 
-    match(v7, '{');
-    while (*v7->cursor != '}') {
-      parse_statement(v7);
-    }
-    match(v7, '}');
-  } else {
-    parse_statement(v7);
-  }
-}
-
 static void parse_if_statement(struct v7 *v7) {
   int old_no_exec = v7->no_exec;
 
@@ -706,7 +702,6 @@ static void parse_if_statement(struct v7 *v7) {
   match(v7, ')');
   if (!v7_is_true(&v7_top(v7)[-1])) {
     v7->no_exec = 1;
-    DBG(("OOOOO"));
   }
   parse_compound_statement(v7);
   v7->no_exec = old_no_exec;
@@ -714,7 +709,8 @@ static void parse_if_statement(struct v7 *v7) {
 
 //  statement  =  declaration | return_statement | if_statement
 //                assignment | expression [ ";" ]
-static void parse_statement(struct v7 *v7) {
+static int parse_statement(struct v7 *v7) {
+  int is_return_statement = 0;
 #ifdef V7_DEBUG
   const char *stmt_str = v7->cursor;
 #endif
@@ -725,6 +721,7 @@ static void parse_statement(struct v7 *v7) {
       parse_declaration(v7);
     } else if (test_token(v7, "return", 6)) {
       parse_return_statement(v7);
+      is_return_statement = 1;
     } else if (test_token(v7, "if", 2)) {
       parse_if_statement(v7);
     } else if (*v7->cursor == '=') {
@@ -743,6 +740,8 @@ static void parse_statement(struct v7 *v7) {
   DBG(("[%.*s] %d [%s]", (int) (v7->cursor - stmt_str), stmt_str,
        (int) (v7_top(v7) - v7_bottom(v7)),
        v7_to_str(v7_top(v7) - 1)));
+
+  return is_return_statement;
 }
 
 //  code        =   { statement }

@@ -38,7 +38,7 @@ static void adder(struct v7 *v7, int num_params) {
   while (num_params-- > 0) {
     sum += v7_top(v7)[num_params].v.num;
   }
-  v7_push_double(v7, sum);
+  v7_push(v7, V7_NUM)->v.num = sum;
 }
 
 static const char *test_native_functions(void) {
@@ -134,6 +134,14 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "k = true ? 1 : 2;") == V7_OK);
   ASSERT(v7_top(v7)[-1].v.num == 1);
+
+  ASSERT(v7_exec(v7, "var f = function(){var x=12; return x + 1;};") == V7_OK);
+  ASSERT(v7_sp(v7) == 1);
+
+  ASSERT(v7_exec(v7, "k = f(1,2,3);") == V7_OK);  
+  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
+  ASSERT(v7_top(v7)[-1].v.num == 13);
 
 #ifdef V7_DEBUG
   dump_var(v7->scopes[0].vars, 0);
