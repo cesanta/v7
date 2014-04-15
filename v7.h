@@ -58,6 +58,7 @@ struct v7_value {
 };
 
 enum v7_error v7_exec(struct v7 *, const char *source_code);
+enum v7_error v7_exec_file(struct v7 *, const char *path);
 enum v7_error v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
 
 struct v7_value *v7_bottom(struct v7 *);      // Return bottom of the stack

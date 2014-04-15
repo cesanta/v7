@@ -769,3 +769,26 @@ enum v7_error v7_exec(struct v7 *v7, const char *source_code) {
 
   return error_code;
 }
+
+enum v7_error v7_exec_file(struct v7 *v7, const char *path) {
+  FILE *fp;
+  char *p;
+  int file_size;
+  enum v7_error status = V7_INTERNAL_ERROR;
+
+  if ((fp = fopen(path, "r")) == NULL) {
+  } else if ((file_size = fseek(fp, 0, SEEK_END)) <= 0) {
+    fclose(fp);
+  } else if ((p = (char *) malloc(file_size + 1)) == NULL) {
+    fclose(fp);
+  } else {
+    rewind(fp);
+    fread(p, 1, file_size, fp);
+    fclose(fp);
+    p[file_size] = '\0';
+    status = v7_exec(v7, p);
+    free(p);
+  }
+
+  return status;
+}
