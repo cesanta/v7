@@ -30,7 +30,7 @@ struct v7 *v7_create(void);
 void v7_destroy(struct v7 **);
 
 // All functions declared below return these error codes:
-enum {
+enum v7_error {
   V7_OK, V7_SYNTAX_ERROR, V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR,
   V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW, V7_UNDEFINED_VARIABLE,
   V7_TYPE_MISMATCH
@@ -43,9 +43,11 @@ struct v7_str {
   int buf_size;   // Buffer size. Should be greater or equal to string length
 };
 
-enum { V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC };
+enum v7_type {
+  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC
+};
 struct v7_value {
-  unsigned char type;
+  enum v7_type type;
   union {
     struct v7_str str;
     double num;
@@ -55,8 +57,8 @@ struct v7_value {
   } v;
 };
 
-int v7_exec(struct v7 *, const char *source_code);
-int v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
+enum v7_error v7_exec(struct v7 *, const char *source_code);
+enum v7_error v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
 
 struct v7_value *v7_bottom(struct v7 *);      // Return bottom of the stack
 struct v7_value *v7_top(struct v7 *);         // Return top of the stack
