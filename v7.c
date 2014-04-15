@@ -202,7 +202,7 @@ static char *v7_strdup(const char *ptr, size_t len) {
   return p;
 }
 
-struct v7_value *v7_push(struct v7 *v7, unsigned char type) {
+struct v7_value *v7_push(struct v7 *v7, enum v7_type type) {
   struct v7_value *v = inc_stack(v7, 1);
   v->type = type;
   return v;
@@ -315,14 +315,17 @@ int v7_assign(struct v7 *v7) {
   return V7_OK;
 }
 
-int v7_define_func(struct v7 *v7, const char *name, v7_func_t c_func) {
-  int error_code = V7_OK;
+enum v7_error v7_define_func(struct v7 *v7, const char *name, v7_func_t f) {
+  enum v7_error error_code = V7_OK;
   struct var *var = NULL;
 
-  if ((error_code = setjmp(v7->exception_env)) != 0) return error_code;
+  if ((error_code = (enum v7_error) setjmp(v7->exception_env)) != 0) {
+    return error_code;
+  }
+
   if ((var = lookup(v7, name, strlen(name), 1)) != NULL) {
     var->value.type = V7_C_FUNC;
-    var->value.v.c_func = c_func;
+    var->value.v.c_func = f;
   }
 
   return error_code;
@@ -460,21 +463,13 @@ static void parse_function_definition(struct v7 *v7, int no_exec) {
   v7->no_exec = old_no_exec;
 }
 
-//  function_call  = identifier "(" { expression} ")"
+//  function_call  = expression "(" { expression} ")"
 static void parse_function_call(struct v7 *v7) {
-  struct var *var = lookup(v7, v7->tok, v7->tok_len, 0);
-  struct v7_value *v, *rv, *f = var == NULL ? NULL : &var->value;
-  int old_sp = v7_sp(v7);
+  //struct var *var = lookup(v7, v7->tok, v7->tok_len, 0);
+  struct v7_value *v = v7_top(v7) - 1;
 
   if (!v7->no_exec) {
-    EXPECT(v7, f != NULL, V7_UNDEFINED_VARIABLE);
-    EXPECT(v7, f->type == V7_FUNC || f->type == V7_C_FUNC, V7_TYPE_MISMATCH);
-
-    // Push return value, frame pointer, return address on stack
-    rv = v7_push(v7, V7_UNDEF);                // Return value
-    //current_scope(v7)->fp = v7_sp(v7);    // Frame pointer
-    //v7_push(v7, V7_NUM)->v.num = current_scope(v7)->fp;
-    //ra = v7_push(v7, V7_FUNC);            // Return address
+    EXPECT(v7, v->type == V7_FUNC || v->type == V7_C_FUNC, V7_TYPE_MISMATCH);
   }
 
   // Push arguments on stack
@@ -487,22 +482,24 @@ static void parse_function_call(struct v7 *v7) {
   if (v7->no_exec) return;
 
   // Perform the call
-  if (f == NULL || v7->no_exec) {
+  if (v == NULL || v7->no_exec) {
     // No action
-  } else if (f->type == V7_FUNC) {
-    v = v7_top(v7);
-    v7->cursor = f->v.func;
+  } else if (v->type == V7_FUNC) {
+    struct v7_value *val = v7_top(v7);
+    const char *src = v7->cursor;
+    v7->cursor = v->v.func;
+    v->type = V7_UNDEF;
     parse_function_definition(v7, 0);
-    DBG(("%d", v7_top(v7) - v));
-    if (v7_top(v7) > v) {
-      // Function body pushed some value on stack, use it as return value
-      *rv = *v;
+    v7->cursor = src;
+    // If function body pushed some value on stack, use it as return value
+    if (v7_top(v7) > val) {
+      *v = *val;
     }
-  } else if (f->type == V7_C_FUNC) {
+  } else if (v->type == V7_C_FUNC) {
     // C function, it must clean up the stack and push the result
-    f->v.c_func(v7, v7_sp(v7) - old_sp);
+    v->v.c_func(v7, v7_top(v7) - v);
   }
-  current_scope(v7)->sp = old_sp + 1;
+  current_scope(v7)->sp = v - v7_bottom(v7) + 1;
 }
 
 static void parse_string_literal(struct v7 *v7) {
@@ -536,13 +533,15 @@ static void parse_object_literal(struct v7 *v7) {
   match(v7, '}');
 }
 
-//  factor  =   number | string | function_call | "(" expression ")" |
+//  factor  =   number | string | "(" expression ")" |
 //              identifier | "this" | "null" | "true" | "false" |
 //              "{" object_literal "}" |
 //              "[" array_literal "]" |
-//              function_definition
+//              function_definition |
+//              function_call
 static void parse_factor2(struct v7 *v7) {
-  int sp = v7_sp(v7);
+  int old_sp = v7_sp(v7);
+
   if (*v7->cursor == '(') {
     match(v7, '(');
     parse_expression(v7);
@@ -562,8 +561,6 @@ static void parse_factor2(struct v7 *v7) {
       v7_push(v7, V7_BOOL)->v.num = 0;
     } else if (test_token(v7, "function", 8)) {
       parse_function_definition(v7, 1);
-    } else if (*v7->cursor == '(') {
-      parse_function_call(v7);
     } else if (!v7->no_exec) {
       struct var *var = lookup(v7, v7->tok, v7->tok_len, 0);
       inc_stack(v7, 1)[0] = var->value;
@@ -572,9 +569,13 @@ static void parse_factor2(struct v7 *v7) {
     parse_num(v7);
   }
 
+  if (*v7->cursor == '(') {
+    parse_function_call(v7);
+  }
+
   // Don't leave anything on stack if no execution flag is set
   if (v7->no_exec) {
-    current_scope(v7)->sp = sp;
+    current_scope(v7)->sp = old_sp;
   }
 }
 
@@ -745,14 +746,16 @@ static int parse_statement(struct v7 *v7) {
 }
 
 //  code        =   { statement }
-int v7_exec(struct v7 *v7, const char *source_code) {
-  int error_code = V7_OK;
+enum v7_error v7_exec(struct v7 *v7, const char *source_code) {
+  enum v7_error error_code = V7_OK;
 
   v7->source_code = v7->cursor = source_code;
   skip_whitespaces_and_comments(v7);
 
   // Setup exception environment. This is the exception catching point.
-  if ((error_code = setjmp(v7->exception_env)) != 0) return error_code;
+  if ((error_code = (enum v7_error) setjmp(v7->exception_env)) != 0) {
+    return error_code;
+  }
 
   // The following code may raise an exception and jump to the previous line,
   // returning non-zero from the setjmp() call

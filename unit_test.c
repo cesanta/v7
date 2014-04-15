@@ -72,7 +72,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "3 + 4") == V7_OK);
   ASSERT(v7_top(v7)[-1].v.num == 7);
 
-  ASSERT(v7_exec(v7, "2()") == V7_SYNTAX_ERROR);
+  ASSERT(v7_exec(v7, "2()") == V7_TYPE_MISMATCH);
   ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == V7_OK);
 
   ASSERT(v7_exec(v7, "( (5  ) );") == V7_OK);
@@ -142,6 +142,11 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 13);
+
+  ASSERT(v7_exec(v7, "(function() { return f() + 7; })()") == V7_OK);
+  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
+  ASSERT(v7_top(v7)[-1].v.num == 20);
 
 #ifdef V7_DEBUG
   dump_var(v7->scopes[0].vars, 0);
