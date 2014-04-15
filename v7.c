@@ -38,6 +38,7 @@
 #define DBG(x)
 #endif
 
+#define MAX_STRING_LITERAL_LENGTH 500
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #define EXPECT(v7, cond, code) do { if (!(cond)) \
   raise_exception((v7), (code)); } while (0)
@@ -139,16 +140,15 @@ static int v7_is_true(const struct v7_value *v) {
   return (v->type == V7_BOOL || v->type == V7_NUM) && v->v.num != 0;
 }
 
-#ifdef V7_DEBUG
 static const char *v7_to_str(const struct v7_value *v) {
   static char buf[100];
 
   switch (v->type) {
     case V7_NUM:
-      snprintf(buf, sizeof(buf), "(number) %.0lf", v->v.num);
+      snprintf(buf, sizeof(buf), "%.0lf", v->v.num);
       break;
     case V7_BOOL:
-      snprintf(buf, sizeof(buf), "(boolean) %s", v->v.num ? "true" : "false");
+      snprintf(buf, sizeof(buf), "%s", v->v.num ? "true" : "false");
       break;
     case V7_UNDEF:
       snprintf(buf, sizeof(buf), "%s", "undefined");
@@ -160,11 +160,10 @@ static const char *v7_to_str(const struct v7_value *v) {
         snprintf(buf, sizeof(buf), "%s", "(object)");
         break;
     case V7_STR:
-        snprintf(buf, sizeof(buf), "(string) [%.*s]",
-                 v->v.str.len, v->v.str.buf);
+        snprintf(buf, sizeof(buf), "%.*s", v->v.str.len, v->v.str.buf);
         break;
     case V7_FUNC:
-        snprintf(buf, sizeof(buf), "(function) [%s]", v->v.func);
+        snprintf(buf, sizeof(buf), "function%s", v->v.func);
         break;
     default:
       snprintf(buf, sizeof(buf), "??");
@@ -174,6 +173,7 @@ static const char *v7_to_str(const struct v7_value *v) {
   return buf;
 }
 
+#ifdef V7_DEBUG
 static void dump_var(const struct var *var, int depth) {
   const struct var *v;
   int i;
@@ -463,24 +463,7 @@ static void parse_function_definition(struct v7 *v7, int no_exec) {
   v7->no_exec = old_no_exec;
 }
 
-//  function_call  = expression "(" { expression} ")"
-static void parse_function_call(struct v7 *v7) {
-  //struct var *var = lookup(v7, v7->tok, v7->tok_len, 0);
-  struct v7_value *v = v7_top(v7) - 1;
-
-  if (!v7->no_exec) {
-    EXPECT(v7, v->type == V7_FUNC || v->type == V7_C_FUNC, V7_TYPE_MISMATCH);
-  }
-
-  // Push arguments on stack
-  match(v7, '(');
-  while (*v7->cursor != ')') {
-    parse_expression(v7);
-    test_and_skip_char(v7, ',');
-  }
-  match(v7, ')');
-  if (v7->no_exec) return;
-
+void v7_call(struct v7 *v7, struct v7_value *v) {
   // Perform the call
   if (v == NULL || v7->no_exec) {
     // No action
@@ -497,17 +480,61 @@ static void parse_function_call(struct v7 *v7) {
     }
   } else if (v->type == V7_C_FUNC) {
     // C function, it must clean up the stack and push the result
-    v->v.c_func(v7, v7_top(v7) - v);
+    v->v.c_func(v7, v7_top(v7) - v - 1);
   }
   current_scope(v7)->sp = v - v7_bottom(v7) + 1;
 }
 
+//  function_call  = expression "(" { expression} ")"
+static void parse_function_call(struct v7 *v7) {
+  //struct var *var = lookup(v7, v7->tok, v7->tok_len, 0);
+  struct v7_value *v = v7_top(v7) - 1;
+
+  if (!v7->no_exec) {
+    EXPECT(v7, v->type == V7_FUNC || v->type == V7_C_FUNC, V7_TYPE_MISMATCH);
+  }
+
+  // Push arguments on stack
+  match(v7, '(');
+  while (*v7->cursor != ')') {
+    parse_expression(v7);
+    test_and_skip_char(v7, ',');
+  }
+  match(v7, ')');
+
+  if (!v7->no_exec) {
+    v7_call(v7, v);
+  }
+}
+
 static void parse_string_literal(struct v7 *v7) {
+  char buf[MAX_STRING_LITERAL_LENGTH];
   const char *begin = v7->cursor++;
   struct v7_value *v = v7_push(v7, V7_STR);
-  while (*v7->cursor != *begin && *v7->cursor != '\0') v7->cursor++;
-  v->v.str.len = v->v.str.buf_size = v7->cursor - (begin + 1);
-  v->v.str.buf = v7_strdup(begin + 1, v->v.str.len);
+  size_t i = 0;
+
+  // Scan string literal into the buffer, handle escape sequences
+  while (*v7->cursor != *begin && *v7->cursor != '\0') {
+    switch (*v7->cursor) {
+      case '\\':
+        v7->cursor++;
+        switch (*v7->cursor) {
+          case 'n': buf[i++] = '\n'; break;
+          case 't': buf[i++] = '\t'; break;
+          case '\\': buf[i++] = '\\'; break;
+          default: if (*v7->cursor == *begin) buf[i++] = *begin; break;
+        }
+        break;
+      default:
+        buf[i++] = *v7->cursor;
+        break;
+    }
+    if (i >= sizeof(buf) - 1) i = sizeof(buf) - 1;
+    v7->cursor++;
+  }
+
+  v->v.str.len = v->v.str.buf_size = i;
+  v->v.str.buf = v7_strdup(buf, v->v.str.len);
   match(v7, *begin);
   skip_whitespaces_and_comments(v7);
 }
@@ -773,11 +800,11 @@ enum v7_error v7_exec(struct v7 *v7, const char *source_code) {
 enum v7_error v7_exec_file(struct v7 *v7, const char *path) {
   FILE *fp;
   char *p;
-  int file_size;
+  long file_size;
   enum v7_error status = V7_INTERNAL_ERROR;
 
   if ((fp = fopen(path, "r")) == NULL) {
-  } else if ((file_size = fseek(fp, 0, SEEK_END)) <= 0) {
+  } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
   } else if ((p = (char *) malloc(file_size + 1)) == NULL) {
     fclose(fp);
@@ -791,4 +818,15 @@ enum v7_error v7_exec_file(struct v7 *v7, const char *path) {
   }
 
   return status;
+}
+
+static void stdlib_print(struct v7 *v7, int num_args) {
+  struct v7_value *v = v7_top(v7) - 1;
+  while (num_args-- > 0) {
+    printf("%s", v7_to_str(v - num_args));
+  }
+}
+
+void v7_init_stdlib(struct v7 *v7) {
+  v7_define_func(v7, "print", stdlib_print);
 }

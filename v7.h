@@ -24,6 +24,7 @@
 extern "C" {
 #endif // __cplusplus
 
+struct v7;  // Opaque structure
 typedef void (*v7_func_t)(struct v7 *, int num_params);
 
 struct v7 *v7_create(void);
@@ -60,16 +61,12 @@ struct v7_value {
 enum v7_error v7_exec(struct v7 *, const char *source_code);
 enum v7_error v7_exec_file(struct v7 *, const char *path);
 enum v7_error v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
+void v7_call(struct v7 *v7, struct v7_value *v);
+void v7_init_stdlib(struct v7 *);
 
 struct v7_value *v7_bottom(struct v7 *);      // Return bottom of the stack
 struct v7_value *v7_top(struct v7 *);         // Return top of the stack
-
-struct v7_value *v7_push_null(struct v7 *);
-struct v7_value *v7_push_undefined(struct v7 *);
-struct v7_value *v7_push_double(struct v7 *, double val);
-struct v7_value *v7_push_boolean(struct v7 *, int val);
-struct v7_value *v7_push_string(struct v7 *, const char *str, int len);
-struct v7_value *v7_push_object(struct v7 *);
+struct v7_value *v7_push(struct v7 *v7, enum v7_type type);
 
 #ifdef __cplusplus
 }
