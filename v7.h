@@ -24,18 +24,22 @@
 extern "C" {
 #endif // __cplusplus
 
-struct v7;  // Opaque structure
-typedef void (*v7_func_t)(struct v7 *, int num_params);
+enum v7_type {
+  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC,
+  V7_C_FUNC, V7_REF
+};
 
-struct v7 *v7_create(void);
-void v7_destroy(struct v7 **);
-
-// All functions declared below return these error codes:
-enum v7_error {
+enum v7_err {
   V7_OK, V7_SYNTAX_ERROR, V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR,
   V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW, V7_UNDEFINED_VARIABLE,
   V7_TYPE_MISMATCH
 };
+
+struct v7;
+struct v7_val;
+struct v7_map;
+typedef void (*v7_func_t)(struct v7 *, struct v7_val *result,
+                          struct v7_val *params, int num_params);
 
 // A string.
 struct v7_str {
@@ -44,29 +48,40 @@ struct v7_str {
   int buf_size;   // Buffer size. Should be greater or equal to string length
 };
 
-enum v7_type {
-  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC
-};
-struct v7_value {
-  enum v7_type type;
-  union {
-    struct v7_str str;
-    double num;
-    v7_func_t c_func;
-    char *func;
-    void *obj;
-  } v;
+union v7_v {
+  struct v7_str str;
+  double num;
+  v7_func_t c_func;
+  char *func;
+  struct v7_map *map;
 };
 
-enum v7_error v7_exec(struct v7 *, const char *source_code);
-enum v7_error v7_exec_file(struct v7 *, const char *path);
-enum v7_error v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
-void v7_call(struct v7 *v7, struct v7_value *v);
+struct v7_val {
+  enum v7_type type;
+  union v7_v v;
+};
+
+// Key/value pair. "struct v7_map *" is a key/val list head, represents object
+struct v7_map {
+  struct v7_map *next;
+  struct v7_val key;
+  struct v7_val val;
+};
+
+struct v7 *v7_create(void);
+void v7_destroy(struct v7 **);
+
+enum v7_err v7_exec(struct v7 *, const char *source_code);
+enum v7_err v7_exec_file(struct v7 *, const char *path);
+enum v7_err v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
+enum v7_err v7_assign(struct v7 *v7, struct v7_val *obj, struct v7_val *key,
+                      struct v7_val *val);
+void v7_call(struct v7 *v7, struct v7_val *function);
 void v7_init_stdlib(struct v7 *);
 
-struct v7_value *v7_bottom(struct v7 *);      // Return bottom of the stack
-struct v7_value *v7_top(struct v7 *);         // Return top of the stack
-struct v7_value *v7_push(struct v7 *v7, enum v7_type type);
+struct v7_val *v7_bottom(struct v7 *);    // Get bottom of the stack
+struct v7_val *v7_top(struct v7 *);       // Get top of the stack
+struct v7_val *v7_push(struct v7 *v7, enum v7_type type);
 
 #ifdef __cplusplus
 }
