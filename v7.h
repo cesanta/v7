@@ -77,6 +77,7 @@ enum v7_err v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
 enum v7_err v7_assign(struct v7 *v7, struct v7_val *obj, struct v7_val *key,
                       struct v7_val *val);
 void v7_call(struct v7 *v7, struct v7_val *function);
+int v7_sp(struct v7 *v7);
 void v7_init_stdlib(struct v7 *);
 
 struct v7_val *v7_bottom(struct v7 *);    // Get bottom of the stack

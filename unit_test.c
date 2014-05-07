@@ -15,7 +15,12 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
-#include "v7.c"
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "v7.h"
 
 #define FAIL(str, line) do {                    \
   printf("Fail on line %d: [%s]\n", line, str); \
