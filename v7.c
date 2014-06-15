@@ -235,8 +235,6 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
 }
 
 static struct v7_val *vlookup(struct v7_map *v, const struct v7_val *key) {
-  char buf[200];
-  DBG(("%s %p [%s]", __func__, v, to_string(key, buf, sizeof(buf))));
   for (; v != NULL; v = v->next) if (cmp(&v->key, key)) return &v->val;
   return NULL;
 }
@@ -446,10 +444,7 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
   while (*v7->cursor != ')') {
     parse_identifier(v7);
     if (!v7->no_exec && i < num_params) {
-      char k[500], buf[500];
       struct v7_val key = str_to_val((char *) v7->tok, v7->tok_len);
-      DBG(("Assigning: [%s] => [%s]\n", to_string(&key, k, sizeof(k)),
-           to_string(&v[i + 1], buf, sizeof(buf))));
       v7_assign(&v7->scopes[v7->current_scope], &key, &v[i + 1]);
     }
     i++;

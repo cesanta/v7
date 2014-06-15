@@ -168,8 +168,11 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 20);
+  
+  ASSERT(v7_exec(v7, "var a = 1; if (a == 1) { a = 2; }; a;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
+  ASSERT(v7_top(v7)[-1].v.num == 2);
 
-  //dump_var(&v7->scopes[0].ns, 0);
   v7_exec(v7, "print(__ns__, '\n');");
   v7_destroy(&v7);
 
