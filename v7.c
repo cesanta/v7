@@ -55,7 +55,7 @@ struct v7 {
   int no_exec;              // No-execute flag. For parsing function defs
   const char *tok;          // Parsed terminal token (ident, number, string)
   int tok_len;              // Length of the parsed terminal token
-  struct v7_val *cur_obj;
+  struct v7_val *cur_obj;   // Current namespace object ('x=1; x.y=1;', etc)
 
   jmp_buf exception_env;    // Exception environment
 };
