@@ -121,7 +121,7 @@ static struct v7_val *inc_stack(struct v7 *v7, int incr) {
   return &v7->stack[v7->sp - incr];
 }
 
-struct v7_val *v7_bottom(struct v7 *v7) {
+struct v7_val *v7_stk(struct v7 *v7) {
   return v7->stack;
 }
 
@@ -130,7 +130,7 @@ struct v7_val *v7_top(struct v7 *v7) {
 }
 
 int v7_sp(struct v7 *v7) {
-  return v7_top(v7) - v7_bottom(v7);
+  return v7_top(v7) - v7_stk(v7);
 }
 
 static int v7_is_true(const struct v7_val *v) {
@@ -235,6 +235,8 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
 }
 
 static struct v7_val *vlookup(struct v7_map *v, const struct v7_val *key) {
+  char buf[200];
+  DBG(("%s %p [%s]", __func__, v, to_string(key, buf, sizeof(buf))));
   for (; v != NULL; v = v->next) if (cmp(&v->key, key)) return &v->val;
   return NULL;
 }
@@ -251,25 +253,29 @@ static struct v7_val *vinsert(struct v7_map **h, const struct v7_val *key) {
   return &var->val;
 }
 
-static struct v7_val *lookup(struct v7 *v7, const char *name, size_t len,
-                             int allocate) {
-  struct v7_val key, *val = NULL; //, *ns = &current_scope(v7)->ns;
+static struct v7_val *find(struct v7 *v7, const struct v7_val *key, int alloc) {
+  struct v7_val *val = NULL;
   int i;
 
   if (v7->no_exec) return NULL;
 
   // Search for the name, traversing scopes up to the top level scope
-  key = str_to_val((char *) name, len);
   for (i = v7->current_scope; i >= 0; i--) {
-    if ((val = vlookup(v7->scopes[i].v.map, &key)) != NULL) return val;
+    if ((val = vlookup(v7->scopes[i].v.map, key)) != NULL) return val;
   }
 
   // Not found, create a new variable
-  if (allocate) {
-    val = vinsert(&v7->scopes[v7->current_scope].v.map, &key);
+  if (alloc) {
+    val = vinsert(&v7->scopes[v7->current_scope].v.map, key);
   }
 
   return val;
+}
+
+static struct v7_val *lookup(struct v7 *v7, const char *name, size_t len,
+                             int allocate) {
+  struct v7_val key = str_to_val((char *) name, len);
+  return find(v7, &key, allocate);
 }
 
 static void free_value(struct v7_val *v) {
@@ -435,6 +441,7 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
     v7->current_scope++;
     EXPECT(v7, v7->current_scope < (int) ARRAY_SIZE(v7->scopes),
            V7_RECURSION_TOO_DEEP);
+    printf("XXX [%s]\n", src);
   }
 
   while (*v7->cursor != ')') {
@@ -451,10 +458,14 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
   }
   match(v7, ')');
   match(v7, '{');
+  printf("YY [%s] [%s]\n", src, v7->cursor);
+  
   while (*v7->cursor != '}') {
-    if (v7->sp > old_sp) v7->sp = old_sp;
-    if (parse_statement(v7)) break;
+    v7->sp = old_sp;                // Clean up the stack from prev stmt
+    if (parse_statement(v7)) break; // Leave statement value on stack
   }
+  printf("ZZ [%s] [%s]\n", src, v7->cursor);
+  
   if (v7->no_exec) {
     v7_push(v7, V7_FUNC)->v.func = v7_strdup(src, (v7->cursor + 1) - src);
   }
@@ -467,6 +478,7 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
   }
 
   v7->no_exec = old_no_exec;
+  //v7->sp = old_sp;
 }
 
 void v7_call(struct v7 *v7, struct v7_val *v, int num_params) {
@@ -474,7 +486,6 @@ void v7_call(struct v7 *v7, struct v7_val *v, int num_params) {
   if (v->type == V7_FUNC) {
     struct v7_val *val = v7_top(v7);
     const char *src = v7->cursor;
-    printf("Calling [%s]\n", v->v.func);
 
     // Return value will substitute function objest on a stack
     v->type = V7_UNDEF;       // Set return value to 'undefined'
@@ -494,7 +505,6 @@ void v7_call(struct v7 *v7, struct v7_val *v, int num_params) {
 
 //  function_call  = expression "(" { expression} ")"
 static void parse_function_call(struct v7 *v7) {
-  //struct v7_obj *var = lookup(v7, v7->tok, v7->tok_len, 0);
   struct v7_val *v = v7_top(v7) - 1;
   int num_params = 0;
 
@@ -583,7 +593,8 @@ static void parse_variable(struct v7 *v7) {
   if (v7->tok_len == 6 && memcmp(v7->tok, "__ns__", 6) == 0) {
     ns = &v7->scopes[v7->current_scope];
   } else {
-    ns = vlookup(v7->scopes[v7->current_scope].v.map, &key);
+    //ns = vlookup(v7->scopes[v7->current_scope].v.map, &key);
+    ns = find(v7, &key, 0);
   }
 
   while (*v7->cursor == '.' || *v7->cursor == '[') {
@@ -811,8 +822,6 @@ static int parse_statement(struct v7 *v7) {
       is_return_statement = 1;
     } else if (test_token(v7, "if", 2)) {
       parse_if_statement(v7);
-    //} else if (*v7->cursor == '=') {
-    //  parse_assignment(v7);
     } else {
       v7->cursor = v7->tok;
       parse_expression(v7);
