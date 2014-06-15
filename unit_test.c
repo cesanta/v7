@@ -140,8 +140,12 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1].type == V7_FUNC);
   ASSERT(strcmp(v7_top(v7)[-1].v.func, "(x, y) { }") == 0);
 
-  ASSERT(v7_exec(v7, "var f1 = function(x, y) { return 1 + 3; };") == V7_OK);
+  ASSERT(v7_exec(v7, "var f1 = function(x, y) { return x * y; };") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_FUNC);
+
+  v7_exec(v7, "print(__ns__, '\n');");
+  ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].v.num == 49);
 
   ASSERT(v7_exec(v7, "if (0) f1 = 2; ") == V7_OK);
   ASSERT(v7_exec(v7, "if (5) { f1 = 3; f2 = function(){}; } ") == V7_OK);

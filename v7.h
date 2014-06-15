@@ -32,7 +32,7 @@ enum v7_type {
 enum v7_err {
   V7_OK, V7_SYNTAX_ERROR, V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR,
   V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW, V7_UNDEFINED_VARIABLE,
-  V7_TYPE_MISMATCH
+  V7_TYPE_MISMATCH, V7_RECURSION_TOO_DEEP
 };
 
 struct v7;
@@ -75,7 +75,7 @@ enum v7_err v7_exec(struct v7 *, const char *source_code);
 enum v7_err v7_exec_file(struct v7 *, const char *path);
 enum v7_err v7_define_func(struct v7 *, const char *name, v7_func_t c_func);
 enum v7_err v7_assign(struct v7_val *obj, struct v7_val *k, struct v7_val *v);
-void v7_call(struct v7 *v7, struct v7_val *function);
+void v7_call(struct v7 *v7, struct v7_val *function, int num_params);
 int v7_sp(struct v7 *v7);
 void v7_init_stdlib(struct v7 *);
 
