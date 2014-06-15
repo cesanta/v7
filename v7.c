@@ -109,8 +109,6 @@ void v7_destroy(struct v7 **v7) {
 }
 
 static struct v7_val *inc_stack(struct v7 *v7, int incr) {
-  //struct scope *scope = current_scope(v7);
-
   v7->sp += incr;
   if (v7->sp >= (int) ARRAY_SIZE(v7->stack)) {
     raise_exception(v7, V7_STACK_OVERFLOW);
@@ -584,7 +582,6 @@ static void parse_variable(struct v7 *v7) {
   if (v7->tok_len == 6 && memcmp(v7->tok, "__ns__", 6) == 0) {
     ns = &v7->scopes[v7->current_scope];
   } else {
-    //ns = vlookup(v7->scopes[v7->current_scope].v.map, &key);
     ns = find(v7, &key, 0);
   }
 
@@ -606,8 +603,6 @@ static void parse_variable(struct v7 *v7) {
       parse_expression(v7);
       match(v7, ']');
       if (!v7->no_exec) {
-        //EXPECT(v7, cur_obj == &v7_top(v7)[-2], V7_INTERNAL_ERROR);
-        //EXPECT(v7, val[1].type == V7_STR, V7_TYPE_MISMATCH);
         ns = v7->cur_obj = vlookup(ns->v.map, v7_top(v7) - 1);
         inc_stack(v7, -1);
       }
@@ -695,11 +690,6 @@ static void parse_expression(struct v7 *v7) {
 #define DECSTK(v7)   if (!v7->no_exec) { v7_top(v7)[-2] = v7_top(v7)[-1]; \
                                           inc_stack(v7, -1); }
 
-  // Push namespace object on stack for potential assignment
-  if (!v7->no_exec) {
-    //v7_push(v7, V7_REF)->v.ref = &current_scope(v7)->ns;
-  }
-
   parse_term(v7);
   cur_obj = v7->cur_obj;
   key = str_to_val((char *) v7->tok, v7->tok_len);
@@ -733,33 +723,9 @@ static void parse_expression(struct v7 *v7) {
     v7->no_exec = old_no_exec;
   }
 
-  DBG(("%d [%s] [%.*s]", v7_sp(v7),
-    v7_to_str(v7_top(v7) - 1),
-    (int) (v7->cursor - stmt_str), stmt_str));
+  DBG(("%d [%s] [%.*s]", v7_sp(v7), v7_to_str(v7_top(v7) - 1),
+       (int) (v7->cursor - stmt_str), stmt_str));
 }
-
-#if 0
-//  assignment  =   identifier "=" expression
-static void parse_assignment(struct v7 *v7) {
-  struct v7_val name; //= { V7_STR };
-  struct v7_obj *var = lookup(v7, v7->tok, v7->tok_len, 1);
-  // NOTE(lsm): Important to lookup just after parse_identifier()
-  name.type = V7_STR;
-  name.v.str.buf = (char *) v7->tok;
-  name.v.str.len = name.v.str.buf_size = v7->tok_len;
-
-  match(v7, '=');
-  parse_expression(v7);
-
-  // Do the assignment: get the value from the top of the stack,
-  // where parse_expression() should have left calculated value.
-  if (!v7->no_exec) {
-    //v7_assign(v7, NULL, );
-    EXPECT(v7, current_scope(v7)->sp > 0, V7_INTERNAL_ERROR);
-    var->val = v7_top(v7)[-1];
-  }
-}
-#endif
 
 //  declaration =   "var" identifier [ "=" expression ] [ "," { i [ "=" e ] } ]
 static void parse_declaration(struct v7 *v7) {
