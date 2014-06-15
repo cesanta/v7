@@ -441,7 +441,6 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
     v7->current_scope++;
     EXPECT(v7, v7->current_scope < (int) ARRAY_SIZE(v7->scopes),
            V7_RECURSION_TOO_DEEP);
-    printf("XXX [%s]\n", src);
   }
 
   while (*v7->cursor != ')') {
@@ -449,8 +448,8 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
     if (!v7->no_exec && i < num_params) {
       char k[500], buf[500];
       struct v7_val key = str_to_val((char *) v7->tok, v7->tok_len);
-      printf("Assigning: [%s] => [%s]\n", to_string(&key, k, sizeof(k)),
-               to_string(&v[i + 1], buf, sizeof(buf)));
+      DBG(("Assigning: [%s] => [%s]\n", to_string(&key, k, sizeof(k)),
+           to_string(&v[i + 1], buf, sizeof(buf))));
       v7_assign(&v7->scopes[v7->current_scope], &key, &v[i + 1]);
     }
     i++;
@@ -458,13 +457,11 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
   }
   match(v7, ')');
   match(v7, '{');
-  printf("YY [%s] [%s]\n", src, v7->cursor);
   
   while (*v7->cursor != '}') {
     v7->sp = old_sp;                // Clean up the stack from prev stmt
     if (parse_statement(v7)) break; // Leave statement value on stack
   }
-  printf("ZZ [%s] [%s]\n", src, v7->cursor);
   
   if (v7->no_exec) {
     v7_push(v7, V7_FUNC)->v.func = v7_strdup(src, (v7->cursor + 1) - src);
@@ -478,7 +475,6 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
   }
 
   v7->no_exec = old_no_exec;
-  //v7->sp = old_sp;
 }
 
 void v7_call(struct v7 *v7, struct v7_val *v, int num_params) {
@@ -724,13 +720,9 @@ static void parse_expression(struct v7 *v7) {
   if (*v7->cursor == '=') {
     match(v7, '=');
     parse_expression(v7);
-    //printf("%s %p %p\n", __func__, &current_scope(v7)->ns, v7_top(v7)[-3].v.ref);
     v7_assign(cur_obj, &key, v7_top(v7) - 1);
     DECSTK(v7);
   }
-
-  // Remove namespace object from the stack, leave result only
-  //DECSTK(v7);
 
   // Parse ternary operator
   if (*v7->cursor == '?') {
