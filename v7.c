@@ -808,7 +808,7 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
 
   while (*v7->cursor != '\0') {
     v7->sp = 0;           // Reset stack on each statement
-    parse_statement(v7);
+    parse_statement(v7);  // Leave the result of last expression on stack
   }
 
   return error_code;
