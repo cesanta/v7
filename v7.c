@@ -196,6 +196,7 @@ static char *v7_strdup(const char *ptr, size_t len) {
 struct v7_val *v7_push(struct v7 *v7, enum v7_type type) {
   struct v7_val *v = inc_stack(v7, 1);
   v->type = type;
+  v->v.map = NULL;
   return v;
 }
 
@@ -279,26 +280,51 @@ static void free_value(struct v7_val *v) {
   v->type = V7_UNDEF;
 }
 
-// Stack: <object> <name_str> <value>
-enum v7_err v7_assign(struct v7_val *obj, struct v7_val *key,
-                      struct v7_val *val) {
-  struct v7_val *v;
+struct v7_val *v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v) {
+  struct v7_val *val = NULL;
 
-  if (obj == NULL || obj->type != V7_OBJ) return V7_TYPE_MISMATCH;
+  if (obj == NULL || obj->type != V7_OBJ) return val;
 
   // Find attribute inside object
-  if ((v = vlookup(obj->v.map, key)) == NULL) {
-    v = vinsert(&obj->v.map, key);
+  if ((val = vlookup(obj->v.map, k)) == NULL) {
+    val = vinsert(&obj->v.map, k);
   }
 
-  if (v == NULL) return V7_OUT_OF_MEMORY;
-  free_value(v);  // Deallocate previously held value
-  *v = *val;      // Assign new value
+  if (val != NULL) {
+    free_value(val);  // Deallocate previously held value
+    *val = *v;      // Assign new value
+  }
 
-  return V7_OK;
+  return val;
 }
 
-enum v7_err v7_define_func(struct v7 *v7, const char *name, v7_func_t f) {
+struct v7_val *v7_set_num(struct v7_val *obj, const char *key, double num) {
+  struct v7_val k, v;
+  k = str_to_val((char *) key, strlen(key));
+  v.type = V7_NUM;
+  v.v.num = num;
+  return v7_set(obj, &k, &v);
+}
+
+struct v7_val *v7_set_str(struct v7_val *obj, const char *key,
+                          const char *str, int len) {
+  struct v7_val k, v;
+  k = str_to_val((char *) key, strlen(key));
+  v.type = V7_STR;
+  v.v.str.len = len;
+  v.v.str.buf = (char *) str;
+  return v7_set(obj, &k, &v);
+}
+
+struct v7_val *v7_set_obj(struct v7_val *obj, const char *key) {
+  struct v7_val k, v;
+  k = str_to_val((char *) key, strlen(key));
+  v.type = V7_OBJ;
+  v.v.map = NULL;
+  return v7_set(obj, &k, &v);
+}
+
+enum v7_err v7_set_func(struct v7 *v7, const char *name, v7_func_t f) {
   enum v7_err error_code = V7_OK;
   struct v7_val *val = NULL;
 
@@ -443,7 +469,7 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
     parse_identifier(v7);
     if (!v7->no_exec && i < num_params) {
       struct v7_val key = str_to_val((char *) v7->tok, v7->tok_len);
-      v7_assign(&v7->scopes[v7->current_scope], &key, &v[i + 1]);
+      v7_set(&v7->scopes[v7->current_scope], &key, &v[i + 1]);
     }
     i++;
     if (!test_and_skip_char(v7, ',')) break;
@@ -566,7 +592,7 @@ static void parse_object_literal(struct v7 *v7) {
     if (!v7->no_exec) {
       v = v7_top(v7) - 3;
       EXPECT(v7, v->type == V7_OBJ, V7_TYPE_MISMATCH);
-      v7_assign(v, v + 1, v + 2);
+      v7_set(v, v + 1, v + 2);
       inc_stack(v7, -2);
     }
     test_and_skip_char(v7, ',');
@@ -608,7 +634,6 @@ static void parse_variable(struct v7 *v7) {
       }
     }
   }
-  //v7->cur_obj = ns;
 
   if (!v7->no_exec) {
     if (ns != NULL) {
@@ -676,8 +701,39 @@ static void parse_term(struct v7 *v7) {
   }
 }
 
+enum { OP_XX, OP_GT, OP_LT, OP_GE, OP_LE, OP_EQ };
+
+static int is_logical_op(const char *s) {
+  switch (s[0]) {
+    case '>': return s[1] == '=' ? OP_GE : OP_GT;
+    case '<': return s[1] == '=' ? OP_LE : OP_LT;
+    case '=': return s[1] == '=' ? OP_EQ : OP_XX;
+    default: return OP_XX;
+  }
+}
+
+static void do_logical_op(struct v7 *v7, int op) {
+  struct v7_val *v = v7_top(v7) - 2;
+
+  if (v7->no_exec) return;
+  if (v->type != V7_NUM || v[1].type != V7_NUM) {
+    raise_exception(v7, V7_TYPE_MISMATCH);
+  }
+
+  switch (op) {
+    case OP_GT: v[0].v.num = v[0].v.num >  v[1].v.num ? 1 : 0; break;
+    case OP_GE: v[0].v.num = v[0].v.num >= v[1].v.num ? 1 : 0; break;
+    case OP_LT: v[0].v.num = v[0].v.num <  v[1].v.num ? 1 : 0; break;
+    case OP_LE: v[0].v.num = v[0].v.num <= v[1].v.num ? 1 : 0; break;
+    case OP_EQ: v[0].v.num = v[0].v.num == v[1].v.num ? 1 : 0; break;
+  }
+
+  inc_stack(v7, -1);
+}
+
 //  expression  =   term { add_op term } |
 //                  expression "?" expression ":" expression
+//                  expression logical_op expression
 //                  variable "=" expression
 //  add_op      =   "+" | "-"
 static void parse_expression(struct v7 *v7) {
@@ -685,6 +741,7 @@ static void parse_expression(struct v7 *v7) {
   const char *stmt_str = v7->cursor;
 #endif
   struct v7_val key, *cur_obj;
+  int op;
 
   v7->cur_obj = &v7->scopes[v7->current_scope];
 #define DECSTK(v7)   if (!v7->no_exec) { v7_top(v7)[-2] = v7_top(v7)[-1]; \
@@ -701,11 +758,18 @@ static void parse_expression(struct v7 *v7) {
     do_arithmetic_op(v7, ch);
   }
 
+  if ((op = is_logical_op(v7->cursor)) > OP_XX) {
+    v7->cursor += op == OP_LT || op == OP_GT ? 1 : 2;
+    skip_whitespaces_and_comments(v7);
+    parse_expression(v7);
+    do_logical_op(v7, op);
+  }
+
   // Parse assignment
   if (*v7->cursor == '=') {
     match(v7, '=');
     parse_expression(v7);
-    v7_assign(cur_obj, &key, v7_top(v7) - 1);
+    v7_set(cur_obj, &key, v7_top(v7) - 1);
     DECSTK(v7);
   }
 
@@ -848,5 +912,5 @@ static void stdlib_print(struct v7 *v7, struct v7_val *result,
 }
 
 void v7_init_stdlib(struct v7 *v7) {
-  v7_define_func(v7, "print", stdlib_print);
+  v7_set_func(v7, "print", stdlib_print);
 }
