@@ -77,7 +77,7 @@ struct v7_val *v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v);
 struct v7_val *v7_set_num(struct v7_val *, const char *k, double num);
 struct v7_val *v7_set_str(struct v7_val *, const char *k, const char *, int);
 struct v7_val *v7_set_obj(struct v7_val *obj, const char *key);
-enum v7_err v7_set_func(struct v7 *, const char *name, v7_func_t c_func);
+struct v7_val *v7_set_func(struct v7 *, const char *name, v7_func_t c_func);
 
 void v7_call(struct v7 *v7, struct v7_val *function, int num_params);
 

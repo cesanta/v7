@@ -324,20 +324,16 @@ struct v7_val *v7_set_obj(struct v7_val *obj, const char *key) {
   return v7_set(obj, &k, &v);
 }
 
-enum v7_err v7_set_func(struct v7 *v7, const char *name, v7_func_t f) {
+struct v7_val *v7_set_func(struct v7 *v7, const char *name, v7_func_t f) {
   enum v7_err error_code = V7_OK;
   struct v7_val *val = NULL;
-
-  if ((error_code = (enum v7_err) setjmp(v7->exception_env)) != 0) {
-    return error_code;
-  }
 
   if ((val = lookup(v7, name, strlen(name), 1)) != NULL) {
     val->type = V7_C_FUNC;
     val->v.c_func = f;
   }
 
-  return error_code;
+  return val;
 }
 
 static int is_alpha(int ch) {
