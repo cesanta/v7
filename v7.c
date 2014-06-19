@@ -49,7 +49,7 @@ struct v7 {
   struct v7_val scopes[20]; // Namespace objects (scopes)
   int current_scope;        // Pointer to the current scope
 
-  const char *source_code;  // Pointer to the source code string
+  const char *source_code;  // Pointer to the source codeing
   const char *cursor;       // Current parsing position
   int line_no;              // Line number
   int no_exec;              // No-execute flag. For parsing function defs
@@ -84,17 +84,22 @@ struct v7 *v7_create(void) {
 }
 
 static void free_val(struct v7_val *v) {
-  DBG(("%s %p", __func__, v));
   if (v->type == V7_OBJ) {
     struct v7_map *p, *tmp;
     for (p = v->v.map; p != NULL; p = tmp) {
+      DBG(("%p", v));
       tmp = p->next;
       free_val(&p->key);
       free_val(&p->val);
       free(p);
     }
-    v->v.map = NULL;
+  } else if (v->type == V7_STR) {
+    free(v->v.str.buf);
+  } else if (v->type == V7_FUNC) {
+    free(v->v.func);
   }
+  memset(v, 0, sizeof(*v));
+  v->type = V7_UNDEF;
 }
 
 void v7_destroy(struct v7 **v7) {
@@ -108,7 +113,18 @@ void v7_destroy(struct v7 **v7) {
   }
 }
 
+struct v7_val *v7_get_root_namespace(struct v7 *v7) {
+  return &v7->scopes[0];
+}
+
 static struct v7_val *inc_stack(struct v7 *v7, int incr) {
+  int i;
+
+  // Free values pushed on stack (like string literals and functions)
+  for (i = 0; incr < 0 && i > -incr; i++) {
+    free_val(v7->stack + (v7->sp + incr) + i - 1);
+  }
+  
   v7->sp += incr;
   if (v7->sp >= (int) ARRAY_SIZE(v7->stack)) {
     raise_exception(v7, V7_STACK_OVERFLOW);
@@ -176,7 +192,7 @@ static const char *to_string(const struct v7_val *v, char *buf, size_t bsiz) {
       snprintf(buf, bsiz, "??");
       break;
   }
-
+  buf[bsiz - 1] = '\0';  // Protect from snprintf overflow
   return buf;
 }
 
@@ -218,12 +234,16 @@ static void do_arithmetic_op(struct v7 *v7, int op) {
   inc_stack(v7, -1);
 }
 
-static struct v7_val str_to_val(char *buf, size_t len) {
+static struct v7_val str_to_val(const char *buf, size_t len) {
   struct v7_val v;
   v.type = V7_STR;
-  v.v.str.buf = buf;
+  v.v.str.buf = (char *) buf;
   v.v.str.len = v.v.str.buf_size = len;
   return v;
+}
+
+struct v7_val v7_str_to_val(const char *buf) {
+  return str_to_val((char *) buf, strlen(buf));
 }
 
 static int cmp(const struct v7_val *a, const struct v7_val *b) {
@@ -233,9 +253,22 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
     memcmp(a->v.str.buf, b->v.str.buf, a->v.str.len) == 0;
 }
 
-static struct v7_val *vlookup(struct v7_map *v, const struct v7_val *key) {
-  for (; v != NULL; v = v->next) if (cmp(&v->key, key)) return &v->val;
+struct v7_val *v7_get(struct v7_val *obj, const struct v7_val *key) {
+  struct v7_map *m;
+  if (obj == NULL || obj->type != V7_OBJ) return NULL;
+  for (m = obj->v.map; m != NULL; m = m->next) {
+    if (cmp(&m->key, key)) return &m->val;
+  }
   return NULL;
+}
+
+static void v7_copy(const struct v7_val *src, struct v7_val *dst) {
+  *dst = *src;
+  if (src->type == V7_STR) {
+    dst->v.str.buf = v7_strdup(src->v.str.buf, src->v.str.len);
+  } else if (src->type == V7_FUNC) {
+    dst->v.func = v7_strdup(src->v.func, strlen(src->v.func));
+  }
 }
 
 static struct v7_val *vinsert(struct v7_map **h, const struct v7_val *key) {
@@ -243,7 +276,7 @@ static struct v7_val *vinsert(struct v7_map **h, const struct v7_val *key) {
 
   if (var == NULL) return NULL;
   var->val.type = V7_UNDEF;
-  var->key = *key;
+  v7_copy(key, &var->key);
   var->next = *h;
   *h = var;
 
@@ -258,7 +291,7 @@ static struct v7_val *find(struct v7 *v7, const struct v7_val *key, int alloc) {
 
   // Search for the name, traversing scopes up to the top level scope
   for (i = v7->current_scope; i >= 0; i--) {
-    if ((val = vlookup(v7->scopes[i].v.map, key)) != NULL) return val;
+    if ((val = v7_get(&v7->scopes[i], key)) != NULL) return val;
   }
 
   // Not found, create a new variable
@@ -271,13 +304,9 @@ static struct v7_val *find(struct v7 *v7, const struct v7_val *key, int alloc) {
 
 static struct v7_val *lookup(struct v7 *v7, const char *name, size_t len,
                              int allocate) {
-  struct v7_val key = str_to_val((char *) name, len);
-  return find(v7, &key, allocate);
-}
-
-static void free_value(struct v7_val *v) {
-  // TODO(lsm): free strings, functions, objects
-  v->type = V7_UNDEF;
+  struct v7_val key = str_to_val(name, len);
+  struct v7_val *val = find(v7, &key, allocate);
+  return val;
 }
 
 struct v7_val *v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v) {
@@ -286,12 +315,12 @@ struct v7_val *v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v) {
   if (obj == NULL || obj->type != V7_OBJ) return val;
 
   // Find attribute inside object
-  if ((val = vlookup(obj->v.map, k)) == NULL) {
+  if ((val = v7_get(obj, k)) == NULL) {
     val = vinsert(&obj->v.map, k);
   }
 
   if (val != NULL) {
-    free_value(val);  // Deallocate previously held value
+    free_val(val);  // Deallocate previously held value
     *val = *v;      // Assign new value
   }
 
@@ -311,8 +340,8 @@ struct v7_val *v7_set_str(struct v7_val *obj, const char *key,
   struct v7_val k, v;
   k = str_to_val((char *) key, strlen(key));
   v.type = V7_STR;
-  v.v.str.len = len;
-  v.v.str.buf = (char *) str;
+  v.v.str.len = v.v.str.buf_size = len;
+  v.v.str.buf = v7_strdup(str, len);
   return v7_set(obj, &k, &v);
 }
 
@@ -324,16 +353,13 @@ struct v7_val *v7_set_obj(struct v7_val *obj, const char *key) {
   return v7_set(obj, &k, &v);
 }
 
-struct v7_val *v7_set_func(struct v7 *v7, const char *name, v7_func_t f) {
-  enum v7_err error_code = V7_OK;
-  struct v7_val *val = NULL;
-
-  if ((val = lookup(v7, name, strlen(name), 1)) != NULL) {
-    val->type = V7_C_FUNC;
-    val->v.c_func = f;
-  }
-
-  return val;
+struct v7_val *v7_set_func(struct v7_val *obj, const char *key, v7_func_t f) {
+  //struct v7_val *val = NULL;
+  struct v7_val k, v;
+  k = str_to_val((char *) key, strlen(key));
+  v.type = V7_C_FUNC;
+  v.v.c_func = f;
+  return v7_set(obj, &k, &v);
 }
 
 static int is_alpha(int ch) {
@@ -353,15 +379,20 @@ static int is_space(int ch) {
 }
 
 static void skip_whitespaces_and_comments(struct v7 *v7) {
-  const char *s = v7->cursor;
-  if (is_space(*s)) {
+  const char *s = v7->cursor, *p = NULL;
+  while (s != p && *s != '\0' && (is_space(*s) || *s == '/')) {
+    p = s;
     while (*s != '\0' && is_space(*s)) {
       if (*s == '\n') v7->line_no++;
       s++;
     }
     if (s[0] == '/' && s[1] == '/') {
       s += 2;
-      while (*s != '\0' && *s != '\n') s++;
+      while (s[0] != '\0' && s[0] != '\n') s++;
+    }
+    if (s[0] == '/' && s[1] == '*') {
+      s += 2;
+      while (s[0] != '\0' && !(s[-1] == '/' && s[-2] == '*')) s++;
     }
   }
   v7->cursor = s;
@@ -492,32 +523,34 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
   v7->no_exec = old_no_exec;
 }
 
-void v7_call(struct v7 *v7, struct v7_val *v, int num_params) {
-  if (v == NULL || v7->no_exec) return;
-  if (v->type == V7_FUNC) {
-    struct v7_val *val = v7_top(v7);
+void v7_call(struct v7 *v7, struct v7_val *v) {
+  struct v7_val *top = v7_top(v7);
+  int num_args = (top - v) - 1;
+
+  if (v != NULL && !v7->no_exec && v->type == V7_FUNC) {
     const char *src = v7->cursor;
 
     // Return value will substitute function objest on a stack
     v->type = V7_UNDEF;       // Set return value to 'undefined'
     v7->cursor = v->v.func;   // Move control flow to function body
 
-    parse_function_definition(v7, v, num_params);  // Execute function body
+    parse_function_definition(v7, v, num_args);  // Execute function body
     v7->cursor = src;         // Return control flow
-    if (v7_top(v7) > val) {   // If function body pushed some value on stack,
-      *v = *val;              // use that value as return value
+    if (v7_top(v7) > top) {   // If function body pushed some value on stack,
+      *v = *top;              // use that value as return value
     }
-  } else if (v->type == V7_C_FUNC) {
-    // C function, it must clean up the stack and push the result
-    v->v.c_func(v7, v, v + 1, v7_top(v7) - v - 1);
+  } else if (v != NULL && !v7->no_exec && v->type == V7_C_FUNC) {
+    v->v.c_func(v7, v7->cur_obj, v, v + 1, v7_top(v7) - v - 1);
   }
-  v7->sp = v - v7->stack + 1;
+  {char a[100];
+    printf("%s %d [%s]\n", __func__, num_args, to_string(v + 1, a, sizeof(a)));
+  }
+  inc_stack(v7, -num_args);  // Clean up stack
 }
 
 //  function_call  = expression "(" { expression} ")"
 static void parse_function_call(struct v7 *v7) {
   struct v7_val *v = v7_top(v7) - 1;
-  int num_params = 0;
 
   if (!v7->no_exec) {
     EXPECT(v7, v->type == V7_FUNC || v->type == V7_C_FUNC, V7_TYPE_MISMATCH);
@@ -527,13 +560,12 @@ static void parse_function_call(struct v7 *v7) {
   match(v7, '(');
   while (*v7->cursor != ')') {
     parse_expression(v7);
-    num_params++;
     test_and_skip_char(v7, ',');
   }
   match(v7, ')');
 
   if (!v7->no_exec) {
-    v7_call(v7, v, num_params);
+    v7_call(v7, v);
   }
 }
 
@@ -563,8 +595,8 @@ static void parse_string_literal(struct v7 *v7) {
     v7->cursor++;
   }
 
-  v->v.str.len = v->v.str.buf_size = i;
-  v->v.str.buf = v7_strdup(buf, v->v.str.len);
+  v->v.str.len = v->v.str.buf_size = v7->no_exec ? 0 : i;
+  v->v.str.buf = v7->no_exec ? NULL : v7_strdup(buf, v->v.str.len);
   match(v7, *begin);
   skip_whitespaces_and_comments(v7);
 }
@@ -581,7 +613,7 @@ static void parse_object_literal(struct v7 *v7) {
       parse_identifier(v7);
       v = v7_push(v7, V7_STR);
       v->v.str.len = v->v.str.buf_size = v7->tok_len;
-      v->v.str.buf = (char *) v7->tok;
+      v->v.str.buf = v7_strdup(v7->tok, v7->tok_len);
     }
     match(v7, ':');
     parse_expression(v7);
@@ -599,11 +631,11 @@ static void parse_object_literal(struct v7 *v7) {
 // variable = identifier { '.' identifier | '[' expression ']' }
 static void parse_variable(struct v7 *v7) {
   struct v7_val *ns, *v = v7->no_exec ? NULL : v7_push(v7, V7_UNDEF);
-  struct v7_val key = str_to_val((char *) v7->tok, v7->tok_len);
 
   if (v7->tok_len == 6 && memcmp(v7->tok, "__ns__", 6) == 0) {
     ns = &v7->scopes[v7->current_scope];
   } else {
+    struct v7_val key = str_to_val(v7->tok, v7->tok_len);
     ns = find(v7, &key, 0);
   }
 
@@ -618,14 +650,14 @@ static void parse_variable(struct v7 *v7) {
     if (ch == '.') {
       parse_identifier(v7);
       if (!v7->no_exec) {
-        key = str_to_val((char *) v7->tok, v7->tok_len);
-        ns = vlookup(ns->v.map, &key);
+        struct v7_val key = str_to_val(v7->tok, v7->tok_len);
+        ns = v7_get(ns, &key);
       }
     } else {
       parse_expression(v7);
       match(v7, ']');
       if (!v7->no_exec) {
-        ns = v7->cur_obj = vlookup(ns->v.map, v7_top(v7) - 1);
+        ns = v7->cur_obj = v7_get(ns, v7_top(v7) - 1);
         inc_stack(v7, -1);
       }
     }
@@ -736,7 +768,7 @@ static void parse_expression(struct v7 *v7) {
 #ifdef V7_DEBUG
   const char *stmt_str = v7->cursor;
 #endif
-  struct v7_val key, *cur_obj;
+  struct v7_val *cur_obj;
   int op;
 
   v7->cur_obj = &v7->scopes[v7->current_scope];
@@ -745,7 +777,7 @@ static void parse_expression(struct v7 *v7) {
 
   parse_term(v7);
   cur_obj = v7->cur_obj;
-  key = str_to_val((char *) v7->tok, v7->tok_len);
+  //key = str_to_val((char *) v7->tok, v7->tok_len);
 
   while (*v7->cursor == '-' || *v7->cursor == '+') {
     int ch = *v7->cursor;
@@ -763,8 +795,11 @@ static void parse_expression(struct v7 *v7) {
 
   // Parse assignment
   if (*v7->cursor == '=') {
+    struct v7_val key = { V7_STR,
+      { { v7_strdup(v7->tok, v7->tok_len), v7->tok_len, v7->tok_len } }};
     match(v7, '=');
     parse_expression(v7);
+    
     v7_set(cur_obj, &key, v7_top(v7) - 1);
     DECSTK(v7);
   }
@@ -814,7 +849,8 @@ static void parse_if_statement(struct v7 *v7) {
   match(v7, '(');
   parse_expression(v7);
   match(v7, ')');
-  if (!v7_is_true(&v7_top(v7)[-1])) {
+  assert(v7->no_exec || v7->sp > 0);  // Stack may be empty if v7->no_exec
+  if (!v7->no_exec && !v7_is_true(&v7_top(v7)[-1])) {
     v7->no_exec = 1;
   }
   parse_compound_statement(v7);
@@ -865,10 +901,11 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   // returning non-zero from the setjmp() call
   // Prior calls to v7_exec() may have left current_scope modified, reset now
   v7->current_scope = 0;
+  v7->sp = 0;
 
   while (*v7->cursor != '\0') {
-    v7->sp = 0;           // Reset stack on each statement
-    parse_statement(v7);  // Leave the result of last expression on stack
+    inc_stack(v7, -v7->sp);   // Reset stack on each statement
+    parse_statement(v7);      // Leave the result of last expression on stack
   }
 
   return error_code;
@@ -897,10 +934,12 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   return status;
 }
 
-static void stdlib_print(struct v7 *v7, struct v7_val *result,
+static void stdlib_print(struct v7 *v7, struct v7_val *obj,
+                         struct v7_val *result,
                          struct v7_val *args, int num_args) {
   int i;
   (void) v7;
+  (void) obj;
   result->type = V7_UNDEF;
   for (i = 0; i < num_args; i++) {
     printf("%s", v7_to_str(args + i));
@@ -908,5 +947,5 @@ static void stdlib_print(struct v7 *v7, struct v7_val *result,
 }
 
 void v7_init_stdlib(struct v7 *v7) {
-  v7_set_func(v7, "print", stdlib_print);
+  v7_set_func(v7_get_root_namespace(v7), "print", stdlib_print);
 }

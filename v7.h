@@ -37,7 +37,8 @@ enum v7_err {
 struct v7;
 struct v7_val;
 struct v7_map;
-typedef void (*v7_func_t)(struct v7 *, struct v7_val *result,
+typedef void (*v7_func_t)(struct v7 *, struct v7_val *obj,
+                          struct v7_val *result,
                           struct v7_val *params, int num_params);
 
 // A string.
@@ -74,18 +75,21 @@ enum v7_err v7_exec(struct v7 *, const char *source_code);
 enum v7_err v7_exec_file(struct v7 *, const char *path);
 
 struct v7_val *v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v);
-struct v7_val *v7_set_num(struct v7_val *, const char *k, double num);
-struct v7_val *v7_set_str(struct v7_val *, const char *k, const char *, int);
-struct v7_val *v7_set_obj(struct v7_val *obj, const char *key);
-struct v7_val *v7_set_func(struct v7 *, const char *name, v7_func_t c_func);
+struct v7_val *v7_set_num(struct v7_val *, const char *key, double num);
+struct v7_val *v7_set_str(struct v7_val *, const char *key, const char *, int);
+struct v7_val *v7_set_obj(struct v7_val *, const char *key);
+struct v7_val *v7_set_func(struct v7_val *, const char *key, v7_func_t);
+struct v7_val *v7_get(struct v7_val *obj, const struct v7_val *key);
+struct v7_val *v7_get_root_namespace(struct v7 *);
 
-void v7_call(struct v7 *v7, struct v7_val *function, int num_params);
+void v7_call(struct v7 *v7, struct v7_val *func);
 
 int v7_sp(struct v7 *v7);
 struct v7_val *v7_stk(struct v7 *);    // Get bottom of the stack
 struct v7_val *v7_top(struct v7 *);    // Get top of the stack
 struct v7_val *v7_push(struct v7 *v7, enum v7_type type);
 
+struct v7_val v7_str_to_val(const char *buf);
 void v7_init_stdlib(struct v7 *);
 
 #ifdef __cplusplus

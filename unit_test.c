@@ -37,11 +37,11 @@
 
 static int static_num_tests = 0;
 
-static void adder(struct v7 *v7, struct v7_val *result,
+static void adder(struct v7 *v7, struct v7_val *obj, struct v7_val *result,
                   struct v7_val *args, int num_args) {
   int i;
 
-  (void) v7;
+  (void) v7; (void) obj;
   result->type = V7_NUM;
   result->v.num = 0;
 
@@ -52,7 +52,7 @@ static void adder(struct v7 *v7, struct v7_val *result,
 
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
-  ASSERT(v7_set_func(v7, "adder", adder) != NULL);
+  ASSERT(v7_set_func(v7_get_root_namespace(v7), "adder", adder) != NULL);
   ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 10);
@@ -145,6 +145,7 @@ static const char *test_v7_exec(void) {
 
   v7_exec(v7, "print(__ns__, '\n');");
   ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
+  ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 49);
 
   ASSERT(v7_exec(v7, "if (0) f1 = 2; ") == V7_OK);
