@@ -117,14 +117,15 @@ struct v7_val *v7_get_root_namespace(struct v7 *v7) {
   return &v7->scopes[0];
 }
 
+static const char *to_string(const struct v7_val *v, char *buf, size_t bsiz);
 static struct v7_val *inc_stack(struct v7 *v7, int incr) {
   int i;
 
   // Free values pushed on stack (like string literals and functions)
-  for (i = 0; incr < 0 && i > -incr; i++) {
-    free_val(v7->stack + (v7->sp + incr) + i - 1);
+  for (i = 0; incr < 0 && i < -incr; i++) {
+    free_val(v7_top(v7) - (i + 1));
   }
-  
+
   v7->sp += incr;
   if (v7->sp >= (int) ARRAY_SIZE(v7->stack)) {
     raise_exception(v7, V7_STACK_OVERFLOW);
@@ -168,19 +169,21 @@ static const char *to_string(const struct v7_val *v, char *buf, size_t bsiz) {
     case V7_OBJ:
       {
         const struct v7_map *kv;
-        size_t n = snprintf(buf, bsiz, "%s", "{ ");
-        char b1[500], b2[500];
-        for (kv = v->v.map; kv != NULL; kv = kv->next) {
-          n += snprintf(buf + n , bsiz - n, "%s%s: %s",
-                        kv == v->v.map ? "" : ", ",
-                        to_string(&kv->key, b1, sizeof(b1)),
-                        to_string(&kv->val, b2, sizeof(b2)));
+        size_t n = snprintf(buf, bsiz, "%s", "{");
+
+        for (kv = v->v.map; kv != NULL && n < bsiz - 1; kv = kv->next) {
+          if (kv != v->v.map) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+          to_string(&kv->key, buf + n, bsiz - n);
+          n = strlen(buf);
+          n += snprintf(buf + n , bsiz - n, "%s", ": ");
+          to_string(&kv->val, buf + n, bsiz - n);
+          n = strlen(buf);
         }
-        n += snprintf(buf + n, bsiz - n, "%s", " }");
+        n += snprintf(buf + n, bsiz - n, "%s", "}");
       }
       break;
     case V7_STR:
-        snprintf(buf, bsiz, "%.*s", v->v.str.len, v->v.str.buf);
+        snprintf(buf, bsiz, "'%.*s'", v->v.str.len, v->v.str.buf);
         break;
     case V7_FUNC:
         snprintf(buf, bsiz, "function%s", v->v.func);
@@ -192,7 +195,7 @@ static const char *to_string(const struct v7_val *v, char *buf, size_t bsiz) {
       snprintf(buf, bsiz, "??");
       break;
   }
-  buf[bsiz - 1] = '\0';  // Protect from snprintf overflow
+  buf[bsiz - 1] = '\0';
   return buf;
 }
 
@@ -461,7 +464,7 @@ static void parse_return_statement(struct v7 *v7) {
 }
 
 static void parse_compound_statement(struct v7 *v7) {
-  if (*v7->cursor == '{') { 
+  if (*v7->cursor == '{') {
     int old_sp = v7->sp;
     match(v7, '{');
     while (*v7->cursor != '}') {
@@ -479,7 +482,7 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
                                       int num_params) {
   int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp;
   const char *src = v7->cursor;
-  
+
   // If 'v' (func to call) is NULL, that means we're just parsing function
   // definition to save it's body.
   v7->no_exec = v == NULL;
@@ -503,17 +506,17 @@ static void parse_function_definition(struct v7 *v7, struct v7_val *v,
   }
   match(v7, ')');
   match(v7, '{');
-  
+
   while (*v7->cursor != '}') {
     v7->sp = old_sp;                // Clean up the stack from prev stmt
     if (parse_statement(v7)) break; // Leave statement value on stack
   }
-  
+
   if (v7->no_exec) {
     v7_push(v7, V7_FUNC)->v.func = v7_strdup(src, (v7->cursor + 1) - src);
   }
   match(v7, '}');
-  
+
   // Deinitialize scope
   if (!v7->no_exec) {
     v7->current_scope--;
@@ -542,7 +545,7 @@ void v7_call(struct v7 *v7, struct v7_val *v) {
   } else if (v != NULL && !v7->no_exec && v->type == V7_C_FUNC) {
     v->v.c_func(v7, v7->cur_obj, v, v + 1, v7_top(v7) - v - 1);
   }
-  {char a[100];
+  {char a[200];
     printf("%s %d [%s]\n", __func__, num_args, to_string(v + 1, a, sizeof(a)));
   }
   inc_stack(v7, -num_args);  // Clean up stack
@@ -669,7 +672,7 @@ static void parse_variable(struct v7 *v7) {
     } else {
       v->type = V7_UNDEF;
     }
-  }  
+  }
 }
 
 //  factor  =   number | string_literal | "(" expression ")" |
@@ -799,7 +802,7 @@ static void parse_expression(struct v7 *v7) {
       { { v7_strdup(v7->tok, v7->tok_len), v7->tok_len, v7->tok_len } }};
     match(v7, '=');
     parse_expression(v7);
-    
+
     v7_set(cur_obj, &key, v7_top(v7) - 1);
     DECSTK(v7);
   }
