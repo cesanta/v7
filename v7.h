@@ -18,14 +18,54 @@
 #ifndef V7_HEADER_INCLUDED
 #define  V7_HEADER_INCLUDED
 
-#define V7_VERSION "1.0"
+#include <sys/stat.h>
+#include <assert.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#endif
+
+#ifdef V7_DEBUG
+#define DBG(x) do { printf("%-20s ", __func__); printf x; putchar('\n'); \
+  fflush(stdout); } while(0)
+#else
+#define DBG(x)
+#endif
+
+#define V7_VERSION "1.0"
+#define MAX_STRING_LITERAL_LENGTH 500
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+
+// Linked list interface
+struct llhead { struct llhead *prev, *next; };
+
+#define LL_INIT(N)              ((N)->next = (N)->prev = (N))
+#define LL_DECLARE_AND_INIT(H)  struct llhead H = { &H, &H }
+#define LL_ENTRY(P,T,N)         ((T *)((char *)(P) - offsetof(T, N)))
+#define LL_IS_EMPTY(N)          ((N)->next == (N))
+#define LL_FOREACH(H,N,T)       for (N = (H)->next, T = (N)->next; N != (H); \
+                                     N = (T), T = (N)->next)
+#define LL_ADD(H, N)  do { ((H)->next)->prev = (N); (N)->next = ((H)->next); \
+                            (N)->prev = (H); (H)->next = (N); } while (0)
+#define LL_TAIL(H, N) do { ((H)->prev)->next = (N); (N)->prev = ((H)->prev); \
+                            (N)->next = (H); (H)->prev = (N); } while (0)
+#define LL_DEL(N)     do { ((N)->next)->prev = ((N)->prev); \
+                            ((N)->prev)->next = ((N)->next); \
+                            LL_INIT(N); } while (0)
+
 enum v7_type {
-  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC
+  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL,
+  V7_FUNC, V7_C_FUNC, V7_REF
 };
 
 enum v7_err {
@@ -54,10 +94,13 @@ union v7_v {
   v7_func_t c_func;
   char *func;
   struct v7_map *map;
+  struct v7_val *ref;
 };
 
 struct v7_val {
+  struct llhead link;           // Linkage in struct v7::values
   enum v7_type type;
+  unsigned char not_owned:1;    // Object's memory owned elsewhere
   union v7_v v;
 };
 
@@ -66,6 +109,22 @@ struct v7_map {
   struct v7_map *next;
   struct v7_val key;
   struct v7_val val;
+};
+
+struct v7 {
+  struct v7_val stack[200];
+  int sp;                     // Stack pointer
+  struct v7_val scopes[20];   // Namespace objects (scopes)
+  int current_scope;          // Pointer to the current scope
+
+  const char *source_code;    // Pointer to the source codeing
+  const char *cursor;         // Current parsing position
+  int line_no;                // Line number
+  int no_exec;                // No-execute flag. For parsing function defs
+  const char *tok;            // Parsed terminal token (ident, number, string)
+  int tok_len;                // Length of the parsed terminal token
+  struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
+  struct llhead values;       // List of allocated values
 };
 
 struct v7 *v7_create(void);
@@ -82,13 +141,14 @@ struct v7_val *v7_set_func(struct v7_val *, const char *key, v7_func_t);
 struct v7_val *v7_get(struct v7_val *obj, const struct v7_val *key);
 struct v7_val *v7_get_root_namespace(struct v7 *);
 
-void v7_call(struct v7 *v7, struct v7_val *func);
+enum v7_err v7_call(struct v7 *v7, struct v7_val *func);
 
 int v7_sp(struct v7 *v7);
 struct v7_val *v7_stk(struct v7 *);    // Get bottom of the stack
 struct v7_val *v7_top(struct v7 *);    // Get top of the stack
 struct v7_val *v7_push(struct v7 *v7, enum v7_type type);
 
+const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz);
 struct v7_val v7_str_to_val(const char *buf);
 void v7_init_stdlib(struct v7 *);
 

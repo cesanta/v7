@@ -74,7 +74,7 @@ static const char *test_v7_exec(void) {
 
   v7_init_stdlib(v7);
   ASSERT(v7_exec(v7, "") == V7_OK);
- 
+
   ASSERT(v7_exec(v7, "-2;") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == -2);
@@ -120,7 +120,11 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "k = { key1: {x:3}, key2: ':-)', y: 5 };") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_OBJ);
+  ASSERT(v7_sp(v7) == 1);
+  v7_exec(v7, "print(k, '\n');");
 
+  ASSERT(v7_exec(v7, "k.x = 3;") == V7_OK);
+  v7_exec(v7, "print(k, '\n');");
   ASSERT(v7_exec(v7, "k.qwe = { foo: 5 };") == V7_OK);
   ASSERT(v7_exec(v7, "k.qwe.foo = 15;") == V7_OK);
   v7_exec(v7, "print(k, '\n');");
@@ -135,7 +139,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var z = 'key1'; k[z]['x']") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 3);
-  
+
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { } ; ") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_FUNC);
   ASSERT(strcmp(v7_top(v7)[-1].v.func, "(x, y) { }") == 0);
@@ -148,10 +152,14 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 49);
 
+  ASSERT(v7_exec(v7, "var pp = function(x) { print(x, ', hi\n'); };") == V7_OK);
+  ASSERT(v7_exec(v7, "pp({});") == V7_OK);
+  ASSERT(v7_exec(v7, "pp(123, {});") == V7_OK);
+
   ASSERT(v7_exec(v7, "if (0) f1 = 2; ") == V7_OK);
   ASSERT(v7_exec(v7, "if (5) { f1 = 3; f2 = function(){}; } ") == V7_OK);
 
-  ASSERT(v7_exec(v7, "k = 0 ? 1 : 2;") == V7_OK);
+  ASSERT(v7_exec(v7, "0 ? 1 : 2;") == V7_OK);
   ASSERT(v7_top(v7)[-1].v.num == 2);
 
   ASSERT(v7_exec(v7, "k = true ? 1 : 2;") == V7_OK);
@@ -169,7 +177,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 20);
-  
+
   ASSERT(v7_exec(v7, "var a = 1; if (a == 1) { a = 2; }; a;") == V7_OK);
   ASSERT(v7_top(v7)[-1].type == V7_NUM);
   ASSERT(v7_top(v7)[-1].v.num == 2);
