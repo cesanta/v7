@@ -79,7 +79,7 @@ struct v7_val;
 struct v7_map;
 typedef void (*v7_func_t)(struct v7 *, struct v7_val *obj,
                           struct v7_val *result,
-                          struct v7_val *params, int num_params);
+                          struct v7_val **params, int num_params);
 
 // A string.
 struct v7_str {
@@ -112,7 +112,7 @@ struct v7_map {
 };
 
 struct v7 {
-  struct v7_val stack[200];
+  struct v7_val *stack[200];
   int sp;                     // Stack pointer
   struct v7_val scopes[20];   // Namespace objects (scopes)
   int current_scope;          // Pointer to the current scope
@@ -144,8 +144,8 @@ struct v7_val *v7_get_root_namespace(struct v7 *);
 enum v7_err v7_call(struct v7 *v7, struct v7_val *func);
 
 int v7_sp(struct v7 *v7);
-struct v7_val *v7_stk(struct v7 *);    // Get bottom of the stack
-struct v7_val *v7_top(struct v7 *);    // Get top of the stack
+struct v7_val **v7_stk(struct v7 *);    // Get bottom of the stack
+struct v7_val **v7_top(struct v7 *);    // Get top of the stack
 struct v7_val *v7_push(struct v7 *v7, enum v7_type type);
 
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz);
