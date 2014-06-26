@@ -99,6 +99,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "a = 7;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 7);
+  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 10);
@@ -123,7 +124,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_sp(v7) == 1);
   v7_exec(v7, "print(k, '\n');");
 
-  ASSERT(v7_exec(v7, "k.x = 3;") == V7_OK);
+  ASSERT(v7_exec(v7, "k.x = 47;") == V7_OK);
   v7_exec(v7, "print(k, '\n');");
   ASSERT(v7_exec(v7, "k.qwe = { foo: 5 };") == V7_OK);
   ASSERT(v7_exec(v7, "k.qwe.foo = 15;") == V7_OK);
@@ -140,7 +141,12 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 3);
 
+  ASSERT(v7_exec(v7, "var stk = 1;") == V7_OK);
+  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_top(v7)[-1]->type == V7_NUM);
+
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { } ; ") == V7_OK);
+  ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
   ASSERT(strcmp(v7_top(v7)[-1]->v.func, "(x, y) { }") == 0);
 
@@ -153,7 +159,10 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->v.num == 49);
 
   ASSERT(v7_exec(v7, "var pp = function(x) { print(x, ', hi\n'); };") == V7_OK);
+  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_exec(v7, "pp();") == V7_OK);
   ASSERT(v7_exec(v7, "pp({});") == V7_OK);
+  ASSERT(v7_exec(v7, "pp(1, 2);") == V7_OK);
   ASSERT(v7_exec(v7, "pp(123, {});") == V7_OK);
 
   ASSERT(v7_exec(v7, "if (0) f1 = 2; ") == V7_OK);
