@@ -87,7 +87,6 @@ typedef void (*v7_func_t)(struct v7 *, struct v7_val *obj,
 struct v7_str {
   char *buf;      // Pointer to buffer with string data
   int len;        // String length
-  int buf_size;   // Buffer size. Should be greater or equal to string length
 };
 
 union v7_v {
@@ -110,8 +109,8 @@ struct v7_val {
 // Key/value pair. "struct v7_map *" is a key/val list head, represents object
 struct v7_map {
   struct v7_map *next;
-  struct v7_val key;
-  struct v7_val val;
+  struct v7_val *key;
+  struct v7_val *val;
 };
 
 struct v7 {
@@ -139,13 +138,16 @@ enum v7_err v7_exec_file(struct v7 *, const char *path);
 enum v7_err v7_push(struct v7 *v7, enum v7_type type);
 enum v7_err v7_call(struct v7 *v7, struct v7_val *func);
 
+#if 0
 struct v7_val *v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v);
 struct v7_val *v7_set_num(struct v7_val *, const char *key, double num);
 struct v7_val *v7_set_str(struct v7_val *, const char *key, const char *, int);
 struct v7_val *v7_set_obj(struct v7_val *, const char *key);
 struct v7_val *v7_set_func(struct v7_val *, const char *key, v7_func_t);
+#endif
+void reg_func(struct v7 *v7, const char *key, v7_func_t c_func);
 
-struct v7_val *v7_get(struct v7_val *obj, const struct v7_val *key);
+struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key);
 struct v7_val *v7_get_root_namespace(struct v7 *);
 
 int v7_sp(struct v7 *v7);             // Get number of values in the stack

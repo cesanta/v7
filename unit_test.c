@@ -52,7 +52,7 @@ static void adder(struct v7 *v7, struct v7_val *obj, struct v7_val *result,
 
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
-  ASSERT(v7_set_func(v7_get_root_namespace(v7), "adder", adder) != NULL);
+  reg_func(v7, "adder", adder);
   ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 10);
@@ -74,6 +74,7 @@ static const char *test_v7_exec(void) {
 
   v7_init_stdlib(v7);
   ASSERT(v7_exec(v7, "") == V7_OK);
+  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "-2;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
@@ -103,9 +104,11 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 10);
+  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "c = b * (a + 3) / 2;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 50);
+  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a;") == V7_OK);
   ASSERT(v7_exec(v7, "b + 2; x + 3 + 1 z = x -2;") == V7_OK);
@@ -122,11 +125,10 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "k = { key1: {x:3}, key2: ':-)', y: 5 };") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_OBJ);
   ASSERT(v7_sp(v7) == 1);
-  v7_exec(v7, "print(k, '\n');");
 
   ASSERT(v7_exec(v7, "k.x = 47;") == V7_OK);
-  v7_exec(v7, "print(k, '\n');");
   ASSERT(v7_exec(v7, "k.qwe = { foo: 5 };") == V7_OK);
+  v7_exec(v7, "print(k, '\n');");
   ASSERT(v7_exec(v7, "k.qwe.foo = 15;") == V7_OK);
   v7_exec(v7, "print(k, '\n');");
 
@@ -153,7 +155,6 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { return x * y; };") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
 
-  v7_exec(v7, "print(__ns__, '\n');");
   ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 49);
