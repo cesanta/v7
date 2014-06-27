@@ -102,7 +102,8 @@ struct v7_val {
   struct llhead link;           // Linkage in struct v7::values
   enum v7_type type;            // Value type
   unsigned char ref_count;      // Reference counter
-  unsigned char not_owned:1;    // Object's memory owned elsewhere
+  unsigned char str_unowned:1;  // Object's string must not fe free-ed
+  unsigned char val_unowned:1;  // Object must not be free-d
   union v7_v v;                 // The value itself
 };
 
@@ -145,7 +146,7 @@ struct v7_val *v7_set_str(struct v7_val *, const char *key, const char *, int);
 struct v7_val *v7_set_obj(struct v7_val *, const char *key);
 struct v7_val *v7_set_func(struct v7_val *, const char *key, v7_func_t);
 #endif
-void reg_func(struct v7 *v7, const char *key, v7_func_t c_func);
+void v7_reg_func(struct v7 *v7, const char *key, v7_func_t c_func);
 
 struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key);
 struct v7_val *v7_get_root_namespace(struct v7 *);
