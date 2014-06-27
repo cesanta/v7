@@ -713,7 +713,7 @@ static enum v7_err parse_factor(struct v7 *v7) {
     TRY(parse_object_literal(v7));
   } else if (is_alpha(*v7->cursor) || *v7->cursor == '_') {
     TRY(parse_identifier(v7));
-    if (test_token(v7, "this", 4) || test_token(v7, "__ns__", 6)) {
+    if (test_token(v7, "this", 4)) {
       TRY(v7_push(v7, V7_OBJ));
       v7_top(v7)[-1] = &v7->scopes[v7->current_scope];
     } else if (test_token(v7, "null", 4)) {

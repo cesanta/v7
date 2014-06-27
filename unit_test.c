@@ -74,7 +74,7 @@ static const char *test_v7_exec(void) {
 
   v7_init_stdlib(v7);
   ASSERT(v7_exec(v7, "") == V7_OK);
-  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "-2;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
@@ -100,15 +100,15 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "a = 7;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 7);
-  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 10);
-  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "c = b * (a + 3) / 2;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 50);
-  ASSERT(v7_exec(v7, "print(__ns__, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a;") == V7_OK);
   ASSERT(v7_exec(v7, "b + 2; x + 3 + 1 z = x -2;") == V7_OK);
@@ -192,7 +192,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 2);
 
-  v7_exec(v7, "print(__ns__, '\n');");
+  v7_exec(v7, "print(this, '\n');");
   v7_destroy(&v7);
 
   return NULL;
