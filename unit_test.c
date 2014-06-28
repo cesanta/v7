@@ -74,6 +74,8 @@ static const char *test_v7_exec(void) {
 
   v7_init_stdlib(v7);
   ASSERT(v7_exec(v7, "") == V7_OK);
+  ASSERT(v7_exec(v7, "print();") == V7_OK);
+  ASSERT(v7_exec(v7, "print('\n');") == V7_OK);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "-2;") == V7_OK);

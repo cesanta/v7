@@ -17,11 +17,6 @@
 
 #include "v7.h"
 
-#if 0
-static struct v7_val s_undefined_val = {{0, 0}, V7_UNDEF, 1, 1, {{0,0,0}}};
-static struct v7_val s_null_val = {{0, 0}, V7_NULL, 1, 1, {{0,0,0}}};
-#endif
-
 // Forward declarations
 static enum v7_err parse_expression(struct v7 *);
 static enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -50,7 +45,6 @@ static void free_val(struct v7_val *v) {
   v->ref_count--;
   assert(v->ref_count >= 0);
   if (v->ref_count > 0) return;
-  return;
   if (v->type == V7_OBJ) {
     struct v7_map *p, *tmp;
     for (p = v->v.map; p != NULL; p = tmp) {
@@ -178,7 +172,10 @@ static char *v7_strdup(const char *ptr, size_t len) {
 
 struct v7_val *v7_mkval(enum v7_type type) {
   struct v7_val *v = (struct v7_val *) calloc(1, sizeof(*v));
-  if (v) v->type = type;
+  if (v) {
+    LL_INIT(&v->link);
+    v->type = type;
+  }
   return v;
 }
 
@@ -252,17 +249,6 @@ struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key) {
   return NULL;
 }
 
-#if 0
-static void v7_copy(const struct v7_val *src, struct v7_val *dst) {
-  *dst = *src;
-  if (src->type == V7_STR) {
-    dst->v.str.buf = v7_strdup(src->v.str.buf, src->v.str.len);
-  } else if (src->type == V7_FUNC) {
-    dst->v.func = v7_strdup(src->v.func, strlen(src->v.func));
-  }
-}
-#endif
-
 static enum v7_err v7_push_string(struct v7 *v7, const char *s,
                                   v7_string_size_t len, int do_copy) {
   struct v7_val **v = v7_top(v7);
@@ -280,6 +266,7 @@ static struct v7_map *vinsert(struct v7_map **h, struct v7_val *key) {
     key->ref_count++;
     m->key = key;
     m->val = v7_mkval(V7_UNDEF);
+    m->val->ref_count++;
     m->next = *h;
     *h = m;
   }
@@ -309,7 +296,7 @@ enum v7_err v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v) {
 
   CHECK(obj != NULL && obj->type == V7_OBJ, V7_TYPE_MISMATCH);
 
-  // Find attribute inside object XXX
+  // Find attribute inside object
   if ((m = v7_get(obj, k)) == NULL) {
     m = vinsert(&obj->v.map, k);
     CHECK(m != NULL, V7_OUT_OF_MEMORY);
@@ -473,7 +460,7 @@ static enum v7_err parse_compound_statement(struct v7 *v7) {
     int old_sp = v7->sp;
     match(v7, '{');
     while (*v7->cursor != '}') {
-      if (v7_sp(v7) > old_sp) v7->sp = old_sp;
+      if (v7->sp > old_sp) inc_stack(v7, old_sp - v7->sp);
       TRY(parse_statement(v7, NULL));
     }
     match(v7, '}');
@@ -515,7 +502,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   while (*v7->cursor != '}') {
     int is_return_statement = 0;
-    v7->sp = old_sp;                  // Clean up the stack from prev stmt
+    inc_stack(v7, old_sp - v7->sp);   // Clean up the stack from prev stmt
     TRY(parse_statement(v7, &is_return_statement));
     if (is_return_statement) break;   // Leave statement value on stack
   }
@@ -553,7 +540,9 @@ enum v7_err v7_call(struct v7 *v7, int num_args) {
     TRY(parse_function_definition(v7, v, num_args));  // Execute function body
     v7->cursor = src;           // Return control flow
     if (v7_top(v7) > top) {     // If function body pushed some value on stack,
-      v[0] = top[0];      // use that value as return value  XXX
+      free_val(v[0]);
+      v[0] = top[0];            // use that value as return value
+      v[0]->ref_count++;
     }
   } else if (f->type == V7_C_FUNC) {
     f->v.c_func(v7, v7->cur_obj, v[0], v + 1, num_args);
@@ -714,7 +703,7 @@ static enum v7_err parse_factor(struct v7 *v7) {
   } else if (is_alpha(*v7->cursor) || *v7->cursor == '_') {
     TRY(parse_identifier(v7));
     if (test_token(v7, "this", 4)) {
-      TRY(v7_push(v7, V7_OBJ));
+      inc_stack(v7, 1);
       v7_top(v7)[-1] = &v7->scopes[v7->current_scope];
     } else if (test_token(v7, "null", 4)) {
       TRY(v7_push(v7, V7_NULL));
@@ -739,7 +728,7 @@ static enum v7_err parse_factor(struct v7 *v7) {
 
   // Don't leave anything on stack if no execution flag is set
   if (v7->no_exec) {
-    v7->sp = old_sp;
+    inc_stack(v7, old_sp - v7->sp);
   }
 
   return V7_OK;
@@ -926,8 +915,8 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   // The following code may raise an exception and jump to the previous line,
   // returning non-zero from the setjmp() call
   // Prior calls to v7_exec() may have left current_scope modified, reset now
-  v7->current_scope = 0;
-  v7->sp = 0;
+  v7->current_scope = 0;  // XXX free up higher scopes?
+  inc_stack(v7, -v7->sp);
 
   while (*v7->cursor != '\0') {
     inc_stack(v7, -v7->sp);         // Reset stack on each statement
