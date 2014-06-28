@@ -1,5 +1,5 @@
 // Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
-// Copyright (c) 2013 Cesanta Software Limited
+// Copyright (c) 2013-2014 Cesanta Software Limited
 // All rights reserved
 //
 // This library is dual-licensed: you can redistribute it and/or modify
@@ -161,12 +161,12 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 49);
 
-  ASSERT(v7_exec(v7, "var pp = function(x) { print(x, ', hi\n'); };") == V7_OK);
+  ASSERT(v7_exec(v7, "f = function(x,y,z) { print(this, '\n'); };") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
-  ASSERT(v7_exec(v7, "pp();") == V7_OK);
-  ASSERT(v7_exec(v7, "pp({});") == V7_OK);
-  ASSERT(v7_exec(v7, "pp(1, 2);") == V7_OK);
-  ASSERT(v7_exec(v7, "pp(123, {});") == V7_OK);
+  ASSERT(v7_exec(v7, "f();") == V7_OK);
+  ASSERT(v7_exec(v7, "f({});") == V7_OK);
+  ASSERT(v7_exec(v7, "f(1, 2);") == V7_OK);
+  ASSERT(v7_exec(v7, "f(123, {});") == V7_OK);
 
   ASSERT(v7_exec(v7, "if (0) f1 = 2; ") == V7_OK);
   ASSERT(v7_exec(v7, "if (5) { f1 = 3; f2 = function(){}; } ") == V7_OK);

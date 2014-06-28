@@ -63,23 +63,11 @@ static void free_val(struct v7_val *v) {
   if (!v->val_unowned) free(v);
 }
 
-void v7_destroy(struct v7 **v7) {
-  if (v7 && *v7) {
-    size_t i;
-    for (i = 0; i < ARRAY_SIZE((*v7)->scopes); i++) {
-      free_val(&(*v7)->scopes[i]);
-    }
-    free(*v7);
-    *v7 = NULL;
-  }
-}
-
 struct v7_val *v7_get_root_namespace(struct v7 *v7) {
   return &v7->scopes[0];
 }
 
 static enum v7_err inc_stack(struct v7 *v7, int incr) {
-  //struct v7_val *top = v7_top(v7);
   int i;
 
   CHECK(v7->sp + incr < (int) ARRAY_SIZE(v7->stack), V7_STACK_OVERFLOW);
@@ -88,14 +76,24 @@ static enum v7_err inc_stack(struct v7 *v7, int incr) {
   // Free values pushed on stack (like string literals and functions)
   for (i = 0; incr < 0 && i < -incr && i < v7->sp; i++) {
     free_val(v7->stack[v7->sp - (i + 1)]);
+    v7->stack[v7->sp - (i + 1)] = NULL;
   }
 
   v7->sp += incr;
   return V7_OK;
 }
 
-struct v7_val **v7_stk(struct v7 *v7) {
-  return v7->stack;
+void v7_destroy(struct v7 **v7) {
+  size_t i;
+  if (v7 == NULL || v7[0] == NULL) return;
+  assert(v7[0]->sp >= 0);
+  inc_stack(v7[0], -v7[0]->sp);
+  for (i = 0; i < ARRAY_SIZE(v7[0]->scopes); i++) {
+    v7[0]->scopes[i].ref_count = 1;   // Force free_val() below to free memory
+    free_val(&v7[0]->scopes[i]);
+  }
+  free(v7[0]);
+  v7[0] = NULL;
 }
 
 struct v7_val **v7_top(struct v7 *v7) {
@@ -103,7 +101,7 @@ struct v7_val **v7_top(struct v7 *v7) {
 }
 
 int v7_sp(struct v7 *v7) {
-  return v7_top(v7) - v7_stk(v7);
+  return v7_top(v7) - v7->stack;
 }
 
 static int v7_is_true(const struct v7_val *v) {
@@ -170,27 +168,26 @@ static char *v7_strdup(const char *ptr, size_t len) {
   return p;
 }
 
-struct v7_val *v7_mkval(enum v7_type type) {
+struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type) {
   struct v7_val *v = (struct v7_val *) calloc(1, sizeof(*v));
-  if (v) {
-    LL_INIT(&v->link);
+  if (v != NULL) {
+    LL_ADD(&v7->values, &v->link);
     v->type = type;
   }
   return v;
 }
 
-struct v7_val *v7_mkval_str(const char *buf, v7_string_size_t len) {
-  struct v7_val *v = v7_mkval(V7_STR);
+struct v7_val *v7_mkval_str(struct v7 *v7, const char *buf, int len) {
+  struct v7_val *v = v7_mkval(v7, V7_STR);
   v->v.str.len = len;
   v->v.str.buf = v7_strdup(buf, len);
   return v;
 }
 
 enum v7_err v7_push(struct v7 *v7, enum v7_type type) {
-  struct v7_val *v = v7_mkval(type);
+  struct v7_val *v = v7_mkval(v7, type);
   CHECK(v != NULL, V7_OUT_OF_MEMORY);
   v->ref_count = 1;
-  LL_ADD(&v7->values, &v->link);
   TRY(inc_stack(v7, 1));
   v7->stack[v7->sp - 1] = v;
   return V7_OK;
@@ -250,7 +247,7 @@ struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key) {
 }
 
 static enum v7_err v7_push_string(struct v7 *v7, const char *s,
-                                  v7_string_size_t len, int do_copy) {
+                                  int len, int do_copy) {
   struct v7_val **v = v7_top(v7);
   TRY(v7_push(v7, V7_STR));
   v[0]->v.str.len = len;
@@ -259,13 +256,14 @@ static enum v7_err v7_push_string(struct v7 *v7, const char *s,
   return V7_OK;
 }
 
-static struct v7_map *vinsert(struct v7_map **h, struct v7_val *key) {
+static struct v7_map *vinsert(struct v7 *v7, struct v7_map **h,
+                              struct v7_val *key) {
   struct v7_map *m;
 
   if ((m = (struct v7_map *) calloc(1, sizeof(*m))) != NULL) {
     key->ref_count++;
     m->key = key;
-    m->val = v7_mkval(V7_UNDEF);
+    m->val = v7_mkval(v7, V7_UNDEF);
     m->val->ref_count++;
     m->next = *h;
     *h = m;
@@ -286,19 +284,20 @@ static struct v7_map *find(struct v7 *v7, struct v7_val *key, int alloc) {
   }
 
   // Not found, create a new variable
-  if (alloc) m = vinsert(&v7->scopes[v7->current_scope].v.map, key);
+  if (alloc) m = vinsert(v7, &v7->scopes[v7->current_scope].v.map, key);
 
   return m;
 }
 
-enum v7_err v7_set(struct v7_val *obj, struct v7_val *k, struct v7_val *v) {
+enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
+                   struct v7_val *v) {
   struct v7_map *m = NULL;
 
   CHECK(obj != NULL && obj->type == V7_OBJ, V7_TYPE_MISMATCH);
 
   // Find attribute inside object
   if ((m = v7_get(obj, k)) == NULL) {
-    m = vinsert(&obj->v.map, k);
+    m = vinsert(v7, &obj->v.map, k);
     CHECK(m != NULL, V7_OUT_OF_MEMORY);
   }
 
@@ -406,11 +405,8 @@ static int test_token(struct v7 *v7, const char *kw, int kwlen) {
 
 //  number      =   { digit }
 static enum v7_err parse_num(struct v7 *v7) {
-  struct v7_val *value;
+  double value = 0;
   int is_negative = 0;
-
-  TRY(v7_push(v7, V7_NUM));
-  value = v7_top(v7)[-1];
 
   if (*v7->cursor == '-') {
     is_negative = 1;
@@ -419,18 +415,22 @@ static enum v7_err parse_num(struct v7 *v7) {
 
   CHECK(is_digit(*v7->cursor), V7_SYNTAX_ERROR);
   v7->tok = v7->cursor;
-  value->v.num = 0;
   while (is_digit(*v7->cursor)) {
-    value->v.num *= 10;
-    value->v.num += *v7->cursor++ - '0';
+    value *= 10;
+    value += *v7->cursor++ - '0';
   }
 
   if (is_negative) {
-    value->v.num = -value->v.num;
+    value = -value;
   }
 
   v7->tok_len = v7->cursor - v7->tok;
   skip_whitespaces_and_comments(v7);
+
+  if (!v7->no_exec) {
+    TRY(v7_push(v7, V7_NUM));
+    v7_top(v7)[-1]->v.num = value;
+  }
 
   return V7_OK;
 }
@@ -486,13 +486,16 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7->current_scope++;
     CHECK(v7->current_scope < (int) ARRAY_SIZE(v7->scopes),
           V7_RECURSION_TOO_DEEP);
+    CHECK(v7->scopes[v7->current_scope].v.map == NULL, V7_INTERNAL_ERROR);
+    CHECK(v7->scopes[v7->current_scope].type == V7_OBJ, V7_INTERNAL_ERROR);
   }
 
   while (*v7->cursor != ')') {
     TRY(parse_identifier(v7));
-    if (!v7->no_exec && i < num_params) {
-      struct v7_val *key = v7_mkval_str(v7->tok, v7->tok_len);
-      v7_set(&v7->scopes[v7->current_scope], key, v[i + 1]);
+    if (!v7->no_exec) {
+      struct v7_val *key = v7_mkval_str(v7, v7->tok, v7->tok_len);
+      struct v7_val *val = i < num_params ? v[i + 1] : v7_mkval(v7, V7_UNDEF);
+      v7_set(v7, &v7->scopes[v7->current_scope], key, val);
     }
     i++;
     if (!test_and_skip_char(v7, ',')) break;
@@ -515,7 +518,8 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   // Deinitialize scope
   if (!v7->no_exec) {
-    free_val(v7->scopes + v7->current_scope);
+    v7->scopes[v7->current_scope].ref_count = 1;  // Force free_val() below
+    free_val(&v7->scopes[v7->current_scope]);
     v7->current_scope--;
     assert(v7->current_scope >= 0);
   }
@@ -532,7 +536,8 @@ enum v7_err v7_call(struct v7 *v7, int num_args) {
   CHECK(f->type == V7_FUNC || f->type == V7_C_FUNC, V7_TYPE_MISMATCH);
 
   // Return value will substitute function objest on a stack
-  v[0] = v7_mkval(V7_UNDEF);  // Set return value to 'undefined'
+  v[0] = v7_mkval(v7, V7_UNDEF);  // Set return value to 'undefined'
+  v[0]->ref_count++;
 
   if (f->type == V7_FUNC) {
     const char *src = v7->cursor;
@@ -629,8 +634,8 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
     if (!v7->no_exec) {
       struct v7_val **v = v7_top(v7) - 3;
       CHECK(v[0]->type == V7_OBJ, V7_TYPE_MISMATCH);
-      v7_set(v[0], v[1], v[2]);
-      v7->sp -= 2;
+      v7_set(v7, v[0], v[1], v[2]);
+      inc_stack(v7, -2);
     }
     test_and_skip_char(v7, ',');
   }
@@ -674,10 +679,10 @@ static enum v7_err parse_variable(struct v7 *v7) {
     }
   }
 
-  if (v != NULL && ns != NULL && !v7->no_exec) {
+  if (v != NULL && ns != NULL) {
     free_val(v[-1]);
     v[-1] = ns;
-    ns->ref_count++;
+    v[-1]->ref_count++;
   }
 
   return V7_OK;
@@ -786,12 +791,13 @@ static enum v7_err parse_assignment(struct v7 *v7, struct v7_val *obj) {
 
   if (!v7->no_exec) {
     TRY(v7_push_string(v7, tok, tok_len, 1));
-    v7_set(obj, v7_top(v7)[-1], top[0]);
+    v7_set(v7, obj, top[1], top[0]);
+    CHECK(v7_top(v7) - top > 1, V7_INTERNAL_ERROR);
     CHECK(v7->sp > 1, V7_STACK_UNDERFLOW);
     free_val(top[-1]);
-    free_val(v7_top(v7)[-1]);
     top[-1] = top[0];
-    v7->sp -= 2;
+    top[-1]->ref_count++;
+    inc_stack(v7, top - v7_top(v7));
   }
 
   return V7_OK;
@@ -856,7 +862,7 @@ static enum v7_err parse_declaration(struct v7 *v7) {
     inc_stack(v7, sp - v7_sp(v7));  // Clean up the stack after prev decl
     TRY(parse_identifier(v7));
     if (*v7->cursor == '=') {
-      v7_push(v7, V7_UNDEF);
+      if (!v7->no_exec) v7_push(v7, V7_UNDEF);
       TRY(parse_assignment(v7, &v7->scopes[v7->current_scope]));
     }
   } while (test_and_skip_char(v7, ','));
@@ -962,9 +968,10 @@ static void stdlib_print(struct v7 *v7, struct v7_val *obj,
 }
 
 void v7_reg_func(struct v7 *v7, const char *key, v7_func_t c_func) {
-  struct v7_val *k = v7_mkval_str(key, strlen(key)), *v = v7_mkval(V7_C_FUNC);
+  struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
+  struct v7_val *v = v7_mkval(v7, V7_C_FUNC);
   v->v.c_func = c_func;
-  v7_set(v7_get_root_namespace(v7), k, v);
+  v7_set(v7, v7_get_root_namespace(v7), k, v);
 }
 
 void v7_init_stdlib(struct v7 *v7) {
