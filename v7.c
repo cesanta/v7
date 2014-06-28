@@ -977,3 +977,23 @@ void v7_reg_func(struct v7 *v7, const char *key, v7_func_t c_func) {
 void v7_init_stdlib(struct v7 *v7) {
   v7_reg_func(v7, "print", &stdlib_print);
 }
+
+#ifdef V7_EXE
+int main(int argc, char *argv[]) {
+  struct v7 *v7 = v7_create();
+  int i, error_code;
+
+  v7_init_stdlib(v7);
+
+  for (i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
+      if ((error_code = v7_exec(v7, argv[i + 1])) != V7_OK) {
+        fprintf(stderr, "Error executing [%s]: %d\n", argv[i + 1], error_code);
+      }
+    }
+  }
+
+  v7_destroy(&v7);
+  return 0;
+}
+#endif
