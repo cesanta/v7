@@ -350,42 +350,38 @@ enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   return V7_OK;
 }
 
-#if 0
-struct v7_val *v7_set_num(struct v7_val *obj, const char *key, double num) {
-  struct v7_val k, v;
-  k = str_to_val((char *) key, strlen(key));
-  v.type = V7_NUM;
-  v.v.num = num;
-  return v7_set(obj, &k, &v);
+enum v7_err v7_set_func(struct v7 *v7, struct v7_val *obj,
+                        const char *key, v7_func_t c_func) {
+  struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
+  struct v7_val *v = v7_mkval(v7, V7_C_FUNC);
+  CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
+  v->v.c_func = c_func;
+  return v7_set(v7, obj, k, v);
 }
 
-struct v7_val *v7_set_str(struct v7_val *obj, const char *key,
-                          const char *str, int len) {
-  struct v7_val k, v;
-  k = str_to_val((char *) key, strlen(key));
-  v.type = V7_STR;
-  v.v.str.len = len;
-  v.v.str.buf = v7_strdup(str, len);
-  return v7_set(obj, &k, &v);
+enum v7_err v7_set_num(struct v7 *v7, struct v7_val *obj,
+                       const char *key, double num) {
+  struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
+  struct v7_val *v = v7_mkval(v7, V7_NUM);
+  CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
+  v->v.num = num;
+  return v7_set(v7, obj, k, v);
 }
 
-struct v7_val *v7_set_obj(struct v7_val *obj, const char *key) {
-  struct v7_val k, v;
-  k = str_to_val((char *) key, strlen(key));
-  v.type = V7_OBJ;
-  v.v.map = NULL;
-  return v7_set(obj, &k, &v);
+enum v7_err v7_set_str(struct v7 *v7, struct v7_val *obj,
+                       const char *key, const char *str, int len) {
+  struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
+  struct v7_val *v = v7_mkval_str(v7, str, len);
+  CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
+  return v7_set(v7, obj, k, v);
 }
 
-struct v7_val *v7_set_func(struct v7_val *obj, const char *key, v7_func_t f) {
-  //struct v7_val *val = NULL;
-  struct v7_val k, v;
-  k = str_to_val((char *) key, strlen(key));
-  v.type = V7_C_FUNC;
-  v.v.c_func = f;
-  return v7_set(obj, &k, &v);
+enum v7_err v7_set_obj(struct v7 *v7, struct v7_val *obj, const char *key) {
+  struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
+  struct v7_val *v = v7_mkval(v7, V7_OBJ);
+  CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
+  return v7_set(v7, obj, k, v);
 }
-#endif
 
 static int is_alpha(int ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
@@ -1018,16 +1014,8 @@ static void stdlib_print(struct v7 *v7, struct v7_val *obj,
   }
 }
 
-void v7_reg_func(struct v7 *v7, struct v7_val *obj,
-                 const char *key, v7_func_t c_func) {
-  struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
-  struct v7_val *v = v7_mkval(v7, V7_C_FUNC);
-  v->v.c_func = c_func;
-  v7_set(v7, obj, k, v);
-}
-
 void v7_init_stdlib(struct v7 *v7) {
-  v7_reg_func(v7, v7_get_root_namespace(v7), "print", &stdlib_print);
+  v7_set_func(v7, v7_get_root_namespace(v7), "print", &stdlib_print);
 }
 
 #ifdef V7_EXE
