@@ -52,7 +52,7 @@ static void adder(struct v7 *v7, struct v7_val *obj, struct v7_val *result,
 
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
-  v7_reg_func(v7, "adder", adder);
+  v7_reg_func(v7, v7_get_root_namespace(v7), "adder", adder);
   ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 10);

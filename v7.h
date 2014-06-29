@@ -107,7 +107,7 @@ struct v7_val *v7_set_str(struct v7_val *, const char *key, const char *, int);
 struct v7_val *v7_set_obj(struct v7_val *, const char *key);
 struct v7_val *v7_set_func(struct v7_val *, const char *key, v7_func_t);
 #endif
-void v7_reg_func(struct v7 *v7, const char *key, v7_func_t c_func);
+void v7_reg_func(struct v7 *, struct v7_val *obj, const char *name, v7_func_t);
 
 struct v7_val *v7_lookup(struct v7_val *obj, const char *key);
 struct v7_val *v7_get_root_namespace(struct v7 *);

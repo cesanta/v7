@@ -1018,15 +1018,16 @@ static void stdlib_print(struct v7 *v7, struct v7_val *obj,
   }
 }
 
-void v7_reg_func(struct v7 *v7, const char *key, v7_func_t c_func) {
+void v7_reg_func(struct v7 *v7, struct v7_val *obj,
+                 const char *key, v7_func_t c_func) {
   struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
   struct v7_val *v = v7_mkval(v7, V7_C_FUNC);
   v->v.c_func = c_func;
-  v7_set(v7, v7_get_root_namespace(v7), k, v);
+  v7_set(v7, obj, k, v);
 }
 
 void v7_init_stdlib(struct v7 *v7) {
-  v7_reg_func(v7, "print", &stdlib_print);
+  v7_reg_func(v7, v7_get_root_namespace(v7), "print", &stdlib_print);
 }
 
 #ifdef V7_EXE
