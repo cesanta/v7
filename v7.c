@@ -417,7 +417,10 @@ static void skip_whitespaces_and_comments(struct v7 *v7) {
     }
     if (s[0] == '/' && s[1] == '*') {
       s += 2;
-      while (s[0] != '\0' && !(s[-1] == '/' && s[-2] == '*')) s++;
+      while (s[0] != '\0' && !(s[-1] == '/' && s[-2] == '*')) {
+        if (s[0] == '\n') v7->line_no++;
+        s++;
+      }
     }
   }
   v7->cursor = s;
@@ -993,6 +996,15 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   }
 
   return status;
+}
+
+const char *v7_err_to_str(enum v7_err e) {
+  static const char *strings[] = {
+    "no error", "syntax error", "out of memory", "internal error",
+    "stack overflow", "stack underflow", "undefined variable",
+    "type mismatch", "recursion too deep"
+  };
+  return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
 }
 
 static void stdlib_print(struct v7 *v7, struct v7_val *obj,

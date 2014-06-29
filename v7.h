@@ -117,6 +117,7 @@ struct v7_val **v7_top(struct v7 *);  // Get top of the stack
 
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz);
 struct v7_val v7_str_to_val(const char *buf);
+const char *v7_err_to_str(enum v7_err);
 
 void v7_init_stdlib(struct v7 *);
 
