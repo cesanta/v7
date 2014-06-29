@@ -376,11 +376,11 @@ enum v7_err v7_set_str(struct v7 *v7, struct v7_val *obj,
   return v7_set(v7, obj, k, v);
 }
 
-enum v7_err v7_set_obj(struct v7 *v7, struct v7_val *obj, const char *key) {
+enum v7_err v7_set_obj(struct v7 *v7, struct v7_val *obj, const char *key,
+                       struct v7_val *val) {
   struct v7_val *k = v7_mkval_str(v7, key, strlen(key));
-  struct v7_val *v = v7_mkval(v7, V7_OBJ);
-  CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
-  return v7_set(v7, obj, k, v);
+  CHECK(k != NULL, V7_OUT_OF_MEMORY);
+  return v7_set(v7, obj, k, val);
 }
 
 static int is_alpha(int ch) {
@@ -1002,13 +1002,12 @@ const char *v7_err_to_str(enum v7_err e) {
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
 }
 
-static void stdlib_print(struct v7 *v7, struct v7_val *obj,
+static void stdlib_print(struct v7 *v7, struct v7_val *this_obj,
                          struct v7_val *result,
                          struct v7_val **args, int num_args) {
   char buf[2000];
   int i;
-  (void) v7; (void) obj;
-  result->type = V7_UNDEF;
+  (void) v7; (void) this_obj; (void) result;
   for (i = 0; i < num_args; i++) {
     printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
   }
