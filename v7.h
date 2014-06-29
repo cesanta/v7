@@ -2,70 +2,33 @@
 // Copyright (c) 2013-2014 Cesanta Software Limited
 // All rights reserved
 //
-// This library is dual-licensed: you can redistribute it and/or modify
+// This software is dual-licensed: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License version 2 as
 // published by the Free Software Foundation. For the terms of this
 // license, see <http://www.gnu.org/licenses/>.
 //
-// You are free to use this library under the terms of the GNU General
+// You are free to use this software under the terms of the GNU General
 // Public License, but WITHOUT ANY WARRANTY; without even the implied
 // warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
 //
-// Alternatively, you can license this library under a commercial
+// Alternatively, you can license this software under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
 #ifndef V7_HEADER_INCLUDED
 #define  V7_HEADER_INCLUDED
 
-#include <sys/stat.h>
-#include <assert.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-#ifdef _WIN32
-#define vsnprintf _vsnprintf
-#endif
-
-#ifdef V7_DEBUG
-#define DBG(x) do { printf("%-20s ", __func__); printf x; putchar('\n'); \
-  fflush(stdout); } while(0)
-#else
-#define DBG(x)
-#endif
-
 #define V7_VERSION "1.0"
-#define MAX_STRING_LITERAL_LENGTH 500
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
-// Linked list interface
+// Linked list chain
 struct llhead { struct llhead *prev, *next; };
 
-#define LL_INIT(N)              ((N)->next = (N)->prev = (N))
-#define LL_DECLARE_AND_INIT(H)  struct llhead H = { &H, &H }
-#define LL_ENTRY(P,T,N)         ((T *)((char *)(P) - offsetof(T, N)))
-#define LL_IS_EMPTY(N)          ((N)->next == (N))
-#define LL_FOREACH(H,N,T)       for (N = (H)->next, T = (N)->next; N != (H); \
-                                     N = (T), T = (N)->next)
-#define LL_ADD(H, N)  do { ((H)->next)->prev = (N); (N)->next = ((H)->next); \
-                            (N)->prev = (H); (H)->next = (N); } while (0)
-#define LL_TAIL(H, N) do { ((H)->prev)->next = (N); (N)->prev = ((H)->prev); \
-                            (N)->next = (H); (H)->prev = (N); } while (0)
-#define LL_DEL(N)     do { ((N)->next)->prev = ((N)->prev); \
-                            ((N)->prev)->next = ((N)->next); \
-                            LL_INIT(N); } while (0)
-
 enum v7_type {
-  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL,
-  V7_FUNC, V7_C_FUNC, V7_REF
+  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC
 };
 
 enum v7_err {
@@ -77,7 +40,7 @@ enum v7_err {
 struct v7;
 struct v7_val;
 struct v7_map;
-typedef void (*v7_func_t)(struct v7 *, struct v7_val *obj,
+typedef void (*v7_func_t)(struct v7 *, struct v7_val *this_obj,
                           struct v7_val *result,
                           struct v7_val **params, int num_params);
 
@@ -146,7 +109,7 @@ struct v7_val *v7_set_func(struct v7_val *, const char *key, v7_func_t);
 #endif
 void v7_reg_func(struct v7 *v7, const char *key, v7_func_t c_func);
 
-struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key);
+struct v7_val *v7_lookup(struct v7_val *obj, const char *key);
 struct v7_val *v7_get_root_namespace(struct v7 *);
 
 int v7_sp(struct v7 *v7);             // Get number of values in the stack

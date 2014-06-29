@@ -2,20 +2,57 @@
 // Copyright (c) 2013-2014 Cesanta Software Limited
 // All rights reserved
 //
-// This library is dual-licensed: you can redistribute it and/or modify
+// This software is dual-licensed: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License version 2 as
 // published by the Free Software Foundation. For the terms of this
 // license, see <http://www.gnu.org/licenses/>.
 //
-// You are free to use this library under the terms of the GNU General
+// You are free to use this software under the terms of the GNU General
 // Public License, but WITHOUT ANY WARRANTY; without even the implied
 // warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 // See the GNU General Public License for more details.
 //
-// Alternatively, you can license this library under a commercial
+// Alternatively, you can license this software under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
 #include "v7.h"
+
+#include <sys/stat.h>
+#include <assert.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#endif
+
+#ifdef V7_DEBUG
+#define DBG(x) do { printf("%-20s ", __func__); printf x; putchar('\n'); \
+  fflush(stdout); } while(0)
+#else
+#define DBG(x)
+#endif
+
+#define MAX_STRING_LITERAL_LENGTH 500
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+
+#define LL_INIT(N)              ((N)->next = (N)->prev = (N))
+#define LL_DECLARE_AND_INIT(H)  struct llhead H = { &H, &H }
+#define LL_ENTRY(P,T,N)         ((T *)((char *)(P) - offsetof(T, N)))
+#define LL_IS_EMPTY(N)          ((N)->next == (N))
+#define LL_FOREACH(H,N,T)       for (N = (H)->next, T = (N)->next; N != (H); \
+                                     N = (T), T = (N)->next)
+#define LL_ADD(H, N)  do { ((H)->next)->prev = (N); (N)->next = ((H)->next); \
+                            (N)->prev = (H); (H)->next = (N); } while (0)
+#define LL_TAIL(H, N) do { ((H)->prev)->next = (N); (N)->prev = ((H)->prev); \
+                            (N)->next = (H); (H)->prev = (N); } while (0)
+#define LL_DEL(N)     do { ((N)->next)->prev = ((N)->prev); \
+                            ((N)->prev)->next = ((N)->next); \
+                            LL_INIT(N); } while (0)
 
 // Forward declarations
 static enum v7_err parse_expression(struct v7 *);
@@ -140,9 +177,6 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
     case V7_OBJ:
       obj_v7_to_string(v, buf, bsiz);
       break;
-    case V7_REF:
-      obj_v7_to_string(v->v.ref, buf, bsiz);
-      break;
     case V7_STR:
         snprintf(buf, bsiz, "%.*s", v->v.str.len, v->v.str.buf);
         break;
@@ -238,12 +272,17 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
 
 struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key) {
   struct v7_map *m;
-  //if (obj != NULL && obj->type == V7_REF) obj = obj->v.ref;
   if (obj == NULL || obj->type != V7_OBJ) return NULL;
   for (m = obj->v.map; m != NULL; m = m->next) {
     if (cmp(m->key, key)) return m;
   }
   return NULL;
+}
+
+struct v7_val *v7_lookup(struct v7_val *obj, const char *key) {
+  struct v7_val k = v7_str_to_val(key);
+  struct v7_map *m = v7_get(obj, &k);
+  return m == NULL ? NULL : m->val;
 }
 
 static enum v7_err v7_push_string(struct v7 *v7, const char *s,
@@ -948,6 +987,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
     fread(p, 1, file_size, fp);
     fclose(fp);
     p[file_size] = '\0';
+    v7->line_no = 1;
     status = v7_exec(v7, p);
     free(p);
   }
