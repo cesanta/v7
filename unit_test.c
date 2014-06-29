@@ -85,7 +85,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "3 + 4") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 7);
 
-  ASSERT(v7_exec(v7, "2()") == V7_TYPE_MISMATCH);
+  ASSERT(v7_exec(v7, "2()") == V7_CALLED_NON_FUNCTION);
   ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == V7_OK);
 
   ASSERT(v7_exec(v7, "( (5  ) );") == V7_OK);

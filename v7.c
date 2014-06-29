@@ -575,7 +575,7 @@ enum v7_err v7_call(struct v7 *v7, int num_args) {
 
   if (v7->no_exec) return V7_OK;
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
-  CHECK(f->type == V7_FUNC || f->type == V7_C_FUNC, V7_TYPE_MISMATCH);
+  CHECK(f->type == V7_FUNC || f->type == V7_C_FUNC, V7_CALLED_NON_FUNCTION);
 
   // Return value will substitute function objest on a stack
   v[0] = v7_mkval(v7, V7_UNDEF);  // Set return value to 'undefined'
@@ -605,9 +605,8 @@ static enum v7_err parse_function_call(struct v7 *v7) {
   struct v7_val **v = v7_top(v7) - 1;
   int num_args = 0;
 
-  if (!v7->no_exec) {
-    CHECK(v[0]->type == V7_FUNC || v[0]->type == V7_C_FUNC, V7_TYPE_MISMATCH);
-  }
+  CHECK(v7->no_exec || v[0]->type == V7_FUNC || v[0]->type == V7_C_FUNC,
+        V7_CALLED_NON_FUNCTION);
 
   // Push arguments on stack
   TRY(match(v7, '('));
@@ -1002,7 +1001,7 @@ const char *v7_err_to_str(enum v7_err e) {
   static const char *strings[] = {
     "no error", "syntax error", "out of memory", "internal error",
     "stack overflow", "stack underflow", "undefined variable",
-    "type mismatch", "recursion too deep"
+    "type mismatch", "recursion too deep", "called non-function"
   };
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
 }
