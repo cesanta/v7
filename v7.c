@@ -729,6 +729,30 @@ static enum v7_err parse_variable(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err del_key(struct v7_val *obj, const struct v7_val *key) {
+  struct v7_map **p;
+  CHECK(obj->type == V7_OBJ, V7_TYPE_MISMATCH);
+  for (p = &obj->v.map; *p != NULL; p = &p[0]->next) {
+    if (cmp(key, p[0]->key)) {
+      struct v7_map *next = p[0]->next;
+      free_val(p[0]->key);
+      free_val(p[0]->val);
+      free(p[0]);
+      p[0] = next;
+      break;
+    }
+  }
+  return V7_OK;
+}
+
+static enum v7_err parse_delete(struct v7 *v7) {
+  struct v7_val key;
+  TRY(parse_expression(v7));
+  key = str_to_val(v7->tok, v7->tok_len);  // Must go after parse_expression
+  TRY(del_key(v7->cur_obj, &key));
+  return V7_OK;
+}
+
 //  factor  =   number | string_literal | "(" expression ")" |
 //              variable | "this" | "null" | "true" | "false" |
 //              "{" object_literal "}" |
@@ -761,6 +785,8 @@ static enum v7_err parse_factor(struct v7 *v7) {
       v7_top(v7)[-1]->v.num = 0;
     } else if (test_token(v7, "function", 8)) {
       TRY(parse_function_definition(v7, NULL, 0));
+    } else if (test_token(v7, "delete", 6)) {
+      TRY(parse_delete(v7));
     } else {
       TRY(parse_variable(v7));
     }

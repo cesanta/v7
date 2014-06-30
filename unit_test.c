@@ -124,6 +124,21 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var blah = 'kuku';") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_STR);
 
+  // Test that k.y does exist
+  ASSERT(v7_exec(v7, "k = { y: 17 };") == V7_OK);
+  ASSERT(v7_exec(v7, "k.y") == V7_OK);
+  ASSERT(v7_top(v7)[-1]->type == V7_NUM);
+  ASSERT(v7_top(v7)[-1]->v.num == 17);
+  ASSERT(v7_sp(v7) == 1);
+
+  // Delete k.y and make sure it's gone
+  ASSERT(v7_exec(v7, "delete k.y; k.y;") == V7_OK);
+  ASSERT(v7_top(v7)[-1]->type == V7_UNDEF);
+  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_exec(v7, "delete b; b;") == V7_OK);
+  ASSERT(v7_top(v7)[-1]->type == V7_UNDEF);
+  ASSERT(v7_sp(v7) == 1);
+
   ASSERT(v7_exec(v7, "k = { key1: {x:3}, key2: ':-)', y: 5 };") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_OBJ);
   ASSERT(v7_sp(v7) == 1);
