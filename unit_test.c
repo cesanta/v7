@@ -55,7 +55,7 @@ static const char *test_native_functions(void) {
   v7_set_func(v7, v7_get_root_namespace(v7), "adder", adder);
   ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 10);
+  ASSERT(v7_top(v7)[-1]->v.num == 10.0);
   v7_destroy(&v7);
   return NULL;
 }
@@ -80,36 +80,36 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "-2;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == -2);
+  ASSERT((int) v7_top(v7)[-1]->v.num == -2);
 
   ASSERT(v7_exec(v7, "3 + 4") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->v.num == 7);
+  ASSERT(v7_top(v7)[-1]->v.num == 7.0);
 
   ASSERT(v7_exec(v7, "2()") == V7_CALLED_NON_FUNCTION);
   ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == V7_OK);
 
   ASSERT(v7_exec(v7, "( (5  ) );") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 5);
+  ASSERT(v7_top(v7)[-1]->v.num == 5.0);
 
   ASSERT(v7_exec(v7, "(2 + (12 / 4));") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 5);
+  ASSERT(v7_top(v7)[-1]->v.num == 5.0);
 
   ASSERT(v7_exec(v7, "1;2 7") == V7_OK);
   ASSERT(v7_exec(v7, "a + 5") == V7_TYPE_MISMATCH);
 
   ASSERT(v7_exec(v7, "a = 7;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 7);
+  ASSERT(v7_top(v7)[-1]->v.num == 7.0);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->v.num == 10);
+  ASSERT(v7_top(v7)[-1]->v.num == 10.0);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "c = b * (a + 3) / 2;") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->v.num == 50);
+  ASSERT(v7_top(v7)[-1]->v.num == 50.0);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a;") == V7_OK);
@@ -119,7 +119,7 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "var k = true;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_BOOL);
-  ASSERT(v7_top(v7)[-1]->v.num != 0);
+  ASSERT(v7_top(v7)[-1]->v.num != 0.0);
 
   ASSERT(v7_exec(v7, "var blah = 'kuku';") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_STR);
@@ -128,7 +128,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "k = { y: 17 };") == V7_OK);
   ASSERT(v7_exec(v7, "k.y") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 17);
+  ASSERT(v7_top(v7)[-1]->v.num == 17.0);
   ASSERT(v7_sp(v7) == 1);
 
   // Delete k.y and make sure it's gone
@@ -151,14 +151,14 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "k.key1.x + 4") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 7);
+  ASSERT(v7_top(v7)[-1]->v.num == 7.0);
 
   ASSERT(v7_exec(v7, "k.foo") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_UNDEF);
 
   ASSERT(v7_exec(v7, "var z = 'key1'; k[z]['x']") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 3);
+  ASSERT(v7_top(v7)[-1]->v.num == 3.0);
 
   ASSERT(v7_exec(v7, "var stk = 1;") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
@@ -174,7 +174,7 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 49);
+  ASSERT(v7_top(v7)[-1]->v.num == 49.0);
 
   ASSERT(v7_exec(v7, "f = function(x,y,z) { print(this, '\n'); };") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
@@ -187,10 +187,10 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "if (5) { f1 = 3; f2 = function(){}; } ") == V7_OK);
 
   ASSERT(v7_exec(v7, "0 ? 1 : 2;") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->v.num == 2);
+  ASSERT(v7_top(v7)[-1]->v.num == 2.0);
 
   ASSERT(v7_exec(v7, "k = true ? 1 : 2;") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->v.num == 1);
+  ASSERT(v7_top(v7)[-1]->v.num == 1.0);
 
   ASSERT(v7_exec(v7, "var f = function(){var x=12; return x + 1;};") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
@@ -198,16 +198,16 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "k = f(1,2,3);") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 13);
+  ASSERT(v7_top(v7)[-1]->v.num == 13.0);
 
   ASSERT(v7_exec(v7, "(function() { return f() + 7; })()") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 20);
+  ASSERT(v7_top(v7)[-1]->v.num == 20.0);
 
   ASSERT(v7_exec(v7, "var a = 1; if (a == 1) { a = 2; }; a;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 2);
+  ASSERT(v7_top(v7)[-1]->v.num == 2.0);
 
   v7_exec(v7, "print(this, '\n');");
   v7_destroy(&v7);

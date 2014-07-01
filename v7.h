@@ -24,9 +24,6 @@ extern "C" {
 
 #define V7_VERSION "1.0"
 
-// Linked list chain
-struct llhead { struct llhead *prev, *next; };
-
 enum v7_type {
   V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC
 };
@@ -46,8 +43,8 @@ typedef void (*v7_func_t)(struct v7 *, struct v7_val *this_obj,
 
 // A string.
 struct v7_str {
-  char *buf;      // Pointer to buffer with string data
-  int len;        // String length
+  char *buf;          // Pointer to buffer with string data
+  unsigned long len;  // String length
 };
 
 union v7_v {
@@ -56,15 +53,15 @@ union v7_v {
   v7_func_t c_func;
   char *func;
   struct v7_map *map;
-  struct v7_val *ref;
 };
 
 struct v7_val {
-  struct llhead link;           // Linkage in struct v7::values
+  struct v7_val *next;
+  struct v7_val *proto;         // Prototype
   enum v7_type type;            // Value type
-  unsigned char ref_count;      // Reference counter
-  unsigned char str_unowned:1;  // Object's string must not fe free-ed
-  unsigned char val_unowned:1;  // Object must not be free-d
+  unsigned short ref_count;     // Reference counter  XXX make it signed
+  unsigned char str_unowned;    // Object's string must not fe free-ed
+  unsigned char val_unowned;    // Object must not be free-d
   union v7_v v;                 // The value itself
 };
 
@@ -77,18 +74,18 @@ struct v7_map {
 
 struct v7 {
   struct v7_val *stack[200];
-  int sp;                     // Stack pointer
   struct v7_val scopes[20];   // Namespace objects (scopes)
+  int sp;                     // Stack pointer
   int current_scope;          // Pointer to the current scope
 
   const char *source_code;    // Pointer to the source codeing
   const char *cursor;         // Current parsing position
+  const char *tok;            // Parsed terminal token (ident, number, string)
+  unsigned long tok_len;      // Length of the parsed terminal token
   int line_no;                // Line number
   int no_exec;                // No-execute flag. For parsing function defs
-  const char *tok;            // Parsed terminal token (ident, number, string)
-  int tok_len;                // Length of the parsed terminal token
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
-  struct llhead values;       // List of allocated values
+  struct v7_val *values;
 };
 
 struct v7 *v7_create(void);
@@ -104,7 +101,7 @@ enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *key,
 enum v7_err v7_set_func(struct v7 *, struct v7_val *, const char *, v7_func_t);
 enum v7_err v7_set_num(struct v7 *, struct v7_val *, const char *, double);
 enum v7_err v7_set_str(struct v7 *, struct v7_val *, const char *,
-                       const char *, int);
+                       const char *str, unsigned long str_len);
 enum v7_err v7_set_obj(struct v7 *, struct v7_val *, const char *,
                        struct v7_val *);
 struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type);

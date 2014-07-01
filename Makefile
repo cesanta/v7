@@ -8,6 +8,10 @@ all: unit_test
 unit_test: v7.c v7.h unit_test.c
 	g++ v7.c unit_test.c -o $@ $(CFLAGS)
 
+u:
+	$(CC) v7.c unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
+	./$@
+
 v7: v7.c v7.h
 	$(CC) v7.c -o $@ -DV7_EXE $(CFLAGS)
 
