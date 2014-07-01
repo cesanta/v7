@@ -36,7 +36,7 @@ enum v7_err {
 
 struct v7;
 struct v7_val;
-struct v7_map;
+struct v7_prop;
 typedef void (*v7_func_t)(struct v7 *, struct v7_val *this_obj,
                           struct v7_val *result,
                           struct v7_val **params, int num_params);
@@ -47,12 +47,18 @@ struct v7_str {
   unsigned long len;  // String length
 };
 
-union v7_v {
+union v7_scalar {
+  char *func;
   struct v7_str str;
   double num;
   v7_func_t c_func;
-  char *func;
-  struct v7_map *map;
+  struct v7_prop *props;
+};
+
+struct v7_prop {
+  struct v7_prop *next;
+  struct v7_val *key;
+  struct v7_val *val;
 };
 
 struct v7_val {
@@ -60,16 +66,8 @@ struct v7_val {
   struct v7_val *proto;         // Prototype
   enum v7_type type;            // Value type
   unsigned short ref_count;     // Reference counter  XXX make it signed
-  unsigned char str_unowned;    // Object's string must not fe free-ed
-  unsigned char val_unowned;    // Object must not be free-d
-  union v7_v v;                 // The value itself
-};
-
-// Key/value pair. "struct v7_map *" is a key/val list head, represents object
-struct v7_map {
-  struct v7_map *next;
-  struct v7_val *key;
-  struct v7_val *val;
+  unsigned short flags;
+  union v7_scalar v;            // The value itself
 };
 
 struct v7 {

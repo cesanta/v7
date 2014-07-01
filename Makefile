@@ -1,5 +1,5 @@
 #PROF = -fprofile-arcs -ftest-coverage -g -O0
-CFLAGS = -W -Wall -g -O0 $(PROF) $(CFLAGS_EXTRA)
+CFLAGS = -W -Wall -pedantic -ansi -g -O0 $(PROF) $(CFLAGS_EXTRA)
 
 all: unit_test
 	valgrind -q --leak-check=full ./unit_test

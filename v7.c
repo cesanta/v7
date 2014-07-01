@@ -32,13 +32,39 @@
 
 #define MAX_STRING_LITERAL_LENGTH 500
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
+#define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
+#define RO_OBJ(t) {0, 0, t, 0, VAL_RO|STR_RO|PROP_RO, {0}}
+#define SET_RO_PROP(obj, name, type, attr, initializer)  \
+  do {                                                  \
+    static struct v7_val key = RO_OBJ(V7_STR);          \
+    static struct v7_val val = RO_OBJ(type);            \
+    static struct v7_prop prop = {NULL, &key, &val};    \
+    key.v.str.buf = (char *) (name);                    \
+    key.v.str.len = strlen(key.v.str.buf);              \
+    val.v.attr = (initializer);                         \
+    prop.next = obj.v.props;                            \
+    obj.v.props = &prop;                                \
+  } while (0)
+
+// Possible values for struct v7_val::flags 
+enum { VAL_RO = 1, STR_RO = 2, PROP_RO = 4 };
 
 // Forward declarations
 static enum v7_err parse_expression(struct v7 *);
 static enum v7_err parse_statement(struct v7 *, int *is_return);
 
-#define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
-#define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
+// Static variables
+static struct v7_val s_object_proto = RO_OBJ(V7_OBJ);
+static struct v7_val s_string_proto = RO_OBJ(V7_OBJ);
+
+static void init_prototypes(void) {
+  static int prototypes_initialized;
+  if (prototypes_initialized) return;
+  prototypes_initialized++;
+  s_string_proto.proto = &s_object_proto;
+  SET_RO_PROP(s_string_proto, "length", V7_NUM, num, 12.0);
+}
 
 struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
@@ -48,8 +74,12 @@ struct v7 *v7_create(void) {
 
   for (i = 0; i < ARRAY_SIZE(v7->scopes); i++) {
     v7->scopes[i].type = V7_OBJ;
-    v7->scopes[i].val_unowned = 1;
+    v7->scopes[i].flags = VAL_RO;
   }
+
+  init_prototypes();
+  v7_set_obj(v7, v7_get_root_namespace(v7), "Object", &s_object_proto);
+  v7_set_obj(v7, v7_get_root_namespace(v7), "String", &s_string_proto);
 
   return v7;
 }
@@ -67,22 +97,22 @@ static void free_val(struct v7 *v7, struct v7_val *v) {
   v->ref_count--;
   assert(v->ref_count >= 0);
   if (v->ref_count > 0) return;
-  if (v->type == V7_OBJ) {
-    struct v7_map *p, *tmp;
-    for (p = v->v.map; p != NULL; p = tmp) {
+  if (v->type == V7_OBJ && !(v->flags & PROP_RO)) {
+    struct v7_prop *p, *tmp;
+    for (p = v->v.props; p != NULL; p = tmp) {
       tmp = p->next;
       free_val(v7, p->key);
       free_val(v7, p->val);
       free(p);
     }
-  } else if (v->type == V7_STR && !v->str_unowned) {
+    v->v.props = NULL;
+  } else if (v->type == V7_STR && !(v->flags & STR_RO)) {
     free(v->v.str.buf);
-  } else if (v->type == V7_FUNC && !v->str_unowned) {
+  } else if (v->type == V7_FUNC && !(v->flags & STR_RO)) {
     free(v->v.func);
   }
   unlink_val(&v7->values, v);
-  memset(&v->v, 0, sizeof(v->v));
-  if (!v->val_unowned) free(v);
+  if (!(v->flags & VAL_RO)) free(v);
 }
 
 struct v7_val *v7_get_root_namespace(struct v7 *v7) {
@@ -131,11 +161,11 @@ static int v7_is_true(const struct v7_val *v) {
 }
 
 static void obj_v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
-  const struct v7_map *m;
+  const struct v7_prop *m;
   int n = snprintf(buf, bsiz, "%s", "{");
 
-  for (m = v->v.map; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != v->v.map) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+  for (m = v->v.props; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != v->v.props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
     v7_to_string(m->key, buf + n, bsiz - n);
     n = (int) strlen(buf);
     n += snprintf(buf + n , bsiz - n, "%s", ": ");
@@ -190,10 +220,13 @@ static char *v7_strdup(const char *ptr, unsigned long len) {
 struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type) {
   struct v7_val *v = (struct v7_val *) calloc(1, sizeof(*v));
   if (v != NULL) {
-    //LL_ADD(&v7->values, &v->link);
     v->type = type;
     v->next = v7->values;
     v7->values = v;
+    switch (type) {
+      case V7_STR: v->proto = &s_string_proto; break;
+      default: v->proto = &s_object_proto; break;
+    }
   }
   return v;
 }
@@ -262,10 +295,10 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
     memcmp(a->v.str.buf, b->v.str.buf, a->v.str.len) == 0;
 }
 
-static struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key) {
-  struct v7_map *m;
+static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key) {
+  struct v7_prop *m;
   if (obj == NULL || obj->type != V7_OBJ) return NULL;
-  for (m = obj->v.map; m != NULL; m = m->next) {
+  for (m = obj->v.props; m != NULL; m = m->next) {
     if (cmp(m->key, key)) return m;
   }
   return NULL;
@@ -273,7 +306,7 @@ static struct v7_map *v7_get(struct v7_val *obj, const struct v7_val *key) {
 
 struct v7_val *v7_lookup(struct v7_val *obj, const char *key) {
   struct v7_val k = v7_str_to_val(key);
-  struct v7_map *m = v7_get(obj, &k);
+  struct v7_prop *m = v7_get(obj, &k);
   return m == NULL ? NULL : m->val;
 }
 
@@ -283,15 +316,15 @@ static enum v7_err v7_make_and_push_string(struct v7 *v7, const char *s,
   TRY(v7_make_and_push(v7, V7_STR));
   v[0]->v.str.len = len;
   v[0]->v.str.buf = do_copy ? v7_strdup(s, len) : (char *) s;
-  v[0]->str_unowned = !do_copy;
+  v[0]->flags = do_copy ? 0 : STR_RO;
   return V7_OK;
 }
 
-static struct v7_map *vinsert(struct v7 *v7, struct v7_map **h,
+static struct v7_prop *vinsert(struct v7 *v7, struct v7_prop **h,
                               struct v7_val *key) {
-  struct v7_map *m;
+  struct v7_prop *m;
 
-  if ((m = (struct v7_map *) calloc(1, sizeof(*m))) != NULL) {
+  if ((m = (struct v7_prop *) calloc(1, sizeof(*m))) != NULL) {
     key->ref_count++;
     m->key = key;
     m->val = v7_mkval(v7, V7_UNDEF);
@@ -303,8 +336,8 @@ static struct v7_map *vinsert(struct v7 *v7, struct v7_map **h,
   return m;
 }
 
-static struct v7_map *find(struct v7 *v7, struct v7_val *key, int alloc) {
-  struct v7_map *m = NULL;
+static struct v7_prop *find(struct v7 *v7, struct v7_val *key, int alloc) {
+  struct v7_prop *m = NULL;
   int i;
 
   if (v7->no_exec) return NULL;
@@ -315,20 +348,20 @@ static struct v7_map *find(struct v7 *v7, struct v7_val *key, int alloc) {
   }
 
   // Not found, create a new variable
-  if (alloc) m = vinsert(v7, &v7->scopes[v7->current_scope].v.map, key);
+  if (alloc) m = vinsert(v7, &v7->scopes[v7->current_scope].v.props, key);
 
   return m;
 }
 
 enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
                    struct v7_val *v) {
-  struct v7_map *m = NULL;
+  struct v7_prop *m = NULL;
 
   CHECK(obj != NULL && obj->type == V7_OBJ, V7_TYPE_MISMATCH);
 
   // Find attribute inside object
   if ((m = v7_get(obj, k)) == NULL) {
-    m = vinsert(v7, &obj->v.map, k);
+    m = vinsert(v7, &obj->v.props, k);
     CHECK(m != NULL, V7_OUT_OF_MEMORY);
   }
 
@@ -516,7 +549,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7->current_scope++;
     CHECK(v7->current_scope < (int) ARRAY_SIZE(v7->scopes),
           V7_RECURSION_TOO_DEEP);
-    CHECK(v7->scopes[v7->current_scope].v.map == NULL, V7_INTERNAL_ERROR);
+    CHECK(v7->scopes[v7->current_scope].v.props == NULL, V7_INTERNAL_ERROR);
     CHECK(v7->scopes[v7->current_scope].type == V7_OBJ, V7_INTERNAL_ERROR);
   }
 
@@ -675,7 +708,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
 // variable = identifier { '.' identifier | '[' expression ']' }
 static enum v7_err parse_variable(struct v7 *v7) {
   struct v7_val *ns, **v = NULL, key = str_to_val(v7->tok, v7->tok_len);
-  struct v7_map *m = find(v7, &key, 0);
+  struct v7_prop *m = find(v7, &key, 0);
 
   ns = (m == NULL) ? NULL : m->val;
   if (!v7->no_exec) {
@@ -719,11 +752,11 @@ static enum v7_err parse_variable(struct v7 *v7) {
 
 static enum v7_err del_key(struct v7 *v7, struct v7_val *obj,
                            const struct v7_val *key) {
-  struct v7_map **p;
+  struct v7_prop **p;
   CHECK(obj->type == V7_OBJ, V7_TYPE_MISMATCH);
-  for (p = &obj->v.map; *p != NULL; p = &p[0]->next) {
+  for (p = &obj->v.props; *p != NULL; p = &p[0]->next) {
     if (cmp(key, p[0]->key)) {
-      struct v7_map *next = p[0]->next;
+      struct v7_prop *next = p[0]->next;
       free_val(v7, p[0]->key);
       free_val(v7, p[0]->val);
       free(p[0]);

@@ -209,7 +209,6 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 2.0);
 
-  v7_exec(v7, "print(this, '\n');");
   v7_destroy(&v7);
 
   return NULL;
