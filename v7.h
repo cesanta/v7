@@ -25,7 +25,8 @@ extern "C" {
 #define V7_VERSION "1.0"
 
 enum v7_type {
-  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC
+  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC,
+  V7_RO_PROP
 };
 
 enum v7_err {
@@ -40,6 +41,7 @@ struct v7_prop;
 typedef void (*v7_func_t)(struct v7 *, struct v7_val *this_obj,
                           struct v7_val *result,
                           struct v7_val **params, int num_params);
+typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
 
 // A string.
 struct v7_str {
@@ -52,6 +54,7 @@ union v7_scalar {
   struct v7_str str;
   double num;
   v7_func_t c_func;
+  v7_prop_func_t prop_func;
   struct v7_prop *props;
 };
 

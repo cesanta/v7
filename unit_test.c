@@ -209,8 +209,19 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 2.0);
 
-  v7_destroy(&v7);
+  ASSERT(v7_exec(v7, "a = 'hi there'; a . length;") == V7_OK);
+  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_top(v7)[-1]->type == V7_NUM);
+  ASSERT(v7_top(v7)[-1]->v.num == 8.0);
 
+  v7_destroy(&v7);
+  return NULL;
+}
+
+static const char *test_String_functions(void) {
+  struct v7 *v7 = v7_create();
+
+  v7_destroy(&v7);
   return NULL;
 }
 
@@ -218,6 +229,7 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_v7_destroy);
   RUN_TEST(test_v7_exec);
   RUN_TEST(test_native_functions);
+  RUN_TEST(test_String_functions);
   return NULL;
 }
 
