@@ -1,8 +1,6 @@
 V7: Embedded JavaScript engine 
 ==============================
 
-Note: This project is in the design phase.
-
 V7 is a C/C++ library that implements Javascript engine. It is intended
 to be embedded into other programs to allow scripting and configuration,
 but also it could be used as stand-alone JS interpreter in scripts.
