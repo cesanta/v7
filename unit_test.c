@@ -209,10 +209,19 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 2.0);
 
-  ASSERT(v7_exec(v7, "a = 'hi there'; a . length;") == V7_OK);
+#if 1
+  ASSERT(v7_exec(v7, "123.toString();") == V7_OK);
+  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_top(v7)[-1]->type == V7_STR);
+  ASSERT(strcmp(v7_top(v7)[-1]->v.str.buf, "123") == 0);
+#endif
+
+#if 0
+  ASSERT(v7_exec(v7, "'hello'.length") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
-  ASSERT(v7_top(v7)[-1]->v.num == 8.0);
+  ASSERT(v7_top(v7)[-1]->v.num == 5.0);
+#endif
 
   v7_destroy(&v7);
   return NULL;
