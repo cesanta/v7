@@ -104,7 +104,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->v.num == 7.0);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
-  
+
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 10.0);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
@@ -131,9 +131,12 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 17.0);
   ASSERT(v7_sp(v7) == 1);
+  v7_exec(v7, "print(this, '\n');");
 
   // Delete k.y and make sure it's gone
-  ASSERT(v7_exec(v7, "delete k.y; k.y;") == V7_OK);
+  ASSERT(v7_exec(v7, "delete k.y;") == V7_OK);
+  v7_exec(v7, "print(':---)\n', k, '\n', this, '\n');");
+  ASSERT(v7_exec(v7, "k.y;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_UNDEF);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_exec(v7, "delete b; b;") == V7_OK);
@@ -209,6 +212,9 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var a = 1; if (a == 1) { a = 2; }; a;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 2.0);
+
+  ASSERT(v7_exec(v7, "a = { x: function() { print(this, '\n'); } }") == V7_OK);
+  ASSERT(v7_exec(v7, "a.x();") == V7_OK);
 
 #if 1
   printf("[-----\n");
