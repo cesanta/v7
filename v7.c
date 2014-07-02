@@ -806,7 +806,6 @@ static enum v7_err parse_variable_or_prop_accessor(struct v7 *v7, int use_tok) {
       ns = find(v7, &key);
     } else {
       ns = v7_top(v7)[-1];
-      ns->ref_count++;
     }
     v = &v7_top(v7)[-1];
   }
@@ -920,9 +919,8 @@ static enum v7_err parse_factor(struct v7 *v7) {
   }
 
   while (*v7->cursor == '.') {
-    parse_variable_or_prop_accessor(v7, 0);
+    TRY(parse_variable_or_prop_accessor(v7, 0));
   }
-  //TRACE_OBJ(v7->cur_obj);
 
   if (*v7->cursor == '(') {
     TRY(parse_function_call(v7));
