@@ -32,7 +32,8 @@ enum v7_type {
 enum v7_err {
   V7_OK, V7_SYNTAX_ERROR, V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR,
   V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW, V7_UNDEFINED_VARIABLE,
-  V7_TYPE_MISMATCH, V7_RECURSION_TOO_DEEP, V7_CALLED_NON_FUNCTION
+  V7_TYPE_MISMATCH, V7_RECURSION_TOO_DEEP, V7_CALLED_NON_FUNCTION,
+  V7_NUM_ERRORS
 };
 
 struct v7;
@@ -66,11 +67,11 @@ struct v7_prop {
 
 struct v7_val {
   struct v7_val *next;
-  struct v7_val *proto;         // Prototype
-  enum v7_type type;            // Value type
-  unsigned short ref_count;     // Reference counter  XXX make it signed
+  struct v7_val *proto;       // Prototype
+  enum v7_type type;          // Value type
+  short ref_count;            // Reference counter  XXX make it signed
   unsigned short flags;
-  union v7_scalar v;            // The value itself
+  union v7_scalar v;          // The value itself
 };
 
 struct v7 {

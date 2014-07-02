@@ -103,7 +103,8 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 7.0);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
-
+  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
   ASSERT(v7_top(v7)[-1]->v.num == 10.0);
   ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
@@ -210,10 +211,12 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->v.num == 2.0);
 
 #if 1
+  printf("[-----\n");
   ASSERT(v7_exec(v7, "123.toString();") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_STR);
   ASSERT(strcmp(v7_top(v7)[-1]->v.str.buf, "123") == 0);
+  printf("-----]\n");
 #endif
 
 #if 0
