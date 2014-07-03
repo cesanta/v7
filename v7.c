@@ -32,6 +32,7 @@
 #define vsnprintf _vsnprintf
 #endif
 
+#define V7_CACHE_OBJS
 #define MAX_STRING_LITERAL_LENGTH 500
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
@@ -186,15 +187,6 @@ struct v7 *v7_create(void) {
   return v7;
 }
 
-static void unlink_val(struct v7_val **head, struct v7_val *v) {
-  for (; *head != NULL; head = &head[0]->next) {
-    if (*head == v) {
-      head[0] = head[0]->next;
-      break;
-    }
-  }
-}
-
 static void free_val(struct v7 *v7, struct v7_val *v) {
   v->ref_count--;
   assert(v->ref_count >= 0);
@@ -205,7 +197,12 @@ static void free_val(struct v7 *v7, struct v7_val *v) {
       tmp = p->next;
       free_val(v7, p->key);
       free_val(v7, p->val);
+#ifdef V7_CACHE_OBJS
+      p->next = v7->free_props;
+      v7->free_props = p;
+#else
       free(p);
+#endif
     }
     v->v.props = NULL;
   } else if (v->type == V7_STR && !(v->flags & STRING_READONLY)) {
@@ -213,11 +210,15 @@ static void free_val(struct v7 *v7, struct v7_val *v) {
   } else if (v->type == V7_FUNC && !(v->flags & STRING_READONLY)) {
     free(v->v.func);
   }
-  unlink_val(&v7->values, v);
   if (!(v->flags & VALUE_READONLY)) {
-   memset(v, 0, sizeof(*v));
-   free(v);
- }
+    memset(v, 0, sizeof(*v));
+#ifdef V7_CACHE_OBJS
+    v->next = v7->free_values;
+    v7->free_values = v;
+#else
+    free(v);
+#endif
+  }
 }
 
 struct v7_val *v7_get_root_namespace(struct v7 *v7) {
@@ -247,11 +248,31 @@ static void free_scopes(struct v7 *v7, int i) {
   }
 }
 
+static void free_values(struct v7 *v7) {
+  struct v7_val *v;
+  while (v7->free_values != NULL) {
+    v = v7->free_values->next;
+    free(v7->free_values); 
+    v7->free_values = v;
+  }
+}
+
+static void free_props(struct v7 *v7) {
+  struct v7_prop *p;
+  while (v7->free_props != NULL) {
+    p = v7->free_props->next;
+    free(v7->free_props); 
+    v7->free_props = p;
+  }
+}
+
 void v7_destroy(struct v7 **v7) {
   if (v7 == NULL || v7[0] == NULL) return;
   assert(v7[0]->sp >= 0);
   inc_stack(v7[0], -v7[0]->sp);
   free_scopes(v7[0], 0);
+  free_values(v7[0]);
+  free_props(v7[0]);
   free(v7[0]);
   v7[0] = NULL;
 }
@@ -318,11 +339,18 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
 }
 
 struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type) {
-  struct v7_val *v = (struct v7_val *) calloc(1, sizeof(*v));
+  struct v7_val *v = NULL;
+
+  if ((v = v7->free_values) != NULL) {
+    v7->free_values = v->next;
+  } else {
+    v = (struct v7_val *) calloc(1, sizeof(*v));
+  }
+
   if (v != NULL) {
     v->type = type;
-    v->next = v7->values;
-    v7->values = v;
+    //v->next = v7->values;
+    //v7->values = v;
     switch (type) {
       case V7_STR: v->proto = &s_string; break;
       case V7_NUM: v->proto = &s_number; break;
@@ -436,7 +464,13 @@ static struct v7_prop *vinsert(struct v7 *v7, struct v7_prop **h,
                               struct v7_val *key) {
   struct v7_prop *m;
 
-  if ((m = (struct v7_prop *) calloc(1, sizeof(*m))) != NULL) {
+  if ((m = v7->free_props) != NULL) {
+    v7->free_props = m->next;
+  } else {
+    m = (struct v7_prop *) calloc(1, sizeof(*m));
+  }
+
+  if (m != NULL) {
     key->ref_count++;
     m->key = key;
     m->val = v7_mkval(v7, V7_UNDEF);
