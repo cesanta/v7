@@ -195,7 +195,10 @@ static void free_val(struct v7 *v7, struct v7_val *v) {
     free(v->v.func);
   }
   unlink_val(&v7->values, v);
-  if (!(v->flags & VALUE_READONLY)) { memset(v, 0, sizeof(*v)); free(v); }
+  if (!(v->flags & VALUE_READONLY)) {
+   memset(v, 0, sizeof(*v));
+   free(v);
+ }
 }
 
 struct v7_val *v7_get_root_namespace(struct v7 *v7) {
@@ -791,13 +794,6 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
   return V7_OK;
 }
 
-static void set_cur_obj(struct v7 *v7, struct v7_val *v) {
-  struct v7_val *old = v7->cur_obj;
-  v7->cur_obj = v;
-  v->ref_count++;
-  free_val(v7, old);
-}
-
 // variable = identifier { '.' identifier | '[' expression ']' }
 static enum v7_err parse_prop_accessor(struct v7 *v7) {
   struct v7_val **top = NULL, *v = NULL, *ns = NULL;
@@ -814,9 +810,6 @@ static enum v7_err parse_prop_accessor(struct v7 *v7) {
 
     TRY(match(v7, ch));
     CHECK(v7->no_exec || ns != NULL, V7_SYNTAX_ERROR);
-    //set_cur_obj(v7, ns);
-    ns->ref_count++;
-    free_val(v7, v7->cur_obj);
     v7->cur_obj = ns;
 
     if (ch == '.') {
@@ -847,6 +840,15 @@ static enum v7_err parse_prop_accessor(struct v7 *v7) {
     struct v7_val *old = top[0];
     top[0] = ns == NULL ? v : ns;
     top[0]->ref_count++;
+
+    // parse_function_call() might use v7->cur_obj, which can be
+    // deallocated by the free_val() calls below. Therefore, we call
+    // parse_function_call() right here, before cleaning up.
+    // NOTE: find a better way of doing this.
+    if (*v7->cursor == '(') {
+      TRY(parse_function_call(v7));
+    }
+
     free_val(v7, v);
     free_val(v7, old);
   }
@@ -933,11 +935,8 @@ static enum v7_err parse_factor(struct v7 *v7) {
   }
 
   while (*v7->cursor == '.' || *v7->cursor == '[') {
-    v7->cur_obj->ref_count++;
     TRY(parse_prop_accessor(v7));
-    free_val(v7, v7->cur_obj);
   }
-
 
   if (*v7->cursor == '(') {
     TRY(parse_function_call(v7));

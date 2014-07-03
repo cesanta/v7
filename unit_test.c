@@ -217,25 +217,16 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "a = { x: function() { print(this, '\n'); } }") == V7_OK);
   ASSERT(v7_exec(v7, "a.x();") == V7_OK);
 
-#if 0
-  printf("[-----\n");
   ASSERT(v7_exec(v7, "74.toString()") == V7_OK);
-  printf("-----]\n");
-
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_STR);
   printf("[%s]\n", v7_top(v7)[-1]->v.str.buf);
   ASSERT(strcmp(v7_top(v7)[-1]->v.str.buf, "74") == 0);
-#endif
 
-#if 0
-#if 0
   ASSERT(v7_exec(v7, "'hello'.length") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 5.0);
-#endif
-#endif
 
   v7_destroy(&v7);
   return NULL;
