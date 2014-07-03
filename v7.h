@@ -97,7 +97,7 @@ enum v7_err v7_exec(struct v7 *, const char *source_code);
 enum v7_err v7_exec_file(struct v7 *, const char *path);
 enum v7_err v7_push(struct v7 *v7, struct v7_val *v);
 enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type);
-enum v7_err v7_call(struct v7 *v7, int num_args);
+enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
 enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *key,
                    struct v7_val *val);
 enum v7_err v7_set_func(struct v7 *, struct v7_val *, const char *, v7_func_t);
@@ -114,7 +114,6 @@ struct v7_val **v7_top(struct v7 *);
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz);
 struct v7_val v7_str_to_val(const char *buf);
 const char *v7_err_to_str(enum v7_err);
-void v7_init_stdlib(struct v7 *);
 
 #ifdef __cplusplus
 }

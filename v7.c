@@ -39,16 +39,20 @@
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
 #define RO_OBJ(t) {0,0,(t),0,VALUE_READONLY|STRING_READONLY|PROP_READONLY,{0}}
-#define SET_RO_PROP(obj, name, type, attr, initializer)  \
+#define SET_RO_PROP_V(obj, name, val)                   \
   do {                                                  \
     static struct v7_val key = RO_OBJ(V7_STR);          \
-    static struct v7_val val = RO_OBJ(type);            \
     static struct v7_prop prop = {NULL, &key, &val};    \
     key.v.str.buf = (char *) (name);                    \
     key.v.str.len = strlen(key.v.str.buf);              \
-    val.v.attr = (initializer);                         \
     prop.next = obj.v.props;                            \
     obj.v.props = &prop;                                \
+  } while (0)
+#define SET_RO_PROP(obj, name, type, attr, initializer) \
+  do {                                                  \
+    static struct v7_val val = RO_OBJ(type);            \
+    val.v.attr = (initializer);                         \
+    SET_RO_PROP_V(obj, name, val);                      \
   } while (0)
 
 // Possible values for struct v7_val::flags 
@@ -121,7 +125,18 @@ static void Str_charAt(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-static void init_prototypes(void) {
+static void Os_print(struct v7 *v7, struct v7_val *this_obj,
+                         struct v7_val *result,
+                         struct v7_val **args, int num_args) {
+  char buf[4000];
+  int i;
+  (void) v7; (void) this_obj; (void) result;
+  for (i = 0; i < num_args; i++) {
+    printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
+  }
+}
+
+static void init_stdlib(void) {
   static int prototypes_initialized;
   if (prototypes_initialized) return;
   prototypes_initialized++;
@@ -131,10 +146,11 @@ static void init_prototypes(void) {
 
   SET_RO_PROP(s_number, "MAX_VALUE", V7_NUM, num, LONG_MAX);
   SET_RO_PROP(s_number, "MIN_VALUE", V7_NUM, num, LONG_MIN);
+  SET_RO_PROP(s_number, "NaN", V7_NUM, num, NAN);
 
   SET_RO_PROP(s_string, "length", V7_RO_PROP, prop_func, Str_length);
   SET_RO_PROP(s_string, "charCodeAt", V7_C_FUNC, c_func, Str_charCodeAt);
-  SET_RO_PROP(s_string, "charCodeAt", V7_C_FUNC, c_func, Str_charAt);
+  SET_RO_PROP(s_string, "charAt", V7_C_FUNC, c_func, Str_charAt);
 
   SET_RO_PROP(s_math, "E", V7_NUM, num, M_E);
   SET_RO_PROP(s_math, "PI", V7_NUM, num, M_PI);
@@ -144,6 +160,12 @@ static void init_prototypes(void) {
   SET_RO_PROP(s_math, "LOG10E", V7_NUM, num, M_LOG10E);
   SET_RO_PROP(s_math, "SQRT1_2", V7_NUM, num, M_SQRT1_2);
   SET_RO_PROP(s_math, "SQRT2", V7_NUM, num, M_SQRT2);
+
+  SET_RO_PROP(s_stdlib, "print", V7_C_FUNC, c_func, Os_print);
+  SET_RO_PROP_V(s_stdlib, "Object", s_object);
+  SET_RO_PROP_V(s_stdlib, "Number", s_number);
+  SET_RO_PROP_V(s_stdlib, "Math", s_math);
+  SET_RO_PROP_V(s_stdlib, "String", s_string);
 }
 
 struct v7 *v7_create(void) {
@@ -158,11 +180,8 @@ struct v7 *v7_create(void) {
     v7->scopes[i].flags = VALUE_READONLY;
   }
 
-  init_prototypes();
-  v7_set_obj(v7, v7_get_root_namespace(v7), "Object", &s_object);
-  v7_set_obj(v7, v7_get_root_namespace(v7), "String", &s_string);
-  v7_set_obj(v7, v7_get_root_namespace(v7), "Number", &s_number);
-  v7_set_obj(v7, v7_get_root_namespace(v7), "Math", &s_math);
+  init_stdlib();
+  v7->scopes[0].proto = &s_stdlib;
 
   return v7;
 }
@@ -371,13 +390,14 @@ struct v7_val v7_str_to_val(const char *buf) {
 }
 
 static int cmp(const struct v7_val *a, const struct v7_val *b) {
+  double an = a->v.num, bn = b->v.num;
+  const struct v7_str *as = &a->v.str, *bs = &b->v.str;
   if (a->type != b->type) return 0;
   switch (a->type) {
-    case V7_NUM: return a->v.num == b->v.num;
-    case V7_BOOL: return a->v.num == b->v.num;
-    case V7_STR: return a->v.str.len == b->v.str.len &&
-      memcmp(a->v.str.buf, b->v.str.buf, a->v.str.len) == 0;
-    default: return 0;
+    case V7_NUM: return (isnan(an) && isnan(bn)) || (an == bn);
+    case V7_BOOL: return an == bn;
+    case V7_STR: return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
+    default: return a == b;
   }
 }
 
@@ -678,7 +698,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   return V7_OK;
 }
 
-enum v7_err v7_call(struct v7 *v7, int num_args) {
+enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
   struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f = v[0];
 
   if (v7->no_exec) return V7_OK;
@@ -700,7 +720,7 @@ enum v7_err v7_call(struct v7 *v7, int num_args) {
       v[0]->ref_count++;
     }
   } else if (f->type == V7_C_FUNC) {
-    f->v.c_func(v7, v7->cur_obj, v[0], v + 1, num_args);
+    f->v.c_func(v7, this_obj, v[0], v + 1, num_args);
   }
   free_val(v7, f);
 
@@ -709,7 +729,7 @@ enum v7_err v7_call(struct v7 *v7, int num_args) {
 }
 
 //  function_call  = expression "(" { expression} ")"
-static enum v7_err parse_function_call(struct v7 *v7) {
+static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj) {
   struct v7_val **v = v7_top(v7) - 1;
   int num_args = 0;
 
@@ -728,7 +748,7 @@ static enum v7_err parse_function_call(struct v7 *v7) {
 
 
   if (!v7->no_exec) {
-    TRY(v7_call(v7, num_args));
+    TRY(v7_call(v7, this_obj, num_args));
   }
   return V7_OK;
 }
@@ -846,7 +866,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7) {
     // parse_function_call() right here, before cleaning up.
     // NOTE: find a better way of doing this.
     if (*v7->cursor == '(') {
-      TRY(parse_function_call(v7));
+      TRY(parse_function_call(v7, v7->cur_obj));
     }
 
     free_val(v7, v);
@@ -939,7 +959,7 @@ static enum v7_err parse_factor(struct v7 *v7) {
   }
 
   if (*v7->cursor == '(') {
-    TRY(parse_function_call(v7));
+    TRY(parse_function_call(v7, v7->cur_obj));
   }
 
   // Don't leave anything on stack if no execution flag is set
@@ -985,9 +1005,10 @@ static enum v7_err do_logical_op(struct v7 *v7, int op) {
     case OP_GE: v[0]->v.num = v[0]->v.num >= v[1]->v.num ? 1.0 : 0.0; break;
     case OP_LT: v[0]->v.num = v[0]->v.num <  v[1]->v.num ? 1.0 : 0.0; break;
     case OP_LE: v[0]->v.num = v[0]->v.num <= v[1]->v.num ? 1.0 : 0.0; break;
-    case OP_EQ: v[0]->v.num = v[0]->v.num == v[1]->v.num ? 1.0 : 0.0; break;
+    case OP_EQ: v[0]->v.num = cmp(v[0], v[1]) ? 1.0 : 0.0; break;
   }
 
+  v[0]->type = V7_BOOL;
   TRY(inc_stack(v7, -1));
   return V7_OK;
 }
@@ -1051,6 +1072,7 @@ static enum v7_err parse_expression(struct v7 *v7) {
     int condition_true = v7_is_true(v7_top(v7)[-1]);
     int old_no_exec = v7->no_exec;
 
+    TRY(inc_stack(v7, -1));   // Remove condition value from the stack
     TRY(match(v7, '?'));
     v7->no_exec = old_no_exec || !condition_true;
     TRY(parse_expression(v7));
@@ -1175,32 +1197,10 @@ const char *v7_err_to_str(enum v7_err e) {
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
 }
 
-static void stdlib_print(struct v7 *v7, struct v7_val *this_obj,
-                         struct v7_val *result,
-                         struct v7_val **args, int num_args) {
-  char buf[4000];
-  int i;
-  (void) v7; (void) this_obj; (void) result;
-  for (i = 0; i < num_args; i++) {
-    printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
-  }
-}
-
-void v7_init_stdlib(struct v7 *v7) {
-  static int s_stdlib_initialized = 0;
-  if (s_stdlib_initialized == 0) {
-    s_stdlib_initialized++;
-    SET_RO_PROP(s_stdlib, "print", V7_C_FUNC, c_func, stdlib_print);
-  }
-  v7_get_root_namespace(v7)->proto = &s_stdlib;
-}
-
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
   int i, error_code;
-
-  v7_init_stdlib(v7);
 
   for (i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
