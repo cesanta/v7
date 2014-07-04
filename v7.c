@@ -1074,23 +1074,23 @@ static int is_logical_op(const char *s) {
 
 static enum v7_err do_logical_op(struct v7 *v7, int op) {
   struct v7_val **v = v7_top(v7) - 2;
+  int res = 0;
 
   if (v7->no_exec) return V7_OK;
   if (v[0]->type == V7_NUM && v[1]->type == V7_NUM) {
     switch (op) {
-      case OP_GT: v[0]->v.num = v[0]->v.num >  v[1]->v.num ? 1.0 : 0.0; break;
-      case OP_GE: v[0]->v.num = v[0]->v.num >= v[1]->v.num ? 1.0 : 0.0; break;
-      case OP_LT: v[0]->v.num = v[0]->v.num <  v[1]->v.num ? 1.0 : 0.0; break;
-      case OP_LE: v[0]->v.num = v[0]->v.num <= v[1]->v.num ? 1.0 : 0.0; break;
-      case OP_EQ: v[0]->v.num = cmp(v[0], v[1]) ? 1.0 : 0.0; break;
+      case OP_GT: res = v[0]->v.num >  v[1]->v.num; break;
+      case OP_GE: res = v[0]->v.num >= v[1]->v.num; break;
+      case OP_LT: res = v[0]->v.num <  v[1]->v.num; break;
+      case OP_LE: res = v[0]->v.num <= v[1]->v.num; break;
+      case OP_EQ: res = cmp(v[0], v[1]); break;
     }
   } else if (op == OP_EQ) {
-    v[0]->v.num = cmp(v[0], v[1]) ? 1.0 : 0.0;
-  } else {
-    v[0]->v.num = 0.0;
+    res = cmp(v[0], v[1]);
   }
-  v[0]->type = V7_BOOL;
-  TRY(inc_stack(v7, -1));
+  TRY(inc_stack(v7, -2));
+  TRY(v7_make_and_push(v7, V7_BOOL));
+  v[0]->v.num = res ? 1.0 : 0.0;
   return V7_OK;
 }
 
