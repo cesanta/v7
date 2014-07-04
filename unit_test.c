@@ -216,6 +216,9 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var a = 1; if (a == 1) { a = 2; }; a;") == V7_OK);
   ASSERT(check_num(v7, 2.0));
 
+  ASSERT(v7_exec(v7, "var a = 'foo'; a == 'foo';") == V7_OK);
+  ASSERT(check_bool(v7, 1.0));
+
   ASSERT(v7_exec(v7, "a = { x: function(p) "
                  "{ std.print(this, '\n'); } }") == V7_OK);
   ASSERT(v7_exec(v7, "a.x(2);") == V7_OK);
@@ -225,6 +228,15 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "'hello'.length") == V7_OK);
   ASSERT(check_num(v7, 5.0));
+
+  ASSERT(v7_exec(v7, "if (false) 3; ") == V7_OK);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7_exec(v7, "if (true) 3; ") == V7_OK);
+  ASSERT(check_num(v7, 3.0));
+  ASSERT(v7_exec(v7, "if ('') 3; ") == V7_OK);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7_exec(v7, "if ('0') 9; ") == V7_OK);
+  ASSERT(check_num(v7, 9.0));
 
   ASSERT(v7_exec(v7, "'foo' + 'bar'") == V7_OK);
   ASSERT(check_str(v7, "foobar"));

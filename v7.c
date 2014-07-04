@@ -127,15 +127,24 @@ static void Str_charAt(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-static void Os_print(struct v7 *v7, struct v7_val *this_obj,
-                         struct v7_val *result,
-                         struct v7_val **args, int num_args) {
+static void Std_print(struct v7 *v7, struct v7_val *this_obj,
+                      struct v7_val *result,
+                      struct v7_val **args, int num_args) {
   char buf[4000];
   int i;
-  (void) v7; (void) this_obj; (void) result;
+
+  (void) v7; (void) this_obj; (void) result; (void) num_args;
   for (i = 0; i < num_args; i++) {
     printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
   }
+}
+
+static void Std_exit(struct v7 *v7, struct v7_val *this_obj,
+                     struct v7_val *result,
+                     struct v7_val **args, int num_args) {
+  int exit_code = num_args > 0 ? (int) args[0]->v.num : EXIT_SUCCESS;
+  (void) v7; (void) this_obj; (void) result; (void) num_args;
+  exit(exit_code);
 }
 
 static void init_stdlib(void) {
@@ -163,7 +172,8 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_math, "SQRT1_2", V7_NUM, num, M_SQRT1_2);
   SET_RO_PROP(s_math, "SQRT2", V7_NUM, num, M_SQRT2);
 
-  SET_RO_PROP(s_stdlib, "print", V7_C_FUNC, c_func, Os_print);
+  SET_RO_PROP(s_stdlib, "print", V7_C_FUNC, c_func, Std_print);
+  SET_RO_PROP(s_stdlib, "exit", V7_C_FUNC, c_func, Std_exit);
 
   SET_RO_PROP_V(s_globals, "Object", s_object);
   SET_RO_PROP_V(s_globals, "Number", s_number);
@@ -289,7 +299,9 @@ int v7_sp(struct v7 *v7) {
 }
 
 static int v7_is_true(const struct v7_val *v) {
-  return (v->type == V7_BOOL || v->type == V7_NUM) && v->v.num != 0.0;
+  return  (v->type == V7_BOOL && v->v.num != 0.0) ||
+          (v->type == V7_NUM && v->v.num != 0.0 && !isnan(v->v.num)) ||
+          (v->type == V7_STR && v->v.str.len > 0);
 }
 
 static void obj_v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
@@ -1051,16 +1063,19 @@ static enum v7_err do_logical_op(struct v7 *v7, int op) {
   struct v7_val **v = v7_top(v7) - 2;
 
   if (v7->no_exec) return V7_OK;
-  CHECK(v[0]->type == V7_NUM && v[1]->type == V7_NUM, V7_TYPE_MISMATCH);
-
-  switch (op) {
-    case OP_GT: v[0]->v.num = v[0]->v.num >  v[1]->v.num ? 1.0 : 0.0; break;
-    case OP_GE: v[0]->v.num = v[0]->v.num >= v[1]->v.num ? 1.0 : 0.0; break;
-    case OP_LT: v[0]->v.num = v[0]->v.num <  v[1]->v.num ? 1.0 : 0.0; break;
-    case OP_LE: v[0]->v.num = v[0]->v.num <= v[1]->v.num ? 1.0 : 0.0; break;
-    case OP_EQ: v[0]->v.num = cmp(v[0], v[1]) ? 1.0 : 0.0; break;
+  if (v[0]->type == V7_NUM && v[1]->type == V7_NUM) {
+    switch (op) {
+      case OP_GT: v[0]->v.num = v[0]->v.num >  v[1]->v.num ? 1.0 : 0.0; break;
+      case OP_GE: v[0]->v.num = v[0]->v.num >= v[1]->v.num ? 1.0 : 0.0; break;
+      case OP_LT: v[0]->v.num = v[0]->v.num <  v[1]->v.num ? 1.0 : 0.0; break;
+      case OP_LE: v[0]->v.num = v[0]->v.num <= v[1]->v.num ? 1.0 : 0.0; break;
+      case OP_EQ: v[0]->v.num = cmp(v[0], v[1]) ? 1.0 : 0.0; break;
+    }
+  } else if (op == OP_EQ) {
+    v[0]->v.num = cmp(v[0], v[1]) ? 1.0 : 0.0;
+  } else {
+    v[0]->v.num = 0.0;
   }
-
   v[0]->type = V7_BOOL;
   TRY(inc_stack(v7, -1));
   return V7_OK;
@@ -1164,7 +1179,9 @@ static enum v7_err parse_if_statement(struct v7 *v7) {
   if (!v7->no_exec && !v7_is_true(v7_top(v7)[-1])) {
     v7->no_exec = 1;
   }
+  inc_stack(v7, -1);  // Remove condition result from the stack
   TRY(parse_compound_statement(v7));
+  if (v7->no_exec && !old_no_exec) v7_make_and_push(v7, V7_UNDEF);
   v7->no_exec = old_no_exec;
 
   return V7_OK;
@@ -1240,7 +1257,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   return status;
 }
 
-const char *v7_err_to_str(enum v7_err e) {
+const char *v7_strerror(enum v7_err e) {
   static const char *strings[] = {
     "no error", "syntax error", "out of memory", "internal error",
     "stack overflow", "stack underflow", "undefined variable",
@@ -1258,7 +1275,8 @@ int main(int argc, char *argv[]) {
   for (i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if ((error_code = v7_exec(v7, argv[i + 1])) != V7_OK) {
-        fprintf(stderr, "Error executing [%s]: %d\n", argv[i + 1], error_code);
+        fprintf(stderr, "Error executing [%s]: %s\n", argv[i + 1],
+                v7_strerror(error_code));
       }
     }
   }
