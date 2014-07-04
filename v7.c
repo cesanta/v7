@@ -330,6 +330,9 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
     case V7_C_FUNC:
       snprintf(buf, bsiz, "'c_function_at_%p'", v->v.c_func);
       break;
+    case V7_RO_PROP:
+      snprintf(buf, bsiz, "'c_prop_at_%p'", v->v.prop_func);
+      break;
     default:
       snprintf(buf, bsiz, "??");
       break;
@@ -383,26 +386,39 @@ enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
 
 static enum v7_err do_arithmetic_op(struct v7 *v7, int op) {
   struct v7_val **v = v7_top(v7) - 2;
-  double a, b, res = 0;
 
   if (v7->no_exec) return V7_OK;
   CHECK(v7->sp >= 2, V7_STACK_UNDERFLOW);
-  CHECK(v[0]->type == V7_NUM && v[1]->type == V7_NUM, V7_TYPE_MISMATCH);
-  a = v[0]->v.num;
-  b = v[1]->v.num;
 
-  switch (op) {
-    case '+': res = a + b; break;
-    case '-': res = a - b; break;
-    case '*': res = a * b; break;
-    case '/': res = a / b; break;
+  if (v[0]->type == V7_STR && v[1]->type == V7_STR && op == '+') {
+    struct v7_val *res = NULL;
+    char *str = (char *) malloc(v[0]->v.str.len + v[1]->v.str.len + 1);
+    CHECK(str != NULL, V7_OUT_OF_MEMORY);
+    res = v7_mkval(v7, V7_STR);
+    CHECK(res != NULL, V7_OUT_OF_MEMORY);  // TODO: free(str)
+    res->v.str.len = v[0]->v.str.len + v[1]->v.str.len;
+    res->v.str.buf = str;
+    memcpy(str, v[0]->v.str.buf, v[0]->v.str.len);
+    memcpy(str + v[0]->v.str.len, v[1]->v.str.buf, v[1]->v.str.len);
+    str[res->v.str.len] = '\0';
+    TRY(inc_stack(v7, -2));
+    TRY(v7_push(v7, res));
+    return V7_OK;
+  } else if (v[0]->type == V7_NUM && v[1]->type == V7_NUM) {
+    double a = v[0]->v.num, b = v[1]->v.num, res = 0;
+    switch (op) {
+      case '+': res = a + b; break;
+      case '-': res = a - b; break;
+      case '*': res = a * b; break;
+      case '/': res = a / b; break;
+    }
+    TRY(inc_stack(v7, -2));
+    TRY(v7_make_and_push(v7, V7_NUM));
+    v7_top(v7)[-1]->v.num = res;
+    return V7_OK;
+  } else {
+    return V7_TYPE_MISMATCH;
   }
-
-  TRY(inc_stack(v7, -2));
-  TRY(v7_make_and_push(v7, V7_NUM));
-  v7_top(v7)[-1]->v.num = res;
-
-  return V7_OK;
 }
 
 static struct v7_val str_to_val(const char *buf, size_t len) {

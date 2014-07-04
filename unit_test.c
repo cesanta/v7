@@ -225,8 +225,8 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "'hello'.length") == V7_OK);
   ASSERT(check_num(v7, 5.0));
 
-  //ASSERT(v7_exec(v7, "'foo' + 'bar") == V7_OK);
-  //ASSERT(check_str(v7, "foobar"));
+  ASSERT(v7_exec(v7, "'foo' + 'bar'") == V7_OK);
+  ASSERT(check_str(v7, "foobar"));
 
   v7_destroy(&v7);
   return NULL;
