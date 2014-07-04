@@ -69,6 +69,7 @@ static struct v7_val s_string = RO_OBJ(V7_OBJ);
 static struct v7_val s_math = RO_OBJ(V7_OBJ);
 static struct v7_val s_number = RO_OBJ(V7_OBJ);
 static struct v7_val s_stdlib = RO_OBJ(V7_OBJ);
+static struct v7_val s_globals = RO_OBJ(V7_OBJ);
 
 static char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *) malloc(len + 1);
@@ -163,10 +164,12 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_math, "SQRT2", V7_NUM, num, M_SQRT2);
 
   SET_RO_PROP(s_stdlib, "print", V7_C_FUNC, c_func, Os_print);
-  SET_RO_PROP_V(s_stdlib, "Object", s_object);
-  SET_RO_PROP_V(s_stdlib, "Number", s_number);
-  SET_RO_PROP_V(s_stdlib, "Math", s_math);
-  SET_RO_PROP_V(s_stdlib, "String", s_string);
+
+  SET_RO_PROP_V(s_globals, "Object", s_object);
+  SET_RO_PROP_V(s_globals, "Number", s_number);
+  SET_RO_PROP_V(s_globals, "Math", s_math);
+  SET_RO_PROP_V(s_globals, "String", s_string);
+  SET_RO_PROP_V(s_globals, "std", s_stdlib);
 }
 
 struct v7 *v7_create(void) {
@@ -182,7 +185,7 @@ struct v7 *v7_create(void) {
   }
 
   init_stdlib();
-  v7->scopes[0].proto = &s_stdlib;
+  v7->scopes[0].proto = &s_globals;
 
   return v7;
 }
@@ -328,10 +331,10 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
         snprintf(buf, bsiz, "'function%s'", v->v.func);
         break;
     case V7_C_FUNC:
-      snprintf(buf, bsiz, "'c_function_at_%p'", v->v.c_func);
+      snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
       break;
     case V7_RO_PROP:
-      snprintf(buf, bsiz, "'c_prop_at_%p'", v->v.prop_func);
+      snprintf(buf, bsiz, "'c_prop_%p'", v->v.prop_func);
       break;
     default:
       snprintf(buf, bsiz, "??");

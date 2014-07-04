@@ -92,9 +92,9 @@ static const char *test_v7_exec(void) {
   struct v7 *v7 = v7_create();
 
   ASSERT(v7_exec(v7, "") == V7_OK);
-  ASSERT(v7_exec(v7, "print();") == V7_OK);
-  ASSERT(v7_exec(v7, "print('\n');") == V7_OK);
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "std.print();") == V7_OK);
+  ASSERT(v7_exec(v7, "std.print('\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "std.print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "-2;") == V7_OK);
   ASSERT(check_num(v7, -2.0));
@@ -118,15 +118,15 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "a = 7;") == V7_OK);
   ASSERT(check_num(v7, 7.0));
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "std.print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
   ASSERT(check_num(v7, 10.0));
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "std.print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "c = b * (a + 3) / 2;") == V7_OK);
   ASSERT(check_num(v7, 50.0));
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "std.print(this, '\n');") == V7_OK);
 
   ASSERT(v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a;") == V7_OK);
   ASSERT(v7_exec(v7, "b + 2; x + 3 + 1 z = x -2;") == V7_OK);
@@ -144,7 +144,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "k = { y: 17 };") == V7_OK);
   ASSERT(v7_exec(v7, "k.y") == V7_OK);
   ASSERT(check_num(v7, 17.0));
-  v7_exec(v7, "print(this, '\n');");
+  v7_exec(v7, "std.print(this, '\n');");
 
   // Delete k.y and make sure it's gone
   ASSERT(v7_exec(v7, "delete k.y;") == V7_OK);
@@ -161,9 +161,9 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "k.x = 47;") == V7_OK);
   ASSERT(v7_exec(v7, "k.qwe = { foo: 5 };") == V7_OK);
-  v7_exec(v7, "print(k, '\n');");
+  v7_exec(v7, "std.print(k, '\n');");
   ASSERT(v7_exec(v7, "k.qwe.foo = 15;") == V7_OK);
-  v7_exec(v7, "print(k, '\n');");
+  v7_exec(v7, "std.print(k, '\n');");
 
   ASSERT(v7_exec(v7, "k.key1.x + 4") == V7_OK);
   ASSERT(check_num(v7, 7.0));
@@ -188,7 +188,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
   ASSERT(check_num(v7, 49.0));
 
-  ASSERT(v7_exec(v7, "f = function(x,y,z) { print(this, '\n'); };") == V7_OK);
+  ASSERT(v7_exec(v7, "f = function(x,y,z) {std.print(this, '\n');};") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_exec(v7, "f();") == V7_OK);
   ASSERT(v7_exec(v7, "f({});") == V7_OK);
@@ -216,7 +216,8 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var a = 1; if (a == 1) { a = 2; }; a;") == V7_OK);
   ASSERT(check_num(v7, 2.0));
 
-  ASSERT(v7_exec(v7, "a = { x: function(p) { print(this, '\n'); } }") == V7_OK);
+  ASSERT(v7_exec(v7, "a = { x: function(p) "
+                 "{ std.print(this, '\n'); } }") == V7_OK);
   ASSERT(v7_exec(v7, "a.x(2);") == V7_OK);
 
   ASSERT(v7_exec(v7, "74.toString()") == V7_OK);
@@ -241,7 +242,7 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, "Number.NaN") == V7_OK);
   ASSERT(check_num(v7, NAN));
   ASSERT(v7_exec(v7, "1 == 2") == V7_OK);
-  //ASSERT(v7_exec(v7, "print(this, '\n')") == V7_OK);
+  //ASSERT(v7_exec(v7, "std.print(this, '\n')") == V7_OK);
   ASSERT(check_bool(v7, 0));
 
   // String
