@@ -56,6 +56,13 @@ static int check_bool(struct v7 *v7, double val) {
     v7_top(v7)[-1]->type == V7_BOOL && val == v7_top(v7)[-1]->v.num;
 }
 
+static int check_str(struct v7 *v7, const char *val) {
+  return v7->sp == 1 &&
+    v7_top(v7)[-1]->type == V7_STR &&
+    strlen(val) == v7_top(v7)[-1]->v.str.len &&
+    memcmp(val, v7_top(v7)[-1]->v.str.buf, strlen(val)) == 0;
+}
+
 static int check_num(struct v7 *v7, double num) {
   const struct v7_val *v = v7_top(v7)[-1];
   return v7->sp == 1 && v->type == V7_NUM &&
@@ -213,12 +220,13 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "a.x(2);") == V7_OK);
 
   ASSERT(v7_exec(v7, "74.toString()") == V7_OK);
-  ASSERT(v7_sp(v7) == 1);
-  ASSERT(v7_top(v7)[-1]->type == V7_STR);
-  ASSERT(strcmp(v7_top(v7)[-1]->v.str.buf, "74") == 0);
+  ASSERT(check_str(v7, "74"));
 
   ASSERT(v7_exec(v7, "'hello'.length") == V7_OK);
   ASSERT(check_num(v7, 5.0));
+
+  //ASSERT(v7_exec(v7, "'foo' + 'bar") == V7_OK);
+  //ASSERT(check_str(v7, "foobar"));
 
   v7_destroy(&v7);
   return NULL;
