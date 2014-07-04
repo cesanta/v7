@@ -449,14 +449,18 @@ struct v7_val v7_str_to_val(const char *buf) {
 }
 
 static int cmp(const struct v7_val *a, const struct v7_val *b) {
-  double an = a->v.num, bn = b->v.num;
-  const struct v7_str *as = &a->v.str, *bs = &b->v.str;
+  if (a == NULL || b == NULL) return 0;
   if (a->type != b->type) return 0;
-  switch (a->type) {
-    case V7_NUM: return (isnan(an) && isnan(bn)) || (an == bn);
-    case V7_BOOL: return an == bn;
-    case V7_STR: return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
-    default: return a == b;
+  {
+    double an = a->v.num, bn = b->v.num;
+    const struct v7_str *as = &a->v.str, *bs = &b->v.str;
+
+    switch (a->type) {
+      case V7_NUM: return (isnan(an) && isnan(bn)) || (an == bn);
+      case V7_BOOL: return an == bn;
+      case V7_STR: return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
+      default: return a == b;
+    }
   }
 }
 
@@ -530,6 +534,7 @@ enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   struct v7_prop *m = NULL;
 
   CHECK(obj != NULL && obj->type == V7_OBJ, V7_TYPE_MISMATCH);
+  CHECK(k != NULL && v != NULL, V7_INTERNAL_ERROR);
 
   // Find attribute inside object
   if ((m = v7_get(obj, k)) == NULL) {
@@ -856,22 +861,30 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
 }
 
 static enum v7_err parse_object_literal(struct v7 *v7) {
+  // Push empty object on stack
   TRY(v7_make_and_push(v7, V7_OBJ));
   TRY(match(v7, '{'));
+
+  // Assign key/values to the object, until closing "}" is found
   while (*v7->cursor != '}') {
+    // Push key on stack
     if (*v7->cursor == '\'' || *v7->cursor == '"') {
       TRY(parse_string_literal(v7));
     } else {
       TRY(parse_identifier(v7));
       TRY(v7_make_and_push_string(v7, v7->tok, v7->tok_len, 1));
     }
+
+    // Push value on stack
     TRY(match(v7, ':'));
     TRY(parse_expression(v7));
+
+    // Stack should now have object, key, value. Assign, and remove key/value
     if (!v7->no_exec) {
       struct v7_val **v = v7_top(v7) - 3;
       CHECK(v[0]->type == V7_OBJ, V7_TYPE_MISMATCH);
-      v7_set(v7, v[0], v[1], v[2]);
-      inc_stack(v7, -2);
+      TRY(v7_set(v7, v[0], v[1], v[2]));
+      TRY(inc_stack(v7, -2));
     }
     test_and_skip_char(v7, ',');
   }
@@ -1140,7 +1153,7 @@ static enum v7_err parse_expression(struct v7 *v7) {
     int condition_true = v7_is_true(v7_top(v7)[-1]);
     int old_no_exec = v7->no_exec;
 
-    TRY(inc_stack(v7, -1));   // Remove condition value from the stack
+    if (!v7->no_exec) TRY(inc_stack(v7, -1));   // Remove condition result
     TRY(match(v7, '?'));
     v7->no_exec = old_no_exec || !condition_true;
     TRY(parse_expression(v7));
@@ -1170,20 +1183,21 @@ static enum v7_err parse_declaration(struct v7 *v7) {
 }
 
 static enum v7_err parse_if_statement(struct v7 *v7) {
-  int old_no_exec = v7->no_exec;
-
+  int old_no_exec = v7->no_exec;  // Remember execution flag
   TRY(match(v7, '('));
-  TRY(parse_expression(v7));
+  TRY(parse_expression(v7));      // Evaluate condition, pushed on stack
   TRY(match(v7, ')'));
-  assert(v7->no_exec || v7->sp > 0);  // Stack may be empty if v7->no_exec
-  if (!v7->no_exec && !v7_is_true(v7_top(v7)[-1])) {
-    v7->no_exec = 1;
+  if (!old_no_exec) {
+    // If condition is false, do not execute "if" body
+    CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
+    v7->no_exec = !v7_is_true(v7_top(v7)[-1]);
+    // If condition is true, clean it from stack
+    if (!v7->no_exec) {
+      TRY(inc_stack(v7, -1));
+    }
   }
-  inc_stack(v7, -1);  // Remove condition result from the stack
   TRY(parse_compound_statement(v7));
-  if (v7->no_exec && !old_no_exec) v7_make_and_push(v7, V7_UNDEF);
-  v7->no_exec = old_no_exec;
-
+  v7->no_exec = old_no_exec;  // Restore old execution flag
   return V7_OK;
 }
 
