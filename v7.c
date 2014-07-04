@@ -126,6 +126,28 @@ static void Str_charAt(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
+static void Str_indexOf(struct v7 *v7, struct v7_val *this_obj,
+                        struct v7_val *result, struct v7_val **args,
+                        int num_args) {
+  (void) v7; (void) this_obj; (void) result; (void) num_args;
+
+  result->type = V7_NUM;
+  result->v.num = -1.0;
+
+  if (this_obj->type == V7_STR && num_args > 0 && args[0]->type == V7_STR) {
+    int i = num_args > 1 && args[1]->type == V7_NUM ? (int) args[1]->v.num : 0;
+    const struct v7_str *a = &this_obj->v.str, *b = &args[0]->v.str;
+
+    // Scan the string, advancing one byte at a time
+    for (; i >= 0 && a->len >= b->len && i <= (int) (a->len - b->len); i++) {
+      if (memcmp(a->buf + i, b->buf, b->len) == 0) {
+        result->v.num = i;
+        break;
+      }
+    }
+  }
+}
+
 static void Std_print(struct v7 *v7, struct v7_val *this_obj,
                       struct v7_val *result,
                       struct v7_val **args, int num_args) {
@@ -161,6 +183,7 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_string, "length", V7_RO_PROP, prop_func, Str_length);
   SET_RO_PROP(s_string, "charCodeAt", V7_C_FUNC, c_func, Str_charCodeAt);
   SET_RO_PROP(s_string, "charAt", V7_C_FUNC, c_func, Str_charAt);
+  SET_RO_PROP(s_string, "indexOf", V7_C_FUNC, c_func, Str_indexOf);
 
   SET_RO_PROP(s_math, "E", V7_NUM, num, M_E);
   SET_RO_PROP(s_math, "PI", V7_NUM, num, M_PI);

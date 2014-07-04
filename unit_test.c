@@ -266,6 +266,12 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v7, 'o'));
   ASSERT(v7_exec(v7, "'hello'.charCodeAt(5) == Number.NaN") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
+  ASSERT(v7_exec(v7, "'hello'.indexOf()") == V7_OK);
+  ASSERT(check_num(v7, -1.0));
+  ASSERT(v7_exec(v7, "'hi there'.indexOf('e')") == V7_OK);
+  ASSERT(check_num(v7, 5.0));
+  ASSERT(v7_exec(v7, "'hi there'.indexOf('e', 6)") == V7_OK);
+  ASSERT(check_num(v7, 7.0));
 
   v7_destroy(&v7);
   return NULL;
