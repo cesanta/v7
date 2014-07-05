@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <assert.h>
 #include <errno.h>
+#include <float.h>
 #include <limits.h>
 #include <math.h>
 #include <stdarg.h>
@@ -30,6 +31,26 @@
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
+#define snprintf _snprintf
+#define isnan(x) _isnan(x)
+#endif
+
+// MSVC6 doesn't have standard C math constants defined
+#ifndef M_PI
+#define M_E         2.71828182845904523536028747135266250
+#define M_LOG2E     1.44269504088896340735992468100189214
+#define M_LOG10E    0.434294481903251827651128918916605082
+#define M_LN2       0.693147180559945309417232121458176568
+#define M_LN10      2.30258509299404568401799145468436421
+#define M_PI        3.14159265358979323846264338327950288
+#define M_PI_2      1.57079632679489661923132169163975144
+#define M_PI_4      0.785398163397448309615660845819875721
+#define M_1_PI      0.318309886183790671537767526745028724
+#define M_2_PI      0.636619772367581343075535053490057448
+#define M_2_SQRTPI  1.12837916709551257389615890312154517
+#define M_SQRT2     1.41421356237309504880168872420969808
+#define M_SQRT1_2   0.707106781186547524400844362104849039
+#define NAN         atof("NAN")
 #endif
 
 #define V7_CACHE_OBJS
@@ -68,6 +89,7 @@ static struct v7_val s_object = RO_OBJ(V7_OBJ);
 static struct v7_val s_string = RO_OBJ(V7_OBJ);
 static struct v7_val s_math = RO_OBJ(V7_OBJ);
 static struct v7_val s_number = RO_OBJ(V7_OBJ);
+static struct v7_val s_array = RO_OBJ(V7_OBJ);
 static struct v7_val s_stdlib = RO_OBJ(V7_OBJ);
 
 static char *v7_strdup(const char *ptr, unsigned long len) {
@@ -148,6 +170,15 @@ static void Str_indexOf(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
+static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
+  struct v7_prop *p;
+  result->type = V7_NUM;
+  result->v.num = 0.0;
+  for (p = this_obj->v.props; p != NULL; p = p->next) {
+    result->v.num += 1.0;
+  }
+}
+
 static void Std_print(struct v7 *v7, struct v7_val *this_obj,
                       struct v7_val *result,
                       struct v7_val **args, int num_args) {
@@ -172,13 +203,15 @@ static void init_stdlib(void) {
   static int prototypes_initialized;
   if (prototypes_initialized) return;
   prototypes_initialized++;
-  s_string.proto = s_math.proto = s_number.proto = &s_object;
+  s_string.proto = s_number.proto = s_array.proto = &s_object;
 
   SET_RO_PROP(s_object, "toString", V7_C_FUNC, c_func, Obj_toString);
 
   SET_RO_PROP(s_number, "MAX_VALUE", V7_NUM, num, LONG_MAX);
   SET_RO_PROP(s_number, "MIN_VALUE", V7_NUM, num, LONG_MIN);
   SET_RO_PROP(s_number, "NaN", V7_NUM, num, NAN);
+
+  SET_RO_PROP(s_array, "length", V7_RO_PROP, prop_func, Arr_length);
 
   SET_RO_PROP(s_string, "length", V7_RO_PROP, prop_func, Str_length);
   SET_RO_PROP(s_string, "charCodeAt", V7_C_FUNC, c_func, Str_charCodeAt);
@@ -201,7 +234,7 @@ static void init_stdlib(void) {
   SET_RO_PROP_V(s_stdlib, "Number", s_number);
   SET_RO_PROP_V(s_stdlib, "Math", s_math);
   SET_RO_PROP_V(s_stdlib, "String", s_string);
-  SET_RO_PROP_V(s_stdlib, "std", s_stdlib);
+  SET_RO_PROP_V(s_stdlib, "Array", s_array);
 }
 
 struct v7 *v7_create(void) {
@@ -226,12 +259,14 @@ static void free_val(struct v7 *v7, struct v7_val *v) {
   v->ref_count--;
   assert(v->ref_count >= 0);
   if (v->ref_count > 0) return;
-  if (v->type == V7_OBJ && !(v->flags & PROP_READONLY)) {
+  if ((v->type == V7_OBJ || v->type == V7_ARRAY) &&
+      !(v->flags & PROP_READONLY)) {
     struct v7_prop *p, *tmp;
     for (p = v->v.props; p != NULL; p = tmp) {
       tmp = p->next;
       free_val(v7, p->key);
       free_val(v7, p->val);
+      p->val = p->key = NULL;
 #ifdef V7_CACHE_OBJS
       p->next = v7->free_props;
       v7->free_props = p;
@@ -394,6 +429,7 @@ struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type) {
     switch (type) {
       case V7_STR: v->proto = &s_string; break;
       case V7_NUM: v->proto = &s_number; break;
+      case V7_ARRAY: v->proto = &s_array; break;
       default: v->proto = &s_object; break;
     }
   }
@@ -489,9 +525,15 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
 static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key) {
   struct v7_prop *m;
   for (; obj != NULL; obj = obj->proto) {
-    if (obj->type != V7_OBJ) continue;
-    for (m = obj->v.props; m != NULL; m = m->next) {
-      if (cmp(m->key, key)) return m;
+    if (obj->type == V7_ARRAY && key->type == V7_NUM) {
+      int i = (int) key->v.num;
+      for (m = obj->v.props; m != NULL; m = m->next) {
+        if (i-- == 0) return m;
+      }
+    } else if (obj->type == V7_OBJ) {
+      for (m = obj->v.props; m != NULL; m = m->next) {
+        if (cmp(m->key, key)) return m;
+      }
     }
   }
   return NULL;
@@ -517,26 +559,29 @@ static enum v7_err v7_make_and_push_string(struct v7 *v7, const char *s,
   return V7_OK;
 }
 
-static struct v7_prop *vinsert(struct v7 *v7, struct v7_prop **h,
-                              struct v7_val *key) {
+static struct v7_prop *mkprop(struct v7 *v7) {
   struct v7_prop *m;
-
   if ((m = v7->free_props) != NULL) {
     v7->free_props = m->next;
   } else {
     m = (struct v7_prop *) calloc(1, sizeof(*m));
   }
-
-  if (m != NULL) {
-    key->ref_count++;
-    m->key = key;
-    m->val = v7_mkval(v7, V7_UNDEF);
-    m->val->ref_count++;
-    m->next = *h;
-    *h = m;
-  }
-
   return m;
+}
+
+static enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
+                           struct v7_val *key, struct v7_val *val) {
+  struct v7_prop *m = mkprop(v7);
+  CHECK(m != NULL, V7_OUT_OF_MEMORY);
+
+  key->ref_count++;
+  val->ref_count++;
+  m->key = key;
+  m->val = val;
+  m->next = *h;
+  *h = m;
+
+  return V7_OK;
 }
 
 static struct v7_val *find(struct v7 *v7, struct v7_val *key) {
@@ -555,20 +600,16 @@ enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
                    struct v7_val *v) {
   struct v7_prop *m = NULL;
 
-  CHECK(obj != NULL && obj->type == V7_OBJ, V7_TYPE_MISMATCH);
-  CHECK(k != NULL && v != NULL, V7_INTERNAL_ERROR);
+  CHECK(obj != NULL && k != NULL && v != NULL, V7_INTERNAL_ERROR);
+  CHECK(obj->type == V7_OBJ || obj->type == V7_ARRAY, V7_TYPE_MISMATCH);
 
   // Find attribute inside object
-  if ((m = v7_get(obj, k)) == NULL) {
-    m = vinsert(v7, &obj->v.props, k);
-    CHECK(m != NULL, V7_OUT_OF_MEMORY);
-  }
-
-  if (m != NULL) {
-    struct v7_val *tmp = m->val;
+  if ((m = v7_get(obj, k)) != NULL) {
+    free_val(v7, m->val);
     v->ref_count++;
     m->val = v;
-    free_val(v7, tmp);    // Deallocate previous value
+  } else {
+    TRY(vinsert(v7, &obj->v.props, k, v));
   }
 
   return V7_OK;
@@ -882,6 +923,48 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err append_to_array(struct v7 *v7, struct v7_val *arr,
+                                   struct v7_val *val) {
+  struct v7_val *key = v7_mkval(v7, V7_NUM);
+  struct v7_prop **head, *prop;
+  CHECK(arr->type == V7_ARRAY, V7_INTERNAL_ERROR);
+  // Append using a dummy key. TODO: do not use dummy keys, they eat RAM
+  // Make dummy key unique, or v7_set() may override an existing key.
+  // Also, we want to append to the end of the list, to make indexing work
+  key->v.num = (unsigned long) key;
+  for (head = &arr->v.props; *head != NULL; head = &head[0]->next);
+  prop = mkprop(v7);
+  CHECK(prop != NULL, V7_OUT_OF_MEMORY);
+  prop->next = *head;
+  *head = prop;
+  prop->key = key;
+  prop->val = val;
+  key->ref_count++;
+  val->ref_count++;
+  //TRY(vinsert(v7, &arr->v.props, key, val));
+  return V7_OK;
+}
+
+static enum v7_err parse_array_literal(struct v7 *v7) {
+  // Push empty array on stack
+  TRY(v7_make_and_push(v7, V7_ARRAY));
+  TRY(match(v7, '['));
+
+  // Scan array literal, append elements one by one
+  while (*v7->cursor != ']') {
+    // Push new element on stack
+    TRY(parse_expression(v7));
+    if (!v7->no_exec) {
+      TRY(append_to_array(v7, v7_top(v7)[-2], v7_top(v7)[-1]));
+      TRY(inc_stack(v7, -1));
+    }
+    test_and_skip_char(v7, ',');
+  }
+
+  TRY(match(v7, ']'));
+  return V7_OK;
+}
+
 static enum v7_err parse_object_literal(struct v7 *v7) {
   // Push empty object on stack
   TRY(v7_make_and_push(v7, V7_OBJ));
@@ -904,7 +987,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
     // Stack should now have object, key, value. Assign, and remove key/value
     if (!v7->no_exec) {
       struct v7_val **v = v7_top(v7) - 3;
-      CHECK(v[0]->type == V7_OBJ, V7_TYPE_MISMATCH);
+      CHECK(v[0]->type == V7_OBJ, V7_INTERNAL_ERROR);
       TRY(v7_set(v7, v[0], v[1], v[2]));
       TRY(inc_stack(v7, -2));
     }
@@ -1031,6 +1114,8 @@ static enum v7_err parse_factor(struct v7 *v7) {
     TRY(parse_string_literal(v7));
   } else if (*v7->cursor == '{') {
     TRY(parse_object_literal(v7));
+  } else if (*v7->cursor == '[') {
+    TRY(parse_array_literal(v7));
   } else if (is_alpha(*v7->cursor) || *v7->cursor == '_') {
     TRY(parse_identifier(v7));
     if (test_token(v7, "this", 4)) {

@@ -15,11 +15,12 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
+#include <math.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "v7.h"
 
@@ -35,6 +36,11 @@
 
 #define RUN_TEST(test) do { const char *msg = test(); \
   if (msg) return msg; } while (0)
+
+#ifdef _WIN32
+#define isnan(x) _isnan(x)
+#endif
+
 
 static int static_num_tests = 0;
 
@@ -243,6 +249,12 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "'foo' + 'bar'") == V7_OK);
   ASSERT(check_str(v7, "foobar"));
 
+  ASSERT(v7_exec(v7, "var x = [1, 'foo', true, 7];") == V7_OK);
+  ASSERT(v7_exec(v7, "x.length") == V7_OK);
+  ASSERT(check_num(v7, 4.0));
+  ASSERT(v7_exec(v7, "x[1]") == V7_OK);
+  ASSERT(check_str(v7, "foo"));
+
   v7_destroy(&v7);
   return NULL;
 }
@@ -251,10 +263,12 @@ static const char *test_stdlib(void) {
   struct v7 *v7 = v7_create();
 
   // Number
+#ifndef _WIN32
   ASSERT(v7_exec(v7, "Math.PI") == V7_OK);
   ASSERT(check_num(v7, M_PI));
   ASSERT(v7_exec(v7, "Number.NaN") == V7_OK);
   ASSERT(check_num(v7, NAN));
+#endif
   ASSERT(v7_exec(v7, "1 == 2") == V7_OK);
   //ASSERT(v7_exec(v7, "print(this, '\n')") == V7_OK);
   ASSERT(check_bool(v7, 0));

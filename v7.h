@@ -26,7 +26,7 @@ extern "C" {
 
 enum v7_type {
   V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC,
-  V7_RO_PROP
+  V7_RO_PROP, V7_ARRAY
 };
 
 enum v7_err {

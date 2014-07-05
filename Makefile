@@ -16,4 +16,4 @@ v7: v7.c v7.h
 	$(CC) v7.c -o $@ -DV7_EXE $(CFLAGS)
 
 w:
-	wine cl unit_test.c && wine unit_test.exe
+	wine cl unit_test.c v7.c && wine unit_test.exe
