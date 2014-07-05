@@ -107,6 +107,7 @@ enum v7_err v7_set_str(struct v7 *, struct v7_val *, const char *,
                        const char *str, unsigned long str_len);
 enum v7_err v7_set_obj(struct v7 *, struct v7_val *, const char *,
                        struct v7_val *);
+enum v7_err v7_append(struct v7 *, struct v7_val *array, struct v7_val *val);
 struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type);
 struct v7_val *v7_lookup(struct v7_val *obj, const char *key);
 struct v7_val *v7_get_root_namespace(struct v7 *);

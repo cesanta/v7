@@ -918,8 +918,7 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err append_to_array(struct v7 *v7, struct v7_val *arr,
-                                   struct v7_val *val) {
+enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   struct v7_val *key = v7_mkval(v7, V7_NUM);
   struct v7_prop **head, *prop;
   CHECK(arr->type == V7_ARRAY, V7_INTERNAL_ERROR);
@@ -950,7 +949,7 @@ static enum v7_err parse_array_literal(struct v7 *v7) {
     // Push new element on stack
     TRY(parse_expression(v7));
     if (!v7->no_exec) {
-      TRY(append_to_array(v7, v7_top(v7)[-2], v7_top(v7)[-1]));
+      TRY(v7_append(v7, v7_top(v7)[-2], v7_top(v7)[-1]));
       TRY(inc_stack(v7, -1));
     }
     test_and_skip_char(v7, ',');
