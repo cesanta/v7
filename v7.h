@@ -104,11 +104,12 @@ enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *key,
 enum v7_err v7_set_func(struct v7 *, struct v7_val *, const char *, v7_func_t);
 enum v7_err v7_set_num(struct v7 *, struct v7_val *, const char *, double);
 enum v7_err v7_set_str(struct v7 *, struct v7_val *, const char *,
-                       const char *str, unsigned long str_len);
+                       const char *str, unsigned long str_len, int own);
 enum v7_err v7_set_obj(struct v7 *, struct v7_val *, const char *,
                        struct v7_val *);
 enum v7_err v7_append(struct v7 *, struct v7_val *array, struct v7_val *val);
 struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type);
+void v7_freeval(struct v7 *v7, struct v7_val *v);
 struct v7_val *v7_lookup(struct v7_val *obj, const char *key);
 struct v7_val *v7_get_root_namespace(struct v7 *);
 int v7_sp(struct v7 *v7);
