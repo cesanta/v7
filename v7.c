@@ -33,6 +33,7 @@
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)
+#define isinf(x) (!_finite(x))
 #endif
 
 // MSVC6 doesn't have standard C math constants defined
@@ -46,6 +47,7 @@
 #define M_SQRT2     1.41421356237309504880168872420969808
 #define M_SQRT1_2   0.707106781186547524400844362104849039
 #define NAN         atof("NAN")
+#define INFINITY    atof("INFINITY")  // TODO: fix this
 #endif
 
 #define V7_CACHE_OBJS
@@ -306,6 +308,11 @@ static enum v7_err inc_stack(struct v7 *v7, int incr) {
   return V7_OK;
 }
 
+enum v7_err v7_pop(struct v7 *v7, int incr) {
+  CHECK(incr >= 0, V7_INTERNAL_ERROR);
+  return inc_stack(v7, -incr);
+}
+
 static void free_scopes(struct v7 *v7, int i) {
   for (; i < (int) ARRAY_SIZE(v7->scopes); i++) {
     v7->scopes[i].ref_count = 1;   // Force v7_freeval() below to free memory
@@ -350,10 +357,12 @@ int v7_sp(struct v7 *v7) {
   return (int) (v7_top(v7) - v7->stack);
 }
 
-static int v7_is_true(const struct v7_val *v) {
+int v7_is_true(const struct v7_val *v) {
   return  (v->type == V7_BOOL && v->v.num != 0.0) ||
           (v->type == V7_NUM && v->v.num != 0.0 && !isnan(v->v.num)) ||
-          (v->type == V7_STR && v->v.str.len > 0);
+          (v->type == V7_STR && v->v.str.len > 0) ||
+          (v->type == V7_OBJ) ||
+          (v->type == V7_ARRAY);
 }
 
 static void obj_v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
@@ -508,10 +517,15 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
     const struct v7_str *as = &a->v.str, *bs = &b->v.str;
 
     switch (a->type) {
-      case V7_NUM: return (isnan(an) && isnan(bn)) || (an == bn);
-      case V7_BOOL: return an == bn;
-      case V7_STR: return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
-      default: return a == b;
+      case V7_NUM:
+        return (an == bn) || (isinf(an) && isinf(bn)) ||
+          (isnan(an) && isnan(bn));
+      case V7_BOOL:
+        return an == bn;
+      case V7_STR:
+        return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
+      default:
+        return a == b;
     }
   }
 }
@@ -703,24 +717,13 @@ static int test_token(struct v7 *v7, const char *kw, unsigned long kwlen) {
 //  number      =   { digit }
 static enum v7_err parse_num(struct v7 *v7) {
   double value = 0;
-  int is_negative = 0;
-
-  if (*v7->cursor == '-') {
-    is_negative = 1;
-    TRY(match(v7, *v7->cursor));
-  }
-
-  CHECK(is_digit(*v7->cursor), V7_SYNTAX_ERROR);
-  v7->tok = v7->cursor;
-  while (is_digit(*v7->cursor)) {
-    value *= 10;
-    value += *v7->cursor++ - '0';
-  }
-
-  if (is_negative) {
-    value = -value;
-  }
-
+  char *end;
+  
+  value = strtod(v7->cursor, &end);
+  // Handle case like 123.toString()
+  if (end != NULL && (v7->cursor < &end[-1]) && end[-1] == '.') end--;
+  CHECK(value != 0 || end > v7->cursor, V7_SYNTAX_ERROR);
+  v7->cursor = end;
   v7->tok_len = (unsigned long) (v7->cursor - v7->tok);
   skip_whitespaces_and_comments(v7);
 
@@ -743,26 +746,18 @@ static enum v7_err parse_identifier(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err parse_return_statement(struct v7 *v7) {
-  if (*v7->cursor == ';' || *v7->cursor == '}') {
-    if (!v7->no_exec) TRY(v7_make_and_push(v7, V7_UNDEF));
-  } else {
-    TRY(parse_expression(v7));
-  }
-  return V7_OK;
-}
-
-static enum v7_err parse_compound_statement(struct v7 *v7) {
+static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
   if (*v7->cursor == '{') {
     int old_sp = v7->sp;
-    match(v7, '{');
+    TRY(match(v7, '{'));
     while (*v7->cursor != '}') {
-      inc_stack(v7, old_sp - v7->sp);
-      TRY(parse_statement(v7, NULL));
+      TRY(inc_stack(v7, old_sp - v7->sp));
+      TRY(parse_statement(v7, has_return));
+      if (*has_return && !v7->no_exec) return V7_OK;
     }
-    match(v7, '}');
+    TRY(match(v7, '}'));
   } else {
-    TRY(parse_statement(v7, NULL));
+    TRY(parse_statement(v7, has_return));
   }
   return V7_OK;
 }
@@ -770,7 +765,7 @@ static enum v7_err parse_compound_statement(struct v7 *v7) {
 // function_defition = "function" "(" func_params ")" "{" func_body "}"
 static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
                                              int num_params) {
-  int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp;
+  int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0;
   const char *src = v7->cursor;
 
   // If 'v' (func to call) is NULL, that means we're just parsing function
@@ -798,23 +793,20 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     if (!test_and_skip_char(v7, ',')) break;
   }
   TRY(match(v7, ')'));
-  TRY(match(v7, '{'));
-
-  while (*v7->cursor != '}') {
-    int is_return_statement = 0;
-    inc_stack(v7, old_sp - v7->sp);   // Clean up the stack from prev stmt
-    TRY(parse_statement(v7, &is_return_statement));
-    if (is_return_statement) break;   // Leave statement value on stack
-  }
+  TRY(parse_compound_statement(v7, &has_return));
 
   if (v7->no_exec) {
     TRY(v7_make_and_push(v7, V7_FUNC));
     v7_top(v7)[-1]->v.func = v7_strdup(src, (v7->cursor + 1) - src);
   }
-  TRY(match(v7, '}'));
 
-  // Deinitialize scope
   if (!v7->no_exec) {
+    // If function didn't have return statement, return UNDEF
+    if (!has_return) {
+      inc_stack(v7, old_sp - v7->sp);
+      v7_make_and_push(v7, V7_UNDEF);
+    }
+    // Clean up function scope
     v7->scopes[v7->current_scope].ref_count = 1;  // Force v7_freeval() below
     v7_freeval(v7, &v7->scopes[v7->current_scope]);
     v7->current_scope--;
@@ -1125,6 +1117,12 @@ static enum v7_err parse_factor(struct v7 *v7) {
       TRY(parse_function_definition(v7, NULL, 0));
     } else if (test_token(v7, "delete", 6)) {
       TRY(parse_delete(v7));
+    } else if (test_token(v7, "NaN", 3)) {
+      TRY(v7_make_and_push(v7, V7_NUM));
+      v7_top(v7)[-1]->v.num = NAN;
+    } else if (test_token(v7, "Infinity", 8)) {
+      TRY(v7_make_and_push(v7, V7_NUM));
+      v7_top(v7)[-1]->v.num = INFINITY;
     } else {
       TRY(parse_variable(v7));
     }
@@ -1282,7 +1280,7 @@ static enum v7_err parse_declaration(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err parse_if_statement(struct v7 *v7) {
+static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   int old_no_exec = v7->no_exec;  // Remember execution flag
   TRY(match(v7, '('));
   TRY(parse_expression(v7));      // Evaluate condition, pushed on stack
@@ -1296,23 +1294,27 @@ static enum v7_err parse_if_statement(struct v7 *v7) {
       TRY(inc_stack(v7, -1));
     }
   }
-  TRY(parse_compound_statement(v7));
+  TRY(parse_compound_statement(v7, has_return));
   v7->no_exec = old_no_exec;  // Restore old execution flag
   return V7_OK;
 }
 
 //  statement  =  declaration | return_statement | if_statement
 //                assignment | expression [ ";" ]
-static enum v7_err parse_statement(struct v7 *v7, int *is_return_statement) {
+static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   if (*v7->cursor == '_' || is_alpha(*v7->cursor)) {
     TRY(parse_identifier(v7));    // Load identifier into v7->tok, v7->tok_len
     if (test_token(v7, "var", 3)) {
       TRY(parse_declaration(v7));
     } else if (test_token(v7, "return", 6)) {
-      TRY(parse_return_statement(v7));
-      if (is_return_statement != NULL) *is_return_statement = 1;
+      if (!v7->no_exec) {
+        *has_return = 1;
+      }
+      if (*v7->cursor != ';' && *v7->cursor != '}') {
+        TRY(parse_expression(v7));
+      }
     } else if (test_token(v7, "if", 2)) {
-      TRY(parse_if_statement(v7));
+      TRY(parse_if_statement(v7, has_return));
     } else {
       v7->cursor = v7->tok;
       TRY(parse_expression(v7));
@@ -1323,8 +1325,6 @@ static enum v7_err parse_statement(struct v7 *v7, int *is_return_statement) {
 
   // Skip optional semicolons
   while (*v7->cursor == ';') match(v7, *v7->cursor);
-
-  //return is_return_statement;
   return V7_OK;
 }
 
@@ -1332,6 +1332,7 @@ static enum v7_err parse_statement(struct v7 *v7, int *is_return_statement) {
 enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   v7->source_code = v7->cursor = source_code;
   skip_whitespaces_and_comments(v7);
+  int has_ret = 0;
 
   // The following code may raise an exception and jump to the previous line,
   // returning non-zero from the setjmp() call
@@ -1340,8 +1341,8 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   v7->current_scope = 0;  // XXX free up higher scopes?
 
   while (*v7->cursor != '\0') {
-    inc_stack(v7, -v7->sp);       // Reset stack on each statement
-    TRY(parse_statement(v7, 0));  // Leave the result of last expr on stack
+    inc_stack(v7, -v7->sp);               // Reset stack on each statement
+    TRY(parse_statement(v7, &has_ret));   // Last expr result on stack
   }
 
   return V7_OK;

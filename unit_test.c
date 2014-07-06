@@ -15,14 +15,20 @@
 // Alternatively, you can license this library under a commercial
 // license, as set out in <http://cesanta.com/products.html>.
 
-#include <math.h>
 #include <limits.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "v7.h"
+
+#ifdef _WIN32
+#define isinf(x) (!_finite(x))
+#define NAN         atof("NAN")
+//#define INFINITY    BLAH
+#endif
 
 #define FAIL(str, line) do {                    \
   printf("Fail on line %d: [%s]\n", line, str); \
@@ -69,10 +75,11 @@ static int check_str(struct v7 *v7, const char *val) {
     memcmp(val, v7_top(v7)[-1]->v.str.buf, strlen(val)) == 0;
 }
 
-static int check_num(struct v7 *v7, double num) {
+static int check_num(struct v7 *v7, double an) {
   const struct v7_val *v = v7_top(v7)[-1];
+  double bn = v->v.num;
   return v7->sp == 1 && v->type == V7_NUM &&
-    ((isnan(num) && isnan(v->v.num)) || (v->v.num == num));
+    ((an == bn) || (isinf(an) && isinf(bn)) || (isnan(an) && isnan(bn)));
 }
 
 static const char *test_native_functions(void) {
@@ -107,6 +114,20 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "3 + 4") == V7_OK);
   ASSERT(check_num(v7, 7.0));
+
+  ASSERT(v7_exec(v7, "123.456") == V7_OK);
+  ASSERT(check_num(v7, 123.456));
+
+  ASSERT(v7_exec(v7, "NaN") == V7_OK);
+  ASSERT(check_num(v7, NAN));
+
+  // TODO: fix infinity handling under MSVC6
+#ifndef _WIN32
+  ASSERT(v7_exec(v7, "Infinity") == V7_OK);
+  ASSERT(check_num(v7, INFINITY));
+  ASSERT(v7_exec(v7, "-Infinity") == V7_OK);
+  ASSERT(check_num(v7, -INFINITY));
+#endif
 
   ASSERT(v7_exec(v7, "2()") == V7_CALLED_NON_FUNCTION);
   ASSERT(v7_exec(v7, " 15 +	2 \r\n * 2  / 1 - 3 * 4 ; ") == V7_OK);
@@ -186,7 +207,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { } ; ") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
-  ASSERT(strcmp(v7_top(v7)[-1]->v.func, "(x, y) { }") == 0);
+  ASSERT(strcmp(v7_top(v7)[-1]->v.func, "(x, y) { } ;") == 0);
 
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { return x * y; };") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
@@ -255,6 +276,18 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "x[1]") == V7_OK);
   ASSERT(check_str(v7, "foo"));
 
+  ASSERT(v7_exec(v7, "var f1 = function() { 1; };") == V7_OK);
+  ASSERT(v7_exec(v7, "var f2 = function(x) { if (x) return x; };") == V7_OK);
+  ASSERT(v7_exec(v7, "f1()") == V7_OK);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7_exec(v7, "f2(false)") == V7_OK);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7_exec(v7, "f2(17)") == V7_OK);
+  //ASSERT(check_num(v7, 17.0));
+  //ASSERT(v7_exec(v7, "f2(true)") == V7_OK);
+  //ASSERT(check_bool(v7, 1.0));
+  
+
   v7_destroy(&v7);
   return NULL;
 }
@@ -287,12 +320,54 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, "'hi there'.indexOf('e', 6)") == V7_OK);
   ASSERT(check_num(v7, 7.0));
 
+  ASSERT(v7_exec(v7, "7 >= 0") == V7_OK);
+  ASSERT(check_bool(v7, 1.0));
+
+  v7_destroy(&v7);
+  return NULL;
+}
+
+static int test_if_expr(struct v7 *v7, const char *expr, int result) {
+  return v7_exec(v7, expr) == V7_OK && v7_sp(v7) == 1 &&
+    (v7_is_true(v7_top(v7)[-1]) ? 1 : 0) == result;
+}
+
+static const char *test_is_true(void) {
+  struct v7 *v7 = v7_create();
+
+  ASSERT(test_if_expr(v7, "true", 1));
+  ASSERT(test_if_expr(v7, "false", 0));
+  ASSERT(test_if_expr(v7, "1", 1));
+  ASSERT(test_if_expr(v7, "123.24876", 1));
+  ASSERT(test_if_expr(v7, "0", 0));
+  ASSERT(test_if_expr(v7, "-1", 1));
+  ASSERT(test_if_expr(v7, "'true'", 1));
+  ASSERT(test_if_expr(v7, "'false'", 1));
+  ASSERT(test_if_expr(v7, "'hi'", 1));
+  ASSERT(test_if_expr(v7, "'1'", 1));
+  ASSERT(test_if_expr(v7, "'0'", 1));
+  ASSERT(test_if_expr(v7, "'-1'", 1));
+  ASSERT(test_if_expr(v7, "''", 0));
+  ASSERT(test_if_expr(v7, "null", 0));
+  ASSERT(test_if_expr(v7, "undefined", 0));
+#ifndef _WIN32
+  ASSERT(test_if_expr(v7, "Infinity", 1));
+  ASSERT(test_if_expr(v7, "-Infinity", 1));
+#endif
+  ASSERT(test_if_expr(v7, "[]", 1));
+  ASSERT(test_if_expr(v7, "{}", 1));
+  ASSERT(test_if_expr(v7, "[[]]", 1));
+  ASSERT(test_if_expr(v7, "[0]", 1));
+  ASSERT(test_if_expr(v7, "[1]", 1));
+  ASSERT(test_if_expr(v7, "NaN", 0));
+
   v7_destroy(&v7);
   return NULL;
 }
 
 static const char *run_all_tests(void) {
   RUN_TEST(test_v7_destroy);
+  RUN_TEST(test_is_true);
   RUN_TEST(test_v7_exec);
   RUN_TEST(test_native_functions);
   RUN_TEST(test_stdlib);
