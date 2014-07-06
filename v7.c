@@ -167,6 +167,35 @@ static void Str_indexOf(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
+static void Str_substr(struct v7 *v7, struct v7_val *this_obj,
+                        struct v7_val *result, struct v7_val **args,
+                        int num_args) {
+  (void) v7; (void) this_obj; (void) result; (void) num_args; (void) args;
+
+  result->type = V7_STR;
+  result->v.str.buf = (char *) "";
+  result->v.str.len = 0;
+  result->flags = V7_RDONLY_STR;
+
+  if (num_args > 0 && args[0]->type == V7_NUM) {
+    long start = (long) args[0]->v.num;
+    if (start < 0) {
+      start += (long) this_obj->v.str.len;
+    }
+    if (start >= 0 && start < (long) this_obj->v.str.len) {
+      long n = this_obj->v.str.len - start;
+      if (num_args > 1 && args[1]->type == V7_NUM) {
+        n = args[1]->v.num;
+      }
+      if (n > 0 && n <= ((long) this_obj->v.str.len - start)) {
+        result->v.str.len = n;
+        result->v.str.buf = v7_strdup(this_obj->v.str.buf + start, n);
+        result->flags = 0;
+      }
+    }
+  }
+}
+
 static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   struct v7_prop *p;
   result->type = V7_NUM;
@@ -214,6 +243,7 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_string, "charCodeAt", V7_C_FUNC, c_func, Str_charCodeAt);
   SET_RO_PROP(s_string, "charAt", V7_C_FUNC, c_func, Str_charAt);
   SET_RO_PROP(s_string, "indexOf", V7_C_FUNC, c_func, Str_indexOf);
+  SET_RO_PROP(s_string, "substr", V7_C_FUNC, c_func, Str_substr);
 
   SET_RO_PROP(s_math, "E", V7_NUM, num, M_E);
   SET_RO_PROP(s_math, "PI", V7_NUM, num, M_PI);

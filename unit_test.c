@@ -319,6 +319,16 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v7, 5.0));
   ASSERT(v7_exec(v7, "'hi there'.indexOf('e', 6)") == V7_OK);
   ASSERT(check_num(v7, 7.0));
+  ASSERT(v7_exec(v7, "'hi there'.substr(3, 2)") == V7_OK);
+  ASSERT(check_str(v7, "th"));
+  ASSERT(v7_exec(v7, "'hi there'.substr(3)") == V7_OK);
+  ASSERT(check_str(v7, "there"));
+  ASSERT(v7_exec(v7, "'hi there'.substr(-2)") == V7_OK);
+  ASSERT(check_str(v7, "re"));
+  ASSERT(v7_exec(v7, "'hi there'.substr(-20)") == V7_OK);
+  ASSERT(check_str(v7, ""));
+  ASSERT(v7_exec(v7, "'hi there'.substr(0, 300)") == V7_OK);
+  ASSERT(check_str(v7, ""));
 
   ASSERT(v7_exec(v7, "7 >= 0") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
