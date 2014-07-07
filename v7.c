@@ -1360,9 +1360,10 @@ static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
 
 //  code        =   { statement }
 enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
+  int has_ret = 0;
+
   v7->source_code = v7->cursor = source_code;
   skip_whitespaces_and_comments(v7);
-  int has_ret = 0;
 
   // The following code may raise an exception and jump to the previous line,
   // returning non-zero from the setjmp() call
