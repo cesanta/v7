@@ -1074,10 +1074,9 @@ static enum v7_err parse_prop_accessor(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err del_key(struct v7 *v7, struct v7_val *obj,
-                           const struct v7_val *key) {
+enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key) {
   struct v7_prop **p;
-  CHECK(obj->type == V7_OBJ, V7_TYPE_MISMATCH);
+  CHECK(obj->type == V7_OBJ || obj->type == V7_ARRAY, V7_TYPE_MISMATCH);
   for (p = &obj->v.props; *p != NULL; p = &p[0]->next) {
     if (cmp(key, p[0]->key)) {
       struct v7_prop *next = p[0]->next;
@@ -1095,7 +1094,7 @@ static enum v7_err parse_delete(struct v7 *v7) {
   struct v7_val key;
   TRY(parse_expression(v7));
   key = str_to_val(v7->tok, v7->tok_len);  // Must go after parse_expression
-  TRY(del_key(v7, v7->cur_obj, &key));
+  TRY(v7_del(v7, v7->cur_obj, &key));
   return V7_OK;
 }
 
