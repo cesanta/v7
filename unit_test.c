@@ -283,10 +283,11 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "f2(false)") == V7_OK);
   ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
   ASSERT(v7_exec(v7, "f2(17)") == V7_OK);
-  //ASSERT(check_num(v7, 17.0));
-  //ASSERT(v7_exec(v7, "f2(true)") == V7_OK);
-  //ASSERT(check_bool(v7, 1.0));
-  
+  ASSERT(check_num(v7, 17.0));
+  ASSERT(v7_exec(v7, "f2(true)") == V7_OK);
+  ASSERT(check_bool(v7, 1.0));
+
+  ASSERT(v7_exec(v7, "print(['hi', 1, true, null], '\n')") == V7_OK);
 
   v7_destroy(&v7);
   return NULL;

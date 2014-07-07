@@ -395,7 +395,7 @@ int v7_is_true(const struct v7_val *v) {
           (v->type == V7_ARRAY);
 }
 
-static void obj_v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
+static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m;
   int n = snprintf(buf, bsiz, "%s", "{");
 
@@ -408,6 +408,21 @@ static void obj_v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
     n = (int) strlen(buf);
   }
   n += snprintf(buf + n, bsiz - n, "%s", "}");
+}
+
+static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  const struct v7_prop *m;
+  int n = snprintf(buf, bsiz, "%s", "[");
+
+  for (m = v->v.props; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != v->v.props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    //v7_to_string(m->key, buf + n, bsiz - n);
+    //n = (int) strlen(buf);
+    //n += snprintf(buf + n , bsiz - n, "%d: ");
+    v7_to_string(m->val, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+  }
+  n += snprintf(buf + n, bsiz - n, "%s", "]");
 }
 
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
@@ -425,7 +440,10 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
       snprintf(buf, bsiz, "%s", "null");
       break;
     case V7_OBJ:
-      obj_v7_to_string(v, buf, bsiz);
+      obj_to_string(v, buf, bsiz);
+      break;
+    case V7_ARRAY:
+      arr_to_string(v, buf, bsiz);
       break;
     case V7_STR:
         snprintf(buf, bsiz, "%.*s", (int) v->v.str.len, v->v.str.buf);
