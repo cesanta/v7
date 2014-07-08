@@ -207,7 +207,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { } ; ") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
-  ASSERT(strcmp(v7_top(v7)[-1]->v.func, "(x, y) { } ;") == 0);
+  ASSERT(strcmp(v7_top(v7)[-1]->v.func, "(x, y) { } ") == 0);
 
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { return x * y; };") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
@@ -285,6 +285,32 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "f2(17)") == V7_OK);
   ASSERT(check_num(v7, 17.0));
   ASSERT(v7_exec(v7, "f2(true)") == V7_OK);
+  ASSERT(check_bool(v7, 1.0));
+
+  ASSERT(v7_exec(v7, "1 <= 2 ? 7 : 8") == V7_OK);
+  ASSERT(check_num(v7, 7.0));
+
+  ASSERT(v7_exec(v7, "function a (x) { return x * x }; ") == V7_OK);
+  ASSERT(v7_exec(v7, "a(2)") == V7_OK);
+  ASSERT(check_num(v7, 4.0));
+  ASSERT(v7_exec(v7, "a(0)") == V7_OK);
+  ASSERT(check_num(v7, 0.0));
+
+  ASSERT(v7_exec(v7, "function fac(x) { "
+         "return x <= 1 ? 1 : x * fac(x - 1); }") == V7_OK);
+  ASSERT(v7_exec(v7, "fac(1)") == V7_OK);
+  ASSERT(check_num(v7, 1.0));
+  ASSERT(v7_exec(v7, "fac(5)") == V7_OK);
+  ASSERT(check_num(v7, 120.0));
+  ASSERT(v7_exec(v7, "fac(1234)") == V7_RECURSION_TOO_DEEP);
+
+  ASSERT(v7_exec(v7, "function qq(a,b) { return a + b; }") == V7_OK);
+  ASSERT(v7_exec(v7, "qq(1,2)") == V7_OK);
+  ASSERT(check_num(v7, 3.0));
+
+  ASSERT(v7_exec(v7, "!5") == V7_OK);
+  ASSERT(check_bool(v7, 0.0));
+  ASSERT(v7_exec(v7, "!''") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
 
   ASSERT(v7_exec(v7, "print(['hi', 1, true, null], '\n')") == V7_OK);

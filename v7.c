@@ -416,9 +416,6 @@ static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
 
   for (m = v->v.props; m != NULL && n < bsiz - 1; m = m->next) {
     if (m != v->v.props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
-    //v7_to_string(m->key, buf + n, bsiz - n);
-    //n = (int) strlen(buf);
-    //n += snprintf(buf + n , bsiz - n, "%d: ");
     v7_to_string(m->val, buf + n, bsiz - n);
     n = (int) strlen(buf);
   }
@@ -813,8 +810,17 @@ static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
 // function_defition = "function" "(" func_params ")" "{" func_body "}"
 static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
                                              int num_params) {
-  int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0;
-  const char *src = v7->cursor;
+  int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, len, has_return = 0;
+  const char *src = v7->cursor, *func_name = NULL;
+
+  if (*v7->cursor != '(') {
+    // function name is given, e.g. function foo() {}
+    CHECK(v == NULL, V7_SYNTAX_ERROR);
+    TRY(parse_identifier(v7));
+    func_name = v7->tok;
+    len = v7->tok_len;
+    src = v7->cursor;
+  }
 
   // If 'v' (func to call) is NULL, that means we're just parsing function
   // definition to save it's body.
@@ -835,7 +841,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     if (!v7->no_exec) {
       struct v7_val *key = v7_mkval_str(v7, v7->tok, v7->tok_len, 1);
       struct v7_val *val = i < num_params ? v[i + 1] : v7_mkval(v7, V7_UNDEF);
-      v7_set(v7, &v7->scopes[v7->current_scope], key, val);
+      TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, val));
     }
     i++;
     if (!test_and_skip_char(v7, ',')) break;
@@ -845,21 +851,26 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   if (v7->no_exec) {
     TRY(v7_make_and_push(v7, V7_FUNC));
-    v7_top(v7)[-1]->v.func = v7_strdup(src, (v7->cursor + 1) - src);
+    v7_top(v7)[-1]->v.func = v7_strdup(src, v7->cursor - src);
+
+    if (func_name != NULL) {
+      struct v7_val *key = v7_mkval_str(v7, func_name, len, 1);
+      TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, v7_top(v7)[-1]));
+    }
   }
 
   if (!v7->no_exec) {
     // If function didn't have return statement, return UNDEF
     if (!has_return) {
-      inc_stack(v7, old_sp - v7->sp);
-      v7_make_and_push(v7, V7_UNDEF);
+      TRY(inc_stack(v7, old_sp - v7->sp));
+      TRY(v7_make_and_push(v7, V7_UNDEF));
     }
     // Clean up function scope
     v7->scopes[v7->current_scope].ref_count = 1;  // Force v7_freeval() below
     v7_freeval(v7, &v7->scopes[v7->current_scope]);
     v7->current_scope--;
-    assert(v7->current_scope >= 0);
-  }
+    CHECK(v7->current_scope >= 0, V7_INTERNAL_ERROR);
+  } 
 
   v7->no_exec = old_no_exec;
   return V7_OK;
@@ -906,13 +917,11 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj) {
   // Push arguments on stack
   TRY(match(v7, '('));
   while (*v7->cursor != ')') {
-    parse_expression(v7);
+    TRY(parse_expression(v7));
     test_and_skip_char(v7, ',');
     num_args++;
   }
   TRY(match(v7, ')'));
-  //TRACE_OBJ(v7->cur_obj);
-
 
   if (!v7->no_exec) {
     TRY(v7_call(v7, this_obj, num_args));
@@ -1138,7 +1147,16 @@ static enum v7_err parse_variable(struct v7 *v7) {
 static enum v7_err parse_factor(struct v7 *v7) {
   int old_sp = v7_sp(v7);
 
-  if (*v7->cursor == '(') {
+  if (*v7->cursor == '!') {
+    TRY(match(v7, '!'));
+    TRY(parse_expression(v7));
+    if (!v7->no_exec) {
+      int is_true = v7_is_true(v7_top(v7)[-1]);
+      TRY(v7_pop(v7, 1));
+      TRY(v7_make_and_push(v7, V7_BOOL));
+      v7_top(v7)[-1]->v.num = is_true ? 0.0 : 1.0;
+    }
+  } else if (*v7->cursor == '(') {
     TRY(match(v7, '('));
     TRY(parse_expression(v7));
     TRY(match(v7, ')'));
@@ -1284,7 +1302,7 @@ static enum v7_err parse_expression(struct v7 *v7) {
   if ((op = is_logical_op(v7->cursor)) > OP_XX) {
     v7->cursor += op == OP_LT || op == OP_GT ? 1 : 2;
     skip_whitespaces_and_comments(v7);
-    TRY(parse_expression(v7));
+    TRY(parse_term(v7));
     TRY(do_logical_op(v7, op));
   }
 
@@ -1295,10 +1313,15 @@ static enum v7_err parse_expression(struct v7 *v7) {
 
   // Parse ternary operator
   if (*v7->cursor == '?') {
-    int condition_true = v7_is_true(v7_top(v7)[-1]);
     int old_no_exec = v7->no_exec;
+    int condition_true = 1;
 
-    if (!v7->no_exec) TRY(inc_stack(v7, -1));   // Remove condition result
+    if (!v7->no_exec) {
+      CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
+      condition_true = v7_is_true(v7_top(v7)[-1]);
+      TRY(inc_stack(v7, -1));   // Remove condition result
+    }
+
     TRY(match(v7, '?'));
     v7->no_exec = old_no_exec || !condition_true;
     TRY(parse_expression(v7));
@@ -1385,7 +1408,7 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   // The following code may raise an exception and jump to the previous line,
   // returning non-zero from the setjmp() call
   // Prior calls to v7_exec() may have left current_scope modified, reset now
-  // free_scopes(v7, 1);
+  free_scopes(v7, 1);
   v7->current_scope = 0;  // XXX free up higher scopes?
 
   while (*v7->cursor != '\0') {
@@ -1435,16 +1458,26 @@ int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
   int i, error_code;
 
-  for (i = 1; i < argc; i++) {
+  // Execute inline code
+  for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if ((error_code = v7_exec(v7, argv[i + 1])) != V7_OK) {
         fprintf(stderr, "Error executing [%s]: %s\n", argv[i + 1],
                 v7_strerror(error_code));
       }
+      i++;
+    }
+  }
+
+  // Execute files
+  for (; i < argc; i++) {
+    if ((error_code = v7_exec_file(v7, argv[i])) != V7_OK) {
+      fprintf(stderr, "%s line %d: %s\n", argv[i], v7->line_no,
+              v7_strerror(error_code));
     }
   }
 
   v7_destroy(&v7);
-  return 0;
+  return EXIT_SUCCESS;
 }
 #endif
