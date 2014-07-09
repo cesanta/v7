@@ -118,7 +118,6 @@ int v7_is_true(const struct v7_val *v);
 int v7_sp(struct v7 *v7);
 struct v7_val **v7_top(struct v7 *);
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz);
-struct v7_val v7_str_to_val(const char *buf);
 const char *v7_strerror(enum v7_err);
 
 #ifdef __cplusplus

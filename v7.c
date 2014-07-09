@@ -569,6 +569,8 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
         return an == bn;
       case V7_STR:
         return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
+      case V7_UNDEF:
+        return 0;
       default:
         return a == b;
     }
@@ -1172,6 +1174,8 @@ static enum v7_err parse_factor(struct v7 *v7) {
       TRY(v7_push(v7, &v7->scopes[v7->current_scope]));
     } else if (test_token(v7, "null", 4)) {
       TRY(v7_make_and_push(v7, V7_NULL));
+    } else if (test_token(v7, "undefined", 9)) {
+      TRY(v7_make_and_push(v7, V7_UNDEF));
     } else if (test_token(v7, "true", 4)) {
       TRY(v7_make_and_push(v7, V7_BOOL));
       v7_top(v7)[-1]->v.num = 1;
@@ -1224,13 +1228,14 @@ static enum v7_err parse_term(struct v7 *v7) {
   return V7_OK;
 }
 
-enum { OP_XX, OP_GT, OP_LT, OP_GE, OP_LE, OP_EQ };
+enum { OP_XX, OP_GT, OP_LT, OP_GE, OP_LE, OP_EQ, OP_NE };
 
 static int is_logical_op(const char *s) {
   switch (s[0]) {
     case '>': return s[1] == '=' ? OP_GE : OP_GT;
     case '<': return s[1] == '=' ? OP_LE : OP_LT;
     case '=': return s[1] == '=' ? OP_EQ : OP_XX;
+    case '!': return s[1] == '=' ? OP_NE : OP_XX;
     default: return OP_XX;
   }
 }
@@ -1247,9 +1252,12 @@ static enum v7_err do_logical_op(struct v7 *v7, int op) {
       case OP_LT: res = v[0]->v.num <  v[1]->v.num; break;
       case OP_LE: res = v[0]->v.num <= v[1]->v.num; break;
       case OP_EQ: res = cmp(v[0], v[1]); break;
+      case OP_NE: res = !cmp(v[0], v[1]); break;
     }
   } else if (op == OP_EQ) {
     res = cmp(v[0], v[1]);
+  } else if (op == OP_NE) {
+    res = !cmp(v[0], v[1]);
   }
   TRY(inc_stack(v7, -2));
   TRY(v7_make_and_push(v7, V7_BOOL));
