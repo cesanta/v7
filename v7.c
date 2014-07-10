@@ -472,6 +472,7 @@ struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type) {
   }
 
   if (v != NULL) {
+    assert(v->ref_count == 0);
     v->type = type;
     switch (type) {
       case V7_STR: v->proto = &s_string; break;
@@ -842,8 +843,10 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     TRY(parse_identifier(v7));
     if (!v7->no_exec) {
       struct v7_val *key = v7_mkval_str(v7, v7->tok, v7->tok_len, 1);
-      struct v7_val *val = i < num_params ? v[i + 1] : v7_mkval(v7, V7_UNDEF);
+      struct v7_val *val = i < num_params ? v[i + 2] : v7_mkval(v7, V7_UNDEF);
+      key->ref_count++;
       TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, val));
+      v7_freeval(v7, key);
     }
     i++;
     if (!test_and_skip_char(v7, ',')) break;
@@ -857,7 +860,9 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
     if (func_name != NULL) {
       struct v7_val *key = v7_mkval_str(v7, func_name, len, 1);
+      key->ref_count++;
       TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, v7_top(v7)[-1]));
+      v7_freeval(v7, key);
     }
   }
 
@@ -879,32 +884,42 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 }
 
 enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
-  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f = v[0];
+  struct v7_val **top = v7_top(v7), **v = top - (num_args + 2), *f;
 
   if (v7->no_exec) return V7_OK;
+  f = v[0];
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
   CHECK(f->type == V7_FUNC || f->type == V7_C_FUNC, V7_CALLED_NON_FUNCTION);
 
-  // Return value will substitute function objest on a stack
-  v[0] = v7_mkval(v7, V7_UNDEF);  // Set return value to 'undefined'
-  v[0]->ref_count++;
-
+  // Stack looks as follows:
+  //  v   --->  <called_function>     v[0]
+  //            <return_value>        v[1]
+  //            <argument_0>        ---+
+  //            <argument_1>           |
+  //            <argument_2>           |  <-- num_args
+  //            ...                    |
+  //            <argument_N>        ---+
+  // top  --->
   if (f->type == V7_FUNC) {
     const char *src = v7->cursor;
     v7->cursor = f->v.func;     // Move control flow to function body
     TRY(parse_function_definition(v7, v, num_args));  // Execute function body
     v7->cursor = src;           // Return control flow
     if (v7_top(v7) > top) {     // If function body pushed some value on stack,
-      v7_freeval(v7, v[0]);
-      v[0] = top[0];            // use that value as return value
-      v[0]->ref_count++;
+      v7_freeval(v7, v[1]);
+      v[1] = top[0];            // use that value as return value
+      v[1]->ref_count++;
     }
   } else if (f->type == V7_C_FUNC) {
-    f->v.c_func(v7, this_obj, v[0], v + 1, num_args);
+    f->v.c_func(v7, this_obj, v[1], v + 2, num_args);
   }
-  v7_freeval(v7, f);
 
-  TRY(inc_stack(v7, - (int) (v7_top(v7) - (v + 1))));  // Clean up stack
+  // Move return value to where <called_function> is, cleanup everything else
+  v7_freeval(v7, v[0]);
+  v[0] = v[1];
+  v[1]->ref_count++;
+  TRY(v7_pop(v7, (int) (v7_top(v7) - (v + 1))));
+
   return V7_OK;
 }
 
@@ -916,6 +931,11 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj) {
   CHECK(v7->no_exec || v[0]->type == V7_FUNC || v[0]->type == V7_C_FUNC,
         V7_CALLED_NON_FUNCTION);
 
+  // Push return value on stack
+  if (!v7->no_exec) {
+    v7_make_and_push(v7, V7_UNDEF);
+  }
+
   // Push arguments on stack
   TRY(match(v7, '('));
   while (*v7->cursor != ')') {
@@ -925,9 +945,8 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj) {
   }
   TRY(match(v7, ')'));
 
-  if (!v7->no_exec) {
-    TRY(v7_call(v7, this_obj, num_args));
-  }
+  TRY(v7_call(v7, this_obj, num_args));
+
   return V7_OK;
 }
 
@@ -1420,7 +1439,7 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   v7->current_scope = 0;  // XXX free up higher scopes?
 
   while (*v7->cursor != '\0') {
-    inc_stack(v7, -v7->sp);               // Reset stack on each statement
+    TRY(inc_stack(v7, -v7->sp));          // Reset stack on each statement
     TRY(parse_statement(v7, &has_ret));   // Last expr result on stack
   }
 
