@@ -84,7 +84,7 @@ static int check_num(struct v7 *v7, double an) {
 
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
-  v7_set_func(v7, v7_get_root_namespace(v7), "adder", adder);
+  v7_setv(v7, v7_rootns(v7), "adder", 5, 0, V7_C_FUNC, adder);
   ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(check_num(v7, 10.0));
   v7_destroy(&v7);
@@ -209,6 +209,8 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
   ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
   ASSERT(check_num(v7, 49.0));
+  ASSERT(v7_exec(v7, "f1(12, 4) * 2;") == V7_OK);
+  ASSERT(check_num(v7, 96.0));
 
   ASSERT(v7_exec(v7, "f = function(x,y,z) {print(this, '\n');};") == V7_OK);
   ASSERT(v7_sp(v7) == 1);

@@ -318,7 +318,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   }
 }
 
-struct v7_val *v7_get_root_namespace(struct v7 *v7) {
+struct v7_val *v7_rootns(struct v7 *v7) {
   return &v7->scopes[0];
 }
 
@@ -652,8 +652,8 @@ static struct v7_val *find(struct v7 *v7, struct v7_val *key) {
   return NULL;
 }
 
-enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
-                   struct v7_val *v) {
+static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
+                          struct v7_val *v) {
   struct v7_prop *m = NULL;
 
   CHECK(obj != NULL && k != NULL && v != NULL, V7_INTERNAL_ERROR);
@@ -671,6 +671,42 @@ enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   return V7_OK;
 }
 
+enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
+                    const char *key, unsigned long key_len, int key_own,
+                    enum v7_type type, ...) {
+  struct v7_val *k = v7_mkval_str(v7, key, key_len, key_own);
+  struct v7_val *v = type == V7_OBJ ? NULL : v7_mkval(v7, type);
+  va_list ap;
+
+  // TODO: do not leak here
+  CHECK(k != NULL && (type == V7_OBJ || v != NULL), V7_OUT_OF_MEMORY);
+
+  va_start(ap, type);
+  switch (type) {
+    case V7_C_FUNC: v->v.c_func = va_arg(ap, v7_func_t); break;
+    case V7_NUM: v->v.num = va_arg(ap, double); break;
+    case V7_OBJ: v = va_arg(ap, struct v7_val *); break;
+    case V7_STR:
+      v->v.str.buf = va_arg(ap, char *);
+      v->v.str.len = va_arg(ap, unsigned long);
+      if (va_arg(ap, int) != 0) {
+        v->v.str.buf = v7_strdup(v->v.str.buf, v->v.str.len);
+      } else {
+        v->flags = V7_RDONLY_STR;
+      }
+      break;
+    default: return V7_INTERNAL_ERROR;  // TODO: don't leak here
+  }
+  va_end(ap);
+
+  k->ref_count++;
+  TRY(v7_set(v7, obj, k, v));
+  v7_freeval(v7, k);
+
+  return V7_OK;
+}
+
+#if 0
 enum v7_err v7_set_func(struct v7 *v7, struct v7_val *obj,
                         const char *key, v7_func_t c_func) {
   struct v7_val *k = v7_mkval_str(v7, key, strlen(key), 1);
@@ -703,6 +739,7 @@ enum v7_err v7_set_obj(struct v7 *v7, struct v7_val *obj, const char *key,
   CHECK(k != NULL, V7_OUT_OF_MEMORY);
   return v7_set(v7, obj, k, val);
 }
+#endif
 
 static int is_alpha(int ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
@@ -813,7 +850,8 @@ static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
 // function_defition = "function" "(" func_params ")" "{" func_body "}"
 static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
                                              int num_params) {
-  int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, len, has_return = 0;
+  int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0, ln = 0;
+  unsigned long func_name_len = 0;
   const char *src = v7->cursor, *func_name = NULL;
 
   if (*v7->cursor != '(') {
@@ -821,13 +859,14 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     CHECK(v == NULL, V7_SYNTAX_ERROR);
     TRY(parse_identifier(v7));
     func_name = v7->tok;
-    len = v7->tok_len;
+    func_name_len = v7->tok_len;
     src = v7->cursor;
   }
 
   // If 'v' (func to call) is NULL, that means we're just parsing function
   // definition to save it's body.
   v7->no_exec = v == NULL;
+  ln = v7->line_no;  // Line number where function starts
   TRY(match(v7, '('));
 
   // Initialize new scope
@@ -843,7 +882,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     TRY(parse_identifier(v7));
     if (!v7->no_exec) {
       struct v7_val *key = v7_mkval_str(v7, v7->tok, v7->tok_len, 1);
-      struct v7_val *val = i < num_params ? v[i + 2] : v7_mkval(v7, V7_UNDEF);
+      struct v7_val *val = i < num_params ? v[i + 1] : v7_mkval(v7, V7_UNDEF);
       key->ref_count++;
       TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, val));
       v7_freeval(v7, key);
@@ -856,10 +895,11 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   if (v7->no_exec) {
     TRY(v7_make_and_push(v7, V7_FUNC));
-    v7_top(v7)[-1]->v.func = v7_strdup(src, v7->cursor - src);
+    v7_top(v7)[-1]->v.str.len = ln;
+    v7_top(v7)[-1]->v.func = v7_strdup(src, (unsigned long) (v7->cursor - src));
 
     if (func_name != NULL) {
-      struct v7_val *key = v7_mkval_str(v7, func_name, len, 1);
+      struct v7_val *key = v7_mkval_str(v7, func_name, func_name_len, 1);
       key->ref_count++;
       TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, v7_top(v7)[-1]));
       v7_freeval(v7, key);
@@ -884,40 +924,48 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 }
 
 enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
-  struct v7_val **top = v7_top(v7), **v = top - (num_args + 2), *f;
+  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f;
 
   if (v7->no_exec) return V7_OK;
   f = v[0];
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
   CHECK(f->type == V7_FUNC || f->type == V7_C_FUNC, V7_CALLED_NON_FUNCTION);
 
+  // Push return value on stack
+  //v7_make_and_push(v7, V7_UNDEF);
+
+
   // Stack looks as follows:
   //  v   --->  <called_function>     v[0]
-  //            <return_value>        v[1]
   //            <argument_0>        ---+
   //            <argument_1>           |
   //            <argument_2>           |  <-- num_args
   //            ...                    |
   //            <argument_N>        ---+
-  // top  --->
+  // top  --->  <return_value>
   if (f->type == V7_FUNC) {
-    const char *src = v7->cursor;
+    const char *old_cursor = v7->cursor;
+    int old_line_no = v7->line_no;
+
     v7->cursor = f->v.func;     // Move control flow to function body
+    v7->line_no = f->v.str.len;
     TRY(parse_function_definition(v7, v, num_args));  // Execute function body
-    v7->cursor = src;           // Return control flow
-    if (v7_top(v7) > top) {     // If function body pushed some value on stack,
-      v7_freeval(v7, v[1]);
-      v[1] = top[0];            // use that value as return value
-      v[1]->ref_count++;
+    v7->cursor = old_cursor;    // Return control flow
+    v7->line_no = old_line_no;
+    CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
+
+    if (v7_top(v7) == top) {
+      TRY(v7_make_and_push(v7, V7_UNDEF));
     }
   } else if (f->type == V7_C_FUNC) {
-    f->v.c_func(v7, this_obj, v[1], v + 2, num_args);
+    TRY(v7_make_and_push(v7, V7_UNDEF));
+    f->v.c_func(v7, this_obj, v7_top(v7)[-1], v + 1, num_args);
   }
 
   // Move return value to where <called_function> is, cleanup everything else
   v7_freeval(v7, v[0]);
-  v[0] = v[1];
-  v[1]->ref_count++;
+  v[0] = top[0];
+  v[0]->ref_count++;
   TRY(v7_pop(v7, (int) (v7_top(v7) - (v + 1))));
 
   return V7_OK;
@@ -930,11 +978,6 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj) {
 
   CHECK(v7->no_exec || v[0]->type == V7_FUNC || v[0]->type == V7_C_FUNC,
         V7_CALLED_NON_FUNCTION);
-
-  // Push return value on stack
-  if (!v7->no_exec) {
-    v7_make_and_push(v7, V7_UNDEF);
-  }
 
   // Push arguments on stack
   TRY(match(v7, '('));
@@ -1449,17 +1492,17 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
 enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   FILE *fp;
   char *p;
-  size_t file_size;
+  long file_size;
   enum v7_err status = V7_INTERNAL_ERROR;
 
   if ((fp = fopen(path, "r")) == NULL) {
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
-  } else if ((p = (char *) malloc(file_size + 1)) == NULL) {
+  } else if ((p = (char *) malloc((size_t) file_size + 1)) == NULL) {
     fclose(fp);
   } else {
     rewind(fp);
-    fread(p, 1, file_size, fp);
+    fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
     p[file_size] = '\0';
     v7->line_no = 1;
