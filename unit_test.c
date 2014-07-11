@@ -84,7 +84,7 @@ static int check_num(struct v7 *v7, double an) {
 
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
-  v7_setv(v7, v7_rootns(v7), "adder", 5, 0, V7_C_FUNC, adder);
+  v7_setv(v7, v7_rootns(v7), V7_STR, V7_C_FUNC, "adder", 5, 0, adder);
   ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(check_num(v7, 10.0));
   v7_destroy(&v7);

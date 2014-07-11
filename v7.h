@@ -100,18 +100,7 @@ enum v7_err v7_push(struct v7 *v7, struct v7_val *v);
 enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type);
 enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
 enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
-                    const char *key, unsigned long key_len, int key_own,
-                    enum v7_type type, ...);
-#if 0
-enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *key,
-                   struct v7_val *val);
-enum v7_err v7_set_func(struct v7 *, struct v7_val *, const char *, v7_func_t);
-enum v7_err v7_set_num(struct v7 *, struct v7_val *, const char *, double);
-enum v7_err v7_set_str(struct v7 *, struct v7_val *, const char *,
-                       const char *str, unsigned long str_len, int own);
-enum v7_err v7_set_obj(struct v7 *, struct v7_val *, const char *,
-                       struct v7_val *);
-#endif
+                    enum v7_type key_type, enum v7_type val_type, ...);
 enum v7_err v7_append(struct v7 *, struct v7_val *array, struct v7_val *val);
 enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key);
 enum v7_err v7_pop(struct v7 *, int num);

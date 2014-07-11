@@ -74,7 +74,7 @@
     SET_RO_PROP_V(obj, name, val);                      \
   } while (0)
 
-// Possible values for struct v7_val::flags 
+// Possible values for struct v7_val::flags
 enum { V7_RDONLY_VAL = 1, V7_RDONLY_STR = 2, V7_RDONLY_PROP = 4 };
 
 // Forward declarations
@@ -354,7 +354,7 @@ static void free_values(struct v7 *v7) {
   struct v7_val *v;
   while (v7->free_values != NULL) {
     v = v7->free_values->next;
-    free(v7->free_values); 
+    free(v7->free_values);
     v7->free_values = v;
   }
 }
@@ -363,7 +363,7 @@ static void free_props(struct v7 *v7) {
   struct v7_prop *p;
   while (v7->free_props != NULL) {
     p = v7->free_props->next;
-    free(v7->free_props); 
+    free(v7->free_props);
     v7->free_props = p;
   }
 }
@@ -605,6 +605,7 @@ struct v7_val *v7_lookup(struct v7_val *obj, const char *key) {
   return get2(obj, &k);
 }
 
+// TODO: reuse v7_mkval_str()
 static enum v7_err v7_make_and_push_string(struct v7 *v7, const char *s,
                                            unsigned long len, int do_copy) {
   struct v7_val **v = v7_top(v7);
@@ -671,21 +672,14 @@ static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   return V7_OK;
 }
 
-enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
-                    const char *key, unsigned long key_len, int key_own,
-                    enum v7_type type, ...) {
-  struct v7_val *k = v7_mkval_str(v7, key, key_len, key_own);
-  struct v7_val *v = type == V7_OBJ ? NULL : v7_mkval(v7, type);
-  va_list ap;
-
-  // TODO: do not leak here
-  CHECK(k != NULL && (type == V7_OBJ || v != NULL), V7_OUT_OF_MEMORY);
-
-  va_start(ap, type);
-  switch (type) {
+static struct v7_val *mkv(struct v7 *v7, enum v7_type t, va_list ap) {
+  struct v7_val *v = (t == V7_OBJ || t == V7_ARRAY) ? NULL : v7_mkval(v7, t);
+  // TODO: check for v7_mkval() failure
+  switch (t) {
     case V7_C_FUNC: v->v.c_func = va_arg(ap, v7_func_t); break;
     case V7_NUM: v->v.num = va_arg(ap, double); break;
-    case V7_OBJ: v = va_arg(ap, struct v7_val *); break;
+    case V7_OBJ: // fallthrough
+    case V7_ARRAY: v = va_arg(ap, struct v7_val *); break;
     case V7_STR:
       v->v.str.buf = va_arg(ap, char *);
       v->v.str.len = va_arg(ap, unsigned long);
@@ -695,9 +689,23 @@ enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
         v->flags = V7_RDONLY_STR;
       }
       break;
-    default: return V7_INTERNAL_ERROR;  // TODO: don't leak here
+    default: return NULL;  // TODO: don't leak here
   }
+  return v;
+}
+
+enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
+                    enum v7_type key_type, enum v7_type val_type, ...) {
+  struct v7_val *k = NULL, *v = NULL;
+  va_list ap;
+
+  va_start(ap, val_type);
+  k = mkv(v7, key_type, ap);
+  v = mkv(v7, val_type, ap);
   va_end(ap);
+
+  // TODO: do not leak here
+  CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
 
   k->ref_count++;
   TRY(v7_set(v7, obj, k, v));
@@ -803,7 +811,7 @@ static int test_token(struct v7 *v7, const char *kw, unsigned long kwlen) {
 static enum v7_err parse_num(struct v7 *v7) {
   double value = 0;
   char *end;
-  
+
   value = strtod(v7->cursor, &end);
   // Handle case like 123.toString()
   if (end != NULL && (v7->cursor < &end[-1]) && end[-1] == '.') end--;
@@ -917,7 +925,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7_freeval(v7, &v7->scopes[v7->current_scope]);
     v7->current_scope--;
     CHECK(v7->current_scope >= 0, V7_INTERNAL_ERROR);
-  } 
+  }
 
   v7->no_exec = old_no_exec;
   return V7_OK;
