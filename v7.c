@@ -74,8 +74,13 @@
     SET_RO_PROP_V(obj, name, val);                      \
   } while (0)
 
-// Possible values for struct v7_val::flags
-enum { V7_RDONLY_VAL = 1, V7_RDONLY_STR = 2, V7_RDONLY_PROP = 4 };
+// Possible bit mask values for struct v7_val::flags
+enum {
+  V7_RDONLY_VAL   = 1,    // The whole "struct v7_val" is statically allocated
+                          // and must not be free()-ed
+  V7_RDONLY_STR   = 2,    // struct v7_val::v.str.buf is statically allocated
+  V7_RDONLY_PROP  = 4     // struct v7_val::v.prop is statically allocated
+};
 
 // Forward declarations
 static enum v7_err parse_expression(struct v7 *);
