@@ -122,8 +122,27 @@ static void Obj_toString(struct v7 *v7, struct v7_val *this_obj,
 DEFINE_C_FUNC(Math_random, v7, this_obj, result, args, num_args) {
   result->type = V7_NUM;
   srand((unsigned long) result);   // TODO: make better randomness
-  result->type = V7_NUM;
   result->v.num = (double) rand() / RAND_MAX;
+}
+
+DEFINE_C_FUNC(Math_sin, v7, this_obj, result, args, num_args) {
+  result->type = V7_NUM;
+  result->v.num = num_args == 1 ? sin(args[0]->v.num) : 0;
+}
+
+DEFINE_C_FUNC(Math_sqrt, v7, this_obj, result, args, num_args) {
+  result->type = V7_NUM;
+  result->v.num = num_args == 1 ? sqrt(args[0]->v.num) : 0;
+}
+
+DEFINE_C_FUNC(Math_tan, v7, this_obj, result, args, num_args) {
+  result->type = V7_NUM;
+  result->v.num = num_args == 1 ? tan(args[0]->v.num) : 0;
+}
+
+DEFINE_C_FUNC(Math_pow, v7, this_obj, result, args, num_args) {
+  result->type = V7_NUM;
+  result->v.num = num_args == 2 ? pow(args[0]->v.num, args[1]->v.num) : 0;
 }
 
 static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
@@ -153,6 +172,13 @@ DEFINE_C_FUNC(Str_charAt, v7, this_obj, result, args, num_args) {
     result->v.str.len = 1;
     result->v.str.buf = v7_strdup("x", 1);
     result->v.str.buf[0] = ((unsigned char *) str->buf)[(int) idx];
+  }
+}
+
+DEFINE_C_FUNC(Str_match, v7, this_obj, result, args, num_args) {
+  result->type = V7_UNDEF;
+  if (num_args == 1 && args[0]->type == V7_REGEX) {
+
   }
 }
 
@@ -230,6 +256,10 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_object, "toString", V7_C_FUNC, c_func, Obj_toString);
 
   SET_RO_PROP(s_math, "random", V7_C_FUNC, c_func, Math_random);
+  SET_RO_PROP(s_math, "pow", V7_C_FUNC, c_func, Math_pow);
+  SET_RO_PROP(s_math, "sin", V7_C_FUNC, c_func, Math_sin);
+  SET_RO_PROP(s_math, "tan", V7_C_FUNC, c_func, Math_tan);
+  SET_RO_PROP(s_math, "sqrt", V7_C_FUNC, c_func, Math_sqrt);
 
   SET_RO_PROP(s_number, "MAX_VALUE", V7_NUM, num, LONG_MAX);
   SET_RO_PROP(s_number, "MIN_VALUE", V7_NUM, num, LONG_MIN);
@@ -242,6 +272,7 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_string, "charAt", V7_C_FUNC, c_func, Str_charAt);
   SET_RO_PROP(s_string, "indexOf", V7_C_FUNC, c_func, Str_indexOf);
   SET_RO_PROP(s_string, "substr", V7_C_FUNC, c_func, Str_substr);
+  SET_RO_PROP(s_string, "match", V7_C_FUNC, c_func, Str_match);
 
   SET_RO_PROP(s_math, "E", V7_NUM, num, M_E);
   SET_RO_PROP(s_math, "PI", V7_NUM, num, M_PI);

@@ -360,6 +360,11 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, ""));
   ASSERT(v7_exec(v7, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, ""));
+  ASSERT(v7_exec(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);
+
+  // Math
+  ASSERT(v7_exec(v7, "Math.sqrt(144)") == V7_OK);
+  ASSERT(check_num(v7, 12.0));
 
   // Regexp
   ASSERT(v7_exec(v7, "re = /GET (\\S+) HTTP/") == V7_OK);
