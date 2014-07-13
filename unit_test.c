@@ -361,6 +361,9 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, ""));
 
+  // Regexp
+  //ASSERT(v7_exec(v7, "re = /GET (\S+) HTTP/") == V7_OK);
+
   v7_destroy(&v7);
   return NULL;
 }

@@ -51,7 +51,7 @@
 #endif
 
 #define V7_CACHE_OBJS
-#define MAX_STRING_LITERAL_LENGTH 500
+#define MAX_STRING_LITERAL_LENGTH 2000
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
 #define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
@@ -111,6 +111,15 @@ static void Obj_toString(struct v7 *v7, struct v7_val *this_obj,
   result->type = V7_STR;
   result->v.str.len = strlen(buf);
   result->v.str.buf = v7_strdup(buf, result->v.str.len);
+}
+
+static void Math_random(struct v7 *v7, struct v7_val *this_obj,
+                        struct v7_val *result, struct v7_val **args,
+                        int num_args) {
+  (void) v7; (void) args; (void) num_args;
+  srand((unsigned int *) result);   // TODO: make better randomness
+  result->type = V7_NUM;
+  result->v.num = (double) rand() / RAND_MAX;
 }
 
 static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
@@ -237,6 +246,8 @@ static void init_stdlib(void) {
   s_string.proto = s_number.proto = s_array.proto = &s_object;
 
   SET_RO_PROP(s_object, "toString", V7_C_FUNC, c_func, Obj_toString);
+
+  SET_RO_PROP(s_math, "random", V7_C_FUNC, c_func, Math_random);
 
   SET_RO_PROP(s_number, "MAX_VALUE", V7_NUM, num, LONG_MAX);
   SET_RO_PROP(s_number, "MIN_VALUE", V7_NUM, num, LONG_MIN);
@@ -1167,6 +1178,13 @@ static enum v7_err parse_delete(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err parse_regex(struct v7 *v7) {
+  char regex[MAX_STRING_LITERAL_LENGTH], *p;
+  TRY(match(v7, '/'));
+  TRY(match(v7, '/'));
+  return V7_OK;
+}
+
 static enum v7_err parse_variable(struct v7 *v7) {
   struct v7_val key = str_to_val(v7->tok, v7->tok_len), *v = NULL;
   if (!v7->no_exec) {
@@ -1208,6 +1226,8 @@ static enum v7_err parse_factor(struct v7 *v7) {
     TRY(parse_object_literal(v7));
   } else if (*v7->cursor == '[') {
     TRY(parse_array_literal(v7));
+  } else if (*v7->cursor == '/') {
+    TRY(parse_regex(v7));
   } else if (is_alpha(*v7->cursor) || *v7->cursor == '_') {
     TRY(parse_identifier(v7));
     if (test_token(v7, "this", 4)) {

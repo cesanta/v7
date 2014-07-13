@@ -26,7 +26,7 @@ extern "C" {
 
 enum v7_type {
   V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC,
-  V7_RO_PROP, V7_ARRAY
+  V7_RO_PROP, V7_ARRAY, V7_REGEX
 };
 
 enum v7_err {
@@ -51,12 +51,13 @@ struct v7_str {
 };
 
 union v7_scalar {
-  char *func;
+  char *func;               // \0-terminated function code
+  char *regex;              // \0-terminated regex
   struct v7_str str;
   double num;
-  v7_func_t c_func;
-  v7_prop_func_t prop_func;
-  struct v7_prop *props;
+  v7_func_t c_func;         // C function
+  v7_prop_func_t prop_func; // Object's property function, e.g. String.length
+  struct v7_prop *props;    // Object's key/value list
 };
 
 struct v7_prop {
