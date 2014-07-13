@@ -317,7 +317,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "7 >= 0") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
 
-  ASSERT(v7_exec(v7, "print(['hi', 1, true, null], '\n')") == V7_OK);
+  ASSERT(v7_exec(v7, "print(['hi', 1, true, null, /\\s+/], '\n')") == V7_OK);
 
   v7_destroy(&v7);
   return NULL;
@@ -362,7 +362,7 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, ""));
 
   // Regexp
-  //ASSERT(v7_exec(v7, "re = /GET (\S+) HTTP/") == V7_OK);
+  ASSERT(v7_exec(v7, "re = /GET (\\S+) HTTP/") == V7_OK);
 
   v7_destroy(&v7);
   return NULL;

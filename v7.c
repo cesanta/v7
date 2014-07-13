@@ -74,6 +74,12 @@
     SET_RO_PROP_V(obj, name, val);                      \
   } while (0)
 
+#define DEFINE_C_FUNC(name, aa, ab, ac, ad, ae)         \
+  static void name(struct v7 * __unused aa,             \
+    struct v7_val * __unused ab,                        \
+    struct v7_val * __unused ac,                        \
+    struct v7_val ** __unused ad, int __unused ae)
+
 // Possible bit mask values for struct v7_val::flags
 enum {
   V7_RDONLY_VAL   = 1,    // The whole "struct v7_val" is statically allocated
@@ -89,9 +95,9 @@ static enum v7_err parse_statement(struct v7 *, int *is_return);
 // Static variables
 static struct v7_val s_object = RO_OBJ(V7_OBJ);
 static struct v7_val s_string = RO_OBJ(V7_OBJ);
-static struct v7_val s_math = RO_OBJ(V7_OBJ);
+static struct v7_val s_math   = RO_OBJ(V7_OBJ);
 static struct v7_val s_number = RO_OBJ(V7_OBJ);
-static struct v7_val s_array = RO_OBJ(V7_OBJ);
+static struct v7_val s_array  = RO_OBJ(V7_OBJ);
 static struct v7_val s_stdlib = RO_OBJ(V7_OBJ);
 
 static char *v7_strdup(const char *ptr, unsigned long len) {
@@ -113,11 +119,9 @@ static void Obj_toString(struct v7 *v7, struct v7_val *this_obj,
   result->v.str.buf = v7_strdup(buf, result->v.str.len);
 }
 
-static void Math_random(struct v7 *v7, struct v7_val *this_obj,
-                        struct v7_val *result, struct v7_val **args,
-                        int num_args) {
-  (void) v7; (void) args; (void) num_args;
-  srand((unsigned int *) result);   // TODO: make better randomness
+DEFINE_C_FUNC(Math_random, v7, this_obj, result, args, num_args) {
+  result->type = V7_NUM;
+  srand((unsigned long) result);   // TODO: make better randomness
   result->type = V7_NUM;
   result->v.num = (double) rand() / RAND_MAX;
 }
@@ -127,13 +131,10 @@ static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
   result->v.num = this_obj->v.str.len;
 }
 
-static void Str_charCodeAt(struct v7 *v7, struct v7_val *this_obj,
-                           struct v7_val *result, struct v7_val **args,
-                           int num_args) {
+DEFINE_C_FUNC(Str_charCodeAt, v7, this_obj, result, args, num_args) {
   double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
   const struct v7_str *str = &this_obj->v.str;
 
-  (void) v7;
   result->type = V7_NUM;
   result->v.num = NAN;
 
@@ -142,15 +143,11 @@ static void Str_charCodeAt(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-static void Str_charAt(struct v7 *v7, struct v7_val *this_obj,
-                       struct v7_val *result, struct v7_val **args,
-                       int num_args) {
+DEFINE_C_FUNC(Str_charAt, v7, this_obj, result, args, num_args) {
   double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
   const struct v7_str *str = &this_obj->v.str;
 
-  (void) v7;
   result->type = V7_UNDEF;
-
   if (!isnan(idx) && this_obj->type == V7_STR && fabs(idx) < str->len) {
     result->type = V7_STR;
     result->v.str.len = 1;
@@ -159,11 +156,7 @@ static void Str_charAt(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-static void Str_indexOf(struct v7 *v7, struct v7_val *this_obj,
-                        struct v7_val *result, struct v7_val **args,
-                        int num_args) {
-  (void) v7; (void) this_obj; (void) result; (void) num_args;
-
+DEFINE_C_FUNC(Str_indexOf, v7, this_obj, result, args, num_args) {
   result->type = V7_NUM;
   result->v.num = -1.0;
 
@@ -181,11 +174,7 @@ static void Str_indexOf(struct v7 *v7, struct v7_val *this_obj,
   }
 }
 
-static void Str_substr(struct v7 *v7, struct v7_val *this_obj,
-                        struct v7_val *result, struct v7_val **args,
-                        int num_args) {
-  (void) v7; (void) this_obj; (void) result; (void) num_args; (void) args;
-
+DEFINE_C_FUNC(Str_substr, v7, this_obj, result, args, num_args) {
   result->type = V7_STR;
   result->v.str.buf = (char *) "";
   result->v.str.len = 0;
@@ -219,23 +208,16 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   }
 }
 
-static void Std_print(struct v7 *v7, struct v7_val *this_obj,
-                      struct v7_val *result,
-                      struct v7_val **args, int num_args) {
+DEFINE_C_FUNC(Std_print, v7, this_obj, result, args, num_args) {
   char buf[4000];
   int i;
-
-  (void) v7; (void) this_obj; (void) result; (void) num_args;
   for (i = 0; i < num_args; i++) {
     printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
   }
 }
 
-static void Std_exit(struct v7 *v7, struct v7_val *this_obj,
-                     struct v7_val *result,
-                     struct v7_val **args, int num_args) {
+DEFINE_C_FUNC(Std_exit, v7, this_obj, result, args, num_args) {
   int exit_code = num_args > 0 ? (int) args[0]->v.num : EXIT_SUCCESS;
-  (void) v7; (void) this_obj; (void) result; (void) num_args;
   exit(exit_code);
 }
 
@@ -320,6 +302,8 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
     v->v.props = NULL;
   } else if (v->type == V7_STR && !(v->flags & V7_RDONLY_STR)) {
     free(v->v.str.buf);
+  } else if (v->type == V7_REGEX && !(v->flags & V7_RDONLY_STR)) {
+    free(v->v.regex);
   } else if (v->type == V7_FUNC && !(v->flags & V7_RDONLY_STR)) {
     free(v->v.func);
   }
@@ -463,6 +447,9 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
         break;
     case V7_FUNC:
         snprintf(buf, bsiz, "'function%s'", v->v.func);
+        break;
+    case V7_REGEX:
+        snprintf(buf, bsiz, "/%s/", v->v.regex);
         break;
     case V7_C_FUNC:
       snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
@@ -1179,9 +1166,22 @@ static enum v7_err parse_delete(struct v7 *v7) {
 }
 
 static enum v7_err parse_regex(struct v7 *v7) {
-  char regex[MAX_STRING_LITERAL_LENGTH], *p;
+  char regex[MAX_STRING_LITERAL_LENGTH];
+  size_t i;
+
+  CHECK(*v7->cursor == '/', V7_SYNTAX_ERROR);
+  for (i = 0, v7->cursor++; i < sizeof(regex) - 1 && *v7->cursor != '/' &&
+    *v7->cursor != '\0'; i++, v7->cursor++) {
+    if (*v7->cursor == '\\' && v7->cursor[1] == '/') v7->cursor++;
+    regex[i] = *v7->cursor;
+  }
+  regex[i] = '\0';
   TRY(match(v7, '/'));
-  TRY(match(v7, '/'));
+  if (!v7->no_exec) {
+    TRY(v7_make_and_push(v7, V7_REGEX));
+    v7_top(v7)[-1]->v.regex = v7_strdup(regex, strlen(regex));
+  }
+
   return V7_OK;
 }
 
