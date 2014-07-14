@@ -578,6 +578,7 @@ static enum v7_err do_arithmetic_op(struct v7 *v7, int op) {
       case '-': res = a - b; break;
       case '*': res = a * b; break;
       case '/': res = a / b; break;
+      case '%': res = (unsigned long) a % (unsigned long) b; break;
     }
     TRY(inc_stack(v7, -2));
     TRY(v7_make_and_push(v7, V7_NUM));
@@ -1332,7 +1333,7 @@ static enum v7_err parse_factor(struct v7 *v7) {
 //  mul_op      =   "*" | "/"
 static enum v7_err parse_term(struct v7 *v7) {
   TRY(parse_factor(v7));
-  while (*v7->cursor == '*' || *v7->cursor == '/') {
+  while (*v7->cursor == '*' || *v7->cursor == '/' || *v7->cursor == '%') {
     int ch = *v7->cursor;
     TRY(match(v7, ch));
     TRY(parse_factor(v7));
