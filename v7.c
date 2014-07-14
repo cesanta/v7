@@ -1344,7 +1344,7 @@ static enum v7_err parse_term(struct v7 *v7) {
 
 enum { OP_XX, OP_GT, OP_LT, OP_GE, OP_LE, OP_EQ, OP_NE };
 
-static int is_logical_op(const char *s) {
+static int is_relational_op(const char *s) {
   switch (s[0]) {
     case '>': return s[1] == '=' ? OP_GE : OP_GT;
     case '<': return s[1] == '=' ? OP_LE : OP_LT;
@@ -1354,7 +1354,7 @@ static int is_logical_op(const char *s) {
   }
 }
 
-static enum v7_err do_logical_op(struct v7 *v7, int op) {
+static enum v7_err do_relational_op(struct v7 *v7, int op) {
   struct v7_val **v = v7_top(v7) - 2;
   int res = 0;
 
@@ -1400,6 +1400,17 @@ static enum v7_err parse_assignment(struct v7 *v7, struct v7_val *obj) {
   return V7_OK;
 }
 
+static enum v7_err parse_add_sub(struct v7 *v7) {
+  TRY(parse_term(v7));
+  while (*v7->pc == '-' || *v7->pc == '+') {
+    int ch = *v7->pc;
+    TRY(match(v7, ch));
+    TRY(parse_term(v7));
+    TRY(do_arithmetic_op(v7, ch));
+  }
+  return V7_OK;
+}
+
 //  expression  =   term { add_op term } |
 //                  expression "?" expression ":" expression
 //                  expression "." expression
@@ -1413,20 +1424,13 @@ static enum v7_err parse_expression(struct v7 *v7) {
   int op;
 
   v7->cur_obj = &v7->scopes[v7->current_scope];
-  TRY(parse_term(v7));
 
-  while (*v7->pc == '-' || *v7->pc == '+') {
-    int ch = *v7->pc;
-    TRY(match(v7, ch));
-    TRY(parse_term(v7));
-    TRY(do_arithmetic_op(v7, ch));
-  }
-
-  if ((op = is_logical_op(v7->pc)) > OP_XX) {
+  TRY(parse_add_sub(v7));
+  if ((op = is_relational_op(v7->pc)) > OP_XX) {
     v7->pc += op == OP_LT || op == OP_GT ? 1 : 2;
     skip_whitespaces_and_comments(v7);
-    TRY(parse_term(v7));
-    TRY(do_logical_op(v7, op));
+    TRY(parse_add_sub(v7));
+    TRY(do_relational_op(v7, op));
   }
 
   // Parse assignment
