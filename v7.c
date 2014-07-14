@@ -1029,8 +1029,13 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
       case '\\':
         v7->cursor++;
         switch (*v7->cursor) {
+          // TODO: add escapes for quotes, \XXX, \xXX, \uXXXX
+          case 'b': buf[i++] = '\b'; break;
+          case 'f': buf[i++] = '\f'; break;
           case 'n': buf[i++] = '\n'; break;
+          case 'r': buf[i++] = '\r'; break;
           case 't': buf[i++] = '\t'; break;
+          case 'v': buf[i++] = '\v'; break;
           case '\\': buf[i++] = '\\'; break;
           default: if (*v7->cursor == *begin) buf[i++] = *begin; break;
         }

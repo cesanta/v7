@@ -346,6 +346,8 @@ static const char *test_stdlib(void) {
   ASSERT(check_bool(v7, 1.0));
   ASSERT(v7_exec(v7, "'hello'.indexOf()") == V7_OK);
   ASSERT(check_num(v7, -1.0));
+  ASSERT(v7_exec(v7, "'HTTP/1.0\\r\\n'.indexOf('\\r\\n')") == V7_OK);
+  ASSERT(check_num(v7, 8.0));
   ASSERT(v7_exec(v7, "'hi there'.indexOf('e')") == V7_OK);
   ASSERT(check_num(v7, 5.0));
   ASSERT(v7_exec(v7, "'hi there'.indexOf('e', 6)") == V7_OK);
