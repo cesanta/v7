@@ -82,7 +82,7 @@ struct v7 {
   int current_scope;          // Pointer to the current scope
 
   const char *source_code;    // Pointer to the source codeing
-  const char *cursor;         // Current parsing position
+  const char *pc;             // Current parsing position
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
   int line_no;                // Line number
