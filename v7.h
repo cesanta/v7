@@ -105,8 +105,9 @@ enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
 enum v7_err v7_append(struct v7 *, struct v7_val *array, struct v7_val *val);
 enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key);
 enum v7_err v7_pop(struct v7 *, int num);
-struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type);
+struct v7_val *v7_mkv(struct v7 *v7, enum v7_type t, ...);
 void v7_freeval(struct v7 *v7, struct v7_val *v);
+void v7_set_value_type(struct v7_val *v, enum v7_type type);
 struct v7_val *v7_lookup(struct v7_val *obj, const char *key);
 struct v7_val *v7_rootns(struct v7 *);
 int v7_is_true(const struct v7_val *v);

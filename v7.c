@@ -16,6 +16,7 @@
 // license, as set out in <http://cesanta.com/products.html>.
 
 #include "v7.h"
+#include "slre.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -114,39 +115,39 @@ static void Obj_toString(struct v7 *v7, struct v7_val *this_obj,
   char buf[4000];
   (void) v7; (void) args; (void) num_args;
   v7_to_string(this_obj, buf, sizeof(buf));
-  result->type = V7_STR;
+  v7_set_value_type(result, V7_STR);
   result->v.str.len = strlen(buf);
   result->v.str.buf = v7_strdup(buf, result->v.str.len);
 }
 
 DEFINE_C_FUNC(Math_random, v7, this_obj, result, args, num_args) {
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   srand((unsigned long) result);   // TODO: make better randomness
   result->v.num = (double) rand() / RAND_MAX;
 }
 
 DEFINE_C_FUNC(Math_sin, v7, this_obj, result, args, num_args) {
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = num_args == 1 ? sin(args[0]->v.num) : 0;
 }
 
 DEFINE_C_FUNC(Math_sqrt, v7, this_obj, result, args, num_args) {
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = num_args == 1 ? sqrt(args[0]->v.num) : 0;
 }
 
 DEFINE_C_FUNC(Math_tan, v7, this_obj, result, args, num_args) {
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = num_args == 1 ? tan(args[0]->v.num) : 0;
 }
 
 DEFINE_C_FUNC(Math_pow, v7, this_obj, result, args, num_args) {
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = num_args == 2 ? pow(args[0]->v.num, args[1]->v.num) : 0;
 }
 
 static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = this_obj->v.str.len;
 }
 
@@ -154,7 +155,7 @@ DEFINE_C_FUNC(Str_charCodeAt, v7, this_obj, result, args, num_args) {
   double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
   const struct v7_str *str = &this_obj->v.str;
 
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = NAN;
 
   if (!isnan(idx) && this_obj->type == V7_STR && fabs(idx) < str->len) {
@@ -166,9 +167,9 @@ DEFINE_C_FUNC(Str_charAt, v7, this_obj, result, args, num_args) {
   double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
   const struct v7_str *str = &this_obj->v.str;
 
-  result->type = V7_UNDEF;
+  v7_set_value_type(result, V7_UNDEF);
   if (!isnan(idx) && this_obj->type == V7_STR && fabs(idx) < str->len) {
-    result->type = V7_STR;
+    v7_set_value_type(result, V7_STR);
     result->v.str.len = 1;
     result->v.str.buf = v7_strdup("x", 1);
     result->v.str.buf[0] = ((unsigned char *) str->buf)[(int) idx];
@@ -176,14 +177,28 @@ DEFINE_C_FUNC(Str_charAt, v7, this_obj, result, args, num_args) {
 }
 
 DEFINE_C_FUNC(Str_match, v7, this_obj, result, args, num_args) {
-  result->type = V7_UNDEF;
-  if (num_args == 1 && args[0]->type == V7_REGEX) {
+  struct slre_cap caps[100];
+  const struct v7_str *s = &this_obj->v.str;
+  int i, n;
 
+  v7_set_value_type(result, V7_NULL);
+  memset(caps, 0, sizeof(caps));
+
+  if (num_args == 1 && args[0]->type == V7_REGEX &&
+      (n = slre_match(args[0]->v.regex, s->buf, s->len,
+                      caps, ARRAY_SIZE(caps) - 1, 0)) > 0) {
+    v7_set_value_type(result, V7_ARRAY);
+    v7_append(v7, result, v7_mkv(v7, V7_STR, s->buf, (long) n, 1));
+    for (i = 0; i < (int) ARRAY_SIZE(caps); i++) {
+      if (caps[i].len == 0) break;
+      v7_append(v7, result,
+                v7_mkv(v7, V7_STR, caps[i].ptr, (long) caps[i].len, 1));
+    }
   }
 }
 
 DEFINE_C_FUNC(Str_indexOf, v7, this_obj, result, args, num_args) {
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = -1.0;
 
   if (this_obj->type == V7_STR && num_args > 0 && args[0]->type == V7_STR) {
@@ -201,7 +216,7 @@ DEFINE_C_FUNC(Str_indexOf, v7, this_obj, result, args, num_args) {
 }
 
 DEFINE_C_FUNC(Str_substr, v7, this_obj, result, args, num_args) {
-  result->type = V7_STR;
+  v7_set_value_type(result, V7_STR);
   result->v.str.buf = (char *) "";
   result->v.str.len = 0;
   result->flags = V7_RDONLY_STR;
@@ -227,7 +242,7 @@ DEFINE_C_FUNC(Str_substr, v7, this_obj, result, args, num_args) {
 
 static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   struct v7_prop *p;
-  result->type = V7_NUM;
+  v7_set_value_type(result, V7_NUM);
   result->v.num = 0.0;
   for (p = this_obj->v.props; p != NULL; p = p->next) {
     result->v.num += 1.0;
@@ -301,8 +316,9 @@ struct v7 *v7_create(void) {
 
   for (i = 0; i < ARRAY_SIZE(v7->scopes); i++) {
     v7->scopes[i].ref_count = 1;
-    v7->scopes[i].type = V7_OBJ;
     v7->scopes[i].flags = V7_RDONLY_VAL;
+    v7_set_value_type(&v7->scopes[i], V7_OBJ);
+
   }
 
   init_stdlib();
@@ -496,7 +512,17 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
   return buf;
 }
 
-struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type) {
+void v7_set_value_type(struct v7_val *v, enum v7_type type) {
+  v->type = type;
+  switch (type) {
+    case V7_STR: v->proto = &s_string; break;
+    case V7_NUM: v->proto = &s_number; break;
+    case V7_ARRAY: v->proto = &s_array; break;
+    default: v->proto = &s_object; break;
+  }
+}
+
+static struct v7_val *make_value(struct v7 *v7, enum v7_type type) {
   struct v7_val *v = NULL;
 
   if ((v = v7->free_values) != NULL) {
@@ -507,23 +533,8 @@ struct v7_val *v7_mkval(struct v7 *v7, enum v7_type type) {
 
   if (v != NULL) {
     assert(v->ref_count == 0);
-    v->type = type;
-    switch (type) {
-      case V7_STR: v->proto = &s_string; break;
-      case V7_NUM: v->proto = &s_number; break;
-      case V7_ARRAY: v->proto = &s_array; break;
-      default: v->proto = &s_object; break;
-    }
+    v7_set_value_type(v, type);
   }
-  return v;
-}
-
-static struct v7_val *v7_mkval_str(struct v7 *v7, const char *buf,
-                                   unsigned long len, int own) {
-  struct v7_val *v = v7_mkval(v7, V7_STR);
-  v->v.str.len = len;
-  v->v.str.buf = own ? v7_strdup(buf, len) : (char *) buf;
-  if (!own) v->flags = V7_RDONLY_STR;
   return v;
 }
 
@@ -535,7 +546,7 @@ enum v7_err v7_push(struct v7 *v7, struct v7_val *v) {
 }
 
 enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
-  struct v7_val *v = v7_mkval(v7, type);
+  struct v7_val *v = make_value(v7, type);
   CHECK(v != NULL, V7_OUT_OF_MEMORY);
   return v7_push(v7, v);
 }
@@ -550,7 +561,7 @@ static enum v7_err do_arithmetic_op(struct v7 *v7, int op) {
     struct v7_val *res = NULL;
     char *str = (char *) malloc(v[0]->v.str.len + v[1]->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
-    res = v7_mkval(v7, V7_STR);
+    res = make_value(v7, V7_STR);
     CHECK(res != NULL, V7_OUT_OF_MEMORY);  // TODO: free(str)
     res->v.str.len = v[0]->v.str.len + v[1]->v.str.len;
     res->v.str.buf = str;
@@ -579,7 +590,7 @@ static enum v7_err do_arithmetic_op(struct v7 *v7, int op) {
 
 static struct v7_val str_to_val(const char *buf, size_t len) {
   struct v7_val v;
-  v.type = V7_STR;
+  v7_set_value_type(&v, V7_STR);
   v.v.str.buf = (char *) buf;
   v.v.str.len = len;
   return v;
@@ -639,17 +650,6 @@ struct v7_val *v7_lookup(struct v7_val *obj, const char *key) {
   return get2(obj, &k);
 }
 
-// TODO: reuse v7_mkval_str()
-static enum v7_err v7_make_and_push_string(struct v7 *v7, const char *s,
-                                           unsigned long len, int do_copy) {
-  struct v7_val **v = v7_top(v7);
-  TRY(v7_make_and_push(v7, V7_STR));
-  v[0]->v.str.len = len;
-  v[0]->v.str.buf = do_copy ? v7_strdup(s, len) : (char *) s;
-  v[0]->flags = do_copy ? 0 : V7_RDONLY_STR;
-  return V7_OK;
-}
-
 static struct v7_prop *mkprop(struct v7 *v7) {
   struct v7_prop *m;
   if ((m = v7->free_props) != NULL) {
@@ -706,14 +706,15 @@ static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   return V7_OK;
 }
 
-static struct v7_val *mkv(struct v7 *v7, enum v7_type t, va_list ap) {
-  struct v7_val *v = (t == V7_OBJ || t == V7_ARRAY) ? NULL : v7_mkval(v7, t);
-  // TODO: check for v7_mkval() failure
+struct v7_val *v7_mkvv(struct v7 *v7, enum v7_type t, va_list ap) {
+  //struct v7_val *v = (t == V7_OBJ || t == V7_ARRAY) ? NULL : make_value(v7, t);
+  struct v7_val *v = make_value(v7, t);
+  // TODO: check for make_value() failure
   switch (t) {
     case V7_C_FUNC: v->v.c_func = va_arg(ap, v7_func_t); break;
     case V7_NUM: v->v.num = va_arg(ap, double); break;
     case V7_OBJ: // fallthrough
-    case V7_ARRAY: v = va_arg(ap, struct v7_val *); break;
+    case V7_ARRAY: break; //v = va_arg(ap, struct v7_val *); break;
     case V7_STR:
       v->v.str.buf = va_arg(ap, char *);
       v->v.str.len = va_arg(ap, unsigned long);
@@ -728,14 +729,27 @@ static struct v7_val *mkv(struct v7 *v7, enum v7_type t, va_list ap) {
   return v;
 }
 
+struct v7_val *v7_mkv(struct v7 *v7, enum v7_type t, ...) {
+  struct v7_val *v = NULL;
+  va_list ap;
+
+  va_start(ap, t);
+  v = v7_mkvv(v7, t, ap);
+  va_end(ap);
+
+  return v;
+}
+
 enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
                     enum v7_type key_type, enum v7_type val_type, ...) {
   struct v7_val *k = NULL, *v = NULL;
   va_list ap;
 
   va_start(ap, val_type);
-  k = mkv(v7, key_type, ap);
-  v = mkv(v7, val_type, ap);
+  k = (key_type == V7_OBJ || key_type == V7_ARRAY) ?
+    va_arg(ap, struct v7_val *) : v7_mkvv(v7, key_type, ap);
+  v = (val_type == V7_OBJ || val_type == V7_ARRAY) ?
+    va_arg(ap, struct v7_val *) : v7_mkvv(v7, val_type, ap);
   va_end(ap);
 
   // TODO: do not leak here
@@ -888,8 +902,8 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   while (*v7->cursor != ')') {
     TRY(parse_identifier(v7));
     if (!v7->no_exec) {
-      struct v7_val *key = v7_mkval_str(v7, v7->tok, v7->tok_len, 1);
-      struct v7_val *val = i < num_params ? v[i + 1] : v7_mkval(v7, V7_UNDEF);
+      struct v7_val *key = v7_mkv(v7, V7_STR, v7->tok, v7->tok_len, 1);
+      struct v7_val *val = i < num_params ? v[i + 1] : make_value(v7, V7_UNDEF);
       key->ref_count++;
       TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, val));
       v7_freeval(v7, key);
@@ -906,7 +920,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7_top(v7)[-1]->v.func = v7_strdup(src, (unsigned long) (v7->cursor - src));
 
     if (func_name != NULL) {
-      struct v7_val *key = v7_mkval_str(v7, func_name, func_name_len, 1);
+      struct v7_val *key = v7_mkv(v7, V7_STR, func_name, func_name_len, 1);
       key->ref_count++;
       TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, v7_top(v7)[-1]));
       v7_freeval(v7, key);
@@ -1038,7 +1052,7 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
 }
 
 enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
-  struct v7_val *key = v7_mkval(v7, V7_NUM);
+  struct v7_val *key = make_value(v7, V7_NUM);
   struct v7_prop **head, *prop;
   CHECK(arr->type == V7_ARRAY, V7_INTERNAL_ERROR);
   // Append using a dummy key. TODO: do not use dummy keys, they eat RAM
@@ -1089,8 +1103,11 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
     if (*v7->cursor == '\'' || *v7->cursor == '"') {
       TRY(parse_string_literal(v7));
     } else {
+      struct v7_val *v;
       TRY(parse_identifier(v7));
-      TRY(v7_make_and_push_string(v7, v7->tok, v7->tok_len, 1));
+      v = v7_mkv(v7, V7_STR, v7->tok, v7->tok_len, 1);
+      CHECK(v != NULL, V7_OUT_OF_MEMORY);
+      TRY(v7_push(v7, v));
     }
 
     // Push value on stack
@@ -1116,7 +1133,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7) {
 
   if (!v7->no_exec) {
     top = &v7_top(v7)[-1];
-    v = v7_mkval(v7, V7_UNDEF);
+    v = make_value(v7, V7_UNDEF);
     v->ref_count++;
     ns = top[0];
   }
@@ -1364,7 +1381,8 @@ static enum v7_err parse_assignment(struct v7 *v7, struct v7_val *obj) {
   TRY(parse_expression(v7));
 
   if (!v7->no_exec) {
-    struct v7_val **top = v7_top(v7), *key = v7_mkval_str(v7, tok, tok_len, 1);
+    struct v7_val **top = v7_top(v7);
+    struct v7_val *key = v7_mkv(v7, V7_STR, tok, tok_len, 1);
     key->ref_count++;
     TRY(v7_set(v7, obj, key, top[-1]));
     v7_freeval(v7, key);

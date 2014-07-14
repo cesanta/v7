@@ -360,7 +360,17 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, ""));
   ASSERT(v7_exec(v7, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, ""));
+  ASSERT(v7_exec(v7, "'dew dee'.match(/\\d+/)") == V7_OK);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_NULL);
   ASSERT(v7_exec(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);
+  ASSERT(v7_exec(v7, "m.length") == V7_OK);
+  ASSERT(check_num(v7, 2.0));
+  ASSERT(v7_exec(v7, "m[0]") == V7_OK);
+  ASSERT(check_str(v7, "foo 1234"));
+  ASSERT(v7_exec(v7, "m[1]") == V7_OK);
+  ASSERT(check_str(v7, "1234"));
+  ASSERT(v7_exec(v7, "m[2]") == V7_OK);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
 
   // Math
   ASSERT(v7_exec(v7, "Math.sqrt(144)") == V7_OK);
