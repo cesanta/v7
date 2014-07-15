@@ -1463,6 +1463,23 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err parse_bitwise_xor(struct v7 *v7) {
+  TRY(parse_bitwise_and(v7));
+  if (*v7->pc == '^' && v7->pc[1] != '=') {
+    TRY(match(v7, '^'));
+    TRY(parse_bitwise_and(v7));
+    if (!v7->no_exec) {
+      struct v7_val **v = &v7_top(v7)[-2];
+      unsigned long a = v[0]->v.num, b = v[1]->v.num;
+      CHECK(v[0]->type == V7_NUM && v[1]->type == V7_NUM, V7_TYPE_MISMATCH);
+      TRY(inc_stack(v7, -2));
+      TRY(v7_make_and_push(v7, V7_NUM));
+      v[0]->v.num = a ^ b;
+    }
+  }
+  return V7_OK;
+}
+
 static enum v7_err parse_expression(struct v7 *v7) {
 #ifdef V7_DEBUG
   const char *stmt_str = v7->pc;
@@ -1470,7 +1487,7 @@ static enum v7_err parse_expression(struct v7 *v7) {
 
   v7->cur_obj = &v7->scopes[v7->current_scope];
 
-  TRY(parse_bitwise_and(v7));
+  TRY(parse_bitwise_xor(v7));
 
   // Parse assignment
   if (*v7->pc == '=') {

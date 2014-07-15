@@ -311,6 +311,8 @@ static const char *test_v7_exec(void) {
   ASSERT(check_num(v7, 6.0));
   ASSERT(v7_exec(v7, "76 & 13") == V7_OK);
   ASSERT(check_num(v7, 12.0));
+  ASSERT(v7_exec(v7, "34325 ^ 190992 & 74832") == V7_OK);
+  ASSERT(check_num(v7, 42501.0));
 
   ASSERT(v7_exec(v7, "!5") == V7_OK);
   ASSERT(check_bool(v7, 0.0));
