@@ -89,6 +89,18 @@ enum {
   V7_RDONLY_PROP  = 4     // struct v7_val::v.prop is statically allocated
 };
 
+enum {
+  OP_INVALID,
+  OP_GREATER_THEN,    //  >
+  OP_LESS_THEN,       //  <
+  OP_GREATER_EQUAL,   //  >=
+  OP_LESS_EQUAL,      //  <=
+  OP_EQUAL,           //  ==
+  OP_NOT_EQUAL,       //  !=
+  OP_EQUAL_EQUAL,     //  ===
+  OP_NOT_EQUAL_EQUAL  //  !==
+};
+
 // Forward declarations
 static enum v7_err parse_expression(struct v7 *);
 static enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -1342,23 +1354,21 @@ static enum v7_err parse_term(struct v7 *v7) {
   return V7_OK;
 }
 
-enum { OP_XX, OP_GT, OP_LT, OP_GE, OP_LE, OP_EQ, OP_NE, OP_EQQ, OP_NEE };
-
 static int is_relational_op(const char *s) {
   switch (s[0]) {
-    case '>': return s[1] == '=' ? OP_GE : OP_GT;
-    case '<': return s[1] == '=' ? OP_LE : OP_LT;
-    default: return OP_XX;
+    case '>': return s[1] == '=' ? OP_GREATER_EQUAL : OP_GREATER_THEN;
+    case '<': return s[1] == '=' ? OP_LESS_EQUAL : OP_LESS_THEN;
+    default: return OP_INVALID;
   }
 }
 
 static int is_equality_op(const char *s) {
   if (s[0] == '=' && s[1] == '=') {
-    return s[2] == '=' ? OP_EQQ : OP_EQ;
+    return s[2] == '=' ? OP_EQUAL_EQUAL : OP_EQUAL;
   } else if (s[0] == '!' && s[1] == '=') {
-    return s[2] == '=' ? OP_NEE : OP_NE;
+    return s[2] == '=' ? OP_NOT_EQUAL_EQUAL : OP_NOT_EQUAL;
   }
-  return OP_XX;
+  return OP_INVALID;
 }
 
 static enum v7_err do_logical_op(struct v7 *v7, int op) {
@@ -1368,18 +1378,18 @@ static enum v7_err do_logical_op(struct v7 *v7, int op) {
   if (v7->no_exec) return V7_OK;
   if (v[0]->type == V7_NUM && v[1]->type == V7_NUM) {
     switch (op) {
-      case OP_GT: res = v[0]->v.num >  v[1]->v.num; break;
-      case OP_GE: res = v[0]->v.num >= v[1]->v.num; break;
-      case OP_LT: res = v[0]->v.num <  v[1]->v.num; break;
-      case OP_LE: res = v[0]->v.num <= v[1]->v.num; break;
-      case OP_EQ: // FALLTHROUGH
-      case OP_EQQ: res = cmp(v[0], v[1]); break;
-      case OP_NE: // FALLTHROUGH
-      case OP_NEE: res = !cmp(v[0], v[1]); break;
+      case OP_GREATER_THEN:   res = v[0]->v.num >  v[1]->v.num; break;
+      case OP_GREATER_EQUAL:  res = v[0]->v.num >= v[1]->v.num; break;
+      case OP_LESS_THEN:      res = v[0]->v.num <  v[1]->v.num; break;
+      case OP_LESS_EQUAL:     res = v[0]->v.num <= v[1]->v.num; break;
+      case OP_EQUAL: // FALLTHROUGH
+      case OP_EQUAL_EQUAL:    res = cmp(v[0], v[1]); break;
+      case OP_NOT_EQUAL: // FALLTHROUGH
+      case OP_NOT_EQUAL_EQUAL:  res = !cmp(v[0], v[1]); break;
     }
-  } else if (op == OP_EQ) {
+  } else if (op == OP_EQUAL || op == OP_EQUAL_EQUAL) {
     res = cmp(v[0], v[1]);
-  } else if (op == OP_NE) {
+  } else if (op == OP_NOT_EQUAL || op == OP_NOT_EQUAL_EQUAL) {
     res = !cmp(v[0], v[1]);
   }
   TRY(inc_stack(v7, -2));
@@ -1423,8 +1433,8 @@ static enum v7_err parse_add_sub(struct v7 *v7) {
 static enum v7_err parse_relational(struct v7 *v7) {
   int op;
   TRY(parse_add_sub(v7));
-  if ((op = is_relational_op(v7->pc)) > OP_XX) {
-    v7->pc += op == OP_LT || op == OP_GT ? 1 : 2;
+  if ((op = is_relational_op(v7->pc)) > OP_INVALID) {
+    v7->pc += op == OP_LESS_THEN || op == OP_GREATER_THEN ? 1 : 2;
     skip_whitespaces_and_comments(v7);
     TRY(parse_add_sub(v7));
     TRY(do_logical_op(v7, op));
@@ -1435,8 +1445,8 @@ static enum v7_err parse_relational(struct v7 *v7) {
 static enum v7_err parse_equality(struct v7 *v7) {
   int op;
   TRY(parse_relational(v7));
-  if ((op = is_equality_op(v7->pc)) > OP_XX) {
-    v7->pc += op == OP_EQQ || op == OP_NEE ? 3 : 2;
+  if ((op = is_equality_op(v7->pc)) > OP_INVALID) {
+    v7->pc += op == OP_EQUAL_EQUAL || op == OP_NOT_EQUAL_EQUAL ? 3 : 2;
     skip_whitespaces_and_comments(v7);
     TRY(parse_relational(v7));
     TRY(do_logical_op(v7, op));
@@ -1453,10 +1463,8 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
       struct v7_val **v = &v7_top(v7)[-2];
       unsigned long a = v[0]->v.num, b = v[1]->v.num;
       CHECK(v[0]->type == V7_NUM && v[1]->type == V7_NUM, V7_TYPE_MISMATCH);
-      //int is_true = v7_is_true(v[0]) && v7_is_true(v[1]);
       TRY(inc_stack(v7, -2));
       TRY(v7_make_and_push(v7, V7_NUM));
-      //v[0]->v.num = is_true ? 1.0 : 0.0;
       v[0]->v.num = a & b;
     }
   }
@@ -1480,17 +1488,73 @@ static enum v7_err parse_bitwise_xor(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err parse_bitwise_or(struct v7 *v7) {
+  TRY(parse_bitwise_xor(v7));
+  if (*v7->pc == '|' && v7->pc[1] != '=' && v7->pc[1] != '|') {
+    TRY(match(v7, '|'));
+    TRY(parse_bitwise_xor(v7));
+    if (!v7->no_exec) {
+      struct v7_val **v = &v7_top(v7)[-2];
+      unsigned long a = v[0]->v.num, b = v[1]->v.num;
+      CHECK(v[0]->type == V7_NUM && v[1]->type == V7_NUM, V7_TYPE_MISMATCH);
+      TRY(inc_stack(v7, -2));
+      TRY(v7_make_and_push(v7, V7_NUM));
+      v[0]->v.num = a | b;
+    }
+  }
+  return V7_OK;
+}
+
+static enum v7_err parse_logical_and(struct v7 *v7) {
+  TRY(parse_bitwise_or(v7));
+  if (*v7->pc == '&' && v7->pc[1] == '&') {
+    match(v7, '&');
+    match(v7, '&');
+    TRY(parse_bitwise_or(v7));
+    if (!v7->no_exec) {
+      struct v7_val **v = &v7_top(v7)[-2];
+      int is_true = v7_is_true(v[0]) && v7_is_true(v[1]);
+      TRY(inc_stack(v7, -2));
+      TRY(v7_make_and_push(v7, V7_BOOL));
+      v[0]->v.num = is_true ? 1.0 : 0.0;
+    }
+  }
+  return V7_OK;
+}
+
+static enum v7_err parse_logical_or(struct v7 *v7) {
+  TRY(parse_logical_and(v7));
+  if (*v7->pc == '|' && v7->pc[1] == '|') {
+    match(v7, '|');
+    match(v7, '|');
+    TRY(parse_logical_and(v7));
+    if (!v7->no_exec) {
+      struct v7_val **v = &v7_top(v7)[-2];
+      int is_true = v7_is_true(v[0]) || v7_is_true(v[1]);
+      TRY(inc_stack(v7, -2));
+      TRY(v7_make_and_push(v7, V7_BOOL));
+      v[0]->v.num = is_true ? 1.0 : 0.0;
+    }
+  }
+  return V7_OK;
+}
+
+static int is_assignment_op(const char *s) {
+  return *s == '=';
+}
+
 static enum v7_err parse_expression(struct v7 *v7) {
 #ifdef V7_DEBUG
   const char *stmt_str = v7->pc;
 #endif
+  int op;
 
   v7->cur_obj = &v7->scopes[v7->current_scope];
 
-  TRY(parse_bitwise_xor(v7));
+  TRY(parse_logical_or(v7));
 
   // Parse assignment
-  if (*v7->pc == '=') {
+  if ((op = is_assignment_op(v7->pc))) {
     TRY(parse_assignment(v7, v7->cur_obj));
   }
 
