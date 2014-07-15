@@ -26,4 +26,4 @@ js: v7
 	./v7 unit_test.js
 
 w:
-	wine cl unit_test.c $(SOURCES) && wine unit_test.exe
+	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe

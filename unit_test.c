@@ -314,6 +314,18 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "34325 ^ 190992 & 74832") == V7_OK);
   ASSERT(check_num(v7, 42501.0));
 
+  ASSERT(v7_exec(v7, "a = 12;") == V7_OK);
+  ASSERT(v7_exec(v7, "a += 44; a;") == V7_OK);
+  ASSERT(check_num(v7, 56.0));
+  ASSERT(v7_exec(v7, "a -= a / 2; a;") == V7_OK);
+  ASSERT(check_num(v7, 28.0));
+  ASSERT(v7_exec(v7, "a *= 0.5; a;") == V7_OK);
+  ASSERT(check_num(v7, 14.0));
+#ifndef _WIN32
+  ASSERT(v7_exec(v7, "a /= 0; a;") == V7_OK);
+  ASSERT(check_num(v7, INFINITY));
+#endif
+
   ASSERT(v7_exec(v7, "!5") == V7_OK);
   ASSERT(check_bool(v7, 0.0));
   ASSERT(v7_exec(v7, "!''") == V7_OK);

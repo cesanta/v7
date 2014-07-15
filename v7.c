@@ -35,6 +35,7 @@
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
+#define __unused
 #endif
 
 // MSVC6 doesn't have standard C math constants defined
@@ -91,14 +92,41 @@ enum {
 
 enum {
   OP_INVALID,
+
+  // Relational ops
   OP_GREATER_THEN,    //  >
   OP_LESS_THEN,       //  <
   OP_GREATER_EQUAL,   //  >=
   OP_LESS_EQUAL,      //  <=
+
+  // Equality ops
   OP_EQUAL,           //  ==
   OP_NOT_EQUAL,       //  !=
   OP_EQUAL_EQUAL,     //  ===
-  OP_NOT_EQUAL_EQUAL  //  !==
+  OP_NOT_EQUAL_EQUAL, //  !==
+
+  // Assignment ops
+  OP_ASSIGN,          //  =
+  OP_PLUS_ASSIGN,     //  +=
+  OP_MINUS_ASSIGN,    //  -=
+  OP_MUL_ASSIGN,      //  *=
+  OP_DIV_ASSIGN,      //  /=
+  OP_REM_ASSIGN,      //  %=
+  OP_AND_ASSIGN,      //  &=
+  OP_XOR_ASSIGN,      //  ^=
+  OP_OR_ASSIGN,       //  |=
+  OP_RSHIFT_ASSIGN,   //  >>=
+  OP_LSHIFT_ASSIGN,   //  <<=
+  OP_RRSHIFT_ASSIGN,  //  >>>=
+
+  NUM_OPS
+};
+
+static const int s_op_lengths[NUM_OPS] = {
+  -1,
+  1, 1, 2, 2,
+  2, 2, 3, 3,
+  1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4
 };
 
 // Forward declarations
@@ -563,42 +591,51 @@ enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
   return v7_push(v7, v);
 }
 
-static enum v7_err do_arithmetic_op(struct v7 *v7, int op) {
-  struct v7_val **v = v7_top(v7) - 2;
-
-  if (v7->no_exec) return V7_OK;
-  CHECK(v7->sp >= 2, V7_STACK_UNDERFLOW);
-
-  if (v[0]->type == V7_STR && v[1]->type == V7_STR && op == '+') {
-    struct v7_val *res = NULL;
-    char *str = (char *) malloc(v[0]->v.str.len + v[1]->v.str.len + 1);
+static enum v7_err arith(struct v7_val *a, struct v7_val *b,
+                         struct v7_val *res, int op) {
+if (a->type == V7_STR && a->type == V7_STR && op == '+') {
+    char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
-    res = make_value(v7, V7_STR);
-    CHECK(res != NULL, V7_OUT_OF_MEMORY);  // TODO: free(str)
-    res->v.str.len = v[0]->v.str.len + v[1]->v.str.len;
+    v7_set_value_type(res, V7_STR);
+    res->v.str.len = a->v.str.len + b->v.str.len;
     res->v.str.buf = str;
-    memcpy(str, v[0]->v.str.buf, v[0]->v.str.len);
-    memcpy(str + v[0]->v.str.len, v[1]->v.str.buf, v[1]->v.str.len);
+    memcpy(str, a->v.str.buf, a->v.str.len);
+    memcpy(str + a->v.str.len, b->v.str.buf, b->v.str.len);
     str[res->v.str.len] = '\0';
-    TRY(inc_stack(v7, -2));
-    TRY(v7_push(v7, res));
     return V7_OK;
-  } else if (v[0]->type == V7_NUM && v[1]->type == V7_NUM) {
-    double a = v[0]->v.num, b = v[1]->v.num, res = 0;
+  } else if (a->type == V7_NUM && b->type == V7_NUM) {
+    v7_set_value_type(res, V7_NUM);
     switch (op) {
-      case '+': res = a + b; break;
-      case '-': res = a - b; break;
-      case '*': res = a * b; break;
-      case '/': res = a / b; break;
-      case '%': res = (unsigned long) a % (unsigned long) b; break;
+      case '+': res->v.num = a->v.num + b->v.num; break;
+      case '-': res->v.num = a->v.num - b->v.num; break;
+      case '*': res->v.num = a->v.num * b->v.num; break;
+      case '/': res->v.num = a->v.num / b->v.num; break;
+      case '%': res->v.num = (unsigned long) a->v.num %
+        (unsigned long) b->v.num; break;
+      case '^': res->v.num = (unsigned long) a->v.num ^
+        (unsigned long) b->v.num; break;
     }
-    TRY(inc_stack(v7, -2));
-    TRY(v7_make_and_push(v7, V7_NUM));
-    v7_top(v7)[-1]->v.num = res;
     return V7_OK;
   } else {
     return V7_TYPE_MISMATCH;
   }
+}
+
+static enum v7_err do_arithmetic_op(struct v7 *v7, int op) {
+  struct v7_val **v = v7_top(v7) - 2, tmp, *res;
+
+  if (v7->no_exec) return V7_OK;
+  CHECK(v7->sp >= 2, V7_STACK_UNDERFLOW);
+
+  memset(&tmp, 0, sizeof(tmp));
+  TRY(arith(v[0], v[1], &tmp, op));
+  TRY(inc_stack(v7, -2));
+  res = make_value(v7, tmp.type);
+  CHECK(res != NULL, V7_OUT_OF_MEMORY);
+  *res = tmp;
+  TRY(v7_push(v7, res));
+
+  return V7_OK;
 }
 
 static struct v7_val str_to_val(const char *buf, size_t len) {
@@ -719,19 +756,18 @@ static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   return V7_OK;
 }
 
-struct v7_val *v7_mkvv(struct v7 *v7, enum v7_type t, va_list ap) {
-  //struct v7_val *v = (t == V7_OBJ || t == V7_ARRAY) ? NULL : make_value(v7, t);
+struct v7_val *v7_mkvv(struct v7 *v7, enum v7_type t, va_list *ap) {
   struct v7_val *v = make_value(v7, t);
   // TODO: check for make_value() failure
   switch (t) {
-    case V7_C_FUNC: v->v.c_func = va_arg(ap, v7_func_t); break;
-    case V7_NUM: v->v.num = va_arg(ap, double); break;
+    case V7_C_FUNC: v->v.c_func = va_arg(*ap, v7_func_t); break;
+    case V7_NUM: v->v.num = va_arg(*ap, double); break;
     case V7_OBJ: // fallthrough
     case V7_ARRAY: break; //v = va_arg(ap, struct v7_val *); break;
     case V7_STR:
-      v->v.str.buf = va_arg(ap, char *);
-      v->v.str.len = va_arg(ap, unsigned long);
-      if (va_arg(ap, int) != 0) {
+      v->v.str.buf = va_arg(*ap, char *);
+      v->v.str.len = va_arg(*ap, unsigned long);
+      if (va_arg(*ap, int) != 0) {
         v->v.str.buf = v7_strdup(v->v.str.buf, v->v.str.len);
       } else {
         v->flags = V7_RDONLY_STR;
@@ -747,7 +783,7 @@ struct v7_val *v7_mkv(struct v7 *v7, enum v7_type t, ...) {
   va_list ap;
 
   va_start(ap, t);
-  v = v7_mkvv(v7, t, ap);
+  v = v7_mkvv(v7, t, &ap);
   va_end(ap);
 
   return v;
@@ -760,9 +796,9 @@ enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
 
   va_start(ap, val_type);
   k = (key_type == V7_OBJ || key_type == V7_ARRAY) ?
-    va_arg(ap, struct v7_val *) : v7_mkvv(v7, key_type, ap);
+    va_arg(ap, struct v7_val *) : v7_mkvv(v7, key_type, &ap);
   v = (val_type == V7_OBJ || val_type == V7_ARRAY) ?
-    va_arg(ap, struct v7_val *) : v7_mkvv(v7, val_type, ap);
+    va_arg(ap, struct v7_val *) : v7_mkvv(v7, val_type, &ap);
   va_end(ap);
 
   // TODO: do not leak here
@@ -833,7 +869,6 @@ static int test_token(struct v7 *v7, const char *kw, unsigned long kwlen) {
   return kwlen == v7->tok_len && memcmp(v7->tok, kw, kwlen) == 0;
 }
 
-//  number      =   { digit }
 static enum v7_err parse_num(struct v7 *v7) {
   double value = 0;
   char *end;
@@ -854,7 +889,6 @@ static enum v7_err parse_num(struct v7 *v7) {
   return V7_OK;
 }
 
-//  identifier  =   letter { letter | digit }
 static enum v7_err parse_identifier(struct v7 *v7) {
   CHECK(is_alpha(*v7->pc) || *v7->pc == '_', V7_SYNTAX_ERROR);
   v7->tok = v7->pc;
@@ -881,7 +915,6 @@ static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
-// function_defition = "function" "(" func_params ")" "{" func_body "}"
 static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
                                              int num_params) {
   int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0, ln = 0;
@@ -1086,7 +1119,6 @@ enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   prop->val = val;
   key->ref_count++;
   val->ref_count++;
-  //TRY(vinsert(v7, &arr->v.props, key, val));
   return V7_OK;
 }
 
@@ -1145,7 +1177,6 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
   return V7_OK;
 }
 
-// variable = identifier { '.' identifier | '[' expression ']' }
 static enum v7_err parse_prop_accessor(struct v7 *v7) {
   struct v7_val **top = NULL, *v = NULL, *ns = NULL;
 
@@ -1264,12 +1295,6 @@ static enum v7_err parse_variable(struct v7 *v7) {
   return V7_OK;
 }
 
-//  factor  =   number | string_literal | "(" expression ")" |
-//              variable | "this" | "null" | "true" | "false" |
-//              "{" object_literal "}" |
-//              "[" array_literal "]" |
-//              function_definition |
-//              function_call
 static enum v7_err parse_factor(struct v7 *v7) {
   int old_sp = v7_sp(v7);
 
@@ -1345,7 +1370,8 @@ static enum v7_err parse_factor(struct v7 *v7) {
 //  mul_op      =   "*" | "/"
 static enum v7_err parse_term(struct v7 *v7) {
   TRY(parse_factor(v7));
-  while (*v7->pc == '*' || *v7->pc == '/' || *v7->pc == '%') {
+  while ((*v7->pc == '*' || *v7->pc == '/' || *v7->pc == '%') &&
+         v7->pc[1] != '=') {
     int ch = *v7->pc;
     TRY(match(v7, ch));
     TRY(parse_factor(v7));
@@ -1398,22 +1424,39 @@ static enum v7_err do_logical_op(struct v7 *v7, int op) {
   return V7_OK;
 }
 
-static enum v7_err parse_assignment(struct v7 *v7, struct v7_val *obj) {
+static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
   const char *tok = v7->tok;
   unsigned long tok_len = v7->tok_len;
 
-  TRY(match(v7, '='));
+  v7->pc += s_op_lengths[op];
+  skip_whitespaces_and_comments(v7);
   TRY(parse_expression(v7));
 
+  // Stack layout at this point (assuming stack grows down):
+  //
+  //          | object's value (rvalue)    |    top[-2]
+  //          +----------------------------+
+  //          | expression value (lvalue)  |    top[-1]
+  //          +----------------------------+
+  // top -->  |       nothing yet          |
   if (!v7->no_exec) {
-    struct v7_val **top = v7_top(v7);
-    struct v7_val *key = v7_mkv(v7, V7_STR, tok, tok_len, 1);
-    key->ref_count++;
-    TRY(v7_set(v7, obj, key, top[-1]));
-    v7_freeval(v7, key);
-    v7_freeval(v7, top[-2]);
-    top[-2] = top[-1];
-    v7->sp--;
+    struct v7_val **top = v7_top(v7), *a = top[-2], *b = top[-1];
+    switch (op) {
+      case OP_ASSIGN:
+        TRY(v7_setv(v7, obj, V7_STR, V7_OBJ, tok, tok_len, 1, b));
+        v7_freeval(v7, a);
+        top[-2] = top[-1];
+        v7->sp--;
+        return V7_OK;
+      case OP_PLUS_ASSIGN: TRY(arith(a, b, a, '+')); break;
+      case OP_MINUS_ASSIGN: TRY(arith(a, b, a, '-')); break;
+      case OP_MUL_ASSIGN: TRY(arith(a, b, a, '*')); break;
+      case OP_DIV_ASSIGN: TRY(arith(a, b, a, '/')); break;
+      case OP_REM_ASSIGN: TRY(arith(a, b, a, '%')); break;
+      case OP_XOR_ASSIGN: TRY(arith(a, b, a, '^')); break;
+      default: return V7_NOT_IMPLEMENTED;
+    }
+    TRY(inc_stack(v7, -1));
   }
 
   return V7_OK;
@@ -1421,7 +1464,7 @@ static enum v7_err parse_assignment(struct v7 *v7, struct v7_val *obj) {
 
 static enum v7_err parse_add_sub(struct v7 *v7) {
   TRY(parse_term(v7));
-  while (*v7->pc == '-' || *v7->pc == '+') {
+  while ((*v7->pc == '-' || *v7->pc == '+') && v7->pc[1] != '=') {
     int ch = *v7->pc;
     TRY(match(v7, ch));
     TRY(parse_term(v7));
@@ -1434,7 +1477,7 @@ static enum v7_err parse_relational(struct v7 *v7) {
   int op;
   TRY(parse_add_sub(v7));
   if ((op = is_relational_op(v7->pc)) > OP_INVALID) {
-    v7->pc += op == OP_LESS_THEN || op == OP_GREATER_THEN ? 1 : 2;
+    v7->pc += s_op_lengths[op];
     skip_whitespaces_and_comments(v7);
     TRY(parse_add_sub(v7));
     TRY(do_logical_op(v7, op));
@@ -1446,7 +1489,7 @@ static enum v7_err parse_equality(struct v7 *v7) {
   int op;
   TRY(parse_relational(v7));
   if ((op = is_equality_op(v7->pc)) > OP_INVALID) {
-    v7->pc += op == OP_EQUAL_EQUAL || op == OP_NOT_EQUAL_EQUAL ? 3 : 2;
+    v7->pc += s_op_lengths[op];
     skip_whitespaces_and_comments(v7);
     TRY(parse_relational(v7));
     TRY(do_logical_op(v7, op));
@@ -1539,8 +1582,30 @@ static enum v7_err parse_logical_or(struct v7 *v7) {
   return V7_OK;
 }
 
-static int is_assignment_op(const char *s) {
-  return *s == '=';
+static int is_assign_op(const char *s) {
+  if (s[0] == '=') {
+    return OP_ASSIGN;
+  } else if (s[1] == '=') {
+    switch (s[0]) {
+      case '+': return OP_PLUS_ASSIGN;
+      case '-': return OP_MINUS_ASSIGN;
+      case '*': return OP_MUL_ASSIGN;
+      case '/': return OP_DIV_ASSIGN;
+      case '%': return OP_REM_ASSIGN;
+      case '&': return OP_AND_ASSIGN;
+      case '^': return OP_XOR_ASSIGN;
+      case '|': return OP_OR_ASSIGN;
+      default: return OP_INVALID;
+    }
+  } else if (s[0] == '<' && s[1] == '<' && s[2] == '=') {
+    return OP_LSHIFT_ASSIGN;
+  } else if (s[0] == '>' && s[1] == '>' && s[2] == '=') {
+    return OP_RSHIFT_ASSIGN;
+  } else if (s[0] == '>' && s[1] == '>' && s[2] == '>' && s[3] == '=') {
+    return OP_RRSHIFT_ASSIGN;
+  } else {
+    return OP_INVALID;
+  }
 }
 
 static enum v7_err parse_expression(struct v7 *v7) {
@@ -1554,8 +1619,8 @@ static enum v7_err parse_expression(struct v7 *v7) {
   TRY(parse_logical_or(v7));
 
   // Parse assignment
-  if ((op = is_assignment_op(v7->pc))) {
-    TRY(parse_assignment(v7, v7->cur_obj));
+  if ((op = is_assign_op(v7->pc))) {
+    TRY(parse_assign(v7, v7->cur_obj, op));
   }
 
   // Parse ternary operator
@@ -1590,7 +1655,7 @@ static enum v7_err parse_declaration(struct v7 *v7) {
     TRY(parse_identifier(v7));
     if (*v7->pc == '=') {
       if (!v7->no_exec) v7_make_and_push(v7, V7_UNDEF);
-      TRY(parse_assignment(v7, &v7->scopes[v7->current_scope]));
+      TRY(parse_assign(v7, &v7->scopes[v7->current_scope], OP_ASSIGN));
     }
   } while (test_and_skip_char(v7, ','));
 
@@ -1616,8 +1681,6 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
-//  statement  =  declaration | return_statement | if_statement
-//                assignment | expression [ ";" ]
 static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   if (*v7->pc == '_' || is_alpha(*v7->pc)) {
     TRY(parse_identifier(v7));    // Load identifier into v7->tok, v7->tok_len
@@ -1693,8 +1756,8 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
 const char *v7_strerror(enum v7_err e) {
   static const char *strings[] = {
     "no error", "syntax error", "out of memory", "internal error",
-    "stack overflow", "stack underflow", "undefined variable",
-    "type mismatch", "recursion too deep", "called non-function"
+    "stack overflow", "stack underflow", "undefined variable", "type mismatch",
+    "recursion too deep", "called non-function", "not implemented"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
