@@ -309,6 +309,8 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "5 % 3 * 3") == V7_OK);
   ASSERT(check_num(v7, 6.0));
+  ASSERT(v7_exec(v7, "76 & 13") == V7_OK);
+  ASSERT(check_num(v7, 12.0));
 
   ASSERT(v7_exec(v7, "!5") == V7_OK);
   ASSERT(check_bool(v7, 0.0));
