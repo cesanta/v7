@@ -1342,19 +1342,26 @@ static enum v7_err parse_term(struct v7 *v7) {
   return V7_OK;
 }
 
-enum { OP_XX, OP_GT, OP_LT, OP_GE, OP_LE, OP_EQ, OP_NE };
+enum { OP_XX, OP_GT, OP_LT, OP_GE, OP_LE, OP_EQ, OP_NE, OP_EQQ, OP_NEE };
 
 static int is_relational_op(const char *s) {
   switch (s[0]) {
     case '>': return s[1] == '=' ? OP_GE : OP_GT;
     case '<': return s[1] == '=' ? OP_LE : OP_LT;
-    case '=': return s[1] == '=' ? OP_EQ : OP_XX;
-    case '!': return s[1] == '=' ? OP_NE : OP_XX;
     default: return OP_XX;
   }
 }
 
-static enum v7_err do_relational_op(struct v7 *v7, int op) {
+static int is_equality_op(const char *s) {
+  if (s[0] == '=' && s[1] == '=') {
+    return s[2] == '=' ? OP_EQQ : OP_EQ;
+  } else if (s[0] == '!' && s[1] == '=') {
+    return s[2] == '=' ? OP_NEE : OP_NE;
+  }
+  return OP_XX;
+}
+
+static enum v7_err do_logical_op(struct v7 *v7, int op) {
   struct v7_val **v = v7_top(v7) - 2;
   int res = 0;
 
@@ -1365,8 +1372,10 @@ static enum v7_err do_relational_op(struct v7 *v7, int op) {
       case OP_GE: res = v[0]->v.num >= v[1]->v.num; break;
       case OP_LT: res = v[0]->v.num <  v[1]->v.num; break;
       case OP_LE: res = v[0]->v.num <= v[1]->v.num; break;
-      case OP_EQ: res = cmp(v[0], v[1]); break;
-      case OP_NE: res = !cmp(v[0], v[1]); break;
+      case OP_EQ: // FALLTHROUGH
+      case OP_EQQ: res = cmp(v[0], v[1]); break;
+      case OP_NE: // FALLTHROUGH
+      case OP_NEE: res = !cmp(v[0], v[1]); break;
     }
   } else if (op == OP_EQ) {
     res = cmp(v[0], v[1]);
@@ -1411,6 +1420,30 @@ static enum v7_err parse_add_sub(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err parse_relational(struct v7 *v7) {
+  int op;
+  TRY(parse_add_sub(v7));
+  if ((op = is_relational_op(v7->pc)) > OP_XX) {
+    v7->pc += op == OP_LT || op == OP_GT ? 1 : 2;
+    skip_whitespaces_and_comments(v7);
+    TRY(parse_add_sub(v7));
+    TRY(do_logical_op(v7, op));
+  }
+  return V7_OK;
+}
+
+static enum v7_err parse_equality(struct v7 *v7) {
+  int op;
+  TRY(parse_relational(v7));
+  if ((op = is_equality_op(v7->pc)) > OP_XX) {
+    v7->pc += op == OP_EQQ || op == OP_NEE ? 3 : 2;
+    skip_whitespaces_and_comments(v7);
+    TRY(parse_relational(v7));
+    TRY(do_logical_op(v7, op));
+  }
+  return V7_OK;
+}
+
 //  expression  =   term { add_op term } |
 //                  expression "?" expression ":" expression
 //                  expression "." expression
@@ -1421,17 +1454,10 @@ static enum v7_err parse_expression(struct v7 *v7) {
 #ifdef V7_DEBUG
   const char *stmt_str = v7->pc;
 #endif
-  int op;
 
   v7->cur_obj = &v7->scopes[v7->current_scope];
 
-  TRY(parse_add_sub(v7));
-  if ((op = is_relational_op(v7->pc)) > OP_XX) {
-    v7->pc += op == OP_LT || op == OP_GT ? 1 : 2;
-    skip_whitespaces_and_comments(v7);
-    TRY(parse_add_sub(v7));
-    TRY(do_relational_op(v7, op));
-  }
+  TRY(parse_equality(v7));
 
   // Parse assignment
   if (*v7->pc == '=') {
