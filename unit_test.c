@@ -401,6 +401,16 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, "1234"));
   ASSERT(v7_exec(v7, "m[2]") == V7_OK);
   ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(); m.length") == V7_OK);
+  ASSERT(check_num(v7, 1.0));
+  ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(''); m.length") == V7_OK);
+  ASSERT(check_num(v7, 8.0));
+  ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(' '); m.length") == V7_OK);
+  ASSERT(check_num(v7, 3.0));
+  ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(' ', 2); m.length") == V7_OK);
+  ASSERT(check_num(v7, 2.0));
+  ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(/ /, 2); m.length") == V7_OK);
+  ASSERT(check_num(v7, 2.0));
 
   // Math
   ASSERT(v7_exec(v7, "Math.sqrt(144)") == V7_OK);

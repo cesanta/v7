@@ -237,6 +237,59 @@ DEFINE_C_FUNC(Str_match, v7, this_obj, result, args, num_args) {
   }
 }
 
+// Implementation of memmem()
+static const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
+  const char *end;
+  if (al == 0 || bl == 0 || al < bl) return NULL;
+  for (end = a + (al - bl); a < end; a++) if (!memcmp(a, b, bl)) return a;
+  return NULL;
+}
+
+DEFINE_C_FUNC(Str_split, v7, this_obj, result, args, num_args) {
+  const struct v7_str *s = &this_obj->v.str;
+  const char *p1, *p2, *e = s->buf + s->len;
+  int limit = num_args == 2 && args[1]->type == V7_NUM ? args[1]->v.num : -1;
+  int num_elems = 0;
+
+  v7_set_value_type(result, V7_ARRAY);
+  if (num_args == 0) {
+    v7_append(v7, result, v7_mkv(v7, V7_STR, s->buf, s->len, 1));
+  } else if (args[0]->type == V7_STR) {
+    const struct v7_str *sep = &args[0]->v.str;
+    if (sep->len == 0) {
+      // Separator is empty. Split string by characters.
+      for (p1 = s->buf; p1 < e; p1++) {
+        if (limit >= 0 && limit <= num_elems) return;
+        v7_append(v7, result, v7_mkv(v7, V7_STR, p1, 1, 1));
+        num_elems++;
+      }
+    } else {
+      p1 = s->buf;
+      while ((p2 = memstr(p1, e - p1, sep->buf, sep->len)) != NULL) {
+        if (limit >= 0 && limit <= num_elems) return;
+        v7_append(v7, result, v7_mkv(v7, V7_STR, p1, p2 - p1, 1));
+        p1 = p2 + sep->len;
+        num_elems++;
+      }
+      if (limit < 0 || limit > num_elems) {
+        v7_append(v7, result, v7_mkv(v7, V7_STR, p1, e - p1, 1));
+      }
+    }
+  } else if (args[0]->type == V7_REGEX) {
+    int n = 0;
+    p1 = s->buf;
+    while ((n = slre_match(args[0]->v.regex, s->buf, s->len, 0, 0, 0)) > 0) {
+      if (limit >= 0 && limit <= num_elems) return;
+      v7_append(v7, result, v7_mkv(v7, V7_STR, p1, n, 1));
+      p1 += n;
+      num_elems++;
+    }
+    if (limit < 0 || limit > num_elems) {
+      v7_append(v7, result, v7_mkv(v7, V7_STR, p1, e - p1, 1));
+    }
+  }
+}
+
 DEFINE_C_FUNC(Str_indexOf, v7, this_obj, result, args, num_args) {
   v7_set_value_type(result, V7_NUM);
   result->v.num = -1.0;
@@ -328,6 +381,7 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_string, "indexOf", V7_C_FUNC, c_func, Str_indexOf);
   SET_RO_PROP(s_string, "substr", V7_C_FUNC, c_func, Str_substr);
   SET_RO_PROP(s_string, "match", V7_C_FUNC, c_func, Str_match);
+  SET_RO_PROP(s_string, "split", V7_C_FUNC, c_func, Str_split);
 
   SET_RO_PROP(s_math, "E", V7_NUM, num, M_E);
   SET_RO_PROP(s_math, "PI", V7_NUM, num, M_PI);
@@ -1664,7 +1718,6 @@ static enum v7_err parse_declaration(struct v7 *v7) {
 
 static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   int old_no_exec = v7->no_exec;  // Remember execution flag
-  int old_sp = v7->sp;
 
   TRY(match(v7, '('));
   TRY(parse_expression(v7));      // Evaluate condition, pushed on stack
