@@ -252,15 +252,6 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "'hello'.length") == V7_OK);
   ASSERT(check_num(v7, 5.0));
 
-  ASSERT(v7_exec(v7, "if (false) 3; ") == V7_OK);
-  ASSERT(check_bool(v7, 0.0));
-  ASSERT(v7_exec(v7, "if (true) { if (1) {2;} 5; } ") == V7_OK);
-  ASSERT(check_num(v7, 5.0));
-  ASSERT(v7_exec(v7, "if ('') 3; ") == V7_OK);
-  ASSERT(check_str(v7, ""));
-  ASSERT(v7_exec(v7, "if ('0') 9; ") == V7_OK);
-  ASSERT(check_num(v7, 9.0));
-
   ASSERT(v7_exec(v7, "k = { x : function() { if (1) 2; } }") == V7_OK);
 
   ASSERT(v7_exec(v7, "'foo' + 'bar'") == V7_OK);
@@ -338,6 +329,21 @@ static const char *test_v7_exec(void) {
   ASSERT(check_bool(v7, 1.0));
   ASSERT(v7_exec(v7, "7 >= 0") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
+
+  ASSERT(v7_exec(v7, "if (false) 3; ") == V7_OK);
+  //ASSERT(check_bool(v7, 0.0));
+  ASSERT(v7_exec(v7, "if (true) { if (1) {2;} 5; } ") == V7_OK);
+  ASSERT(check_num(v7, 5.0));
+  ASSERT(v7_exec(v7, "if ('') 3; ") == V7_OK);
+  //ASSERT(check_str(v7, ""));
+  ASSERT(v7_exec(v7, "if ('0') 9; ") == V7_OK);
+  ASSERT(check_num(v7, 9.0));
+  ASSERT(v7_exec(v7, "if (false) 1; else 3;") == V7_OK);
+  ASSERT(check_num(v7, 3.0));
+  ASSERT(v7_exec(v7, "if (false) 1; else if (0) { 3 } else { 2 }") == V7_OK);
+  ASSERT(check_num(v7, 2.0));
+  ASSERT(v7_exec(v7, "if (false) 1; else if (1) { 3 } else { 2 }") == V7_OK);
+  ASSERT(check_num(v7, 3.0));
 
   ASSERT(v7_exec(v7, "print(['hi', 1, true, null, /\\s+/], '\n')") == V7_OK);
 

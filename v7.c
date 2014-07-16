@@ -1664,6 +1664,8 @@ static enum v7_err parse_declaration(struct v7 *v7) {
 
 static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   int old_no_exec = v7->no_exec;  // Remember execution flag
+  int old_sp = v7->sp;
+
   TRY(match(v7, '('));
   TRY(parse_expression(v7));      // Evaluate condition, pushed on stack
   TRY(match(v7, ')'));
@@ -1671,12 +1673,17 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
     // If condition is false, do not execute "if" body
     CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
     v7->no_exec = !v7_is_true(v7_top(v7)[-1]);
-    // If condition is true, clean it from stack
-    if (!v7->no_exec) {
-      TRY(inc_stack(v7, -1));
-    }
+    TRY(inc_stack(v7, -1));   // Cleanup condition result from the stack
   }
   TRY(parse_compound_statement(v7, has_return));
+
+  if (strncmp(v7->pc, "else", 4) == 0) {
+    v7->pc += 4;
+    skip_whitespaces_and_comments(v7);
+    v7->no_exec = !v7->no_exec;
+    TRY(parse_compound_statement(v7, has_return));    
+  }
+
   v7->no_exec = old_no_exec;  // Restore old execution flag
   return V7_OK;
 }
