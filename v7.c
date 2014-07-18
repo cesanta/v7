@@ -193,7 +193,7 @@ static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
 
 DEFINE_C_FUNC(Str_charCodeAt, v7, this_obj, result, args, num_args) {
   double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
-  const struct v7_str *str = &this_obj->v.str;
+  const struct v7_string *str = &this_obj->v.str;
 
   v7_set_value_type(result, V7_NUM);
   result->v.num = NAN;
@@ -205,7 +205,7 @@ DEFINE_C_FUNC(Str_charCodeAt, v7, this_obj, result, args, num_args) {
 
 DEFINE_C_FUNC(Str_charAt, v7, this_obj, result, args, num_args) {
   double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
-  const struct v7_str *str = &this_obj->v.str;
+  const struct v7_string *str = &this_obj->v.str;
 
   v7_set_value_type(result, V7_UNDEF);
   if (!isnan(idx) && this_obj->type == V7_STR && fabs(idx) < str->len) {
@@ -218,7 +218,7 @@ DEFINE_C_FUNC(Str_charAt, v7, this_obj, result, args, num_args) {
 
 DEFINE_C_FUNC(Str_match, v7, this_obj, result, args, num_args) {
   struct slre_cap caps[100];
-  const struct v7_str *s = &this_obj->v.str;
+  const struct v7_string *s = &this_obj->v.str;
   int i, n;
 
   v7_set_value_type(result, V7_NULL);
@@ -246,7 +246,7 @@ static const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
 }
 
 DEFINE_C_FUNC(Str_split, v7, this_obj, result, args, num_args) {
-  const struct v7_str *s = &this_obj->v.str;
+  const struct v7_string *s = &this_obj->v.str;
   const char *p1, *p2, *e = s->buf + s->len;
   int limit = num_args == 2 && args[1]->type == V7_NUM ? args[1]->v.num : -1;
   int num_elems = 0;
@@ -255,7 +255,7 @@ DEFINE_C_FUNC(Str_split, v7, this_obj, result, args, num_args) {
   if (num_args == 0) {
     v7_append(v7, result, v7_mkv(v7, V7_STR, s->buf, s->len, 1));
   } else if (args[0]->type == V7_STR) {
-    const struct v7_str *sep = &args[0]->v.str;
+    const struct v7_string *sep = &args[0]->v.str;
     if (sep->len == 0) {
       // Separator is empty. Split string by characters.
       for (p1 = s->buf; p1 < e; p1++) {
@@ -296,7 +296,7 @@ DEFINE_C_FUNC(Str_indexOf, v7, this_obj, result, args, num_args) {
 
   if (this_obj->type == V7_STR && num_args > 0 && args[0]->type == V7_STR) {
     int i = num_args > 1 && args[1]->type == V7_NUM ? (int) args[1]->v.num : 0;
-    const struct v7_str *a = &this_obj->v.str, *b = &args[0]->v.str;
+    const struct v7_string *a = &this_obj->v.str, *b = &args[0]->v.str;
 
     // Scan the string, advancing one byte at a time
     for (; i >= 0 && a->len >= b->len && i <= (int) (a->len - b->len); i++) {
@@ -709,7 +709,7 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
   if (a->type != b->type) return 0;
   {
     double an = a->v.num, bn = b->v.num;
-    const struct v7_str *as = &a->v.str, *bs = &b->v.str;
+    const struct v7_string *as = &a->v.str, *bs = &b->v.str;
 
     switch (a->type) {
       case V7_NUM:
