@@ -1349,9 +1349,7 @@ static enum v7_err parse_variable(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err parse_factor(struct v7 *v7) {
-  int old_sp = v7_sp(v7);
-
+static enum v7_err parse_scalar(struct v7 *v7) {
   if (*v7->pc == '!') {
     TRY(match(v7, '!'));
     TRY(parse_expression(v7));
@@ -1404,10 +1402,21 @@ static enum v7_err parse_factor(struct v7 *v7) {
     TRY(parse_num(v7));
   }
 
+  return V7_OK;
+}
+
+static enum v7_err parse_prop_accessor2(struct v7 *v7) {
+  TRY(parse_scalar(v7));
   while (*v7->pc == '.' || *v7->pc == '[') {
     TRY(parse_prop_accessor(v7));
   }
+  return V7_OK;
+}
 
+static enum v7_err parse_factor(struct v7 *v7) {
+  int old_sp = v7_sp(v7);
+
+  TRY(parse_prop_accessor2(v7));
   if (*v7->pc == '(') {
     TRY(parse_function_call(v7, v7->cur_obj));
   }

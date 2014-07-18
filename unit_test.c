@@ -411,6 +411,12 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v7, 2.0));
   ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(/ /, 2); m.length") == V7_OK);
   ASSERT(check_num(v7, 2.0));
+  ASSERT(v7_exec(v7, "'aa bb cc'.substr(0, 4).split(' ').length") == V7_OK);
+  ASSERT(check_num(v7, 2.0));
+  ASSERT(v7_exec(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]") == V7_OK);
+  ASSERT(check_str(v7, "b"));
+  ASSERT(v7_exec(v7, "{z: '123456'}.z.substr(0, 3).split('').length") == V7_OK);
+  ASSERT(check_num(v7, 3.0));
 
   // Math
   ASSERT(v7_exec(v7, "Math.sqrt(144)") == V7_OK);
