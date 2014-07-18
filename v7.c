@@ -814,7 +814,7 @@ struct v7_val *v7_mkvv(struct v7 *v7, enum v7_type t, va_list *ap) {
   struct v7_val *v = make_value(v7, t);
   // TODO: check for make_value() failure
   switch (t) {
-    case V7_C_FUNC: v->v.c_func = va_arg(*ap, v7_func_t); break;
+    case V7_C_FUNC: v->v.c_func = va_arg(*ap, v7_c_func_t); break;
     case V7_NUM: v->v.num = va_arg(*ap, double); break;
     case V7_OBJ: // fallthrough
     case V7_ARRAY: break; //v = va_arg(ap, struct v7_val *); break;
