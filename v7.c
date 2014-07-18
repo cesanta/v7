@@ -446,7 +446,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   } else if (v->type == V7_REGEX && !(v->flags & V7_RDONLY_STR)) {
     free(v->v.regex);
   } else if (v->type == V7_FUNC && !(v->flags & V7_RDONLY_STR)) {
-    free(v->v.func);
+    free(v->v.func.source_code);
   }
   if (!(v->flags & V7_RDONLY_VAL)) {
     memset(v, 0, sizeof(*v));
@@ -587,7 +587,7 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
         snprintf(buf, bsiz, "%.*s", (int) v->v.str.len, v->v.str.buf);
         break;
     case V7_FUNC:
-        snprintf(buf, bsiz, "'function%s'", v->v.func);
+        snprintf(buf, bsiz, "'function%s'", v->v.func.source_code);
         break;
     case V7_REGEX:
         snprintf(buf, bsiz, "/%s/", v->v.regex);
@@ -1016,8 +1016,9 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   if (v7->no_exec) {
     TRY(v7_make_and_push(v7, V7_FUNC));
-    v7_top(v7)[-1]->v.str.len = ln;
-    v7_top(v7)[-1]->v.func = v7_strdup(src, (unsigned long) (v7->pc - src));
+    v7_top(v7)[-1]->v.func.line_no = ln;
+    v7_top(v7)[-1]->v.func.source_code =
+      v7_strdup(src, (unsigned long) (v7->pc - src));
 
     if (func_name != NULL) {
       struct v7_val *key = v7_mkv(v7, V7_STR, func_name, func_name_len, 1);
@@ -1068,8 +1069,8 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
     const char *old_pc = v7->pc;
     int old_line_no = v7->line_no;
 
-    v7->pc = f->v.func;     // Move control flow to function body
-    v7->line_no = f->v.str.len;
+    v7->pc = f->v.func.source_code;   // Move control flow to function body
+    v7->line_no = f->v.func.line_no;
     TRY(parse_function_definition(v7, v, num_args));  // Execute function body
     v7->pc = old_pc;    // Return control flow
     v7->line_no = old_line_no;

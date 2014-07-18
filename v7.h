@@ -47,19 +47,21 @@ typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
 
 // A string.
 struct v7_string {
-  char *buf;          // Pointer to buffer with string data
-  unsigned long len;  // String length
+  char *buf;                // Pointer to buffer with string data
+  unsigned long len;        // String length
 };
 
 struct v7_func {
-
+  char *source_code;        // \0-terminated function source code
+  int line_no;              // Line number where function begins
+  struct v7_val;            // Closure scope
 };
 
 union v7_scalar {
-  char *func;               // \0-terminated function code
   char *regex;              // \0-terminated regex
-  struct v7_string str;
   double num;
+  struct v7_string str;
+  struct v7_func func;      // \0-terminated function code
   v7_c_func_t c_func;       // C function
   v7_prop_func_t prop_func; // Object's property function, e.g. String.length
   struct v7_prop *props;    // Object's key/value list
