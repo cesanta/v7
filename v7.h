@@ -32,18 +32,22 @@ enum v7_type {
 enum v7_err {
   V7_OK, V7_SYNTAX_ERROR, V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR,
   V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW, V7_UNDEFINED_VARIABLE,
-  V7_TYPE_MISMATCH, V7_RECURSION_TOO_DEEP, V7_CALLED_NON_FUNCTION,
-  V7_NOT_IMPLEMENTED,
+  V7_TYPE_MISMATCH, V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED,
   V7_NUM_ERRORS
 };
 
 struct v7;
 struct v7_val;
-struct v7_prop;
 typedef void (*v7_c_func_t)(struct v7 *, struct v7_val *this_obj,
                             struct v7_val *result,
                             struct v7_val **params, int num_params);
 typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
+
+struct v7_prop {
+  struct v7_prop *next;
+  struct v7_val *key;
+  struct v7_val *val;
+};
 
 // A string.
 struct v7_string {
@@ -54,7 +58,9 @@ struct v7_string {
 struct v7_func {
   char *source_code;        // \0-terminated function source code
   int line_no;              // Line number where function begins
-  struct v7_val;            // Closure scope
+  struct v7_val *scope;     // Function's scope
+  struct v7_val *upper;     // Upper-level function
+  struct v7_val *args;      // Upper-level function
 };
 
 union v7_scalar {
@@ -67,12 +73,6 @@ union v7_scalar {
   struct v7_prop *props;    // Object's key/value list
 };
 
-struct v7_prop {
-  struct v7_prop *next;
-  struct v7_val *key;
-  struct v7_val *val;
-};
-
 struct v7_val {
   struct v7_val *next;
   struct v7_val *proto;       // Prototype
@@ -83,10 +83,12 @@ struct v7_val {
 };
 
 struct v7 {
-  struct v7_val *stack[200];
-  struct v7_val scopes[20];   // Namespace objects (scopes)
+  struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
+  struct v7_val root_scope;
+  struct v7_val *curr_func;   // Currently executing function
+  //struct v7_val scopes[20]; // Namespace objects (scopes)
   int sp;                     // Stack pointer
-  int current_scope;          // Pointer to the current scope
+  //int current_scope;        // Pointer to the current scope
 
   const char *source_code;    // Pointer to the source codeing
   const char *pc;             // Current parsing position

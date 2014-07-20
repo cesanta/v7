@@ -207,6 +207,8 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { return x * y; };") == V7_OK);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
+  ASSERT(v7_exec(v7, "f1(2, 3)") == V7_OK);
+  ASSERT(check_num(v7, 6.0));
   ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
   ASSERT(check_num(v7, 49.0));
   ASSERT(v7_exec(v7, "f1(12, 4) * 2;") == V7_OK);
@@ -289,7 +291,7 @@ static const char *test_v7_exec(void) {
   ASSERT(check_num(v7, 1.0));
   ASSERT(v7_exec(v7, "fac(5)") == V7_OK);
   ASSERT(check_num(v7, 120.0));
-  ASSERT(v7_exec(v7, "fac(20)") == V7_RECURSION_TOO_DEEP);
+  ASSERT(v7_exec(v7, "fac(20)") == V7_OK);
 
   ASSERT(v7_exec(v7, "function qq(a,b) { return a + b; }") == V7_OK);
   ASSERT(v7_exec(v7, "qq(1,2)") == V7_OK);

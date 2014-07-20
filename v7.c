@@ -404,19 +404,15 @@ static void init_stdlib(void) {
 
 struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
-  size_t i;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) == NULL) return NULL;
 
-  for (i = 0; i < ARRAY_SIZE(v7->scopes); i++) {
-    v7->scopes[i].ref_count = 1;
-    v7->scopes[i].flags = V7_RDONLY_VAL;
-    v7_set_value_type(&v7->scopes[i], V7_OBJ);
-
-  }
-
   init_stdlib();
-  v7->scopes[0].proto = &s_stdlib;
+
+  v7_set_value_type(&v7->root_scope, V7_OBJ);
+  v7->root_scope.proto = &s_stdlib;   // Must go after v7_set_value_type
+  v7->root_scope.flags = V7_RDONLY_VAL;
+  v7->root_scope.ref_count = 1;
 
   return v7;
 }
@@ -445,8 +441,11 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
     free(v->v.str.buf);
   } else if (v->type == V7_REGEX && !(v->flags & V7_RDONLY_STR)) {
     free(v->v.regex);
-  } else if (v->type == V7_FUNC && !(v->flags & V7_RDONLY_STR)) {
-    free(v->v.func.source_code);
+  } else if (v->type == V7_FUNC) {
+    if (!(v->flags & V7_RDONLY_STR)) {
+      free(v->v.func.source_code);
+    }
+    v7_freeval(v7, v->v.func.scope);
   }
   if (!(v->flags & V7_RDONLY_VAL)) {
     memset(v, 0, sizeof(*v));
@@ -460,7 +459,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
 }
 
 struct v7_val *v7_rootns(struct v7 *v7) {
-  return &v7->scopes[0];
+  return &v7->root_scope;
 }
 
 static enum v7_err inc_stack(struct v7 *v7, int incr) {
@@ -484,12 +483,14 @@ enum v7_err v7_pop(struct v7 *v7, int incr) {
   return inc_stack(v7, -incr);
 }
 
+#if 0
 static void free_scopes(struct v7 *v7, int i) {
   for (; i < (int) ARRAY_SIZE(v7->scopes); i++) {
     v7->scopes[i].ref_count = 1;   // Force v7_freeval() below to free memory
     v7_freeval(v7, &v7->scopes[i]);
   }
 }
+#endif
 
 static void free_values(struct v7 *v7) {
   struct v7_val *v;
@@ -513,7 +514,8 @@ void v7_destroy(struct v7 **v7) {
   if (v7 == NULL || v7[0] == NULL) return;
   assert(v7[0]->sp >= 0);
   inc_stack(v7[0], -v7[0]->sp);
-  free_scopes(v7[0], 0);
+  v7[0]->root_scope.ref_count = 1;
+  v7_freeval(v7[0], &v7[0]->root_scope);
   free_values(v7[0]);
   free_props(v7[0]);
   free(v7[0]);
@@ -780,15 +782,19 @@ static enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
 }
 
 static struct v7_val *find(struct v7 *v7, struct v7_val *key) {
-  struct v7_val *v;
-  int i;
+  struct v7_val *v, *f;
 
   if (v7->no_exec) return NULL;
+
+  // Search in function arguments first
+  if (v7->curr_func != NULL &&
+      (v = get2(v7->curr_func->v.func.args, key)) != NULL) return v;
+
   // Search for the name, traversing scopes up to the top level scope
-  for (i = v7->current_scope; i >= 0; i--) {
-    if ((v = get2(&v7->scopes[i], key)) != NULL) return v;
+  for (f = v7->curr_func; f != NULL; f = f->v.func.upper) {
+    if ((v = get2(f->v.func.scope, key)) != NULL) return v;
   }
-  return NULL;
+  return get2(&v7->root_scope, key);
 }
 
 static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
@@ -969,11 +975,16 @@ static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
+static struct v7_val *cur_scope(struct v7 *v7) {
+  return v7->curr_func == NULL ? &v7->root_scope : v7->curr_func->v.func.scope;
+}
+
 static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
                                              int num_params) {
   int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0, ln = 0;
   unsigned long func_name_len = 0;
   const char *src = v7->pc, *func_name = NULL;
+  struct v7_val args;
 
   if (*v7->pc != '(') {
     // function name is given, e.g. function foo() {}
@@ -990,14 +1001,9 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   ln = v7->line_no;  // Line number where function starts
   TRY(match(v7, '('));
 
-  // Initialize new scope
-  if (!v7->no_exec) {
-    v7->current_scope++;
-    CHECK(v7->current_scope < (int) ARRAY_SIZE(v7->scopes),
-          V7_RECURSION_TOO_DEEP);
-    CHECK(v7->scopes[v7->current_scope].v.props == NULL, V7_INTERNAL_ERROR);
-    CHECK(v7->scopes[v7->current_scope].type == V7_OBJ, V7_INTERNAL_ERROR);
-  }
+  memset(&args, 0, sizeof(args));
+  v7_set_value_type(&args, V7_OBJ);
+  args.flags = V7_RDONLY_VAL;
 
   while (*v7->pc != ')') {
     TRY(parse_identifier(v7));
@@ -1005,26 +1011,35 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
       struct v7_val *key = v7_mkv(v7, V7_STR, v7->tok, v7->tok_len, 1);
       struct v7_val *val = i < num_params ? v[i + 1] : make_value(v7, V7_UNDEF);
       key->ref_count++;
-      TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, val));
+      TRY(v7_set(v7, &args, key, val));
       v7_freeval(v7, key);
     }
     i++;
     if (!test_and_skip_char(v7, ',')) break;
   }
   TRY(match(v7, ')'));
+
+  if (!v7->no_exec) {
+    assert(v7->curr_func != NULL);
+    v7->curr_func->v.func.args = &args;
+  }
+
   TRY(parse_compound_statement(v7, &has_return));
 
   if (v7->no_exec) {
+    struct v7_val *func;
     TRY(v7_make_and_push(v7, V7_FUNC));
-    v7_top(v7)[-1]->v.func.line_no = ln;
-    v7_top(v7)[-1]->v.func.source_code =
-      v7_strdup(src, (unsigned long) (v7->pc - src));
+    func = v7_top(v7)[-1];
+
+    func->v.func.line_no = ln;
+    func->v.func.source_code = v7_strdup(src, (unsigned long) (v7->pc - src));
+    func->v.func.scope = v7_mkv(v7, V7_OBJ);
+    func->v.func.scope->ref_count = 1;
+    func->v.func.upper = v7->curr_func;
 
     if (func_name != NULL) {
-      struct v7_val *key = v7_mkv(v7, V7_STR, func_name, func_name_len, 1);
-      key->ref_count++;
-      TRY(v7_set(v7, &v7->scopes[v7->current_scope], key, v7_top(v7)[-1]));
-      v7_freeval(v7, key);
+      TRY(v7_setv(v7, cur_scope(v7), V7_STR, V7_OBJ,
+                  func_name, func_name_len, 1, func));
     }
   }
 
@@ -1034,11 +1049,11 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
       TRY(inc_stack(v7, old_sp - v7->sp));
       TRY(v7_make_and_push(v7, V7_UNDEF));
     }
-    // Clean up function scope
-    v7->scopes[v7->current_scope].ref_count = 1;  // Force v7_freeval() below
-    v7_freeval(v7, &v7->scopes[v7->current_scope]);
-    v7->current_scope--;
-    CHECK(v7->current_scope >= 0, V7_INTERNAL_ERROR);
+
+    // Cleanup arguments
+    v7->curr_func->v.func.args = NULL;
+    args.ref_count = 1;
+    v7_freeval(v7, &args);
   }
 
   v7->no_exec = old_no_exec;
@@ -1067,13 +1082,21 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
   // top  --->  <return_value>
   if (f->type == V7_FUNC) {
     const char *old_pc = v7->pc;
+    struct v7_val *old_curr_func = v7->curr_func;
     int old_line_no = v7->line_no;
 
-    v7->pc = f->v.func.source_code;   // Move control flow to function body
+    // Move control flow to function body
+    v7->pc = f->v.func.source_code; 
     v7->line_no = f->v.func.line_no;
-    TRY(parse_function_definition(v7, v, num_args));  // Execute function body
-    v7->pc = old_pc;    // Return control flow
+    v7->curr_func = f;
+
+    // Execute function body
+    TRY(parse_function_definition(v7, v, num_args));
+
+    // Return control flow
+    v7->pc = old_pc;
     v7->line_no = old_line_no;
+    v7->curr_func = old_curr_func;
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
 
     if (v7_top(v7) == top) {
@@ -1375,7 +1398,9 @@ static enum v7_err parse_scalar(struct v7 *v7) {
   } else if (is_alpha(*v7->pc) || *v7->pc == '_') {
     TRY(parse_identifier(v7));
     if (test_token(v7, "this", 4)) {
-      TRY(v7_push(v7, &v7->scopes[v7->current_scope]));
+      // TODO: fix this.
+      //TRY(v7_push(v7, cur_scope(v7)));
+      TRY(v7_push(v7, cur_scope(v7)));
     } else if (test_token(v7, "null", 4)) {
       TRY(v7_make_and_push(v7, V7_NULL));
     } else if (test_token(v7, "undefined", 9)) {
@@ -1678,7 +1703,7 @@ static enum v7_err parse_expression(struct v7 *v7) {
 #endif
   int op;
 
-  v7->cur_obj = &v7->scopes[v7->current_scope];
+  v7->cur_obj = cur_scope(v7);
 
   TRY(parse_logical_or(v7));
 
@@ -1719,7 +1744,7 @@ static enum v7_err parse_declaration(struct v7 *v7) {
     TRY(parse_identifier(v7));
     if (*v7->pc == '=') {
       if (!v7->no_exec) v7_make_and_push(v7, V7_UNDEF);
-      TRY(parse_assign(v7, &v7->scopes[v7->current_scope], OP_ASSIGN));
+      TRY(parse_assign(v7, cur_scope(v7), OP_ASSIGN));
     }
   } while (test_and_skip_char(v7, ','));
 
@@ -1785,11 +1810,9 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   v7->source_code = v7->pc = source_code;
   skip_whitespaces_and_comments(v7);
 
-  // The following code may raise an exception and jump to the previous line,
-  // returning non-zero from the setjmp() call
   // Prior calls to v7_exec() may have left current_scope modified, reset now
-  free_scopes(v7, 1);
-  v7->current_scope = 0;  // XXX free up higher scopes?
+  //free_scopes(v7, 1);
+  //v7->current_scope = 0;  // XXX free up higher scopes?
 
   while (*v7->pc != '\0') {
     TRY(inc_stack(v7, -v7->sp));          // Reset stack on each statement
@@ -1827,7 +1850,7 @@ const char *v7_strerror(enum v7_err e) {
   static const char *strings[] = {
     "no error", "syntax error", "out of memory", "internal error",
     "stack overflow", "stack underflow", "undefined variable", "type mismatch",
-    "recursion too deep", "called non-function", "not implemented"
+    "called non-function", "not implemented"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
