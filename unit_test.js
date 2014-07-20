@@ -24,6 +24,20 @@ test(factorial(-2) == 1, 'factorial 2');
 test(factorial(1) == 1, 'factorial 3');
 
 
+var module = (function(arg) {
+  var privateProperty = 17;
+  var privateMethod = function(x, y) { return x * y * private_var * arg; };
+  return {
+    publicProperty: 'I am public!',
+    publicMethod: function(x) { return x * arg; },
+    privilegedMethod: function(x, y) { return privateMethod(x, y); }
+  };
+})(7);
+test(module.publicProperty === 'I am public!');
+//test(module.publicMethod(3) === 15);
+//test(module.privilegedMethod(3, 4) === 1020);
+
+
 test('a' + 'b' == 'ab', 'string concatenation');
 test('He who knows, does not speak'.substr(3, 3) == 'who', 'substr 1');
 test('He who speaks, does not know'.substr(24) == 'know', 'substr 2');
