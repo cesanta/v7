@@ -346,7 +346,7 @@ DEFINE_C_FUNC(Std_print, v7, this_obj, result, args, num_args) {
   char buf[4000];
   int i;
   for (i = 0; i < num_args; i++) {
-    printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
+    printf("%s\n", v7_to_string(args[i], buf, sizeof(buf)));
   }
 }
 
@@ -446,6 +446,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
       free(v->v.func.source_code);
     }
     v7_freeval(v7, v->v.func.scope);
+    if (v->v.func.upper != NULL) v7_freeval(v7, v->v.func.upper);
   }
   if (!(v->flags & V7_RDONLY_VAL)) {
     memset(v, 0, sizeof(*v));
@@ -1036,6 +1037,9 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     func->v.func.scope = v7_mkv(v7, V7_OBJ);
     func->v.func.scope->ref_count = 1;
     func->v.func.upper = v7->curr_func;
+    if (func->v.func.upper != NULL) {
+      func->v.func.upper->ref_count++;
+    }
 
     if (func_name != NULL) {
       TRY(v7_setv(v7, cur_scope(v7), V7_STR, V7_OBJ,
@@ -1255,67 +1259,6 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err parse_prop_accessor(struct v7 *v7) {
-  struct v7_val **top = NULL, *v = NULL, *ns = NULL;
-
-  if (!v7->no_exec) {
-    top = &v7_top(v7)[-1];
-    v = make_value(v7, V7_UNDEF);
-    v->ref_count++;
-    ns = top[0];
-  }
-
-  while (*v7->pc == '.' || *v7->pc == '[') {
-    int ch = *v7->pc;
-
-    TRY(match(v7, ch));
-    CHECK(v7->no_exec || ns != NULL, V7_SYNTAX_ERROR);
-    v7->cur_obj = ns;
-
-    if (ch == '.') {
-      TRY(parse_identifier(v7));
-      if (!v7->no_exec) {
-        struct v7_val key = str_to_val(v7->tok, v7->tok_len);
-        ns = get2(ns, &key);
-        if (ns != NULL && ns->type == V7_RO_PROP) {
-          ns->v.prop_func(v7->cur_obj, v);
-          ns = v;
-        }
-      }
-    } else {
-      TRY(parse_expression(v7));
-      TRY(match(v7, ']'));
-      if (!v7->no_exec) {
-        ns = get2(ns, v7_top(v7)[-1]);
-        if (ns != NULL && ns->type == V7_RO_PROP) {
-          ns->v.prop_func(v7->cur_obj, v);
-          ns = v;
-        }
-        TRY(inc_stack(v7, -1));
-      }
-    }
-  }
-
-  if (top != NULL) {
-    struct v7_val *old = top[0];
-    top[0] = ns == NULL ? v : ns;
-    top[0]->ref_count++;
-
-    // parse_function_call() might use v7->cur_obj, which can be
-    // deallocated by the v7_freeval() calls below. Therefore, we call
-    // parse_function_call() right here, before cleaning up.
-    // NOTE: find a better way of doing this.
-    if (*v7->pc == '(') {
-      TRY(parse_function_call(v7, v7->cur_obj));
-    }
-
-    v7_freeval(v7, v);
-    v7_freeval(v7, old);
-  }
-
-  return V7_OK;
-}
-
 enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key) {
   struct v7_prop **p;
   CHECK(obj->type == V7_OBJ || obj->type == V7_ARRAY, V7_TYPE_MISMATCH);
@@ -1431,10 +1374,68 @@ static enum v7_err parse_scalar(struct v7 *v7) {
   return V7_OK;
 }
 
+
+static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
+  struct v7_val **top = NULL, *v = NULL, *ns = NULL;
+
+  if (!v7->no_exec) {
+    top = &v7_top(v7)[-1];
+    v = make_value(v7, V7_UNDEF);
+    v->ref_count++;
+    ns = top[0];
+  }
+  v7->cur_obj = ns;
+  CHECK(v7->no_exec || ns != NULL, V7_SYNTAX_ERROR);
+
+  if (op == '.') {
+    TRY(parse_identifier(v7));
+    if (!v7->no_exec) {
+      struct v7_val key = str_to_val(v7->tok, v7->tok_len);
+      ns = get2(ns, &key);
+      if (ns != NULL && ns->type == V7_RO_PROP) {
+        ns->v.prop_func(v7->cur_obj, v);
+        ns = v;
+      }
+    }
+  } else {
+    TRY(parse_expression(v7));
+    TRY(match(v7, ']'));
+    if (!v7->no_exec) {
+      ns = get2(ns, v7_top(v7)[-1]);
+      if (ns != NULL && ns->type == V7_RO_PROP) {
+        ns->v.prop_func(v7->cur_obj, v);
+        ns = v;
+      }
+      TRY(inc_stack(v7, -1));
+    }
+  }
+
+  if (top != NULL) {
+    struct v7_val *old = top[0];
+    top[0] = ns == NULL ? v : ns;
+    top[0]->ref_count++;
+
+    // parse_function_call() might use v7->cur_obj, which can be
+    // deallocated by the v7_freeval() calls below. Therefore, we call
+    // parse_function_call() right here, before cleaning up.
+    // NOTE: find a better way of doing this.
+    if (*v7->pc == '(') {
+      TRY(parse_function_call(v7, v7->cur_obj));
+    }
+
+    v7_freeval(v7, v);
+    v7_freeval(v7, old);
+  }
+
+  return V7_OK;
+}
+
 static enum v7_err parse_prop_accessor2(struct v7 *v7) {
   TRY(parse_scalar(v7));
   while (*v7->pc == '.' || *v7->pc == '[') {
-    TRY(parse_prop_accessor(v7));
+    int op = v7->pc[0];
+    TRY(match(v7, op));
+    TRY(parse_prop_accessor(v7, op));
   }
   return V7_OK;
 }

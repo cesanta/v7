@@ -33,6 +33,7 @@ var module = (function(arg) {
     privilegedMethod: function(x, y) { return privateMethod(x, y); }
   };
 })(7);
+print(module)
 test(module.publicProperty === 'I am public!');
 //test(module.publicMethod(3) === 15);
 //test(module.privilegedMethod(3, 4) === 1020);
@@ -47,4 +48,4 @@ test(1.2345 / 0.0 == Infinity, 'Math 2');
 test(undefined != undefined, 'undef');
 test((function(x,y){ return x * y;})(3, 4) == 12, 'anon function');
 
-print('Congratulations, all tests passed!\n');
+print('Congratulations, all tests passed!');

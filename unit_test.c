@@ -136,20 +136,19 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "a + 5") == V7_TYPE_MISMATCH);
 
   ASSERT(v7_exec(v7, "print();") == V7_OK);
-  ASSERT(v7_exec(v7, "print('\n');") == V7_OK);
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this);") == V7_OK);
 
   ASSERT(v7_exec(v7, "a = 7;") == V7_OK);
   ASSERT(check_num(v7, 7.0));
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this);") == V7_OK);
 
   ASSERT(v7_exec(v7, "b = a + 3;") == V7_OK);
   ASSERT(check_num(v7, 10.0));
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this);") == V7_OK);
 
   ASSERT(v7_exec(v7, "c = b * (a + 3) / 2;") == V7_OK);
   ASSERT(check_num(v7, 50.0));
-  ASSERT(v7_exec(v7, "print(this, '\n');") == V7_OK);
+  ASSERT(v7_exec(v7, "print(this);") == V7_OK);
 
   ASSERT(v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a;") == V7_OK);
   ASSERT(v7_exec(v7, "b + 2; x + 3 + 1 z = x -2;") == V7_OK);
@@ -167,7 +166,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "k = { y: 17 };") == V7_OK);
   ASSERT(v7_exec(v7, "k.y") == V7_OK);
   ASSERT(check_num(v7, 17.0));
-  v7_exec(v7, "print(this, '\n');");
+  v7_exec(v7, "print(this);");
 
   // Delete k.y and make sure it's gone
   ASSERT(v7_exec(v7, "delete k.y;") == V7_OK);
@@ -184,9 +183,9 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "k.x = 47;") == V7_OK);
   ASSERT(v7_exec(v7, "k.qwe = { foo: 5 };") == V7_OK);
-  v7_exec(v7, "print(k, '\n');");
+  v7_exec(v7, "print(k);");
   ASSERT(v7_exec(v7, "k.qwe.foo = 15;") == V7_OK);
-  v7_exec(v7, "print(k, '\n');");
+  v7_exec(v7, "print(k);");
 
   ASSERT(v7_exec(v7, "k.key1.x + 4") == V7_OK);
   ASSERT(check_num(v7, 7.0));
@@ -214,7 +213,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "f1(12, 4) * 2;") == V7_OK);
   ASSERT(check_num(v7, 96.0));
 
-  ASSERT(v7_exec(v7, "f = function(x,y,z) {print(this, '\n');};") == V7_OK);
+  ASSERT(v7_exec(v7, "f = function(x,y,z) {print(this);};") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_exec(v7, "f();") == V7_OK);
   ASSERT(v7_exec(v7, "f({});") == V7_OK);
@@ -245,8 +244,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var a = 'foo'; a == 'foo';") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
 
-  ASSERT(v7_exec(v7, "a = { x: function(p) "
-                 "{ print(this, '\n'); } }") == V7_OK);
+  ASSERT(v7_exec(v7, "a = { x: function(p) { print(this); } }") == V7_OK);
   ASSERT(v7_exec(v7, "a.x(2);") == V7_OK);
 
   ASSERT(v7_exec(v7, "74.toString()") == V7_OK);
@@ -333,11 +331,9 @@ static const char *test_v7_exec(void) {
   ASSERT(check_bool(v7, 1.0));
 
   ASSERT(v7_exec(v7, "if (false) 3; ") == V7_OK);
-  //ASSERT(check_bool(v7, 0.0));
   ASSERT(v7_exec(v7, "if (true) { if (1) {2;} 5; } ") == V7_OK);
   ASSERT(check_num(v7, 5.0));
   ASSERT(v7_exec(v7, "if ('') 3; ") == V7_OK);
-  //ASSERT(check_str(v7, ""));
   ASSERT(v7_exec(v7, "if ('0') 9; ") == V7_OK);
   ASSERT(check_num(v7, 9.0));
   ASSERT(v7_exec(v7, "if (false) 1; else 3;") == V7_OK);
@@ -347,7 +343,11 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "if (false) 1; else if (1) { 3 } else { 2 }") == V7_OK);
   ASSERT(check_num(v7, 3.0));
 
-  ASSERT(v7_exec(v7, "print(['hi', 1, true, null, /\\s+/], '\n')") == V7_OK);
+  ASSERT(v7_exec(v7, "print(['hi', 1, true, null, /\\s+/])") == V7_OK);
+
+  ASSERT(v7_exec(v7, "a = {};") == V7_OK);
+  //ASSERT(v7_exec(v7, "a.foo = function(x) { var y = "
+  //               "x.substr(1).split() }") == V7_OK);
 
   v7_destroy(&v7);
   return NULL;
