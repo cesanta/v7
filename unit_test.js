@@ -14,6 +14,17 @@ function test(condition, msg) {
   }
 }
 
+
+var func1 = function() {
+  var param = 5;
+  param++;
+  return function(x, y) { return x * y * param; }
+}
+var closure1 = func1(), closure2 = func1();
+test(closure1(2, 3) == 36, 'closure1');
+test(closure2(2, 3) == 36, 'closure2');
+
+
 var v1 = 123, v2 = 234;
 function f(v1) { return v1 ? v1 : v2; }
 test(f(1) == 1, 'func params 1');
@@ -46,7 +57,8 @@ test('He who speaks, does not know'.substr(24) == 'know', 'substr 2');
 test('A warrior never worries about his fear'.indexOf('his') == 30, 'indexOf');
 test(Math.PI - 3.1415926 < 0.0001, 'Math 1');
 test(1.2345 / 0.0 == Infinity, 'Math 2');
-test(undefined != undefined, 'undef');
+test(undefined == undefined, 'undef');
+test(undefined == null, 'undef2');
 test((function(x,y){ return x * y;})(3, 4) == 12, 'anon function');
 
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);

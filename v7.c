@@ -719,6 +719,8 @@ struct v7_val v7_str_to_val(const char *buf) {
 
 static int cmp(const struct v7_val *a, const struct v7_val *b) {
   if (a == NULL || b == NULL) return 0;
+  if ((a->type == V7_UNDEF || a->type == V7_NULL) &&
+      (b->type == V7_UNDEF || b->type == V7_NULL)) return 1;
   if (a->type != b->type) return 0;
   {
     double an = a->v.num, bn = b->v.num;
@@ -732,8 +734,6 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
         return an == bn;
       case V7_STR:
         return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
-      case V7_UNDEF:
-        return 0;
       default:
         return a == b;
     }
