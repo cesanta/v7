@@ -47,7 +47,7 @@ var module = (function(arg) {
   };
 })(7);
 test(module.publicProperty === 'I am public!');
-//test(module.publicMethod(3) === 15);
+test(module.publicMethod(3) === 15);
 //test(module.privilegedMethod(3, 4) === 1020);
 
 
