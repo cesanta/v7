@@ -355,8 +355,9 @@ DEFINE_C_FUNC(Std_print, v7, this_obj, result, args, num_args) {
   char buf[4000];
   int i;
   for (i = 0; i < num_args; i++) {
-    printf("%s\n", v7_to_string(args[i], buf, sizeof(buf)));
+    printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
   }
+  putchar('\n');
 }
 
 DEFINE_C_FUNC(Std_exit, v7, this_obj, result, args, num_args) {
@@ -1440,13 +1441,29 @@ static enum v7_err parse_prop_accessor2(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err parse_precedence_3(struct v7 *v7) {
+  TRY(parse_prop_accessor2(v7));
+  if ((v7->pc[0] == '+' && v7->pc[1] == '+') ||
+      (v7->pc[0] == '-' && v7->pc[1] == '-')) {
+    int increment = (v7->pc[0] == '+') ? 1 : -1;
+    v7->pc += 2;
+    skip_whitespaces_and_comments(v7);
+    if (!v7->no_exec) {
+      struct v7_val *v = v7_top(v7)[-1];
+      CHECK(v->type == V7_NUM, V7_TYPE_MISMATCH);
+      v->v.num += increment;
+    }
+  }
+  return V7_OK;
+}
+
 static enum v7_err parse_precedence_4(struct v7 *v7) {
   int neg = 0;
   if (v7->pc[0] == '!' && v7->pc[1] != '=') {
     TRY(match(v7, v7->pc[0]));
     neg++;
   }
-  TRY(parse_prop_accessor2(v7));
+  TRY(parse_precedence_3(v7));
   if (neg && !v7->no_exec) {
     int is_true = v7_is_true(v7_top(v7)[-1]);
     TRY(v7_pop(v7, 1));
@@ -1783,7 +1800,7 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   if (strncmp(v7->pc, "else", 4) == 0) {
     v7->pc += 4;
     skip_whitespaces_and_comments(v7);
-    v7->no_exec = !v7->no_exec;
+    v7->no_exec = old_no_exec || !v7->no_exec;
     TRY(parse_compound_statement(v7, has_return));    
   }
 

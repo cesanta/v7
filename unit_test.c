@@ -343,6 +343,9 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "if (false) 1; else if (1) { 3 } else { 2 }") == V7_OK);
   ASSERT(check_num(v7, 3.0));
 
+  ASSERT(v7_exec(v7, "a = 32; 2 + a++;") == V7_OK);
+  ASSERT(check_num(v7, 35.0));
+
   ASSERT(v7_exec(v7, "print(['hi', 1, true, null, /\\s+/])") == V7_OK);
 
   ASSERT(v7_exec(v7, "a = {};") == V7_OK);

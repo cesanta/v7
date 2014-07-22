@@ -14,7 +14,6 @@ function test(condition, msg) {
   }
 }
 
-
 var v1 = 123, v2 = 234;
 function f(v1) { return v1 ? v1 : v2; }
 test(f(1) == 1, 'func params 1');
@@ -36,7 +35,6 @@ var module = (function(arg) {
     privilegedMethod: function(x, y) { return privateMethod(x, y); }
   };
 })(7);
-print(module)
 test(module.publicProperty === 'I am public!');
 //test(module.publicMethod(3) === 15);
 //test(module.privilegedMethod(3, 4) === 1020);
