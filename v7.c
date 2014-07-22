@@ -99,6 +99,14 @@ enum {
   OP_GREATER_EQUAL,   //  >=
   OP_LESS_EQUAL,      //  <=
 
+  OP_PLUS,            //  +
+  OP_MINUS,           //  -
+  OP_MUL,             //  *
+  OP_DIV,             //  /
+  OP_REM,             //  %
+  OP_PLUS_PLUS,       //  ++
+  OP_MINUS_MINUS,     //  --
+
   // Equality ops
   OP_EQUAL,           //  ==
   OP_NOT_EQUAL,       //  !=
@@ -125,6 +133,7 @@ enum {
 static const int s_op_lengths[NUM_OPS] = {
   -1,
   1, 1, 2, 2,
+  1, 1, 1, 1, 1, 2, 2,
   2, 2, 3, 3,
   1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4
 };
@@ -1317,16 +1326,7 @@ static enum v7_err parse_variable(struct v7 *v7) {
 }
 
 static enum v7_err parse_scalar(struct v7 *v7) {
-  if (*v7->pc == '!') {
-    TRY(match(v7, '!'));
-    TRY(parse_expression(v7));
-    if (!v7->no_exec) {
-      int is_true = v7_is_true(v7_top(v7)[-1]);
-      TRY(v7_pop(v7, 1));
-      TRY(v7_make_and_push(v7, V7_BOOL));
-      v7_top(v7)[-1]->v.num = is_true ? 0.0 : 1.0;
-    }
-  } else if (*v7->pc == '(') {
+  if (*v7->pc == '(') {
     TRY(match(v7, '('));
     TRY(parse_expression(v7));
     TRY(match(v7, ')'));
@@ -1440,10 +1440,26 @@ static enum v7_err parse_prop_accessor2(struct v7 *v7) {
   return V7_OK;
 }
 
+static enum v7_err parse_precedence_4(struct v7 *v7) {
+  int neg = 0;
+  if (v7->pc[0] == '!' && v7->pc[1] != '=') {
+    TRY(match(v7, v7->pc[0]));
+    neg++;
+  }
+  TRY(parse_prop_accessor2(v7));
+  if (neg && !v7->no_exec) {
+    int is_true = v7_is_true(v7_top(v7)[-1]);
+    TRY(v7_pop(v7, 1));
+    TRY(v7_make_and_push(v7, V7_BOOL));
+    v7_top(v7)[-1]->v.num = is_true ? 0.0 : 1.0;
+  }
+  return V7_OK;
+}
+
 static enum v7_err parse_factor(struct v7 *v7) {
   int old_sp = v7_sp(v7);
 
-  TRY(parse_prop_accessor2(v7));
+  TRY(parse_precedence_4(v7));
   if (*v7->pc == '(') {
     TRY(parse_function_call(v7, v7->cur_obj));
   }
@@ -1456,8 +1472,6 @@ static enum v7_err parse_factor(struct v7 *v7) {
   return V7_OK;
 }
 
-//  term        =   factor { mul_op factor }
-//  mul_op      =   "*" | "/"
 static enum v7_err parse_term(struct v7 *v7) {
   TRY(parse_factor(v7));
   while ((*v7->pc == '*' || *v7->pc == '/' || *v7->pc == '%') &&

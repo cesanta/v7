@@ -4,10 +4,13 @@
 //
 // To run this test, start a terminal and execute "make js"
 
+var numFailedTests = 0, numPassedTests = 0;
 function test(condition, msg) {
-  if (!condition) {
-    print(msg, ' test failed\n');
-    exit(1);
+  if (condition) {
+    numPassedTests++;
+  } else {
+    print(msg, ' test failed');
+    numFailedTests++;
   }
 }
 
@@ -48,4 +51,4 @@ test(1.2345 / 0.0 == Infinity, 'Math 2');
 test(undefined != undefined, 'undef');
 test((function(x,y){ return x * y;})(3, 4) == 12, 'anon function');
 
-print('Congratulations, all tests passed!');
+print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);
