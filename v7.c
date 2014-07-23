@@ -99,14 +99,6 @@ enum {
   OP_GREATER_EQUAL,   //  >=
   OP_LESS_EQUAL,      //  <=
 
-  OP_PLUS,            //  +
-  OP_MINUS,           //  -
-  OP_MUL,             //  *
-  OP_DIV,             //  /
-  OP_REM,             //  %
-  OP_PLUS_PLUS,       //  ++
-  OP_MINUS_MINUS,     //  --
-
   // Equality ops
   OP_EQUAL,           //  ==
   OP_NOT_EQUAL,       //  !=
@@ -133,7 +125,6 @@ enum {
 static const int s_op_lengths[NUM_OPS] = {
   -1,
   1, 1, 2, 2,
-  1, 1, 1, 1, 1, 2, 2,
   2, 2, 3, 3,
   1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4
 };

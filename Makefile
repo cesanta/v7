@@ -5,7 +5,7 @@ CFLAGS += -I$(SLRE)
 
 SOURCES = v7.c $(SLRE)/slre.c
 
-all: unit_test
+all: unit_test js
 	valgrind -q --leak-check=full ./unit_test
 #	gcov -a unit_test.c
 

@@ -321,10 +321,6 @@ static const char *test_v7_exec(void) {
   ASSERT(check_bool(v7, 0.0));
   ASSERT(v7_exec(v7, "!''") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
-  ASSERT(v7_exec(v7, "null != undefined") == V7_OK);
-  ASSERT(check_bool(v7, 1.0));
-  ASSERT(v7_exec(v7, "undefined != undefined") == V7_OK);
-  ASSERT(check_bool(v7, 1.0));
   ASSERT(v7_exec(v7, "1 != 2") == V7_OK);
   ASSERT(check_bool(v7, 1.0));
   ASSERT(v7_exec(v7, "7 >= 0") == V7_OK);
