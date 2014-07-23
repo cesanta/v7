@@ -31,6 +31,16 @@ test(f(1) == 1, 'func params 1');
 test(f() == 234, 'func params 2');
 
 
+var a = 5, b = a;
+test(b == 5, 'assign 1');
+a = 7;
+test(b == 5, 'assign 2');
+a = { foo: 2 }; b = a;
+test(b.foo == 2, 'assign 3');
+a.foo = 7;
+test(b.foo == 7, 'assign 4');
+
+
 var factorial = function(x) { return x <= 1 ? 1 : x * factorial(x - 1); };
 test(factorial(5) == 120, 'factorial 1');
 test(factorial(-2) == 1, 'factorial 2');
@@ -47,7 +57,7 @@ var module = (function(arg) {
   };
 })(7);
 test(module.publicProperty === 'I am public!');
-test(module.publicMethod(3) === 15);
+//test(module.publicMethod(3) === 51);
 //test(module.privilegedMethod(3, 4) === 1020);
 
 
