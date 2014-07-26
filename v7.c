@@ -1442,6 +1442,8 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
 
     v7_freeval(v7, v);
     v7_freeval(v7, old);
+  } else if (*v7->pc == '(') {
+    TRY(parse_function_call(v7, v7->cur_obj));
   }
 
   return V7_OK;

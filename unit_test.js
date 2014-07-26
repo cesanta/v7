@@ -40,6 +40,11 @@ test(b.foo == 2, 'assign 3');
 a.foo = 7;
 test(b.foo == 7, 'assign 4');
 
+(function() {
+  var a = { b: 'aa bb cc dd' };
+  var x = a.b.substr().split('\r\n');
+})();
+
 
 var factorial = function(x) { return x <= 1 ? 1 : x * factorial(x - 1); };
 test(factorial(5) == 120, 'factorial 1');
