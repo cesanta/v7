@@ -964,11 +964,15 @@ static enum v7_err parse_num(struct v7 *v7) {
   return V7_OK;
 }
 
+static int is_valid_start_of_identifier(int ch) {
+  return ch == '$' || ch == '_' || is_alpha(ch);
+}
+
 static enum v7_err parse_identifier(struct v7 *v7) {
-  CHECK(is_alpha(*v7->pc) || *v7->pc == '_', V7_SYNTAX_ERROR);
+  CHECK(is_valid_start_of_identifier(v7->pc[0]), V7_SYNTAX_ERROR);
   v7->tok = v7->pc;
   v7->pc++;
-  while (is_alnum(*v7->pc) || *v7->pc == '_') v7->pc++;
+  while (is_alnum(*v7->pc) || *v7->pc == '_' || *v7->pc == '$') v7->pc++;
   v7->tok_len = (unsigned long) (v7->pc - v7->tok);
   skip_whitespaces_and_comments(v7);
   return V7_OK;
@@ -1343,7 +1347,7 @@ static enum v7_err parse_scalar(struct v7 *v7) {
     TRY(parse_array_literal(v7));
   } else if (*v7->pc == '/') {
     TRY(parse_regex(v7));
-  } else if (is_alpha(*v7->pc) || *v7->pc == '_') {
+  } else if (is_valid_start_of_identifier(v7->pc[0])) {
     TRY(parse_identifier(v7));
     if (test_token(v7, "this", 4)) {
       // TODO: fix this.
@@ -1813,7 +1817,7 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
 }
 
 static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
-  if (*v7->pc == '_' || is_alpha(*v7->pc)) {
+  if (is_valid_start_of_identifier(v7->pc[0])) {
     TRY(parse_identifier(v7));    // Load identifier into v7->tok, v7->tok_len
     if (test_token(v7, "var", 3)) {
       TRY(parse_declaration(v7));
