@@ -65,6 +65,8 @@ test('a' + 'b' == 'ab', 'string concatenation');
 test('He who knows, does not speak'.substr(3, 3) == 'who', 'substr 1');
 test('He who speaks, does not know'.substr(24) == 'know', 'substr 2');
 test('A warrior never worries about his fear'.indexOf('his') == 30, 'indexOf');
+test((123.33245).toFixed(0) === '123', 'toFixed');
+
 test(Math.PI - 3.1415926 < 0.0001, 'Math 1');
 test(1.2345 / 0.0 == Infinity, 'Math 2');
 test(undefined == undefined, 'undef');

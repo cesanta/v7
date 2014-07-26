@@ -342,6 +342,18 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   }
 }
 
+DEFINE_C_FUNC(Num_toFixed, v7, this_obj, result, args, num_args) {
+  int len, digits = num_args > 0 ? (int) args[0]->v.num : 0;
+  char fmt[10], buf[100];
+
+  v7_set_value_type(result, V7_STR);
+  snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
+  len = snprintf(buf, sizeof(buf), fmt, this_obj->v.num);
+  if (len > 0 && (result->v.str.buf = v7_strdup(buf, len)) != NULL) {
+    result->v.str.len = len;
+  }
+}
+
 DEFINE_C_FUNC(Std_print, v7, this_obj, result, args, num_args) {
   char buf[4000];
   int i;
@@ -373,6 +385,7 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_number, "MAX_VALUE", V7_NUM, num, LONG_MAX);
   SET_RO_PROP(s_number, "MIN_VALUE", V7_NUM, num, LONG_MIN);
   SET_RO_PROP(s_number, "NaN", V7_NUM, num, NAN);
+  SET_RO_PROP(s_number, "toFixed", V7_C_FUNC, c_func, Num_toFixed);
 
   SET_RO_PROP(s_array, "length", V7_RO_PROP, prop_func, Arr_length);
 

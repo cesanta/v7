@@ -23,7 +23,8 @@ v7: $(SOURCES) v7.h
 	$(CC) $(SOURCES) -o $@ -DV7_EXE $(CFLAGS)
 
 js: v7
-	./v7 unit_test.js
+	@./v7 unit_test.js
+	@rhino -version 130 unit_test.js
 
 w:
 	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe
