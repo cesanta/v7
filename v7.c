@@ -84,10 +84,16 @@
 
 // Possible bit mask values for struct v7_val::flags
 enum {
-  V7_RDONLY_VAL   = 1,    // The whole "struct v7_val" is statically allocated
+  V7_RDONLY_VAL     = 1,  // The whole "struct v7_val" is statically allocated
                           // and must not be free()-ed
-  V7_RDONLY_STR   = 2,    // struct v7_val::v.str.buf is statically allocated
-  V7_RDONLY_PROP  = 4     // struct v7_val::v.prop is statically allocated
+  V7_RDONLY_STR     = 2,  // struct v7_val::v.str.buf is statically allocated
+  V7_RDONLY_PROP    = 4,  // struct v7_val::v.prop is statically allocated
+
+  // ES3.0 8.6.1 property attributes
+  V7_ATTR_READ_ONLY = 8,  // Property is read-only
+  V7_ATTR_DONT_ENUM = 16, // Not enumeratable by for (.. in ..) loop
+  V7_ATTR_DONT_DEL  = 32, // Attempts to delete the property are ignored
+  V7_ATTR_INTERNAL  = 64  // Not directly accessible, implementation-specific
 };
 
 enum {
