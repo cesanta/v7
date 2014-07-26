@@ -315,26 +315,28 @@ DEFINE_C_FUNC(Str_indexOf, v7, this_obj, result, args, num_args) {
 }
 
 DEFINE_C_FUNC(Str_substr, v7, this_obj, result, args, num_args) {
+  long start = 0;
+
   v7_set_value_type(result, V7_STR);
   result->v.str.buf = (char *) "";
   result->v.str.len = 0;
   result->flags = V7_RDONLY_STR;
 
   if (num_args > 0 && args[0]->type == V7_NUM) {
-    long start = (long) args[0]->v.num;
-    if (start < 0) {
-      start += (long) this_obj->v.str.len;
+    start = (long) args[0]->v.num;
+  }
+  if (start < 0) {
+    start += (long) this_obj->v.str.len;
+  }
+  if (start >= 0 && start < (long) this_obj->v.str.len) {
+    long n = this_obj->v.str.len - start;
+    if (num_args > 1 && args[1]->type == V7_NUM) {
+      n = args[1]->v.num;
     }
-    if (start >= 0 && start < (long) this_obj->v.str.len) {
-      long n = this_obj->v.str.len - start;
-      if (num_args > 1 && args[1]->type == V7_NUM) {
-        n = args[1]->v.num;
-      }
-      if (n > 0 && n <= ((long) this_obj->v.str.len - start)) {
-        result->v.str.len = n;
-        result->v.str.buf = v7_strdup(this_obj->v.str.buf + start, n);
-        result->flags = 0;
-      }
+    if (n > 0 && n <= ((long) this_obj->v.str.len - start)) {
+      result->v.str.len = n;
+      result->v.str.buf = v7_strdup(this_obj->v.str.buf + start, n);
+      result->flags = 0;
     }
   }
 }
