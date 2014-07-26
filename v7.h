@@ -97,6 +97,7 @@ struct v7 {
   int line_no;                // Line number
   int no_exec;                // No-execute flag. For parsing function defs
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
+  struct v7_val *this_obj;
   struct v7_val *free_values;
   struct v7_prop *free_props;
 };

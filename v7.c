@@ -1116,7 +1116,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
     int old_line_no = v7->line_no;
 
     // Move control flow to function body
-    v7->pc = f->v.func.source_code; 
+    v7->pc = f->v.func.source_code;
     v7->line_no = f->v.func.line_no;
     v7->curr_func = f;
 
@@ -1358,9 +1358,7 @@ static enum v7_err parse_scalar(struct v7 *v7) {
   } else if (is_valid_start_of_identifier(v7->pc[0])) {
     TRY(parse_identifier(v7));
     if (test_token(v7, "this", 4)) {
-      // TODO: fix this.
-      //TRY(v7_push(v7, cur_scope(v7)));
-      TRY(v7_push(v7, cur_scope(v7)));
+      TRY(v7_push(v7, v7->this_obj));
     } else if (test_token(v7, "null", 4)) {
       TRY(v7_make_and_push(v7, V7_NULL));
     } else if (test_token(v7, "undefined", 9)) {
@@ -1401,7 +1399,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
     v->ref_count++;
     ns = top[0];
   }
-  v7->cur_obj = ns;
+  v7->cur_obj = v7->this_obj = ns;
   CHECK(v7->no_exec || ns != NULL, V7_SYNTAX_ERROR);
 
   if (op == '.') {
@@ -1450,12 +1448,14 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
 }
 
 static enum v7_err parse_prop_accessor2(struct v7 *v7) {
+  struct v7_val *old_this = v7->this_obj;
   TRY(parse_scalar(v7));
   while (*v7->pc == '.' || *v7->pc == '[') {
     int op = v7->pc[0];
     TRY(match(v7, op));
     TRY(parse_prop_accessor(v7, op));
   }
+  v7->this_obj = old_this;
   return V7_OK;
 }
 
@@ -1819,7 +1819,7 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
     v7->pc += 4;
     skip_whitespaces_and_comments(v7);
     v7->no_exec = old_no_exec || !v7->no_exec;
-    TRY(parse_compound_statement(v7, has_return));    
+    TRY(parse_compound_statement(v7, has_return));
   }
 
   v7->no_exec = old_no_exec;  // Restore old execution flag
@@ -1863,6 +1863,7 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   // Prior calls to v7_exec() may have left current_scope modified, reset now
   //free_scopes(v7, 1);
   //v7->current_scope = 0;  // XXX free up higher scopes?
+  v7->this_obj = &v7->root_scope;
 
   while (*v7->pc != '\0') {
     TRY(inc_stack(v7, -v7->sp));          // Reset stack on each statement
