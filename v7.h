@@ -49,7 +49,6 @@ struct v7_prop {
   struct v7_val *val;
 };
 
-// A string.
 struct v7_string {
   char *buf;                // Pointer to buffer with string data
   unsigned long len;        // String length
@@ -60,7 +59,7 @@ struct v7_func {
   int line_no;              // Line number where function begins
   struct v7_val *scope;     // Function's scope
   struct v7_val *upper;     // Upper-level function
-  struct v7_val *args;      // Upper-level function
+  struct v7_val *args;      // Function arguments
 };
 
 union v7_scalar {
@@ -86,9 +85,7 @@ struct v7 {
   struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
   struct v7_val root_scope;
   struct v7_val *curr_func;   // Currently executing function
-  //struct v7_val scopes[20]; // Namespace objects (scopes)
   int sp;                     // Stack pointer
-  //int current_scope;        // Pointer to the current scope
 
   const char *source_code;    // Pointer to the source codeing
   const char *pc;             // Current parsing position
