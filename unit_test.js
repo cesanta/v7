@@ -46,14 +46,26 @@ test(b.foo == 7, 'assign 4');
   var x = a.b.substr().split('\r\n');
 })();
 
+
 var a = { b: function() { return this.c; }, c: 777 };
 test(a.b() == 777, 'this 1');
 test(this.a.c == 777, 'this 2');
+
+
+var a = 11;
+var b = function() { return a; var a = 'hi'; }
+test(b() == undefined, 'hoisting 1');
+
 
 var factorial = function(x) { return x <= 1 ? 1 : x * factorial(x - 1); };
 test(factorial(5) == 120, 'factorial 1');
 test(factorial(-2) == 1, 'factorial 2');
 test(factorial(1) == 1, 'factorial 3');
+
+
+var ctor = function(x) { this.prop1 = x; return 0; };
+var o = new ctor('blah');
+test(o.prop1 === 'blah', 'ctor1');
 
 
 var module = (function(arg) {
@@ -65,10 +77,9 @@ var module = (function(arg) {
     privilegedMethod: function(x, y) { return privateMethod(x, y); }
   };
 })(7);
-test(module.publicProperty === 'I am public!');
-//test(module.publicMethod(3) === 51);
+test(module.publicProperty === 'I am public!', 'public prop');
+//test(module.publicMethod(3) == 21, 'public method');
 //test(module.privilegedMethod(3, 4) === 1020);
-
 
 test('a' + 'b' == 'ab', 'string concatenation');
 test('He who knows, does not speak'.substr(3, 3) == 'who', 'substr 1');
@@ -82,6 +93,8 @@ test(Math.PI - 3.1415926 < 0.0001, 'Math 1');
 test(1.2345 / 0.0 == Infinity, 'Math 2');
 test(undefined == undefined, 'undef');
 test(undefined == null, 'undef2');
+test(Number(3.45) == 3.45, 'new1');
+test((new Number(3.45)) == 3.45, 'new2');
 test((function(x,y){ return x * y;})(3, 4) == 12, 'anon function');
 
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);
