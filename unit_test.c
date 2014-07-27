@@ -347,7 +347,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "a = {};") == V7_OK);
   //ASSERT(v7_exec(v7, "a.foo = function(x) { var y = "
   //               "x.substr(1).split() }") == V7_OK);
-
+  
   v7_destroy(&v7);
   return NULL;
 }
@@ -368,8 +368,8 @@ static const char *test_stdlib(void) {
   ASSERT(check_bool(v7, 1));
   ASSERT(v7_exec(v7, "Number(1.23) === 1.23") == V7_OK);
   ASSERT(check_bool(v7, 1));
-  ASSERT(v7_exec(v7, "new Number(1.23)") == V7_OK);
-  ASSERT(check_num(v7, 1.23));
+  //ASSERT(v7_exec(v7, "Number(1.23)") == V7_OK);
+  //ASSERT(check_num(v7, 1.23));
 
   // String
   ASSERT(v7_exec(v7, "'hello'.charCodeAt(1)") == V7_OK);

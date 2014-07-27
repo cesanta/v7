@@ -150,6 +150,11 @@ static struct v7_val s_number = RO_OBJ(V7_OBJ);
 static struct v7_val s_array  = RO_OBJ(V7_OBJ);
 static struct v7_val s_global = RO_OBJ(V7_OBJ);
 
+static const char *s_type_names[] = {
+  "undefined", "null", "object", "number", "string", "boolean", "function",
+  "c_function", "property", "regexp"
+};
+
 static char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *) malloc(len + 1);
   if (p == NULL) return NULL;
@@ -1013,8 +1018,14 @@ static enum v7_err parse_identifier(struct v7 *v7) {
 }
 
 static int compare_to_tok(struct v7 *v7, const char *str, int str_len) {
-  return memcmp(v7->pc, str, str_len) == 0 &&
-    !is_valid_identifier_char(v7->pc[str_len]);
+  int equal = 0;
+  if (memcmp(v7->pc, str, str_len) == 0 &&
+      !is_valid_identifier_char(v7->pc[str_len])) {
+    equal++;
+    v7->pc += str_len;
+    skip_whitespaces_and_comments(v7);
+  }
+  return equal;
 }
 
 static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
@@ -1486,8 +1497,6 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
 
   if (compare_to_tok(v7, "new", 3)) {
     has_new++;
-    v7->pc += 3;
-    skip_whitespaces_and_comments(v7);
     if (!v7->no_exec) {
       v7_make_and_push(v7, V7_OBJ);
       cur_this = v7->this_obj = v7_top(v7)[-1];
@@ -1523,29 +1532,36 @@ static enum v7_err parse_precedence_3(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err parse_factor(struct v7 *v7) {
-  int neg = 0;
+static enum v7_err parse_precedence4(struct v7 *v7) {
+  int has_neg = 0, has_typeof = 0;
   if (v7->pc[0] == '!') { // && v7->pc[1] != '=') {  TODO(lsm): remove
     TRY(match(v7, v7->pc[0]));
-    neg++;
+    has_neg++;
+  }
+  if (compare_to_tok(v7, "typeof", 6)) {
+    has_typeof++;
   }
   TRY(parse_precedence_3(v7));
-  if (neg && !v7->no_exec) {
+  if (has_neg && !v7->no_exec) {
     int is_true = v7_is_true(v7_top(v7)[-1]);
     TRY(v7_make_and_push(v7, V7_BOOL));
     v7_top(v7)[-1]->v.num = is_true ? 0.0 : 1.0;
+  }
+  if (has_typeof && !v7->no_exec) {
+    const char *s = s_type_names[v7_top(v7)[-1]->type];
+    TRY(v7_push(v7, v7_mkv(v7, V7_STR, s, strlen(s), 0)));
   }
 
   return V7_OK;
 }
 
 static enum v7_err parse_term(struct v7 *v7) {
-  TRY(parse_factor(v7));
+  TRY(parse_precedence4(v7));
   while ((*v7->pc == '*' || *v7->pc == '/' || *v7->pc == '%') &&
          v7->pc[1] != '=') {
     int sp1 = v7->sp, ch = *v7->pc;
     TRY(match(v7, ch));
-    TRY(parse_factor(v7));
+    TRY(parse_precedence4(v7));
     if (!v7->no_exec) {
       TRY(do_arithmetic_op(v7, ch, sp1, v7->sp));
     }

@@ -96,5 +96,9 @@ test(undefined == null, 'undef2');
 test(Number(3.45) == 3.45, 'new1');
 test((new Number(3.45)) == 3.45, 'new2');
 test((function(x,y){ return x * y;})(3, 4) == 12, 'anon function');
+test(typeof 123 === 'number', 'typeof1');
+test(typeof {} === 'object', 'typeof2');
+test(typeof function(){} === 'function', 'typeof3');
+test(typeof 'x' === 'string', 'typeof4');
 
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);
