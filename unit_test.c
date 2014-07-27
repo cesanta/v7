@@ -345,8 +345,8 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "print(['hi', 1, true, null, /\\s+/])") == V7_OK);
 
   ASSERT(v7_exec(v7, "a = {};") == V7_OK);
-  //ASSERT(v7_exec(v7, "a.foo = function(x) { var y = "
-  //               "x.substr(1).split() }") == V7_OK);
+  ASSERT(v7_exec(v7, "a.foo = function(x) { var y = "
+                 "x.substr(1).split() }") == V7_OK);
   
   v7_destroy(&v7);
   return NULL;
@@ -423,6 +423,8 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, "b"));
   ASSERT(v7_exec(v7, "{z: '123456'}.z.substr(0, 3).split('').length") == V7_OK);
   ASSERT(check_num(v7, 3.0));
+  ASSERT(v7_exec(v7, "new String()") == V7_OK);
+  //ASSERT(check_str(v7, ""));
 
   // Math
   ASSERT(v7_exec(v7, "Math.sqrt(144)") == V7_OK);

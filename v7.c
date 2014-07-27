@@ -148,6 +148,7 @@ static struct v7_val s_string = RO_OBJ(V7_OBJ);
 static struct v7_val s_math   = RO_OBJ(V7_OBJ);
 static struct v7_val s_number = RO_OBJ(V7_OBJ);
 static struct v7_val s_array  = RO_OBJ(V7_OBJ);
+static struct v7_val s_json   = RO_OBJ(V7_OBJ);
 static struct v7_val s_global = RO_OBJ(V7_OBJ);
 
 static const char *s_type_names[] = {
@@ -370,11 +371,32 @@ DEFINE_C_FUNC(Num_toFixed, v7, this_obj, result, args, num_args) {
   }
 }
 
+DEFINE_C_FUNC(Object_ctor, v7, this_obj, result, args, num_args) {
+  v7_set_value_type(result, V7_OBJ);
+}
+
 DEFINE_C_FUNC(Number_ctor, v7, this_obj, result, args, num_args) {
-  //v7_set_value_type(this_obj, V7_NUM);
   v7_set_value_type(result, V7_NUM);
-  //this_obj->v.num =
   result->v.num = num_args > 0 ? args[0]->v.num : 0.0;
+}
+
+static void set_empty_string(struct v7_val *s) {
+  v7_set_value_type(s, V7_STR);
+  s->flags = V7_RDONLY_STR;
+  s->v.str.buf = (char *) "";
+  s->v.str.len = 0;
+}
+
+DEFINE_C_FUNC(String_ctor, v7, this_obj, result, args, num_args) {
+  set_empty_string(result);
+}
+
+DEFINE_C_FUNC(Array_ctor, v7, this_obj, result, args, num_args) {
+  v7_set_value_type(result, V7_ARRAY);
+}
+
+DEFINE_C_FUNC(Json_stringify, v7, this_obj, result, args, num_args) {
+  set_empty_string(result);
 }
 
 DEFINE_C_FUNC(Std_print, v7, this_obj, result, args, num_args) {
@@ -410,6 +432,8 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_number, "NaN", V7_NUM, num, NAN);
   SET_RO_PROP(s_number, "toFixed", V7_C_FUNC, c_func, Num_toFixed);
 
+  SET_RO_PROP(s_json, "stringify", V7_C_FUNC, c_func, Json_stringify);
+
   SET_RO_PROP(s_array, "length", V7_RO_PROP, prop_func, Arr_length);
 
   SET_RO_PROP(s_string, "length", V7_RO_PROP, prop_func, Str_length);
@@ -432,12 +456,12 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_global, "print", V7_C_FUNC, c_func, Std_print);
   SET_RO_PROP(s_global, "exit", V7_C_FUNC, c_func, Std_exit);
   
-  SET_RO_PROP_V(s_global, "Object", s_object);
-  //SET_RO_PROP_V(s_global, "Number", s_number);
+  SET_RO_PROP2(s_global, "Object", V7_C_FUNC, &s_object, c_func, Object_ctor);
   SET_RO_PROP2(s_global, "Number", V7_C_FUNC, &s_number, c_func, Number_ctor);
+  SET_RO_PROP2(s_global, "String", V7_C_FUNC, &s_string, c_func, String_ctor);
+  SET_RO_PROP2(s_global, "Array", V7_C_FUNC, &s_array, c_func, Array_ctor);
   SET_RO_PROP_V(s_global, "Math", s_math);
-  SET_RO_PROP_V(s_global, "String", s_string);
-  SET_RO_PROP_V(s_global, "Array", s_array);
+  SET_RO_PROP_V(s_global, "JSON", s_json);
 }
 
 struct v7 *v7_create(void) {
@@ -1534,13 +1558,13 @@ static enum v7_err parse_precedence_3(struct v7 *v7) {
 
 static enum v7_err parse_precedence4(struct v7 *v7) {
   int has_neg = 0, has_typeof = 0;
-  if (v7->pc[0] == '!') { // && v7->pc[1] != '=') {  TODO(lsm): remove
+
+  if (v7->pc[0] == '!') {
     TRY(match(v7, v7->pc[0]));
     has_neg++;
   }
-  if (compare_to_tok(v7, "typeof", 6)) {
-    has_typeof++;
-  }
+  has_typeof = compare_to_tok(v7, "typeof", 6);
+  
   TRY(parse_precedence_3(v7));
   if (has_neg && !v7->no_exec) {
     int is_true = v7_is_true(v7_top(v7)[-1]);
