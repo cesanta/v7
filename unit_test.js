@@ -102,5 +102,8 @@ test(typeof {} === 'object', 'typeof2');
 test(typeof function(){} === 'function', 'typeof3');
 test(typeof 'x' === 'string', 'typeof4');
 test(typeof (new String()) === 'object', 'new4');
+test('aa  \tbb cc'.split(/\s+/).length == 3, 'split1');
+test('aa  \tbb cc'.split(/\s+/)[1] == 'bb', 'split2');
+test('aa  \tbb cc'.split(/\s+/)[2] == 'cc', 'split3');
 
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);

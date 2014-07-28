@@ -291,11 +291,15 @@ DEFINE_C_FUNC(Str_split, v7, this_obj, result, args, num_args) {
       }
     }
   } else if (args[0]->type == V7_REGEX) {
+    char regex[200];
+    struct slre_cap caps[20];
     int n = 0;
+    
+    snprintf(regex, sizeof(regex), "(%s)", args[0]->v.regex);
     p1 = s->buf;
-    while ((n = slre_match(args[0]->v.regex, s->buf, s->len, 0, 0, 0)) > 0) {
+    while ((n = slre_match(regex, p1, e - p1, caps, ARRAY_SIZE(caps), 0)) > 0) {
       if (limit >= 0 && limit <= num_elems) return;
-      v7_append(v7, result, v7_mkv(v7, V7_STR, p1, n, 1));
+      v7_append(v7, result, v7_mkv(v7, V7_STR, p1, caps[0].ptr - p1, 1));
       p1 += n;
       num_elems++;
     }
