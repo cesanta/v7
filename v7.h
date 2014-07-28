@@ -117,6 +117,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v);
 void v7_set_value_type(struct v7_val *v, enum v7_type type);
 struct v7_val *v7_lookup(struct v7_val *obj, const char *key);
 struct v7_val *v7_rootns(struct v7 *);
+void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
 int v7_is_true(const struct v7_val *v);
 int v7_sp(struct v7 *v7);
 struct v7_val **v7_top(struct v7 *);

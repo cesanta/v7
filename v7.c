@@ -945,6 +945,22 @@ enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
   return V7_OK;
 }
 
+void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
+  struct v7_prop *p;
+
+  v7_set_value_type(v, orig->type);
+  switch (v->type) {
+    case V7_ARRAY:
+    case V7_OBJ:
+      for (p = orig->v.props; p != NULL; p = p->next) {
+        v7_set(v7, v, p->key, p->val);
+      }
+      break;
+    // TODO(lsm): add the rest of types
+    default: abort(); break;
+  }
+}
+
 static int is_alpha(int ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }

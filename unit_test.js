@@ -101,5 +101,6 @@ test(typeof 123 === 'number', 'typeof1');
 test(typeof {} === 'object', 'typeof2');
 test(typeof function(){} === 'function', 'typeof3');
 test(typeof 'x' === 'string', 'typeof4');
+test(typeof (new String()) === 'object', 'new4');
 
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);
