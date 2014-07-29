@@ -38,9 +38,17 @@ enum v7_err {
 
 struct v7;
 struct v7_val;
-typedef void (*v7_c_func_t)(struct v7 *, struct v7_val *this_obj,
-                            struct v7_val *result,
-                            struct v7_val **params, int num_params);
+
+struct v7_c_func_arg {
+  struct v7 *v7;
+  struct v7_val *this_obj;
+  struct v7_val *result;
+  struct v7_val **args;
+  int num_args;
+  int called_as_constructor;
+};
+
+typedef void (*v7_c_func_t)(struct v7_c_func_arg *arg);
 typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
 
 struct v7_prop {

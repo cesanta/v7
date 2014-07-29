@@ -50,16 +50,14 @@
 
 static int static_num_tests = 0;
 
-static void adder(struct v7 *v7, struct v7_val *obj, struct v7_val *result,
-                  struct v7_val **args, int num_args) {
+static void adder(struct v7_c_func_arg *cfa) {
   int i;
 
-  (void) v7; (void) obj;
-  result->type = V7_NUM;
-  result->v.num = 0;
+  cfa->result->type = V7_NUM;
+  cfa->result->v.num = 0;
 
-  for (i = 0; i < num_args; i++) {
-    result->v.num += args[i]->v.num;
+  for (i = 0; i < cfa->num_args; i++) {
+    cfa->result->v.num += cfa->args[i]->v.num;
   }
 }
 

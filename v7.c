@@ -79,12 +79,6 @@
 #define SET_RO_PROP(obj, name, type, attr, initializer) \
     SET_RO_PROP2(obj, name, type, &s_object, attr, initializer)
 
-#define DEFINE_C_FUNC(name, aa, ab, ac, ad, ae)         \
-  static void name(struct v7 * __unused aa,             \
-    struct v7_val * __unused ab,                        \
-    struct v7_val * __unused ac,                        \
-    struct v7_val ** __unused ad, int __unused ae)
-
 // Possible bit mask values for struct v7_val::flags
 enum {
   V7_RDONLY_VAL     = 1,  // The whole "struct v7_val" is statically allocated
@@ -166,41 +160,39 @@ static char *v7_strdup(const char *ptr, unsigned long len) {
   return p;
 }
 
-static void Obj_toString(struct v7 *v7, struct v7_val *this_obj,
-                         struct v7_val *result, struct v7_val **args,
-                         int num_args) {
+static void Obj_toString(struct v7_c_func_arg *cfa) {
   char buf[4000];
-  (void) v7; (void) args; (void) num_args;
-  v7_to_string(this_obj, buf, sizeof(buf));
-  v7_set_value_type(result, V7_STR);
-  result->v.str.len = strlen(buf);
-  result->v.str.buf = v7_strdup(buf, result->v.str.len);
+  v7_to_string(cfa->this_obj, buf, sizeof(buf));
+  v7_set_value_type(cfa->result, V7_STR);
+  cfa->result->v.str.len = strlen(buf);
+  cfa->result->v.str.buf = v7_strdup(buf, cfa->result->v.str.len);
 }
 
-DEFINE_C_FUNC(Math_random, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_NUM);
-  srand((unsigned long) result);   // TODO: make better randomness
-  result->v.num = (double) rand() / RAND_MAX;
+static void Math_random(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_NUM);
+  srand((unsigned long) cfa->result);   // TODO: make better randomness
+  cfa->result->v.num = (double) rand() / RAND_MAX;
 }
 
-DEFINE_C_FUNC(Math_sin, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_NUM);
-  result->v.num = num_args == 1 ? sin(args[0]->v.num) : 0;
+static void Math_sin(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_NUM);
+  cfa->result->v.num = cfa->num_args == 1 ? sin(cfa->args[0]->v.num) : 0;
 }
 
-DEFINE_C_FUNC(Math_sqrt, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_NUM);
-  result->v.num = num_args == 1 ? sqrt(args[0]->v.num) : 0;
+static void Math_sqrt(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_NUM);
+  cfa->result->v.num = cfa->num_args == 1 ? sqrt(cfa->args[0]->v.num) : 0;
 }
 
-DEFINE_C_FUNC(Math_tan, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_NUM);
-  result->v.num = num_args == 1 ? tan(args[0]->v.num) : 0;
+static void Math_tan(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_NUM);
+  cfa->result->v.num = cfa->num_args == 1 ? tan(cfa->args[0]->v.num) : 0;
 }
 
-DEFINE_C_FUNC(Math_pow, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_NUM);
-  result->v.num = num_args == 2 ? pow(args[0]->v.num, args[1]->v.num) : 0;
+static void Math_pow(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_NUM);
+  cfa->result->v.num = cfa->num_args == 2 ?
+    pow(cfa->args[0]->v.num, cfa->args[1]->v.num) : 0;
 }
 
 static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
@@ -208,48 +200,51 @@ static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
   result->v.num = this_obj->v.str.len;
 }
 
-DEFINE_C_FUNC(Str_charCodeAt, v7, this_obj, result, args, num_args) {
-  double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
-  const struct v7_string *str = &this_obj->v.str;
+static void Str_charCodeAt(struct v7_c_func_arg *cfa) {
+  double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_NUM ?
+    cfa->args[0]->v.num : NAN;
+  const struct v7_string *str = &cfa->this_obj->v.str;
 
-  v7_set_value_type(result, V7_NUM);
-  result->v.num = NAN;
+  v7_set_value_type(cfa->result, V7_NUM);
+  cfa->result->v.num = NAN;
 
-  if (!isnan(idx) && this_obj->type == V7_STR && fabs(idx) < str->len) {
-    result->v.num = ((unsigned char *) str->buf)[(int) idx];
+  if (!isnan(idx) && cfa->this_obj->type == V7_STR && fabs(idx) < str->len) {
+    cfa->result->v.num = ((unsigned char *) str->buf)[(int) idx];
   }
 }
 
-DEFINE_C_FUNC(Str_charAt, v7, this_obj, result, args, num_args) {
-  double idx = num_args > 0 && args[0]->type == V7_NUM ? args[0]->v.num : NAN;
-  const struct v7_string *str = &this_obj->v.str;
+static void Str_charAt(struct v7_c_func_arg *cfa) {
+  double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_NUM ?
+     cfa->args[0]->v.num : NAN;
+  const struct v7_string *str = &cfa->this_obj->v.str;
 
-  v7_set_value_type(result, V7_UNDEF);
-  if (!isnan(idx) && this_obj->type == V7_STR && fabs(idx) < str->len) {
-    v7_set_value_type(result, V7_STR);
-    result->v.str.len = 1;
-    result->v.str.buf = v7_strdup("x", 1);
-    result->v.str.buf[0] = ((unsigned char *) str->buf)[(int) idx];
+  v7_set_value_type(cfa->result, V7_UNDEF);
+  if (!isnan(idx) && cfa->this_obj->type == V7_STR && fabs(idx) < str->len) {
+    v7_set_value_type(cfa->result, V7_STR);
+    cfa->result->v.str.len = 1;
+    cfa->result->v.str.buf = v7_strdup("x", 1);
+    cfa->result->v.str.buf[0] = ((unsigned char *) str->buf)[(int) idx];
   }
 }
 
-DEFINE_C_FUNC(Str_match, v7, this_obj, result, args, num_args) {
+static void Str_match(struct v7_c_func_arg *cfa) {
   struct slre_cap caps[100];
-  const struct v7_string *s = &this_obj->v.str;
+  const struct v7_string *s = &cfa->this_obj->v.str;
   int i, n;
 
-  v7_set_value_type(result, V7_NULL);
+  v7_set_value_type(cfa->result, V7_NULL);
   memset(caps, 0, sizeof(caps));
 
-  if (num_args == 1 && args[0]->type == V7_REGEX &&
-      (n = slre_match(args[0]->v.regex, s->buf, s->len,
+  if (cfa->num_args == 1 && cfa->args[0]->type == V7_REGEX &&
+      (n = slre_match(cfa->args[0]->v.regex, s->buf, s->len,
                       caps, ARRAY_SIZE(caps) - 1, 0)) > 0) {
-    v7_set_value_type(result, V7_ARRAY);
-    v7_append(v7, result, v7_mkv(v7, V7_STR, s->buf, (long) n, 1));
+    v7_set_value_type(cfa->result, V7_ARRAY);
+    v7_append(cfa->v7, cfa->result,
+              v7_mkv(cfa->v7, V7_STR, s->buf, (long) n, 1));
     for (i = 0; i < (int) ARRAY_SIZE(caps); i++) {
       if (caps[i].len == 0) break;
-      v7_append(v7, result,
-                v7_mkv(v7, V7_STR, caps[i].ptr, (long) caps[i].len, 1));
+      v7_append(cfa->v7, cfa->result,
+                v7_mkv(cfa->v7, V7_STR, caps[i].ptr, (long) caps[i].len, 1));
     }
   }
 }
@@ -262,96 +257,103 @@ static const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
   return NULL;
 }
 
-DEFINE_C_FUNC(Str_split, v7, this_obj, result, args, num_args) {
-  const struct v7_string *s = &this_obj->v.str;
+static void Str_split(struct v7_c_func_arg *cfa) {
+  const struct v7_string *s = &cfa->this_obj->v.str;
   const char *p1, *p2, *e = s->buf + s->len;
-  int limit = num_args == 2 && args[1]->type == V7_NUM ? args[1]->v.num : -1;
+  int limit = cfa->num_args == 2 && cfa->args[1]->type == V7_NUM ?
+     cfa->args[1]->v.num : -1;
   int num_elems = 0;
 
-  v7_set_value_type(result, V7_ARRAY);
-  if (num_args == 0) {
-    v7_append(v7, result, v7_mkv(v7, V7_STR, s->buf, s->len, 1));
-  } else if (args[0]->type == V7_STR) {
-    const struct v7_string *sep = &args[0]->v.str;
+  v7_set_value_type(cfa->result, V7_ARRAY);
+  if (cfa->num_args == 0) {
+    v7_append(cfa->v7, cfa->result, v7_mkv(cfa->v7, V7_STR, s->buf, s->len, 1));
+  } else if (cfa->args[0]->type == V7_STR) {
+    const struct v7_string *sep = &cfa->args[0]->v.str;
     if (sep->len == 0) {
       // Separator is empty. Split string by characters.
       for (p1 = s->buf; p1 < e; p1++) {
         if (limit >= 0 && limit <= num_elems) return;
-        v7_append(v7, result, v7_mkv(v7, V7_STR, p1, 1, 1));
+        v7_append(cfa->v7, cfa->result, v7_mkv(cfa->v7, V7_STR, p1, 1, 1));
         num_elems++;
       }
     } else {
       p1 = s->buf;
       while ((p2 = memstr(p1, e - p1, sep->buf, sep->len)) != NULL) {
         if (limit >= 0 && limit <= num_elems) return;
-        v7_append(v7, result, v7_mkv(v7, V7_STR, p1, p2 - p1, 1));
+        v7_append(cfa->v7, cfa->result,
+                  v7_mkv(cfa->v7, V7_STR, p1, p2 - p1, 1));
         p1 = p2 + sep->len;
         num_elems++;
       }
       if (limit < 0 || limit > num_elems) {
-        v7_append(v7, result, v7_mkv(v7, V7_STR, p1, e - p1, 1));
+        v7_append(cfa->v7, cfa->result, v7_mkv(cfa->v7, V7_STR, p1, e - p1, 1));
       }
     }
-  } else if (args[0]->type == V7_REGEX) {
+  } else if (cfa->args[0]->type == V7_REGEX) {
     char regex[200];
     struct slre_cap caps[20];
     int n = 0;
     
-    snprintf(regex, sizeof(regex), "(%s)", args[0]->v.regex);
+    snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
     while ((n = slre_match(regex, p1, e - p1, caps, ARRAY_SIZE(caps), 0)) > 0) {
       if (limit >= 0 && limit <= num_elems) return;
-      v7_append(v7, result, v7_mkv(v7, V7_STR, p1, caps[0].ptr - p1, 1));
+      v7_append(cfa->v7, cfa->result,
+                v7_mkv(cfa->v7, V7_STR, p1, caps[0].ptr - p1, 1));
       p1 += n;
       num_elems++;
     }
     if (limit < 0 || limit > num_elems) {
-      v7_append(v7, result, v7_mkv(v7, V7_STR, p1, e - p1, 1));
+      v7_append(cfa->v7, cfa->result, v7_mkv(cfa->v7, V7_STR, p1, e - p1, 1));
     }
   }
 }
 
-DEFINE_C_FUNC(Str_indexOf, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_NUM);
-  result->v.num = -1.0;
+static void Str_indexOf(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_NUM);
+  cfa->result->v.num = -1.0;
 
-  if (this_obj->type == V7_STR && num_args > 0 && args[0]->type == V7_STR) {
-    int i = num_args > 1 && args[1]->type == V7_NUM ? (int) args[1]->v.num : 0;
-    const struct v7_string *a = &this_obj->v.str, *b = &args[0]->v.str;
+  if (cfa->this_obj->type == V7_STR &&
+      cfa->num_args > 0 &&
+      cfa->args[0]->type == V7_STR) {
+    int i = cfa->num_args > 1 && cfa->args[1]->type == V7_NUM ?
+      (int) cfa->args[1]->v.num : 0;
+    const struct v7_string *a = &cfa->this_obj->v.str,
+      *b = &cfa->args[0]->v.str;
 
     // Scan the string, advancing one byte at a time
     for (; i >= 0 && a->len >= b->len && i <= (int) (a->len - b->len); i++) {
       if (memcmp(a->buf + i, b->buf, b->len) == 0) {
-        result->v.num = i;
+        cfa->result->v.num = i;
         break;
       }
     }
   }
 }
 
-DEFINE_C_FUNC(Str_substr, v7, this_obj, result, args, num_args) {
+static void Str_substr(struct v7_c_func_arg *cfa) {
   long start = 0;
 
-  v7_set_value_type(result, V7_STR);
-  result->v.str.buf = (char *) "";
-  result->v.str.len = 0;
-  result->flags = V7_RDONLY_STR;
+  v7_set_value_type(cfa->result, V7_STR);
+  cfa->result->v.str.buf = (char *) "";
+  cfa->result->v.str.len = 0;
+  cfa->result->flags = V7_RDONLY_STR;
 
-  if (num_args > 0 && args[0]->type == V7_NUM) {
-    start = (long) args[0]->v.num;
+  if (cfa->num_args > 0 && cfa->args[0]->type == V7_NUM) {
+    start = (long) cfa->args[0]->v.num;
   }
   if (start < 0) {
-    start += (long) this_obj->v.str.len;
+    start += (long) cfa->this_obj->v.str.len;
   }
-  if (start >= 0 && start < (long) this_obj->v.str.len) {
-    long n = this_obj->v.str.len - start;
-    if (num_args > 1 && args[1]->type == V7_NUM) {
-      n = args[1]->v.num;
+  if (start >= 0 && start < (long) cfa->this_obj->v.str.len) {
+    long n = cfa->this_obj->v.str.len - start;
+    if (cfa->num_args > 1 && cfa->args[1]->type == V7_NUM) {
+      n = cfa->args[1]->v.num;
     }
-    if (n > 0 && n <= ((long) this_obj->v.str.len - start)) {
-      result->v.str.len = n;
-      result->v.str.buf = v7_strdup(this_obj->v.str.buf + start, n);
-      result->flags = 0;
+    if (n > 0 && n <= ((long) cfa->this_obj->v.str.len - start)) {
+      cfa->result->v.str.len = n;
+      cfa->result->v.str.buf = v7_strdup(cfa->this_obj->v.str.buf + start, n);
+      cfa->result->flags = 0;
     }
   }
 }
@@ -365,25 +367,25 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   }
 }
 
-DEFINE_C_FUNC(Num_toFixed, v7, this_obj, result, args, num_args) {
-  int len, digits = num_args > 0 ? (int) args[0]->v.num : 0;
+static void Num_toFixed(struct v7_c_func_arg *cfa) {
+  int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
   char fmt[10], buf[100];
 
-  v7_set_value_type(result, V7_STR);
+  v7_set_value_type(cfa->result, V7_STR);
   snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
-  len = snprintf(buf, sizeof(buf), fmt, this_obj->v.num);
-  if (len > 0 && (result->v.str.buf = v7_strdup(buf, len)) != NULL) {
-    result->v.str.len = len;
+  len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
+  if (len > 0 && (cfa->result->v.str.buf = v7_strdup(buf, len)) != NULL) {
+    cfa->result->v.str.len = len;
   }
 }
 
-DEFINE_C_FUNC(Object_ctor, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_OBJ);
+static void Object_ctor(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_OBJ);
 }
 
-DEFINE_C_FUNC(Number_ctor, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_NUM);
-  result->v.num = num_args > 0 ? args[0]->v.num : 0.0;
+static void Number_ctor(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_NUM);
+  cfa->result->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
 }
 
 static void set_empty_string(struct v7_val *s) {
@@ -393,16 +395,16 @@ static void set_empty_string(struct v7_val *s) {
   s->v.str.len = 0;
 }
 
-DEFINE_C_FUNC(String_ctor, v7, this_obj, result, args, num_args) {
-  set_empty_string(result);
+static void String_ctor(struct v7_c_func_arg *cfa) {
+  set_empty_string(cfa->result);
 }
 
-DEFINE_C_FUNC(Array_ctor, v7, this_obj, result, args, num_args) {
-  v7_set_value_type(result, V7_ARRAY);
+static void Array_ctor(struct v7_c_func_arg *cfa) {
+  v7_set_value_type(cfa->result, V7_ARRAY);
 }
 
-DEFINE_C_FUNC(Json_stringify, v7, this_obj, result, args, num_args) {
-  set_empty_string(result);
+static void Json_stringify(struct v7_c_func_arg *cfa) {
+  set_empty_string(cfa->result);
   // TODO(lsm): implement JSON.stringify
 }
 
@@ -637,53 +639,53 @@ static void bin2str(char *to, const unsigned char *p, size_t len) {
   *to = '\0';
 }
 
-DEFINE_C_FUNC(Crypto_md5, v7, this_obj, result, args, num_args) {
-  set_empty_string(result);
-  if (num_args == 1 && args[0]->type == V7_STR) {
-    result->v.str.len = 16;
-    result->v.str.buf = (char *) calloc(1, result->v.str.len + 1);
-    v7_md5(args[0], result->v.str.buf);
+static void Crypto_md5(struct v7_c_func_arg *cfa) {
+  set_empty_string(cfa->result);
+  if (cfa->num_args == 1 && cfa->args[0]->type == V7_STR) {
+    cfa->result->v.str.len = 16;
+    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
+    v7_md5(cfa->args[0], cfa->result->v.str.buf);
   }
 }
 
-DEFINE_C_FUNC(Crypto_md5_hex, v7, this_obj, result, args, num_args) {
-  set_empty_string(result);
-  if (num_args == 1 && args[0]->type == V7_STR) {
+static void Crypto_md5_hex(struct v7_c_func_arg *cfa) {
+  set_empty_string(cfa->result);
+  if (cfa->num_args == 1 && cfa->args[0]->type == V7_STR) {
     char hash[16];
-    v7_md5(args[0], hash);
-    result->v.str.len = 32;
-    result->v.str.buf = (char *) calloc(1, result->v.str.len + 1);
-    bin2str(result->v.str.buf, (unsigned char *) hash, sizeof(hash));
+    v7_md5(cfa->args[0], hash);
+    cfa->result->v.str.len = 32;
+    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
+    bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
   }
 }
 #endif  // V7_DISABLE_CRYPTO
 
-DEFINE_C_FUNC(Std_print, v7, this_obj, result, args, num_args) {
+static void Std_print(struct v7_c_func_arg *cfa) {
   char buf[4000];
   int i;
-  for (i = 0; i < num_args; i++) {
-    printf("%s", v7_to_string(args[i], buf, sizeof(buf)));
+  for (i = 0; i < cfa->num_args; i++) {
+    printf("%s", v7_to_string(cfa->args[i], buf, sizeof(buf)));
   }
   putchar('\n');
 }
 
-DEFINE_C_FUNC(Std_load, v7, this_obj, result, args, num_args) {
+static void Std_load(struct v7_c_func_arg *cfa) {  
   int i;
 
-  v7_set_value_type(result, V7_BOOL);
-  result->v.num = 1.0;
+  v7_set_value_type(cfa->result, V7_BOOL);
+  cfa->result->v.num = 1.0;
 
-  for (i = 0; i < num_args; i++) {
-    if (args[i]->type != V7_STR ||
-        v7_exec_file(v7, args[i]->v.str.buf) != V7_OK) {
-      result->v.num = 0.0;
+  for (i = 0; i < cfa->num_args; i++) {
+    if (cfa->args[i]->type != V7_STR ||
+        v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf) != V7_OK) {
+      cfa->result->v.num = 0.0;
       break;
     }
   }
 }
 
-DEFINE_C_FUNC(Std_exit, v7, this_obj, result, args, num_args) {
-  int exit_code = num_args > 0 ? (int) args[0]->v.num : EXIT_SUCCESS;
+static void Std_exit(struct v7_c_func_arg *cfa) {  
+  int exit_code = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
 }
 
@@ -1479,7 +1481,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
     struct v7_val *old_curr_func = v7->curr_func;
     int old_line_no = v7->line_no;
 
-    // Move control flow to function body
+    // Move control flow to the function body
     v7->pc = f->v.func.source_code;
     v7->line_no = f->v.func.line_no;
     v7->curr_func = f;
@@ -1487,27 +1489,17 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
     // Execute function body
     TRY(parse_function_definition(v7, v, num_args));
 
-    // Return control flow
+    // Return control flow back
     v7->pc = old_pc;
     v7->line_no = old_line_no;
     v7->curr_func = old_curr_func;
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
-#if 0
-    if (v7_top(v7) == top) {
-      TRY(v7_make_and_push(v7, V7_UNDEF));
-    }
-#endif
   } else if (f->type == V7_C_FUNC) {
-    //TRY(v7_make_and_push(v7, V7_UNDEF));
-    f->v.c_func(v7, this_obj, v7_top(v7)[-1], v + 1, num_args);
+    struct v7_c_func_arg arg = {
+      v7, this_obj, v7_top(v7)[-1], v + 1, num_args, 0
+    };
+    f->v.c_func(&arg);
   }
-#if 0
-  // Move return value to where <called_function> is, cleanup everything else
-  v7_freeval(v7, v[0]);
-  v[0] = top[0];
-  inc_ref_count(v[0]);
-  TRY(v7_pop(v7, (int) (v7_top(v7) - (v + 1))));
-#endif
   return V7_OK;
 }
 
