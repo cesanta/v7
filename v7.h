@@ -64,10 +64,10 @@ struct v7_func {
 
 union v7_scalar {
   char *regex;              // \0-terminated regex
-  double num;
-  struct v7_string str;
+  double num;               // Holds "Number" or "Boolean" value
+  struct v7_string str;     // Holds "String" value
   struct v7_func func;      // \0-terminated function code
-  v7_c_func_t c_func;       // C function
+  v7_c_func_t c_func;       // Pointer to the C function
   v7_prop_func_t prop_func; // Object's property function, e.g. String.length
 };
 
@@ -83,21 +83,21 @@ struct v7_val {
 };
 
 struct v7 {
-  struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
-  struct v7_val root_scope;
+  struct v7_val root_scope;   // "global" object (root-level execution context)
   struct v7_val *curr_func;   // Currently executing function
+  struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
   int sp;                     // Stack pointer
 
-  const char *source_code;    // Pointer to the source codeing
+  const char *source_code;    // Pointer to the source code
   const char *pc;             // Current parsing position
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
   int line_no;                // Line number
   int no_exec;                // No-execute flag. For parsing function defs
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
-  struct v7_val *this_obj;
-  struct v7_val *free_values;
-  struct v7_prop *free_props;
+  struct v7_val *this_obj;    // Current "this" object
+  struct v7_val *free_values; // List of free (deallocated) values
+  struct v7_prop *free_props; // List of free (deallocated) props
 };
 
 struct v7 *v7_create(void);
