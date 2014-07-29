@@ -13,11 +13,11 @@ Small size and simplicity are V7's main design goals.
 
 To retain it's small size, V7 does not implement full ECMAScript specification.
 
-## Example: using V7 to implement HTTP/Websocket server
+## Example: implementing HTTP/Websocket server
 
-Please take a look at [websocket.js](https://github.com/cesanta/websocket.js)
+Please take a look at [Smart.js](https://github.com/cesanta/Smart.js)
 
-## Example: using V7 to load complex configuration in JSON format
+## Example: loading complex JSON configuration
 
 TBD
 
