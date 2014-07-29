@@ -59,15 +59,15 @@
 #define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
-#define RO_OBJ(t) {0,0,(t),0,V7_RDONLY_VAL|V7_RDONLY_STR|V7_RDONLY_PROP,{0}}
+#define RO_OBJ(t) { 0, 0, 0, 0, {0},(t), V7_RDONLY_ALL, 0 }
 #define SET_RO_PROP_V(obj, name, val)                   \
   do {                                                  \
     static struct v7_val key = RO_OBJ(V7_STR);          \
     static struct v7_prop prop = {NULL, &key, &val};    \
     key.v.str.buf = (char *) (name);                    \
     key.v.str.len = strlen(key.v.str.buf);              \
-    prop.next = obj.v.props;                            \
-    obj.v.props = &prop;                                \
+    prop.next = obj.props;                              \
+    obj.props = &prop;                                  \
   } while (0)
 #define SET_RO_PROP2(obj, name, type, prototype, attr, initializer) \
   do {                                                  \
@@ -91,6 +91,7 @@ enum {
                           // and must not be free()-ed
   V7_RDONLY_STR     = 2,  // struct v7_val::v.str.buf is statically allocated
   V7_RDONLY_PROP    = 4,  // struct v7_val::v.prop is statically allocated
+  V7_RDONLY_ALL     = V7_RDONLY_VAL | V7_RDONLY_STR | V7_RDONLY_PROP,
 
   // ES3.0 8.6.1 property attributes
   V7_ATTR_READ_ONLY = 8,  // Property is read-only
@@ -359,7 +360,7 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   struct v7_prop *p;
   v7_set_value_type(result, V7_NUM);
   result->v.num = 0.0;
-  for (p = this_obj->v.props; p != NULL; p = p->next) {
+  for (p = this_obj->props; p != NULL; p = p->next) {
     result->v.num += 1.0;
   }
 }
@@ -785,11 +786,11 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   if ((v->type == V7_OBJ || v->type == V7_ARRAY) &&
       !(v->flags & V7_RDONLY_PROP)) {
     struct v7_prop *p, *tmp;
-    for (p = v->v.props; p != NULL; p = tmp) {
+    for (p = v->props; p != NULL; p = tmp) {
       tmp = p->next;
       free_prop(v7, p);
     }
-    v->v.props = NULL;
+    v->props = NULL;
   } else if (v->type == V7_STR && !(v->flags & V7_RDONLY_STR)) {
     free(v->v.str.buf);
   } else if (v->type == V7_REGEX && !(v->flags & V7_RDONLY_STR)) {
@@ -896,8 +897,8 @@ static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m;
   int n = snprintf(buf, bsiz, "%s", "{");
 
-  for (m = v->v.props; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != v->v.props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+  for (m = v->props; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != v->props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
     v7_to_string(m->key, buf + n, bsiz - n);
     n = (int) strlen(buf);
     n += snprintf(buf + n , bsiz - n, "%s", ": ");
@@ -911,8 +912,8 @@ static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m;
   int n = snprintf(buf, bsiz, "%s", "[");
 
-  for (m = v->v.props; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != v->v.props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+  for (m = v->props; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != v->props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
     v7_to_string(m->val, buf + n, bsiz - n);
     n = (int) strlen(buf);
   }
@@ -1088,11 +1089,11 @@ static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key) {
   for (; obj != NULL; obj = obj->proto) {
     if (obj->type == V7_ARRAY && key->type == V7_NUM) {
       int i = (int) key->v.num;
-      for (m = obj->v.props; m != NULL; m = m->next) {
+      for (m = obj->props; m != NULL; m = m->next) {
         if (i-- == 0) return m;
       }
     } else if (obj->type == V7_OBJ) {
-      for (m = obj->v.props; m != NULL; m = m->next) {
+      for (m = obj->props; m != NULL; m = m->next) {
         if (cmp(m->key, key)) return m;
       }
     }
@@ -1164,7 +1165,7 @@ static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
     inc_ref_count(v);
     m->val = v;
   } else {
-    TRY(vinsert(v7, &obj->v.props, k, v));
+    TRY(vinsert(v7, &obj->props, k, v));
   }
 
   return V7_OK;
@@ -1232,7 +1233,7 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
   switch (v->type) {
     case V7_ARRAY:
     case V7_OBJ:
-      for (p = orig->v.props; p != NULL; p = p->next) {
+      for (p = orig->props; p != NULL; p = p->next) {
         v7_set(v7, v, p->key, p->val);
       }
       break;
@@ -1582,7 +1583,7 @@ enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   // Make dummy key unique, or v7_set() may override an existing key.
   // Also, we want to append to the end of the list, to make indexing work
   key->v.num = (unsigned long) key;
-  for (head = &arr->v.props; *head != NULL; head = &head[0]->next);
+  for (head = &arr->props; *head != NULL; head = &head[0]->next);
   prop = mkprop(v7);
   CHECK(prop != NULL, V7_OUT_OF_MEMORY);
   prop->next = *head;
@@ -1652,7 +1653,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
 enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key) {
   struct v7_prop **p;
   CHECK(obj->type == V7_OBJ || obj->type == V7_ARRAY, V7_TYPE_MISMATCH);
-  for (p = &obj->v.props; *p != NULL; p = &p[0]->next) {
+  for (p = &obj->props; *p != NULL; p = &p[0]->next) {
     if (cmp(key, p[0]->key)) {
       struct v7_prop *next = p[0]->next;
       free_prop(v7, p[0]);

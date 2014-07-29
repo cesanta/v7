@@ -69,16 +69,17 @@ union v7_scalar {
   struct v7_func func;      // \0-terminated function code
   v7_c_func_t c_func;       // C function
   v7_prop_func_t prop_func; // Object's property function, e.g. String.length
-  struct v7_prop *props;    // Object's key/value list
 };
 
 struct v7_val {
   struct v7_val *next;
   struct v7_val *proto;       // Prototype
-  enum v7_type type;          // Value type
-  short ref_count;            // Reference counter
-  unsigned short flags;
+  struct v7_val *ctor;        // Constructor object
+  struct v7_prop *props;      // Object's key/value list
   union v7_scalar v;          // The value itself
+  enum v7_type type;          // Value type
+  unsigned short flags;       // Attributes
+  short ref_count;            // Reference counter
 };
 
 struct v7 {
