@@ -106,4 +106,10 @@ test('aa  \tbb cc'.split(/\s+/).length == 3, 'split1');
 test('aa  \tbb cc'.split(/\s+/)[1] == 'bb', 'split2');
 test('aa  \tbb cc'.split(/\s+/)[2] == 'cc', 'split3');
 
+if (!constructor) {
+  // Rhino doesn't have that
+  test(Crypto.md5_hex('') == 'd41d8cd98f00b204e9800998ecf8427e', 'md5_hex1');
+  test(Crypto.md5_hex('x') == '9dd4e461268c8034f5c8564e155c67a6', 'md5_hex2');  
+}
+
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);
