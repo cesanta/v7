@@ -76,7 +76,7 @@ struct v7_val {
   struct v7_val *next;
   struct v7_val *proto;       // Prototype
   enum v7_type type;          // Value type
-  short ref_count;            // Reference counter  XXX make it signed
+  short ref_count;            // Reference counter
   unsigned short flags;
   union v7_scalar v;          // The value itself
 };

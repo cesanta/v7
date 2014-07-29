@@ -412,6 +412,21 @@ DEFINE_C_FUNC(Std_print, v7, this_obj, result, args, num_args) {
   putchar('\n');
 }
 
+DEFINE_C_FUNC(Std_load, v7, this_obj, result, args, num_args) {
+  int i;
+
+  v7_set_value_type(result, V7_BOOL);
+  result->v.num = 1.0;
+
+  for (i = 0; i < num_args; i++) {
+    if (args[i]->type != V7_STR ||
+        v7_exec_file(v7, args[i]->v.str.buf) != V7_OK) {
+      result->v.num = 0.0;
+      break;
+    }
+  }
+}
+
 DEFINE_C_FUNC(Std_exit, v7, this_obj, result, args, num_args) {
   int exit_code = num_args > 0 ? (int) args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
@@ -459,6 +474,7 @@ static void init_stdlib(void) {
 
   SET_RO_PROP(s_global, "print", V7_C_FUNC, c_func, Std_print);
   SET_RO_PROP(s_global, "exit", V7_C_FUNC, c_func, Std_exit);
+  SET_RO_PROP(s_global, "load", V7_C_FUNC, c_func, Std_load);
   
   SET_RO_PROP2(s_global, "Object", V7_C_FUNC, &s_object, c_func, Object_ctor);
   SET_RO_PROP2(s_global, "Number", V7_C_FUNC, &s_number, c_func, Number_ctor);
