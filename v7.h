@@ -115,7 +115,7 @@ enum v7_err v7_exec(struct v7 *, const char *source_code);
 enum v7_err v7_exec_file(struct v7 *, const char *path);
 enum v7_err v7_push(struct v7 *v7, struct v7_val *v);
 enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type);
-enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
+enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args, int);
 enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
                     enum v7_type key_type, enum v7_type val_type, ...);
 enum v7_err v7_append(struct v7 *, struct v7_val *array, struct v7_val *val);

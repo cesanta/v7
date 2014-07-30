@@ -397,6 +397,8 @@ static void set_empty_string(struct v7_val *s) {
 
 static void String_ctor(struct v7_c_func_arg *cfa) {
   set_empty_string(cfa->result);
+  if (cfa->called_as_constructor) {
+  }
 }
 
 static void Array_ctor(struct v7_c_func_arg *cfa) {
@@ -1456,7 +1458,8 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   return V7_OK;
 }
 
-enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
+enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
+                    int called_as_ctor) {
   struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f;
 
   if (v7->no_exec) return V7_OK;
@@ -1496,14 +1499,15 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
   } else if (f->type == V7_C_FUNC) {
     struct v7_c_func_arg arg = {
-      v7, this_obj, v7_top(v7)[-1], v + 1, num_args, 0
+      v7, this_obj, v7_top(v7)[-1], v + 1, num_args, called_as_ctor
     };
     f->v.c_func(&arg);
   }
   return V7_OK;
 }
 
-static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj) {
+static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
+                                       int called_as_ctor) {
   struct v7_val **v = v7_top(v7) - 1;
   int num_args = 0;
 
@@ -1520,7 +1524,7 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj) {
   }
   TRY(match(v7, ')'));
 
-  TRY(v7_call(v7, this_obj, num_args));
+  TRY(v7_call(v7, this_obj, num_args, called_as_ctor));
 
   return V7_OK;
 }
@@ -1786,7 +1790,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
   return V7_OK;
 }
 
-static enum v7_err parse_precedence_1(struct v7 *v7) {
+static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   struct v7_val *old_this = v7->this_obj;
 
   TRY(parse_precedence_0(v7));
@@ -1796,7 +1800,7 @@ static enum v7_err parse_precedence_1(struct v7 *v7) {
     TRY(parse_prop_accessor(v7, op));
     
     while (*v7->pc == '(') {
-      TRY(parse_function_call(v7, v7->cur_obj));
+      TRY(parse_function_call(v7, v7->cur_obj, has_new));
     }
   }
   v7->this_obj = old_this;
@@ -1815,9 +1819,9 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
       cur_this = v7->this_obj = v7_top(v7)[-1];
     }
   }
-  TRY(parse_precedence_1(v7));
+  TRY(parse_precedence_1(v7, has_new));
   while (*v7->pc == '(') {
-    TRY(parse_function_call(v7, v7->cur_obj));
+    TRY(parse_function_call(v7, v7->cur_obj, has_new));
   }
 
   if (has_new && !v7->no_exec) {
