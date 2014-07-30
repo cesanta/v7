@@ -2252,23 +2252,24 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
 
 enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   FILE *fp;
-  char *p;
-  long file_size;
+  char *p, *old_pc = (char *) v7->pc;
+  long file_size, old_line_no = v7->line_no;
   enum v7_err status = V7_INTERNAL_ERROR;
 
   if ((fp = fopen(path, "r")) == NULL) {
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
-  } else if ((p = (char *) malloc((size_t) file_size + 1)) == NULL) {
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     fclose(fp);
   } else {
     rewind(fp);
     fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
-    p[file_size] = '\0';
     v7->line_no = 1;
     status = v7_exec(v7, p);
     free(p);
+    v7->pc = old_pc;
+    if (status == V7_OK) v7->line_no = (int) old_line_no;
   }
 
   return status;
