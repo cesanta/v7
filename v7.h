@@ -75,6 +75,7 @@ union v7_scalar {
   double num;               // Holds "Number" or "Boolean" value
   struct v7_string str;     // Holds "String" value
   struct v7_func func;      // \0-terminated function code
+  struct v7_prop *array;    // List of array elements
   v7_c_func_t c_func;       // Pointer to the C function
   v7_prop_func_t prop_func; // Object's property function, e.g. String.length
 };

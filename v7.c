@@ -370,7 +370,7 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   struct v7_prop *p;
   v7_set_value_type(result, V7_NUM);
   result->v.num = 0.0;
-  for (p = this_obj->props; p != NULL; p = p->next) {
+  for (p = this_obj->v.array; p != NULL; p = p->next) {
     result->v.num += 1.0;
   }
 }
@@ -1100,7 +1100,7 @@ static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key) {
   for (; obj != NULL; obj = obj->proto) {
     if (obj->type == V7_ARRAY && key->type == V7_NUM) {
       int i = (int) key->v.num;
-      for (m = obj->props; m != NULL; m = m->next) {
+      for (m = obj->v.array; m != NULL; m = m->next) {
         if (i-- == 0) return m;
       }
     } else if (obj->type == V7_OBJ) {
@@ -1579,21 +1579,16 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
 }
 
 enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
-  struct v7_val *key = make_value(v7, V7_NUM);
   struct v7_prop **head, *prop;
   CHECK(arr->type == V7_ARRAY, V7_INTERNAL_ERROR);
-  // Append using a dummy key. TODO: do not use dummy keys, they eat RAM
-  // Make dummy key unique, or v7_set() may override an existing key.
-  // Also, we want to append to the end of the list, to make indexing work
-  key->v.num = (unsigned long) key;
-  for (head = &arr->props; *head != NULL; head = &head[0]->next);
+  // Append to the end of the list, to make indexing work
+  for (head = &arr->v.array; *head != NULL; head = &head[0]->next);
   prop = mkprop(v7);
   CHECK(prop != NULL, V7_OUT_OF_MEMORY);
   prop->next = *head;
   *head = prop;
-  prop->key = key;
+  prop->key = NULL;
   prop->val = val;
-  inc_ref_count(key);
   inc_ref_count(val);
   return V7_OK;
 }
