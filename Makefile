@@ -28,3 +28,6 @@ js: v7
 
 w:
 	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe
+
+clean:
+	rm -rf *.gc* *.dSYM *.exe *.obj a.out u unit_test v7
