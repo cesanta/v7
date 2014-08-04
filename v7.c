@@ -152,6 +152,14 @@ static const char *s_type_names[] = {
   "c_function", "property", "regexp"
 };
 
+static int is_object_type(enum v7_type type) {
+  return type == V7_OBJ || type == V7_ARRAY;
+}
+
+static int is_object(const struct v7_val *v) {
+  return is_object_type(v->type);
+}
+
 static char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *) malloc(len + 1);
   if (p == NULL) return NULL;
@@ -787,8 +795,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   v->ref_count--;
   assert(v->ref_count >= 0);
   if (v->ref_count > 0) return;
-  if ((v->type == V7_OBJ || v->type == V7_ARRAY) &&
-      !(v->flags & V7_RDONLY_PROP)) {
+  if (is_object(v) && !(v->flags & V7_RDONLY_PROP)) {
     struct v7_prop *p, *tmp;
     for (p = v->props; p != NULL; p = tmp) {
       tmp = p->next;
@@ -1161,7 +1168,7 @@ static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   struct v7_prop *m = NULL;
 
   CHECK(obj != NULL && k != NULL && v != NULL, V7_INTERNAL_ERROR);
-  CHECK(obj->type == V7_OBJ || obj->type == V7_ARRAY, V7_TYPE_MISMATCH);
+  CHECK(is_object(obj), V7_TYPE_MISMATCH);
 
   // Find attribute inside object
   if ((m = v7_get(obj, k)) != NULL) {
@@ -1214,9 +1221,9 @@ enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
   va_list ap;
 
   va_start(ap, val_type);
-  k = (key_type == V7_OBJ || key_type == V7_ARRAY) ?
+  k = is_object_type(key_type) ?
     va_arg(ap, struct v7_val *) : v7_mkvv(v7, key_type, &ap);
-  v = (val_type == V7_OBJ || val_type == V7_ARRAY) ?
+  v = is_object_type(val_type) ?
     va_arg(ap, struct v7_val *) : v7_mkvv(v7, val_type, &ap);
   va_end(ap);
 
@@ -1648,7 +1655,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
 
 enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key) {
   struct v7_prop **p;
-  CHECK(obj->type == V7_OBJ || obj->type == V7_ARRAY, V7_TYPE_MISMATCH);
+  CHECK(is_object(obj), V7_TYPE_MISMATCH);
   for (p = &obj->props; *p != NULL; p = &p[0]->next) {
     if (cmp(key, p[0]->key)) {
       struct v7_prop *next = p[0]->next;
