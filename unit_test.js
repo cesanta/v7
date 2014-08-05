@@ -39,6 +39,15 @@ a = { foo: 2 }; b = a;
 test(b.foo == 2, 'assign 3');
 a.foo = 7;
 test(b.foo == 7, 'assign 4');
+a.foo++;
+test(b.foo == 8, 'incr1');
+
+
+a = 1;
+for (i = 1; i <= 5; i++) {
+  a *= i;
+}
+test(a == 120, 'for1');
 
 
 (function() {
@@ -110,7 +119,7 @@ test('aa  \tbb cc'.split(/\s+/)[2] == 'cc', 'split3');
 if (!constructor) {
   // Rhino doesn't have that
   test(Crypto.md5_hex('') == 'd41d8cd98f00b204e9800998ecf8427e', 'md5_hex1');
-  test(Crypto.md5_hex('x') == '9dd4e461268c8034f5c8564e155c67a6', 'md5_hex2');  
+  test(Crypto.md5_hex('x') == '9dd4e461268c8034f5c8564e155c67a6', 'md5_hex2');
 }
 
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);

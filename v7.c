@@ -2210,6 +2210,62 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
+static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
+  int line_expr2, line_expr3, line_stmt, line_end,
+    is_true, old_no_exec = v7->no_exec;
+  const char *expr2, *expr3, *stmt, *end;
+
+  TRY(match(v7, '('));
+  TRY(parse_expression(v7));    // expr1
+  TRY(match(v7, ';'));
+
+  // Pass through the loop, don't execute it, just remember locations
+  v7->no_exec = 1;
+  expr2 = v7->pc;
+  line_expr2 = v7->line_no;
+  TRY(parse_expression(v7));    // expr2 (condition)
+  TRY(match(v7, ';'));
+
+  expr3 = v7->pc;
+  line_expr3 = v7->line_no;
+  TRY(parse_expression(v7));    // expr3  (post-iteration)
+  TRY(match(v7, ')'));
+
+  stmt = v7->pc;
+  line_stmt = v7->line_no;
+  TRY(parse_compound_statement(v7, has_return));
+  end = v7->pc;
+  line_end = v7->line_no;
+
+  v7->no_exec = old_no_exec;
+
+  // Execute loop
+  if (!v7->no_exec) {
+    for (;;) {
+      v7->pc = expr2;
+      v7->line_no = line_expr2;
+      TRY(parse_expression(v7));    // Evaluate condition
+      is_true = !v7_is_true(v7_top(v7)[-1]);
+      TRY(inc_stack(v7, -1));
+      if (is_true) break;
+
+      v7->pc = stmt;
+      v7->line_no = line_stmt;
+      TRY(parse_compound_statement(v7, has_return));  // Loop body
+
+      v7->pc = expr3;
+      v7->line_no = line_expr3;
+      TRY(parse_expression(v7));    // expr3  (post-iteration)
+    }
+  }
+
+  // Jump to the code after the loop
+  v7->line_no = line_end;
+  v7->pc = end;
+
+  return V7_OK;
+}
+
 static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   if (is_valid_start_of_identifier(v7->pc[0])) {
     TRY(parse_identifier(v7));    // Load identifier into v7->tok, v7->tok_len
@@ -2224,6 +2280,8 @@ static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
       }
     } else if (test_token(v7, "if", 2)) {
       TRY(parse_if_statement(v7, has_return));
+    } else if (test_token(v7, "for", 3)) {
+      TRY(parse_for_statement(v7, has_return));
     } else {
       v7->pc = v7->tok;
       TRY(parse_expression(v7));
