@@ -849,15 +849,6 @@ enum v7_err v7_pop(struct v7 *v7, int incr) {
   return inc_stack(v7, -incr);
 }
 
-#if 0
-static void free_scopes(struct v7 *v7, int i) {
-  for (; i < (int) ARRAY_SIZE(v7->scopes); i++) {
-    v7->scopes[i].ref_count = 1;   // Force v7_freeval() below to free memory
-    v7_freeval(v7, &v7->scopes[i]);
-  }
-}
-#endif
-
 static void free_values(struct v7 *v7) {
   struct v7_val *v;
   while (v7->free_values != NULL) {
@@ -1349,7 +1340,7 @@ static enum v7_err parse_identifier(struct v7 *v7) {
   return V7_OK;
 }
 
-static int compare_to_tok(struct v7 *v7, const char *str, int str_len) {
+static int lookahead(struct v7 *v7, const char *str, int str_len) {
   int equal = 0;
   if (memcmp(v7->pc, str, str_len) == 0 &&
       !is_valid_identifier_char(v7->pc[str_len])) {
@@ -1814,7 +1805,7 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
   int has_new = 0;
   struct v7_val *old_this_obj = v7->this_obj, *cur_this;
 
-  if (compare_to_tok(v7, "new", 3)) {
+  if (lookahead(v7, "new", 3)) {
     has_new++;
     if (!v7->no_exec) {
       v7_make_and_push(v7, V7_OBJ);
@@ -1858,7 +1849,7 @@ static enum v7_err parse_precedence4(struct v7 *v7) {
     TRY(match(v7, v7->pc[0]));
     has_neg++;
   }
-  has_typeof = compare_to_tok(v7, "typeof", 6);
+  has_typeof = lookahead(v7, "typeof", 6);
 
   TRY(parse_precedence_3(v7));
   if (has_neg && !v7->no_exec) {
