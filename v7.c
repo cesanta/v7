@@ -2293,7 +2293,7 @@ static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
 }
 
 enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
-  int has_ret = 0;
+  int has_ret = 0, old_sp = v7->sp;
 
   v7->source_code = v7->pc = source_code;
   skip_whitespaces_and_comments(v7);
@@ -2303,7 +2303,7 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   v7->this_obj = &v7->root_scope;
 
   while (*v7->pc != '\0') {
-    TRY(inc_stack(v7, -v7->sp));          // Reset stack on each statement
+    TRY(inc_stack(v7, old_sp - v7->sp));  // Reset stack on each statement
     TRY(parse_statement(v7, &has_ret));   // Last expr result on stack
   }
 
