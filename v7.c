@@ -2207,7 +2207,11 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   const char *expr2, *expr3, *stmt, *end;
 
   TRY(match(v7, '('));
-  TRY(parse_expression(v7));    // expr1
+  if (lookahead(v7, "var", 3)) {
+    parse_declaration(v7);
+  } else {
+    TRY(parse_expression(v7));    // expr1
+  }
   TRY(match(v7, ';'));
 
   // Pass through the loop, don't execute it, just remember locations
@@ -2281,7 +2285,8 @@ static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
     TRY(parse_expression(v7));
   }
 
-  // Skip optional semicolons
+  // Skip optional colons and semicolons
+  while (*v7->pc == ',') match(v7, *v7->pc);
   while (*v7->pc == ';') match(v7, *v7->pc);
   return V7_OK;
 }

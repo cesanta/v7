@@ -43,11 +43,11 @@ a.foo++;
 test(b.foo == 8, 'incr1');
 
 
-a = 1;
-for (i = 1; i <= 5; i++) {
-  a *= i;
-}
+a = 1, b = 1;
+for (var i = 1; i <= 5; i++) { a *= i; }
+for (i = 1; i <= 6; i++) b *= i;
 test(a == 120, 'for1');
+test(b == 720, 'for2');
 
 
 (function() {
