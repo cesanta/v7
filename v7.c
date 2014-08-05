@@ -896,11 +896,11 @@ int v7_is_true(const struct v7_val *v) {
 }
 
 static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
-  const struct v7_prop *m;
+  const struct v7_prop *m, *head = v->props;
   int n = snprintf(buf, bsiz, "%s", "{");
 
-  for (m = v->props; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != v->props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
     v7_to_string(m->key, buf + n, bsiz - n);
     n = (int) strlen(buf);
     n += snprintf(buf + n , bsiz - n, "%s", ": ");
@@ -911,11 +911,11 @@ static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
 }
 
 static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
-  const struct v7_prop *m;
+  const struct v7_prop *m, *head = v->v.array;
   int n = snprintf(buf, bsiz, "%s", "[");
 
-  for (m = v->v.array; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != v->props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
     v7_to_string(m->val, buf + n, bsiz - n);
     n = (int) strlen(buf);
   }
@@ -1940,6 +1940,7 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
     struct v7_val **top = v7_top(v7), *a = top[-2], *b = top[-1];
     switch (op) {
       case OP_ASSIGN:
+        CHECK(v7->sp >= 2, V7_INTERNAL_ERROR);
         TRY(v7_setv(v7, obj, V7_STR, V7_OBJ, tok, tok_len, 1, b));
         v7_freeval(v7, a);
         top[-2] = top[-1];
