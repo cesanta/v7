@@ -301,7 +301,7 @@ static void Str_split(struct v7_c_func_arg *cfa) {
     char regex[200];
     struct slre_cap caps[20];
     int n = 0;
-    
+
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
     while ((n = slre_match(regex, p1, e - p1, caps, ARRAY_SIZE(caps), 0)) > 0) {
@@ -679,7 +679,7 @@ static void Std_print(struct v7_c_func_arg *cfa) {
   putchar('\n');
 }
 
-static void Std_load(struct v7_c_func_arg *cfa) {  
+static void Std_load(struct v7_c_func_arg *cfa) {
   int i;
 
   v7_set_value_type(cfa->result, V7_BOOL);
@@ -694,7 +694,7 @@ static void Std_load(struct v7_c_func_arg *cfa) {
   }
 }
 
-static void Std_exit(struct v7_c_func_arg *cfa) {  
+static void Std_exit(struct v7_c_func_arg *cfa) {
   int exit_code = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
 }
@@ -747,7 +747,7 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_global, "print", V7_C_FUNC, c_func, Std_print);
   SET_RO_PROP(s_global, "exit", V7_C_FUNC, c_func, Std_exit);
   SET_RO_PROP(s_global, "load", V7_C_FUNC, c_func, Std_load);
-  
+
   SET_RO_PROP2(s_global, "Object", V7_C_FUNC, &s_object, c_func, Object_ctor);
   SET_RO_PROP2(s_global, "Number", V7_C_FUNC, &s_number, c_func, Number_ctor);
   SET_RO_PROP2(s_global, "String", V7_C_FUNC, &s_string, c_func, String_ctor);
@@ -923,7 +923,7 @@ static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m;
   int n = snprintf(buf, bsiz, "%s", "[");
 
-  for (m = v->props; m != NULL && n < bsiz - 1; m = m->next) {
+  for (m = v->v.array; m != NULL && n < bsiz - 1; m = m->next) {
     if (m != v->props) n += snprintf(buf + n , bsiz - n, "%s", ", ");
     v7_to_string(m->val, buf + n, bsiz - n);
     n = (int) strlen(buf);
@@ -1800,7 +1800,7 @@ static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
     int op = v7->pc[0];
     TRY(match(v7, op));
     TRY(parse_prop_accessor(v7, op));
-    
+
     while (*v7->pc == '(') {
       TRY(parse_function_call(v7, v7->cur_obj, has_new));
     }
@@ -1859,7 +1859,7 @@ static enum v7_err parse_precedence4(struct v7 *v7) {
     has_neg++;
   }
   has_typeof = compare_to_tok(v7, "typeof", 6);
-  
+
   TRY(parse_precedence_3(v7));
   if (has_neg && !v7->no_exec) {
     int is_true = v7_is_true(v7_top(v7)[-1]);
@@ -2167,7 +2167,6 @@ static enum v7_err parse_expression(struct v7 *v7) {
   return V7_OK;
 }
 
-//  declaration =   "var" identifier [ "=" expression ] [ "," { i [ "=" e ] } ]
 static enum v7_err parse_declaration(struct v7 *v7) {
   int sp = v7_sp(v7);
 
