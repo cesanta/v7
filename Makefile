@@ -5,9 +5,11 @@ CFLAGS += -I$(SLRE)
 
 SOURCES = v7.c $(SLRE)/slre.c
 
-all: unit_test js
+all: v7
+
+v:
 	valgrind -q --leak-check=full ./unit_test
-#	gcov -a unit_test.c
+	gcov -a unit_test.c
 
 $(SLRE)/slre.c:
 	cd .. && git clone https://github.com/cesanta/slre
@@ -25,6 +27,9 @@ v7: $(SOURCES) v7.h
 js: v7
 	@./v7 unit_test.js
 	@rhino -version 130 unit_test.js
+
+t: v7
+	./v7 tests/run_tests.js
 
 w:
 	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe
