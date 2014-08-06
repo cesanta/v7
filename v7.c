@@ -177,6 +177,14 @@ static void Obj_toString(struct v7_c_func_arg *cfa) {
   cfa->result->v.str.buf = v7_strdup(buf, cfa->result->v.str.len);
 }
 
+static void Obj_keys(struct v7_c_func_arg *cfa) {
+  struct v7_prop *p;
+  v7_set_value_type(cfa->result, V7_ARRAY);
+  for (p = cfa->this_obj->props; p != NULL; p = p->next) {
+    v7_append(cfa->v7, cfa->result, p->key);
+  }
+}
+
 static void Math_random(struct v7_c_func_arg *cfa) {
   v7_set_value_type(cfa->result, V7_NUM);
   srand((unsigned long) cfa->result);   // TODO: make better randomness
@@ -738,6 +746,7 @@ static void init_stdlib(void) {
   s_string.proto = s_number.proto = s_array.proto = &s_object;
 
   SET_RO_PROP(s_object, "toString", V7_C_FUNC, c_func, Obj_toString);
+  SET_RO_PROP(s_object, "keys", V7_C_FUNC, c_func, Obj_keys);
 
   SET_RO_PROP(s_math, "random", V7_C_FUNC, c_func, Math_random);
   SET_RO_PROP(s_math, "pow", V7_C_FUNC, c_func, Math_pow);
