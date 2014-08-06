@@ -49,6 +49,11 @@ for (i = 1; i <= 6; i++) b *= i;
 test(a == 120, 'for1');
 test(b == 720, 'for2');
 
+a = { foo: 1, bar: 2 }, b = [];
+for (var key in a) b.push(key);
+b.sort();
+test(b.length == 2 && b[0] == 'foo' && b[1] == 'bar', 'for3');
+
 
 (function() {
   var a = { b: 'aa bb cc dd' };
@@ -110,6 +115,8 @@ test(typeof 123 === 'number', 'typeof1');
 test(typeof {} === 'object', 'typeof2');
 test(typeof function(){} === 'function', 'typeof3');
 test(typeof 'x' === 'string', 'typeof4');
+test(typeof [] === 'object', 'typeof5');
+test(typeof null === 'object', 'typeof6');
 test(typeof (new String()) === 'object', 'new4');
 test(typeof (new Number(3.45)) == 'object', 'new5');
 test('aa  \tbb cc'.split(/\s+/).length == 3, 'split1');

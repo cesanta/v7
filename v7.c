@@ -136,6 +136,7 @@ static const int s_op_lengths[NUM_OPS] = {
 // Forward declarations
 static enum v7_err parse_expression(struct v7 *);
 static enum v7_err parse_statement(struct v7 *, int *is_return);
+static int cmp(const struct v7_val *a, const struct v7_val *b);
 
 // Static variables
 static struct v7_val s_object = RO_OBJ(V7_OBJ);
@@ -372,6 +373,37 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   result->v.num = 0.0;
   for (p = this_obj->v.array; p != NULL; p = p->next) {
     result->v.num += 1.0;
+  }
+}
+
+static void Arr_push(struct v7_c_func_arg *cfa) {
+  int i;
+  for (i = 0; i < cfa->num_args; i++) {
+    v7_append(cfa->v7, cfa->this_obj, cfa->args[i]);
+  }
+}
+
+static int cmp_prop(const void *pa, const void *pb) {
+  const struct v7_prop *p1 = (struct v7_prop *) pa;
+  const struct v7_prop *p2 = (struct v7_prop *) pb;
+  return cmp(p1->val, p2->val);
+}
+
+static void Arr_sort(struct v7_c_func_arg *cfa) {
+  int i = 0, length = 0;
+  struct v7_val *v = cfa->this_obj;
+  struct v7_prop *p, **arr;
+
+  // TODO(lsm): do proper error checking
+  for (p = v->v.array; p != NULL; p = p->next) length++;
+  arr = malloc(length * sizeof(p));
+  for (p = v->v.array; p != NULL; p = p->next) arr[i++] = p;
+  qsort(arr, length, sizeof(arr[0]), cmp_prop);
+
+  v->v.array = NULL;
+  for (i = 0; i < length; i++) {
+    arr[i]->next = v->v.array;
+    v->v.array = arr[i];
   }
 }
 
@@ -726,6 +758,8 @@ static void init_stdlib(void) {
 #endif
 
   SET_RO_PROP(s_array, "length", V7_RO_PROP, prop_func, Arr_length);
+  SET_RO_PROP(s_array, "push", V7_C_FUNC, c_func, Arr_push);
+  SET_RO_PROP(s_array, "sort", V7_C_FUNC, c_func, Arr_sort);
 
   SET_RO_PROP(s_string, "length", V7_RO_PROP, prop_func, Str_length);
   SET_RO_PROP(s_string, "charCodeAt", V7_C_FUNC, c_func, Str_charCodeAt);
@@ -2056,7 +2090,7 @@ static enum v7_err parse_bitwise_or(struct v7 *v7) {
 
 static enum v7_err parse_logical_and(struct v7 *v7) {
   TRY(parse_bitwise_or(v7));
-  if (*v7->pc == '&' && v7->pc[1] == '&') {
+  while (*v7->pc == '&' && v7->pc[1] == '&') {
     int sp1 = v7->sp;
     match(v7, '&');
     match(v7, '&');
@@ -2202,12 +2236,59 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
+static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
+                                          int *has_return) {
+  const char *tok = v7->tok, *stmt;
+  int tok_len = v7->tok_len, line_stmt;
+
+  TRY(parse_expression(v7));
+  TRY(match(v7, ')'));
+  stmt = v7->pc;
+  line_stmt = v7->line_no;
+
+  // Execute loop body
+  if (v7->no_exec) {
+    TRY(parse_compound_statement(v7, has_return));
+  } else {
+    int old_sp = v7->sp;
+    struct v7_val *obj = v7_top(v7)[-1];
+    struct v7_val *scope = has_var ? cur_scope(v7) : &v7->root_scope;
+    struct v7_prop *prop;
+
+    CHECK(is_object(obj), V7_TYPE_MISMATCH);
+    for (prop = obj->props; prop != NULL; prop = prop->next) {
+      TRY(v7_setv(v7, scope, V7_STR, V7_OBJ,
+                  tok, tok_len, 0, prop->key));
+      v7->pc = stmt;
+      v7->line_no = line_stmt;
+      TRY(parse_compound_statement(v7, has_return));  // Loop body
+      TRY(inc_stack(v7, old_sp - v7->sp));  // Clean up stack
+    }
+  }
+
+  return V7_OK;
+}
+
 static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
-  int line_expr2, line_expr3, line_stmt, line_end,
-    is_true, old_no_exec = v7->no_exec;
-  const char *expr2, *expr3, *stmt, *end;
+  int line_expr1, line_expr2, line_expr3, line_stmt, line_end,
+    is_true, old_no_exec = v7->no_exec, has_var = 0;
+  const char *expr1, *expr2, *expr3, *stmt, *end;
 
   TRY(match(v7, '('));
+  expr1 = v7->pc;
+  line_expr1 = v7->line_no;
+
+  // See if this is an enumeration loop
+  if (lookahead(v7, "var", 3)) {
+    has_var = 1;
+  }
+  if (parse_identifier(v7) == V7_OK && lookahead(v7, "in", 2)) {
+    return parse_for_in_statement(v7, has_var, has_return);
+  } else {
+    v7->pc = expr1;
+    v7->line_no = line_expr1;
+  }
+
   if (lookahead(v7, "var", 3)) {
     parse_declaration(v7);
   } else {
