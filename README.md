@@ -24,5 +24,5 @@ Please take a look at [Smart.js](https://github.com/cesanta/Smart.js)
     v7_exec(v7, "config.devices[2].name");              // Lookup value
     printf("Device2 name: [%s]\n", v7_top(v7)[-1].v.str.buf);
 
-## Example: using V7 to provide scripting ability for the online game
+## Example: using V7 as a game scripting engine
 
