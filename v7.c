@@ -2237,6 +2237,7 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
 
   // Execute loop
   if (!v7->no_exec) {
+    int old_sp = v7->sp;
     for (;;) {
       v7->pc = expr2;
       v7->line_no = line_expr2;
@@ -2252,6 +2253,8 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
       v7->pc = expr3;
       v7->line_no = line_expr3;
       TRY(parse_expression(v7));    // expr3  (post-iteration)
+
+      TRY(inc_stack(v7, old_sp - v7->sp));  // Clean up stack
     }
   }
 
