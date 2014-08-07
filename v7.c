@@ -406,7 +406,7 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
   for (p = v->v.array; p != NULL; p = p->next) {
     length++;
   }
-  arr = malloc(length * sizeof(p));
+  arr = (struct v7_prop **) malloc(length * sizeof(p));
   for (p = v->v.array; p != NULL; p = p->next) {
     arr[i++] = p;
   }
@@ -2386,8 +2386,8 @@ static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
-enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
-  int has_ret = 0, old_sp = v7->sp;
+static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+  int has_ret = 0;
 
   v7->source_code = v7->pc = source_code;
   skip_whitespaces_and_comments(v7);
@@ -2397,11 +2397,15 @@ enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
   v7->this_obj = &v7->root_scope;
 
   while (*v7->pc != '\0') {
-    TRY(inc_stack(v7, old_sp - v7->sp));  // Reset stack on each statement
+    TRY(inc_stack(v7, sp - v7->sp));      // Reset stack on each statement
     TRY(parse_statement(v7, &has_ret));   // Last expr result on stack
   }
 
   return V7_OK;
+}
+
+enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
+  return do_exec(v7, source_code, 0);
 }
 
 enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
@@ -2420,7 +2424,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
     fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
     v7->line_no = 1;
-    status = v7_exec(v7, p);
+    status = do_exec(v7, p, v7->sp);
     free(p);
     v7->pc = old_pc;
     if (status == V7_OK) v7->line_no = (int) old_line_no;

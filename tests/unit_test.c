@@ -32,6 +32,7 @@
 
 #define FAIL(str, line) do {                    \
   printf("Fail on line %d: [%s]\n", line, str); \
+  abort();                                      \
   return str;                                   \
 } while (0)
 
@@ -67,7 +68,7 @@ static int check_bool(struct v7 *v7, double val) {
 }
 
 static int check_str(struct v7 *v7, const char *val) {
-  return v7->sp == 1 &&
+  return v7->sp > 0 &&
     v7_top(v7)[-1]->type == V7_STR &&
     strlen(val) == v7_top(v7)[-1]->v.str.len &&
     memcmp(val, v7_top(v7)[-1]->v.str.buf, strlen(val)) == 0;
@@ -76,7 +77,7 @@ static int check_str(struct v7 *v7, const char *val) {
 static int check_num(struct v7 *v7, double an) {
   const struct v7_val *v = v7_top(v7)[-1];
   double bn = v->v.num;
-  return v7->sp == 1 && v->type == V7_NUM &&
+  return v7->sp > 0 && v->type == V7_NUM &&
     ((an == bn) || (isinf(an) && isinf(bn)) || (isnan(an) && isnan(bn)));
 }
 
@@ -198,7 +199,7 @@ static const char *test_v7_exec(void) {
   ASSERT(check_num(v7, 1.0));
 
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { } ; ") == V7_OK);
-  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_sp(v7) > 0);
   ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
   ASSERT(strcmp(v7_top(v7)[-1]->v.func.source_code, "(x, y) { } ") == 0);
 
@@ -228,7 +229,7 @@ static const char *test_v7_exec(void) {
   ASSERT(check_num(v7, 1.0));
 
   ASSERT(v7_exec(v7, "var f = function(){var x=12; return x + 1;};") == V7_OK);
-  ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_sp(v7) > 0);
 
   ASSERT(v7_exec(v7, "k = f(1,2,3);") == V7_OK);
   ASSERT(check_num(v7, 13.0));
