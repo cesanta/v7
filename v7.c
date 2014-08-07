@@ -392,8 +392,8 @@ static void Arr_push(struct v7_c_func_arg *cfa) {
 }
 
 static int cmp_prop(const void *pa, const void *pb) {
-  const struct v7_prop *p1 = (struct v7_prop *) pa;
-  const struct v7_prop *p2 = (struct v7_prop *) pb;
+  const struct v7_prop *p1 = * (struct v7_prop **) pa;
+  const struct v7_prop *p2 = * (struct v7_prop **) pb;
   return cmp(p1->val, p2->val);
 }
 
@@ -403,16 +403,20 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
   struct v7_prop *p, **arr;
 
   // TODO(lsm): do proper error checking
-  for (p = v->v.array; p != NULL; p = p->next) length++;
+  for (p = v->v.array; p != NULL; p = p->next) {
+    length++;
+  }
   arr = malloc(length * sizeof(p));
-  for (p = v->v.array; p != NULL; p = p->next) arr[i++] = p;
-  qsort(arr, length, sizeof(arr[0]), cmp_prop);
-
+  for (p = v->v.array; p != NULL; p = p->next) {
+    arr[i++] = p;
+  }
+  qsort(arr, length, sizeof(p), cmp_prop);
   v->v.array = NULL;
   for (i = 0; i < length; i++) {
     arr[i]->next = v->v.array;
     v->v.array = arr[i];
   }
+  free(arr);
 }
 
 static void Num_toFixed(struct v7_c_func_arg *cfa) {
@@ -1985,9 +1989,6 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
       case OP_ASSIGN:
         CHECK(v7->sp >= 2, V7_INTERNAL_ERROR);
         TRY(v7_setv(v7, obj, V7_STR, V7_OBJ, tok, tok_len, 1, b));
-        v7_freeval(v7, a);
-        top[-2] = top[-1];
-        v7->sp--;
         return V7_OK;
       case OP_PLUS_ASSIGN: TRY(arith(a, b, a, '+')); break;
       case OP_MINUS_ASSIGN: TRY(arith(a, b, a, '-')); break;
@@ -2267,7 +2268,7 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
     CHECK(is_object(obj), V7_TYPE_MISMATCH);
     for (prop = obj->props; prop != NULL; prop = prop->next) {
       TRY(v7_setv(v7, scope, V7_STR, V7_OBJ,
-                  tok, tok_len, 0, prop->key));
+                  tok, tok_len, 1, prop->key));
       v7->pc = stmt;
       v7->line_no = line_stmt;
       TRY(parse_compound_statement(v7, has_return));  // Loop body
