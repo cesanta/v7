@@ -1,4 +1,3 @@
-#PROF = -fprofile-arcs -ftest-coverage -g -O0
 CFLAGS = -W -Wall -pedantic -ansi -Wno-comment -g -O0 $(PROF) $(CFLAGS_EXTRA)
 SLRE = ../slre
 CFLAGS += -I$(SLRE) -I.
@@ -7,9 +6,10 @@ SOURCES = v7.c $(SLRE)/slre.c
 
 all: v7
 
-v:
+v: unit_test
 	valgrind -q --leak-check=full ./unit_test
-	gcov -a unit_test.c
+#	valgrind -q --leak-check=full ./v7 tests/run_tests.js
+#	gcov -a unit_test.c
 
 $(SLRE)/slre.c:
 	cd .. && git clone https://github.com/cesanta/slre
