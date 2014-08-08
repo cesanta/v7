@@ -49,10 +49,10 @@ for (i = 1; i <= 6; i++) b *= i;
 test(a == 120, 'for1');
 test(b == 720, 'for2');
 
-a = { foo: 1, bar: 2 }, b = [];
+a = { foo: 1, bar: 2, baz: 3 }, b = [];
 for (var key in a) b.push(key);
 b.sort();
-test(b.length == 2 && b[0] == 'foo' && b[1] == 'bar', 'for3');
+test(b.length == 3 && b[0] == 'bar' && b[1] == 'baz' && b[2] == 'foo', 'for3');
 
 
 (function() {
