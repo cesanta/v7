@@ -7,7 +7,7 @@ SOURCES = v7.c $(SLRE)/slre.c
 all: v7
 
 v: unit_test
-	valgrind -q --leak-check=full ./unit_test
+	valgrind -q --leak-check=full --show-reachable=yes --leak-resolution=high --num-callers=100 ./unit_test
 #	valgrind -q --leak-check=full ./v7 tests/run_tests.js
 #	gcov -a unit_test.c
 
