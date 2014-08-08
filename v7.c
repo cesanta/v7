@@ -825,7 +825,7 @@ static void Std_base64_decode(struct v7_c_func_arg *cfa) {
   set_empty_string(cfa->result);
   if (cfa->num_args == 1 && v->type == V7_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 4 + 1;
-    cfa->result->v.str.buf = malloc(cfa->result->v.str.len + 1);
+    cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
     base64_decode((const unsigned char *) v->v.str.buf, v->v.str.len,
                   cfa->result->v.str.buf);
   }
@@ -837,7 +837,7 @@ static void Std_base64_encode(struct v7_c_func_arg *cfa) {
   set_empty_string(cfa->result);
   if (cfa->num_args == 1 && v->type == V7_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 2 + 1;
-    cfa->result->v.str.buf = malloc(cfa->result->v.str.len + 1);
+    cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
     base64_encode((const unsigned char *) v->v.str.buf, v->v.str.len,
                   cfa->result->v.str.buf);
   }
