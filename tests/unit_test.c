@@ -367,8 +367,8 @@ static const char *test_stdlib(void) {
   ASSERT(check_bool(v7, 1));
   ASSERT(v7_exec(v7, "Number(1.23) === 1.23") == V7_OK);
   ASSERT(check_bool(v7, 1));
-  //ASSERT(v7_exec(v7, "Number(1.23)") == V7_OK);
-  //ASSERT(check_num(v7, 1.23));
+  ASSERT(v7_exec(v7, "Number(1.23)") == V7_OK);
+  ASSERT(check_num(v7, 1.23));
 
   // String
   ASSERT(v7_exec(v7, "'hello'.charCodeAt(1)") == V7_OK);
