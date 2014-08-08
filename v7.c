@@ -137,6 +137,7 @@ static const int s_op_lengths[NUM_OPS] = {
 static enum v7_err parse_expression(struct v7 *);
 static enum v7_err parse_statement(struct v7 *, int *is_return);
 static int cmp(const struct v7_val *a, const struct v7_val *b);
+static enum v7_err do_exec(struct v7 *v7, const char *, int);
 
 // Static variables
 static struct v7_val s_object = RO_OBJ(V7_OBJ);
@@ -159,6 +160,13 @@ static int is_object_type(enum v7_type type) {
 
 static int is_object(const struct v7_val *v) {
   return is_object_type(v->type);
+}
+
+static void inc_ref_count(struct v7_val *v) {
+  assert(v != NULL);
+  assert(v->ref_count >= 0);
+  assert(v->flags || v->proto != NULL); // Check that value is allocated
+  v->ref_count++;
 }
 
 static char *v7_strdup(const char *ptr, unsigned long len) {
@@ -814,9 +822,7 @@ static void base64_decode(const unsigned char *s, int len, char *dst) {
 static void Std_base64_decode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
-  v7_set_value_type(cfa->result, V7_BOOL);
   set_empty_string(cfa->result);
-
   if (cfa->num_args == 1 && v->type == V7_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 4 + 1;
     cfa->result->v.str.buf = malloc(cfa->result->v.str.len + 1);
@@ -828,14 +834,28 @@ static void Std_base64_decode(struct v7_c_func_arg *cfa) {
 static void Std_base64_encode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
-  v7_set_value_type(cfa->result, V7_BOOL);
   set_empty_string(cfa->result);
-
   if (cfa->num_args == 1 && v->type == V7_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 2 + 1;
     cfa->result->v.str.buf = malloc(cfa->result->v.str.len + 1);
     base64_encode((const unsigned char *) v->v.str.buf, v->v.str.len,
                   cfa->result->v.str.buf);
+  }
+}
+
+static void Std_eval(struct v7_c_func_arg *cfa) {
+  struct v7_val *v = cfa->args[0];
+  if (cfa->num_args == 1 && v->type == V7_STR && v->v.str.len > 0) {
+    int old_line_no = cfa->v7->line_no;
+    cfa->v7->line_no = 1;
+    do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    cfa->v7->line_no = old_line_no;
+#if 0
+    if (cfa->v7->sp > old_sp) {
+      *cfa->result = *v7_top(cfa->v7)[-1];
+      inc_ref_count(cfa->result);
+    }
+#endif
   }
 }
 
@@ -892,6 +912,7 @@ static void init_stdlib(void) {
   SET_RO_PROP(s_global, "load", V7_C_FUNC, c_func, Std_load);
   SET_RO_PROP(s_global, "base64_encode", V7_C_FUNC, c_func, Std_base64_encode);
   SET_RO_PROP(s_global, "base64_decode", V7_C_FUNC, c_func, Std_base64_decode);
+  SET_RO_PROP(s_global, "eval", V7_C_FUNC, c_func, Std_eval);
 
   SET_RO_PROP2(s_global, "Object", V7_C_FUNC, &s_object, c_func, Object_ctor);
   SET_RO_PROP2(s_global, "Number", V7_C_FUNC, &s_number, c_func, Number_ctor);
@@ -917,13 +938,6 @@ struct v7 *v7_create(void) {
   return v7;
 }
 
-static void inc_ref_count(struct v7_val *v) {
-  assert(v != NULL);
-  assert(v->ref_count >= 0);
-  assert(v->flags || v->proto != NULL); // Check that value is allocated
-  v->ref_count++;
-}
-
 static void free_prop(struct v7 *v7, struct v7_prop *p) {
   if (p->key != NULL) v7_freeval(v7, p->key);
   v7_freeval(v7, p->val);
@@ -937,9 +951,8 @@ static void free_prop(struct v7 *v7, struct v7_prop *p) {
 }
 
 void v7_freeval(struct v7 *v7, struct v7_val *v) {
-  v->ref_count--;
-  assert(v->ref_count >= 0);
-  if (v->ref_count > 0) return;
+  assert(v->ref_count > 0);
+  if (--v->ref_count > 0) return;
 
   if (is_object(v) && !(v->flags & V7_RDONLY_PROP)) {
     struct v7_prop *p, *tmp;
@@ -1245,7 +1258,8 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
   }
 }
 
-static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key) {
+static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key,
+                              int own_prop) {
   struct v7_prop *m;
   for (; obj != NULL; obj = obj->proto) {
     if (obj->type == V7_ARRAY && key->type == V7_NUM) {
@@ -1258,12 +1272,13 @@ static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key) {
         if (cmp(m->key, key)) return m;
       }
     }
+    if (own_prop) break;
   }
   return NULL;
 }
 
 static struct v7_val *get2(struct v7_val *obj, const struct v7_val *key) {
-  struct v7_prop *m = v7_get(obj, key);
+  struct v7_prop *m = v7_get(obj, key, 0);
   return (m == NULL) ? NULL : m->val;
 }
 
@@ -1321,7 +1336,7 @@ static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   CHECK(is_object(obj), V7_TYPE_MISMATCH);
 
   // Find attribute inside object
-  if ((m = v7_get(obj, k)) != NULL) {
+  if ((m = v7_get(obj, k, 1)) != NULL) {
     v7_freeval(v7, m->val);
     inc_ref_count(v);
     m->val = v;
