@@ -394,7 +394,7 @@ static void Arr_push(struct v7_c_func_arg *cfa) {
 static int cmp_prop(const void *pa, const void *pb) {
   const struct v7_prop *p1 = * (struct v7_prop **) pa;
   const struct v7_prop *p2 = * (struct v7_prop **) pb;
-  return cmp(p1->val, p2->val);
+  return cmp(p2->val, p1->val);
 }
 
 static void Arr_sort(struct v7_c_func_arg *cfa) {
@@ -827,7 +827,7 @@ static void inc_ref_count(struct v7_val *v) {
 }
 
 static void free_prop(struct v7 *v7, struct v7_prop *p) {
-  v7_freeval(v7, p->key);
+  if (p->key != NULL) v7_freeval(v7, p->key);
   v7_freeval(v7, p->val);
   p->val = p->key = NULL;
 #ifdef V7_CACHE_OBJS
@@ -842,6 +842,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   v->ref_count--;
   assert(v->ref_count >= 0);
   if (v->ref_count > 0) return;
+
   if (is_object(v) && !(v->flags & V7_RDONLY_PROP)) {
     struct v7_prop *p, *tmp;
     for (p = v->props; p != NULL; p = tmp) {
@@ -849,6 +850,15 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
       free_prop(v7, p);
     }
     v->props = NULL;
+  }
+
+  if (v->type == V7_ARRAY) {
+    struct v7_prop *p, *tmp;
+    for (p = v->v.array; p != NULL; p = tmp) {
+      tmp = p->next;
+      free_prop(v7, p);
+    }
+    v->v.array = NULL;
   } else if (v->type == V7_STR && !(v->flags & V7_RDONLY_STR)) {
     free(v->v.str.buf);
   } else if (v->type == V7_REGEX && !(v->flags & V7_RDONLY_STR)) {
@@ -857,9 +867,13 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
     if (!(v->flags & V7_RDONLY_STR)) {
       free(v->v.func.source_code);
     }
+
     v7_freeval(v7, v->v.func.scope);
-    if (v->v.func.upper != NULL) v7_freeval(v7, v->v.func.upper);
+    if (v->v.func.upper != NULL) {
+      v7_freeval(v7, v->v.func.upper);
+    }
   }
+
   if (!(v->flags & V7_RDONLY_VAL)) {
     memset(v, 0, sizeof(*v));
 #ifdef V7_CACHE_OBJS
@@ -1609,7 +1623,7 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
   }
 
   v->v.str.len = v7->no_exec ? 0 : i;
-  v->v.str.buf = v7->no_exec ? NULL : v7_strdup(buf, v->v.str.len);
+  v->v.str.buf = v7->no_exec || i == 0 ? NULL : v7_strdup(buf, v->v.str.len);
   TRY(match(v7, *begin));
   skip_whitespaces_and_comments(v7);
 
@@ -1794,8 +1808,8 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
 
   if (!v7->no_exec) {
     ns = v7_top(v7)[-1];
-    v = make_value(v7, V7_UNDEF);
-    inc_ref_count(v);
+    v7_make_and_push(v7, V7_UNDEF);
+    v = v7_top(v7)[-1];
   }
   v7->cur_obj = v7->this_obj = ns;
   CHECK(v7->no_exec || ns != NULL, V7_SYNTAX_ERROR);
@@ -2198,6 +2212,8 @@ static enum v7_err parse_expression(struct v7 *v7) {
     inc_ref_count(result);
     TRY(inc_stack(v7, old_sp - v7->sp));
     TRY(v7_push(v7, result));
+    assert(result->ref_count > 1);
+    v7_freeval(v7, result);
   }
 
   return V7_OK;
