@@ -792,9 +792,10 @@ static unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-static void base64_decode(const unsigned char *s, char *dst) {
+static void base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
-  while ((a = from_b64(s[0])) != 255 &&
+  while (len >= 4 &&
+         (a = from_b64(s[0])) != 255 &&
          (b = from_b64(s[1])) != 255 &&
          (c = from_b64(s[2])) != 255 &&
          (d = from_b64(s[3])) != 255) {
@@ -805,6 +806,7 @@ static void base64_decode(const unsigned char *s, char *dst) {
     if (d == 200) break;
     *dst++ = c << 6 | d;
     s += 4;
+    len -=4;
   }
   *dst = 0;
 }
@@ -816,9 +818,10 @@ static void Std_base64_decode(struct v7_c_func_arg *cfa) {
   set_empty_string(cfa->result);
 
   if (cfa->num_args == 1 && v->type == V7_STR && v->v.str.len > 0) {
-    cfa->result->v.str.len = v->v.str.len * 2 / 3 + 1;
+    cfa->result->v.str.len = v->v.str.len * 3 / 4 + 1;
     cfa->result->v.str.buf = malloc(cfa->result->v.str.len + 1);
-    base64_decode((const unsigned char *) v->v.str.buf, cfa->result->v.str.buf);
+    base64_decode((const unsigned char *) v->v.str.buf, v->v.str.len,
+                  cfa->result->v.str.buf);
   }
 }
 
