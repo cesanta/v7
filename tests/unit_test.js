@@ -122,6 +122,10 @@ test(typeof (new Number(3.45)) == 'object', 'new5');
 test('aa  \tbb cc'.split(/\s+/).length == 3, 'split1');
 test('aa  \tbb cc'.split(/\s+/)[1] == 'bb', 'split2');
 test('aa  \tbb cc'.split(/\s+/)[2] == 'cc', 'split3');
+test([] instanceof Array, 'instanceof1');
+test(new String() instanceof String, 'instanceof2');
+test(function(){} instanceof Function, 'instanceof3');
+test(function(){} instanceof Object, 'instanceof4');
 
 if (!constructor) {
   // Rhino doesn't have that

@@ -2144,16 +2144,34 @@ static enum v7_err parse_add_sub(struct v7 *v7) {
   return V7_OK;
 }
 
+static int is_instance_of(const struct v7_val *obj, const struct v7_val *ctor) {
+  if (is_object(obj) && ctor != NULL) {
+    while (obj->ctor != NULL) {
+      if (obj->ctor == ctor) return 1;
+      obj = obj->ctor;
+    }
+  }
+  return 0;
+}
+
 static enum v7_err parse_relational(struct v7 *v7) {
   int op;
   TRY(parse_add_sub(v7));
-  if ((op = is_relational_op(v7->pc)) > OP_INVALID) {
+  while ((op = is_relational_op(v7->pc)) > OP_INVALID) {
     int sp1 = v7->sp;
     v7->pc += s_op_lengths[op];
     skip_whitespaces_and_comments(v7);
     TRY(parse_add_sub(v7));
     if (!v7->no_exec) {
       TRY(do_logical_op(v7, op, sp1, v7->sp));
+    }
+  }
+  if (lookahead(v7, "instanceof", 10)) {
+    TRY(parse_identifier(v7));
+    if (!v7->no_exec) {
+      struct v7_val key = str_to_val(v7->tok, v7->tok_len);
+      TRY(v7_make_and_push(v7, V7_BOOL));
+      v7_top(v7)[-1]->v.num = is_instance_of(v7_top(v7)[-2], find(v7, &key));
     }
   }
   return V7_OK;
