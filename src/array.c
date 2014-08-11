@@ -43,3 +43,16 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
   }
   free(arr);
 }
+
+static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  const struct v7_prop *m, *head = v->v.array;
+  int n = snprintf(buf, bsiz, "%s", "[");
+
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    v7_to_string(m->val, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+  }
+  n += snprintf(buf + n, bsiz - n, "%s", "]");
+}
+

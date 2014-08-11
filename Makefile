@@ -6,8 +6,7 @@ TO_AMALGAMATE = src/internal.h src/global_vars.c src/util.c \
                 src/crypto.c src/array.c src/boolean.c src/date.c \
                 src/error.c src/function.c src/math.c src/number.c \
                 src/object.c src/regex.c src/string.c src/json.c \
-                src/stdlib.c \
-                src/parser.c
+                src/stdlib.c src/parser.c src/main.c
 
 all: v7
 

@@ -2,6 +2,21 @@ static void Object_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }
 
+static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  const struct v7_prop *m, *head = v->props;
+  int n = snprintf(buf, bsiz, "%s", "{");
+
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    v7_to_string(m->key, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+    n += snprintf(buf + n , bsiz - n, "%s", ": ");
+    v7_to_string(m->val, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+  }
+  n += snprintf(buf + n, bsiz - n, "%s", "}");
+}
+
 static void Obj_toString(struct v7_c_func_arg *cfa) {
   char buf[4000];
   v7_to_string(cfa->this_obj, buf, sizeof(buf));
