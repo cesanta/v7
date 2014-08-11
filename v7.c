@@ -448,7 +448,7 @@ static void Arr_push(struct v7_c_func_arg *cfa) {
 static int cmp_prop(const void *pa, const void *pb) {
   const struct v7_prop *p1 = * (struct v7_prop **) pa;
   const struct v7_prop *p2 = * (struct v7_prop **) pb;
-  return cmp(p1->val, p2->val);
+  return cmp(p2->val, p1->val);
 }
 
 static void Arr_sort(struct v7_c_func_arg *cfa) {
@@ -1269,24 +1269,27 @@ struct v7_val v7_str_to_val(const char *buf) {
 }
 
 static int cmp(const struct v7_val *a, const struct v7_val *b) {
-  if (a == NULL || b == NULL) return 0;
+  int res;
+  if (a == NULL || b == NULL) return 1;
   if ((a->type == V7_TYPE_UNDEF || a->type == V7_TYPE_NULL) &&
-      (b->type == V7_TYPE_UNDEF || b->type == V7_TYPE_NULL)) return 1;
-  if (a->type != b->type) return 0;
+      (b->type == V7_TYPE_UNDEF || b->type == V7_TYPE_NULL)) return 0;
+  if (a->type != b->type) return 1;
   {
     double an = a->v.num, bn = b->v.num;
     const struct v7_string *as = &a->v.str, *bs = &b->v.str;
 
     switch (a->type) {
       case V7_TYPE_NUM:
-        return (an == bn) || (isinf(an) && isinf(bn)) ||
-          (isnan(an) && isnan(bn));
+        return (isinf(an) && isinf(bn)) ||
+        (isnan(an) && isnan(bn)) ? 0 : an - bn;
       case V7_TYPE_BOOL:
-        return an == bn;
+        return an != bn;
       case V7_TYPE_STR:
-        return as->len == bs->len && !memcmp(as->buf, bs->buf, as->len);
+        res = memcmp(as->buf, bs->buf, as->len < bs->len ? as->len : bs->len);
+        return res != 0 ? res : (int) as->len - (int) bs->len;
+        return as->len != bs->len || memcmp(as->buf, bs->buf, as->len) != 0;
       default:
-        return a == b;
+        return a - b;
     }
   }
 }
@@ -1302,7 +1305,7 @@ static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key,
       }
     } else if (obj->type == V7_TYPE_OBJ) {
       for (m = obj->props; m != NULL; m = m->next) {
-        if (cmp(m->key, key)) return m;
+        if (cmp(m->key, key) == 0) return m;
       }
     }
     if (own_prop) break;
@@ -1853,7 +1856,7 @@ enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key) {
   struct v7_prop **p;
   CHECK(obj->type == V7_TYPE_OBJ, V7_TYPE_MISMATCH);
   for (p = &obj->props; *p != NULL; p = &p[0]->next) {
-    if (cmp(key, p[0]->key)) {
+    if (cmp(key, p[0]->key) == 0) {
       struct v7_prop *next = p[0]->next;
       free_prop(v7, p[0]);
       p[0] = next;
@@ -2069,10 +2072,13 @@ static enum v7_err parse_precedence4(struct v7 *v7) {
     v7_top(v7)[-1]->v.num = is_true ? 0.0 : 1.0;
   }
   if (has_typeof && !v7->no_exec) {
+    const struct v7_val *v = v7_top(v7)[-1];
     static const char *names[] = {
       "undefined", "null", "boolean", "string", "number", "object"
     };
-    const char *s = names[v7_top(v7)[-1]->type];
+    const char *s = names[v->type];
+    if (v7_is_class(v, V7_CLASS_ARRAY)) s = "array";
+    if (v7_is_class(v, V7_CLASS_FUNCTION)) s = "function";
     TRY(v7_push(v7, v7_mkv(v7, V7_TYPE_STR, s, strlen(s), 0)));
   }
 
@@ -2121,14 +2127,14 @@ static enum v7_err do_logical_op(struct v7 *v7, int op, int sp1, int sp2) {
       case OP_LESS_THEN:      res = v1->v.num <  v2->v.num; break;
       case OP_LESS_EQUAL:     res = v1->v.num <= v2->v.num; break;
       case OP_EQUAL: // FALLTHROUGH
-      case OP_EQUAL_EQUAL:    res = cmp(v1, v2); break;
+      case OP_EQUAL_EQUAL:    res = cmp(v1, v2) == 0; break;
       case OP_NOT_EQUAL: // FALLTHROUGH
-      case OP_NOT_EQUAL_EQUAL:  res = !cmp(v1, v2); break;
+      case OP_NOT_EQUAL_EQUAL:  res = cmp(v1, v2) != 0; break;
     }
   } else if (op == OP_EQUAL || op == OP_EQUAL_EQUAL) {
-    res = cmp(v1, v2);
+    res = cmp(v1, v2) == 0;
   } else if (op == OP_NOT_EQUAL || op == OP_NOT_EQUAL_EQUAL) {
-    res = !cmp(v1, v2);
+    res = cmp(v1, v2) != 0;
   }
   TRY(v7_make_and_push(v7, V7_TYPE_BOOL));
   v7_top(v7)[-1]->v.num = res ? 1.0 : 0.0;
