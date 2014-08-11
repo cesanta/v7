@@ -4,7 +4,7 @@ CFLAGS += -I$(SLRE) -I.
 
 SOURCES = v7.c $(SLRE)/slre.c
 TO_AMALGAMATE = src/internal.h src/global_vars.c src/util.c \
-                src/crypto.c src/parser.c
+                src/crypto.c src/array.c src/parser.c
 
 all: v7
 
