@@ -1,0 +1,14 @@
+static void Number_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = common_ctor(cfa);
+  obj->type = cfa->called_as_constructor ? V7_TYPE_OBJ : V7_TYPE_NUM;
+  obj->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
+}
+
+static void Num_toFixed(struct v7_c_func_arg *cfa) {
+  int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
+  char fmt[10], buf[100];
+
+  snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
+  len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
+  v7_init_str(cfa->result, buf, len, 1);
+}

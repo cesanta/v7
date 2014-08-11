@@ -139,9 +139,9 @@ static const int s_op_lengths[NUM_OPS] = {
 
 static struct v7_val s_constructors[V7_NUM_CLASSES];
 static struct v7_val s_prototypes[V7_NUM_CLASSES];
-static struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_global = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
+static struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static void inc_ref_count(struct v7_val *v) {
   assert(v != NULL);
   assert(v->ref_count >= 0);
@@ -211,6 +211,12 @@ void v7_init_bool(struct v7_val *v, int is_true) {
 void v7_init_func(struct v7_val *v, v7_c_func_t func) {
   v7_set_class(v, V7_CLASS_FUNCTION);
   v->v.c_func = func;
+}
+
+void v7_set_class(struct v7_val *v, enum v7_class cls) {
+  v->type = V7_TYPE_OBJ;
+  v->proto = &s_prototypes[cls];
+  v->ctor = &s_constructors[cls];
 }
 #ifndef V7_DISABLE_CRYPTO
 
@@ -510,45 +516,17 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
   }
   free(arr);
 }
-
-
-static void Boolean_ctor(struct v7_c_func_arg *cfa)  { common_ctor(cfa); }
-static void Date_ctor(struct v7_c_func_arg *cfa)     { common_ctor(cfa); }
-static void Error_ctor(struct v7_c_func_arg *cfa)    { common_ctor(cfa); }
-static void Function_ctor(struct v7_c_func_arg *cfa) { common_ctor(cfa); }
-static void Number_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa);
-  obj->type = cfa->called_as_constructor ? V7_TYPE_OBJ : V7_TYPE_NUM;
-  obj->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
+static void Boolean_ctor(struct v7_c_func_arg *cfa) {
+  common_ctor(cfa);
+}static void Date_ctor(struct v7_c_func_arg *cfa) {
+  common_ctor(cfa);
 }
-static void Object_ctor(struct v7_c_func_arg *cfa)    { common_ctor(cfa); }
-static void Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa);
-  v7_set_class(obj, V7_CLASS_REGEXP);
+static void Error_ctor(struct v7_c_func_arg *cfa) {
+  common_ctor(cfa);
 }
-static void String_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa), *arg = cfa->args[0];
-  if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
-    v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
-  } else {
-    v7_init_str(obj, NULL, 0, 0);
-  }
+static void Function_ctor(struct v7_c_func_arg *cfa) {
+  common_ctor(cfa);
 }
-
-static void Obj_toString(struct v7_c_func_arg *cfa) {
-  char buf[4000];
-  v7_to_string(cfa->this_obj, buf, sizeof(buf));
-  v7_init_str(cfa->result, buf, strlen(buf), 1);
-}
-
-static void Obj_keys(struct v7_c_func_arg *cfa) {
-  struct v7_prop *p;
-  v7_set_class(cfa->result, V7_CLASS_ARRAY);
-  for (p = cfa->this_obj->props; p != NULL; p = p->next) {
-    v7_append(cfa->v7, cfa->result, p->key);
-  }
-}
-
 static void Math_random(struct v7_c_func_arg *cfa) {
   srand((unsigned long) cfa->result);   // TODO: make better randomness
   v7_init_num(cfa->result, (double) rand() / RAND_MAX);
@@ -568,7 +546,50 @@ static void Math_tan(struct v7_c_func_arg *cfa) {
 
 static void Math_pow(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args == 2 ?
-    pow(cfa->args[0]->v.num, cfa->args[1]->v.num) : 0.0);
+              pow(cfa->args[0]->v.num, cfa->args[1]->v.num) : 0.0);
+}
+static void Number_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = common_ctor(cfa);
+  obj->type = cfa->called_as_constructor ? V7_TYPE_OBJ : V7_TYPE_NUM;
+  obj->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
+}
+
+static void Num_toFixed(struct v7_c_func_arg *cfa) {
+  int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
+  char fmt[10], buf[100];
+
+  snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
+  len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
+  v7_init_str(cfa->result, buf, len, 1);
+}
+static void Object_ctor(struct v7_c_func_arg *cfa) {
+  common_ctor(cfa);
+}
+
+static void Obj_toString(struct v7_c_func_arg *cfa) {
+  char buf[4000];
+  v7_to_string(cfa->this_obj, buf, sizeof(buf));
+  v7_init_str(cfa->result, buf, strlen(buf), 1);
+}
+
+static void Obj_keys(struct v7_c_func_arg *cfa) {
+  struct v7_prop *p;
+  v7_set_class(cfa->result, V7_CLASS_ARRAY);
+  for (p = cfa->this_obj->props; p != NULL; p = p->next) {
+    v7_append(cfa->v7, cfa->result, p->key);
+  }
+}
+static void Regex_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = common_ctor(cfa);
+  v7_set_class(obj, V7_CLASS_REGEXP);
+}
+static void String_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = common_ctor(cfa), *arg = cfa->args[0];
+  if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
+    v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
+  } else {
+    v7_init_str(obj, NULL, 0, 0);
+  }
 }
 
 static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
@@ -577,7 +598,7 @@ static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
 
 static void Str_charCodeAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
-    cfa->args[0]->v.num : NAN;
+  cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
 
   v7_init_num(cfa->result, NAN);
@@ -588,7 +609,7 @@ static void Str_charCodeAt(struct v7_c_func_arg *cfa) {
 
 static void Str_charAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
-     cfa->args[0]->v.num : NAN;
+  cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
 
   if (!isnan(idx) && cfa->this_obj->type == V7_TYPE_STR &&
@@ -632,7 +653,7 @@ static void Str_split(struct v7_c_func_arg *cfa) {
   const struct v7_string *s = &cfa->this_obj->v.str;
   const char *p1, *p2, *e = s->buf + s->len;
   int limit = cfa->num_args == 2 && cfa->args[1]->type == V7_TYPE_NUM ?
-     cfa->args[1]->v.num : -1;
+  cfa->args[1]->v.num : -1;
   int num_elems = 0;
 
   v7_set_class(cfa->result, V7_CLASS_ARRAY);
@@ -689,9 +710,9 @@ static void Str_indexOf(struct v7_c_func_arg *cfa) {
       cfa->num_args > 0 &&
       cfa->args[0]->type == V7_TYPE_STR) {
     int i = cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM ?
-      (int) cfa->args[1]->v.num : 0;
+    (int) cfa->args[1]->v.num : 0;
     const struct v7_string *a = &cfa->this_obj->v.str,
-      *b = &cfa->args[0]->v.str;
+    *b = &cfa->args[0]->v.str;
 
     // Scan the string, advancing one byte at a time
     for (; i >= 0 && a->len >= b->len && i <= (int) (a->len - b->len); i++) {
@@ -723,21 +744,10 @@ static void Str_substr(struct v7_c_func_arg *cfa) {
     }
   }
 }
-
-static void Num_toFixed(struct v7_c_func_arg *cfa) {
-  int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
-  char fmt[10], buf[100];
-
-  snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
-  len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
-  v7_init_str(cfa->result, buf, len, 1);
-}
-
 static void Json_stringify(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   // TODO(lsm): implement JSON.stringify
 }
-
 static void Std_print(struct v7_c_func_arg *cfa) {
   char buf[4000];
   int i;
@@ -873,11 +883,6 @@ static void Std_eval(struct v7_c_func_arg *cfa) {
   }
 }
 
-void v7_set_class(struct v7_val *v, enum v7_class cls) {
-  v->type = V7_TYPE_OBJ;
-  v->proto = &s_prototypes[cls];
-  v->ctor = &s_constructors[cls];
-}
 
 static void init_stdlib(void) {
   static v7_c_func_t ctors[V7_NUM_CLASSES] = {
@@ -919,6 +924,7 @@ static void init_stdlib(void) {
   SET_METHOD(s_crypto, "md5", Crypto_md5);
   SET_METHOD(s_crypto, "md5_hex", Crypto_md5_hex);
   SET_RO_PROP_V(s_global, "Crypto", s_crypto);
+  v7_set_class(&s_crypto, V7_CLASS_OBJECT);
   s_crypto.ref_count = 1;
 #endif
 
@@ -964,10 +970,8 @@ static void init_stdlib(void) {
 
   v7_set_class(&s_math, V7_CLASS_OBJECT);
   v7_set_class(&s_json, V7_CLASS_OBJECT);
-  v7_set_class(&s_crypto, V7_CLASS_OBJECT);
   v7_set_class(&s_global, V7_CLASS_OBJECT);
-  s_math.ref_count = s_json.ref_count = 1;
-  s_global.ref_count = 1;
+  s_math.ref_count = s_json.ref_count = s_global.ref_count = 1;
 }
 
 struct v7 *v7_create(void) {

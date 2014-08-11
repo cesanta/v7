@@ -1,10 +1,13 @@
 CFLAGS = -W -Wall -pedantic -ansi -Wno-comment -g -O0 $(PROF) $(CFLAGS_EXTRA)
 SLRE = ../slre
 CFLAGS += -I$(SLRE) -I.
-
 SOURCES = v7.c $(SLRE)/slre.c
 TO_AMALGAMATE = src/internal.h src/global_vars.c src/util.c \
-                src/crypto.c src/array.c src/parser.c
+                src/crypto.c src/array.c src/boolean.c src/date.c \
+                src/error.c src/function.c src/math.c src/number.c \
+                src/object.c src/regex.c src/string.c src/json.c \
+                src/stdlib.c \
+                src/parser.c
 
 all: v7
 

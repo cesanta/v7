@@ -68,3 +68,9 @@ void v7_init_func(struct v7_val *v, v7_c_func_t func) {
   v7_set_class(v, V7_CLASS_FUNCTION);
   v->v.c_func = func;
 }
+
+void v7_set_class(struct v7_val *v, enum v7_class cls) {
+  v->type = V7_TYPE_OBJ;
+  v->proto = &s_prototypes[cls];
+  v->ctor = &s_constructors[cls];
+}
