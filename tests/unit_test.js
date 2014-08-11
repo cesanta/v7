@@ -52,6 +52,7 @@ test(b == 720, 'for2');
 a = { foo: 1, bar: 2, baz: 3 }, b = [];
 for (var key in a) b.push(key);
 b.sort();
+print(b)
 test(b.length == 3 && b[0] == 'bar' && b[1] == 'baz' && b[2] == 'foo', 'for3');
 
 

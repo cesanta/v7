@@ -14,8 +14,8 @@ for (var i = 0; i < testFiles.length; i++) {
   for (var j = 0; j < cfg.testsCollection.tests.length; j++) {
     var test = cfg.testsCollection.tests[j];
     var code = base64_decode(test.code);
-    print('  ', test.description);
+    //print('  ', test.description);
     //print(code);
-    eval(code);
+    //eval(code);
   }
 }

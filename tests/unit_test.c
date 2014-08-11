@@ -54,7 +54,7 @@ static int static_num_tests = 0;
 static void adder(struct v7_c_func_arg *cfa) {
   int i;
 
-  cfa->result->type = V7_NUM;
+  cfa->result->type = V7_TYPE_NUM;
   cfa->result->v.num = 0;
 
   for (i = 0; i < cfa->num_args; i++) {
@@ -64,12 +64,12 @@ static void adder(struct v7_c_func_arg *cfa) {
 
 static int check_bool(struct v7 *v7, double val) {
   return v7->sp == 1 &&
-    v7_top(v7)[-1]->type == V7_BOOL && val == v7_top(v7)[-1]->v.num;
+    v7_top(v7)[-1]->type == V7_TYPE_BOOL && val == v7_top(v7)[-1]->v.num;
 }
 
 static int check_str(struct v7 *v7, const char *val) {
   return v7->sp > 0 &&
-    v7_top(v7)[-1]->type == V7_STR &&
+    v7_top(v7)[-1]->type == V7_TYPE_STR &&
     strlen(val) == v7_top(v7)[-1]->v.str.len &&
     memcmp(val, v7_top(v7)[-1]->v.str.buf, strlen(val)) == 0;
 }
@@ -77,16 +77,21 @@ static int check_str(struct v7 *v7, const char *val) {
 static int check_num(struct v7 *v7, double an) {
   const struct v7_val *v = v7_top(v7)[-1];
   double bn = v->v.num;
-  return v7->sp > 0 && v->type == V7_NUM &&
+  return v7->sp > 0 && v->type == V7_TYPE_NUM &&
     ((an == bn) || (isinf(an) && isinf(bn)) || (isnan(an) && isnan(bn)));
 }
 
 static const char *test_native_functions(void) {
+  static struct v7_val adder_func_obj;
   struct v7 *v7 = v7_create();
-  v7_setv(v7, v7_rootns(v7), V7_STR, V7_C_FUNC, "adder", 5, 0, adder);
+
+  v7_init_func(&adder_func_obj, &adder);
+  v7_setv(v7, v7_rootns(v7), V7_TYPE_STR, V7_TYPE_OBJ,
+          "adder", 5, 0, &adder_func_obj);
   ASSERT(v7_exec(v7, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(check_num(v7, 10.0));
   v7_destroy(&v7);
+
   return NULL;
 }
 
@@ -127,7 +132,7 @@ static const char *test_v7_exec(void) {
   ASSERT(check_num(v7, 5.0));
 
   ASSERT(v7_exec(v7, "(2 + (12 / 4));") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_NUM);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_NUM);
   ASSERT(v7_top(v7)[-1]->v.num == 5.0);
 
   ASSERT(v7_exec(v7, "1;2 7") == V7_OK);
@@ -155,11 +160,11 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "1 2 3") == V7_OK);
 
   ASSERT(v7_exec(v7, "var k = true;") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_BOOL);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_BOOL);
   ASSERT(v7_top(v7)[-1]->v.num != 0.0);
 
   ASSERT(v7_exec(v7, "var blah = 'kuku';") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_STR);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_STR);
 
   // Test that k.y does exist
   ASSERT(v7_exec(v7, "k = { y: 17 };") == V7_OK);
@@ -170,14 +175,14 @@ static const char *test_v7_exec(void) {
   // Delete k.y and make sure it's gone
   ASSERT(v7_exec(v7, "delete k.y;") == V7_OK);
   ASSERT(v7_exec(v7, "k.y;") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_UNDEF);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_UNDEF);
   ASSERT(v7_sp(v7) == 1);
   ASSERT(v7_exec(v7, "delete b; b;") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_UNDEF);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_UNDEF);
   ASSERT(v7_sp(v7) == 1);
 
   ASSERT(v7_exec(v7, "k = { key1: {x:3}, key2: ':-)', y: 5 };") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_OBJ);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_OBJ);
   ASSERT(v7_sp(v7) == 1);
 
   ASSERT(v7_exec(v7, "k.x = 47;") == V7_OK);
@@ -190,7 +195,7 @@ static const char *test_v7_exec(void) {
   ASSERT(check_num(v7, 7.0));
 
   ASSERT(v7_exec(v7, "k.foo") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_UNDEF);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_UNDEF);
 
   ASSERT(v7_exec(v7, "var z = 'key1'; k[z]['x']") == V7_OK);
   ASSERT(check_num(v7, 3.0));
@@ -200,11 +205,11 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { } ; ") == V7_OK);
   ASSERT(v7_sp(v7) > 0);
-  ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
+  ASSERT(v7_top(v7)[-1]->type == V7_TYPE_OBJ);
   ASSERT(strcmp(v7_top(v7)[-1]->v.func.source_code, "(x, y) { } ") == 0);
 
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { return x * y; };") == V7_OK);
-  ASSERT(v7_top(v7)[-1]->type == V7_FUNC);
+  ASSERT(v7_is_class(v7_top(v7)[-1], V7_CLASS_FUNCTION));
   ASSERT(v7_exec(v7, "f1(2, 3)") == V7_OK);
   ASSERT(check_num(v7, 6.0));
   ASSERT(v7_exec(v7, "f1(12, 4) + 1;") == V7_OK);
@@ -265,9 +270,9 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var f1 = function() { 1; };") == V7_OK);
   ASSERT(v7_exec(v7, "var f2 = function(x) { if (x) return x; };") == V7_OK);
   ASSERT(v7_exec(v7, "f1()") == V7_OK);
-  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_TYPE_UNDEF);
   ASSERT(v7_exec(v7, "f2(false)") == V7_OK);
-  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_TYPE_UNDEF);
   ASSERT(v7_exec(v7, "f2(17)") == V7_OK);
   ASSERT(check_num(v7, 17.0));
   ASSERT(v7_exec(v7, "f2(true)") == V7_OK);
@@ -346,7 +351,10 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "a = {};") == V7_OK);
   ASSERT(v7_exec(v7, "a.foo = function(x) { var y = "
                  "x.substr(1).split() }") == V7_OK);
-  
+
+  ASSERT(v7_exec(v7, "typeof 2") == V7_OK);
+  ASSERT(check_str(v7, "number"));
+
   v7_destroy(&v7);
   return NULL;
 }
@@ -369,6 +377,7 @@ static const char *test_stdlib(void) {
   ASSERT(check_bool(v7, 1));
   ASSERT(v7_exec(v7, "Number(1.23)") == V7_OK);
   ASSERT(check_num(v7, 1.23));
+  ASSERT(v7_exec(v7, "new Number(21.23)") == V7_OK);
 
   // String
   ASSERT(v7_exec(v7, "'hello'.charCodeAt(1)") == V7_OK);
@@ -396,7 +405,7 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, ""));
   ASSERT(v7_exec(v7, "'dew dee'.match(/\\d+/)") == V7_OK);
-  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_NULL);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_TYPE_NULL);
   ASSERT(v7_exec(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);
   ASSERT(v7_exec(v7, "m.length") == V7_OK);
   ASSERT(check_num(v7, 2.0));
@@ -405,7 +414,7 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, "m[1]") == V7_OK);
   ASSERT(check_str(v7, "1234"));
   ASSERT(v7_exec(v7, "m[2]") == V7_OK);
-  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_UNDEF);
+  ASSERT(v7->sp == 1 && v7->stack[0]->type == V7_TYPE_UNDEF);
   ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(); m.length") == V7_OK);
   ASSERT(check_num(v7, 1.0));
   ASSERT(v7_exec(v7, "m = 'aa bb cc'.split(''); m.length") == V7_OK);
@@ -422,10 +431,12 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, "b"));
   ASSERT(v7_exec(v7, "{z: '123456'}.z.substr(0, 3).split('').length") == V7_OK);
   ASSERT(check_num(v7, 3.0));
-  ASSERT(v7_exec(v7, "new String()") == V7_OK);
-  //ASSERT(check_str(v7, ""));
+  ASSERT(v7_exec(v7, "String('hi')") == V7_OK);
+  ASSERT(check_str(v7, "hi"));
+  ASSERT(v7_exec(v7, "new String('blah')") == V7_OK);
 
   // Math
+  v7_exec(v7, "Math");
   ASSERT(v7_exec(v7, "Math.sqrt(144)") == V7_OK);
   ASSERT(check_num(v7, 12.0));
 

@@ -25,8 +25,14 @@ extern "C" {
 #define V7_VERSION "1.0"
 
 enum v7_type {
-  V7_UNDEF, V7_NULL, V7_OBJ, V7_NUM, V7_STR, V7_BOOL, V7_FUNC, V7_C_FUNC,
-  V7_RO_PROP, V7_ARRAY, V7_REGEX
+  V7_TYPE_UNDEF, V7_TYPE_NULL, V7_TYPE_BOOL, V7_TYPE_STR, V7_TYPE_NUM,
+  V7_TYPE_OBJ, V7_NUM_TYPES
+};
+
+enum v7_class {
+  V7_CLASS_ARRAY, V7_CLASS_BOOLEAN, V7_CLASS_DATE, V7_CLASS_ERROR,
+  V7_CLASS_FUNCTION, V7_CLASS_NUMBER, V7_CLASS_OBJECT, V7_CLASS_REGEXP,
+  V7_CLASS_STRING, V7_NUM_CLASSES
 };
 
 enum v7_err {
@@ -55,11 +61,17 @@ struct v7_prop {
   struct v7_prop *next;
   struct v7_val *key;
   struct v7_val *val;
+  unsigned short flags;
+#define V7_PROP_NOT_WRITABLE   1  // property is not changeable
+#define V7_PROP_NOT_ENUMERABLE 2  // not enumerable in for..in loop
+#define V7_PROP_NOT_DELETABLE  4  // delete-ing this property must fail
+#define V7_PROP_ALLOCATED      8  // v7_prop must be free()-ed
 };
 
 struct v7_string {
   char *buf;                // Pointer to buffer with string data
   unsigned long len;        // String length
+  char loc[16];             // Small strings are stored here
 };
 
 struct v7_func {
@@ -87,8 +99,14 @@ struct v7_val {
   struct v7_prop *props;      // Object's key/value list
   union v7_scalar v;          // The value itself
   enum v7_type type;          // Value type
-  unsigned short flags;       // Attributes
   short ref_count;            // Reference counter
+
+  unsigned short flags;       // Flags - defined below
+#define V7_VAL_ALLOCATED   1  // Whole "struct v7_val" must be free()-ed
+#define V7_STR_ALLOCATED   2  // v.str.buf must be free()-ed
+#define V7_JS_FUNC         4  // Function object is a JavsScript code
+#define V7_PROP_FUNC       8  // Function object is a native property function
+#define V7_VAL_DEALLOCATED 16 // Value has been deallocated
 };
 
 struct v7 {
@@ -124,7 +142,6 @@ enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key);
 enum v7_err v7_pop(struct v7 *, int num);
 struct v7_val *v7_mkv(struct v7 *v7, enum v7_type t, ...);
 void v7_freeval(struct v7 *v7, struct v7_val *v);
-void v7_set_value_type(struct v7_val *v, enum v7_type type);
 struct v7_val *v7_lookup(struct v7_val *obj, const char *key);
 struct v7_val *v7_rootns(struct v7 *);
 void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
@@ -133,6 +150,11 @@ int v7_sp(struct v7 *v7);
 struct v7_val **v7_top(struct v7 *);
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz);
 const char *v7_strerror(enum v7_err);
+int v7_is_class(const struct v7_val *obj, enum v7_class cls);
+void v7_set_class(struct v7_val *obj, enum v7_class cls);
+void v7_init_func(struct v7_val *v, v7_c_func_t func);
+void v7_init_str(struct v7_val *v, char *p, unsigned long len, int own);
+void v7_init_num(struct v7_val *v, double num);
 
 #ifdef __cplusplus
 }
