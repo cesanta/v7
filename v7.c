@@ -1153,7 +1153,12 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
   } else if (v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN)) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER)) {
+    // TODO: check this on 32-bit arch
+    if (v->v.num > ((unsigned long) 1 << 52) || ceil(v->v.num) != v->v.num) {
       snprintf(buf, bsiz, "%lg", v->v.num);
+    } else {
+      snprintf(buf, bsiz, "%lu", (unsigned long) v->v.num);
+    }
   } else if (v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING)) {
     snprintf(buf, bsiz, "%.*s", (int) v->v.str.len, v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_ARRAY)) {
