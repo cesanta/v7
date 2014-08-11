@@ -151,53 +151,20 @@ static void init_stdlib(void) {
     s_constructors[i].v.c_func = ctors[i];
   }
 
-  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "toString", Obj_toString);
-  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
+  init_object();
+  init_number();
+  init_array();
+  init_string();
+  init_regex();
+  init_function();
+  init_date();
+  init_error();
 
-  SET_METHOD(s_math, "random", Math_random);
-  SET_METHOD(s_math, "pow", Math_pow);
-  SET_METHOD(s_math, "sin", Math_sin);
-  SET_METHOD(s_math, "tan", Math_tan);
-  SET_METHOD(s_math, "sqrt", Math_sqrt);
-
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MAX_VALUE",
-              V7_TYPE_NUM, num, LONG_MAX);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MIN_VALUE",
-              V7_TYPE_NUM, num, LONG_MIN);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "NaN",
-              V7_TYPE_NUM, num, NAN);
-  SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
-
-  SET_METHOD(s_json, "stringify", Json_stringify);
-
+  init_math();
+  init_json();
 #ifndef V7_DISABLE_CRYPTO
-  SET_METHOD(s_crypto, "md5", Crypto_md5);
-  SET_METHOD(s_crypto, "md5_hex", Crypto_md5_hex);
-  SET_RO_PROP_V(s_global, "Crypto", s_crypto);
-  v7_set_class(&s_crypto, V7_CLASS_OBJECT);
-  s_crypto.ref_count = 1;
+  init_crypto();
 #endif
-
-  SET_PROP_FUNC(s_prototypes[V7_CLASS_ARRAY], "length", Arr_length);
-  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "push", Arr_push);
-  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "sort", Arr_sort);
-
-  SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "indexOf", Str_indexOf);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
-
-  SET_RO_PROP(s_math, "E", V7_TYPE_NUM, num, M_E);
-  SET_RO_PROP(s_math, "PI", V7_TYPE_NUM, num, M_PI);
-  SET_RO_PROP(s_math, "LN2", V7_TYPE_NUM, num, M_LN2);
-  SET_RO_PROP(s_math, "LN10", V7_TYPE_NUM, num, M_LN10);
-  SET_RO_PROP(s_math, "LOG2E", V7_TYPE_NUM, num, M_LOG2E);
-  SET_RO_PROP(s_math, "LOG10E", V7_TYPE_NUM, num, M_LOG10E);
-  SET_RO_PROP(s_math, "SQRT1_2", V7_TYPE_NUM, num, M_SQRT1_2);
-  SET_RO_PROP(s_math, "SQRT2", V7_TYPE_NUM, num, M_SQRT2);
 
   SET_METHOD(s_global, "print", Std_print);
   SET_METHOD(s_global, "exit", Std_exit);
@@ -206,20 +173,6 @@ static void init_stdlib(void) {
   SET_METHOD(s_global, "base64_decode", Std_base64_decode);
   SET_METHOD(s_global, "eval", Std_eval);
 
-  SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
-  SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
-  SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
-  SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
-  SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
-  SET_RO_PROP_V(s_global, "Function", s_constructors[V7_CLASS_FUNCTION]);
-  SET_RO_PROP_V(s_global, "Date", s_constructors[V7_CLASS_DATE]);
-  SET_RO_PROP_V(s_global, "Error", s_constructors[V7_CLASS_ERROR]);
-
-  SET_RO_PROP_V(s_global, "Math", s_math);
-  SET_RO_PROP_V(s_global, "JSON", s_json);
-
-  v7_set_class(&s_math, V7_CLASS_OBJECT);
-  v7_set_class(&s_json, V7_CLASS_OBJECT);
   v7_set_class(&s_global, V7_CLASS_OBJECT);
-  s_math.ref_count = s_json.ref_count = s_global.ref_count = 1;
+  s_global.ref_count = 1;
 }

@@ -159,3 +159,15 @@ static void Str_substr(struct v7_c_func_arg *cfa) {
     }
   }
 }
+
+static void init_string(void) {
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "indexOf", Str_indexOf);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
+
+  SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
+}

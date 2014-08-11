@@ -250,4 +250,14 @@ static void Crypto_md5_hex(struct v7_c_func_arg *cfa) {
     bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
   }
 }
+
+static void init_crypto(void) {
+  SET_METHOD(s_crypto, "md5", Crypto_md5);
+  SET_METHOD(s_crypto, "md5_hex", Crypto_md5_hex);
+
+  v7_set_class(&s_crypto, V7_CLASS_OBJECT);
+  s_crypto.ref_count = 1;
+
+  SET_RO_PROP_V(s_global, "Crypto", s_crypto);
+}
 #endif  // V7_DISABLE_CRYPTO

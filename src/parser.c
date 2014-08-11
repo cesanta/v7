@@ -1,4 +1,3 @@
-
 struct v7 *v7_create(void) {
   static int prototypes_initialized = 0;
   struct v7 *v7 = NULL;

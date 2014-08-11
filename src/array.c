@@ -56,3 +56,10 @@ static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   n += snprintf(buf + n, bsiz - n, "%s", "]");
 }
 
+static void init_array(void) {
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_ARRAY], "length", Arr_length);
+  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "push", Arr_push);
+  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "sort", Arr_sort);
+
+  SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
+}

@@ -12,3 +12,14 @@ static void Num_toFixed(struct v7_c_func_arg *cfa) {
   len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
   v7_init_str(cfa->result, buf, len, 1);
 }
+
+static void init_number(void) {
+  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MAX_VALUE",
+              V7_TYPE_NUM, num, LONG_MAX);
+  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MIN_VALUE",
+              V7_TYPE_NUM, num, LONG_MIN);
+  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "NaN",
+              V7_TYPE_NUM, num, NAN);
+  SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
+  SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
+}

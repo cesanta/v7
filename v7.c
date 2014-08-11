@@ -139,9 +139,10 @@ static const int s_op_lengths[NUM_OPS] = {
 
 static struct v7_val s_constructors[V7_NUM_CLASSES];
 static struct v7_val s_prototypes[V7_NUM_CLASSES];
+
 static struct v7_val s_global = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
-static struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
+static struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static void inc_ref_count(struct v7_val *v) {
   assert(v != NULL);
   assert(v->ref_count >= 0);
@@ -803,6 +804,16 @@ static void Crypto_md5_hex(struct v7_c_func_arg *cfa) {
     bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
   }
 }
+
+static void init_crypto(void) {
+  SET_METHOD(s_crypto, "md5", Crypto_md5);
+  SET_METHOD(s_crypto, "md5_hex", Crypto_md5_hex);
+
+  v7_set_class(&s_crypto, V7_CLASS_OBJECT);
+  s_crypto.ref_count = 1;
+
+  SET_RO_PROP_V(s_global, "Crypto", s_crypto);
+}
 #endif  // V7_DISABLE_CRYPTO
 static void Array_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
@@ -862,18 +873,33 @@ static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   n += snprintf(buf + n, bsiz - n, "%s", "]");
 }
 
-static void Boolean_ctor(struct v7_c_func_arg *cfa) {
+static void init_array(void) {
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_ARRAY], "length", Arr_length);
+  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "push", Arr_push);
+  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "sort", Arr_sort);
+
+  SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
+}static void Boolean_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }static void Date_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }
-static void Error_ctor(struct v7_c_func_arg *cfa) {
+
+static void init_date(void) {
+  SET_RO_PROP_V(s_global, "Date", s_constructors[V7_CLASS_DATE]);
+}static void Error_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }
-static void Function_ctor(struct v7_c_func_arg *cfa) {
+
+static void init_error(void) {
+  SET_RO_PROP_V(s_global, "Error", s_constructors[V7_CLASS_ERROR]);
+}static void Function_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }
-static void Math_random(struct v7_c_func_arg *cfa) {
+
+static void init_function(void) {
+  SET_RO_PROP_V(s_global, "Function", s_constructors[V7_CLASS_FUNCTION]);
+}static void Math_random(struct v7_c_func_arg *cfa) {
   srand((unsigned long) cfa->result);   // TODO: make better randomness
   v7_init_num(cfa->result, (double) rand() / RAND_MAX);
 }
@@ -894,7 +920,28 @@ static void Math_pow(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args == 2 ?
               pow(cfa->args[0]->v.num, cfa->args[1]->v.num) : 0.0);
 }
-static void Number_ctor(struct v7_c_func_arg *cfa) {
+
+static void init_math(void) {
+  SET_METHOD(s_math, "random", Math_random);
+  SET_METHOD(s_math, "pow", Math_pow);
+  SET_METHOD(s_math, "sin", Math_sin);
+  SET_METHOD(s_math, "tan", Math_tan);
+  SET_METHOD(s_math, "sqrt", Math_sqrt);
+
+  SET_RO_PROP(s_math, "E", V7_TYPE_NUM, num, M_E);
+  SET_RO_PROP(s_math, "PI", V7_TYPE_NUM, num, M_PI);
+  SET_RO_PROP(s_math, "LN2", V7_TYPE_NUM, num, M_LN2);
+  SET_RO_PROP(s_math, "LN10", V7_TYPE_NUM, num, M_LN10);
+  SET_RO_PROP(s_math, "LOG2E", V7_TYPE_NUM, num, M_LOG2E);
+  SET_RO_PROP(s_math, "LOG10E", V7_TYPE_NUM, num, M_LOG10E);
+  SET_RO_PROP(s_math, "SQRT1_2", V7_TYPE_NUM, num, M_SQRT1_2);
+  SET_RO_PROP(s_math, "SQRT2", V7_TYPE_NUM, num, M_SQRT2);
+
+  v7_set_class(&s_math, V7_CLASS_OBJECT);
+  s_math.ref_count = 1;
+
+  SET_RO_PROP_V(s_global, "Math", s_math);
+}static void Number_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = common_ctor(cfa);
   obj->type = cfa->called_as_constructor ? V7_TYPE_OBJ : V7_TYPE_NUM;
   obj->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
@@ -908,7 +955,17 @@ static void Num_toFixed(struct v7_c_func_arg *cfa) {
   len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
   v7_init_str(cfa->result, buf, len, 1);
 }
-static void Object_ctor(struct v7_c_func_arg *cfa) {
+
+static void init_number(void) {
+  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MAX_VALUE",
+              V7_TYPE_NUM, num, LONG_MAX);
+  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MIN_VALUE",
+              V7_TYPE_NUM, num, LONG_MIN);
+  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "NaN",
+              V7_TYPE_NUM, num, NAN);
+  SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
+  SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
+}static void Object_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }
 
@@ -940,11 +997,19 @@ static void Obj_keys(struct v7_c_func_arg *cfa) {
     v7_append(cfa->v7, cfa->result, p->key);
   }
 }
-static void Regex_ctor(struct v7_c_func_arg *cfa) {
+
+static void init_object(void) {
+  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "toString", Obj_toString);
+  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
+  SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
+}static void Regex_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = common_ctor(cfa);
   v7_set_class(obj, V7_CLASS_REGEXP);
 }
-static void String_ctor(struct v7_c_func_arg *cfa) {
+
+static void init_regex(void) {
+  SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
+}static void String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = common_ctor(cfa), *arg = cfa->args[0];
   if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
     v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
@@ -1105,11 +1170,30 @@ static void Str_substr(struct v7_c_func_arg *cfa) {
     }
   }
 }
-static void Json_stringify(struct v7_c_func_arg *cfa) {
+
+static void init_string(void) {
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "indexOf", Str_indexOf);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
+
+  SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
+}static void Json_stringify(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   // TODO(lsm): implement JSON.stringify
 }
-static void Std_print(struct v7_c_func_arg *cfa) {
+
+static void init_json(void) {
+  SET_METHOD(s_json, "stringify", Json_stringify);
+
+  v7_set_class(&s_json, V7_CLASS_OBJECT);
+  s_json.ref_count = 1;
+
+  SET_RO_PROP_V(s_global, "JSON", s_json);
+}static void Std_print(struct v7_c_func_arg *cfa) {
   char buf[4000];
   int i;
   for (i = 0; i < cfa->num_args; i++) {
@@ -1262,53 +1346,20 @@ static void init_stdlib(void) {
     s_constructors[i].v.c_func = ctors[i];
   }
 
-  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "toString", Obj_toString);
-  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
+  init_object();
+  init_number();
+  init_array();
+  init_string();
+  init_regex();
+  init_function();
+  init_date();
+  init_error();
 
-  SET_METHOD(s_math, "random", Math_random);
-  SET_METHOD(s_math, "pow", Math_pow);
-  SET_METHOD(s_math, "sin", Math_sin);
-  SET_METHOD(s_math, "tan", Math_tan);
-  SET_METHOD(s_math, "sqrt", Math_sqrt);
-
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MAX_VALUE",
-              V7_TYPE_NUM, num, LONG_MAX);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MIN_VALUE",
-              V7_TYPE_NUM, num, LONG_MIN);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "NaN",
-              V7_TYPE_NUM, num, NAN);
-  SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
-
-  SET_METHOD(s_json, "stringify", Json_stringify);
-
+  init_math();
+  init_json();
 #ifndef V7_DISABLE_CRYPTO
-  SET_METHOD(s_crypto, "md5", Crypto_md5);
-  SET_METHOD(s_crypto, "md5_hex", Crypto_md5_hex);
-  SET_RO_PROP_V(s_global, "Crypto", s_crypto);
-  v7_set_class(&s_crypto, V7_CLASS_OBJECT);
-  s_crypto.ref_count = 1;
+  init_crypto();
 #endif
-
-  SET_PROP_FUNC(s_prototypes[V7_CLASS_ARRAY], "length", Arr_length);
-  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "push", Arr_push);
-  SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "sort", Arr_sort);
-
-  SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "indexOf", Str_indexOf);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
-
-  SET_RO_PROP(s_math, "E", V7_TYPE_NUM, num, M_E);
-  SET_RO_PROP(s_math, "PI", V7_TYPE_NUM, num, M_PI);
-  SET_RO_PROP(s_math, "LN2", V7_TYPE_NUM, num, M_LN2);
-  SET_RO_PROP(s_math, "LN10", V7_TYPE_NUM, num, M_LN10);
-  SET_RO_PROP(s_math, "LOG2E", V7_TYPE_NUM, num, M_LOG2E);
-  SET_RO_PROP(s_math, "LOG10E", V7_TYPE_NUM, num, M_LOG10E);
-  SET_RO_PROP(s_math, "SQRT1_2", V7_TYPE_NUM, num, M_SQRT1_2);
-  SET_RO_PROP(s_math, "SQRT2", V7_TYPE_NUM, num, M_SQRT2);
 
   SET_METHOD(s_global, "print", Std_print);
   SET_METHOD(s_global, "exit", Std_exit);
@@ -1317,24 +1368,9 @@ static void init_stdlib(void) {
   SET_METHOD(s_global, "base64_decode", Std_base64_decode);
   SET_METHOD(s_global, "eval", Std_eval);
 
-  SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
-  SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
-  SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
-  SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
-  SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
-  SET_RO_PROP_V(s_global, "Function", s_constructors[V7_CLASS_FUNCTION]);
-  SET_RO_PROP_V(s_global, "Date", s_constructors[V7_CLASS_DATE]);
-  SET_RO_PROP_V(s_global, "Error", s_constructors[V7_CLASS_ERROR]);
-
-  SET_RO_PROP_V(s_global, "Math", s_math);
-  SET_RO_PROP_V(s_global, "JSON", s_json);
-
-  v7_set_class(&s_math, V7_CLASS_OBJECT);
-  v7_set_class(&s_json, V7_CLASS_OBJECT);
   v7_set_class(&s_global, V7_CLASS_OBJECT);
-  s_math.ref_count = s_json.ref_count = s_global.ref_count = 1;
+  s_global.ref_count = 1;
 }
-
 struct v7 *v7_create(void) {
   static int prototypes_initialized = 0;
   struct v7 *v7 = NULL;

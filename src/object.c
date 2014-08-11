@@ -30,3 +30,9 @@ static void Obj_keys(struct v7_c_func_arg *cfa) {
     v7_append(cfa->v7, cfa->result, p->key);
   }
 }
+
+static void init_object(void) {
+  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "toString", Obj_toString);
+  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
+  SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
+}
