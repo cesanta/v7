@@ -124,15 +124,58 @@ static void Std_eval(struct v7_c_func_arg *cfa) {
     cfa->v7->line_no = 1;
     do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
     cfa->v7->line_no = old_line_no;
-#if 0
-    if (cfa->v7->sp > old_sp) {
-      *cfa->result = *v7_top(cfa->v7)[-1];
-      inc_ref_count(cfa->result);
-    }
-#endif
   }
 }
 
+static void Std_read(struct v7_c_func_arg *cfa) {
+  struct v7_val *v;
+  char buf[2048];
+  size_t n;
+
+  cfa->result->type = V7_TYPE_NULL;
+  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+      (n = fread(buf, 1, sizeof(buf), (FILE *) (unsigned long) v->v.num)) > 0) {
+    v7_init_str(cfa->result, buf, n, 1);
+  }
+}
+
+static void Std_write(struct v7_c_func_arg *cfa) {
+  struct v7_val *v = cfa->args[0];
+  size_t n;
+
+  v7_init_num(cfa->result, -1.0);
+  if (cfa->num_args == 1 &&
+      is_string(cfa->args[0]) &&
+      (v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+      (n = fwrite(cfa->args[0]->v.str.buf, 1, cfa->args[0]->v.str.len,
+                  (FILE *) (unsigned long) v->v.num)) > 0) {
+    v7_init_num(cfa->result, n);
+  }
+}
+
+static void Std_close(struct v7_c_func_arg *cfa) {
+  struct v7_val *v;
+  v7_init_bool(cfa->result, 0);
+  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+      fclose((FILE *) (unsigned long) v->v.num) == 0) {
+    v7_init_bool(cfa->result, 1);
+  }
+}
+
+static void Std_open(struct v7_c_func_arg *cfa) {
+  struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1];
+  FILE *fp;
+
+  cfa->result->type = V7_TYPE_NULL;
+  if (cfa->num_args == 2 && is_string(v1) && is_string(v2) &&
+      (fp = fopen(v1->v.str.buf, v2->v.str.buf)) != NULL) {
+    v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
+            "fp", 2, 0, (double) (unsigned long) fp);
+    //v7_set_class(res, V7_CLASS_OBJECT);
+    cfa->result->type = V7_TYPE_OBJ;
+    cfa->result->proto = &s_file;
+  }
+}
 
 static void init_stdlib(void) {
   static v7_c_func_t ctors[V7_NUM_CLASSES] = {
@@ -172,6 +215,14 @@ static void init_stdlib(void) {
   SET_METHOD(s_global, "base64_encode", Std_base64_encode);
   SET_METHOD(s_global, "base64_decode", Std_base64_decode);
   SET_METHOD(s_global, "eval", Std_eval);
+  SET_METHOD(s_global, "open", Std_open);
+
+  SET_METHOD(s_file, "read", Std_read);
+  SET_METHOD(s_file, "write", Std_write);
+  SET_METHOD(s_file, "close", Std_close);
+
+  v7_set_class(&s_file, V7_CLASS_OBJECT);
+  s_file.ref_count = 1;
 
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;

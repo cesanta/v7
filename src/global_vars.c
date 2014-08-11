@@ -11,3 +11,4 @@ static struct v7_val s_prototypes[V7_NUM_CLASSES];
 static struct v7_val s_global = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
+static struct v7_val s_file = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);

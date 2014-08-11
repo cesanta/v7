@@ -407,3 +407,86 @@ const char *v7_strerror(enum v7_err e) {
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
 }
 
+int v7_is_true(const struct v7_val *v) {
+  return (v->type == V7_TYPE_BOOL && v->v.num != 0.0) ||
+  (v->type == V7_TYPE_NUM && v->v.num != 0.0 && !isnan(v->v.num)) ||
+  (v->type == V7_TYPE_STR && v->v.str.len > 0) ||
+  (v->type == V7_TYPE_OBJ);
+}
+
+static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  const struct v7_prop *m, *head = v->v.array;
+  int n = snprintf(buf, bsiz, "%s", "[");
+
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    v7_to_string(m->val, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+  }
+  n += snprintf(buf + n, bsiz - n, "%s", "]");
+}
+
+static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  const struct v7_prop *m, *head = v->props;
+  int n = snprintf(buf, bsiz, "%s", "{");
+
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    v7_to_string(m->key, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+    n += snprintf(buf + n , bsiz - n, "%s", ": ");
+    v7_to_string(m->val, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+  }
+  n += snprintf(buf + n, bsiz - n, "%s", "}");
+}
+
+static int is_string(const struct v7_val *v) {
+  return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
+}
+
+static int is_num(const struct v7_val *v) {
+  return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
+}
+
+static int is_bool(const struct v7_val *v) {
+  return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
+}
+
+const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  if (v->type == V7_TYPE_UNDEF) {
+    snprintf(buf, bsiz, "%s", "undefined");
+  } else if (v->type == V7_TYPE_NULL) {
+    snprintf(buf, bsiz, "%s", "null");
+  } else if (is_bool(v)) {
+    snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
+  } else if (is_num(v)) {
+    // TODO: check this on 32-bit arch
+    if (v->v.num > ((unsigned long) 1 << 52) || ceil(v->v.num) != v->v.num) {
+      snprintf(buf, bsiz, "%lg", v->v.num);
+    } else {
+      snprintf(buf, bsiz, "%lu", (unsigned long) v->v.num);
+    }
+  } else if (is_string(v)) {
+    snprintf(buf, bsiz, "%.*s", (int) v->v.str.len, v->v.str.buf);
+  } else if (v7_is_class(v, V7_CLASS_ARRAY)) {
+    arr_to_string(v, buf, bsiz);
+  } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
+    if (v->flags & V7_JS_FUNC) {
+      snprintf(buf, bsiz, "'function%s'", v->v.func.source_code);
+    } else {
+      snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
+    }
+  } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
+    snprintf(buf, bsiz, "/%s/", v->v.regex);
+  } else if (v->type == V7_TYPE_OBJ) {
+    obj_to_string(v, buf, bsiz);
+  } else {
+    snprintf(buf, bsiz, "??");
+  }
+
+  buf[bsiz - 1] = '\0';
+  return buf;
+}
+
+

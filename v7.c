@@ -143,6 +143,7 @@ static struct v7_val s_prototypes[V7_NUM_CLASSES];
 static struct v7_val s_global = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
+static struct v7_val s_file = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static void inc_ref_count(struct v7_val *v) {
   assert(v != NULL);
   assert(v->ref_count >= 0);
@@ -552,6 +553,89 @@ const char *v7_strerror(enum v7_err e) {
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
 }
 
+int v7_is_true(const struct v7_val *v) {
+  return (v->type == V7_TYPE_BOOL && v->v.num != 0.0) ||
+  (v->type == V7_TYPE_NUM && v->v.num != 0.0 && !isnan(v->v.num)) ||
+  (v->type == V7_TYPE_STR && v->v.str.len > 0) ||
+  (v->type == V7_TYPE_OBJ);
+}
+
+static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  const struct v7_prop *m, *head = v->v.array;
+  int n = snprintf(buf, bsiz, "%s", "[");
+
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    v7_to_string(m->val, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+  }
+  n += snprintf(buf + n, bsiz - n, "%s", "]");
+}
+
+static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  const struct v7_prop *m, *head = v->props;
+  int n = snprintf(buf, bsiz, "%s", "{");
+
+  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
+    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    v7_to_string(m->key, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+    n += snprintf(buf + n , bsiz - n, "%s", ": ");
+    v7_to_string(m->val, buf + n, bsiz - n);
+    n = (int) strlen(buf);
+  }
+  n += snprintf(buf + n, bsiz - n, "%s", "}");
+}
+
+static int is_string(const struct v7_val *v) {
+  return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
+}
+
+static int is_num(const struct v7_val *v) {
+  return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
+}
+
+static int is_bool(const struct v7_val *v) {
+  return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
+}
+
+const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
+  if (v->type == V7_TYPE_UNDEF) {
+    snprintf(buf, bsiz, "%s", "undefined");
+  } else if (v->type == V7_TYPE_NULL) {
+    snprintf(buf, bsiz, "%s", "null");
+  } else if (is_bool(v)) {
+    snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
+  } else if (is_num(v)) {
+    // TODO: check this on 32-bit arch
+    if (v->v.num > ((unsigned long) 1 << 52) || ceil(v->v.num) != v->v.num) {
+      snprintf(buf, bsiz, "%lg", v->v.num);
+    } else {
+      snprintf(buf, bsiz, "%lu", (unsigned long) v->v.num);
+    }
+  } else if (is_string(v)) {
+    snprintf(buf, bsiz, "%.*s", (int) v->v.str.len, v->v.str.buf);
+  } else if (v7_is_class(v, V7_CLASS_ARRAY)) {
+    arr_to_string(v, buf, bsiz);
+  } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
+    if (v->flags & V7_JS_FUNC) {
+      snprintf(buf, bsiz, "'function%s'", v->v.func.source_code);
+    } else {
+      snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
+    }
+  } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
+    snprintf(buf, bsiz, "/%s/", v->v.regex);
+  } else if (v->type == V7_TYPE_OBJ) {
+    obj_to_string(v, buf, bsiz);
+  } else {
+    snprintf(buf, bsiz, "??");
+  }
+
+  buf[bsiz - 1] = '\0';
+  return buf;
+}
+
+
 #ifndef V7_DISABLE_CRYPTO
 
 //////////////////////////////// START OF MD5 THIRD PARTY CODE
@@ -861,25 +945,14 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
   free(arr);
 }
 
-static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
-  const struct v7_prop *m, *head = v->v.array;
-  int n = snprintf(buf, bsiz, "%s", "[");
-
-  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
-    v7_to_string(m->val, buf + n, bsiz - n);
-    n = (int) strlen(buf);
-  }
-  n += snprintf(buf + n, bsiz - n, "%s", "]");
-}
-
 static void init_array(void) {
   SET_PROP_FUNC(s_prototypes[V7_CLASS_ARRAY], "length", Arr_length);
   SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "push", Arr_push);
   SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "sort", Arr_sort);
 
   SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
-}static void Boolean_ctor(struct v7_c_func_arg *cfa) {
+}
+static void Boolean_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }static void Date_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
@@ -887,19 +960,22 @@ static void init_array(void) {
 
 static void init_date(void) {
   SET_RO_PROP_V(s_global, "Date", s_constructors[V7_CLASS_DATE]);
-}static void Error_ctor(struct v7_c_func_arg *cfa) {
+}
+static void Error_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }
 
 static void init_error(void) {
   SET_RO_PROP_V(s_global, "Error", s_constructors[V7_CLASS_ERROR]);
-}static void Function_ctor(struct v7_c_func_arg *cfa) {
+}
+static void Function_ctor(struct v7_c_func_arg *cfa) {
   common_ctor(cfa);
 }
 
 static void init_function(void) {
   SET_RO_PROP_V(s_global, "Function", s_constructors[V7_CLASS_FUNCTION]);
-}static void Math_random(struct v7_c_func_arg *cfa) {
+}
+static void Math_random(struct v7_c_func_arg *cfa) {
   srand((unsigned long) cfa->result);   // TODO: make better randomness
   v7_init_num(cfa->result, (double) rand() / RAND_MAX);
 }
@@ -941,7 +1017,8 @@ static void init_math(void) {
   s_math.ref_count = 1;
 
   SET_RO_PROP_V(s_global, "Math", s_math);
-}static void Number_ctor(struct v7_c_func_arg *cfa) {
+}
+static void Number_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = common_ctor(cfa);
   obj->type = cfa->called_as_constructor ? V7_TYPE_OBJ : V7_TYPE_NUM;
   obj->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
@@ -965,23 +1042,9 @@ static void init_number(void) {
               V7_TYPE_NUM, num, NAN);
   SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
   SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
-}static void Object_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
 }
-
-static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
-  const struct v7_prop *m, *head = v->props;
-  int n = snprintf(buf, bsiz, "%s", "{");
-
-  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
-    v7_to_string(m->key, buf + n, bsiz - n);
-    n = (int) strlen(buf);
-    n += snprintf(buf + n , bsiz - n, "%s", ": ");
-    v7_to_string(m->val, buf + n, bsiz - n);
-    n = (int) strlen(buf);
-  }
-  n += snprintf(buf + n, bsiz - n, "%s", "}");
+static void Object_ctor(struct v7_c_func_arg *cfa) {
+  common_ctor(cfa);
 }
 
 static void Obj_toString(struct v7_c_func_arg *cfa) {
@@ -1002,14 +1065,16 @@ static void init_object(void) {
   SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "toString", Obj_toString);
   SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
   SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
-}static void Regex_ctor(struct v7_c_func_arg *cfa) {
+}
+static void Regex_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = common_ctor(cfa);
   v7_set_class(obj, V7_CLASS_REGEXP);
 }
 
 static void init_regex(void) {
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
-}static void String_ctor(struct v7_c_func_arg *cfa) {
+}
+static void String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = common_ctor(cfa), *arg = cfa->args[0];
   if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
     v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
@@ -1181,7 +1246,8 @@ static void init_string(void) {
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
 
   SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
-}static void Json_stringify(struct v7_c_func_arg *cfa) {
+}
+static void Json_stringify(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   // TODO(lsm): implement JSON.stringify
 }
@@ -1319,15 +1385,57 @@ static void Std_eval(struct v7_c_func_arg *cfa) {
     cfa->v7->line_no = 1;
     do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
     cfa->v7->line_no = old_line_no;
-#if 0
-    if (cfa->v7->sp > old_sp) {
-      *cfa->result = *v7_top(cfa->v7)[-1];
-      inc_ref_count(cfa->result);
-    }
-#endif
   }
 }
 
+static void Std_read(struct v7_c_func_arg *cfa) {
+  struct v7_val *v;
+  char buf[2048];
+  size_t n;
+
+  cfa->result->type = V7_TYPE_NULL;
+  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+      (n = fread(buf, 1, sizeof(buf), (FILE *) (unsigned long) v->v.num)) > 0) {
+    v7_init_str(cfa->result, buf, n, 1);
+  }
+}
+
+static void Std_write(struct v7_c_func_arg *cfa) {
+  struct v7_val *v = cfa->args[0];
+  size_t n;
+
+  v7_init_num(cfa->result, -1.0);
+  if (cfa->num_args == 1 &&
+      is_string(cfa->args[0]) &&
+      (v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+      (n = fwrite(cfa->args[0]->v.str.buf, 1, cfa->args[0]->v.str.len,
+                  (FILE *) (unsigned long) v->v.num)) > 0) {
+    v7_init_num(cfa->result, n);
+  }
+}
+
+static void Std_close(struct v7_c_func_arg *cfa) {
+  struct v7_val *v;
+  v7_init_bool(cfa->result, 0);
+  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+      fclose((FILE *) (unsigned long) v->v.num) == 0) {
+    v7_init_bool(cfa->result, 1);
+  }
+}
+
+static void Std_open(struct v7_c_func_arg *cfa) {
+  struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1];
+  FILE *fp;
+
+  cfa->result->type = V7_TYPE_NULL;
+  if (cfa->num_args == 2 && is_string(v1) && is_string(v2) &&
+      (fp = fopen(v1->v.str.buf, v2->v.str.buf)) != NULL) {
+    v7_set_class(cfa->result, V7_CLASS_OBJECT);
+    cfa->result->proto = &s_file;
+    v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
+            "fp", 2, 0, (double) (unsigned long) fp);
+  }
+}
 
 static void init_stdlib(void) {
   static v7_c_func_t ctors[V7_NUM_CLASSES] = {
@@ -1367,6 +1475,14 @@ static void init_stdlib(void) {
   SET_METHOD(s_global, "base64_encode", Std_base64_encode);
   SET_METHOD(s_global, "base64_decode", Std_base64_decode);
   SET_METHOD(s_global, "eval", Std_eval);
+  SET_METHOD(s_global, "open", Std_open);
+
+  SET_METHOD(s_file, "read", Std_read);
+  SET_METHOD(s_file, "write", Std_write);
+  SET_METHOD(s_file, "close", Std_close);
+
+  v7_set_class(&s_file, V7_CLASS_OBJECT);
+  s_file.ref_count = 1;
 
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;
@@ -1411,49 +1527,6 @@ struct v7_val **v7_top(struct v7 *v7) {
 
 int v7_sp(struct v7 *v7) {
   return (int) (v7_top(v7) - v7->stack);
-}
-
-int v7_is_true(const struct v7_val *v) {
-  return (v->type == V7_TYPE_BOOL && v->v.num != 0.0) ||
-  (v->type == V7_TYPE_NUM && v->v.num != 0.0 && !isnan(v->v.num)) ||
-  (v->type == V7_TYPE_STR && v->v.str.len > 0) ||
-  (v->type == V7_TYPE_OBJ);
-}
-
-const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
-  if (v->type == V7_TYPE_UNDEF) {
-    snprintf(buf, bsiz, "%s", "undefined");
-  } else if (v->type == V7_TYPE_NULL) {
-    snprintf(buf, bsiz, "%s", "null");
-  } else if (v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN)) {
-    snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
-  } else if (v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER)) {
-    // TODO: check this on 32-bit arch
-    if (v->v.num > ((unsigned long) 1 << 52) || ceil(v->v.num) != v->v.num) {
-      snprintf(buf, bsiz, "%lg", v->v.num);
-    } else {
-      snprintf(buf, bsiz, "%lu", (unsigned long) v->v.num);
-    }
-  } else if (v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING)) {
-    snprintf(buf, bsiz, "%.*s", (int) v->v.str.len, v->v.str.buf);
-  } else if (v7_is_class(v, V7_CLASS_ARRAY)) {
-    arr_to_string(v, buf, bsiz);
-  } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
-    if (v->flags & V7_JS_FUNC) {
-      snprintf(buf, bsiz, "'function%s'", v->v.func.source_code);
-    } else {
-      snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
-    }
-  } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
-    snprintf(buf, bsiz, "/%s/", v->v.regex);
-  } else if (v->type == V7_TYPE_OBJ) {
-    obj_to_string(v, buf, bsiz);
-  } else {
-    snprintf(buf, bsiz, "??");
-  }
-
-  buf[bsiz - 1] = '\0';
-  return buf;
 }
 
 enum v7_err v7_push(struct v7 *v7, struct v7_val *v) {

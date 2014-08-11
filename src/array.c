@@ -44,18 +44,6 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
   free(arr);
 }
 
-static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
-  const struct v7_prop *m, *head = v->v.array;
-  int n = snprintf(buf, bsiz, "%s", "[");
-
-  for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
-    v7_to_string(m->val, buf + n, bsiz - n);
-    n = (int) strlen(buf);
-  }
-  n += snprintf(buf + n, bsiz - n, "%s", "]");
-}
-
 static void init_array(void) {
   SET_PROP_FUNC(s_prototypes[V7_CLASS_ARRAY], "length", Arr_length);
   SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "push", Arr_push);
