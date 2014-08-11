@@ -3,8 +3,12 @@ SLRE = ../slre
 CFLAGS += -I$(SLRE) -I.
 
 SOURCES = v7.c $(SLRE)/slre.c
+TO_AMALGAMATE = src/internal.h src/global_vars.c src/util.c src/parser.c
 
 all: v7
+
+v7.c: $(TO_AMALGAMATE)
+	cat $(TO_AMALGAMATE) > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes --leak-resolution=high --num-callers=100 ./unit_test
