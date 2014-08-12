@@ -1,3 +1,30 @@
+static int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
+  if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
+    while (obj != NULL) {
+      if (obj->ctor == ctor) return 1;
+      if (obj->proto == obj) break;  // Break on circular reference
+      obj = obj->proto;
+    }
+  }
+  return 0;
+}
+
+int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
+  return instanceof(obj, &s_constructors[cls]);
+}
+
+static int is_string(const struct v7_val *v) {
+  return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
+}
+
+static int is_num(const struct v7_val *v) {
+  return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
+}
+
+static int is_bool(const struct v7_val *v) {
+  return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
+}
+
 static void inc_ref_count(struct v7_val *v) {
   assert(v != NULL);
   assert(v->ref_count >= 0);
@@ -11,21 +38,6 @@ static char *v7_strdup(const char *ptr, unsigned long len) {
   memcpy(p, ptr, len);
   p[len] = '\0';
   return p;
-}
-
-static int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
-  if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
-    while (obj->ctor != NULL) {
-      if (obj->ctor == ctor) return 1;
-      obj = obj->ctor;
-      if (obj->ctor == obj) break;  // Break on circular reference
-    }
-  }
-  return 0;
-}
-
-int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
-  return instanceof(obj, &s_constructors[cls]);
 }
 
 static struct v7_val *common_ctor(struct v7_c_func_arg *cfa) {
@@ -223,13 +235,30 @@ struct v7_val v7_str_to_val(const char *buf) {
 
 static int cmp(const struct v7_val *a, const struct v7_val *b) {
   int res;
+  double an, bn;
+  const struct v7_string *as, *bs;
+  struct v7_val ta, tb;
+
   if (a == NULL || b == NULL) return 1;
   if ((a->type == V7_TYPE_UNDEF || a->type == V7_TYPE_NULL) &&
       (b->type == V7_TYPE_UNDEF || b->type == V7_TYPE_NULL)) return 0;
+
+  if (is_num(a) && is_num(b)) {
+    v7_init_num(&ta, a->v.num);
+    v7_init_num(&tb, b->v.num);
+    a = &ta; b = &tb;
+  }
+
+  if (is_string(a) && is_string(b)) {
+    v7_init_str(&ta, a->v.str.buf, a->v.str.len, 0);
+    v7_init_str(&tb, b->v.str.buf, b->v.str.len, 0);
+    a = &ta; b = &tb;
+  }
+
   if (a->type != b->type) return 1;
-  {
-  double an = a->v.num, bn = b->v.num;
-  const struct v7_string *as = &a->v.str, *bs = &b->v.str;
+
+  an = a->v.num, bn = b->v.num;
+  as = &a->v.str, bs = &b->v.str;
 
   switch (a->type) {
     case V7_TYPE_NUM:
@@ -243,7 +272,6 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
       return as->len != bs->len || memcmp(as->buf, bs->buf, as->len) != 0;
     default:
       return a - b;
-  }
   }
 }
 
@@ -439,18 +467,6 @@ static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
     n = (int) strlen(buf);
   }
   n += snprintf(buf + n, bsiz - n, "%s", "}");
-}
-
-static int is_string(const struct v7_val *v) {
-  return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
-}
-
-static int is_num(const struct v7_val *v) {
-  return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
-}
-
-static int is_bool(const struct v7_val *v) {
-  return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
 }
 
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {

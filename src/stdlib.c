@@ -141,15 +141,17 @@ static void Std_read(struct v7_c_func_arg *cfa) {
 
 static void Std_write(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
-  size_t n;
+  size_t n, i;
 
-  v7_init_num(cfa->result, -1.0);
-  if (cfa->num_args == 1 &&
-      is_string(cfa->args[0]) &&
-      (v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
-      (n = fwrite(cfa->args[0]->v.str.buf, 1, cfa->args[0]->v.str.len,
-                  (FILE *) (unsigned long) v->v.num)) > 0) {
-    v7_init_num(cfa->result, n);
+  v7_init_num(cfa->result, 0);
+  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL) {
+    for (i = 0; (int) i < cfa->num_args; i++) {
+      if (is_string(cfa->args[i]) &&
+          (n = fwrite(cfa->args[i]->v.str.buf, 1, cfa->args[i]->v.str.len,
+                      (FILE *) (unsigned long) v->v.num)) > 0) {
+        cfa->result->v.num += n;
+      }
+    }
   }
 }
 
@@ -169,11 +171,10 @@ static void Std_open(struct v7_c_func_arg *cfa) {
   cfa->result->type = V7_TYPE_NULL;
   if (cfa->num_args == 2 && is_string(v1) && is_string(v2) &&
       (fp = fopen(v1->v.str.buf, v2->v.str.buf)) != NULL) {
-    v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
-            "fp", 2, 0, (double) (unsigned long) fp);
-    //v7_set_class(res, V7_CLASS_OBJECT);
-    cfa->result->type = V7_TYPE_OBJ;
+    v7_set_class(cfa->result, V7_CLASS_OBJECT);
     cfa->result->proto = &s_file;
+    v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
+            "fp", 2, 0, (double) (unsigned long) fp);  // after v7_set_class !
   }
 }
 
@@ -188,8 +189,8 @@ static void init_stdlib(void) {
     s_prototypes[i].type = s_constructors[i].type = V7_TYPE_OBJ;
     s_prototypes[i].ref_count = s_constructors[i].ref_count = 1;
     s_prototypes[i].proto = &s_prototypes[V7_CLASS_OBJECT];
-    s_prototypes[i].ctor = &s_constructors[V7_CLASS_FUNCTION];
-    s_constructors[i].proto = &s_prototypes[i];
+    s_prototypes[i].ctor = &s_constructors[i];
+    s_constructors[i].proto = &s_prototypes[V7_CLASS_OBJECT];
     s_constructors[i].ctor = &s_constructors[V7_CLASS_FUNCTION];
     s_constructors[i].v.c_func = ctors[i];
   }

@@ -311,7 +311,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
 enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
                     int called_as_ctor) {
-  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f;
+  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f, *res;
 
   if (v7->no_exec) return V7_OK;
   f = v[0];
@@ -320,6 +320,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
 
   // Push return value on stack
   v7_make_and_push(v7, V7_TYPE_UNDEF);
+  res = v7_top(v7)[-1];
 
 
   // Stack looks as follows:
@@ -350,7 +351,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
   } else {
     struct v7_c_func_arg arg = {
-      v7, this_obj, v7_top(v7)[-1], v + 1, num_args, called_as_ctor
+      v7, this_obj, res, v + 1, num_args, called_as_ctor
     };
     f->v.c_func(&arg);
   }
@@ -665,11 +666,13 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
     if (!v7->no_exec) {
       v7_make_and_push(v7, V7_TYPE_OBJ);
       cur_this = v7->this_obj = v7_top(v7)[-1];
+      v7_set_class(cur_this, V7_CLASS_OBJECT);
     }
   }
   TRY(parse_precedence_1(v7, has_new));
   while (*v7->pc == '(') {
-    TRY(parse_function_call(v7, v7->this_obj, has_new));
+    // Use cur_this, not v7->this_obj: v7->this_obj could have been changed
+    TRY(parse_function_call(v7, cur_this, has_new));
   }
 
   if (has_new && !v7->no_exec) {
@@ -715,10 +718,9 @@ static enum v7_err parse_precedence4(struct v7 *v7) {
   if (has_typeof && !v7->no_exec) {
     const struct v7_val *v = v7_top(v7)[-1];
     static const char *names[] = {
-      "undefined", "null", "boolean", "string", "number", "object"
+      "undefined", "object", "boolean", "string", "number", "object"
     };
     const char *s = names[v->type];
-    if (v7_is_class(v, V7_CLASS_ARRAY)) s = "array";
     if (v7_is_class(v, V7_CLASS_FUNCTION)) s = "function";
     TRY(v7_push(v7, v7_mkv(v7, V7_TYPE_STR, s, strlen(s), 0)));
   }

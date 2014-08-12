@@ -144,6 +144,33 @@ static struct v7_val s_global = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 static struct v7_val s_file = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
+static int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
+  if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
+    while (obj != NULL) {
+      if (obj->ctor == ctor) return 1;
+      if (obj->proto == obj) break;  // Break on circular reference
+      obj = obj->proto;
+    }
+  }
+  return 0;
+}
+
+int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
+  return instanceof(obj, &s_constructors[cls]);
+}
+
+static int is_string(const struct v7_val *v) {
+  return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
+}
+
+static int is_num(const struct v7_val *v) {
+  return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
+}
+
+static int is_bool(const struct v7_val *v) {
+  return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
+}
+
 static void inc_ref_count(struct v7_val *v) {
   assert(v != NULL);
   assert(v->ref_count >= 0);
@@ -157,21 +184,6 @@ static char *v7_strdup(const char *ptr, unsigned long len) {
   memcpy(p, ptr, len);
   p[len] = '\0';
   return p;
-}
-
-static int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
-  if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
-    while (obj->ctor != NULL) {
-      if (obj->ctor == ctor) return 1;
-      obj = obj->ctor;
-      if (obj->ctor == obj) break;  // Break on circular reference
-    }
-  }
-  return 0;
-}
-
-int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
-  return instanceof(obj, &s_constructors[cls]);
 }
 
 static struct v7_val *common_ctor(struct v7_c_func_arg *cfa) {
@@ -369,13 +381,30 @@ struct v7_val v7_str_to_val(const char *buf) {
 
 static int cmp(const struct v7_val *a, const struct v7_val *b) {
   int res;
+  double an, bn;
+  const struct v7_string *as, *bs;
+  struct v7_val ta, tb;
+
   if (a == NULL || b == NULL) return 1;
   if ((a->type == V7_TYPE_UNDEF || a->type == V7_TYPE_NULL) &&
       (b->type == V7_TYPE_UNDEF || b->type == V7_TYPE_NULL)) return 0;
+
+  if (is_num(a) && is_num(b)) {
+    v7_init_num(&ta, a->v.num);
+    v7_init_num(&tb, b->v.num);
+    a = &ta; b = &tb;
+  }
+
+  if (is_string(a) && is_string(b)) {
+    v7_init_str(&ta, a->v.str.buf, a->v.str.len, 0);
+    v7_init_str(&tb, b->v.str.buf, b->v.str.len, 0);
+    a = &ta; b = &tb;
+  }
+
   if (a->type != b->type) return 1;
-  {
-  double an = a->v.num, bn = b->v.num;
-  const struct v7_string *as = &a->v.str, *bs = &b->v.str;
+
+  an = a->v.num, bn = b->v.num;
+  as = &a->v.str, bs = &b->v.str;
 
   switch (a->type) {
     case V7_TYPE_NUM:
@@ -389,7 +418,6 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
       return as->len != bs->len || memcmp(as->buf, bs->buf, as->len) != 0;
     default:
       return a - b;
-  }
   }
 }
 
@@ -585,18 +613,6 @@ static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
     n = (int) strlen(buf);
   }
   n += snprintf(buf + n, bsiz - n, "%s", "}");
-}
-
-static int is_string(const struct v7_val *v) {
-  return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
-}
-
-static int is_num(const struct v7_val *v) {
-  return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
-}
-
-static int is_bool(const struct v7_val *v) {
-  return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
 }
 
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
@@ -1019,9 +1035,12 @@ static void init_math(void) {
   SET_RO_PROP_V(s_global, "Math", s_math);
 }
 static void Number_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa);
-  obj->type = cfa->called_as_constructor ? V7_TYPE_OBJ : V7_TYPE_NUM;
-  obj->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
+  v7_init_num(cfa->result, cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0);
+  if (cfa->called_as_constructor) {
+    cfa->this_obj->proto = &s_prototypes[V7_CLASS_NUMBER];
+    cfa->this_obj->ctor = &s_constructors[V7_CLASS_NUMBER];
+    cfa->this_obj->v.num = cfa->result->v.num;
+  }
 }
 
 static void Num_toFixed(struct v7_c_func_arg *cfa) {
@@ -1034,11 +1053,11 @@ static void Num_toFixed(struct v7_c_func_arg *cfa) {
 }
 
 static void init_number(void) {
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MAX_VALUE",
+  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MAX_VALUE",
               V7_TYPE_NUM, num, LONG_MAX);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MIN_VALUE",
+  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MIN_VALUE",
               V7_TYPE_NUM, num, LONG_MIN);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "NaN",
+  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "NaN",
               V7_TYPE_NUM, num, NAN);
   SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
   SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
@@ -1075,11 +1094,19 @@ static void init_regex(void) {
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
 }
 static void String_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa), *arg = cfa->args[0];
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  struct v7_val *arg = cfa->args[0];
+
   if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
     v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
   } else {
     v7_init_str(obj, NULL, 0, 0);
+  }
+
+  if (cfa->called_as_constructor) {
+    cfa->this_obj->type = V7_TYPE_OBJ;
+    cfa->this_obj->proto = &s_prototypes[V7_CLASS_STRING];
+    cfa->this_obj->ctor = &s_constructors[V7_CLASS_STRING];
   }
 }
 
@@ -1402,15 +1429,17 @@ static void Std_read(struct v7_c_func_arg *cfa) {
 
 static void Std_write(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
-  size_t n;
+  size_t n, i;
 
-  v7_init_num(cfa->result, -1.0);
-  if (cfa->num_args == 1 &&
-      is_string(cfa->args[0]) &&
-      (v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
-      (n = fwrite(cfa->args[0]->v.str.buf, 1, cfa->args[0]->v.str.len,
-                  (FILE *) (unsigned long) v->v.num)) > 0) {
-    v7_init_num(cfa->result, n);
+  v7_init_num(cfa->result, 0);
+  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL) {
+    for (i = 0; (int) i < cfa->num_args; i++) {
+      if (is_string(cfa->args[i]) &&
+          (n = fwrite(cfa->args[i]->v.str.buf, 1, cfa->args[i]->v.str.len,
+                      (FILE *) (unsigned long) v->v.num)) > 0) {
+        cfa->result->v.num += n;
+      }
+    }
   }
 }
 
@@ -1433,7 +1462,7 @@ static void Std_open(struct v7_c_func_arg *cfa) {
     v7_set_class(cfa->result, V7_CLASS_OBJECT);
     cfa->result->proto = &s_file;
     v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
-            "fp", 2, 0, (double) (unsigned long) fp);
+            "fp", 2, 0, (double) (unsigned long) fp);  // after v7_set_class !
   }
 }
 
@@ -1448,8 +1477,8 @@ static void init_stdlib(void) {
     s_prototypes[i].type = s_constructors[i].type = V7_TYPE_OBJ;
     s_prototypes[i].ref_count = s_constructors[i].ref_count = 1;
     s_prototypes[i].proto = &s_prototypes[V7_CLASS_OBJECT];
-    s_prototypes[i].ctor = &s_constructors[V7_CLASS_FUNCTION];
-    s_constructors[i].proto = &s_prototypes[i];
+    s_prototypes[i].ctor = &s_constructors[i];
+    s_constructors[i].proto = &s_prototypes[V7_CLASS_OBJECT];
     s_constructors[i].ctor = &s_constructors[V7_CLASS_FUNCTION];
     s_constructors[i].v.c_func = ctors[i];
   }
@@ -1800,7 +1829,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
 enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
                     int called_as_ctor) {
-  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f;
+  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f, *res;
 
   if (v7->no_exec) return V7_OK;
   f = v[0];
@@ -1809,6 +1838,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
 
   // Push return value on stack
   v7_make_and_push(v7, V7_TYPE_UNDEF);
+  res = v7_top(v7)[-1];
 
 
   // Stack looks as follows:
@@ -1839,7 +1869,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
   } else {
     struct v7_c_func_arg arg = {
-      v7, this_obj, v7_top(v7)[-1], v + 1, num_args, called_as_ctor
+      v7, this_obj, res, v + 1, num_args, called_as_ctor
     };
     f->v.c_func(&arg);
   }
@@ -2154,11 +2184,13 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
     if (!v7->no_exec) {
       v7_make_and_push(v7, V7_TYPE_OBJ);
       cur_this = v7->this_obj = v7_top(v7)[-1];
+      v7_set_class(cur_this, V7_CLASS_OBJECT);
     }
   }
   TRY(parse_precedence_1(v7, has_new));
   while (*v7->pc == '(') {
-    TRY(parse_function_call(v7, v7->this_obj, has_new));
+    // Use cur_this, not v7->this_obj: v7->this_obj could have been changed
+    TRY(parse_function_call(v7, cur_this, has_new));
   }
 
   if (has_new && !v7->no_exec) {
@@ -2204,10 +2236,9 @@ static enum v7_err parse_precedence4(struct v7 *v7) {
   if (has_typeof && !v7->no_exec) {
     const struct v7_val *v = v7_top(v7)[-1];
     static const char *names[] = {
-      "undefined", "null", "boolean", "string", "number", "object"
+      "undefined", "object", "boolean", "string", "number", "object"
     };
     const char *s = names[v->type];
-    if (v7_is_class(v, V7_CLASS_ARRAY)) s = "array";
     if (v7_is_class(v, V7_CLASS_FUNCTION)) s = "function";
     TRY(v7_push(v7, v7_mkv(v7, V7_TYPE_STR, s, strlen(s), 0)));
   }

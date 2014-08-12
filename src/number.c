@@ -1,7 +1,10 @@
 static void Number_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa);
-  obj->type = cfa->called_as_constructor ? V7_TYPE_OBJ : V7_TYPE_NUM;
-  obj->v.num = cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0;
+  v7_init_num(cfa->result, cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0);
+  if (cfa->called_as_constructor) {
+    cfa->this_obj->proto = &s_prototypes[V7_CLASS_NUMBER];
+    cfa->this_obj->ctor = &s_constructors[V7_CLASS_NUMBER];
+    cfa->this_obj->v.num = cfa->result->v.num;
+  }
 }
 
 static void Num_toFixed(struct v7_c_func_arg *cfa) {
@@ -14,11 +17,11 @@ static void Num_toFixed(struct v7_c_func_arg *cfa) {
 }
 
 static void init_number(void) {
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MAX_VALUE",
+  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MAX_VALUE",
               V7_TYPE_NUM, num, LONG_MAX);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "MIN_VALUE",
+  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MIN_VALUE",
               V7_TYPE_NUM, num, LONG_MIN);
-  SET_RO_PROP(s_prototypes[V7_CLASS_NUMBER], "NaN",
+  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "NaN",
               V7_TYPE_NUM, num, NAN);
   SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
   SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);

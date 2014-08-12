@@ -436,7 +436,6 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, "new String('blah')") == V7_OK);
 
   // Math
-  v7_exec(v7, "Math");
   ASSERT(v7_exec(v7, "Math.sqrt(144)") == V7_OK);
   ASSERT(check_num(v7, 12.0));
 

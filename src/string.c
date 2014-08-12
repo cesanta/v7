@@ -1,9 +1,17 @@
 static void String_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa), *arg = cfa->args[0];
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  struct v7_val *arg = cfa->args[0];
+
   if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
     v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
   } else {
     v7_init_str(obj, NULL, 0, 0);
+  }
+
+  if (cfa->called_as_constructor) {
+    cfa->this_obj->type = V7_TYPE_OBJ;
+    cfa->this_obj->proto = &s_prototypes[V7_CLASS_STRING];
+    cfa->this_obj->ctor = &s_constructors[V7_CLASS_STRING];
   }
 }
 

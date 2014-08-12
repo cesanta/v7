@@ -2,7 +2,7 @@
 // Copyright (c) 2013-2014 Cesanta Software Limited
 // All rights reserved
 //
-// To run this test, start a terminal and execute "make js"
+// To run this test, start a terminal and run "make js"
 
 var numFailedTests = 0, numPassedTests = 0;
 function test(condition, msg) {
@@ -126,6 +126,9 @@ test([] instanceof Array, 'instanceof1');
 test(new String() instanceof String, 'instanceof2');
 test(function(){} instanceof Function, 'instanceof3');
 test(function(){} instanceof Object, 'instanceof4');
+test(new (function(){})() instanceof Object, 'instanceof5');
+test(new String() instanceof Object, 'instanceof6');
+test(new Number(1) instanceof Number, 'instanceof7');
 
 if (!constructor) {
   // Rhino doesn't have that
