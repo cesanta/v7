@@ -130,6 +130,7 @@ static enum v7_err parse_expression(struct v7 *);
 static enum v7_err parse_statement(struct v7 *, int *is_return);
 static int cmp(const struct v7_val *a, const struct v7_val *b);
 static enum v7_err do_exec(struct v7 *v7, const char *, int);
+static void init_stdlib(void);
 static const int s_op_lengths[NUM_OPS] = {
   -1,
   1, 1, 2, 2,
@@ -652,7 +653,64 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
   return buf;
 }
 
+struct v7 *v7_create(void) {
+  static int prototypes_initialized = 0;
+  struct v7 *v7 = NULL;
 
+  if (prototypes_initialized == 0) {
+    prototypes_initialized++;
+    init_stdlib();  // One-time initialization
+  }
+
+  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+    v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
+    v7->root_scope.proto = &s_global;
+    v7->root_scope.ref_count = 1;
+  }
+
+  return v7;
+}
+
+struct v7_val *v7_rootns(struct v7 *v7) {
+  return &v7->root_scope;
+}
+
+void v7_destroy(struct v7 **v7) {
+  if (v7 == NULL || v7[0] == NULL) return;
+  assert(v7[0]->sp >= 0);
+  inc_stack(v7[0], -v7[0]->sp);
+  v7[0]->root_scope.ref_count = 1;
+  v7_freeval(v7[0], &v7[0]->root_scope);
+  free_values(v7[0]);
+  free_props(v7[0]);
+  free(v7[0]);
+  v7[0] = NULL;
+}
+
+struct v7_val **v7_top(struct v7 *v7) {
+  return &v7->stack[v7->sp];
+}
+
+int v7_sp(struct v7 *v7) {
+  return (int) (v7_top(v7) - v7->stack);
+}
+
+struct v7_val *v7_top_val(struct v7 *v7) {
+  return v7->sp > 0 ? v7->stack[v7->sp - 1] : NULL;
+}
+
+enum v7_err v7_push(struct v7 *v7, struct v7_val *v) {
+  inc_ref_count(v);
+  TRY(inc_stack(v7, 1));
+  v7->stack[v7->sp - 1] = v;
+  return V7_OK;
+}
+
+enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
+  struct v7_val *v = make_value(v7, type);
+  CHECK(v != NULL, V7_OUT_OF_MEMORY);
+  return v7_push(v7, v);
+}
 #ifndef V7_DISABLE_CRYPTO
 
 //////////////////////////////// START OF MD5 THIRD PARTY CODE
@@ -1517,65 +1575,6 @@ static void init_stdlib(void) {
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;
 }
-struct v7 *v7_create(void) {
-  static int prototypes_initialized = 0;
-  struct v7 *v7 = NULL;
-
-  if (prototypes_initialized == 0) {
-    prototypes_initialized++;
-    init_stdlib();  // One-time initialization
-  }
-
-  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
-    v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
-    v7->root_scope.proto = &s_global;
-    v7->root_scope.ref_count = 1;
-  }
-
-  return v7;
-}
-
-struct v7_val *v7_rootns(struct v7 *v7) {
-  return &v7->root_scope;
-}
-
-void v7_destroy(struct v7 **v7) {
-  if (v7 == NULL || v7[0] == NULL) return;
-  assert(v7[0]->sp >= 0);
-  inc_stack(v7[0], -v7[0]->sp);
-  v7[0]->root_scope.ref_count = 1;
-  v7_freeval(v7[0], &v7[0]->root_scope);
-  free_values(v7[0]);
-  free_props(v7[0]);
-  free(v7[0]);
-  v7[0] = NULL;
-}
-
-struct v7_val **v7_top(struct v7 *v7) {
-  return &v7->stack[v7->sp];
-}
-
-int v7_sp(struct v7 *v7) {
-  return (int) (v7_top(v7) - v7->stack);
-}
-
-struct v7_val *v7_top_val(struct v7 *v7) {
-  return v7->sp > 0 ? v7->stack[v7->sp - 1] : NULL;
-}
-
-enum v7_err v7_push(struct v7 *v7, struct v7_val *v) {
-  inc_ref_count(v);
-  TRY(inc_stack(v7, 1));
-  v7->stack[v7->sp - 1] = v;
-  return V7_OK;
-}
-
-enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
-  struct v7_val *v = make_value(v7, type);
-  CHECK(v != NULL, V7_OUT_OF_MEMORY);
-  return v7_push(v7, v);
-}
-
 static enum v7_err arith(struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
   if (a->type == V7_TYPE_STR && a->type == V7_TYPE_STR && op == '+') {
