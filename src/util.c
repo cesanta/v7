@@ -341,7 +341,7 @@ static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
   struct v7_prop *m = NULL;
 
   CHECK(obj != NULL && k != NULL && v != NULL, V7_INTERNAL_ERROR);
-  CHECK(obj->type == V7_TYPE_OBJ, V7_TYPE_MISMATCH);
+  CHECK(obj->type == V7_TYPE_OBJ, V7_TYPE_ERROR);
 
   // Find attribute inside object
   if ((m = v7_get(obj, k, 1)) != NULL) {
@@ -427,8 +427,9 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
 
 const char *v7_strerror(enum v7_err e) {
   static const char *strings[] = {
-    "no error", "syntax error", "out of memory", "internal error",
-    "stack overflow", "stack underflow", "undefined variable", "type mismatch",
+    "no error", "error", "eval error", "range error", "reference error",
+    "syntax error", "type error", "URI error",
+    "out of memory", "internal error", "stack overflow", "stack underflow",
     "called non-function", "not implemented"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);

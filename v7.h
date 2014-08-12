@@ -36,9 +36,10 @@ enum v7_class {
 };
 
 enum v7_err {
-  V7_OK, V7_SYNTAX_ERROR, V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR,
-  V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW, V7_UNDEFINED_VARIABLE,
-  V7_TYPE_MISMATCH, V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED,
+  V7_OK, V7_ERROR, V7_EVAL_ERROR, V7_RANGE_ERROR, V7_REFERENCE_ERROR,
+  V7_SYNTAX_ERROR, V7_TYPE_ERROR, V7_URI_ERROR,
+  V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR, V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW,
+  V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED,
   V7_NUM_ERRORS
 };
 
@@ -148,6 +149,7 @@ void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
 int v7_is_true(const struct v7_val *v);
 int v7_sp(struct v7 *v7);
 struct v7_val **v7_top(struct v7 *);
+struct v7_val *v7_top_val(struct v7 *);
 const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz);
 const char *v7_strerror(enum v7_err);
 int v7_is_class(const struct v7_val *obj, enum v7_class cls);
