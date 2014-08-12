@@ -137,7 +137,7 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "1;2 7") == V7_OK);
   ASSERT(check_num(v7, 7.0));
-  ASSERT(v7_exec(v7, "a + 5") == V7_TYPE_MISMATCH);
+  ASSERT(v7_exec(v7, "a + 5") == V7_TYPE_ERROR);
 
   ASSERT(v7_exec(v7, "print();") == V7_OK);
   ASSERT(v7_exec(v7, "print(this);") == V7_OK);

@@ -2,7 +2,7 @@ load('tests/unit_test.js');
 
 // Run ECMAScript conformance tests, taken from
 // http://test262.ecmascript.org/json/ch09.json
-var testFiles = ['ch09.json'];
+var testFiles = ['ch06.json', 'ch09.json'];
 var numTotalTests = 0;
 var numFailedTests = 0;
 

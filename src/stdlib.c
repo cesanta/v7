@@ -120,10 +120,7 @@ static void Std_base64_encode(struct v7_c_func_arg *cfa) {
 static void Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    int old_line_no = cfa->v7->line_no;
-    cfa->v7->line_no = 1;
     do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
-    cfa->v7->line_no = old_line_no;
   }
 }
 

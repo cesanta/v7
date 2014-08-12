@@ -131,6 +131,7 @@ static enum v7_err parse_statement(struct v7 *, int *is_return);
 static int cmp(const struct v7_val *a, const struct v7_val *b);
 static enum v7_err do_exec(struct v7 *v7, const char *, int);
 static void init_stdlib(void);
+static void skip_whitespaces_and_comments(struct v7 *v7);
 static const int s_op_lengths[NUM_OPS] = {
   -1,
   1, 1, 2, 2,
@@ -710,6 +711,57 @@ enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
   struct v7_val *v = make_value(v7, type);
   CHECK(v != NULL, V7_OUT_OF_MEMORY);
   return v7_push(v7, v);
+}
+
+static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+  int has_ret = 0;
+  struct v7_pstate old_pstate = v7->pstate;
+  enum v7_err err = V7_OK;
+
+  v7->pstate.source_code = v7->pstate.pc = source_code;
+  v7->pstate.line_no = 1;
+  skip_whitespaces_and_comments(v7);
+
+  // Prior calls to v7_exec() may have left current_scope modified, reset now
+  // TODO(lsm): free scope chain
+  v7->this_obj = &v7->root_scope;
+
+  while ((err == V7_OK) && (*v7->pstate.pc != '\0')) {
+    // Reset stack on each statement
+    if ((err = inc_stack(v7, sp - v7->sp)) == V7_OK) {
+      err = parse_statement(v7, &has_ret);
+    }
+  }
+  assert(v7->root_scope.proto == &s_global);
+  v7->pstate = old_pstate;
+
+  return err;
+}
+
+enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
+  return do_exec(v7, source_code, 0);
+}
+
+enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
+  FILE *fp;
+  char *p;
+  long file_size;
+  enum v7_err status = V7_INTERNAL_ERROR;
+
+  if ((fp = fopen(path, "r")) == NULL) {
+  } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
+    fclose(fp);
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
+    fclose(fp);
+  } else {
+    rewind(fp);
+    fread(p, 1, (size_t) file_size, fp);
+    fclose(fp);
+    status = do_exec(v7, p, v7->sp);
+    free(p);
+  }
+
+  return status;
 }
 #ifndef V7_DISABLE_CRYPTO
 
@@ -1467,10 +1519,7 @@ static void Std_base64_encode(struct v7_c_func_arg *cfa) {
 static void Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    int old_line_no = cfa->v7->line_no;
-    cfa->v7->line_no = 1;
     do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
-    cfa->v7->line_no = old_line_no;
   }
 }
 
@@ -1635,11 +1684,11 @@ static int is_space(int ch) {
 }
 
 static void skip_whitespaces_and_comments(struct v7 *v7) {
-  const char *s = v7->pc, *p = NULL;
+  const char *s = v7->pstate.pc, *p = NULL;
   while (s != p && *s != '\0' && (is_space(*s) || *s == '/')) {
     p = s;
     while (*s != '\0' && is_space(*s)) {
-      if (*s == '\n') v7->line_no++;
+      if (*s == '\n') v7->pstate.line_no++;
       s++;
     }
     if (s[0] == '/' && s[1] == '/') {
@@ -1649,23 +1698,23 @@ static void skip_whitespaces_and_comments(struct v7 *v7) {
     if (s[0] == '/' && s[1] == '*') {
       s += 2;
       while (s[0] != '\0' && !(s[-1] == '/' && s[-2] == '*')) {
-        if (s[0] == '\n') v7->line_no++;
+        if (s[0] == '\n') v7->pstate.line_no++;
         s++;
       }
     }
   }
-  v7->pc = s;
+  v7->pstate.pc = s;
 }
 
 static enum v7_err match(struct v7 *v7, int ch) {
-  CHECK(*v7->pc++ == ch, V7_SYNTAX_ERROR);
+  CHECK(*v7->pstate.pc++ == ch, V7_SYNTAX_ERROR);
   skip_whitespaces_and_comments(v7);
   return V7_OK;
 }
 
 static int test_and_skip_char(struct v7 *v7, int ch) {
-  if (*v7->pc == ch) {
-    v7->pc++;
+  if (*v7->pstate.pc == ch) {
+    v7->pstate.pc++;
     skip_whitespaces_and_comments(v7);
     return 1;
   }
@@ -1680,12 +1729,12 @@ static enum v7_err parse_num(struct v7 *v7) {
   double value = 0;
   char *end;
 
-  value = strtod(v7->pc, &end);
+  value = strtod(v7->pstate.pc, &end);
   // Handle case like 123.toString()
-  if (end != NULL && (v7->pc < &end[-1]) && end[-1] == '.') end--;
-  CHECK(value != 0 || end > v7->pc, V7_SYNTAX_ERROR);
-  v7->pc = end;
-  v7->tok_len = (unsigned long) (v7->pc - v7->tok);
+  if (end != NULL && (v7->pstate.pc < &end[-1]) && end[-1] == '.') end--;
+  CHECK(value != 0 || end > v7->pstate.pc, V7_SYNTAX_ERROR);
+  v7->pstate.pc = end;
+  v7->tok_len = (unsigned long) (v7->pstate.pc - v7->tok);
   skip_whitespaces_and_comments(v7);
 
   if (!v7->no_exec) {
@@ -1705,31 +1754,31 @@ static int is_valid_identifier_char(int ch) {
 }
 
 static enum v7_err parse_identifier(struct v7 *v7) {
-  CHECK(is_valid_start_of_identifier(v7->pc[0]), V7_SYNTAX_ERROR);
-  v7->tok = v7->pc;
-  v7->pc++;
-  while (is_valid_identifier_char(v7->pc[0])) v7->pc++;
-  v7->tok_len = (unsigned long) (v7->pc - v7->tok);
+  CHECK(is_valid_start_of_identifier(v7->pstate.pc[0]), V7_SYNTAX_ERROR);
+  v7->tok = v7->pstate.pc;
+  v7->pstate.pc++;
+  while (is_valid_identifier_char(v7->pstate.pc[0])) v7->pstate.pc++;
+  v7->tok_len = (unsigned long) (v7->pstate.pc - v7->tok);
   skip_whitespaces_and_comments(v7);
   return V7_OK;
 }
 
 static int lookahead(struct v7 *v7, const char *str, int str_len) {
   int equal = 0;
-  if (memcmp(v7->pc, str, str_len) == 0 &&
-      !is_valid_identifier_char(v7->pc[str_len])) {
+  if (memcmp(v7->pstate.pc, str, str_len) == 0 &&
+      !is_valid_identifier_char(v7->pstate.pc[str_len])) {
     equal++;
-    v7->pc += str_len;
+    v7->pstate.pc += str_len;
     skip_whitespaces_and_comments(v7);
   }
   return equal;
 }
 
 static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
-  if (*v7->pc == '{') {
+  if (*v7->pstate.pc == '{') {
     int old_sp = v7->sp;
     TRY(match(v7, '{'));
-    while (*v7->pc != '}') {
+    while (*v7->pstate.pc != '}') {
       TRY(inc_stack(v7, old_sp - v7->sp));
       TRY(parse_statement(v7, has_return));
       if (*has_return && !v7->no_exec) return V7_OK;
@@ -1749,28 +1798,28 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
                                              int num_params) {
   int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0, ln = 0;
   unsigned long func_name_len = 0;
-  const char *src = v7->pc, *func_name = NULL;
+  const char *src = v7->pstate.pc, *func_name = NULL;
   struct v7_val args;
 
-  if (*v7->pc != '(') {
+  if (*v7->pstate.pc != '(') {
     // function name is given, e.g. function foo() {}
     CHECK(v == NULL, V7_SYNTAX_ERROR);
     TRY(parse_identifier(v7));
     func_name = v7->tok;
     func_name_len = v7->tok_len;
-    src = v7->pc;
+    src = v7->pstate.pc;
   }
 
   // If 'v' (func to call) is NULL, that means we're just parsing function
   // definition to save it's body.
   v7->no_exec = v == NULL;
-  ln = v7->line_no;  // Line number where function starts
+  ln = v7->pstate.line_no;  // Line number where function starts
   TRY(match(v7, '('));
 
   memset(&args, 0, sizeof(args));
   v7_set_class(&args, V7_CLASS_OBJECT);
 
-  while (*v7->pc != ')') {
+  while (*v7->pstate.pc != ')') {
     TRY(parse_identifier(v7));
     if (!v7->no_exec) {
       // TODO(lsm): use v7_setv() here
@@ -1800,7 +1849,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7_set_class(func, V7_CLASS_FUNCTION);
 
     func->v.func.line_no = ln;
-    func->v.func.source_code = v7_strdup(src, (unsigned long) (v7->pc - src));
+    func->v.func.source_code = v7_strdup(src, (unsigned long) (v7->pstate.pc - src));
     func->v.func.scope = v7_mkv(v7, V7_TYPE_OBJ);
     func->v.func.scope->ref_count = 1;
     func->v.func.upper = v7->curr_func;
@@ -1854,21 +1903,21 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
   //            <argument_N>        ---+
   // top  --->  <return_value>
   if (f->flags & V7_JS_FUNC) {
-    const char *old_pc = v7->pc;
+    const char *old_pc = v7->pstate.pc;
     struct v7_val *old_curr_func = v7->curr_func;
-    int old_line_no = v7->line_no;
+    int old_line_no = v7->pstate.line_no;
 
     // Move control flow to the function body
-    v7->pc = f->v.func.source_code;
-    v7->line_no = f->v.func.line_no;
+    v7->pstate.pc = f->v.func.source_code;
+    v7->pstate.line_no = f->v.func.line_no;
     v7->curr_func = f;
 
     // Execute function body
     TRY(parse_function_definition(v7, v, num_args));
 
     // Return control flow back
-    v7->pc = old_pc;
-    v7->line_no = old_line_no;
+    v7->pstate.pc = old_pc;
+    v7->pstate.line_no = old_line_no;
     v7->curr_func = old_curr_func;
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
   } else {
@@ -1891,7 +1940,7 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
 
   // Push arguments on stack
   TRY(match(v7, '('));
-  while (*v7->pc != ')') {
+  while (*v7->pstate.pc != ')') {
     TRY(parse_expression(v7));
     test_and_skip_char(v7, ',');
     num_args++;
@@ -1905,7 +1954,7 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
 
 static enum v7_err parse_string_literal(struct v7 *v7) {
   char buf[MAX_STRING_LITERAL_LENGTH];
-  const char *begin = v7->pc++;
+  const char *begin = v7->pstate.pc++;
   struct v7_val *v;
   size_t i = 0;
 
@@ -1913,11 +1962,11 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
   v = v7_top(v7)[-1];
 
   // Scan string literal into the buffer, handle escape sequences
-  while (*v7->pc != *begin && *v7->pc != '\0') {
-    switch (*v7->pc) {
+  while (*v7->pstate.pc != *begin && *v7->pstate.pc != '\0') {
+    switch (*v7->pstate.pc) {
       case '\\':
-        v7->pc++;
-        switch (*v7->pc) {
+        v7->pstate.pc++;
+        switch (*v7->pstate.pc) {
           // TODO: add escapes for quotes, \XXX, \xXX, \uXXXX
           case 'b': buf[i++] = '\b'; break;
           case 'f': buf[i++] = '\f'; break;
@@ -1926,15 +1975,15 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
           case 't': buf[i++] = '\t'; break;
           case 'v': buf[i++] = '\v'; break;
           case '\\': buf[i++] = '\\'; break;
-          default: if (*v7->pc == *begin) buf[i++] = *begin; break;
+          default: if (*v7->pstate.pc == *begin) buf[i++] = *begin; break;
         }
         break;
       default:
-        buf[i++] = *v7->pc;
+        buf[i++] = *v7->pstate.pc;
         break;
     }
     if (i >= sizeof(buf) - 1) i = sizeof(buf) - 1;
-    v7->pc++;
+    v7->pstate.pc++;
   }
   v7_init_str(v, buf, v7->no_exec ? 0 : i, 1);
   TRY(match(v7, *begin));
@@ -1967,7 +2016,7 @@ static enum v7_err parse_array_literal(struct v7 *v7) {
   TRY(match(v7, '['));
 
   // Scan array literal, append elements one by one
-  while (*v7->pc != ']') {
+  while (*v7->pstate.pc != ']') {
     // Push new element on stack
     TRY(parse_expression(v7));
     if (!v7->no_exec) {
@@ -1987,9 +2036,9 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
   TRY(match(v7, '{'));
 
   // Assign key/values to the object, until closing "}" is found
-  while (*v7->pc != '}') {
+  while (*v7->pstate.pc != '}') {
     // Push key on stack
-    if (*v7->pc == '\'' || *v7->pc == '"') {
+    if (*v7->pstate.pc == '\'' || *v7->pstate.pc == '"') {
       TRY(parse_string_literal(v7));
     } else {
       struct v7_val *v;
@@ -2042,11 +2091,11 @@ static enum v7_err parse_regex(struct v7 *v7) {
   char regex[MAX_STRING_LITERAL_LENGTH];
   size_t i;
 
-  CHECK(*v7->pc == '/', V7_SYNTAX_ERROR);
-  for (i = 0, v7->pc++; i < sizeof(regex) - 1 && *v7->pc != '/' &&
-    *v7->pc != '\0'; i++, v7->pc++) {
-    if (*v7->pc == '\\' && v7->pc[1] == '/') v7->pc++;
-    regex[i] = *v7->pc;
+  CHECK(*v7->pstate.pc == '/', V7_SYNTAX_ERROR);
+  for (i = 0, v7->pstate.pc++; i < sizeof(regex) - 1 && *v7->pstate.pc != '/' &&
+    *v7->pstate.pc != '\0'; i++, v7->pstate.pc++) {
+    if (*v7->pstate.pc == '\\' && v7->pstate.pc[1] == '/') v7->pstate.pc++;
+    regex[i] = *v7->pstate.pc;
   }
   regex[i] = '\0';
   TRY(match(v7, '/'));
@@ -2073,19 +2122,19 @@ static enum v7_err parse_variable(struct v7 *v7) {
 }
 
 static enum v7_err parse_precedence_0(struct v7 *v7) {
-  if (*v7->pc == '(') {
+  if (*v7->pstate.pc == '(') {
     TRY(match(v7, '('));
     TRY(parse_expression(v7));
     TRY(match(v7, ')'));
-  } else if (*v7->pc == '\'' || *v7->pc == '"') {
+  } else if (*v7->pstate.pc == '\'' || *v7->pstate.pc == '"') {
     TRY(parse_string_literal(v7));
-  } else if (*v7->pc == '{') {
+  } else if (*v7->pstate.pc == '{') {
     TRY(parse_object_literal(v7));
-  } else if (*v7->pc == '[') {
+  } else if (*v7->pstate.pc == '[') {
     TRY(parse_array_literal(v7));
-  } else if (*v7->pc == '/') {
+  } else if (*v7->pstate.pc == '/') {
     TRY(parse_regex(v7));
-  } else if (is_valid_start_of_identifier(v7->pc[0])) {
+  } else if (is_valid_start_of_identifier(v7->pstate.pc[0])) {
     TRY(parse_identifier(v7));
     if (test_token(v7, "this", 4)) {
       TRY(v7_push(v7, v7->this_obj));
@@ -2165,12 +2214,12 @@ static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   struct v7_val *old_this = v7->this_obj;
 
   TRY(parse_precedence_0(v7));
-  while (*v7->pc == '.' || *v7->pc == '[') {
-    int op = v7->pc[0];
+  while (*v7->pstate.pc == '.' || *v7->pstate.pc == '[') {
+    int op = v7->pstate.pc[0];
     TRY(match(v7, op));
     TRY(parse_prop_accessor(v7, op));
 
-    while (*v7->pc == '(') {
+    while (*v7->pstate.pc == '(') {
       TRY(parse_function_call(v7, v7->cur_obj, has_new));
     }
   }
@@ -2192,7 +2241,7 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
     }
   }
   TRY(parse_precedence_1(v7, has_new));
-  while (*v7->pc == '(') {
+  while (*v7->pstate.pc == '(') {
     // Use cur_this, not v7->this_obj: v7->this_obj could have been changed
     TRY(parse_function_call(v7, cur_this, has_new));
   }
@@ -2208,10 +2257,10 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
 
 static enum v7_err parse_precedence_3(struct v7 *v7) {
   TRY(parse_precedence_2(v7));
-  if ((v7->pc[0] == '+' && v7->pc[1] == '+') ||
-      (v7->pc[0] == '-' && v7->pc[1] == '-')) {
-    int increment = (v7->pc[0] == '+') ? 1 : -1;
-    v7->pc += 2;
+  if ((v7->pstate.pc[0] == '+' && v7->pstate.pc[1] == '+') ||
+      (v7->pstate.pc[0] == '-' && v7->pstate.pc[1] == '-')) {
+    int increment = (v7->pstate.pc[0] == '+') ? 1 : -1;
+    v7->pstate.pc += 2;
     skip_whitespaces_and_comments(v7);
     if (!v7->no_exec) {
       struct v7_val *v = v7_top(v7)[-1];
@@ -2225,8 +2274,8 @@ static enum v7_err parse_precedence_3(struct v7 *v7) {
 static enum v7_err parse_precedence4(struct v7 *v7) {
   int has_neg = 0, has_typeof = 0;
 
-  if (v7->pc[0] == '!') {
-    TRY(match(v7, v7->pc[0]));
+  if (v7->pstate.pc[0] == '!') {
+    TRY(match(v7, v7->pstate.pc[0]));
     has_neg++;
   }
   has_typeof = lookahead(v7, "typeof", 6);
@@ -2252,9 +2301,9 @@ static enum v7_err parse_precedence4(struct v7 *v7) {
 
 static enum v7_err parse_term(struct v7 *v7) {
   TRY(parse_precedence4(v7));
-  while ((*v7->pc == '*' || *v7->pc == '/' || *v7->pc == '%') &&
-         v7->pc[1] != '=') {
-    int sp1 = v7->sp, ch = *v7->pc;
+  while ((*v7->pstate.pc == '*' || *v7->pstate.pc == '/' || *v7->pstate.pc == '%') &&
+         v7->pstate.pc[1] != '=') {
+    int sp1 = v7->sp, ch = *v7->pstate.pc;
     TRY(match(v7, ch));
     TRY(parse_precedence4(v7));
     if (!v7->no_exec) {
@@ -2310,7 +2359,7 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
   const char *tok = v7->tok;
   unsigned long tok_len = v7->tok_len;
 
-  v7->pc += s_op_lengths[op];
+  v7->pstate.pc += s_op_lengths[op];
   skip_whitespaces_and_comments(v7);
   TRY(parse_expression(v7));
 
@@ -2344,8 +2393,8 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
 
 static enum v7_err parse_add_sub(struct v7 *v7) {
   TRY(parse_term(v7));
-  while ((*v7->pc == '-' || *v7->pc == '+') && v7->pc[1] != '=') {
-    int sp1 = v7->sp, ch = *v7->pc;
+  while ((*v7->pstate.pc == '-' || *v7->pstate.pc == '+') && v7->pstate.pc[1] != '=') {
+    int sp1 = v7->sp, ch = *v7->pstate.pc;
     TRY(match(v7, ch));
     TRY(parse_term(v7));
     if (!v7->no_exec) {
@@ -2358,9 +2407,9 @@ static enum v7_err parse_add_sub(struct v7 *v7) {
 static enum v7_err parse_relational(struct v7 *v7) {
   int op;
   TRY(parse_add_sub(v7));
-  while ((op = is_relational_op(v7->pc)) > OP_INVALID) {
+  while ((op = is_relational_op(v7->pstate.pc)) > OP_INVALID) {
     int sp1 = v7->sp;
-    v7->pc += s_op_lengths[op];
+    v7->pstate.pc += s_op_lengths[op];
     skip_whitespaces_and_comments(v7);
     TRY(parse_add_sub(v7));
     if (!v7->no_exec) {
@@ -2381,9 +2430,9 @@ static enum v7_err parse_relational(struct v7 *v7) {
 static enum v7_err parse_equality(struct v7 *v7) {
   int op;
   TRY(parse_relational(v7));
-  if ((op = is_equality_op(v7->pc)) > OP_INVALID) {
+  if ((op = is_equality_op(v7->pstate.pc)) > OP_INVALID) {
     int sp1 = v7->sp;
-    v7->pc += s_op_lengths[op];
+    v7->pstate.pc += s_op_lengths[op];
     skip_whitespaces_and_comments(v7);
     TRY(parse_relational(v7));
     if (!v7->no_exec) {
@@ -2395,7 +2444,7 @@ static enum v7_err parse_equality(struct v7 *v7) {
 
 static enum v7_err parse_bitwise_and(struct v7 *v7) {
   TRY(parse_equality(v7));
-  if (*v7->pc == '&' && v7->pc[1] != '&' && v7->pc[1] != '=') {
+  if (*v7->pstate.pc == '&' && v7->pstate.pc[1] != '&' && v7->pstate.pc[1] != '=') {
     int sp1 = v7->sp;
     TRY(match(v7, '&'));
     TRY(parse_equality(v7));
@@ -2412,7 +2461,7 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
 
 static enum v7_err parse_bitwise_xor(struct v7 *v7) {
   TRY(parse_bitwise_and(v7));
-  if (*v7->pc == '^' && v7->pc[1] != '=') {
+  if (*v7->pstate.pc == '^' && v7->pstate.pc[1] != '=') {
     int sp1 = v7->sp;
     TRY(match(v7, '^'));
     TRY(parse_bitwise_and(v7));
@@ -2429,7 +2478,7 @@ static enum v7_err parse_bitwise_xor(struct v7 *v7) {
 
 static enum v7_err parse_bitwise_or(struct v7 *v7) {
   TRY(parse_bitwise_xor(v7));
-  if (*v7->pc == '|' && v7->pc[1] != '=' && v7->pc[1] != '|') {
+  if (*v7->pstate.pc == '|' && v7->pstate.pc[1] != '=' && v7->pstate.pc[1] != '|') {
     int sp1 = v7->sp;
     TRY(match(v7, '|'));
     TRY(parse_bitwise_xor(v7));
@@ -2446,7 +2495,7 @@ static enum v7_err parse_bitwise_or(struct v7 *v7) {
 
 static enum v7_err parse_logical_and(struct v7 *v7) {
   TRY(parse_bitwise_or(v7));
-  while (*v7->pc == '&' && v7->pc[1] == '&') {
+  while (*v7->pstate.pc == '&' && v7->pstate.pc[1] == '&') {
     int sp1 = v7->sp;
     match(v7, '&');
     match(v7, '&');
@@ -2463,7 +2512,7 @@ static enum v7_err parse_logical_and(struct v7 *v7) {
 
 static enum v7_err parse_logical_or(struct v7 *v7) {
   TRY(parse_logical_and(v7));
-  if (*v7->pc == '|' && v7->pc[1] == '|') {
+  if (*v7->pstate.pc == '|' && v7->pstate.pc[1] == '|') {
     int sp1 = v7->sp;
     match(v7, '|');
     match(v7, '|');
@@ -2506,7 +2555,7 @@ static int is_assign_op(const char *s) {
 
 static enum v7_err parse_expression(struct v7 *v7) {
 #ifdef V7_DEBUG
-  const char *stmt_str = v7->pc;
+  const char *stmt_str = v7->pstate.pc;
 #endif
   int op, old_sp = v7->sp;
 
@@ -2514,12 +2563,12 @@ static enum v7_err parse_expression(struct v7 *v7) {
   TRY(parse_logical_or(v7));
 
   // Parse assignment
-  if ((op = is_assign_op(v7->pc))) {
+  if ((op = is_assign_op(v7->pstate.pc))) {
     TRY(parse_assign(v7, v7->cur_obj, op));
   }
 
   // Parse ternary operator
-  if (*v7->pc == '?') {
+  if (*v7->pstate.pc == '?') {
     int old_no_exec = v7->no_exec;
     int condition_true = 1;
 
@@ -2561,7 +2610,7 @@ static enum v7_err parse_declaration(struct v7 *v7) {
       v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_UNDEF,
               v7->tok, v7->tok_len, 1);
     }
-    if (*v7->pc == '=') {
+    if (*v7->pstate.pc == '=') {
       if (!v7->no_exec) v7_make_and_push(v7, V7_TYPE_UNDEF);
       TRY(parse_assign(v7, cur_scope(v7), OP_ASSIGN));
     }
@@ -2584,8 +2633,8 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   }
   TRY(parse_compound_statement(v7, has_return));
 
-  if (strncmp(v7->pc, "else", 4) == 0) {
-    v7->pc += 4;
+  if (strncmp(v7->pstate.pc, "else", 4) == 0) {
+    v7->pstate.pc += 4;
     skip_whitespaces_and_comments(v7);
     v7->no_exec = old_no_exec || !v7->no_exec;
     TRY(parse_compound_statement(v7, has_return));
@@ -2602,8 +2651,8 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
 
   TRY(parse_expression(v7));
   TRY(match(v7, ')'));
-  stmt = v7->pc;
-  line_stmt = v7->line_no;
+  stmt = v7->pstate.pc;
+  line_stmt = v7->pstate.line_no;
 
   // Execute loop body
   if (v7->no_exec) {
@@ -2618,8 +2667,8 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
     for (prop = obj->props; prop != NULL; prop = prop->next) {
       TRY(v7_setv(v7, scope, V7_TYPE_STR, V7_TYPE_OBJ,
                   tok, tok_len, 1, prop->key));
-      v7->pc = stmt;
-      v7->line_no = line_stmt;
+      v7->pstate.pc = stmt;
+      v7->pstate.line_no = line_stmt;
       TRY(parse_compound_statement(v7, has_return));  // Loop body
       TRY(inc_stack(v7, old_sp - v7->sp));  // Clean up stack
     }
@@ -2634,8 +2683,8 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   const char *expr1, *expr2, *expr3, *stmt, *end;
 
   TRY(match(v7, '('));
-  expr1 = v7->pc;
-  line_expr1 = v7->line_no;
+  expr1 = v7->pstate.pc;
+  line_expr1 = v7->pstate.line_no;
 
   // See if this is an enumeration loop
   if (lookahead(v7, "var", 3)) {
@@ -2644,8 +2693,8 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   if (parse_identifier(v7) == V7_OK && lookahead(v7, "in", 2)) {
     return parse_for_in_statement(v7, has_var, has_return);
   } else {
-    v7->pc = expr1;
-    v7->line_no = line_expr1;
+    v7->pstate.pc = expr1;
+    v7->pstate.line_no = line_expr1;
   }
 
   if (lookahead(v7, "var", 3)) {
@@ -2657,21 +2706,21 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
 
   // Pass through the loop, don't execute it, just remember locations
   v7->no_exec = 1;
-  expr2 = v7->pc;
-  line_expr2 = v7->line_no;
+  expr2 = v7->pstate.pc;
+  line_expr2 = v7->pstate.line_no;
   TRY(parse_expression(v7));    // expr2 (condition)
   TRY(match(v7, ';'));
 
-  expr3 = v7->pc;
-  line_expr3 = v7->line_no;
+  expr3 = v7->pstate.pc;
+  line_expr3 = v7->pstate.line_no;
   TRY(parse_expression(v7));    // expr3  (post-iteration)
   TRY(match(v7, ')'));
 
-  stmt = v7->pc;
-  line_stmt = v7->line_no;
+  stmt = v7->pstate.pc;
+  line_stmt = v7->pstate.line_no;
   TRY(parse_compound_statement(v7, has_return));
-  end = v7->pc;
-  line_end = v7->line_no;
+  end = v7->pstate.pc;
+  line_end = v7->pstate.line_no;
 
   v7->no_exec = old_no_exec;
 
@@ -2679,19 +2728,19 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   if (!v7->no_exec) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pc = expr2;
-      v7->line_no = line_expr2;
+      v7->pstate.pc = expr2;
+      v7->pstate.line_no = line_expr2;
       TRY(parse_expression(v7));    // Evaluate condition
       is_true = !v7_is_true(v7_top(v7)[-1]);
       TRY(inc_stack(v7, -1));
       if (is_true) break;
 
-      v7->pc = stmt;
-      v7->line_no = line_stmt;
+      v7->pstate.pc = stmt;
+      v7->pstate.line_no = line_stmt;
       TRY(parse_compound_statement(v7, has_return));  // Loop body
 
-      v7->pc = expr3;
-      v7->line_no = line_expr3;
+      v7->pstate.pc = expr3;
+      v7->pstate.line_no = line_expr3;
       TRY(parse_expression(v7));    // expr3  (post-iteration)
 
       TRY(inc_stack(v7, old_sp - v7->sp));  // Clean up stack
@@ -2699,8 +2748,8 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   }
 
   // Jump to the code after the loop
-  v7->line_no = line_end;
-  v7->pc = end;
+  v7->pstate.line_no = line_end;
+  v7->pstate.pc = end;
 
   return V7_OK;
 }
@@ -2709,7 +2758,7 @@ static enum v7_err parse_return_statement(struct v7 *v7, int *has_return) {
   if (!v7->no_exec) {
     *has_return = 1;
   }
-  if (*v7->pc != ';' && *v7->pc != '}') {
+  if (*v7->pstate.pc != ';' && *v7->pstate.pc != '}') {
     TRY(parse_expression(v7));
   }
   return V7_OK;
@@ -2717,10 +2766,10 @@ static enum v7_err parse_return_statement(struct v7 *v7, int *has_return) {
 
 static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
   enum v7_err err_code;
-  const char *old_pc = v7->pc;
-  int old_no_exec = v7->no_exec, old_line_no = v7->line_no;
+  const char *old_pc = v7->pstate.pc;
+  int old_no_exec = v7->no_exec, old_line_no = v7->pstate.line_no;
 
-  CHECK(v7->pc[0] == '{', V7_SYNTAX_ERROR);
+  CHECK(v7->pstate.pc[0] == '{', V7_SYNTAX_ERROR);
   err_code = parse_compound_statement(v7, has_return);
 
   if (old_no_exec && err_code != V7_OK) {
@@ -2729,8 +2778,8 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
 
   // If exception has happened, skip the block
   if (err_code != V7_OK) {
-    v7->pc = old_pc;
-    v7->line_no = old_line_no;
+    v7->pstate.pc = old_pc;
+    v7->pstate.line_no = old_line_no;
     v7->no_exec = 1;
     TRY(parse_compound_statement(v7, has_return));
   }
@@ -2746,7 +2795,7 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
       TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
       v7_set_class(v7_top_val(v7), V7_CLASS_ERROR);
       v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_OBJ,
-              v7->tok, v7->tok_len, v7_top_val(v7));
+              v7->tok, v7->tok_len, 1, v7_top_val(v7));
     }
 
     v7->no_exec = old_no_exec || err_code == V7_OK;
@@ -2782,57 +2831,9 @@ static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   }
 
   // Skip optional colons and semicolons
-  while (*v7->pc == ',') match(v7, *v7->pc);
-  while (*v7->pc == ';') match(v7, *v7->pc);
+  while (*v7->pstate.pc == ',') match(v7, *v7->pstate.pc);
+  while (*v7->pstate.pc == ';') match(v7, *v7->pstate.pc);
   return V7_OK;
-}
-
-static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
-  int has_ret = 0;
-
-  v7->source_code = v7->pc = source_code;
-  skip_whitespaces_and_comments(v7);
-
-  // Prior calls to v7_exec() may have left current_scope modified, reset now
-  // TODO(lsm): free scope chain
-  v7->this_obj = &v7->root_scope;
-
-  while (*v7->pc != '\0') {
-    TRY(inc_stack(v7, sp - v7->sp));      // Reset stack on each statement
-    TRY(parse_statement(v7, &has_ret));   // Last expr result on stack
-  }
-  assert(v7->root_scope.proto == &s_global);
-
-  return V7_OK;
-}
-
-enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
-  return do_exec(v7, source_code, 0);
-}
-
-enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
-  FILE *fp;
-  char *p, *old_pc = (char *) v7->pc;
-  long file_size, old_line_no = v7->line_no;
-  enum v7_err status = V7_INTERNAL_ERROR;
-
-  if ((fp = fopen(path, "r")) == NULL) {
-  } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
-    fclose(fp);
-  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
-    fclose(fp);
-  } else {
-    rewind(fp);
-    fread(p, 1, (size_t) file_size, fp);
-    fclose(fp);
-    v7->line_no = 1;
-    status = do_exec(v7, p, v7->sp);
-    free(p);
-    v7->pc = old_pc;
-    if (status == V7_OK) v7->line_no = (int) old_line_no;
-  }
-
-  return status;
 }
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
@@ -2853,7 +2854,7 @@ int main(int argc, char *argv[]) {
   // Execute files
   for (; i < argc; i++) {
     if ((error_code = v7_exec_file(v7, argv[i])) != V7_OK) {
-      fprintf(stderr, "%s line %d: %s\n", argv[i], v7->line_no,
+      fprintf(stderr, "%s line %d: %s\n", argv[i], v7->pstate.line_no,
               v7_strerror(error_code));
     }
   }

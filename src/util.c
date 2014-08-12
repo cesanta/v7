@@ -564,3 +564,54 @@ enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
   CHECK(v != NULL, V7_OUT_OF_MEMORY);
   return v7_push(v7, v);
 }
+
+static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+  int has_ret = 0;
+  struct v7_pstate old_pstate = v7->pstate;
+  enum v7_err err = V7_OK;
+
+  v7->pstate.source_code = v7->pstate.pc = source_code;
+  v7->pstate.line_no = 1;
+  skip_whitespaces_and_comments(v7);
+
+  // Prior calls to v7_exec() may have left current_scope modified, reset now
+  // TODO(lsm): free scope chain
+  v7->this_obj = &v7->root_scope;
+
+  while ((err == V7_OK) && (*v7->pstate.pc != '\0')) {
+    // Reset stack on each statement
+    if ((err = inc_stack(v7, sp - v7->sp)) == V7_OK) {
+      err = parse_statement(v7, &has_ret);
+    }
+  }
+  assert(v7->root_scope.proto == &s_global);
+  v7->pstate = old_pstate;
+
+  return err;
+}
+
+enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
+  return do_exec(v7, source_code, 0);
+}
+
+enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
+  FILE *fp;
+  char *p;
+  long file_size;
+  enum v7_err status = V7_INTERNAL_ERROR;
+
+  if ((fp = fopen(path, "r")) == NULL) {
+  } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
+    fclose(fp);
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
+    fclose(fp);
+  } else {
+    rewind(fp);
+    fread(p, 1, (size_t) file_size, fp);
+    fclose(fp);
+    status = do_exec(v7, p, v7->sp);
+    free(p);
+  }
+
+  return status;
+}

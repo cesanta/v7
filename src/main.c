@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
   // Execute files
   for (; i < argc; i++) {
     if ((error_code = v7_exec_file(v7, argv[i])) != V7_OK) {
-      fprintf(stderr, "%s line %d: %s\n", argv[i], v7->line_no,
+      fprintf(stderr, "%s line %d: %s\n", argv[i], v7->pstate.line_no,
               v7_strerror(error_code));
     }
   }

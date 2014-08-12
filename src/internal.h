@@ -131,3 +131,4 @@ static enum v7_err parse_statement(struct v7 *, int *is_return);
 static int cmp(const struct v7_val *a, const struct v7_val *b);
 static enum v7_err do_exec(struct v7 *v7, const char *, int);
 static void init_stdlib(void);
+static void skip_whitespaces_and_comments(struct v7 *v7);

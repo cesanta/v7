@@ -110,17 +110,21 @@ struct v7_val {
 #define V7_VAL_DEALLOCATED 16 // Value has been deallocated
 };
 
+struct v7_pstate {
+  const char *source_code;    // Pointer to the source code
+  const char *pc;             // Current parsing position
+  int line_no;                // Line number
+};
+
 struct v7 {
   struct v7_val root_scope;   // "global" object (root-level execution context)
   struct v7_val *curr_func;   // Currently executing function
   struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
   int sp;                     // Stack pointer
 
-  const char *source_code;    // Pointer to the source code
-  const char *pc;             // Current parsing position
+  struct v7_pstate pstate;    // Parsing state
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
-  int line_no;                // Line number
   int no_exec;                // No-execute flag. For parsing function defs
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
