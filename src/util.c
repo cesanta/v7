@@ -479,7 +479,7 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (is_num(v)) {
     // TODO: check this on 32-bit arch
-    if (v->v.num > ((unsigned long) 1 << 52) || ceil(v->v.num) != v->v.num) {
+    if (v->v.num > ((uint64_t) 1 << 52) || ceil(v->v.num) != v->v.num) {
       snprintf(buf, bsiz, "%lg", v->v.num);
     } else {
       snprintf(buf, bsiz, "%lu", (unsigned long) v->v.num);
