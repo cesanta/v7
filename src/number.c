@@ -1,19 +1,21 @@
-static void Number_ctor(struct v7_c_func_arg *cfa) {
+static enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0);
   if (cfa->called_as_constructor) {
     cfa->this_obj->proto = &s_prototypes[V7_CLASS_NUMBER];
     cfa->this_obj->ctor = &s_constructors[V7_CLASS_NUMBER];
     cfa->this_obj->v.num = cfa->result->v.num;
   }
+  return V7_OK;
 }
 
-static void Num_toFixed(struct v7_c_func_arg *cfa) {
+static enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
   int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
   char fmt[10], buf[100];
 
   snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
   len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
   v7_init_str(cfa->result, buf, len, 1);
+  return V7_OK;
 }
 
 static void init_number(void) {

@@ -40,12 +40,6 @@ static char *v7_strdup(const char *ptr, unsigned long len) {
   return p;
 }
 
-static struct v7_val *common_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
-  obj->type = V7_TYPE_OBJ;
-  return obj;
-}
-
 void v7_init_str(struct v7_val *v, char *p, unsigned long len, int own) {
   v->type = V7_TYPE_STR;
   v->proto = &s_prototypes[V7_CLASS_STRING];

@@ -1,6 +1,7 @@
-static void Json_stringify(struct v7_c_func_arg *cfa) {
+static enum v7_err Json_stringify(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   // TODO(lsm): implement JSON.stringify
+  return V7_OK;
 }
 
 static void init_json(void) {

@@ -190,12 +190,6 @@ static char *v7_strdup(const char *ptr, unsigned long len) {
   return p;
 }
 
-static struct v7_val *common_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
-  obj->type = V7_TYPE_OBJ;
-  return obj;
-}
-
 void v7_init_str(struct v7_val *v, char *p, unsigned long len, int own) {
   v->type = V7_TYPE_STR;
   v->proto = &s_prototypes[V7_CLASS_STRING];
@@ -1021,16 +1015,17 @@ static void bin2str(char *to, const unsigned char *p, size_t len) {
   *to = '\0';
 }
 
-static void Crypto_md5(struct v7_c_func_arg *cfa) {
+static enum v7_err Crypto_md5(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
     cfa->result->v.str.len = 16;
     cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
     v7_md5(cfa->args[0], cfa->result->v.str.buf);
   }
+  return V7_OK;
 }
 
-static void Crypto_md5_hex(struct v7_c_func_arg *cfa) {
+static enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
     char hash[16];
@@ -1039,6 +1034,7 @@ static void Crypto_md5_hex(struct v7_c_func_arg *cfa) {
     cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
     bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
   }
+  return V7_OK;
 }
 
 static void init_crypto(void) {
@@ -1051,8 +1047,10 @@ static void init_crypto(void) {
   SET_RO_PROP_V(s_global, "Crypto", s_crypto);
 }
 #endif  // V7_DISABLE_CRYPTO
-static void Array_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
+static enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_ARRAY);
+  return V7_OK;
 }
 static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   struct v7_prop *p;
@@ -1062,11 +1060,12 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   }
 }
 
-static void Arr_push(struct v7_c_func_arg *cfa) {
+static enum v7_err Arr_push(struct v7_c_func_arg *cfa) {
   int i;
   for (i = 0; i < cfa->num_args; i++) {
     v7_append(cfa->v7, cfa->this_obj, cfa->args[i]);
   }
+  return V7_OK;
 }
 
 static int cmp_prop(const void *pa, const void *pb) {
@@ -1075,7 +1074,7 @@ static int cmp_prop(const void *pa, const void *pb) {
   return cmp(p2->val, p1->val);
 }
 
-static void Arr_sort(struct v7_c_func_arg *cfa) {
+static enum v7_err Arr_sort(struct v7_c_func_arg *cfa) {
   int i = 0, length = 0;
   struct v7_val *v = cfa->this_obj;
   struct v7_prop *p, **arr;
@@ -1095,6 +1094,7 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
     v->v.array = arr[i];
   }
   free(arr);
+  return V7_OK;
 }
 
 static void init_array(void) {
@@ -1104,49 +1104,62 @@ static void init_array(void) {
 
   SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
 }
-static void Boolean_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
-}static void Date_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
+static enum v7_err Boolean_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_BOOLEAN);
+  return V7_OK;
+}static enum v7_err Date_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_DATE);
+  return V7_OK;
 }
 
 static void init_date(void) {
   SET_RO_PROP_V(s_global, "Date", s_constructors[V7_CLASS_DATE]);
 }
-static void Error_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
+static enum v7_err Error_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_ERROR);
+  return V7_OK;
 }
 
 static void init_error(void) {
   SET_RO_PROP_V(s_global, "Error", s_constructors[V7_CLASS_ERROR]);
 }
-static void Function_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
+static enum v7_err Function_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_FUNCTION);
+  return V7_OK;
 }
 
 static void init_function(void) {
   SET_RO_PROP_V(s_global, "Function", s_constructors[V7_CLASS_FUNCTION]);
 }
-static void Math_random(struct v7_c_func_arg *cfa) {
+static enum v7_err Math_random(struct v7_c_func_arg *cfa) {
   srand((unsigned long) cfa->result);   // TODO: make better randomness
   v7_init_num(cfa->result, (double) rand() / RAND_MAX);
+  return V7_OK;
 }
 
-static void Math_sin(struct v7_c_func_arg *cfa) {
+static enum v7_err Math_sin(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args == 1 ? sin(cfa->args[0]->v.num) : 0.0);
+  return V7_OK;
 }
 
-static void Math_sqrt(struct v7_c_func_arg *cfa) {
+static enum v7_err Math_sqrt(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args == 1 ? sqrt(cfa->args[0]->v.num) : 0.0);
+  return V7_OK;
 }
 
-static void Math_tan(struct v7_c_func_arg *cfa) {
+static enum v7_err Math_tan(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args == 1 ? tan(cfa->args[0]->v.num) : 0.0);
+  return V7_OK;
 }
 
-static void Math_pow(struct v7_c_func_arg *cfa) {
+static enum v7_err Math_pow(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args == 2 ?
               pow(cfa->args[0]->v.num, cfa->args[1]->v.num) : 0.0);
+  return V7_OK;
 }
 
 static void init_math(void) {
@@ -1170,22 +1183,24 @@ static void init_math(void) {
 
   SET_RO_PROP_V(s_global, "Math", s_math);
 }
-static void Number_ctor(struct v7_c_func_arg *cfa) {
+static enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0);
   if (cfa->called_as_constructor) {
     cfa->this_obj->proto = &s_prototypes[V7_CLASS_NUMBER];
     cfa->this_obj->ctor = &s_constructors[V7_CLASS_NUMBER];
     cfa->this_obj->v.num = cfa->result->v.num;
   }
+  return V7_OK;
 }
 
-static void Num_toFixed(struct v7_c_func_arg *cfa) {
+static enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
   int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
   char fmt[10], buf[100];
 
   snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
   len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
   v7_init_str(cfa->result, buf, len, 1);
+  return V7_OK;
 }
 
 static void init_number(void) {
@@ -1198,22 +1213,26 @@ static void init_number(void) {
   SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
   SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
 }
-static void Object_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
+static enum v7_err Object_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_OBJECT);
+  return V7_OK;
 }
 
-static void Obj_toString(struct v7_c_func_arg *cfa) {
+static enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
   char buf[4000];
   v7_to_string(cfa->this_obj, buf, sizeof(buf));
   v7_init_str(cfa->result, buf, strlen(buf), 1);
+  return V7_OK;
 }
 
-static void Obj_keys(struct v7_c_func_arg *cfa) {
+static enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
   struct v7_prop *p;
   v7_set_class(cfa->result, V7_CLASS_ARRAY);
   for (p = cfa->this_obj->props; p != NULL; p = p->next) {
     v7_append(cfa->v7, cfa->result, p->key);
   }
+  return V7_OK;
 }
 
 static void init_object(void) {
@@ -1221,15 +1240,16 @@ static void init_object(void) {
   SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
   SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
 }
-static void Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = common_ctor(cfa);
-  v7_set_class(obj, V7_CLASS_REGEXP);
+static enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_OBJECT);
+  return V7_OK;
 }
 
 static void init_regex(void) {
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
 }
-static void String_ctor(struct v7_c_func_arg *cfa) {
+static enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
   struct v7_val *arg = cfa->args[0];
 
@@ -1244,13 +1264,14 @@ static void String_ctor(struct v7_c_func_arg *cfa) {
     cfa->this_obj->proto = &s_prototypes[V7_CLASS_STRING];
     cfa->this_obj->ctor = &s_constructors[V7_CLASS_STRING];
   }
+  return V7_OK;
 }
 
 static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
   v7_init_num(result, this_obj->v.str.len);
 }
 
-static void Str_charCodeAt(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
   cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
@@ -1259,9 +1280,10 @@ static void Str_charCodeAt(struct v7_c_func_arg *cfa) {
   if (!isnan(idx) && cfa->this_obj->type == V7_TYPE_STR && fabs(idx) < str->len) {
     cfa->result->v.num = ((unsigned char *) str->buf)[(int) idx];
   }
+  return V7_OK;
 }
 
-static void Str_charAt(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
   cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
@@ -1270,9 +1292,10 @@ static void Str_charAt(struct v7_c_func_arg *cfa) {
       fabs(idx) < str->len) {
     v7_init_str(cfa->result, &str->buf[(int) idx], 1, 1);
   }
+  return V7_OK;
 }
 
-static void Str_match(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   struct slre_cap caps[100];
   const struct v7_string *s = &cfa->this_obj->v.str;
   int i, n;
@@ -1293,6 +1316,7 @@ static void Str_match(struct v7_c_func_arg *cfa) {
                 v7_mkv(cfa->v7, V7_TYPE_STR, caps[i].ptr, (long) caps[i].len, 1));
     }
   }
+  return V7_OK;
 }
 
 // Implementation of memmem()
@@ -1303,7 +1327,7 @@ static const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
   return NULL;
 }
 
-static void Str_split(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   const struct v7_string *s = &cfa->this_obj->v.str;
   const char *p1, *p2, *e = s->buf + s->len;
   int limit = cfa->num_args == 2 && cfa->args[1]->type == V7_TYPE_NUM ?
@@ -1319,14 +1343,14 @@ static void Str_split(struct v7_c_func_arg *cfa) {
     if (sep->len == 0) {
       // Separator is empty. Split string by characters.
       for (p1 = s->buf; p1 < e; p1++) {
-        if (limit >= 0 && limit <= num_elems) return;
+        if (limit >= 0 && limit <= num_elems) break;
         v7_append(cfa->v7, cfa->result, v7_mkv(cfa->v7, V7_TYPE_STR, p1, 1, 1));
         num_elems++;
       }
     } else {
       p1 = s->buf;
       while ((p2 = memstr(p1, e - p1, sep->buf, sep->len)) != NULL) {
-        if (limit >= 0 && limit <= num_elems) return;
+        if (limit >= 0 && limit <= num_elems) break;
         v7_append(cfa->v7, cfa->result,
                   v7_mkv(cfa->v7, V7_TYPE_STR, p1, p2 - p1, 1));
         p1 = p2 + sep->len;
@@ -1345,7 +1369,7 @@ static void Str_split(struct v7_c_func_arg *cfa) {
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
     while ((n = slre_match(regex, p1, e - p1, caps, ARRAY_SIZE(caps), 0)) > 0) {
-      if (limit >= 0 && limit <= num_elems) return;
+      if (limit >= 0 && limit <= num_elems) break;
       v7_append(cfa->v7, cfa->result,
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, caps[0].ptr - p1, 1));
       p1 += n;
@@ -1356,9 +1380,10 @@ static void Str_split(struct v7_c_func_arg *cfa) {
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, e - p1, 1));
     }
   }
+  return V7_OK;
 }
 
-static void Str_indexOf(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, -1.0);
   if (cfa->this_obj->type == V7_TYPE_STR &&
       cfa->num_args > 0 &&
@@ -1376,9 +1401,10 @@ static void Str_indexOf(struct v7_c_func_arg *cfa) {
       }
     }
   }
+  return V7_OK;
 }
 
-static void Str_substr(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   long start = 0;
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -1397,6 +1423,7 @@ static void Str_substr(struct v7_c_func_arg *cfa) {
       v7_init_str(cfa->result, cfa->this_obj->v.str.buf + start, n, 1);
     }
   }
+  return V7_OK;
 }
 
 static void init_string(void) {
@@ -1410,9 +1437,10 @@ static void init_string(void) {
 
   SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
 }
-static void Json_stringify(struct v7_c_func_arg *cfa) {
+static enum v7_err Json_stringify(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   // TODO(lsm): implement JSON.stringify
+  return V7_OK;
 }
 
 static void init_json(void) {
@@ -1422,16 +1450,18 @@ static void init_json(void) {
   s_json.ref_count = 1;
 
   SET_RO_PROP_V(s_global, "JSON", s_json);
-}static void Std_print(struct v7_c_func_arg *cfa) {
+}static enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   char buf[4000];
   int i;
   for (i = 0; i < cfa->num_args; i++) {
     printf("%s", v7_to_string(cfa->args[i], buf, sizeof(buf)));
   }
   putchar('\n');
+
+  return V7_OK;
 }
 
-static void Std_load(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
 
   v7_init_bool(cfa->result, 1);
@@ -1442,11 +1472,13 @@ static void Std_load(struct v7_c_func_arg *cfa) {
       break;
     }
   }
+  return V7_OK;
 }
 
-static void Std_exit(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
   int exit_code = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
+  return V7_OK;
 }
 
 static void base64_encode(const unsigned char *src, int src_len, char *dst) {
@@ -1517,7 +1549,7 @@ static void base64_decode(const unsigned char *s, int len, char *dst) {
   *dst = 0;
 }
 
-static void Std_base64_decode(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -1527,9 +1559,10 @@ static void Std_base64_decode(struct v7_c_func_arg *cfa) {
     base64_decode((const unsigned char *) v->v.str.buf, v->v.str.len,
                   cfa->result->v.str.buf);
   }
+  return V7_OK;
 }
 
-static void Std_base64_encode(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -1539,20 +1572,18 @@ static void Std_base64_encode(struct v7_c_func_arg *cfa) {
     base64_encode((const unsigned char *) v->v.str.buf, v->v.str.len,
                   cfa->result->v.str.buf);
   }
+  return V7_OK;
 }
 
-static void Std_eval(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    enum v7_err err = do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
-    if (err != V7_OK) {
-      v7_make_and_push(cfa->v7, V7_TYPE_OBJ);
-      v7_set_class(v7_top_val(cfa->v7), V7_CLASS_ERROR);
-    }
+    return do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
   }
+  return V7_OK;
 }
 
-static void Std_read(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   char buf[2048];
   size_t n;
@@ -1562,9 +1593,10 @@ static void Std_read(struct v7_c_func_arg *cfa) {
       (n = fread(buf, 1, sizeof(buf), (FILE *) (unsigned long) v->v.num)) > 0) {
     v7_init_str(cfa->result, buf, n, 1);
   }
+  return V7_OK;
 }
 
-static void Std_write(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_write(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   size_t n, i;
 
@@ -1578,18 +1610,20 @@ static void Std_write(struct v7_c_func_arg *cfa) {
       }
     }
   }
+  return V7_OK;
 }
 
-static void Std_close(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_close(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   v7_init_bool(cfa->result, 0);
   if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
       fclose((FILE *) (unsigned long) v->v.num) == 0) {
     v7_init_bool(cfa->result, 1);
   }
+  return V7_OK;
 }
 
-static void Std_open(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1];
   FILE *fp;
 
@@ -1601,6 +1635,7 @@ static void Std_open(struct v7_c_func_arg *cfa) {
     v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
             "fp", 2, 0, (double) (unsigned long) fp);  // after v7_set_class !
   }
+  return V7_OK;
 }
 
 static void init_stdlib(void) {

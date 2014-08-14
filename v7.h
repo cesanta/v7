@@ -55,7 +55,7 @@ struct v7_c_func_arg {
   int called_as_constructor;
 };
 
-typedef void (*v7_c_func_t)(struct v7_c_func_arg *arg);
+typedef enum v7_err (*v7_c_func_t)(struct v7_c_func_arg *arg);
 typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
 
 struct v7_prop {
