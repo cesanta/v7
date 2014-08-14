@@ -7,7 +7,7 @@ var numTotalTests = 0;
 var numFailedTests = 0;
 
 var $ERROR = function(msg) {
-  print(msg);
+  //print(msg);
   numFailedTests++;
 };
 
@@ -18,12 +18,11 @@ for (var i = 0; i < testFiles.length; i++) {
   for (var j = 0; j < cfg.testsCollection.tests.length; j++) {
     var test = cfg.testsCollection.tests[j];
     var code = base64_decode(test.code);
-    //print(code);
     numTotalTests++;
     try {
       eval(code);
     } catch (err) {
-      print('Error running ', test.description, ': ', err);
+      print('Error running ', test.path, ': ', err, '\n', code, '\n========');
     }
   }
 }

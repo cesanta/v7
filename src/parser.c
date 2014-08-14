@@ -304,7 +304,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
     struct v7_c_func_arg arg = {
       v7, this_obj, res, v + 1, num_args, called_as_ctor
     };
-    f->v.c_func(&arg);
+    TRY(f->v.c_func(&arg));
   }
   return V7_OK;
 }
