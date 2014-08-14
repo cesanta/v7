@@ -1628,7 +1628,7 @@ static void init_stdlib(void) {
 }
 static enum v7_err arith(struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
-  if (a->type == V7_TYPE_STR && a->type == V7_TYPE_STR && op == '+') {
+  if (a->type == V7_TYPE_STR && b->type == V7_TYPE_STR && op == '+') {
     char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
