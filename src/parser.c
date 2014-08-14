@@ -1,6 +1,20 @@
-static enum v7_err arith(struct v7_val *a, struct v7_val *b,
+static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
-  if (a->type == V7_TYPE_STR && a->type == V7_TYPE_STR && op == '+') {
+  if (a->type == V7_TYPE_STR && op == '+') {
+    struct v7_val b_str;
+    if (b->type != V7_TYPE_STR) {
+      // When b is not a String, try using b.toString().
+      struct v7_val *toString;
+      toString = v7_lookup(b, "toString");
+      if (toString == NULL) {
+        return V7_TYPE_ERROR;
+      }
+      struct v7_c_func_arg arg = {
+        v7, b, &b_str, NULL, 0, 0
+      };
+      toString->v.c_func(&arg);
+      b = &b_str;
+    }
     char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
@@ -32,7 +46,7 @@ static enum v7_err do_arithmetic_op(struct v7 *v7, int op, int sp1, int sp2) {
   CHECK(v7->sp >= 2, V7_STACK_UNDERFLOW);
 
   memset(&tmp, 0, sizeof(tmp));
-  TRY(arith(v1, v2, &tmp, op));
+  TRY(arith(v7, v1, v2, &tmp, op));
   res = make_value(v7, tmp.type);
   CHECK(res != NULL, V7_OUT_OF_MEMORY);
   res->v = tmp.v;
@@ -751,12 +765,12 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
         CHECK(v7->sp >= 2, V7_INTERNAL_ERROR);
         TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, tok, tok_len, 1, b));
         return V7_OK;
-      case OP_PLUS_ASSIGN: TRY(arith(a, b, a, '+')); break;
-      case OP_MINUS_ASSIGN: TRY(arith(a, b, a, '-')); break;
-      case OP_MUL_ASSIGN: TRY(arith(a, b, a, '*')); break;
-      case OP_DIV_ASSIGN: TRY(arith(a, b, a, '/')); break;
-      case OP_REM_ASSIGN: TRY(arith(a, b, a, '%')); break;
-      case OP_XOR_ASSIGN: TRY(arith(a, b, a, '^')); break;
+      case OP_PLUS_ASSIGN: TRY(arith(v7, a, b, a, '+')); break;
+      case OP_MINUS_ASSIGN: TRY(arith(v7, a, b, a, '-')); break;
+      case OP_MUL_ASSIGN: TRY(arith(v7, a, b, a, '*')); break;
+      case OP_DIV_ASSIGN: TRY(arith(v7, a, b, a, '/')); break;
+      case OP_REM_ASSIGN: TRY(arith(v7, a, b, a, '%')); break;
+      case OP_XOR_ASSIGN: TRY(arith(v7, a, b, a, '^')); break;
       default: return V7_NOT_IMPLEMENTED;
     }
     TRY(inc_stack(v7, -1));
@@ -1158,7 +1172,9 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
     TRY(parse_compound_statement(v7, has_return));
   }
 
+  // Process catch/finally blocks
   TRY(parse_identifier(v7));
+
   if (test_token(v7, "catch", 5)) {
     TRY(match(v7, '('));
     TRY(parse_identifier(v7));
