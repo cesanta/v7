@@ -1176,7 +1176,18 @@ static void init_math(void) {
   SET_RO_PROP_V(s_global, "Math", s_math);
 }
 static enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
-  v7_init_num(cfa->result, cfa->num_args > 0 ? cfa->args[0]->v.num : 0.0);
+  struct v7_val *arg = cfa->args[0];
+
+  v7_init_num(cfa->result, cfa->num_args > 0 ? arg->v.num : 0.0);
+
+  if (cfa->num_args > 0 && !is_num(arg) && !is_bool(arg)) {
+    if (is_string(arg)) {
+      v7_init_num(cfa->result, strtod(arg->v.str.buf, NULL));
+    } else {
+      v7_init_num(cfa->result, NAN);
+    }
+  }
+
   if (cfa->called_as_constructor) {
     cfa->this_obj->proto = &s_prototypes[V7_CLASS_NUMBER];
     cfa->this_obj->ctor = &s_constructors[V7_CLASS_NUMBER];

@@ -8,6 +8,7 @@ String(null);
 var testFiles = ['ch06.json', 'ch09.json'];
 var numTotalTests = 0;
 var numFailedTests = 0;
+var numExceptions = 0;
 
 var $ERROR = function(msg) {
   print(msg);
@@ -28,9 +29,12 @@ for (var i = 0; i < testFiles.length; i++) {
       eval(code);
       if (currFailed == numFailedTests) ok = 'passed';
     } catch (err) {
+      numExceptions++;
     }
     //print(code, '============= ', test.path, ' (', ok, ')\n\n\n\n');
   }
 }
 
-print('Total tests: ', numTotalTests, ', failed: ', numFailedTests);
+print('Total cases: ', numTotalTests,
+      ', failed checks: ', numFailedTests,
+      ', exceptions: ', numExceptions);
