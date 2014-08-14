@@ -32,11 +32,11 @@ v7: $(SOURCES) v7.h
 	$(CC) $(SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
 
 js: v7
-	@./v7 tests/unit_test.js
-	@rhino -version 130 tests/unit_test.js
+	@./v7 tests/v7_basic_test.js
+	@rhino -version 130 tests/v7_basic_test.js
 
 t: v7
-	./v7 tests/run_tests.js
+	./v7 tests/run_ecma262_tests.js
 
 w:
 	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe
