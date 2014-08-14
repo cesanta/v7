@@ -615,3 +615,26 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
 
   return status;
 }
+
+static enum v7_err call_method(struct v7 *v7, const char *method_name,
+                               struct v7_val *obj, struct v7_val *result,
+                               struct v7_val **args, int num_args,
+                               int call_as_ctor) {
+  struct v7_c_func_arg arg;
+  struct v7_val *method = NULL;
+
+  method = v7_lookup(obj, method_name);
+  CHECK(method != NULL, V7_TYPE_ERROR);
+
+  memset(&arg, 0, sizeof(arg));
+  arg.v7 = v7;
+  arg.this_obj = obj;
+  arg.result = result;
+  arg.args = args;
+  arg.num_args = num_args;
+  arg.called_as_constructor = call_as_ctor;
+
+  method->v.c_func(&arg);
+
+  return V7_OK;
+}

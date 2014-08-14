@@ -765,6 +765,29 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
 
   return status;
 }
+
+static enum v7_err call_method(struct v7 *v7, const char *method_name,
+                               struct v7_val *obj, struct v7_val *result,
+                               struct v7_val **args, int num_args,
+                               int call_as_ctor) {
+  struct v7_c_func_arg arg;
+  struct v7_val *method = NULL;
+
+  method = v7_lookup(obj, method_name);
+  CHECK(method != NULL, V7_TYPE_ERROR);
+
+  memset(&arg, 0, sizeof(arg));
+  arg.v7 = v7;
+  arg.this_obj = obj;
+  arg.result = result;
+  arg.args = args;
+  arg.num_args = num_args;
+  arg.called_as_constructor = call_as_ctor;
+
+  method->v.c_func(&arg);
+
+  return V7_OK;
+}
 #ifndef V7_DISABLE_CRYPTO
 
 //////////////////////////////// START OF MD5 THIRD PARTY CODE
@@ -1521,7 +1544,11 @@ static void Std_base64_encode(struct v7_c_func_arg *cfa) {
 static void Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    enum v7_err err = do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    if (err != V7_OK) {
+      v7_make_and_push(cfa->v7, V7_TYPE_OBJ);
+      v7_set_class(v7_top_val(cfa->v7), V7_CLASS_ERROR);
+    }
   }
 }
 
@@ -1632,15 +1659,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     struct v7_val b_str;
     if (b->type != V7_TYPE_STR) {
       // When b is not a String, try using b.toString().
-      struct v7_val *toString;
-      toString = v7_lookup(b, "toString");
-      if (toString == NULL) {
-        return V7_TYPE_ERROR;
-      }
-      struct v7_c_func_arg arg = {
-        v7, b, &b_str, NULL, 0, 0
-      };
-      toString->v.c_func(&arg);
+      TRY(call_method(v7, "toString", b, &b_str, NULL, 0, 0));
       b = &b_str;
     }
     char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
@@ -2800,7 +2819,9 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
     TRY(parse_compound_statement(v7, has_return));
   }
 
+  // Process catch/finally blocks
   TRY(parse_identifier(v7));
+
   if (test_token(v7, "catch", 5)) {
     TRY(match(v7, '('));
     TRY(parse_identifier(v7));

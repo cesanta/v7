@@ -4,15 +4,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     struct v7_val b_str;
     if (b->type != V7_TYPE_STR) {
       // When b is not a String, try using b.toString().
-      struct v7_val *toString;
-      toString = v7_lookup(b, "toString");
-      if (toString == NULL) {
-        return V7_TYPE_ERROR;
-      }
-      struct v7_c_func_arg arg = {
-        v7, b, &b_str, NULL, 0, 0
-      };
-      toString->v.c_func(&arg);
+      TRY(call_method(v7, "toString", b, &b_str, NULL, 0, 0));
       b = &b_str;
     }
     char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
