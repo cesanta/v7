@@ -2,6 +2,12 @@ static enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
   struct v7_val *arg = cfa->args[0];
 
+  // If argument is not a string, do type conversion
+  if (cfa->num_args == 1 && !is_string(arg)) {
+    TRY(toString(cfa->v7, arg));
+    arg = v7_top_val(cfa->v7);
+  }
+
   if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
     v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
   } else {

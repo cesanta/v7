@@ -77,6 +77,7 @@ void v7_init_func(struct v7_val *v, v7_c_func_t func) {
 
 void v7_set_class(struct v7_val *v, enum v7_class cls) {
   v->type = V7_TYPE_OBJ;
+  v->cls = cls;
   v->proto = &s_prototypes[cls];
   v->ctor = &s_constructors[cls];
 }
@@ -610,25 +611,16 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   return status;
 }
 
-static enum v7_err call_method(struct v7 *v7, const char *method_name,
-                               struct v7_val *obj, struct v7_val *result,
-                               struct v7_val **args, int num_args,
-                               int call_as_ctor) {
-  struct v7_c_func_arg arg;
-  struct v7_val *method = NULL;
+// Convert object to string, push string on stack
+enum v7_err toString(struct v7 *v7, struct v7_val *obj) {
+  struct v7_val *f = NULL;
 
-  method = v7_lookup(obj, method_name);
-  CHECK(method != NULL, V7_TYPE_ERROR);
-
-  memset(&arg, 0, sizeof(arg));
-  arg.v7 = v7;
-  arg.this_obj = obj;
-  arg.result = result;
-  arg.args = args;
-  arg.num_args = num_args;
-  arg.called_as_constructor = call_as_ctor;
-
-  method->v.c_func(&arg);
+  if ((f = v7_lookup(obj, "toString")) == NULL) {
+    f = v7_lookup(&s_prototypes[V7_CLASS_OBJECT], "toString");
+  }
+  CHECK(f != NULL, V7_INTERNAL_ERROR);
+  TRY(v7_push(v7, f));
+  TRY(v7_call(v7, obj, 0, 0));
 
   return V7_OK;
 }

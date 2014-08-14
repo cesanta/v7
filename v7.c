@@ -61,7 +61,7 @@
 #define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
-#define MKOBJ(_proto) { 0, (_proto), 0, 0, {0}, V7_TYPE_OBJ, 0, 0 }
+#define MKOBJ(_proto) {0,(_proto),0,0,{0},V7_TYPE_OBJ,V7_CLASS_OBJECT,0,0}
 
 #define SET_RO_PROP_V(obj, name, val) \
   do { \
@@ -227,6 +227,7 @@ void v7_init_func(struct v7_val *v, v7_c_func_t func) {
 
 void v7_set_class(struct v7_val *v, enum v7_class cls) {
   v->type = V7_TYPE_OBJ;
+  v->cls = cls;
   v->proto = &s_prototypes[cls];
   v->ctor = &s_constructors[cls];
 }
@@ -760,25 +761,16 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   return status;
 }
 
-static enum v7_err call_method(struct v7 *v7, const char *method_name,
-                               struct v7_val *obj, struct v7_val *result,
-                               struct v7_val **args, int num_args,
-                               int call_as_ctor) {
-  struct v7_c_func_arg arg;
-  struct v7_val *method = NULL;
+// Convert object to string, push string on stack
+enum v7_err toString(struct v7 *v7, struct v7_val *obj) {
+  struct v7_val *f = NULL;
 
-  method = v7_lookup(obj, method_name);
-  CHECK(method != NULL, V7_TYPE_ERROR);
-
-  memset(&arg, 0, sizeof(arg));
-  arg.v7 = v7;
-  arg.this_obj = obj;
-  arg.result = result;
-  arg.args = args;
-  arg.num_args = num_args;
-  arg.called_as_constructor = call_as_ctor;
-
-  method->v.c_func(&arg);
+  if ((f = v7_lookup(obj, "toString")) == NULL) {
+    f = v7_lookup(&s_prototypes[V7_CLASS_OBJECT], "toString");
+  }
+  CHECK(f != NULL, V7_INTERNAL_ERROR);
+  TRY(v7_push(v7, f));
+  TRY(v7_call(v7, obj, 0, 0));
 
   return V7_OK;
 }
@@ -1253,6 +1245,12 @@ static enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
   struct v7_val *arg = cfa->args[0];
 
+  // If argument is not a string, do type conversion
+  if (cfa->num_args == 1 && !is_string(arg)) {
+    TRY(toString(cfa->v7, arg));
+    arg = v7_top_val(cfa->v7);
+  }
+
   if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
     v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
   } else {
@@ -1691,11 +1689,12 @@ static void init_stdlib(void) {
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
   if (a->type == V7_TYPE_STR && op == '+') {
-    struct v7_val b_str;
     if (b->type != V7_TYPE_STR) {
       // When b is not a String, try using b.toString().
-      TRY(call_method(v7, "toString", b, &b_str, NULL, 0, 0));
-      b = &b_str;
+      //TRY(v7_make_and_push(v7, V7_TYPE_STR));
+      //TRY(call_method(v7, "toString", b, v7_top_val(v7), NULL, 0, 0));
+      TRY(toString(v7, b));
+      b = v7_top_val(v7);
     }
     char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
@@ -1957,6 +1956,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
   if (v7->no_exec) return V7_OK;
   f = v[0];
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
+  CHECK(f != NULL, V7_TYPE_ERROR);
   CHECK(v7_is_class(f, V7_CLASS_FUNCTION), V7_CALLED_NON_FUNCTION);
 
   // Push return value on stack

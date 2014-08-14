@@ -1,11 +1,12 @@
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
   if (a->type == V7_TYPE_STR && op == '+') {
-    struct v7_val b_str;
     if (b->type != V7_TYPE_STR) {
       // When b is not a String, try using b.toString().
-      TRY(call_method(v7, "toString", b, &b_str, NULL, 0, 0));
-      b = &b_str;
+      //TRY(v7_make_and_push(v7, V7_TYPE_STR));
+      //TRY(call_method(v7, "toString", b, v7_top_val(v7), NULL, 0, 0));
+      TRY(toString(v7, b));
+      b = v7_top_val(v7);
     }
     char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
@@ -267,6 +268,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
   if (v7->no_exec) return V7_OK;
   f = v[0];
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
+  CHECK(f != NULL, V7_TYPE_ERROR);
   CHECK(v7_is_class(f, V7_CLASS_FUNCTION), V7_CALLED_NON_FUNCTION);
 
   // Push return value on stack

@@ -100,6 +100,7 @@ struct v7_val {
   struct v7_prop *props;      // Object's key/value list
   union v7_scalar v;          // The value itself
   enum v7_type type;          // Value type
+  enum v7_class cls;          // Object's internal [[Class]] property
   short ref_count;            // Reference counter
 
   unsigned short flags;       // Flags - defined below

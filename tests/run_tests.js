@@ -1,4 +1,7 @@
-load('tests/unit_test.js');
+// Copyright (c) 2014 Cesanta Software
+// All rights reserved
+
+String(null);
 
 // Run ECMAScript conformance tests, taken from
 // http://test262.ecmascript.org/json/ch09.json
@@ -7,7 +10,7 @@ var numTotalTests = 0;
 var numFailedTests = 0;
 
 var $ERROR = function(msg) {
-  //print(msg);
+  print(msg);
   numFailedTests++;
 };
 
@@ -18,12 +21,15 @@ for (var i = 0; i < testFiles.length; i++) {
   for (var j = 0; j < cfg.testsCollection.tests.length; j++) {
     var test = cfg.testsCollection.tests[j];
     var code = base64_decode(test.code);
+    var ok = 'failed';
     numTotalTests++;
     try {
+      var currFailed = numFailedTests;
       eval(code);
+      if (currFailed == numFailedTests) ok = 'passed';
     } catch (err) {
-      print('Error running ', test.path, ': ', err, '\n', code, '\n========');
     }
+    //print(code, '============= ', test.path, ' (', ok, ')\n\n\n\n');
   }
 }
 
