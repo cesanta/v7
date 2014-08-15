@@ -35,12 +35,16 @@ var a = 5, b = a;
 test(b == 5, 'assign 1');
 a = 7;
 test(b == 5, 'assign 2');
+a -= 2;
+test(a == 5, 'incr3');
 a = { foo: 2 }; b = a;
 test(b.foo == 2, 'assign 3');
 a.foo = 7;
 test(b.foo == 7, 'assign 4');
 a.foo++;
 test(b.foo == 8, 'incr1');
+a.foo -= 7;
+test(b.foo == 1, 'incr2');
 
 
 a = 1, b = 1;
@@ -69,6 +73,8 @@ test(this.a.c == 777, 'this 2');
 var a = 11;
 var b = function() { return a; var a = 'hi'; }
 test(b() == undefined, 'hoisting 1');
+test(hoistFunc() === 123, 'hoisting 2');
+function hoistFunc() { return 123; }
 
 
 var factorial = function(x) { return x <= 1 ? 1 : x * factorial(x - 1); };

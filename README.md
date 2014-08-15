@@ -8,7 +8,7 @@ Small size, simplicity and easy C/C++ integration are V7's main design goals.
 
 ## Features
 - Small footprint, under 100 kilobytes of compiled x86 code
-- Simple API, easy C/C++ interoperability
+- Simple embedding API, easy C/C++ interoperability, single .c file
 - Standard library with file IO, BSD sockets interface, and more
 
 V7 is targeted to conform to the ECMAScript specification version 3.
