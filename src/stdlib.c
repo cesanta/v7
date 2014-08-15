@@ -14,6 +14,7 @@ static enum v7_err Std_load(struct v7_c_func_arg *cfa) {
 
   v7_init_bool(cfa->result, 1);
   for (i = 0; i < cfa->num_args; i++) {
+    TRACE_OBJ(cfa->args[i]);
     if (cfa->args[i]->type != V7_TYPE_STR ||
         v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf) != V7_OK) {
       cfa->result->v.num = 0.0;

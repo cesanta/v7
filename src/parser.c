@@ -1,14 +1,14 @@
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
+  char *str;
+
   if (a->type == V7_TYPE_STR && op == '+') {
     if (b->type != V7_TYPE_STR) {
-      // When b is not a String, try using b.toString().
-      //TRY(v7_make_and_push(v7, V7_TYPE_STR));
-      //TRY(call_method(v7, "toString", b, v7_top_val(v7), NULL, 0, 0));
+      // Do type conversion, result pushed on stack
       TRY(toString(v7, b));
       b = v7_top_val(v7);
     }
-    char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
+    str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
     memcpy(str, a->v.str.buf, a->v.str.len);
@@ -34,16 +34,20 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
 }
 
 static enum v7_err do_arithmetic_op(struct v7 *v7, int op, int sp1, int sp2) {
-  struct v7_val *res, tmp, *v1 = v7->stack[sp1 - 1], *v2 = v7->stack[sp2 - 1];
+  struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7->stack[sp2 - 1];
+  int sp;
 
+  assert(v7->no_exec == 0);
   CHECK(v7->sp >= 2, V7_STACK_UNDERFLOW);
+  TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
+  sp = v7->sp;
+  TRY(arith(v7, v1, v2, v7_top_val(v7), op));
 
-  memset(&tmp, 0, sizeof(tmp));
-  TRY(arith(v7, v1, v2, &tmp, op));
-  res = make_value(v7, tmp.type);
-  CHECK(res != NULL, V7_OUT_OF_MEMORY);
-  res->v = tmp.v;
-  TRY(v7_push(v7, res));
+  // arith() might push another value on stack if type conversion was made.
+  // if that happens, re-push the result again
+  if (v7->sp > sp) {
+    TRY(v7_push(v7, v7->stack[sp - 1]));
+  }
 
   return V7_OK;
 }
@@ -180,7 +184,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0, ln = 0;
   unsigned long func_name_len = 0;
   const char *src = v7->pstate.pc, *func_name = NULL;
-  struct v7_val args;
+  struct v7_val *args = NULL;
 
   if (*v7->pstate.pc != '(') {
     // function name is given, e.g. function foo() {}
@@ -197,8 +201,11 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   ln = v7->pstate.line_no;  // Line number where function starts
   TRY(match(v7, '('));
 
-  memset(&args, 0, sizeof(args));
-  v7_set_class(&args, V7_CLASS_OBJECT);
+  if (!v7->no_exec) {
+    TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
+    args = v7_top_val(v7);
+    v7_set_class(args, V7_CLASS_OBJECT);
+  }
 
   while (*v7->pstate.pc != ')') {
     TRY(parse_identifier(v7));
@@ -207,7 +214,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
       struct v7_val *key = v7_mkv(v7, V7_TYPE_STR, v7->tok, v7->tok_len, 1);
       struct v7_val *val = i < num_params ? v[i + 1] : make_value(v7, V7_TYPE_UNDEF);
       inc_ref_count(key);
-      TRY(v7_set(v7, &args, key, val));
+      TRY(v7_set(v7, args, key, val));
       v7_freeval(v7, key);
     }
     i++;
@@ -217,7 +224,8 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   if (!v7->no_exec) {
     assert(v7->curr_func != NULL);
-    v7->curr_func->v.func.args = &args;
+    v7->curr_func->v.func.args = args;
+    inc_ref_count(args);
   }
 
   TRY(parse_compound_statement(v7, &has_return));
@@ -253,8 +261,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
     // Cleanup arguments
     v7->curr_func->v.func.args = NULL;
-    args.ref_count = 1;
-    v7_freeval(v7, &args);
+    v7_freeval(v7, args);
   }
 
   v7->no_exec = old_no_exec;
@@ -558,8 +565,8 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
     ns = v7_top(v7)[-1];
     v7_make_and_push(v7, V7_TYPE_UNDEF);
     v = v7_top(v7)[-1];
+    v7->cur_obj = v7->this_obj = ns;
   }
-  v7->cur_obj = v7->this_obj = ns;
   CHECK(v7->no_exec || ns != NULL, V7_SYNTAX_ERROR);
 
   if (op == '.') {
@@ -754,6 +761,8 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
   // top -->  |       nothing yet          |
   if (!v7->no_exec) {
     struct v7_val **top = v7_top(v7), *a = top[-2], *b = top[-1];
+    int old_sp = v7->sp - 1;
+
     switch (op) {
       case OP_ASSIGN:
         CHECK(v7->sp >= 2, V7_INTERNAL_ERROR);
@@ -767,7 +776,7 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
       case OP_XOR_ASSIGN: TRY(arith(v7, a, b, a, '^')); break;
       default: return V7_NOT_IMPLEMENTED;
     }
-    TRY(inc_stack(v7, -1));
+    TRY(inc_stack(v7, old_sp - v7->sp));
   }
 
   return V7_OK;
@@ -1028,13 +1037,13 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
 
 static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
                                           int *has_return) {
-  const char *tok = v7->tok, *stmt;
-  int tok_len = v7->tok_len, line_stmt;
+  const char *tok = v7->tok;
+  int tok_len = v7->tok_len;
+  struct v7_pstate s_block;
 
   TRY(parse_expression(v7));
   TRY(match(v7, ')'));
-  stmt = v7->pstate.pc;
-  line_stmt = v7->pstate.line_no;
+  s_block = v7->pstate;
 
   // Execute loop body
   if (v7->no_exec) {
@@ -1049,8 +1058,7 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
     for (prop = obj->props; prop != NULL; prop = prop->next) {
       TRY(v7_setv(v7, scope, V7_TYPE_STR, V7_TYPE_OBJ,
                   tok, tok_len, 1, prop->key));
-      v7->pstate.pc = stmt;
-      v7->pstate.line_no = line_stmt;
+      v7->pstate = s_block;
       TRY(parse_compound_statement(v7, has_return));  // Loop body
       TRY(inc_stack(v7, old_sp - v7->sp));  // Clean up stack
     }
@@ -1060,13 +1068,11 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
 }
 
 static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
-  int line_expr1, line_expr2, line_expr3, line_stmt, line_end,
-    is_true, old_no_exec = v7->no_exec, has_var = 0;
-  const char *expr1, *expr2, *expr3, *stmt, *end;
+  int is_true, old_no_exec = v7->no_exec, has_var = 0;
+  struct v7_pstate s1, s2, s3, s_block, s_end;
 
   TRY(match(v7, '('));
-  expr1 = v7->pstate.pc;
-  line_expr1 = v7->pstate.line_no;
+  s1 = v7->pstate;
 
   // See if this is an enumeration loop
   if (lookahead(v7, "var", 3)) {
@@ -1075,8 +1081,7 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   if (parse_identifier(v7) == V7_OK && lookahead(v7, "in", 2)) {
     return parse_for_in_statement(v7, has_var, has_return);
   } else {
-    v7->pstate.pc = expr1;
-    v7->pstate.line_no = line_expr1;
+    v7->pstate = s1;
   }
 
   if (lookahead(v7, "var", 3)) {
@@ -1088,21 +1093,17 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
 
   // Pass through the loop, don't execute it, just remember locations
   v7->no_exec = 1;
-  expr2 = v7->pstate.pc;
-  line_expr2 = v7->pstate.line_no;
+  s2 = v7->pstate;
   TRY(parse_expression(v7));    // expr2 (condition)
   TRY(match(v7, ';'));
 
-  expr3 = v7->pstate.pc;
-  line_expr3 = v7->pstate.line_no;
+  s3 = v7->pstate;
   TRY(parse_expression(v7));    // expr3  (post-iteration)
   TRY(match(v7, ')'));
 
-  stmt = v7->pstate.pc;
-  line_stmt = v7->pstate.line_no;
+  s_block = v7->pstate;
   TRY(parse_compound_statement(v7, has_return));
-  end = v7->pstate.pc;
-  line_end = v7->pstate.line_no;
+  s_end = v7->pstate;
 
   v7->no_exec = old_no_exec;
 
@@ -1110,19 +1111,19 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   if (!v7->no_exec) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pstate.pc = expr2;
-      v7->pstate.line_no = line_expr2;
+      v7->pstate = s2;
+      assert(v7->no_exec == 0);
       TRY(parse_expression(v7));    // Evaluate condition
+      assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top(v7)[-1]);
-      TRY(inc_stack(v7, -1));
       if (is_true) break;
 
-      v7->pstate.pc = stmt;
-      v7->pstate.line_no = line_stmt;
+      v7->pstate = s_block;
+      assert(v7->no_exec == 0);
       TRY(parse_compound_statement(v7, has_return));  // Loop body
+      assert(v7->no_exec == 0);
 
-      v7->pstate.pc = expr3;
-      v7->pstate.line_no = line_expr3;
+      v7->pstate = s3;
       TRY(parse_expression(v7));    // expr3  (post-iteration)
 
       TRY(inc_stack(v7, old_sp - v7->sp));  // Clean up stack
@@ -1130,8 +1131,8 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   }
 
   // Jump to the code after the loop
-  v7->pstate.line_no = line_end;
-  v7->pstate.pc = end;
+  v7->pstate = s_end;
+  assert(v7->no_exec == old_no_exec);
 
   return V7_OK;
 }

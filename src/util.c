@@ -1,4 +1,12 @@
+
+static void obj_sanity_check(const struct v7_val *obj) {
+  assert(obj != NULL);
+  assert(obj->ref_count >= 0);
+  assert(!(obj->flags & V7_VAL_DEALLOCATED));
+}
+
 static int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
+  obj_sanity_check(obj);
   if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
     while (obj != NULL) {
       if (obj->ctor == ctor) return 1;
@@ -14,21 +22,22 @@ int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
 }
 
 static int is_string(const struct v7_val *v) {
+  obj_sanity_check(v);
   return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
 }
 
 static int is_num(const struct v7_val *v) {
+  obj_sanity_check(v);
   return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
 }
 
 static int is_bool(const struct v7_val *v) {
+  obj_sanity_check(v);
   return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
 }
 
 static void inc_ref_count(struct v7_val *v) {
-  assert(v != NULL);
-  assert(v->ref_count >= 0);
-  assert(!(v->flags & V7_VAL_DEALLOCATED));
+  obj_sanity_check(v);
   v->ref_count++;
 }
 
@@ -232,7 +241,7 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
   int res;
   double an, bn;
   const struct v7_string *as, *bs;
-  struct v7_val ta, tb;
+  struct v7_val ta = MKOBJ(0), tb = MKOBJ(0);
 
   if (a == NULL || b == NULL) return 1;
   if ((a->type == V7_TYPE_UNDEF || a->type == V7_TYPE_NULL) &&
@@ -560,7 +569,7 @@ enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
   return v7_push(v7, v);
 }
 
-static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+static enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) {
   int has_ret = 0;
   struct v7_pstate old_pstate = v7->pstate;
   enum v7_err err = V7_OK;
@@ -579,10 +588,32 @@ static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
       err = parse_statement(v7, &has_ret);
     }
   }
+
   assert(v7->root_scope.proto == &s_global);
   v7->pstate = old_pstate;
 
   return err;
+}
+
+// Do first pass with no execution only, to grab function/variable
+// definitions for hoisting. Second pass executes.
+static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+  int old_no_exec = v7->no_exec;
+  enum v7_err er;
+
+  // Do first pass with no execution only, to grab function/variable
+  // definitions for hoisting.
+  v7->no_exec = 1;
+  er = do_exec2(v7, source_code, sp);
+
+  // Second pass: execute.
+  if (old_no_exec == 0) {
+    v7->no_exec = old_no_exec;
+    er = do_exec2(v7, source_code, sp);
+  }
+  v7->no_exec = old_no_exec;
+
+  return er;
 }
 
 enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
