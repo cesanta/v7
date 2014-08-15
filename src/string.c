@@ -1,6 +1,12 @@
-static void String_ctor(struct v7_c_func_arg *cfa) {
+static enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
   struct v7_val *arg = cfa->args[0];
+
+  // If argument is not a string, do type conversion
+  if (cfa->num_args == 1 && !is_string(arg)) {
+    TRY(toString(cfa->v7, arg));
+    arg = v7_top_val(cfa->v7);
+  }
 
   if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
     v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
@@ -13,13 +19,14 @@ static void String_ctor(struct v7_c_func_arg *cfa) {
     cfa->this_obj->proto = &s_prototypes[V7_CLASS_STRING];
     cfa->this_obj->ctor = &s_constructors[V7_CLASS_STRING];
   }
+  return V7_OK;
 }
 
 static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
   v7_init_num(result, this_obj->v.str.len);
 }
 
-static void Str_charCodeAt(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
   cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
@@ -28,9 +35,10 @@ static void Str_charCodeAt(struct v7_c_func_arg *cfa) {
   if (!isnan(idx) && cfa->this_obj->type == V7_TYPE_STR && fabs(idx) < str->len) {
     cfa->result->v.num = ((unsigned char *) str->buf)[(int) idx];
   }
+  return V7_OK;
 }
 
-static void Str_charAt(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
   cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
@@ -39,9 +47,10 @@ static void Str_charAt(struct v7_c_func_arg *cfa) {
       fabs(idx) < str->len) {
     v7_init_str(cfa->result, &str->buf[(int) idx], 1, 1);
   }
+  return V7_OK;
 }
 
-static void Str_match(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   struct slre_cap caps[100];
   const struct v7_string *s = &cfa->this_obj->v.str;
   int i, n;
@@ -62,6 +71,7 @@ static void Str_match(struct v7_c_func_arg *cfa) {
                 v7_mkv(cfa->v7, V7_TYPE_STR, caps[i].ptr, (long) caps[i].len, 1));
     }
   }
+  return V7_OK;
 }
 
 // Implementation of memmem()
@@ -72,7 +82,7 @@ static const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
   return NULL;
 }
 
-static void Str_split(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   const struct v7_string *s = &cfa->this_obj->v.str;
   const char *p1, *p2, *e = s->buf + s->len;
   int limit = cfa->num_args == 2 && cfa->args[1]->type == V7_TYPE_NUM ?
@@ -88,14 +98,14 @@ static void Str_split(struct v7_c_func_arg *cfa) {
     if (sep->len == 0) {
       // Separator is empty. Split string by characters.
       for (p1 = s->buf; p1 < e; p1++) {
-        if (limit >= 0 && limit <= num_elems) return;
+        if (limit >= 0 && limit <= num_elems) break;
         v7_append(cfa->v7, cfa->result, v7_mkv(cfa->v7, V7_TYPE_STR, p1, 1, 1));
         num_elems++;
       }
     } else {
       p1 = s->buf;
       while ((p2 = memstr(p1, e - p1, sep->buf, sep->len)) != NULL) {
-        if (limit >= 0 && limit <= num_elems) return;
+        if (limit >= 0 && limit <= num_elems) break;
         v7_append(cfa->v7, cfa->result,
                   v7_mkv(cfa->v7, V7_TYPE_STR, p1, p2 - p1, 1));
         p1 = p2 + sep->len;
@@ -114,7 +124,7 @@ static void Str_split(struct v7_c_func_arg *cfa) {
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
     while ((n = slre_match(regex, p1, e - p1, caps, ARRAY_SIZE(caps), 0)) > 0) {
-      if (limit >= 0 && limit <= num_elems) return;
+      if (limit >= 0 && limit <= num_elems) break;
       v7_append(cfa->v7, cfa->result,
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, caps[0].ptr - p1, 1));
       p1 += n;
@@ -125,9 +135,10 @@ static void Str_split(struct v7_c_func_arg *cfa) {
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, e - p1, 1));
     }
   }
+  return V7_OK;
 }
 
-static void Str_indexOf(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, -1.0);
   if (cfa->this_obj->type == V7_TYPE_STR &&
       cfa->num_args > 0 &&
@@ -145,9 +156,10 @@ static void Str_indexOf(struct v7_c_func_arg *cfa) {
       }
     }
   }
+  return V7_OK;
 }
 
-static void Str_substr(struct v7_c_func_arg *cfa) {
+static enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   long start = 0;
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -166,6 +178,7 @@ static void Str_substr(struct v7_c_func_arg *cfa) {
       v7_init_str(cfa->result, cfa->this_obj->v.str.buf + start, n, 1);
     }
   }
+  return V7_OK;
 }
 
 static void init_string(void) {

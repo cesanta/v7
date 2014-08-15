@@ -1,13 +1,15 @@
-static void Std_print(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   char buf[4000];
   int i;
   for (i = 0; i < cfa->num_args; i++) {
     printf("%s", v7_to_string(cfa->args[i], buf, sizeof(buf)));
   }
   putchar('\n');
+
+  return V7_OK;
 }
 
-static void Std_load(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
 
   v7_init_bool(cfa->result, 1);
@@ -18,11 +20,13 @@ static void Std_load(struct v7_c_func_arg *cfa) {
       break;
     }
   }
+  return V7_OK;
 }
 
-static void Std_exit(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
   int exit_code = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
+  return V7_OK;
 }
 
 static void base64_encode(const unsigned char *src, int src_len, char *dst) {
@@ -93,7 +97,7 @@ static void base64_decode(const unsigned char *s, int len, char *dst) {
   *dst = 0;
 }
 
-static void Std_base64_decode(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -103,9 +107,10 @@ static void Std_base64_decode(struct v7_c_func_arg *cfa) {
     base64_decode((const unsigned char *) v->v.str.buf, v->v.str.len,
                   cfa->result->v.str.buf);
   }
+  return V7_OK;
 }
 
-static void Std_base64_encode(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -115,16 +120,18 @@ static void Std_base64_encode(struct v7_c_func_arg *cfa) {
     base64_encode((const unsigned char *) v->v.str.buf, v->v.str.len,
                   cfa->result->v.str.buf);
   }
+  return V7_OK;
 }
 
-static void Std_eval(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    return do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
   }
+  return V7_OK;
 }
 
-static void Std_read(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   char buf[2048];
   size_t n;
@@ -134,9 +141,10 @@ static void Std_read(struct v7_c_func_arg *cfa) {
       (n = fread(buf, 1, sizeof(buf), (FILE *) (unsigned long) v->v.num)) > 0) {
     v7_init_str(cfa->result, buf, n, 1);
   }
+  return V7_OK;
 }
 
-static void Std_write(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_write(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   size_t n, i;
 
@@ -150,18 +158,20 @@ static void Std_write(struct v7_c_func_arg *cfa) {
       }
     }
   }
+  return V7_OK;
 }
 
-static void Std_close(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_close(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   v7_init_bool(cfa->result, 0);
   if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
       fclose((FILE *) (unsigned long) v->v.num) == 0) {
     v7_init_bool(cfa->result, 1);
   }
+  return V7_OK;
 }
 
-static void Std_open(struct v7_c_func_arg *cfa) {
+static enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1];
   FILE *fp;
 
@@ -173,6 +183,7 @@ static void Std_open(struct v7_c_func_arg *cfa) {
     v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
             "fp", 2, 0, (double) (unsigned long) fp);  // after v7_set_class !
   }
+  return V7_OK;
 }
 
 static void init_stdlib(void) {

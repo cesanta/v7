@@ -55,7 +55,7 @@ struct v7_c_func_arg {
   int called_as_constructor;
 };
 
-typedef void (*v7_c_func_t)(struct v7_c_func_arg *arg);
+typedef enum v7_err (*v7_c_func_t)(struct v7_c_func_arg *arg);
 typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
 
 struct v7_prop {
@@ -100,6 +100,7 @@ struct v7_val {
   struct v7_prop *props;      // Object's key/value list
   union v7_scalar v;          // The value itself
   enum v7_type type;          // Value type
+  enum v7_class cls;          // Object's internal [[Class]] property
   short ref_count;            // Reference counter
 
   unsigned short flags;       // Flags - defined below

@@ -231,16 +231,17 @@ static void bin2str(char *to, const unsigned char *p, size_t len) {
   *to = '\0';
 }
 
-static void Crypto_md5(struct v7_c_func_arg *cfa) {
+static enum v7_err Crypto_md5(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
     cfa->result->v.str.len = 16;
     cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
     v7_md5(cfa->args[0], cfa->result->v.str.buf);
   }
+  return V7_OK;
 }
 
-static void Crypto_md5_hex(struct v7_c_func_arg *cfa) {
+static enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
     char hash[16];
@@ -249,6 +250,7 @@ static void Crypto_md5_hex(struct v7_c_func_arg *cfa) {
     cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
     bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
   }
+  return V7_OK;
 }
 
 static void init_crypto(void) {

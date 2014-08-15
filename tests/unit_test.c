@@ -51,7 +51,7 @@
 
 static int static_num_tests = 0;
 
-static void adder(struct v7_c_func_arg *cfa) {
+static enum v7_err adder(struct v7_c_func_arg *cfa) {
   int i;
 
   cfa->result->type = V7_TYPE_NUM;
@@ -60,6 +60,8 @@ static void adder(struct v7_c_func_arg *cfa) {
   for (i = 0; i < cfa->num_args; i++) {
     cfa->result->v.num += cfa->args[i]->v.num;
   }
+
+  return V7_OK;
 }
 
 static int check_bool(struct v7 *v7, double val) {

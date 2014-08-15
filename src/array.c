@@ -1,5 +1,7 @@
-static void Array_ctor(struct v7_c_func_arg *cfa) {
-  common_ctor(cfa);
+static enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  v7_set_class(obj, V7_CLASS_ARRAY);
+  return V7_OK;
 }
 static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   struct v7_prop *p;
@@ -9,11 +11,12 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   }
 }
 
-static void Arr_push(struct v7_c_func_arg *cfa) {
+static enum v7_err Arr_push(struct v7_c_func_arg *cfa) {
   int i;
   for (i = 0; i < cfa->num_args; i++) {
     v7_append(cfa->v7, cfa->this_obj, cfa->args[i]);
   }
+  return V7_OK;
 }
 
 static int cmp_prop(const void *pa, const void *pb) {
@@ -22,7 +25,7 @@ static int cmp_prop(const void *pa, const void *pb) {
   return cmp(p2->val, p1->val);
 }
 
-static void Arr_sort(struct v7_c_func_arg *cfa) {
+static enum v7_err Arr_sort(struct v7_c_func_arg *cfa) {
   int i = 0, length = 0;
   struct v7_val *v = cfa->this_obj;
   struct v7_prop *p, **arr;
@@ -42,6 +45,7 @@ static void Arr_sort(struct v7_c_func_arg *cfa) {
     v->v.array = arr[i];
   }
   free(arr);
+  return V7_OK;
 }
 
 static void init_array(void) {

@@ -60,7 +60,7 @@
 #define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
-#define MKOBJ(_proto) { 0, (_proto), 0, 0, {0}, V7_TYPE_OBJ, 0, 0 }
+#define MKOBJ(_proto) {0,(_proto),0,0,{0},V7_TYPE_OBJ,V7_CLASS_OBJECT,0,0}
 
 #define SET_RO_PROP_V(obj, name, val) \
   do { \
