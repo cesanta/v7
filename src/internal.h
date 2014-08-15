@@ -35,6 +35,8 @@
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #define __unused
+#else
+#include <stdint.h>
 #endif
 
 // MSVC6 doesn't have standard C math constants defined

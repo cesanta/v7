@@ -35,6 +35,8 @@
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #define __unused
+#else
+#include <stdint.h>
 #endif
 
 // MSVC6 doesn't have standard C math constants defined
@@ -636,7 +638,7 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (is_num(v)) {
     // TODO: check this on 32-bit arch
-    if (v->v.num > ((unsigned long) 1 << 52) || ceil(v->v.num) != v->v.num) {
+    if (v->v.num > ((uint64_t) 1 << 52) || ceil(v->v.num) != v->v.num) {
       snprintf(buf, bsiz, "%lg", v->v.num);
     } else {
       snprintf(buf, bsiz, "%lu", (unsigned long) v->v.num);
@@ -771,6 +773,29 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
   }
 
   return status;
+}
+
+static enum v7_err call_method(struct v7 *v7, const char *method_name,
+                               struct v7_val *obj, struct v7_val *result,
+                               struct v7_val **args, int num_args,
+                               int call_as_ctor) {
+  struct v7_c_func_arg arg;
+  struct v7_val *method = NULL;
+
+  method = v7_lookup(obj, method_name);
+  CHECK(method != NULL, V7_TYPE_ERROR);
+
+  memset(&arg, 0, sizeof(arg));
+  arg.v7 = v7;
+  arg.this_obj = obj;
+  arg.result = result;
+  arg.args = args;
+  arg.num_args = num_args;
+  arg.called_as_constructor = call_as_ctor;
+
+  method->v.c_func(&arg);
+
+  return V7_OK;
 }
 #ifndef V7_DISABLE_CRYPTO
 
@@ -1959,7 +1984,11 @@ static void Std_base64_encode(struct v7_c_func_arg *cfa) {
 static void Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    enum v7_err err = do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    if (err != V7_OK) {
+      v7_make_and_push(cfa->v7, V7_TYPE_OBJ);
+      v7_set_class(v7_top_val(cfa->v7), V7_CLASS_ERROR);
+    }
   }
 }
 
@@ -2064,9 +2093,15 @@ static void init_stdlib(void) {
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;
 }
-static enum v7_err arith(struct v7_val *a, struct v7_val *b,
+static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
-  if (a->type == V7_TYPE_STR && a->type == V7_TYPE_STR && op == '+') {
+  if (a->type == V7_TYPE_STR && op == '+') {
+    struct v7_val b_str;
+    if (b->type != V7_TYPE_STR) {
+      // When b is not a String, try using b.toString().
+      TRY(call_method(v7, "toString", b, &b_str, NULL, 0, 0));
+      b = &b_str;
+    }
     char *str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
@@ -2098,7 +2133,7 @@ static enum v7_err do_arithmetic_op(struct v7 *v7, int op, int sp1, int sp2) {
   CHECK(v7->sp >= 2, V7_STACK_UNDERFLOW);
 
   memset(&tmp, 0, sizeof(tmp));
-  TRY(arith(v1, v2, &tmp, op));
+  TRY(arith(v7, v1, v2, &tmp, op));
   res = make_value(v7, tmp.type);
   CHECK(res != NULL, V7_OUT_OF_MEMORY);
   res->v = tmp.v;
@@ -2817,12 +2852,12 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
         CHECK(v7->sp >= 2, V7_INTERNAL_ERROR);
         TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, tok, tok_len, 1, b));
         return V7_OK;
-      case OP_PLUS_ASSIGN: TRY(arith(a, b, a, '+')); break;
-      case OP_MINUS_ASSIGN: TRY(arith(a, b, a, '-')); break;
-      case OP_MUL_ASSIGN: TRY(arith(a, b, a, '*')); break;
-      case OP_DIV_ASSIGN: TRY(arith(a, b, a, '/')); break;
-      case OP_REM_ASSIGN: TRY(arith(a, b, a, '%')); break;
-      case OP_XOR_ASSIGN: TRY(arith(a, b, a, '^')); break;
+      case OP_PLUS_ASSIGN: TRY(arith(v7, a, b, a, '+')); break;
+      case OP_MINUS_ASSIGN: TRY(arith(v7, a, b, a, '-')); break;
+      case OP_MUL_ASSIGN: TRY(arith(v7, a, b, a, '*')); break;
+      case OP_DIV_ASSIGN: TRY(arith(v7, a, b, a, '/')); break;
+      case OP_REM_ASSIGN: TRY(arith(v7, a, b, a, '%')); break;
+      case OP_XOR_ASSIGN: TRY(arith(v7, a, b, a, '^')); break;
       default: return V7_NOT_IMPLEMENTED;
     }
     TRY(inc_stack(v7, -1));
@@ -3224,7 +3259,9 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
     TRY(parse_compound_statement(v7, has_return));
   }
 
+  // Process catch/finally blocks
   TRY(parse_identifier(v7));
+
   if (test_token(v7, "catch", 5)) {
     TRY(match(v7, '('));
     TRY(parse_identifier(v7));

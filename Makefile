@@ -1,4 +1,4 @@
-CFLAGS = -W -Wall -pedantic -ansi -Wno-comment -g -O0 $(PROF) $(CFLAGS_EXTRA)
+CFLAGS = -W -Wall -pedantic -Wno-comment -g -O0 $(PROF) $(CFLAGS_EXTRA)
 SLRE = ../slre
 CFLAGS += -I$(SLRE) -I.
 SOURCES = v7.c $(SLRE)/slre.c
@@ -29,7 +29,7 @@ u:
 	./$@
 
 v7: $(SOURCES) v7.h
-	$(CC) $(SOURCES) -o $@ -DV7_EXE $(CFLAGS)
+	$(CC) $(SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
 
 js: v7
 	@./v7 tests/unit_test.js
