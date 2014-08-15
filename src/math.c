@@ -25,12 +25,26 @@ static enum v7_err Math_pow(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
+static enum v7_err Math_floor(struct v7_c_func_arg *cfa) {
+  v7_init_num(cfa->result, cfa->num_args == 1 ?
+              floor(cfa->args[0]->v.num) : 0.0);
+  return V7_OK;
+}
+
+static enum v7_err Math_ceil(struct v7_c_func_arg *cfa) {
+  v7_init_num(cfa->result, cfa->num_args == 1 ?
+              ceil(cfa->args[0]->v.num) : 0.0);
+  return V7_OK;
+}
+
 static void init_math(void) {
   SET_METHOD(s_math, "random", Math_random);
   SET_METHOD(s_math, "pow", Math_pow);
   SET_METHOD(s_math, "sin", Math_sin);
   SET_METHOD(s_math, "tan", Math_tan);
   SET_METHOD(s_math, "sqrt", Math_sqrt);
+  SET_METHOD(s_math, "floor", Math_floor);
+  SET_METHOD(s_math, "ceil", Math_ceil);
 
   SET_RO_PROP(s_math, "E", V7_TYPE_NUM, num, M_E);
   SET_RO_PROP(s_math, "PI", V7_TYPE_NUM, num, M_PI);
