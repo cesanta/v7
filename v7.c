@@ -53,7 +53,6 @@
 #define INFINITY    atof("INFINITY")  // TODO: fix this
 #endif
 
-//#define V7_CACHE_OBJS
 #define MAX_STRING_LITERAL_LENGTH 2000
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
@@ -125,16 +124,6 @@ enum {
 
   NUM_OPS
 };
-
-// 
-typedef unsigned long uint64_t;
-typedef unsigned long u_int64_t;
-typedef unsigned int uint32_t;
-typedef unsigned int u_int32_t;
-typedef unsigned char uint8_t;
-typedef unsigned char u_int8_t;
-
-#define bcopy memcpy
 
 // Forward declarations
 static enum v7_err parse_expression(struct v7 *);

@@ -24,6 +24,26 @@ extern "C" {
 
 #define V7_VERSION "1.0"
 
+/////custom defines/////
+// conditional compiling macros
+// #define V7_DEBUG
+// #define V7_DISABLE_CRYPTO
+// #define V7_CACHE_OBJS
+
+// custom types
+typedef unsigned long uint64_t;
+typedef unsigned long u_int64_t;
+typedef unsigned int uint32_t;
+typedef unsigned int u_int32_t;
+typedef unsigned int uint16_t;
+typedef unsigned int u_int16_t;
+typedef unsigned char uint8_t;
+typedef unsigned char u_int8_t;
+
+// some substitutes
+#define bcopy memcpy
+////////////////////////
+
 enum v7_type {
   V7_TYPE_UNDEF, V7_TYPE_NULL, V7_TYPE_BOOL, V7_TYPE_STR, V7_TYPE_NUM,
   V7_TYPE_OBJ, V7_NUM_TYPES
