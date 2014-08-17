@@ -24,6 +24,8 @@ var closure1 = func1(), closure2 = func1();
 test(closure1(2, 3) == 36, 'closure1');
 test(closure2(2, 3) == 36, 'closure2');
 
+var func2 = function(x) { x = 10; test(x == 10, 'local scope 1'); }
+func2(3);
 
 var v1 = 123, v2 = 234;
 function f(v1) { return v1 ? v1 : v2; }

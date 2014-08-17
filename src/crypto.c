@@ -1,3 +1,5 @@
+#include "internal.h"
+
 #ifndef V7_DISABLE_CRYPTO
 
 //////////////////////////////// START OF MD5 THIRD PARTY CODE
@@ -62,7 +64,8 @@ void MD5Init(MD5_CTX *ctx) {
 #define MD5STEP(f, w, x, y, z, data, s) \
 ( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
 
-void MD5Transform(u_int32_t state[4], const u_int8_t block[MD5_BLOCK_LENGTH]) {
+static void MD5Transform(uint32_t state[4],
+                         const uint8_t block[MD5_BLOCK_LENGTH]) {
 	uint32_t a, b, c, d, in[MD5_BLOCK_LENGTH / 4];
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -156,7 +159,7 @@ void MD5Transform(u_int32_t state[4], const u_int8_t block[MD5_BLOCK_LENGTH]) {
 	state[3] += d;
 }
 
-void MD5Update(MD5_CTX *ctx, const unsigned char *input, size_t len) {
+static void MD5Update(MD5_CTX *ctx, const unsigned char *input, size_t len) {
 	size_t have, need;
 
 	/* Check how many bytes we already have and how many more we need. */
@@ -188,7 +191,7 @@ void MD5Update(MD5_CTX *ctx, const unsigned char *input, size_t len) {
 		bcopy(input, ctx->buffer + have, len);
 }
 
-void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
+static void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
 	uint8_t count[8];
 	size_t padlen;
 	int i;
@@ -214,7 +217,7 @@ void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
 
 static struct v7_val s_crypto = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 
-static void v7_md5(const struct v7_val *v, char *buf) {
+V7_PRIVATE void v7_md5(const struct v7_val *v, char *buf) {
   MD5_CTX ctx;
   MD5Init(&ctx);
   MD5Update(&ctx, (const unsigned char *) v->v.str.buf, v->v.str.len);
@@ -231,7 +234,7 @@ static void bin2str(char *to, const unsigned char *p, size_t len) {
   *to = '\0';
 }
 
-static enum v7_err Crypto_md5(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Crypto_md5(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
     cfa->result->v.str.len = 16;
@@ -241,7 +244,7 @@ static enum v7_err Crypto_md5(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
     char hash[16];
@@ -253,7 +256,7 @@ static enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static void init_crypto(void) {
+V7_PRIVATE void init_crypto(void) {
   SET_METHOD(s_crypto, "md5", Crypto_md5);
   SET_METHOD(s_crypto, "md5_hex", Crypto_md5_hex);
 

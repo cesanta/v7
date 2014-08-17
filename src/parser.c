@@ -1,3 +1,44 @@
+#include "internal.h"
+
+enum {
+  OP_INVALID,
+
+  // Relational ops
+  OP_GREATER_THEN,    //  >
+  OP_LESS_THEN,       //  <
+  OP_GREATER_EQUAL,   //  >=
+  OP_LESS_EQUAL,      //  <=
+
+  // Equality ops
+  OP_EQUAL,           //  ==
+  OP_NOT_EQUAL,       //  !=
+  OP_EQUAL_EQUAL,     //  ===
+  OP_NOT_EQUAL_EQUAL, //  !==
+
+  // Assignment ops
+  OP_ASSIGN,          //  =
+  OP_PLUS_ASSIGN,     //  +=
+  OP_MINUS_ASSIGN,    //  -=
+  OP_MUL_ASSIGN,      //  *=
+  OP_DIV_ASSIGN,      //  /=
+  OP_REM_ASSIGN,      //  %=
+  OP_AND_ASSIGN,      //  &=
+  OP_XOR_ASSIGN,      //  ^=
+  OP_OR_ASSIGN,       //  |=
+  OP_RSHIFT_ASSIGN,   //  >>=
+  OP_LSHIFT_ASSIGN,   //  <<=
+  OP_RRSHIFT_ASSIGN,  //  >>>=
+
+  NUM_OPS
+};
+
+static const int s_op_lengths[NUM_OPS] = {
+  -1,
+  1, 1, 2, 2,
+  2, 2, 3, 3,
+  1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4
+};
+
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
   char *str;
@@ -68,7 +109,7 @@ static int is_space(int ch) {
   return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 }
 
-static void skip_whitespaces_and_comments(struct v7 *v7) {
+V7_PRIVATE void skip_whitespaces_and_comments(struct v7 *v7) {
   const char *s = v7->pstate.pc, *p = NULL;
   while (s != p && *s != '\0' && (is_space(*s) || *s == '/')) {
     p = s;
@@ -184,7 +225,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0, ln = 0;
   unsigned long func_name_len = 0;
   const char *src = v7->pstate.pc, *func_name = NULL;
-  struct v7_val *args = NULL;
+  struct v7_val *args = NULL, *var_obj = NULL;
 
   if (*v7->pstate.pc != '(') {
     // function name is given, e.g. function foo() {}
@@ -197,11 +238,16 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   // If 'v' (func to call) is NULL, that means we're just parsing function
   // definition to save it's body.
-  v7->no_exec = v == NULL;
+  v7->no_exec = (v == NULL) ? 1 : 0;
   ln = v7->pstate.line_no;  // Line number where function starts
   TRY(match(v7, '('));
 
-  if (!v7->no_exec) {
+  if (v7->no_exec) {
+    var_obj = v7_mkv(v7, V7_TYPE_OBJ);
+    inc_ref_count(var_obj);
+    var_obj->proto = v7->cur_var_obj;
+    v7->cur_var_obj = var_obj;
+  } else {
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
     args = v7_top_val(v7);
     v7_set_class(args, V7_CLASS_OBJECT);
@@ -238,15 +284,23 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7_set_class(func, V7_CLASS_FUNCTION);
 
     func->v.func.line_no = ln;
-    func->v.func.source_code = v7_strdup(src, (unsigned long) (v7->pstate.pc - src));
+    func->v.func.source_code = v7_strdup(src, (unsigned long)
+                                         (v7->pstate.pc - src));
+
     func->v.func.scope = v7_mkv(v7, V7_TYPE_OBJ);
     func->v.func.scope->ref_count = 1;
+
+    func->v.func.var_obj = var_obj;
+
     func->v.func.upper = v7->curr_func;
     if (func->v.func.upper != NULL) {
       inc_ref_count(func->v.func.upper);
     }
 
     if (func_name != NULL) {
+      TRY(v7_setv(v7, v7->cur_var_obj, V7_TYPE_STR, V7_TYPE_OBJ,
+                  func_name, func_name_len, 1, func));
+      // TODO(lsm): delete this
       TRY(v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_OBJ,
                   func_name, func_name_len, 1, func));
     }
@@ -759,6 +813,8 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
   //          | expression value (lvalue)  |    top[-1]
   //          +----------------------------+
   // top -->  |       nothing yet          |
+
+  //<#parse_assign#>
   if (!v7->no_exec) {
     struct v7_val **top = v7_top(v7), *a = top[-2], *b = top[-1];
     int old_sp = v7->sp - 1;
@@ -944,7 +1000,7 @@ static int is_assign_op(const char *s) {
   }
 }
 
-static enum v7_err parse_expression(struct v7 *v7) {
+V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
 #ifdef V7_DEBUG
   const char *stmt_str = v7->pstate.pc;
 #endif
@@ -998,9 +1054,13 @@ static enum v7_err parse_declaration(struct v7 *v7) {
     inc_stack(v7, sp - v7_sp(v7));  // Clean up the stack after prev decl
     TRY(parse_identifier(v7));
     if (v7->no_exec) {
+      v7_setv(v7, v7->cur_var_obj, V7_TYPE_STR, V7_TYPE_UNDEF,
+              v7->tok, v7->tok_len, 1);
+      // TODO(lsm): remove this
       v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_UNDEF,
               v7->tok, v7->tok_len, 1);
     }
+    //<#parse_declaration#>
     if (*v7->pstate.pc == '=') {
       if (!v7->no_exec) v7_make_and_push(v7, V7_TYPE_UNDEF);
       TRY(parse_assign(v7, cur_scope(v7), OP_ASSIGN));
@@ -1200,7 +1260,7 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
-static enum v7_err parse_statement(struct v7 *v7, int *has_return) {
+V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   if (lookahead(v7, "var", 3)) {
     TRY(parse_declaration(v7));
   } else if (lookahead(v7, "return", 6)) {

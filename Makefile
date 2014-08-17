@@ -2,7 +2,7 @@ CFLAGS = -W -Wall -pedantic -Wno-comment -g -O0 $(PROF) $(CFLAGS_EXTRA)
 SLRE = ../slre
 CFLAGS += -I$(SLRE) -I.
 SOURCES = v7.c $(SLRE)/slre.c
-TO_AMALGAMATE = src/internal.h src/global_vars.c src/util.c \
+TO_AMALGAMATE = src/global_vars.c src/util.c \
                 src/crypto.c src/array.c src/boolean.c src/date.c \
                 src/error.c src/function.c src/math.c src/number.c \
                 src/object.c src/regex.c src/string.c src/json.c \
@@ -10,8 +10,8 @@ TO_AMALGAMATE = src/internal.h src/global_vars.c src/util.c \
 
 all: v7
 
-v7.c: $(TO_AMALGAMATE)
-	cat $(TO_AMALGAMATE) > $@
+v7.c: src/internal.h $(TO_AMALGAMATE) v7.h Makefile
+	cat src/internal.h $(TO_AMALGAMATE) | sed '/#include "internal.h"/d' > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes --leak-resolution=high --num-callers=100 ./unit_test
@@ -28,7 +28,8 @@ u:
 	$(CC) $(SOURCES) tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
 	./$@
 
-v7: $(SOURCES) v7.h
+v7: src/internal.h $(TO_AMALGAMATE) v7.h v7.c
+	$(CC) $(TO_AMALGAMATE) $(SLRE)/slre.c -o $@ -DV7_EXE -DV7_PRIVATE="" $(CFLAGS) -lm
 	$(CC) $(SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
 
 js: v7

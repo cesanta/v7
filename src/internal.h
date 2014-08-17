@@ -63,6 +63,17 @@
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
 #define MKOBJ(_proto) {0,(_proto),0,0,{0},V7_TYPE_OBJ,V7_CLASS_OBJECT,0,0}
 
+#ifndef V7_PRIVATE
+#define V7_PRIVATE static
+#else
+extern struct v7_val s_constructors[];
+extern struct v7_val s_prototypes[];
+extern struct v7_val s_global;
+extern struct v7_val s_math;
+extern struct v7_val s_json;
+extern struct v7_val s_file;
+#endif
+
 #define SET_RO_PROP_V(obj, name, val) \
   do { \
     static struct v7_val key = MKOBJ(&s_prototypes[V7_CLASS_STRING]); \
@@ -95,42 +106,40 @@
     SET_RO_PROP_V(_obj, _name, _val); \
   } while (0)
 
-enum {
-  OP_INVALID,
-
-  // Relational ops
-  OP_GREATER_THEN,    //  >
-  OP_LESS_THEN,       //  <
-  OP_GREATER_EQUAL,   //  >=
-  OP_LESS_EQUAL,      //  <=
-
-  // Equality ops
-  OP_EQUAL,           //  ==
-  OP_NOT_EQUAL,       //  !=
-  OP_EQUAL_EQUAL,     //  ===
-  OP_NOT_EQUAL_EQUAL, //  !==
-
-  // Assignment ops
-  OP_ASSIGN,          //  =
-  OP_PLUS_ASSIGN,     //  +=
-  OP_MINUS_ASSIGN,    //  -=
-  OP_MUL_ASSIGN,      //  *=
-  OP_DIV_ASSIGN,      //  /=
-  OP_REM_ASSIGN,      //  %=
-  OP_AND_ASSIGN,      //  &=
-  OP_XOR_ASSIGN,      //  ^=
-  OP_OR_ASSIGN,       //  |=
-  OP_RSHIFT_ASSIGN,   //  >>=
-  OP_LSHIFT_ASSIGN,   //  <<=
-  OP_RRSHIFT_ASSIGN,  //  >>>=
-
-  NUM_OPS
-};
-
 // Forward declarations
-static enum v7_err parse_expression(struct v7 *);
-static enum v7_err parse_statement(struct v7 *, int *is_return);
-static int cmp(const struct v7_val *a, const struct v7_val *b);
-static enum v7_err do_exec(struct v7 *v7, const char *, int);
-static void init_stdlib(void);
-static void skip_whitespaces_and_comments(struct v7 *v7);
+V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
+V7_PRIVATE enum v7_err parse_expression(struct v7 *);
+V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
+V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b);
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *, int);
+V7_PRIVATE void init_stdlib(void);
+V7_PRIVATE void skip_whitespaces_and_comments(struct v7 *v7);
+V7_PRIVATE int is_num(const struct v7_val *v);
+V7_PRIVATE int is_bool(const struct v7_val *v);
+V7_PRIVATE int is_string(const struct v7_val *v);
+V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
+V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_c_func_t ctor);
+V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
+V7_PRIVATE void inc_ref_count(struct v7_val *);
+V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type);
+V7_PRIVATE enum v7_err v7_set(struct v7 *v7, struct v7_val *obj,
+                              struct v7_val *k, struct v7_val *v);
+V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len);
+V7_PRIVATE struct v7_prop *mkprop(struct v7 *v7);
+V7_PRIVATE void free_prop(struct v7 *v7, struct v7_prop *p);
+V7_PRIVATE struct v7_val str_to_val(const char *buf, size_t len);
+V7_PRIVATE struct v7_val *find(struct v7 *v7, struct v7_val *key);
+V7_PRIVATE struct v7_val *get2(struct v7_val *obj, const struct v7_val *key);
+
+V7_PRIVATE void init_array(void);
+V7_PRIVATE void init_boolean(void);
+V7_PRIVATE void init_crypto(void);
+V7_PRIVATE void init_date(void);
+V7_PRIVATE void init_error(void);
+V7_PRIVATE void init_function(void);
+V7_PRIVATE void init_json(void);
+V7_PRIVATE void init_math(void);
+V7_PRIVATE void init_number(void);
+V7_PRIVATE void init_object(void);
+V7_PRIVATE void init_string(void);
+V7_PRIVATE void init_regex(void);

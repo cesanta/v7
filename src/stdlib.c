@@ -1,4 +1,6 @@
-static enum v7_err Std_print(struct v7_c_func_arg *cfa) {
+#include "internal.h"
+
+V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   char buf[4000];
   int i;
   for (i = 0; i < cfa->num_args; i++) {
@@ -9,7 +11,7 @@ static enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_load(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
 
   v7_init_bool(cfa->result, 1);
@@ -24,14 +26,14 @@ static enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
   int exit_code = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
   return V7_OK;
 }
 
-static void base64_encode(const unsigned char *src, int src_len, char *dst) {
-  static const char *b64 =
+V7_PRIVATE void base64_encode(const unsigned char *src, int src_len, char *dst) {
+  V7_PRIVATE const char *b64 =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   int i, j, a, b, c;
 
@@ -56,9 +58,9 @@ static void base64_encode(const unsigned char *src, int src_len, char *dst) {
 }
 
 // Convert one byte of encoded base64 input stream to 6-bit chunk
-static unsigned char from_b64(unsigned char ch) {
+V7_PRIVATE unsigned char from_b64(unsigned char ch) {
   // Inverse lookup map
-  static const unsigned char tab[128] = {
+  V7_PRIVATE const unsigned char tab[128] = {
     255, 255, 255, 255, 255, 255, 255, 255, //  0
     255, 255, 255, 255, 255, 255, 255, 255, //  8
     255, 255, 255, 255, 255, 255, 255, 255, //  16
@@ -79,7 +81,7 @@ static unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-static void base64_decode(const unsigned char *s, int len, char *dst) {
+V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
   while (len >= 4 &&
          (a = from_b64(s[0])) != 255 &&
@@ -98,7 +100,7 @@ static void base64_decode(const unsigned char *s, int len, char *dst) {
   *dst = 0;
 }
 
-static enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -111,7 +113,7 @@ static enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -124,7 +126,7 @@ static enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     return do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
@@ -132,7 +134,7 @@ static enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_read(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   char buf[2048];
   size_t n;
@@ -145,7 +147,7 @@ static enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_write(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_write(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   size_t n, i;
 
@@ -162,7 +164,7 @@ static enum v7_err Std_write(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_close(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_close(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   v7_init_bool(cfa->result, 0);
   if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
@@ -172,7 +174,7 @@ static enum v7_err Std_close(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Std_open(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1];
   FILE *fp;
 
@@ -187,23 +189,7 @@ static enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static void init_stdlib(void) {
-  static v7_c_func_t ctors[V7_NUM_CLASSES] = {
-    Array_ctor, Boolean_ctor, Date_ctor, Error_ctor, Function_ctor,
-    Number_ctor, Object_ctor, Regex_ctor, String_ctor
-  };
-  int i;
-
-  for (i = 0; i < V7_NUM_CLASSES; i++) {
-    s_prototypes[i].type = s_constructors[i].type = V7_TYPE_OBJ;
-    s_prototypes[i].ref_count = s_constructors[i].ref_count = 1;
-    s_prototypes[i].proto = &s_prototypes[V7_CLASS_OBJECT];
-    s_prototypes[i].ctor = &s_constructors[i];
-    s_constructors[i].proto = &s_prototypes[V7_CLASS_OBJECT];
-    s_constructors[i].ctor = &s_constructors[V7_CLASS_FUNCTION];
-    s_constructors[i].v.c_func = ctors[i];
-  }
-
+V7_PRIVATE void init_stdlib(void) {
   init_object();
   init_number();
   init_array();
@@ -212,7 +198,7 @@ static void init_stdlib(void) {
   init_function();
   init_date();
   init_error();
-
+  init_boolean();
   init_math();
   init_json();
 #ifndef V7_DISABLE_CRYPTO

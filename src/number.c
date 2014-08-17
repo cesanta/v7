@@ -1,4 +1,6 @@
-static enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
+#include "internal.h"
+
+V7_PRIVATE enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *arg = cfa->args[0];
 
   v7_init_num(cfa->result, cfa->num_args > 0 ? arg->v.num : 0.0);
@@ -19,7 +21,7 @@ static enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
   int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
   char fmt[10], buf[100];
 
@@ -29,7 +31,8 @@ static enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static void init_number(void) {
+V7_PRIVATE void init_number(void) {
+  init_standard_constructor(V7_CLASS_NUMBER, Number_ctor);
   SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MAX_VALUE",
               V7_TYPE_NUM, num, LONG_MAX);
   SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MIN_VALUE",
