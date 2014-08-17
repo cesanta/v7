@@ -1,9 +1,11 @@
-static enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
+#include "internal.h"
+
+V7_PRIVATE enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
   v7_set_class(obj, V7_CLASS_ARRAY);
   return V7_OK;
 }
-static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   struct v7_prop *p;
   v7_init_num(result, 0.0);
   for (p = this_obj->v.array; p != NULL; p = p->next) {
@@ -11,7 +13,7 @@ static void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
   }
 }
 
-static enum v7_err Arr_push(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Arr_push(struct v7_c_func_arg *cfa) {
   int i;
   for (i = 0; i < cfa->num_args; i++) {
     v7_append(cfa->v7, cfa->this_obj, cfa->args[i]);
@@ -19,13 +21,13 @@ static enum v7_err Arr_push(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static int cmp_prop(const void *pa, const void *pb) {
+V7_PRIVATE int cmp_prop(const void *pa, const void *pb) {
   const struct v7_prop *p1 = * (struct v7_prop **) pa;
   const struct v7_prop *p2 = * (struct v7_prop **) pb;
   return cmp(p2->val, p1->val);
 }
 
-static enum v7_err Arr_sort(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Arr_sort(struct v7_c_func_arg *cfa) {
   int i = 0, length = 0;
   struct v7_val *v = cfa->this_obj;
   struct v7_prop *p, **arr;
@@ -48,7 +50,9 @@ static enum v7_err Arr_sort(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static void init_array(void) {
+V7_PRIVATE void init_array(void) {
+  init_standard_constructor(V7_CLASS_ARRAY, Array_ctor);
+
   SET_PROP_FUNC(s_prototypes[V7_CLASS_ARRAY], "length", Arr_length);
   SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "push", Arr_push);
   SET_METHOD(s_prototypes[V7_CLASS_ARRAY], "sort", Arr_sort);

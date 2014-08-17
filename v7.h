@@ -49,6 +49,7 @@ enum v7_type {
   V7_TYPE_OBJ, V7_NUM_TYPES
 };
 
+// Different classes of V7_TYPE_OBJ type
 enum v7_class {
   V7_CLASS_ARRAY, V7_CLASS_BOOLEAN, V7_CLASS_DATE, V7_CLASS_ERROR,
   V7_CLASS_FUNCTION, V7_CLASS_NUMBER, V7_CLASS_OBJECT, V7_CLASS_REGEXP,
@@ -101,6 +102,7 @@ struct v7_func {
   struct v7_val *scope;     // Function's scope
   struct v7_val *upper;     // Upper-level function
   struct v7_val *args;      // Function arguments
+  struct v7_val *var_obj;   // Function var object: var decls and func defs
 };
 
 union v7_scalar {
@@ -149,6 +151,12 @@ struct v7 {
   int no_exec;                // No-execute flag. For parsing function defs
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
+
+  struct v7_val global_obj;   // Global object
+  struct v7_val global_ctx;   // Global execution context
+  struct v7_val *ctx;         // Current execution context
+  struct v7_val *cur_var_obj; // Current var_obj
+
   struct v7_val *free_values; // List of free (deallocated) values
   struct v7_prop *free_props; // List of free (deallocated) props
 };
@@ -182,6 +190,7 @@ void v7_set_class(struct v7_val *obj, enum v7_class cls);
 void v7_init_func(struct v7_val *v, v7_c_func_t func);
 void v7_init_str(struct v7_val *v, char *p, unsigned long len, int own);
 void v7_init_num(struct v7_val *v, double num);
+void v7_init_bool(struct v7_val *v, int);
 
 #ifdef __cplusplus
 }

@@ -1,11 +1,12 @@
+#include "internal.h"
 
-static void obj_sanity_check(const struct v7_val *obj) {
+V7_PRIVATE void obj_sanity_check(const struct v7_val *obj) {
   assert(obj != NULL);
   assert(obj->ref_count >= 0);
   assert(!(obj->flags & V7_VAL_DEALLOCATED));
 }
 
-static int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
+V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
   obj_sanity_check(obj);
   if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
     while (obj != NULL) {
@@ -21,27 +22,27 @@ int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
   return instanceof(obj, &s_constructors[cls]);
 }
 
-static int is_string(const struct v7_val *v) {
+V7_PRIVATE int is_string(const struct v7_val *v) {
   obj_sanity_check(v);
   return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
 }
 
-static int is_num(const struct v7_val *v) {
+V7_PRIVATE int is_num(const struct v7_val *v) {
   obj_sanity_check(v);
   return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
 }
 
-static int is_bool(const struct v7_val *v) {
+V7_PRIVATE int is_bool(const struct v7_val *v) {
   obj_sanity_check(v);
   return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
 }
 
-static void inc_ref_count(struct v7_val *v) {
+V7_PRIVATE void inc_ref_count(struct v7_val *v) {
   obj_sanity_check(v);
   v->ref_count++;
 }
 
-static char *v7_strdup(const char *ptr, unsigned long len) {
+V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *) malloc(len + 1);
   if (p == NULL) return NULL;
   memcpy(p, ptr, len);
@@ -91,7 +92,7 @@ void v7_set_class(struct v7_val *v, enum v7_class cls) {
   v->ctor = &s_constructors[cls];
 }
 
-static void free_prop(struct v7 *v7, struct v7_prop *p) {
+V7_PRIVATE void free_prop(struct v7 *v7, struct v7_prop *p) {
   if (p->key != NULL) v7_freeval(v7, p->key);
   v7_freeval(v7, p->val);
   p->val = p->key = NULL;
@@ -104,6 +105,16 @@ static void free_prop(struct v7 *v7, struct v7_prop *p) {
 #endif
   }
   p->flags = 0;
+}
+
+V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_c_func_t ctor) {
+  s_prototypes[cls].type = s_constructors[cls].type = V7_TYPE_OBJ;
+  s_prototypes[cls].ref_count = s_constructors[cls].ref_count = 1;
+  s_prototypes[cls].proto = &s_prototypes[V7_CLASS_OBJECT];
+  s_prototypes[cls].ctor = &s_constructors[cls];
+  s_constructors[cls].proto = &s_prototypes[V7_CLASS_OBJECT];
+  s_constructors[cls].ctor = &s_constructors[V7_CLASS_FUNCTION];
+  s_constructors[cls].v.c_func = ctor;
 }
 
 void v7_freeval(struct v7 *v7, struct v7_val *v) {
@@ -151,7 +162,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   }
 }
 
-static enum v7_err inc_stack(struct v7 *v7, int incr) {
+V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr) {
   int i;
 
   CHECK(v7->sp + incr < (int) ARRAY_SIZE(v7->stack), V7_STACK_OVERFLOW);
@@ -172,7 +183,7 @@ enum v7_err v7_pop(struct v7 *v7, int incr) {
   return inc_stack(v7, -incr);
 }
 
-static void free_values(struct v7 *v7) {
+V7_PRIVATE void free_values(struct v7 *v7) {
   struct v7_val *v;
   while (v7->free_values != NULL) {
     v = v7->free_values->next;
@@ -181,7 +192,7 @@ static void free_values(struct v7 *v7) {
   }
 }
 
-static void free_props(struct v7 *v7) {
+V7_PRIVATE void free_props(struct v7 *v7) {
   struct v7_prop *p;
   while (v7->free_props != NULL) {
     p = v7->free_props->next;
@@ -190,7 +201,7 @@ static void free_props(struct v7 *v7) {
   }
 }
 
-static struct v7_val *make_value(struct v7 *v7, enum v7_type type) {
+V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type) {
   struct v7_val *v = NULL;
 
   if ((v = v7->free_values) != NULL) {
@@ -213,7 +224,7 @@ static struct v7_val *make_value(struct v7 *v7, enum v7_type type) {
   return v;
 }
 
-static struct v7_prop *mkprop(struct v7 *v7) {
+V7_PRIVATE struct v7_prop *mkprop(struct v7 *v7) {
   struct v7_prop *m;
   if ((m = v7->free_props) != NULL) {
     v7->free_props = m->next;
@@ -224,7 +235,7 @@ static struct v7_prop *mkprop(struct v7 *v7) {
   return m;
 }
 
-static struct v7_val str_to_val(const char *buf, size_t len) {
+V7_PRIVATE struct v7_val str_to_val(const char *buf, size_t len) {
   struct v7_val v;
   memset(&v, 0, sizeof(v));
   v.type = V7_TYPE_STR;
@@ -237,7 +248,7 @@ struct v7_val v7_str_to_val(const char *buf) {
   return str_to_val((char *) buf, strlen(buf));
 }
 
-static int cmp(const struct v7_val *a, const struct v7_val *b) {
+V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
   int res;
   double an, bn;
   const struct v7_string *as, *bs;
@@ -279,7 +290,7 @@ static int cmp(const struct v7_val *a, const struct v7_val *b) {
   }
 }
 
-static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key,
+V7_PRIVATE struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key,
                               int own_prop) {
   struct v7_prop *m;
   for (; obj != NULL; obj = obj->proto) {
@@ -299,7 +310,7 @@ static struct v7_prop *v7_get(struct v7_val *obj, const struct v7_val *key,
   return NULL;
 }
 
-static struct v7_val *get2(struct v7_val *obj, const struct v7_val *key) {
+V7_PRIVATE struct v7_val *get2(struct v7_val *obj, const struct v7_val *key) {
   struct v7_prop *m = v7_get(obj, key, 0);
   return (m == NULL) ? NULL : m->val;
 }
@@ -309,7 +320,7 @@ struct v7_val *v7_lookup(struct v7_val *obj, const char *key) {
   return get2(obj, &k);
 }
 
-static enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
+V7_PRIVATE enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
                            struct v7_val *key, struct v7_val *val) {
   struct v7_prop *m = mkprop(v7);
   CHECK(m != NULL, V7_OUT_OF_MEMORY);
@@ -324,7 +335,7 @@ static enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
   return V7_OK;
 }
 
-static struct v7_val *find(struct v7 *v7, struct v7_val *key) {
+V7_PRIVATE struct v7_val *find(struct v7 *v7, struct v7_val *key) {
   struct v7_val *v, *f;
 
   if (v7->no_exec) return NULL;
@@ -340,7 +351,7 @@ static struct v7_val *find(struct v7 *v7, struct v7_val *key) {
   return get2(&v7->root_scope, key);
 }
 
-static enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
+V7_PRIVATE enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
                           struct v7_val *v) {
   struct v7_prop *m = NULL;
 
@@ -430,7 +441,7 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
 }
 
 const char *v7_strerror(enum v7_err e) {
-  static const char *strings[] = {
+  V7_PRIVATE const char *strings[] = {
     "no error", "error", "eval error", "range error", "reference error",
     "syntax error", "type error", "URI error",
     "out of memory", "internal error", "stack overflow", "stack underflow",
@@ -447,7 +458,7 @@ int v7_is_true(const struct v7_val *v) {
   (v->type == V7_TYPE_OBJ);
 }
 
-static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
+V7_PRIVATE void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m, *head = v->v.array;
   int n = snprintf(buf, bsiz, "%s", "[");
 
@@ -459,7 +470,7 @@ static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   n += snprintf(buf + n, bsiz - n, "%s", "]");
 }
 
-static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
+V7_PRIVATE void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m, *head = v->props;
   int n = snprintf(buf, bsiz, "%s", "{");
 
@@ -511,7 +522,7 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
 }
 
 struct v7 *v7_create(void) {
-  static int prototypes_initialized = 0;
+  V7_PRIVATE int prototypes_initialized = 0;
   struct v7 *v7 = NULL;
 
   if (prototypes_initialized == 0) {
@@ -523,6 +534,7 @@ struct v7 *v7_create(void) {
     v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
     v7->root_scope.proto = &s_global;
     v7->root_scope.ref_count = 1;
+    v7->cur_var_obj = &v7->root_scope;
   }
 
   return v7;
@@ -569,7 +581,7 @@ enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
   return v7_push(v7, v);
 }
 
-static enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) {
+V7_PRIVATE enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) {
   int has_ret = 0;
   struct v7_pstate old_pstate = v7->pstate;
   enum v7_err err = V7_OK;
@@ -597,7 +609,7 @@ static enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) {
 
 // Do first pass with no execution only, to grab function/variable
 // definitions for hoisting. Second pass executes.
-static enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
   int old_no_exec = v7->no_exec;
   enum v7_err er;
 
@@ -643,7 +655,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
 }
 
 // Convert object to string, push string on stack
-enum v7_err toString(struct v7 *v7, struct v7_val *obj) {
+V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj) {
   struct v7_val *f = NULL;
 
   if ((f = v7_lookup(obj, "toString")) == NULL) {

@@ -1,3 +1,5 @@
+#include "internal.h"
+
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();

@@ -1,3 +1,4 @@
+#include "internal.h"
 
 struct slre_cap {
   const char *ptr;
@@ -65,16 +66,16 @@ struct regex_info {
   int flags;
 };
 
-static int is_metacharacter(const unsigned char *s) {
+V7_PRIVATE int is_metacharacter(const unsigned char *s) {
   static const char *metacharacters = "^$().[]*+?|\\Ssd";
   return strchr(metacharacters, *s) != NULL;
 }
 
-static int op_len(const char *re) {
+V7_PRIVATE int op_len(const char *re) {
   return re[0] == '\\' && re[1] == 'x' ? 4 : re[0] == '\\' ? 2 : 1;
 }
 
-static int set_len(const char *re, int re_len) {
+V7_PRIVATE int set_len(const char *re, int re_len) {
   int len = 0;
 
   while (len < re_len && re[len] != ']') {
@@ -84,23 +85,23 @@ static int set_len(const char *re, int re_len) {
   return len <= re_len ? len + 1 : -1;
 }
 
-static int get_op_len(const char *re, int re_len) {
+V7_PRIVATE int get_op_len(const char *re, int re_len) {
   return re[0] == '[' ? set_len(re + 1, re_len - 1) + 1 : op_len(re);
 }
 
-static int is_quantifier(const char *re) {
+V7_PRIVATE int is_quantifier(const char *re) {
   return re[0] == '*' || re[0] == '+' || re[0] == '?';
 }
 
-static int toi(int x) {
+V7_PRIVATE int toi(int x) {
   return isdigit(x) ? x - '0' : x - 'W';
 }
 
-static int hextoi(const unsigned char *s) {
+V7_PRIVATE int hextoi(const unsigned char *s) {
   return (toi(tolower(s[0])) << 4) | toi(tolower(s[1]));
 }
 
-static int match_op(const unsigned char *re, const unsigned char *s,
+V7_PRIVATE int match_op(const unsigned char *re, const unsigned char *s,
                     struct regex_info *info) {
   int result = 0;
   switch (*re) {
@@ -153,7 +154,7 @@ static int match_op(const unsigned char *re, const unsigned char *s,
   return result;
 }
 
-static int match_set(const char *re, int re_len, const char *s,
+V7_PRIVATE int match_set(const char *re, int re_len, const char *s,
                      struct regex_info *info) {
   int len = 0, result = -1, invert = re[0] == '^';
 
@@ -175,9 +176,9 @@ static int match_set(const char *re, int re_len, const char *s,
   return (!invert && result > 0) || (invert && result <= 0) ? 1 : -1;
 }
 
-static int doh(const char *s, int s_len, struct regex_info *info, int bi);
+V7_PRIVATE int doh(const char *s, int s_len, struct regex_info *info, int bi);
 
-static int bar(const char *re, int re_len, const char *s, int s_len,
+V7_PRIVATE int bar(const char *re, int re_len, const char *s, int s_len,
                struct regex_info *info, int bi) {
   /* i is offset in re, j is offset in s, bi is brackets index */
   int i, j, n, step;
@@ -293,7 +294,7 @@ static int bar(const char *re, int re_len, const char *s, int s_len,
 }
 
 /* Process branch points */
-static int doh(const char *s, int s_len, struct regex_info *info, int bi) {
+V7_PRIVATE int doh(const char *s, int s_len, struct regex_info *info, int bi) {
   const struct bracket_pair *b = &info->brackets[bi];
   int i = 0, len, result;
   const char *p;
@@ -311,7 +312,7 @@ static int doh(const char *s, int s_len, struct regex_info *info, int bi) {
   return result;
 }
 
-static int baz(const char *s, int s_len, struct regex_info *info) {
+V7_PRIVATE int baz(const char *s, int s_len, struct regex_info *info) {
   int i, result = -1, is_anchored = info->brackets[0].ptr[0] == '^';
 
   for (i = 0; i <= s_len; i++) {
@@ -326,7 +327,7 @@ static int baz(const char *s, int s_len, struct regex_info *info) {
   return result;
 }
 
-static void setup_branch_points(struct regex_info *info) {
+V7_PRIVATE void setup_branch_points(struct regex_info *info) {
   int i, j;
   struct branch tmp;
 
@@ -355,7 +356,7 @@ static void setup_branch_points(struct regex_info *info) {
   }
 }
 
-static int foo(const char *re, int re_len, const char *s, int s_len,
+V7_PRIVATE int foo(const char *re, int re_len, const char *s, int s_len,
                struct regex_info *info) {
   int i, step, depth = 0;
 
@@ -415,7 +416,7 @@ static int foo(const char *re, int re_len, const char *s, int s_len,
   return baz(s, s_len, info);
 }
 
-int slre_match(const char *regexp, const char *s, int s_len,
+V7_PRIVATE int slre_match(const char *regexp, const char *s, int s_len,
                struct slre_cap *caps, int num_caps, int flags) {
   struct regex_info info;
 
@@ -429,12 +430,14 @@ int slre_match(const char *regexp, const char *s, int s_len,
   return foo(regexp, strlen(regexp), s, s_len, &info);
 }
 
-static enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
+
+V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
   v7_set_class(obj, V7_CLASS_OBJECT);
   return V7_OK;
 }
 
-static void init_regex(void) {
+V7_PRIVATE void init_regex(void) {
+  init_standard_constructor(V7_CLASS_REGEXP, Regex_ctor);
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
 }

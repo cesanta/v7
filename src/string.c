@@ -1,4 +1,6 @@
-static enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
+#include "internal.h"
+
+V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
   struct v7_val *arg = cfa->args[0];
 
@@ -22,11 +24,11 @@ static enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static void Str_length(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *result) {
   v7_init_num(result, this_obj->v.str.len);
 }
 
-static enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
   cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
@@ -38,7 +40,7 @@ static enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
   double idx = cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM ?
   cfa->args[0]->v.num : NAN;
   const struct v7_string *str = &cfa->this_obj->v.str;
@@ -50,7 +52,7 @@ static enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Str_match(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   struct slre_cap caps[100];
   const struct v7_string *s = &cfa->this_obj->v.str;
   int i, n;
@@ -75,14 +77,14 @@ static enum v7_err Str_match(struct v7_c_func_arg *cfa) {
 }
 
 // Implementation of memmem()
-static const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
+V7_PRIVATE const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
   const char *end;
   if (al == 0 || bl == 0 || al < bl) return NULL;
   for (end = a + (al - bl); a < end; a++) if (!memcmp(a, b, bl)) return a;
   return NULL;
 }
 
-static enum v7_err Str_split(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   const struct v7_string *s = &cfa->this_obj->v.str;
   const char *p1, *p2, *e = s->buf + s->len;
   int limit = cfa->num_args == 2 && cfa->args[1]->type == V7_TYPE_NUM ?
@@ -138,7 +140,7 @@ static enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   v7_init_num(cfa->result, -1.0);
   if (cfa->this_obj->type == V7_TYPE_STR &&
       cfa->num_args > 0 &&
@@ -159,7 +161,7 @@ static enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   long start = 0;
 
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -181,7 +183,8 @@ static enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-static void init_string(void) {
+V7_PRIVATE void init_string(void) {
+  init_standard_constructor(V7_CLASS_STRING, String_ctor);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
