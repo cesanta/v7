@@ -149,8 +149,6 @@ enum v7_err v7_exec_file(struct v7 *, const char *path);
 enum v7_err v7_push(struct v7 *v7, struct v7_val *v);
 enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type);
 enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args, int);
-enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
-                    enum v7_type key_type, enum v7_type val_type, ...);
 enum v7_err v7_append(struct v7 *, struct v7_val *array, struct v7_val *val);
 enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key);
 enum v7_err v7_pop(struct v7 *, int num);
@@ -171,6 +169,12 @@ void v7_init_func(struct v7_val *v, v7_c_func_t func);
 void v7_init_str(struct v7_val *v, char *p, unsigned long len, int own);
 void v7_init_num(struct v7_val *v, double num);
 void v7_init_bool(struct v7_val *v, int);
+
+// Generic function to set an attribute in an object.
+enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
+                    enum v7_type key_type, enum v7_type val_type, ...);
+enum v7_err v7_set_num(struct v7 *, struct v7_val *, const char *, double);
+enum v7_err v7_set_func(struct v7 *, struct v7_val *, const char *, v7_c_func_t);
 
 #ifdef __cplusplus
 }

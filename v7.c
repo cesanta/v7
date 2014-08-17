@@ -578,6 +578,19 @@ enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
   return V7_OK;
 }
 
+enum v7_err v7_set_num(struct v7 *v7, struct v7_val *obj, const char *name,
+                       double num) {
+  return v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_NUM, name, strlen(name), 0, num);
+}
+
+enum v7_err v7_set_func(struct v7 *v7, struct v7_val *obj, const char *name,
+                        v7_c_func_t func) {
+  struct v7_val *func_obj = make_value(v7, V7_TYPE_OBJ);
+  v7_init_func(func_obj, func);
+  return v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, name, strlen(name), 0,
+                 func_obj);
+}
+
 void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
   struct v7_prop *p;
 
