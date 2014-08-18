@@ -125,10 +125,13 @@ struct v7 {
   struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
   int sp;                     // Stack pointer
 
+  int flags;
+#define V7_SCANNING  1        // Code pre-scan, no execution
+#define V7_NO_EXEC   2        // Non-executing code block: if (false) { block }
+
   struct v7_pstate pstate;    // Parsing state
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
-  int no_exec;                // No-execute flag. For parsing function defs
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
 

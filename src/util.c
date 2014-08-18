@@ -335,10 +335,10 @@ V7_PRIVATE enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
   return V7_OK;
 }
 
-V7_PRIVATE struct v7_val *find(struct v7 *v7, struct v7_val *key) {
+V7_PRIVATE struct v7_val *find(struct v7 *v7, const struct v7_val *key) {
   struct v7_val *v, *f;
 
-  if (v7->no_exec) return NULL;
+  if (!EXECUTING(v7->flags)) return NULL;
 
   // Search in function arguments first
   if (v7->curr_func != NULL &&
@@ -535,7 +535,7 @@ const char *v7_to_string(const struct v7_val *v, char *buf, int bsiz) {
 }
 
 struct v7 *v7_create(void) {
-  V7_PRIVATE int prototypes_initialized = 0;
+  static int prototypes_initialized = 0;
   struct v7 *v7 = NULL;
 
   if (prototypes_initialized == 0) {
@@ -623,20 +623,20 @@ V7_PRIVATE enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) 
 // Do first pass with no execution only, to grab function/variable
 // definitions for hoisting. Second pass executes.
 V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
-  int old_no_exec = v7->no_exec;
+  int old_flags = v7->flags;
   enum v7_err er;
 
   // Do first pass with no execution only, to grab function/variable
   // definitions for hoisting.
-  v7->no_exec = 1;
+  v7->flags |= V7_SCANNING;
   er = do_exec2(v7, source_code, sp);
 
   // Second pass: execute.
-  if (old_no_exec == 0) {
-    v7->no_exec = old_no_exec;
+  if (EXECUTING(old_flags)) {
+    v7->flags = old_flags;
     er = do_exec2(v7, source_code, sp);
   }
-  v7->no_exec = old_no_exec;
+  v7->flags = old_flags;
 
   return er;
 }

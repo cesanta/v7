@@ -62,6 +62,7 @@
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
 #define MKOBJ(_proto) {0,(_proto),0,0,{0},V7_TYPE_OBJ,V7_CLASS_OBJECT,0,0}
+#define EXECUTING(_fl) (!((_fl) & (V7_NO_EXEC | V7_SCANNING)))
 
 #ifndef V7_PRIVATE
 #define V7_PRIVATE static
@@ -128,7 +129,7 @@ V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len);
 V7_PRIVATE struct v7_prop *mkprop(struct v7 *v7);
 V7_PRIVATE void free_prop(struct v7 *v7, struct v7_prop *p);
 V7_PRIVATE struct v7_val str_to_val(const char *buf, size_t len);
-V7_PRIVATE struct v7_val *find(struct v7 *v7, struct v7_val *key);
+V7_PRIVATE struct v7_val *find(struct v7 *v7, const struct v7_val *key);
 V7_PRIVATE struct v7_val *get2(struct v7_val *obj, const struct v7_val *key);
 
 V7_PRIVATE void init_array(void);

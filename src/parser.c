@@ -78,7 +78,7 @@ static enum v7_err do_arithmetic_op(struct v7 *v7, int op, int sp1, int sp2) {
   struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7->stack[sp2 - 1];
   int sp;
 
-  assert(v7->no_exec == 0);
+  assert(EXECUTING(v7->flags));
   CHECK(v7->sp >= 2, V7_STACK_UNDERFLOW);
   TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
   sp = v7->sp;
@@ -163,7 +163,7 @@ static enum v7_err parse_num(struct v7 *v7) {
   v7->tok_len = (unsigned long) (v7->pstate.pc - v7->tok);
   skip_whitespaces_and_comments(v7);
 
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     TRY(v7_make_and_push(v7, V7_TYPE_NUM));
     v7_top(v7)[-1]->v.num = value;
   }
@@ -207,7 +207,7 @@ static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
     while (*v7->pstate.pc != '}') {
       TRY(inc_stack(v7, old_sp - v7->sp));
       TRY(parse_statement(v7, has_return));
-      if (*has_return && !v7->no_exec) return V7_OK;
+      if (*has_return && EXECUTING(v7->flags)) return V7_OK;
     }
     TRY(match(v7, '}'));
   } else {
@@ -222,7 +222,7 @@ static struct v7_val *cur_scope(struct v7 *v7) {
 
 static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
                                              int num_params) {
-  int i = 0, old_no_exec = v7->no_exec, old_sp = v7->sp, has_return = 0, ln = 0;
+  int i = 0, old_flags = v7->flags, old_sp = v7->sp, has_return = 0, ln = 0;
   unsigned long func_name_len = 0;
   const char *src = v7->pstate.pc, *func_name = NULL;
   struct v7_val *args = NULL, *var_obj = NULL;
@@ -238,11 +238,11 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   // If 'v' (func to call) is NULL, that means we're just parsing function
   // definition to save it's body.
-  v7->no_exec = (v == NULL) ? 1 : 0;
+  if (v == NULL) v7->flags |= V7_NO_EXEC;
   ln = v7->pstate.line_no;  // Line number where function starts
   TRY(match(v7, '('));
 
-  if (v7->no_exec) {
+  if (!EXECUTING(v7->flags)) {
     var_obj = v7_mkv(v7, V7_TYPE_OBJ);
     inc_ref_count(var_obj);
     var_obj->proto = v7->cur_var_obj;
@@ -255,7 +255,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   while (*v7->pstate.pc != ')') {
     TRY(parse_identifier(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       // TODO(lsm): use v7_setv() here
       struct v7_val *key = v7_mkv(v7, V7_TYPE_STR, v7->tok, v7->tok_len, 1);
       struct v7_val *val = i < num_params ? v[i + 1] : make_value(v7, V7_TYPE_UNDEF);
@@ -268,7 +268,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   }
   TRY(match(v7, ')'));
 
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     assert(v7->curr_func != NULL);
     v7->curr_func->v.func.args = args;
     inc_ref_count(args);
@@ -276,7 +276,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
   TRY(parse_compound_statement(v7, &has_return));
 
-  if (v7->no_exec) {
+  if (!EXECUTING(v7->flags)) {
     struct v7_val *func;
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
     func = v7_top(v7)[-1];
@@ -306,7 +306,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     }
   }
 
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     // If function didn't have return statement, return UNDEF
     if (!has_return) {
       TRY(inc_stack(v7, old_sp - v7->sp));
@@ -318,7 +318,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7_freeval(v7, args);
   }
 
-  v7->no_exec = old_no_exec;
+  v7->flags = old_flags;
   return V7_OK;
 }
 
@@ -326,7 +326,7 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
                     int called_as_ctor) {
   struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f, *res;
 
-  if (v7->no_exec) return V7_OK;
+  if (!EXECUTING(v7->flags)) return V7_OK;
   f = v[0];
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
   CHECK(f != NULL, V7_TYPE_ERROR);
@@ -378,7 +378,7 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
   int num_args = 0;
 
   //TRACE_OBJ(v[0]);
-  CHECK(v7->no_exec || v7_is_class(v[0], V7_CLASS_FUNCTION),
+  CHECK(!EXECUTING(v7->flags) || v7_is_class(v[0], V7_CLASS_FUNCTION),
         V7_CALLED_NON_FUNCTION);
 
   // Push arguments on stack
@@ -428,7 +428,7 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
     if (i >= sizeof(buf) - 1) i = sizeof(buf) - 1;
     v7->pstate.pc++;
   }
-  v7_init_str(v, buf, v7->no_exec ? 0 : i, 1);
+  v7_init_str(v, buf, !EXECUTING(v7->flags) ? 0 : i, 1);
   TRY(match(v7, *begin));
   skip_whitespaces_and_comments(v7);
 
@@ -452,7 +452,7 @@ enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
 
 static enum v7_err parse_array_literal(struct v7 *v7) {
   // Push empty array on stack
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
     v7_set_class(v7_top(v7)[-1], V7_CLASS_ARRAY);
   }
@@ -462,7 +462,7 @@ static enum v7_err parse_array_literal(struct v7 *v7) {
   while (*v7->pstate.pc != ']') {
     // Push new element on stack
     TRY(parse_expression(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       TRY(v7_append(v7, v7_top(v7)[-2], v7_top(v7)[-1]));
       TRY(inc_stack(v7, -1));
     }
@@ -496,7 +496,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
     TRY(parse_expression(v7));
 
     // Stack should now have object, key, value. Assign, and remove key/value
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val **v = v7_top(v7) - 3;
       CHECK(v[0]->type == V7_TYPE_OBJ, V7_INTERNAL_ERROR);
       TRY(v7_set(v7, v[0], v[1], v[2]));
@@ -542,7 +542,7 @@ static enum v7_err parse_regex(struct v7 *v7) {
   }
   regex[i] = '\0';
   TRY(match(v7, '/'));
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
     v7_set_class(v7_top(v7)[-1], V7_CLASS_REGEXP);
     v7_top(v7)[-1]->v.regex = v7_strdup(regex, strlen(regex));
@@ -553,7 +553,7 @@ static enum v7_err parse_regex(struct v7 *v7) {
 
 static enum v7_err parse_variable(struct v7 *v7) {
   struct v7_val key = str_to_val(v7->tok, v7->tok_len), *v = NULL;
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     v = find(v7, &key);
     if (v == NULL) {
       TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
@@ -615,17 +615,17 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
 static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
   struct v7_val *v = NULL, *ns = NULL;
 
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     ns = v7_top(v7)[-1];
     v7_make_and_push(v7, V7_TYPE_UNDEF);
     v = v7_top(v7)[-1];
     v7->cur_obj = v7->this_obj = ns;
   }
-  CHECK(v7->no_exec || ns != NULL, V7_SYNTAX_ERROR);
+  CHECK(!EXECUTING(v7->flags) || ns != NULL, V7_SYNTAX_ERROR);
 
   if (op == '.') {
     TRY(parse_identifier(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val key = str_to_val(v7->tok, v7->tok_len);
       ns = get2(ns, &key);
       if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
@@ -636,7 +636,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
   } else {
     TRY(parse_expression(v7));
     TRY(match(v7, ']'));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       ns = get2(ns, v7_top(v7)[-1]);
       if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
         ns->v.prop_func(v7->cur_obj, v);
@@ -646,7 +646,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
     }
   }
 
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     TRY(v7_push(v7, ns == NULL ? v : ns));
   }
 
@@ -677,7 +677,7 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
 
   if (lookahead(v7, "new", 3)) {
     has_new++;
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       v7_make_and_push(v7, V7_TYPE_OBJ);
       cur_this = v7->this_obj = v7_top(v7)[-1];
       v7_set_class(cur_this, V7_CLASS_OBJECT);
@@ -689,7 +689,7 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
     TRY(parse_function_call(v7, cur_this, has_new));
   }
 
-  if (has_new && !v7->no_exec) {
+  if (has_new && EXECUTING(v7->flags)) {
     TRY(v7_push(v7, cur_this));
   }
 
@@ -705,7 +705,7 @@ static enum v7_err parse_precedence_3(struct v7 *v7) {
     int increment = (v7->pstate.pc[0] == '+') ? 1 : -1;
     v7->pstate.pc += 2;
     skip_whitespaces_and_comments(v7);
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val *v = v7_top(v7)[-1];
       CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       v->v.num += increment;
@@ -724,12 +724,12 @@ static enum v7_err parse_precedence4(struct v7 *v7) {
   has_typeof = lookahead(v7, "typeof", 6);
 
   TRY(parse_precedence_3(v7));
-  if (has_neg && !v7->no_exec) {
+  if (has_neg && EXECUTING(v7->flags)) {
     int is_true = v7_is_true(v7_top(v7)[-1]);
     TRY(v7_make_and_push(v7, V7_TYPE_BOOL));
     v7_top(v7)[-1]->v.num = is_true ? 0.0 : 1.0;
   }
-  if (has_typeof && !v7->no_exec) {
+  if (has_typeof && EXECUTING(v7->flags)) {
     const struct v7_val *v = v7_top(v7)[-1];
     static const char *names[] = {
       "undefined", "object", "boolean", "string", "number", "object"
@@ -749,7 +749,7 @@ static enum v7_err parse_term(struct v7 *v7) {
     int sp1 = v7->sp, ch = *v7->pstate.pc;
     TRY(match(v7, ch));
     TRY(parse_precedence4(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       TRY(do_arithmetic_op(v7, ch, sp1, v7->sp));
     }
   }
@@ -815,7 +815,7 @@ static enum v7_err parse_assign(struct v7 *v7, struct v7_val *obj, int op) {
   // top -->  |       nothing yet          |
 
   //<#parse_assign#>
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     struct v7_val **top = v7_top(v7), *a = top[-2], *b = top[-1];
     int old_sp = v7->sp - 1;
 
@@ -844,7 +844,7 @@ static enum v7_err parse_add_sub(struct v7 *v7) {
     int sp1 = v7->sp, ch = *v7->pstate.pc;
     TRY(match(v7, ch));
     TRY(parse_term(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       TRY(do_arithmetic_op(v7, ch, sp1, v7->sp));
     }
   }
@@ -859,13 +859,13 @@ static enum v7_err parse_relational(struct v7 *v7) {
     v7->pstate.pc += s_op_lengths[op];
     skip_whitespaces_and_comments(v7);
     TRY(parse_add_sub(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       TRY(do_logical_op(v7, op, sp1, v7->sp));
     }
   }
   if (lookahead(v7, "instanceof", 10)) {
     TRY(parse_identifier(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val key = str_to_val(v7->tok, v7->tok_len);
       TRY(v7_make_and_push(v7, V7_TYPE_BOOL));
       v7_top(v7)[-1]->v.num = instanceof(v7_top(v7)[-2], find(v7, &key));
@@ -882,7 +882,7 @@ static enum v7_err parse_equality(struct v7 *v7) {
     v7->pstate.pc += s_op_lengths[op];
     skip_whitespaces_and_comments(v7);
     TRY(parse_relational(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       TRY(do_logical_op(v7, op, sp1, v7->sp));
     }
   }
@@ -895,7 +895,7 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
     int sp1 = v7->sp;
     TRY(match(v7, '&'));
     TRY(parse_equality(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
       unsigned long a = v1->v.num, b = v2->v.num;
       CHECK(v1->type == V7_TYPE_NUM && v1->type == V7_TYPE_NUM, V7_TYPE_ERROR);
@@ -912,7 +912,7 @@ static enum v7_err parse_bitwise_xor(struct v7 *v7) {
     int sp1 = v7->sp;
     TRY(match(v7, '^'));
     TRY(parse_bitwise_and(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
       unsigned long a = v1->v.num, b = v2->v.num;
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
@@ -929,7 +929,7 @@ static enum v7_err parse_bitwise_or(struct v7 *v7) {
     int sp1 = v7->sp;
     TRY(match(v7, '|'));
     TRY(parse_bitwise_xor(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
       unsigned long a = v1->v.num, b = v2->v.num;
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
@@ -947,7 +947,7 @@ static enum v7_err parse_logical_and(struct v7 *v7) {
     match(v7, '&');
     match(v7, '&');
     TRY(parse_bitwise_or(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
       int is_true = v7_is_true(v1) && v7_is_true(v2);
       TRY(v7_make_and_push(v7, V7_TYPE_BOOL));
@@ -964,7 +964,7 @@ static enum v7_err parse_logical_or(struct v7 *v7) {
     match(v7, '|');
     match(v7, '|');
     TRY(parse_logical_and(v7));
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
       int is_true = v7_is_true(v1) || v7_is_true(v2);
       TRY(v7_make_and_push(v7, V7_TYPE_BOOL));
@@ -1016,26 +1016,27 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
 
   // Parse ternary operator
   if (*v7->pstate.pc == '?') {
-    int old_no_exec = v7->no_exec;
+    int old_flags = v7->flags;
     int condition_true = 1;
 
-    if (!v7->no_exec) {
+    if (EXECUTING(v7->flags)) {
       CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
       condition_true = v7_is_true(v7_top(v7)[-1]);
       TRY(inc_stack(v7, -1));   // Remove condition result
     }
 
     TRY(match(v7, '?'));
-    v7->no_exec = old_no_exec || !condition_true;
+    if (!condition_true || !EXECUTING(old_flags)) v7->flags |= V7_NO_EXEC;
     TRY(parse_expression(v7));
     TRY(match(v7, ':'));
-    v7->no_exec = old_no_exec || condition_true;
+    v7->flags = old_flags;
+    if (condition_true || !EXECUTING(old_flags)) v7->flags |= V7_NO_EXEC;
     TRY(parse_expression(v7));
-    v7->no_exec = old_no_exec;
+    v7->flags = old_flags;
   }
 
   // Collapse stack, leave only one value on top
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     struct v7_val *result = v7_top(v7)[-1];
     inc_ref_count(result);
     TRY(inc_stack(v7, old_sp - v7->sp));
@@ -1047,23 +1048,21 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
   return V7_OK;
 }
 
-static enum v7_err parse_declaration(struct v7 *v7) {
+static enum v7_err parse_declaration(struct v7 *v7) { // <#parse_decl#>
   int sp = v7_sp(v7);
 
   do {
     inc_stack(v7, sp - v7_sp(v7));  // Clean up the stack after prev decl
     TRY(parse_identifier(v7));
-    if (v7->no_exec) {
+    if (*v7->pstate.pc == '=') {
+      if (EXECUTING(v7->flags)) v7_make_and_push(v7, V7_TYPE_UNDEF);
+      TRY(parse_assign(v7, cur_scope(v7), OP_ASSIGN));
+    } else {
       v7_setv(v7, v7->cur_var_obj, V7_TYPE_STR, V7_TYPE_UNDEF,
               v7->tok, v7->tok_len, 1);
       // TODO(lsm): remove this
       v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_UNDEF,
               v7->tok, v7->tok_len, 1);
-    }
-    //<#parse_declaration#>
-    if (*v7->pstate.pc == '=') {
-      if (!v7->no_exec) v7_make_and_push(v7, V7_TYPE_UNDEF);
-      TRY(parse_assign(v7, cur_scope(v7), OP_ASSIGN));
     }
   } while (test_and_skip_char(v7, ','));
 
@@ -1071,27 +1070,27 @@ static enum v7_err parse_declaration(struct v7 *v7) {
 }
 
 static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
-  int old_no_exec = v7->no_exec;  // Remember execution flag
+  int old_flags = v7->flags, condition_true;
 
   TRY(match(v7, '('));
   TRY(parse_expression(v7));      // Evaluate condition, pushed on stack
   TRY(match(v7, ')'));
-  if (!old_no_exec) {
+  if (EXECUTING(old_flags)) {
     // If condition is false, do not execute "if" body
     CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
-    v7->no_exec = !v7_is_true(v7_top(v7)[-1]);
+    condition_true = v7_is_true(v7_top_val(v7));
+    if (!condition_true) v7->flags |= V7_NO_EXEC;
     TRY(inc_stack(v7, -1));   // Cleanup condition result from the stack
   }
   TRY(parse_compound_statement(v7, has_return));
 
-  if (strncmp(v7->pstate.pc, "else", 4) == 0) {
-    v7->pstate.pc += 4;
-    skip_whitespaces_and_comments(v7);
-    v7->no_exec = old_no_exec || !v7->no_exec;
+  if (lookahead(v7, "else", 4)) {
+    v7->flags = old_flags;
+    if (!EXECUTING(old_flags) || condition_true) v7->flags |= V7_NO_EXEC;
     TRY(parse_compound_statement(v7, has_return));
   }
 
-  v7->no_exec = old_no_exec;  // Restore old execution flag
+  v7->flags = old_flags;  // Restore old execution flags
   return V7_OK;
 }
 
@@ -1106,7 +1105,7 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
   s_block = v7->pstate;
 
   // Execute loop body
-  if (v7->no_exec) {
+  if (!EXECUTING(v7->flags)) {
     TRY(parse_compound_statement(v7, has_return));
   } else {
     int old_sp = v7->sp;
@@ -1128,7 +1127,7 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
 }
 
 static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
-  int is_true, old_no_exec = v7->no_exec, has_var = 0;
+  int is_true, old_flags = v7->flags, has_var = 0;
   struct v7_pstate s1, s2, s3, s_block, s_end;
 
   TRY(match(v7, '('));
@@ -1152,7 +1151,7 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   TRY(match(v7, ';'));
 
   // Pass through the loop, don't execute it, just remember locations
-  v7->no_exec = 1;
+  v7->flags |= V7_NO_EXEC;
   s2 = v7->pstate;
   TRY(parse_expression(v7));    // expr2 (condition)
   TRY(match(v7, ';'));
@@ -1165,23 +1164,23 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   TRY(parse_compound_statement(v7, has_return));
   s_end = v7->pstate;
 
-  v7->no_exec = old_no_exec;
+  v7->flags = old_flags;
 
   // Execute loop
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     int old_sp = v7->sp;
     for (;;) {
       v7->pstate = s2;
-      assert(v7->no_exec == 0);
+      assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_expression(v7));    // Evaluate condition
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top(v7)[-1]);
       if (is_true) break;
 
       v7->pstate = s_block;
-      assert(v7->no_exec == 0);
+      assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_compound_statement(v7, has_return));  // Loop body
-      assert(v7->no_exec == 0);
+      assert(!EXECUTING(v7->flags) == 0);
 
       v7->pstate = s3;
       TRY(parse_expression(v7));    // expr3  (post-iteration)
@@ -1192,13 +1191,12 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
 
   // Jump to the code after the loop
   v7->pstate = s_end;
-  assert(v7->no_exec == old_no_exec);
 
   return V7_OK;
 }
 
 static enum v7_err parse_return_statement(struct v7 *v7, int *has_return) {
-  if (!v7->no_exec) {
+  if (EXECUTING(v7->flags)) {
     *has_return = 1;
   }
   if (*v7->pstate.pc != ';' && *v7->pstate.pc != '}') {
@@ -1210,12 +1208,12 @@ static enum v7_err parse_return_statement(struct v7 *v7, int *has_return) {
 static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
   enum v7_err err_code;
   const char *old_pc = v7->pstate.pc;
-  int old_no_exec = v7->no_exec, old_line_no = v7->pstate.line_no;
+  int old_flags = v7->flags, old_line_no = v7->pstate.line_no;
 
   CHECK(v7->pstate.pc[0] == '{', V7_SYNTAX_ERROR);
   err_code = parse_compound_statement(v7, has_return);
 
-  if (old_no_exec && err_code != V7_OK) {
+  if (!EXECUTING(old_flags) && err_code != V7_OK) {
     return err_code;
   }
 
@@ -1223,7 +1221,7 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
   if (err_code != V7_OK) {
     v7->pstate.pc = old_pc;
     v7->pstate.line_no = old_line_no;
-    v7->no_exec = 1;
+    v7->flags |= V7_NO_EXEC;
     TRY(parse_compound_statement(v7, has_return));
   }
 
@@ -1243,18 +1241,19 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
               v7->tok, v7->tok_len, 1, v7_top_val(v7));
     }
 
-    v7->no_exec = old_no_exec || err_code == V7_OK;
+    // If there was no exception, do not execute catch block
+    if (!EXECUTING(old_flags) || err_code == V7_OK) v7->flags |= V7_NO_EXEC;
     TRY(parse_compound_statement(v7, has_return));
-    v7->no_exec = old_no_exec;
+    v7->flags = old_flags;
 
     if (lookahead(v7, "finally", 7)) {
       TRY(parse_compound_statement(v7, has_return));
     }
   } else if (test_token(v7, "finally", 7)) {
-    v7->no_exec = old_no_exec;
+    v7->flags = old_flags;
     TRY(parse_compound_statement(v7, has_return));
   } else {
-    v7->no_exec = old_no_exec;
+    v7->flags = old_flags;
     return V7_SYNTAX_ERROR;
   }
   return V7_OK;
