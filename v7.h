@@ -79,9 +79,8 @@ struct v7_string {
 struct v7_func {
   char *source_code;        // \0-terminated function source code
   int line_no;              // Line number where function begins
-  struct v7_val *scope;     // Function's scope
+  const char *id;           // Function ID
   struct v7_val *upper;     // Upper-level function
-  struct v7_val *args;      // Function arguments
   struct v7_val *var_obj;   // Function var object: var decls and func defs
 };
 
@@ -114,32 +113,28 @@ struct v7_val {
 };
 
 struct v7_pstate {
-  const char *source_code;    // Pointer to the source code
+  const char *source_code;
   const char *pc;             // Current parsing position
   int line_no;                // Line number
 };
 
 struct v7 {
   struct v7_val root_scope;   // "global" object (root-level execution context)
-  struct v7_val *curr_func;   // Currently executing function
   struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
   int sp;                     // Stack pointer
-
   int flags;
-#define V7_SCANNING  1        // Code pre-scan, no execution
+#define V7_SCANNING  1        // Pre-scan to initialize lexical scopes, no exec
 #define V7_NO_EXEC   2        // Non-executing code block: if (false) { block }
 
   struct v7_pstate pstate;    // Parsing state
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
+
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
-
-  struct v7_val global_obj;   // Global object
-  struct v7_val global_ctx;   // Global execution context
   struct v7_val *ctx;         // Current execution context
-  struct v7_val *cur_var_obj; // Current var_obj
-
+  struct v7_val *cf;          // Currently executing function
+  struct v7_val *functions;   // List of declared function
   struct v7_val *free_values; // List of free (deallocated) values
   struct v7_prop *free_props; // List of free (deallocated) props
 };

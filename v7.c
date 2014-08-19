@@ -794,7 +794,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
     if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
       free(v->v.func.source_code);
-      v7_freeval(v7, v->v.func.scope);
+      v7_freeval(v7, v->v.func.var_obj);
     }
     if (v->v.func.upper != NULL) v7_freeval(v7, v->v.func.upper);
   }
@@ -990,19 +990,15 @@ V7_PRIVATE struct v7_val *find(struct v7 *v7, const struct v7_val *key) {
 
   if (!EXECUTING(v7->flags)) return NULL;
 
-  // Search in function arguments first
-  if (v7->curr_func != NULL &&
-      (v = get2(v7->curr_func->v.func.args, key)) != NULL) return v;
-
-  // Search for the name, traversing scopes up to the top level scope
-  for (f = v7->curr_func; f != NULL; f = f->v.func.upper) {
-    if ((v = get2(f->v.func.scope, key)) != NULL) return v;
+  for (f = v7->ctx; f != NULL; f = f->next) {
+    if ((v = get2(f, key)) != NULL) return v;
   }
-  return get2(&v7->root_scope, key);
+
+  return NULL;
 }
 
-V7_PRIVATE enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
-                          struct v7_val *v) {
+V7_PRIVATE enum v7_err v7_set(struct v7 *v7, struct v7_val *obj,
+                              struct v7_val *k, struct v7_val *v) {
   struct v7_prop *m = NULL;
 
   CHECK(obj != NULL && k != NULL && v != NULL, V7_INTERNAL_ERROR);
@@ -1197,7 +1193,7 @@ struct v7 *v7_create(void) {
     v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
     v7->root_scope.proto = &s_global;
     v7->root_scope.ref_count = 1;
-    v7->cur_var_obj = &v7->root_scope;
+    v7->ctx = &v7->root_scope;
   }
 
   return v7;
@@ -1275,16 +1271,17 @@ V7_PRIVATE enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) 
 V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
   int old_flags = v7->flags;
   enum v7_err er;
+  char *src = strdup(source_code); // TODO(lsm): fix this leak
 
   // Do first pass with no execution only, to grab function/variable
   // definitions for hoisting.
   v7->flags |= V7_SCANNING;
-  er = do_exec2(v7, source_code, sp);
+  er = do_exec2(v7, src, sp);
 
   // Second pass: execute.
   if (EXECUTING(old_flags)) {
     v7->flags = old_flags;
-    er = do_exec2(v7, source_code, sp);
+    er = do_exec2(v7, src, sp);
   }
   v7->flags = old_flags;
 
@@ -2512,16 +2509,12 @@ static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
   return V7_OK;
 }
 
-static struct v7_val *cur_scope(struct v7 *v7) {
-  return v7->curr_func == NULL ? &v7->root_scope : v7->curr_func->v.func.scope;
-}
-
 static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
-                                             int num_params) {
-  int i = 0, old_flags = v7->flags, old_sp = v7->sp, has_return = 0, ln = 0;
+                                             int num_params) { // <#fdef#>
+  int i = 0, old_flags = v7->flags, old_sp = v7->sp, has_ret = 0;
   unsigned long func_name_len = 0;
   const char *src = v7->pstate.pc, *func_name = NULL;
-  struct v7_val *args = NULL, *var_obj = NULL;
+  struct v7_val *ctx = NULL, *f = NULL;
 
   if (*v7->pstate.pc != '(') {
     // function name is given, e.g. function foo() {}
@@ -2532,86 +2525,102 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     src = v7->pstate.pc;
   }
 
+  // Scanning pass. Create function, add it to the functions list
+  if (v7->flags & V7_SCANNING) {
+    TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
+    f = v7_top(v7)[-1];
+    f->flags |= V7_JS_FUNC;
+    v7_set_class(f, V7_CLASS_FUNCTION);
+    inc_ref_count(f);
+
+    f->v.func.line_no = v7->pstate.line_no;
+    f->v.func.id = src;
+
+    f->v.func.var_obj = v7_mkv(v7, V7_TYPE_OBJ);
+    inc_ref_count(f->v.func.var_obj);
+
+    if (v7->cf != NULL) {
+      inc_ref_count(v7->cf);
+    }
+    f->v.func.upper = v7->cf;
+    v7->cf = f;
+
+    f->v.func.source_code = (char *) src;
+
+    f->next = v7->functions;
+    v7->functions = f;
+  }
+
   // If 'v' (func to call) is NULL, that means we're just parsing function
   // definition to save it's body.
   if (v == NULL) v7->flags |= V7_NO_EXEC;
-  ln = v7->pstate.line_no;  // Line number where function starts
+
   TRY(match(v7, '('));
 
-  if (!EXECUTING(v7->flags)) {
-    var_obj = v7_mkv(v7, V7_TYPE_OBJ);
-    inc_ref_count(var_obj);
-    var_obj->proto = v7->cur_var_obj;
-    v7->cur_var_obj = var_obj;
-  } else {
+  // When executing, create new execution context and push it to the
+  // stack of contexts
+  if (EXECUTING(v7->flags)) {
+    f = v[0];
+    assert(v7_is_class(f, V7_CLASS_FUNCTION));
+
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
-    args = v7_top_val(v7);
-    v7_set_class(args, V7_CLASS_OBJECT);
+    ctx = v7_top_val(v7);
+    v7_set_class(ctx, V7_CLASS_OBJECT);
+    v7_copy(v7, f->v.func.var_obj, ctx);
+    ctx->next = v7->ctx;
+    v7->ctx = ctx;
   }
 
   while (*v7->pstate.pc != ')') {
     TRY(parse_identifier(v7));
     if (EXECUTING(v7->flags)) {
-      // TODO(lsm): use v7_setv() here
-      struct v7_val *key = v7_mkv(v7, V7_TYPE_STR, v7->tok, v7->tok_len, 1);
       struct v7_val *val = i < num_params ? v[i + 1] : make_value(v7, V7_TYPE_UNDEF);
-      inc_ref_count(key);
-      TRY(v7_set(v7, args, key, val));
-      v7_freeval(v7, key);
+      TRY(v7_setv(v7, ctx, V7_TYPE_STR, V7_TYPE_OBJ,
+                  v7->tok, v7->tok_len, 1, val));
     }
     i++;
     if (!test_and_skip_char(v7, ',')) break;
   }
   TRY(match(v7, ')'));
 
-  if (EXECUTING(v7->flags)) {
-    assert(v7->curr_func != NULL);
-    v7->curr_func->v.func.args = args;
-    inc_ref_count(args);
+  TRY(parse_compound_statement(v7, &has_ret));
+
+#if 0
+  if (v7->flags & V7_SCANNING) {
+    f->v.func.source_code = v7_strdup(src, (unsigned long)
+                                      (v7->pstate.pc - src));
   }
-
-  TRY(parse_compound_statement(v7, &has_return));
-
-  if (!EXECUTING(v7->flags)) {
-    struct v7_val *func;
-    TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
-    func = v7_top(v7)[-1];
-    func->flags |= V7_JS_FUNC;
-    v7_set_class(func, V7_CLASS_FUNCTION);
-
-    func->v.func.line_no = ln;
-    func->v.func.source_code = v7_strdup(src, (unsigned long)
-                                         (v7->pstate.pc - src));
-
-    func->v.func.scope = v7_mkv(v7, V7_TYPE_OBJ);
-    func->v.func.scope->ref_count = 1;
-
-    func->v.func.var_obj = var_obj;
-
-    func->v.func.upper = v7->curr_func;
-    if (func->v.func.upper != NULL) {
-      inc_ref_count(func->v.func.upper);
-    }
-
-    if (func_name != NULL) {
-      TRY(v7_setv(v7, v7->cur_var_obj, V7_TYPE_STR, V7_TYPE_OBJ,
-                  func_name, func_name_len, 1, func));
-      // TODO(lsm): delete this
-      TRY(v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_OBJ,
-                  func_name, func_name_len, 1, func));
-    }
-  }
+#endif
 
   if (EXECUTING(v7->flags)) {
+    // Cleanup execution context
+    v7->ctx = ctx->next;
+
     // If function didn't have return statement, return UNDEF
-    if (!has_return) {
+    if (!has_ret) {
       TRY(inc_stack(v7, old_sp - v7->sp));
       TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
     }
+  }
 
-    // Cleanup arguments
-    v7->curr_func->v.func.args = NULL;
-    v7_freeval(v7, args);
+  // Scan pass is done. Lookup created function in the function list.
+  if (!(v7->flags & V7_SCANNING) && (v == NULL)) {
+    for (f = v7->functions; f != NULL; f = f->next) {
+      if (f->v.func.id == src) {
+        TRY(v7_push(v7, f));
+        break;
+      }
+    }
+    //abort();
+    v7->flags = old_flags;
+    if (f == NULL) {
+      return V7_INTERNAL_ERROR;
+    }
+
+    if (func_name != NULL) {
+      TRY(v7_setv(v7, v7->ctx, V7_TYPE_STR, V7_TYPE_OBJ,
+                  func_name, func_name_len, 1, f));
+    }
   }
 
   v7->flags = old_flags;
@@ -2642,22 +2651,17 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
   //            <argument_N>        ---+
   // top  --->  <return_value>
   if (f->flags & V7_JS_FUNC) {
-    const char *old_pc = v7->pstate.pc;
-    struct v7_val *old_curr_func = v7->curr_func;
-    int old_line_no = v7->pstate.line_no;
+    struct v7_pstate old_pstate = v7->pstate;
 
     // Move control flow to the function body
     v7->pstate.pc = f->v.func.source_code;
     v7->pstate.line_no = f->v.func.line_no;
-    v7->curr_func = f;
 
     // Execute function body
     TRY(parse_function_definition(v7, v, num_args));
 
     // Return control flow back
-    v7->pstate.pc = old_pc;
-    v7->pstate.line_no = old_line_no;
-    v7->curr_func = old_curr_func;
+    v7->pstate = old_pstate;
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
   } else {
     struct v7_c_func_arg arg = {
@@ -3302,7 +3306,7 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
 #endif
   int op, old_sp = v7->sp;
 
-  v7->cur_obj = cur_scope(v7);
+  v7->cur_obj = v7->ctx;
   TRY(parse_logical_or(v7));
 
   // Parse assignment
@@ -3345,20 +3349,31 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
 }
 
 static enum v7_err parse_declaration(struct v7 *v7) { // <#parse_decl#>
-  int sp = v7_sp(v7);
+  int old_sp = v7_sp(v7);
+  const char *tok;
+  unsigned long tok_len;
 
   do {
-    inc_stack(v7, sp - v7_sp(v7));  // Clean up the stack after prev decl
+    inc_stack(v7, old_sp - v7_sp(v7));  // Clean up the stack after prev decl
     TRY(parse_identifier(v7));
+    tok = v7->tok;
+    tok_len = v7->tok_len;
+
     if (*v7->pstate.pc == '=') {
       if (EXECUTING(v7->flags)) v7_make_and_push(v7, V7_TYPE_UNDEF);
-      TRY(parse_assign(v7, cur_scope(v7), OP_ASSIGN));
-    } else {
-      v7_setv(v7, v7->cur_var_obj, V7_TYPE_STR, V7_TYPE_UNDEF,
-              v7->tok, v7->tok_len, 1);
-      // TODO(lsm): remove this
-      v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_UNDEF,
-              v7->tok, v7->tok_len, 1);
+      TRY(parse_assign(v7, v7->ctx, OP_ASSIGN));
+    }
+
+    if (v7->flags & V7_SCANNING) {
+      struct v7_val *v = v7_top_val(v7),
+      *obj = v7->cf == NULL ? &v7->root_scope : v7->cf->v.func.var_obj;
+
+      // In code scanning path, store declared variables in the currect scope
+      if (v7->sp > old_sp && v7_is_class(v, V7_CLASS_FUNCTION)) {
+        v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, tok, tok_len, 1, v);
+      } else {
+        v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_UNDEF, tok, tok_len, 1);
+      }
     }
   } while (test_and_skip_char(v7, ','));
 
@@ -3406,7 +3421,7 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
   } else {
     int old_sp = v7->sp;
     struct v7_val *obj = v7_top(v7)[-1];
-    struct v7_val *scope = has_var ? cur_scope(v7) : &v7->root_scope;
+    struct v7_val *scope = has_var ? v7->ctx : &v7->root_scope;
     struct v7_prop *prop;
 
     CHECK(obj->type == V7_TYPE_OBJ, V7_TYPE_ERROR);
@@ -3533,7 +3548,7 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
     if (err_code != V7_OK) {
       TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
       v7_set_class(v7_top_val(v7), V7_CLASS_ERROR);
-      v7_setv(v7, cur_scope(v7), V7_TYPE_STR, V7_TYPE_OBJ,
+      v7_setv(v7, v7->ctx, V7_TYPE_STR, V7_TYPE_OBJ,
               v7->tok, v7->tok_len, 1, v7_top_val(v7));
     }
 

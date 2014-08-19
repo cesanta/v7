@@ -208,7 +208,7 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { } ; ") == V7_OK);
   ASSERT(v7_sp(v7) > 0);
   ASSERT(v7_top(v7)[-1]->type == V7_TYPE_OBJ);
-  ASSERT(strcmp(v7_top(v7)[-1]->v.func.source_code, "(x, y) { } ") == 0);
+  ASSERT(memcmp(v7_top(v7)[-1]->v.func.source_code, "(x, y) { } ", 10) == 0);
 
   ASSERT(v7_exec(v7, "var f1 = function(x, y) { return x * y; };") == V7_OK);
   ASSERT(v7_is_class(v7_top(v7)[-1], V7_CLASS_FUNCTION));
