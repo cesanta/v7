@@ -124,13 +124,28 @@ struct v7_val {
   enum v7_type type;          // Value type
   enum v7_class cls;          // Object's internal [[Class]] property
   short ref_count;            // Reference counter
+  union{
+    uint16_t flags;            // Flags - defined below
+    struct{
+      uint16_t fl_val_alloc:1;
+#define V7_VAL_ALLOCATED   1   // Whole "struct v7_val" must be free()-ed
+      uint16_t fl_str_alloc:1;
+#define V7_STR_ALLOCATED   2   // v.str.buf must be free()-ed
+      uint16_t fl_js_func:1;
+#define V7_JS_FUNC         4   // Function object is a JavsScript code
+      uint16_t fl_prop_func:1;
+#define V7_PROP_FUNC       8   // Function object is a native property function
+      uint16_t fl_val_dealloc:1;
+#define V7_VAL_DEALLOCATED 16  // Value has been deallocated
 
-  unsigned short flags;       // Flags - defined below
-#define V7_VAL_ALLOCATED   1  // Whole "struct v7_val" must be free()-ed
-#define V7_STR_ALLOCATED   2  // v.str.buf must be free()-ed
-#define V7_JS_FUNC         4  // Function object is a JavsScript code
-#define V7_PROP_FUNC       8  // Function object is a native property function
-#define V7_VAL_DEALLOCATED 16 // Value has been deallocated
+      uint16_t regexp_fl_g:1;
+#define V7_REGEXP_FL_G     32  // RegExp flag g
+      uint16_t regexp_fl_i:1;
+#define V7_REGEXP_FL_I     64  // RegExp flag i
+      uint16_t regexp_fl_m:1;
+#define V7_REGEXP_FL_M     128 // RegExp flag m
+    };
+  };
 };
 
 struct v7_pstate {
