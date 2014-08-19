@@ -2760,11 +2760,26 @@ static enum v7_err parse_regex(struct v7 *v7) {
     regex[i] = *v7->pstate.pc;
   }
   regex[i] = '\0';
-  TRY(match(v7, '/'));
+  CHECK(*v7->pstate.pc++ == '/', V7_SYNTAX_ERROR);
+  uint8_t fl_g=0, fl_i=0, fl_m=0, rep;
+  do{
+    switch(*v7->pstate.pc){
+      case 'g': fl_g=1; rep=1; break;
+      case 'i': fl_i=1; rep=1; break;
+      case 'm': fl_m=1; rep=1; break;
+      default :         rep=0; break;
+    }
+    v7->pstate.pc += rep;
+  }while(rep);
+  skip_whitespaces_and_comments(v7);
   if (EXECUTING(v7->flags)) {
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
-    v7_set_class(v7_top(v7)[-1], V7_CLASS_REGEXP);
-    v7_top(v7)[-1]->v.regex = v7_strdup(regex, strlen(regex));
+    struct v7_val *top = v7_top(v7)[-1];
+    v7_set_class(top, V7_CLASS_REGEXP);
+    top->v.regex = v7_strdup(regex, strlen(regex));
+    top->regexp_fl_g = fl_g;
+    top->regexp_fl_i = fl_i;
+    top->regexp_fl_m = fl_m;
   }
 
   return V7_OK;
