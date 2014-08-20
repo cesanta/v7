@@ -144,7 +144,7 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
     if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
       free(v->v.func.source_code);
-      v7_freeval(v7, v->v.func.scope);
+      v7_freeval(v7, v->v.func.var_obj);
     }
     if (v->v.func.upper != NULL) v7_freeval(v7, v->v.func.upper);
   }
@@ -340,19 +340,15 @@ V7_PRIVATE struct v7_val *find(struct v7 *v7, const struct v7_val *key) {
 
   if (!EXECUTING(v7->flags)) return NULL;
 
-  // Search in function arguments first
-  if (v7->curr_func != NULL &&
-      (v = get2(v7->curr_func->v.func.args, key)) != NULL) return v;
-
-  // Search for the name, traversing scopes up to the top level scope
-  for (f = v7->curr_func; f != NULL; f = f->v.func.upper) {
-    if ((v = get2(f->v.func.scope, key)) != NULL) return v;
+  for (f = v7->ctx; f != NULL; f = f->next) {
+    if ((v = get2(f, key)) != NULL) return v;
   }
-  return get2(&v7->root_scope, key);
+
+  return NULL;
 }
 
-V7_PRIVATE enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, struct v7_val *k,
-                          struct v7_val *v) {
+V7_PRIVATE enum v7_err v7_set(struct v7 *v7, struct v7_val *obj,
+                              struct v7_val *k, struct v7_val *v) {
   struct v7_prop *m = NULL;
 
   CHECK(obj != NULL && k != NULL && v != NULL, V7_INTERNAL_ERROR);
@@ -547,7 +543,7 @@ struct v7 *v7_create(void) {
     v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
     v7->root_scope.proto = &s_global;
     v7->root_scope.ref_count = 1;
-    v7->cur_var_obj = &v7->root_scope;
+    v7->ctx = &v7->root_scope;
   }
 
   return v7;
@@ -625,16 +621,17 @@ V7_PRIVATE enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) 
 V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
   int old_flags = v7->flags;
   enum v7_err er;
+  char *src = strdup(source_code); // TODO(lsm): fix this leak
 
   // Do first pass with no execution only, to grab function/variable
   // definitions for hoisting.
   v7->flags |= V7_SCANNING;
-  er = do_exec2(v7, source_code, sp);
+  er = do_exec2(v7, src, sp);
 
   // Second pass: execute.
   if (EXECUTING(old_flags)) {
     v7->flags = old_flags;
-    er = do_exec2(v7, source_code, sp);
+    er = do_exec2(v7, src, sp);
   }
   v7->flags = old_flags;
 
