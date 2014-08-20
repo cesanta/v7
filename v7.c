@@ -1776,9 +1776,24 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
+V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result) {
+  v7_init_bool(result, this_obj->regexp_fl_g);
+}
+
+V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result) {
+  v7_init_bool(result, this_obj->regexp_fl_i);
+}
+
+V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result) {
+  v7_init_bool(result, this_obj->regexp_fl_m);
+}
+
 V7_PRIVATE void init_regex(void) {
   init_standard_constructor(V7_CLASS_REGEXP, Regex_ctor);
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "global", Regex_global);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "ignoreCase", Regex_ignoreCase);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "multiline", Regex_multiline);
 }
 
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {

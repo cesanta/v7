@@ -105,7 +105,10 @@ struct v7_func {
 };
 
 union v7_scalar {
-  char *regex;              // \0-terminated regex
+  struct{
+    char *regex;            // \0-terminated regex
+    uint32_t rx_lastIndex;  // RegExp.lastIndex
+  };
   double num;               // Holds "Number" or "Boolean" value
   struct v7_string str;     // Holds "String" value
   struct v7_func func;      // \0-terminated function code
