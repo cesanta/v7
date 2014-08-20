@@ -433,7 +433,33 @@ V7_PRIVATE int slre_match(const char *regexp, const char *s, int s_len,
 
 V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
-  v7_set_class(obj, V7_CLASS_OBJECT);
+  struct v7_val *str = cfa->args[0];
+
+  if(cfa->num_args > 0){
+    if(!is_string(str)){
+      TRY(toString(cfa->v7, str));
+      str = v7_top_val(cfa->v7);
+    }
+    // TODO: copy str --> regex
+    
+    if(cfa->num_args > 1){
+      struct v7_val *flags = cfa->args[1];
+      if(!is_string(flags)){
+        TRY(toString(cfa->v7, flags));
+        flags = v7_top_val(cfa->v7);
+      }
+      uint32_t ind = flags->v.str.len;
+      while(ind){
+        switch(flags->v.str.buf[--ind]){
+          case 'g': obj->regexp_fl_g=1;  break;
+          case 'i': obj->regexp_fl_i=1;  break;
+          case 'm': obj->regexp_fl_m=1;  break;
+        }
+      }
+    }
+  }
+  
+  v7_set_class(obj, V7_CLASS_REGEXP);
   return V7_OK;
 }
 
