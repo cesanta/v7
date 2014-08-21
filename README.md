@@ -11,7 +11,9 @@ Small size, simplicity and easy C/C++ integration are V7's main design goals.
 - Simple embedding API, easy C/C++ interoperability, single .c file
 - Standard library with file IO, Crypto, BSD sockets and more
 
-V7 is targeted to conform to the ECMAScript specification version 3.
+V7 is targeted to conform to the ECMAScript specification version 5.
+V7 enforces [strict mode](http://goo.gl/MlBicD), even if `use strict`
+is not specified in the source code.
 
 ## Example: implementing HTTP/Websocket server
 
