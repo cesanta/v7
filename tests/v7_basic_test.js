@@ -4,6 +4,7 @@
 //
 // To run this test, start a terminal and run "make js"
 
+
 var numFailedTests = 0, numPassedTests = 0;
 function test(condition, msg) {
   if (condition) {
@@ -15,17 +16,16 @@ function test(condition, msg) {
 }
 
 
-var func1 = function() {
-  var param = 5;
+var func1 = function(x) {
+  var param = 4;
   param++;
-  return function(x, y) { return x * y * param; }
+  return function(y) { return x * y * param; }
 }
 
-var closure1 = func1(), closure2 = func1();
-test(closure1(2, 3) == 36, 'closure1');
-//test(closure2(2, 3) == 36, 'closure2');
-//print(':-)');
-exit(0);
+var closure1 = func1(2), closure2 = func1(3);
+test(closure1(7) == 70, 'closure1');
+test(closure2(7) == 105, 'closure2');
+
 
 var func2 = function(x) { x = 10; test(x == 10, 'local scope 1'); }
 func2(3);
@@ -34,6 +34,7 @@ var v1 = 123, v2 = 234;
 function f(v1) { return v1 ? v1 : v2; }
 test(f(1) == 1, 'func params 1');
 test(f() == 234, 'func params 2');
+
 
 var a = 5, b = a;
 test(b == 5, 'assign 1');
@@ -71,11 +72,10 @@ var a = { b: function() { return this.c; }, c: 777 };
 test(a.b() == 777, 'this 1');
 test(this.a.c == 777, 'this 2');
 
-var a = 11;
+var a = 11, hoisting1 = false;
 var b = function() { return a; var a = 'hi'; }
-test(b() == undefined, 'hoisting 1');
-test(hoistFunc() === 123, 'hoisting 2');
-function hoistFunc() { return 123; }
+try { b(); ff(); } catch (e) { hoisting1 = true; a = 12; }
+// test(hoisting1, 'hoisting1'); // Rhino does not support strict
 
 
 var factorial = function(x) { return x <= 1 ? 1 : x * factorial(x - 1); };
@@ -91,7 +91,7 @@ test(o.prop1 === 'blah', 'ctor1');
 
 var module = (function(arg) {
   var privateProperty = 17;
-  var privateMethod = function(x, y) { return x * y * private_var * arg; };
+  var privateMethod = function(x, y) { return x * y * privateProperty * arg; };
   return {
     publicProperty: 'I am public!',
     publicMethod: function(x) { return x * arg; },
@@ -99,8 +99,8 @@ var module = (function(arg) {
   };
 })(7);
 test(module.publicProperty === 'I am public!', 'public prop');
-//test(module.publicMethod(3) == 21, 'public method');
-//test(module.privilegedMethod(3, 4) === 1020);
+test(module.publicMethod(3) == 3 * 7, 'public method');
+test(module.privilegedMethod(3, 4) === 3 * 4 * 17 * 7, 'privilegedMethod');
 
 test('a' + 'b' == 'ab', 'string concatenation');
 test('He who knows, does not speak'.substr(3, 3) == 'who', 'substr 1');
@@ -140,10 +140,12 @@ test(new (function(){})() instanceof Object, 'instanceof5');
 test(new String() instanceof Object, 'instanceof6');
 test(new Number(1) instanceof Number, 'instanceof7');
 
+
 if (!constructor) {
   // Rhino doesn't have that
   test(Crypto.md5_hex('') == 'd41d8cd98f00b204e9800998ecf8427e', 'md5_hex1');
   test(Crypto.md5_hex('x') == '9dd4e461268c8034f5c8564e155c67a6', 'md5_hex2');
 }
+
 
 print('Passed tests: ', numPassedTests, ', failed tests: ', numFailedTests);

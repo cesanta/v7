@@ -146,7 +146,6 @@ void v7_freeval(struct v7 *v7, struct v7_val *v) {
       free(v->v.func.source_code);
       v7_freeval(v7, v->v.func.var_obj);
     }
-    if (v->v.func.upper != NULL) v7_freeval(v7, v->v.func.upper);
   }
 
   if (v->flags & V7_VAL_ALLOCATED) {
@@ -343,6 +342,8 @@ V7_PRIVATE struct v7_val *find(struct v7 *v7, const struct v7_val *key) {
   for (f = v7->ctx; f != NULL; f = f->next) {
     if ((v = get2(f, key)) != NULL) return v;
   }
+
+  if (v7->cf && (v = get2(v7->cf->v.func.var_obj, key)) != NULL) return v;
 
   return NULL;
 }
@@ -590,7 +591,7 @@ enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type) {
   return v7_push(v7, v);
 }
 
-V7_PRIVATE enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) {
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
   int has_ret = 0;
   struct v7_pstate old_pstate = v7->pstate;
   enum v7_err err = V7_OK;
@@ -614,28 +615,6 @@ V7_PRIVATE enum v7_err do_exec2(struct v7 *v7, const char *source_code, int sp) 
   v7->pstate = old_pstate;
 
   return err;
-}
-
-// Do first pass with no execution only, to grab function/variable
-// definitions for hoisting. Second pass executes.
-V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
-  int old_flags = v7->flags;
-  enum v7_err er;
-  char *src = strdup(source_code); // TODO(lsm): fix this leak
-
-  // Do first pass with no execution only, to grab function/variable
-  // definitions for hoisting.
-  v7->flags |= V7_SCANNING;
-  er = do_exec2(v7, src, sp);
-
-  // Second pass: execute.
-  if (EXECUTING(old_flags)) {
-    v7->flags = old_flags;
-    er = do_exec2(v7, src, sp);
-  }
-  v7->flags = old_flags;
-
-  return er;
 }
 
 enum v7_err v7_exec(struct v7 *v7, const char *source_code) {

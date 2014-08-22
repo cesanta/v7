@@ -99,8 +99,6 @@ struct v7_string {
 struct v7_func {
   char *source_code;        // \0-terminated function source code
   int line_no;              // Line number where function begins
-  const char *id;           // Function ID
-  struct v7_val *upper;     // Upper-level function
   struct v7_val *var_obj;   // Function var object: var decls and func defs
 };
 

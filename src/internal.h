@@ -60,9 +60,15 @@
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
 #define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
+
+// Print current function name and stringified object
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
+
+// Initializer for "struct v7_val", object type
 #define MKOBJ(_proto) {0,(_proto),0,0,{0},V7_TYPE_OBJ,V7_CLASS_OBJECT,0,0}
+
+// True if current code is executing. TODO(lsm): use bit fields, per vrz@
 #define EXECUTING(_fl) (!((_fl) & (V7_NO_EXEC | V7_SCANNING)))
 
 #ifndef V7_PRIVATE
@@ -76,6 +82,7 @@ extern struct v7_val s_json;
 extern struct v7_val s_file;
 #endif
 
+// Adds a read-only attribute "val" by key "name" to the object "obj"
 #define SET_RO_PROP_V(obj, name, val) \
   do { \
     static struct v7_val key = MKOBJ(&s_prototypes[V7_CLASS_STRING]); \
@@ -85,6 +92,7 @@ extern struct v7_val s_file;
     obj.props = &prop; \
   } while (0)
 
+// Adds read-only attribute with given initializers to the object "_o"
 #define SET_RO_PROP2(_o, _name, _t, _proto, _attr, _initializer, _fl) \
   do { \
     static struct v7_val _val = MKOBJ(_proto); \
@@ -97,9 +105,11 @@ extern struct v7_val s_file;
 #define SET_RO_PROP(obj, name, _t, attr, _v) \
     SET_RO_PROP2(obj, name, _t, &s_prototypes[V7_CLASS_OBJECT], attr, _v, 0)
 
+// Adds property function "_func" with key "_name" to the object "_obj"
 #define SET_PROP_FUNC(_obj, _name, _func) \
     SET_RO_PROP2(_obj, _name, V7_TYPE_NULL, 0, prop_func, _func, V7_PROP_FUNC)
 
+// Adds method "_func" with key "_name" to the object "_obj"
 #define SET_METHOD(_obj, _name, _func) \
   do {  \
     static struct v7_val _val = MKOBJ(&s_prototypes[V7_CLASS_STRING]); \
