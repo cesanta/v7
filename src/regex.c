@@ -1,24 +1,5 @@
 #include "internal.h"
 
-struct slre_cap {
-  const char *ptr;
-  int len;
-};
-
-/* Possible flags for slre_match() */
-enum { SLRE_IGNORE_CASE = 1 };
-
-/* slre_match() failure codes */
-#define SLRE_NO_MATCH               -1
-#define SLRE_UNEXPECTED_QUANTIFIER  -2
-#define SLRE_UNBALANCED_BRACKETS    -3
-#define SLRE_INTERNAL_ERROR         -4
-#define SLRE_INVALID_CHARACTER_SET  -5
-#define SLRE_INVALID_METACHARACTER  -6
-#define SLRE_CAPS_ARRAY_TOO_SMALL   -7
-#define SLRE_TOO_MANY_BRANCHES      -8
-#define SLRE_TOO_MANY_BRACKETS      -9
-
 #define MAX_BRANCHES 100
 #define MAX_BRACKETS 100
 #define ARRAY_SIZE(ar) (int) (sizeof(ar) / sizeof((ar)[0]))
