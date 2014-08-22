@@ -1355,8 +1355,11 @@ V7_PRIVATE void init_object(void) {
 
 #define MAX_BRANCHES 100
 #define MAX_BRACKETS 100
-#define ARRAY_SIZE(ar) (int) (sizeof(ar) / sizeof((ar)[0]))
 #define FAIL_IF(condition, error_code) if (condition) return (error_code)
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(ar) (int) (sizeof(ar) / sizeof((ar)[0]))
+#endif
 
 #ifdef SLRE_DEBUG
 #define DBG(x) printf x
