@@ -50,6 +50,7 @@
 
 
 static int static_num_tests = 0;
+int STOP = 0;  // For xcode breakpoints conditions
 
 static enum v7_err adder(struct v7_c_func_arg *cfa) {
   int i;
@@ -221,6 +222,7 @@ static const char *test_v7_exec(void) {
 
   ASSERT(v7_exec(v7, "f = function(x,y,z) {print(this);};") == V7_OK);
   ASSERT(v7_sp(v7) == 1);
+  ASSERT(v7_is_class(v7->stack[0], V7_CLASS_FUNCTION));
   ASSERT(v7_exec(v7, "f();") == V7_OK);
   ASSERT(v7_exec(v7, "f({});") == V7_OK);
   ASSERT(v7_exec(v7, "f(1, 2);") == V7_OK);
@@ -486,10 +488,30 @@ static const char *test_is_true(void) {
   return NULL;
 }
 
+static int BLAH;
+
+static const char *test_closure(void) {
+  struct v7 *v7 = v7_create();
+  BLAH++;
+
+  ASSERT(v7_exec(v7, "function a(x){return function(y){return x*y}}") == V7_OK);
+  ASSERT(v7_exec(v7, "var f1 = a(5);") == V7_OK);
+  ASSERT(v7_exec(v7, "var f2 = a(7);") == V7_OK);
+  ASSERT(v7_is_class(v7_top_val(v7), V7_CLASS_FUNCTION));
+  STOP = 1;
+  ASSERT(v7_exec(v7, "f1(3);") == V7_OK);
+  ASSERT(check_num(v7, 15.0));
+  ASSERT(v7_exec(v7, "f2(3);") == V7_OK);
+  ASSERT(check_num(v7, 21.0));
+  v7_destroy(&v7);
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
   RUN_TEST(test_v7_destroy);
   RUN_TEST(test_is_true);
   RUN_TEST(test_v7_exec);
+  RUN_TEST(test_closure);
   RUN_TEST(test_native_functions);
   RUN_TEST(test_stdlib);
   return NULL;
