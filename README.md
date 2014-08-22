@@ -3,15 +3,15 @@ V7: Embedded JavaScript engine
 
 V7 is a C/C++ library that implements Javascript engine. It is intended
 to be embedded into other programs to allow scripting and configuration,
-but also it could be used as stand-alone JS interpreter in scripts. Main
-V7 design factors are:
+but also it could be used as stand-alone JS interpreter in automation scripts.
+Main V7 design factors are:
 
 - Small size and simplicity. V7 can fit into resource-constrained environments,
   like firmware, embedded devices, etc. V7 is under 100kb of compiled
   x86_64 code.
 - Easy C/C++ integration. Exporting existing C/C++ functions into V7 and
   vice versa is easier then for any other embedded language.
-- Simple embedding API. V7 could be embedded into existing project simply
+- Simple embedding process. V7 could be embedded into existing project simply
   by copying two files, `v7.c` and `v7.h` and adding few lines of C/C++ code.
 - Optional standard library with file IO, Crypto, BSD sockets and more
 
