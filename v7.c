@@ -16,7 +16,6 @@
 // license, as set out in <http://cesanta.com/products.html>.
 
 #include "v7.h"
-#include "slre.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -56,7 +55,9 @@
 
 //#define V7_CACHE_OBJS
 #define MAX_STRING_LITERAL_LENGTH 2000
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
 #define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
 #define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
 
@@ -237,12 +238,14 @@ enum { SLRE_IGNORE_CASE = 1 };
 #include <ctype.h>
 #include <string.h>
 
-#include "slre.h"
 
 #define MAX_BRANCHES 100
 #define MAX_BRACKETS 100
-#define ARRAY_SIZE(ar) (int) (sizeof(ar) / sizeof((ar)[0]))
 #define FAIL_IF(condition, error_code) if (condition) return (error_code)
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(ar) (sizeof(ar) / sizeof((ar)[0]))
+#endif
 
 #ifdef SLRE_DEBUG
 #define DBG(x) printf x
@@ -590,7 +593,7 @@ static int foo(const char *re, int re_len, const char *s, int s_len,
     step = get_op_len(re + i, re_len - i);
 
     if (re[i] == '|') {
-      FAIL_IF(info->num_branches >= ARRAY_SIZE(info->branches),
+      FAIL_IF(info->num_branches >= (int) ARRAY_SIZE(info->branches),
               SLRE_TOO_MANY_BRANCHES);
       info->branches[info->num_branches].bracket_index =
         info->brackets[info->num_brackets - 1].len == -1 ?
@@ -610,7 +613,7 @@ static int foo(const char *re, int re_len, const char *s, int s_len,
                 SLRE_INVALID_METACHARACTER);
       }
     } else if (re[i] == '(') {
-      FAIL_IF(info->num_brackets >= ARRAY_SIZE(info->brackets),
+      FAIL_IF(info->num_brackets >= (int) ARRAY_SIZE(info->brackets),
               SLRE_TOO_MANY_BRACKETS);
       depth++;  /* Order is important here. Depth increments first. */
       info->brackets[info->num_brackets].ptr = re + i + 1;
@@ -649,7 +652,6 @@ int slre_match(const char *regexp, const char *s, int s_len,
   DBG(("========================> [%s] [%.*s]\n", regexp, s_len, s));
   return foo(regexp, strlen(regexp), s, s_len, &info);
 }
-#include "internal.h"
 
 V7_PRIVATE struct v7_val s_constructors[V7_NUM_CLASSES];
 V7_PRIVATE struct v7_val s_prototypes[V7_NUM_CLASSES];
@@ -658,7 +660,6 @@ V7_PRIVATE struct v7_val s_global = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_file = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
-#include "internal.h"
 
 V7_PRIVATE void obj_sanity_check(const struct v7_val *obj) {
   assert(obj != NULL);
@@ -1316,7 +1317,6 @@ V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj) {
 
   return V7_OK;
 }
-#include "internal.h"
 
 #ifndef V7_DISABLE_CRYPTO
 
@@ -1533,13 +1533,162 @@ static void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
 }
 /////////////////////////////////// END OF MD5 THIRD PARTY CODE
 
+/////////////////////////////////// START OF SHA-1 THIRD PARTY CODE
+// SHA-1 in C
+// By Steve Reid <sreid@sea-to-sky.net>
+// 100% Public Domain
+
+#define SHA1HANDSOFF
+#if defined(__sun)
+#include "solarisfixes.h"
+#endif
+
+union char64long16 {
+  unsigned char c[64];
+  uint32_t l[16];
+};
+
+static int is_big_endian(void) {
+  static const int n = 1;
+  return ((char *) &n)[0] == 0;
+}
+
+#define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
+
+static uint32_t blk0(union char64long16 *block, int i) {
+  // Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN
+  if (!is_big_endian()) {
+    block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) |
+    (rol(block->l[i], 8) & 0x00FF00FF);
+  }
+  return block->l[i];
+}
+
+#define blk(i) (block->l[i&15] = rol(block->l[(i+13)&15]^block->l[(i+8)&15] \
+^block->l[(i+2)&15]^block->l[i&15],1))
+#define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(block, i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R1(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R2(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
+#define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
+#define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
+
+typedef struct {
+  uint32_t state[5];
+  uint32_t count[2];
+  unsigned char buffer[64];
+} SHA1_CTX;
+
+static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
+  uint32_t a, b, c, d, e;
+  union char64long16 block[1];
+
+  memcpy(block, buffer, 64);
+  a = state[0];
+  b = state[1];
+  c = state[2];
+  d = state[3];
+  e = state[4];
+  R0(a,b,c,d,e, 0); R0(e,a,b,c,d, 1); R0(d,e,a,b,c, 2); R0(c,d,e,a,b, 3);
+  R0(b,c,d,e,a, 4); R0(a,b,c,d,e, 5); R0(e,a,b,c,d, 6); R0(d,e,a,b,c, 7);
+  R0(c,d,e,a,b, 8); R0(b,c,d,e,a, 9); R0(a,b,c,d,e,10); R0(e,a,b,c,d,11);
+  R0(d,e,a,b,c,12); R0(c,d,e,a,b,13); R0(b,c,d,e,a,14); R0(a,b,c,d,e,15);
+  R1(e,a,b,c,d,16); R1(d,e,a,b,c,17); R1(c,d,e,a,b,18); R1(b,c,d,e,a,19);
+  R2(a,b,c,d,e,20); R2(e,a,b,c,d,21); R2(d,e,a,b,c,22); R2(c,d,e,a,b,23);
+  R2(b,c,d,e,a,24); R2(a,b,c,d,e,25); R2(e,a,b,c,d,26); R2(d,e,a,b,c,27);
+  R2(c,d,e,a,b,28); R2(b,c,d,e,a,29); R2(a,b,c,d,e,30); R2(e,a,b,c,d,31);
+  R2(d,e,a,b,c,32); R2(c,d,e,a,b,33); R2(b,c,d,e,a,34); R2(a,b,c,d,e,35);
+  R2(e,a,b,c,d,36); R2(d,e,a,b,c,37); R2(c,d,e,a,b,38); R2(b,c,d,e,a,39);
+  R3(a,b,c,d,e,40); R3(e,a,b,c,d,41); R3(d,e,a,b,c,42); R3(c,d,e,a,b,43);
+  R3(b,c,d,e,a,44); R3(a,b,c,d,e,45); R3(e,a,b,c,d,46); R3(d,e,a,b,c,47);
+  R3(c,d,e,a,b,48); R3(b,c,d,e,a,49); R3(a,b,c,d,e,50); R3(e,a,b,c,d,51);
+  R3(d,e,a,b,c,52); R3(c,d,e,a,b,53); R3(b,c,d,e,a,54); R3(a,b,c,d,e,55);
+  R3(e,a,b,c,d,56); R3(d,e,a,b,c,57); R3(c,d,e,a,b,58); R3(b,c,d,e,a,59);
+  R4(a,b,c,d,e,60); R4(e,a,b,c,d,61); R4(d,e,a,b,c,62); R4(c,d,e,a,b,63);
+  R4(b,c,d,e,a,64); R4(a,b,c,d,e,65); R4(e,a,b,c,d,66); R4(d,e,a,b,c,67);
+  R4(c,d,e,a,b,68); R4(b,c,d,e,a,69); R4(a,b,c,d,e,70); R4(e,a,b,c,d,71);
+  R4(d,e,a,b,c,72); R4(c,d,e,a,b,73); R4(b,c,d,e,a,74); R4(a,b,c,d,e,75);
+  R4(e,a,b,c,d,76); R4(d,e,a,b,c,77); R4(c,d,e,a,b,78); R4(b,c,d,e,a,79);
+  state[0] += a;
+  state[1] += b;
+  state[2] += c;
+  state[3] += d;
+  state[4] += e;
+  // Erase working structures. The order of operations is important,
+  // used to ensure that compiler doesn't optimize those out.
+  memset(block, 0, sizeof(block));
+  a = b = c = d = e = 0;
+  (void) a; (void) b; (void) c; (void) d; (void) e;
+}
+
+static void SHA1Init(SHA1_CTX *context) {
+  context->state[0] = 0x67452301;
+  context->state[1] = 0xEFCDAB89;
+  context->state[2] = 0x98BADCFE;
+  context->state[3] = 0x10325476;
+  context->state[4] = 0xC3D2E1F0;
+  context->count[0] = context->count[1] = 0;
+}
+
+static void SHA1Update(SHA1_CTX *context, const unsigned char *data,
+                       uint32_t len) {
+  uint32_t i, j;
+
+  j = context->count[0];
+  if ((context->count[0] += len << 3) < j)
+    context->count[1]++;
+  context->count[1] += (len>>29);
+  j = (j >> 3) & 63;
+  if ((j + len) > 63) {
+    memcpy(&context->buffer[j], data, (i = 64-j));
+    SHA1Transform(context->state, context->buffer);
+    for ( ; i + 63 < len; i += 64) {
+      SHA1Transform(context->state, &data[i]);
+    }
+    j = 0;
+  }
+  else i = 0;
+  memcpy(&context->buffer[j], &data[i], len - i);
+}
+
+static void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
+  unsigned i;
+  unsigned char finalcount[8], c;
+
+  for (i = 0; i < 8; i++) {
+    finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
+                                     >> ((3-(i & 3)) * 8) ) & 255);
+  }
+  c = 0200;
+  SHA1Update(context, &c, 1);
+  while ((context->count[0] & 504) != 448) {
+    c = 0000;
+    SHA1Update(context, &c, 1);
+  }
+  SHA1Update(context, finalcount, 8);
+  for (i = 0; i < 20; i++) {
+    digest[i] = (unsigned char)
+    ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
+  }
+  memset(context, '\0', sizeof(*context));
+  memset(&finalcount, '\0', sizeof(finalcount));
+}
+/////////////////////////////////// START OF SHA-1 THIRD PARTY CODE
+
+
 static struct v7_val s_crypto = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 
-V7_PRIVATE void v7_md5(const struct v7_val *v, char *buf) {
+static void v7_md5(const struct v7_val *v, char *buf) {
   MD5_CTX ctx;
   MD5Init(&ctx);
   MD5Update(&ctx, (const unsigned char *) v->v.str.buf, v->v.str.len);
   MD5Final((unsigned char *) buf, &ctx);
+}
+
+static void v7_sha1(const struct v7_val *v, char *buf) {
+  SHA1_CTX ctx;
+  SHA1Init(&ctx);
+  SHA1Update(&ctx, (const unsigned char *) v->v.str.buf, v->v.str.len);
+  SHA1Final((unsigned char *) buf, &ctx);
 }
 
 static void bin2str(char *to, const unsigned char *p, size_t len) {
@@ -1567,7 +1716,29 @@ V7_PRIVATE enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
     char hash[16];
     v7_md5(cfa->args[0], hash);
-    cfa->result->v.str.len = 32;
+    cfa->result->v.str.len = sizeof(hash) * 2;
+    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
+    bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
+  }
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Crypto_sha1(struct v7_c_func_arg *cfa) {
+  v7_init_str(cfa->result, NULL, 0, 0);
+  if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
+    cfa->result->v.str.len = 20;
+    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
+    v7_sha1(cfa->args[0], cfa->result->v.str.buf);
+  }
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Crypto_sha1_hex(struct v7_c_func_arg *cfa) {
+  v7_init_str(cfa->result, NULL, 0, 0);
+  if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
+    char hash[20];
+    v7_sha1(cfa->args[0], hash);
+    cfa->result->v.str.len = sizeof(hash) * 2;
     cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
     bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
   }
@@ -1577,14 +1748,15 @@ V7_PRIVATE enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
 V7_PRIVATE void init_crypto(void) {
   SET_METHOD(s_crypto, "md5", Crypto_md5);
   SET_METHOD(s_crypto, "md5_hex", Crypto_md5_hex);
+  SET_METHOD(s_crypto, "sha1", Crypto_sha1);
+  SET_METHOD(s_crypto, "sha1_hex", Crypto_sha1_hex);
 
   v7_set_class(&s_crypto, V7_CLASS_OBJECT);
-  s_crypto.ref_count = 1;
+  inc_ref_count(&s_crypto);
 
   SET_RO_PROP_V(s_global, "Crypto", s_crypto);
 }
 #endif  // V7_DISABLE_CRYPTO
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -1645,7 +1817,6 @@ V7_PRIVATE void init_array(void) {
 
   SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Boolean_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -1656,7 +1827,6 @@ V7_PRIVATE enum v7_err Boolean_ctor(struct v7_c_func_arg *cfa) {
 V7_PRIVATE void init_boolean(void) {
   init_standard_constructor(V7_CLASS_BOOLEAN, Boolean_ctor);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Date_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -1668,7 +1838,6 @@ V7_PRIVATE void init_date(void) {
   init_standard_constructor(V7_CLASS_DATE, Date_ctor);
   SET_RO_PROP_V(s_global, "Date", s_constructors[V7_CLASS_DATE]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Error_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -1680,7 +1849,6 @@ V7_PRIVATE void init_error(void) {
   init_standard_constructor(V7_CLASS_ERROR, Error_ctor);
   SET_RO_PROP_V(s_global, "Error", s_constructors[V7_CLASS_ERROR]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Function_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -1692,7 +1860,6 @@ V7_PRIVATE void init_function(void) {
   init_standard_constructor(V7_CLASS_FUNCTION, Function_ctor);
   SET_RO_PROP_V(s_global, "Function", s_constructors[V7_CLASS_FUNCTION]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Math_random(struct v7_c_func_arg *cfa) {
   srand((unsigned long) cfa->result);   // TODO: make better randomness
@@ -1756,7 +1923,6 @@ V7_PRIVATE void init_math(void) {
 
   SET_RO_PROP_V(s_global, "Math", s_math);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *arg = cfa->args[0];
@@ -1800,7 +1966,6 @@ V7_PRIVATE void init_number(void) {
   SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
   SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Object_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -1830,7 +1995,6 @@ V7_PRIVATE void init_object(void) {
   SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
   SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -1842,7 +2006,6 @@ V7_PRIVATE void init_regex(void) {
   init_standard_constructor(V7_CLASS_REGEXP, Regex_ctor);
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
@@ -2039,7 +2202,6 @@ V7_PRIVATE void init_string(void) {
 
   SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Json_stringify(struct v7_c_func_arg *cfa) {
   v7_init_str(cfa->result, NULL, 0, 0);
@@ -2055,7 +2217,6 @@ V7_PRIVATE void init_json(void) {
 
   SET_RO_PROP_V(s_global, "JSON", s_json);
 }
-#include "internal.h"
 
 V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   char buf[4000];
@@ -2280,7 +2441,6 @@ V7_PRIVATE void init_stdlib(void) {
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;
 }
-#include "internal.h"
 
 enum {
   OP_INVALID,
@@ -3537,7 +3697,6 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   while (*v7->pstate.pc == ';') match(v7, *v7->pstate.pc);
   return V7_OK;
 }
-#include "internal.h"
 
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {

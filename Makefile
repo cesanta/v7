@@ -10,7 +10,7 @@ SOURCES = $(SLRE)/slre.c \
 all: v7
 
 v7.c: src/internal.h $(SOURCES) v7.h Makefile
-	cat src/internal.h $(SLRE)/slre.h $(SOURCES) | sed '/#include .\(internal|slre\).h./d' > $@
+	cat src/internal.h $(SLRE)/slre.h $(SOURCES) | sed -E '/#include .(internal|slre).h./d' > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes --leak-resolution=high --num-callers=100 ./unit_test

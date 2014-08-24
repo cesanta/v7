@@ -56,7 +56,9 @@
 
 //#define V7_CACHE_OBJS
 #define MAX_STRING_LITERAL_LENGTH 2000
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
 #define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
 #define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
 
