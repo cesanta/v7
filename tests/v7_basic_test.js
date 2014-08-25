@@ -108,6 +108,11 @@ test(lines.length == 4, 'split4');
 test(lines[3].length === 0, 'split5');
 test(lines[2] === 'Baz: xx yy' , 'split6');
 
+var a = 0, b, c = '';
+var foo = function() { return a++ < 10 ? 'x' : false };
+while (b = foo()) { c += b; print(b); }
+test(c === 'xxxxxxxxxx', 'while1')
+
 test('a' + 'b' == 'ab', 'string concatenation');
 test('He who knows, does not speak'.substr(3, 3) == 'who', 'substr 1');
 test('He who speaks, does not know'.substr(24) == 'know', 'substr 2');
