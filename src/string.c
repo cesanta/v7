@@ -62,7 +62,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
 
   if (cfa->num_args == 1 &&
       v7_is_class(cfa->args[0], V7_CLASS_REGEXP) &&
-      (n = slre_match(cfa->args[0]->v.regex, s->buf, s->len,
+      (n = slre_match(cfa->args[0]->v.regex, s->buf, (int) s->len,
                       caps, ARRAY_SIZE(caps) - 1, 0)) > 0) {
     v7_set_class(cfa->result, V7_CLASS_ARRAY);
     v7_append(cfa->v7, cfa->result,
@@ -125,7 +125,8 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
 
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
-    while ((n = slre_match(regex, p1, e - p1, caps, ARRAY_SIZE(caps), 0)) > 0) {
+    while ((n = slre_match(regex, p1, (int) (e - p1),
+                           caps, ARRAY_SIZE(caps), 0)) > 0) {
       if (limit >= 0 && limit <= num_elems) break;
       v7_append(cfa->v7, cfa->result,
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, caps[0].ptr - p1, 1));

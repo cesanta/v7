@@ -285,7 +285,7 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
       return res != 0 ? res : (int) as->len - (int) bs->len;
       return as->len != bs->len || memcmp(as->buf, bs->buf, as->len) != 0;
     default:
-      return a - b;
+      return (int) (a - b);
   }
 }
 

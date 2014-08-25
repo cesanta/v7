@@ -67,7 +67,7 @@
   O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
 
 // Initializer for "struct v7_val", object type
-#define MKOBJ(_proto) {0,(_proto),0,0,{0},V7_TYPE_OBJ,V7_CLASS_OBJECT,0,0}
+#define MKOBJ(_proto) V7_MKVAL(_proto, V7_TYPE_OBJ, V7_CLASS_OBJECT, 0)
 
 // True if current code is executing. TODO(lsm): use bit fields, per vrz@
 #define EXECUTING(_fl) (!((_fl) & (V7_NO_EXEC | V7_SCANNING)))
