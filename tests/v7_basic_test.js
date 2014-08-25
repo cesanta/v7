@@ -145,6 +145,8 @@ if (!constructor) {
   // Rhino doesn't have that
   test(Crypto.md5_hex('') == 'd41d8cd98f00b204e9800998ecf8427e', 'md5_hex1');
   test(Crypto.md5_hex('x') == '9dd4e461268c8034f5c8564e155c67a6', 'md5_hex2');
+  test(Crypto.sha1_hex('foo') == '0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33',
+       'sha1_hex1');
 }
 
 
