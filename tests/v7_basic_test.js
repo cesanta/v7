@@ -110,7 +110,7 @@ test(lines[2] === 'Baz: xx yy' , 'split6');
 
 var a = 0, b, c = '';
 var foo = function() { return a++ < 10 ? 'x' : false };
-while (b = foo()) { c += b; print(b); }
+while (b = foo()) { c += b; }
 test(c === 'xxxxxxxxxx', 'while1')
 
 test('a' + 'b' == 'ab', 'string concatenation');
