@@ -369,7 +369,7 @@ static void v7_md5(const struct v7_val *v, char *buf) {
 static void v7_sha1(const struct v7_val *v, char *buf) {
   SHA1_CTX ctx;
   SHA1Init(&ctx);
-  SHA1Update(&ctx, (const unsigned char *) v->v.str.buf, v->v.str.len);
+  SHA1Update(&ctx, (const unsigned char *) v->v.str.buf,(uint32_t)v->v.str.len);
   SHA1Final((unsigned char *) buf, &ctx);
 }
 

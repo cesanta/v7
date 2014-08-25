@@ -1088,7 +1088,7 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
 static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
                                           int *has_return) {
   const char *tok = v7->tok;
-  int tok_len = v7->tok_len;
+  unsigned long tok_len = v7->tok_len;
   struct v7_pstate s_block;
 
   TRY(parse_expression(v7));

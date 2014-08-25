@@ -107,7 +107,7 @@ V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 4 + 1;
     cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
-    base64_decode((const unsigned char *) v->v.str.buf, v->v.str.len,
+    base64_decode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   cfa->result->v.str.buf);
   }
   return V7_OK;
@@ -120,7 +120,7 @@ V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 2 + 1;
     cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
-    base64_encode((const unsigned char *) v->v.str.buf, v->v.str.len,
+    base64_encode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   cfa->result->v.str.buf);
   }
   return V7_OK;
