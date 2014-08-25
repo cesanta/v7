@@ -290,7 +290,7 @@ struct regex_info {
 };
 
 static int is_metacharacter(const unsigned char *s) {
-  static const char *metacharacters = "^$().[]*+?|\\Ssd";
+  static const char *metacharacters = "^$().[]*+?|\\Ssdbfnrtv";
   return strchr(metacharacters, *s) != NULL;
 }
 
@@ -331,20 +331,15 @@ static int match_op(const unsigned char *re, const unsigned char *s,
     case '\\':
       /* Metacharacters */
       switch (re[1]) {
-        case 'S':
-          FAIL_IF(isspace(*s), SLRE_NO_MATCH);
-          result++;
-          break;
-
-        case 's':
-          FAIL_IF(!isspace(*s), SLRE_NO_MATCH);
-          result++;
-          break;
-
-        case 'd':
-          FAIL_IF(!isdigit(*s), SLRE_NO_MATCH);
-          result++;
-          break;
+        case 'S': FAIL_IF(isspace(*s), SLRE_NO_MATCH); result++; break;
+        case 's': FAIL_IF(!isspace(*s), SLRE_NO_MATCH); result++; break;
+        case 'd': FAIL_IF(!isdigit(*s), SLRE_NO_MATCH); result++; break;
+        case 'b': FAIL_IF(*s != '\b', SLRE_NO_MATCH); result++; break;
+        case 'f': FAIL_IF(*s != '\f', SLRE_NO_MATCH); result++; break;
+        case 'n': FAIL_IF(*s != '\n', SLRE_NO_MATCH); result++; break;
+        case 'r': FAIL_IF(*s != '\r', SLRE_NO_MATCH); result++; break;
+        case 't': FAIL_IF(*s != '\t', SLRE_NO_MATCH); result++; break;
+        case 'v': FAIL_IF(*s != '\v', SLRE_NO_MATCH); result++; break;
 
         case 'x':
           /* Match byte, \xHH where HH is hexadecimal byte representaion */
@@ -946,7 +941,7 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
       return res != 0 ? res : (int) as->len - (int) bs->len;
       return as->len != bs->len || memcmp(as->buf, bs->buf, as->len) != 0;
     default:
-      return a - b;
+      return (int) (a - b);
   }
 }
 
@@ -1687,7 +1682,7 @@ static void v7_md5(const struct v7_val *v, char *buf) {
 static void v7_sha1(const struct v7_val *v, char *buf) {
   SHA1_CTX ctx;
   SHA1Init(&ctx);
-  SHA1Update(&ctx, (const unsigned char *) v->v.str.buf, v->v.str.len);
+  SHA1Update(&ctx, (const unsigned char *) v->v.str.buf,(uint32_t)v->v.str.len);
   SHA1Final((unsigned char *) buf, &ctx);
 }
 
@@ -1862,7 +1857,7 @@ V7_PRIVATE void init_function(void) {
 }
 
 V7_PRIVATE enum v7_err Math_random(struct v7_c_func_arg *cfa) {
-  srand((unsigned long) cfa->result);   // TODO: make better randomness
+  srand((unsigned) cfa->result);   // TODO: make better randomness
   v7_init_num(cfa->result, (double) rand() / RAND_MAX);
   return V7_OK;
 }
@@ -2069,7 +2064,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
 
   if (cfa->num_args == 1 &&
       v7_is_class(cfa->args[0], V7_CLASS_REGEXP) &&
-      (n = slre_match(cfa->args[0]->v.regex, s->buf, s->len,
+      (n = slre_match(cfa->args[0]->v.regex, s->buf, (int) s->len,
                       caps, ARRAY_SIZE(caps) - 1, 0)) > 0) {
     v7_set_class(cfa->result, V7_CLASS_ARRAY);
     v7_append(cfa->v7, cfa->result,
@@ -2132,7 +2127,8 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
 
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
-    while ((n = slre_match(regex, p1, e - p1, caps, ARRAY_SIZE(caps), 0)) > 0) {
+    while ((n = slre_match(regex, p1, (int) (e - p1),
+                           caps, ARRAY_SIZE(caps), 0)) > 0) {
       if (limit >= 0 && limit <= num_elems) break;
       v7_append(cfa->v7, cfa->result,
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, caps[0].ptr - p1, 1));
@@ -2325,7 +2321,7 @@ V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 4 + 1;
     cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
-    base64_decode((const unsigned char *) v->v.str.buf, v->v.str.len,
+    base64_decode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   cfa->result->v.str.buf);
   }
   return V7_OK;
@@ -2338,7 +2334,7 @@ V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     cfa->result->v.str.len = v->v.str.len * 3 / 2 + 1;
     cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
-    base64_encode((const unsigned char *) v->v.str.buf, v->v.str.len,
+    base64_encode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   cfa->result->v.str.buf);
   }
   return V7_OK;
@@ -3515,7 +3511,7 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
 static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
                                           int *has_return) {
   const char *tok = v7->tok;
-  int tok_len = v7->tok_len;
+  unsigned long tok_len = v7->tok_len;
   struct v7_pstate s_block;
 
   TRY(parse_expression(v7));

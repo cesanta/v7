@@ -102,6 +102,12 @@ test(module.publicProperty === 'I am public!', 'public prop');
 test(module.publicMethod(3) == 3 * 7, 'public method');
 test(module.privilegedMethod(3, 4) === 3 * 4 * 17 * 7, 'privilegedMethod');
 
+var httpRequest = 'GET / HTTP/1.0\r\nFoo: bar\r\nBaz: xx yy\r\n\r\n';
+var lines = httpRequest.split(/\s*\n\s*/);
+test(lines.length == 4, 'split4');
+test(lines[3].length === 0, 'split5');
+test(lines[2] === 'Baz: xx yy' , 'split6');
+
 test('a' + 'b' == 'ab', 'string concatenation');
 test('He who knows, does not speak'.substr(3, 3) == 'who', 'substr 1');
 test('He who speaks, does not know'.substr(24) == 'know', 'substr 2');
