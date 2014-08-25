@@ -1533,7 +1533,7 @@ V7_PRIVATE void init_object(void) {
 #define FAIL_IF(condition, error_code) if (condition) return (error_code)
 
 #ifndef ARRAY_SIZE
-#define ARRAY_SIZE(ar) (int) (sizeof(ar) / sizeof((ar)[0]))
+#define ARRAY_SIZE(ar) (sizeof(ar) / sizeof((ar)[0]))
 #endif
 
 #ifdef SLRE_DEBUG
@@ -1882,7 +1882,7 @@ V7_PRIVATE int foo(const char *re, int re_len, const char *s, int s_len,
     step = get_op_len(re + i, re_len - i);
 
     if (re[i] == '|') {
-      FAIL_IF(info->num_branches >= ARRAY_SIZE(info->branches),
+      FAIL_IF(info->num_branches >= (int) ARRAY_SIZE(info->branches),
               SLRE_TOO_MANY_BRANCHES);
       info->branches[info->num_branches].bracket_index =
         info->brackets[info->num_brackets - 1].len == -1 ?
@@ -1902,7 +1902,7 @@ V7_PRIVATE int foo(const char *re, int re_len, const char *s, int s_len,
                 SLRE_INVALID_METACHARACTER);
       }
     } else if (re[i] == '(') {
-      FAIL_IF(info->num_brackets >= ARRAY_SIZE(info->brackets),
+      FAIL_IF(info->num_brackets >= (int) ARRAY_SIZE(info->brackets),
               SLRE_TOO_MANY_BRACKETS);
       depth++;  /* Order is important here. Depth increments first. */
       info->brackets[info->num_brackets].ptr = re + i + 1;
