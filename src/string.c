@@ -119,8 +119,8 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
       }
     }
   } else if (instanceof(cfa->args[0], &s_constructors[V7_CLASS_REGEXP])) {
-    char regex[200];
-    struct slre_cap caps[20];
+    char regex[MAX_STRING_LITERAL_LENGTH];
+    struct slre_cap caps[40];
     int n = 0;
 
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);

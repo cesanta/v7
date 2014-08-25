@@ -596,13 +596,13 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
 
 
 static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
-  struct v7_val *v = NULL, *ns = NULL;
+  struct v7_val *v = NULL, *ns = NULL, *cur_obj = NULL;
 
   if (EXECUTING(v7->flags)) {
     ns = v7_top(v7)[-1];
     v7_make_and_push(v7, V7_TYPE_UNDEF);
     v = v7_top(v7)[-1];
-    v7->cur_obj = v7->this_obj = ns;
+    v7->cur_obj = v7->this_obj = cur_obj = ns;
   }
   CHECK(!EXECUTING(v7->flags) || ns != NULL, V7_SYNTAX_ERROR);
 
@@ -620,14 +620,31 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
     TRY(parse_expression(v7));
     TRY(match(v7, ']'));
     if (EXECUTING(v7->flags)) {
-      ns = get2(ns, v7_top(v7)[-1]);
+      struct v7_val *expr_val = v7_top_val(v7);
+
+      ns = get2(ns, expr_val);
       if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
         ns->v.prop_func(v7->cur_obj, v);
         ns = v;
       }
-      TRY(inc_stack(v7, -1));
+
+      // If we're doing an assignment,
+      // then parse_assign() looks at v7->tok, v7->tok_len for the key.
+      // But, when we're doing something like "a.b['c'] = d;" then
+      // the key is not stored in v7->tok, but in the evaluated expression
+      // instead. Override v7->tok and v7->tok_len here to make parse_assign()
+      // work correctly.
+      if (expr_val->type != V7_TYPE_STR) {
+        TRY(toString(v7, expr_val));
+        expr_val = v7_top_val(v7);
+      }
+      v7->tok = expr_val->v.str.buf;
+      v7->tok_len = expr_val->v.str.len;
     }
   }
+
+  // Set those again cause parse_expression() above could have changed it
+  v7->cur_obj = v7->this_obj = cur_obj;
 
   if (EXECUTING(v7->flags)) {
     TRY(v7_push(v7, ns == NULL ? v : ns));
@@ -640,12 +657,15 @@ static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   struct v7_val *old_this = v7->this_obj;
 
   TRY(parse_precedence_0(v7));
-  while (*v7->pstate.pc == '.' || *v7->pstate.pc == '[') {
-    int op = v7->pstate.pc[0];
-    TRY(match(v7, op));
-    TRY(parse_prop_accessor(v7, op));
+  if (*v7->pstate.pc != '.' && *v7->pstate.pc != '[') return V7_OK;
 
-    while (*v7->pstate.pc == '(') {
+  while (*v7->pstate.pc == '.' || *v7->pstate.pc == '[' ||
+         *v7->pstate.pc == '(') {
+    int op = v7->pstate.pc[0];
+    if (op == '.' || op == '[') {
+      TRY(match(v7, op));
+      TRY(parse_prop_accessor(v7, op));
+    } else {
       TRY(parse_function_call(v7, v7->cur_obj, has_new));
     }
   }
