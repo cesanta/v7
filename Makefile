@@ -20,8 +20,11 @@ v: unit_test
 $(SLRE)/slre.c:
 	cd .. && git clone https://github.com/cesanta/slre
 
-unit_test: $(SOURCES) v7.h tests/unit_test.c
-	g++ $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
+unit_test: $(SOURCES) v7.h tests/unit_test.c src/tokenizer.c
+	g++ $(SOURCES) src/tokenizer.c tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
+
+run:
+	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DV7_PRIVATE= -o t && ./t
 
 u: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
@@ -42,4 +45,4 @@ w: v7.c
 	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe
 
 clean:
-	rm -rf *.gc* *.dSYM *.exe *.obj a.out u unit_test v7
+	rm -rf *.gc* *.dSYM *.exe *.obj a.out u unit_test v7 t
