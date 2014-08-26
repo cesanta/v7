@@ -1,7 +1,7 @@
 #include "internal.h"
 
 V7_PRIVATE enum v7_err Math_random(struct v7_c_func_arg *cfa) {
-  srand((unsigned) cfa->result);   // TODO: make better randomness
+  srand((unsigned) (unsigned long) cfa);   // TODO: make better randomness
   v7_init_num(cfa->result, (double) rand() / RAND_MAX);
   return V7_OK;
 }

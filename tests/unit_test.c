@@ -359,6 +359,12 @@ static const char *test_v7_exec(void) {
   ASSERT(v7_exec(v7, "typeof 2") == V7_OK);
   ASSERT(check_str(v7, "number"));
 
+  ASSERT(v7_exec(v7, "a = { b: { k: 44 } };") == V7_OK);
+  STOP = 1;
+  ASSERT(v7_exec(v7, "a.b['x'] = 79;") == V7_OK);
+  ASSERT(v7_exec(v7, "a.b.x") == V7_OK);
+  ASSERT(check_num(v7, 79.0));
+
   v7_destroy(&v7);
   return NULL;
 }
@@ -498,7 +504,6 @@ static const char *test_closure(void) {
   ASSERT(v7_exec(v7, "var f1 = a(5);") == V7_OK);
   ASSERT(v7_exec(v7, "var f2 = a(7);") == V7_OK);
   ASSERT(v7_is_class(v7_top_val(v7), V7_CLASS_FUNCTION));
-  STOP = 1;
   ASSERT(v7_exec(v7, "f1(3);") == V7_OK);
   ASSERT(check_num(v7, 15.0));
   ASSERT(v7_exec(v7, "f2(3);") == V7_OK);
