@@ -89,6 +89,12 @@ struct v7_prop {
 #define V7_PROP_ALLOCATED      8  // v7_prop must be free()-ed
 };
 
+// Vector, describes some memory location pointed by 'p' with length 'len'
+struct v7_vec {
+  const char *p;
+  int len;
+};
+
 struct v7_string {
   char *buf;                // Pointer to buffer with string data
   unsigned long len;        // String length

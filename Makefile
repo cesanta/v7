@@ -5,7 +5,7 @@ SOURCES = $(SLRE)/slre.c \
           src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
           src/object.c src/regex.c src/string.c src/json.c src/stdlib.c \
-          src/parser.c src/main.c
+          src/parser.c src/tokenizer.c src/main.c
 
 all: v7
 
@@ -22,6 +22,10 @@ $(SLRE)/slre.c:
 
 unit_test: $(SOURCES) v7.h tests/unit_test.c
 	g++ $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
+
+run: js
+	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t
+	./t
 
 u: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
@@ -42,4 +46,4 @@ w: v7.c
 	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe
 
 clean:
-	rm -rf *.gc* *.dSYM *.exe *.obj a.out u unit_test v7
+	rm -rf *.gc* *.dSYM *.exe *.obj a.out u unit_test v7 t
