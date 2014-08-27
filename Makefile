@@ -23,8 +23,9 @@ $(SLRE)/slre.c:
 unit_test: $(SOURCES) v7.h tests/unit_test.c
 	g++ $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
 
-run:
-	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t && ./t
+run: js
+	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t
+	./t
 
 u: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)

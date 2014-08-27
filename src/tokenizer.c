@@ -37,12 +37,12 @@ static int skip_to_next_tok(const char **ptr) {
   return num_lines;
 }
 
-static int is_valid_identifier_char(int ch) {
+static int is_ident_char(int ch) {
   return ch == '$' || ch == '_' || isalnum(ch);
 }
 
 static void ident(const char *src, struct v7_vec *vec) {
-  while (is_valid_identifier_char((unsigned char) src[vec->len])) vec->len++;
+  while (is_ident_char((unsigned char) src[vec->len])) vec->len++;
 }
 
 static enum v7_tok kw(const struct v7_vec *vec, ...) {
@@ -96,7 +96,7 @@ static enum v7_tok punct3(const char *s, struct v7_vec *vec,
   return tok3;
 }
 
-static int parse_num(const char *s, double *num) {
+static int parse_number(const char *s, double *num) {
   char *end;
   double value = strtod(s, &end);
   if (num) *num = value;
@@ -173,7 +173,7 @@ V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec,double *n) {
     // Numbers
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8':
-    case '9': vec->len = parse_num(s, n); return TOK_NUMBER;
+    case '9': vec->len = parse_number(s, n); return TOK_NUMBER;
 
     // String literals
     case '\'':
