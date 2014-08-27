@@ -134,7 +134,7 @@ enum v7_tok {
   TOK_OR, TOK_QUESTION, TOK_TILDA, TOK_LE, TOK_LT, TOK_GE, TOK_GT,
   TOK_LSHIFT_ASSIGN, TOK_LSHIFT, TOK_RSHIFT_ASSIGN, TOK_RSHIFT,
 
-  // Keywords
+  // Keywords. must be in the same order as tokenizer.c::s_keywords array
   TOK_BREAK, TOK_CASE, TOK_CATCH, TOK_CONTINUE, TOK_DEBUGGER, TOK_DEFAULT,
   TOK_DELETE, TOK_DO, TOK_ELSE, TOK_FALSE, TOK_FINALLY, TOK_FOR, TOK_FUNCTION,
   TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL, TOK_RETURN, TOK_SWITCH,
@@ -150,6 +150,7 @@ enum v7_tok {
 };
 
 // Forward declarations
+V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec, double *n);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);

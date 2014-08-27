@@ -1298,20 +1298,22 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
 }
 
 V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
-  if (lookahead(v7, "var", 3)) {
-    TRY(parse_declaration(v7));
-  } else if (lookahead(v7, "return", 6)) {
-    TRY(parse_return_statement(v7, has_return));
-  } else if (lookahead(v7, "if", 2)) {
-    TRY(parse_if_statement(v7, has_return));
-  } else if (lookahead(v7, "for", 3)) {
-    TRY(parse_for_statement(v7, has_return));
-  } else if (lookahead(v7, "while", 5)) {
-    TRY(parse_while_statement(v7, has_return));
-  } else if (lookahead(v7, "try", 3)) {
-    TRY(parse_try_statement(v7, has_return));
-  } else {
-    TRY(parse_expression(v7));
+  struct v7_vec vec;
+  enum v7_tok tok;
+  struct v7_pstate old = v7->pstate;
+
+  tok = next_tok(v7->pstate.pc, &vec, NULL);
+  v7->pstate.pc += vec.len;
+  skip_whitespaces_and_comments(v7); // TODO(lsm): remove this
+
+  switch (tok) {
+    case TOK_VAR: TRY(parse_declaration(v7)); break;
+    case TOK_RETURN: TRY(parse_return_statement(v7, has_return)); break;
+    case TOK_IF: TRY(parse_if_statement(v7, has_return)); break;
+    case TOK_FOR: TRY(parse_for_statement(v7, has_return)); break;
+    case TOK_WHILE: TRY(parse_while_statement(v7, has_return)); break;
+    case TOK_TRY: TRY(parse_try_statement(v7, has_return)); break;
+    default: v7->pstate = old; TRY(parse_expression(v7)); break;
   }
 
   // Skip optional colons and semicolons

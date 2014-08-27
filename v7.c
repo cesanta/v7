@@ -133,7 +133,7 @@ enum v7_tok {
   TOK_OR, TOK_QUESTION, TOK_TILDA, TOK_LE, TOK_LT, TOK_GE, TOK_GT,
   TOK_LSHIFT_ASSIGN, TOK_LSHIFT, TOK_RSHIFT_ASSIGN, TOK_RSHIFT,
 
-  // Keywords
+  // Keywords. must be in the same order as tokenizer.c::s_keywords array
   TOK_BREAK, TOK_CASE, TOK_CATCH, TOK_CONTINUE, TOK_DEBUGGER, TOK_DEFAULT,
   TOK_DELETE, TOK_DO, TOK_ELSE, TOK_FALSE, TOK_FINALLY, TOK_FOR, TOK_FUNCTION,
   TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL, TOK_RETURN, TOK_SWITCH,
@@ -149,6 +149,7 @@ enum v7_tok {
 };
 
 // Forward declarations
+V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec, double *n);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -3766,9 +3767,27 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
 }
 
 V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
-  if (lookahead(v7, "var", 3)) {
+  struct v7_vec vec;
+  enum v7_tok tok;
+  struct v7_pstate old = v7->pstate;
+
+  tok = next_tok(v7->pstate.pc, &vec, NULL);
+  v7->pstate.pc += vec.len;
+  skip_whitespaces_and_comments(v7); // TODO(lsm): remove this
+
+  switch (tok) {
+    case TOK_VAR: TRY(parse_declaration(v7)); break;
+    case TOK_RETURN: TRY(parse_return_statement(v7, has_return)); break;
+    case TOK_IF: TRY(parse_if_statement(v7, has_return)); break;
+    case TOK_FOR: TRY(parse_for_statement(v7, has_return)); break;
+    case TOK_WHILE: TRY(parse_while_statement(v7, has_return)); break;
+    case TOK_TRY: TRY(parse_try_statement(v7, has_return)); break;
+    default: v7->pstate = old; TRY(parse_expression(v7)); break;
+  }
+#if 0
+  if (tok == TOK_VAR) {
     TRY(parse_declaration(v7));
-  } else if (lookahead(v7, "return", 6)) {
+  } else if ()) {
     TRY(parse_return_statement(v7, has_return));
   } else if (lookahead(v7, "if", 2)) {
     TRY(parse_if_statement(v7, has_return));
@@ -3781,6 +3800,7 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   } else {
     TRY(parse_expression(v7));
   }
+#endif
 
   // Skip optional colons and semicolons
   while (*v7->pstate.pc == ',') match(v7, *v7->pstate.pc);
@@ -3913,8 +3933,7 @@ static int parse_str_literal(const char *s) {
   return len;
 }
 
-V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec,
-  double *num) {
+V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec,double *n) {
 
   skip_to_next_tok(&s);
   vec->p = s;
@@ -3962,7 +3981,7 @@ V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec,
     // Numbers
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8':
-    case '9': vec->len = parse_num(s, num); return TOK_NUMBER;
+    case '9': vec->len = parse_num(s, n); return TOK_NUMBER;
 
     // String literals
     case '\'':
@@ -4016,7 +4035,7 @@ int main(void) {
   enum v7_tok tok;
   double num;
 
-  while ((tok = get_next_token(src, &vec, &num)) != TOK_END_OF_INPUT) {
+  while ((tok = next_tok(src, &vec, &num)) != TOK_END_OF_INPUT) {
     printf("%d [%.*s]\n", tok, vec.len, vec.p);
     src = vec.p + vec.len;
   }

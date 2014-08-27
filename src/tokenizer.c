@@ -125,8 +125,7 @@ static int parse_str_literal(const char *s) {
   return len;
 }
 
-V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec,
-  double *num) {
+V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec,double *n) {
 
   skip_to_next_tok(&s);
   vec->p = s;
@@ -174,7 +173,7 @@ V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec,
     // Numbers
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8':
-    case '9': vec->len = parse_num(s, num); return TOK_NUMBER;
+    case '9': vec->len = parse_num(s, n); return TOK_NUMBER;
 
     // String literals
     case '\'':
@@ -228,7 +227,7 @@ int main(void) {
   enum v7_tok tok;
   double num;
 
-  while ((tok = get_next_token(src, &vec, &num)) != TOK_END_OF_INPUT) {
+  while ((tok = next_tok(src, &vec, &num)) != TOK_END_OF_INPUT) {
     printf("%d [%.*s]\n", tok, vec.len, vec.p);
     src = vec.p + vec.len;
   }
