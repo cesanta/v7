@@ -494,11 +494,8 @@ static const char *test_is_true(void) {
   return NULL;
 }
 
-static int BLAH;
-
 static const char *test_closure(void) {
   struct v7 *v7 = v7_create();
-  BLAH++;
 
   ASSERT(v7_exec(v7, "function a(x){return function(y){return x*y}}") == V7_OK);
   ASSERT(v7_exec(v7, "var f1 = a(5);") == V7_OK);

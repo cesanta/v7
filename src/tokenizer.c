@@ -1,40 +1,4 @@
 #include "internal.h"
-#include <ctype.h>
-
-struct v7_vec {
-  const char *p;
-  int len;
-};
-
-enum v7_tok {
-  TOK_END_OF_INPUT, TOK_NUMBER, TOK_STRING_LITERAL, TOK_IDENTIFIER,
-
-  // Punctuators
-  TOK_OPEN_CURLY, TOK_CLOSE_CURLY, TOK_OPEN_PAREN, TOK_CLOSE_PAREN,
-  TOK_OPEN_BRACKET, TOK_CLOSE_BRACKET, TOK_DOT, TOK_COLON, TOK_SEMICOLON,
-  TOK_COMMA, TOK_EQ_EQ, TOK_EQ, TOK_ASSIGN, TOK_NE, TOK_NE_NE, TOK_NOT,
-  TOK_REM_ASSIGN, TOK_REM, TOK_MUL_ASSIGN, TOK_MUL, TOK_DIV_ASSIGN, TOK_DIV,
-  TOK_XOR_ASSIGN, TOK_XOR, TOK_PLUS_PLUS, TOK_PLUS_ASSING, TOK_PLUS,
-  TOK_MINUS_MINUS, TOK_MINUS_ASSING, TOK_MINUS,
-  TOK_LOGICAL_AND, TOK_LOGICAL_AND_ASSING, TOK_AND,
-  TOK_LOGICAL_OR, TOK_LOGICAL_OR_ASSING, TOK_OR,
-  TOK_QUESTION, TOK_TILDA, TOK_LE, TOK_LT, TOK_GE, TOK_GT,
-  TOK_LSHIFT_ASSIGN, TOK_LSHIFT, TOK_RSHIFT_ASSIGN, TOK_RSHIFT,
-
-  // Keywords
-  TOK_BREAK, TOK_CASE, TOK_CATCH, TOK_CONTINUE, TOK_DEBUGGER, TOK_DEFAULT,
-  TOK_DELETE, TOK_DO, TOK_ELSE, TOK_FALSE, TOK_FINALLY, TOK_FOR, TOK_FUNCTION,
-  TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL, TOK_RETURN, TOK_SWITCH,
-  TOK_THIS, TOK_THROW, TOK_TRUE, TOK_TRY, TOK_TYPEOF, TOK_UNDEFINED, TOK_VAR,
-  TOK_VOID, TOK_WHILE, TOK_WITH,
-
-  // TODO(lsm): process these reserved words too
-  TOK_CLASS, TOK_ENUM, TOK_EXTENDS, TOK_SUPER, TOK_CONST, TOK_EXPORT,
-  TOK_IMPORT, TOK_IMPLEMENTS, TOK_LET, TOK_PRIVATE, TOK_PUBLIC,
-  TOK_INTERFACE, TOK_PACKAGE, TOK_PROTECTED, TOK_STATIC, TOK_YIELD,
-
-  NUM_TOKENS
-};
 
 // NOTE(lsm): Must be in the same order as enum for keywords
 struct v7_vec s_keywords[] = {
@@ -132,8 +96,39 @@ static enum v7_tok punct3(const char *s, struct v7_vec *vec,
   return tok3;
 }
 
+static int parse_num(const char *s, double *num) {
+  char *end;
+  double value = strtod(s, &end);
+  if (num) *num = value;
+  return (int) (end - s);
+}
 
-V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec) {
+static int parse_str_literal(const char *s) {
+  int len = 0, quote = *s++;
+
+  // Scan string literal into the buffer, handle escape sequences
+  while (s[len] != quote && s[len] != '\0') {
+    switch (s[len]) {
+      case '\\':
+        len++;
+        switch (s[len]) {
+          case 'b': case 'f': case 'n': case 'r': case 't':
+          case 'v': case '\\': len++; break;
+          default: if (s[len] == quote) len++; break;
+        }
+        break;
+      default: break;
+    }
+    len++;
+  }
+
+  return len;
+}
+
+V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec,
+  double *num) {
+
+  skip_to_next_tok(&s);
   vec->p = s;
   vec->len = 1;
 
@@ -179,9 +174,11 @@ V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec) {
     // Numbers
     case '0': case '1': case '2': case '3': case '4': case '5':
     case '6': case '7': case '8':
-    case '9': return TOK_NUMBER;
+    case '9': vec->len = parse_num(s, num); return TOK_NUMBER;
 
     // String literals
+    case '\'':
+    case '"': vec->len = parse_str_literal(s); return TOK_STRING_LITERAL;
 
     // Punctuators
     case '=': return punct2(s, vec, '=', TOK_EQ, '=', TOK_EQ_EQ, TOK_ASSIGN);
@@ -224,18 +221,19 @@ V7_PRIVATE enum v7_tok get_next_token(const char *s, struct v7_vec *vec) {
   }
 }
 
+#ifdef TEST_RUN
 int main(void) {
-  const char *src = "for (var fo = 1; fore < 12; foo++) { print(23, 'x')} ";
+  const char *src = "for (var fo = 1; fore < 1.17; foo++) { print(23, 'x')} ";
   struct v7_vec vec;
   enum v7_tok tok;
+  double num;
 
-  skip_to_next_tok(&src);
-  while ((tok = get_next_token(src, &vec)) != TOK_END_OF_INPUT) {
+  while ((tok = get_next_token(src, &vec, &num)) != TOK_END_OF_INPUT) {
     printf("%d [%.*s]\n", tok, vec.len, vec.p);
     src = vec.p + vec.len;
-    skip_to_next_tok(&src);
   }
   printf("%d [%.*s]\n", tok, vec.len, vec.p);
 
   return 0;
 }
+#endif
