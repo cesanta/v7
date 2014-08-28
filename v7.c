@@ -56,6 +56,15 @@
 #define INFINITY    atof("INFINITY")  // TODO: fix this
 #endif
 
+// If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
+// the structure, but append it to the list of free structures.
+// Subsequent allocations try to grab a structure from the free list,
+// which speeds up allocation.
+//#define V7_CACHE_OBJS
+
+// Maximum length of the string literal
+#define MAX_STRING_LITERAL_LENGTH 2000
+
 // Different classes of V7_TYPE_OBJ type
 enum v7_class {
   V7_CLASS_NONE, V7_CLASS_ARRAY, V7_CLASS_BOOLEAN, V7_CLASS_DATE,
@@ -143,6 +152,7 @@ struct v7_val {
   (char *) (unsigned long) (_v))
 
 struct v7_pstate {
+  const char *file_name;
   const char *source_code;
   const char *pc;             // Current parsing position
   int line_no;                // Line number
@@ -160,6 +170,8 @@ struct v7 {
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
 
+  char error_message[100];    // Placeholder for the error message
+
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
   struct v7_val *ctx;         // Current execution context
@@ -169,12 +181,17 @@ struct v7 {
   struct v7_prop *free_props; // List of free (deallocated) props
 };
 
-#define MAX_STRING_LITERAL_LENGTH 2000
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
-#define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
-#define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
+#define CHECK(cond, code) do { \
+  if (!(cond)) { \
+    /* snprintf(v7->error_message, sizeof(v7->error_message), \
+      "%s line %d: %s", v7->pstate.file_name, v7->pstate.line_no, \
+      v7_strerror(code)); */ \
+    return (code); \
+  } } while (0)
+#define TRY(call) do {enum v7_err _e = call; CHECK(_e == V7_OK, _e); } while (0)
 
 // Print current function name and stringified object
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
@@ -268,7 +285,7 @@ V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
 V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b);
-V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *, int);
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *, const char *, int);
 V7_PRIVATE void init_stdlib(void);
 V7_PRIVATE void skip_whitespaces_and_comments(struct v7 *v7);
 V7_PRIVATE int is_num(const struct v7_val *v);
@@ -828,12 +845,14 @@ V7_PRIVATE enum v7_err v7_del2(struct v7 *v7, struct v7_val *obj,
   return V7_OK;
 }
 
-V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
+  const char *source_code, int sp) {
   int has_ret = 0;
   struct v7_pstate old_pstate = v7->pstate;
   enum v7_err err = V7_OK;
 
   v7->pstate.source_code = v7->pstate.pc = source_code;
+  v7->pstate.file_name = file_name;
   v7->pstate.line_no = 1;
   skip_whitespaces_and_comments(v7);
 
@@ -2017,6 +2036,7 @@ V7_PRIVATE void init_regex(void) {
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
   struct v7_val *arg = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
 
   // If argument is not a string, do type conversion
   if (cfa->num_args == 1 && !is_string(arg)) {
@@ -2356,7 +2376,7 @@ V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
 V7_PRIVATE enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    return do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    return do_exec(cfa->v7, "<eval>", v->v.str.buf, cfa->v7->sp);
   }
   return V7_OK;
 }
@@ -4048,9 +4068,10 @@ struct v7_val *v7_push_bool(struct v7 *v7, int is_true) {
   return v;
 }
 
-struct v7_val *v7_push_string(struct v7 *v7, const char *str, int n, int own) {
+struct v7_val *v7_push_string(struct v7 *v7, const char *str, unsigned long n,
+ int own) {
   struct v7_val *v = NULL;
-  if (n >= 0 && v7_make_and_push(v7, V7_TYPE_STR) == V7_OK) {
+  if (v7_make_and_push(v7, V7_TYPE_STR) == V7_OK) {
     v = v7_top_val(v7);
     v7_init_str(v, str, n, own);
   }
@@ -4067,7 +4088,12 @@ struct v7_val *v7_push_func(struct v7 *v7, v7_func_t func) {
 }
 
 struct v7_val *v7_push_new_object(struct v7 *v7) {
-  return v7_make_and_push(v7, V7_TYPE_OBJ) == V7_OK ? v7_top_val(v7) : NULL;
+  struct v7_val *v = NULL;
+  if (v7_make_and_push(v7, V7_TYPE_OBJ) == V7_OK) {
+    v = v7_top_val(v7);
+    v7_set_class(v, V7_CLASS_OBJECT);
+  }
+  return v;
 }
 
 struct v7_val *v7_push_val(struct v7 *v7, struct v7_val *v) {
@@ -4129,8 +4155,7 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
 }
 
 const char *v7_get_error_string(const struct v7 *v7) {
-  (void) v7;
-  return v7_strerror(V7_ERROR);
+  return v7->error_message;
 }
 
 struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
@@ -4148,7 +4173,7 @@ enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, const char *key) {
 }
 
 enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
-  return do_exec(v7, source_code, 0);
+  return do_exec(v7, "<exec>", source_code, 0);
 }
 
 static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
@@ -4229,7 +4254,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
     rewind(fp);
     fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
-    status = do_exec(v7, p, v7->sp);
+    status = do_exec(v7, path, p, v7->sp);
     free(p);
   }
 

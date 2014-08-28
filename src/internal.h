@@ -56,6 +56,15 @@
 #define INFINITY    atof("INFINITY")  // TODO: fix this
 #endif
 
+// If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
+// the structure, but append it to the list of free structures.
+// Subsequent allocations try to grab a structure from the free list,
+// which speeds up allocation.
+//#define V7_CACHE_OBJS
+
+// Maximum length of the string literal
+#define MAX_STRING_LITERAL_LENGTH 2000
+
 // Different classes of V7_TYPE_OBJ type
 enum v7_class {
   V7_CLASS_NONE, V7_CLASS_ARRAY, V7_CLASS_BOOLEAN, V7_CLASS_DATE,
@@ -143,6 +152,7 @@ struct v7_val {
   (char *) (unsigned long) (_v))
 
 struct v7_pstate {
+  const char *file_name;
   const char *source_code;
   const char *pc;             // Current parsing position
   int line_no;                // Line number
@@ -160,6 +170,8 @@ struct v7 {
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
 
+  char error_message[100];    // Placeholder for the error message
+
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
   struct v7_val *ctx;         // Current execution context
@@ -169,12 +181,17 @@ struct v7 {
   struct v7_prop *free_props; // List of free (deallocated) props
 };
 
-#define MAX_STRING_LITERAL_LENGTH 2000
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
-#define CHECK(cond, code) do { if (!(cond)) return (code); } while (0)
-#define TRY(call) do { enum v7_err e = call; CHECK(e == V7_OK, e); } while (0)
+#define CHECK(cond, code) do { \
+  if (!(cond)) { \
+    /* snprintf(v7->error_message, sizeof(v7->error_message), \
+      "%s line %d: %s", v7->pstate.file_name, v7->pstate.line_no, \
+      v7_strerror(code)); */ \
+    return (code); \
+  } } while (0)
+#define TRY(call) do {enum v7_err _e = call; CHECK(_e == V7_OK, _e); } while (0)
 
 // Print current function name and stringified object
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
@@ -268,7 +285,7 @@ V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
 V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b);
-V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *, int);
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *, const char *, int);
 V7_PRIVATE void init_stdlib(void);
 V7_PRIVATE void skip_whitespaces_and_comments(struct v7 *v7);
 V7_PRIVATE int is_num(const struct v7_val *v);

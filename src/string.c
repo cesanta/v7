@@ -3,6 +3,7 @@
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
   struct v7_val *arg = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
 
   // If argument is not a string, do type conversion
   if (cfa->num_args == 1 && !is_string(arg)) {

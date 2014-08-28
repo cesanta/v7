@@ -88,7 +88,7 @@ struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
 
 struct v7_val *v7_push_number(struct v7 *, double num);
 struct v7_val *v7_push_bool(struct v7 *, int is_true);
-struct v7_val *v7_push_string(struct v7 *, const char *str, int len, int own);
+struct v7_val *v7_push_string(struct v7 *, const char *str, unsigned long, int);
 struct v7_val *v7_push_new_object(struct v7 *);
 struct v7_val *v7_push_val(struct v7 *, struct v7_val *);
 struct v7_val *v7_push_func(struct v7 *, v7_func_t);
