@@ -35,16 +35,18 @@ Please take a look at [Smart.js](https://github.com/cesanta/Smart.js)
     // C code. exported_foo() glues C function "foo" to Javascript
     static enum v7_err exported_foo(struct v7_c_func_arg *cfa) {
       if (cfa->num_args != 2) {
-        return V7_ERROR;                // Return error: expecting 2 arguments
+        return V7_ERROR;                // Signal error: expecting 2 arguments
       } else {
-        double res = foo(cfa->args[0]->v.num, cfa->args[1]->v.num);
-        v7_init_num(cfa->result, res);  // Set return value
-        return V7_OK;                   // Return success
+        double arg0 = v7_number(cfa->args[0]);
+        double arg1 = v7_number(cfa->args[1]);
+        double result = foo(arg0, arg1);
+        v7_push_number(cfa->v7, result);  // Push result
+        return V7_OK;                     // Signal success
       }
     }
     ...
     // Export variable "foo" as C function to the root namespace
-    v7_set_func(v7, v7_rootns(v7), "foo", &exported_foo);
+    v7_set_func(v7, v7_rootns(v7), "foo", v7_push_func(v7, &exported_foo));
 
 <!-- -->
 
