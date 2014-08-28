@@ -33,15 +33,15 @@ Please take a look at [Smart.js](https://github.com/cesanta/Smart.js)
 ## Example: exporting existing C/C++ function `foo()` into Javascript
 
     // Javascript code
-    var y = foo(1, 2);   // Invokes `exported_foo()` glue function
+    var result = foo(1, 2);   // Invokes `exported_foo()` glue function
 
 <!-- -->
 
     // C code. exported_foo() glues C function "foo" to Javascript.
     static enum v7_err exported_foo(struct v7_c_func_arg *cfa) {
       if (cfa->num_args != 2) {
-        // JavaScript code called us with wrong number of arguments
-        // Signal error
+        // JavaScript code called us with wrong number of arguments,
+        // signal error
         return V7_ERROR;
       } else {
         // Extract numeric values from JavaScript arguments
@@ -52,9 +52,11 @@ Please take a look at [Smart.js](https://github.com/cesanta/Smart.js)
         return V7_OK;                         // Signal success
       }
     }
-    ...
+
     // Export variable "foo" as C function to the root namespace
-    v7_set_func(v7, v7_rootns(v7), "foo", v7_push_func(v7, &exported_foo));
+    struct v7 *v7 = v7_create();
+    v7_set(v7, v7_rootns(v7), "foo", v7_push_func(v7, &exported_foo));
+    v7_exec_file(v7, "my_js_code.js");
 
 ## Example: loading complex JSON configuration
 
