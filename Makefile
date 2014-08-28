@@ -5,7 +5,7 @@ SOURCES = $(SLRE)/slre.c \
           src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
           src/object.c src/regex.c src/string.c src/json.c src/stdlib.c \
-          src/parser.c src/tokenizer.c src/main.c
+          src/parser.c src/tokenizer.c src/api.c src/main.c
 
 all: v7
 

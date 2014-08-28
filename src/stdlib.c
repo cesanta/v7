@@ -1,10 +1,12 @@
 #include "internal.h"
 
 V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
-  char buf[4000];
+  char *p, buf[500];
   int i;
   for (i = 0; i < cfa->num_args; i++) {
-    printf("%s", v7_to_string(cfa->args[i], buf, sizeof(buf)));
+    p = v7_stringify(cfa->args[i], buf, sizeof(buf));
+    printf("%s", p);
+    if (p != buf) free(p);
   }
   putchar('\n');
 
@@ -140,7 +142,7 @@ V7_PRIVATE enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   size_t n;
 
   cfa->result->type = V7_TYPE_NULL;
-  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+  if ((v = v7_get(cfa->this_obj, "fp")) != NULL &&
       (n = fread(buf, 1, sizeof(buf), (FILE *) (unsigned long) v->v.num)) > 0) {
     v7_init_str(cfa->result, buf, n, 1);
   }
@@ -152,7 +154,7 @@ V7_PRIVATE enum v7_err Std_write(struct v7_c_func_arg *cfa) {
   size_t n, i;
 
   v7_init_num(cfa->result, 0);
-  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL) {
+  if ((v = v7_get(cfa->this_obj, "fp")) != NULL) {
     for (i = 0; (int) i < cfa->num_args; i++) {
       if (is_string(cfa->args[i]) &&
           (n = fwrite(cfa->args[i]->v.str.buf, 1, cfa->args[i]->v.str.len,
@@ -167,7 +169,7 @@ V7_PRIVATE enum v7_err Std_write(struct v7_c_func_arg *cfa) {
 V7_PRIVATE enum v7_err Std_close(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   v7_init_bool(cfa->result, 0);
-  if ((v = v7_lookup(cfa->this_obj, "fp")) != NULL &&
+  if ((v = v7_get(cfa->this_obj, "fp")) != NULL &&
       fclose((FILE *) (unsigned long) v->v.num) == 0) {
     v7_init_bool(cfa->result, 1);
   }

@@ -7,9 +7,10 @@ V7_PRIVATE enum v7_err Object_ctor(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
-  char buf[4000];
-  v7_to_string(cfa->this_obj, buf, sizeof(buf));
+  char *p, buf[500];
+  p = v7_stringify(cfa->this_obj, buf, sizeof(buf));
   v7_init_str(cfa->result, buf, strlen(buf), 1);
+  if (p != buf) free(p);
   return V7_OK;
 }
 

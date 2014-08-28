@@ -1,4 +1,3 @@
-// Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
 // Copyright (c) 2013-2014 Cesanta Software Limited
 // All rights reserved
 //
@@ -55,6 +54,103 @@
 #define INFINITY    atof("INFINITY")  // TODO: fix this
 #endif
 
+// Different classes of V7_TYPE_OBJ type
+enum v7_class {
+  V7_CLASS_NONE, V7_CLASS_ARRAY, V7_CLASS_BOOLEAN, V7_CLASS_DATE,
+  V7_CLASS_ERROR, V7_CLASS_FUNCTION, V7_CLASS_NUMBER, V7_CLASS_OBJECT,
+  V7_CLASS_REGEXP, V7_CLASS_STRING, V7_NUM_CLASSES
+};
+
+typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
+
+struct v7_prop {
+  struct v7_prop *next;
+  struct v7_val *key;
+  struct v7_val *val;
+  unsigned short flags;
+#define V7_PROP_NOT_WRITABLE   1  // property is not changeable
+#define V7_PROP_NOT_ENUMERABLE 2  // not enumerable in for..in loop
+#define V7_PROP_NOT_DELETABLE  4  // delete-ing this property must fail
+#define V7_PROP_ALLOCATED      8  // v7_prop must be free()-ed
+};
+
+// Vector, describes some memory location pointed by 'p' with length 'len'
+struct v7_vec {
+  const char *p;
+  int len;
+};
+
+struct v7_string {
+  char *buf;                // Pointer to buffer with string data
+  unsigned long len;        // String length
+  char loc[16];             // Small strings are stored here
+};
+
+struct v7_func {
+  char *source_code;        // \0-terminated function source code
+  int line_no;              // Line number where function begins
+  struct v7_val *var_obj;   // Function var object: var decls and func defs
+};
+
+union v7_scalar {
+  char *regex;              // \0-terminated regex
+  double num;               // Holds "Number" or "Boolean" value
+  struct v7_string str;     // Holds "String" value
+  struct v7_func func;      // \0-terminated function code
+  struct v7_prop *array;    // List of array elements
+  v7_func_t c_func;       // Pointer to the C function
+  v7_prop_func_t prop_func; // Object's property function, e.g. String.length
+};
+
+struct v7_val {
+  struct v7_val *next;
+  struct v7_val *proto;       // Prototype
+  struct v7_val *ctor;        // Constructor object
+  struct v7_prop *props;      // Object's key/value list
+  union v7_scalar v;          // The value itself
+  enum v7_type type;          // Value type
+  enum v7_class cls;          // Object's internal [[Class]] property
+  short ref_count;            // Reference counter
+
+  unsigned short flags;       // Flags - defined below
+#define V7_VAL_ALLOCATED   1  // Whole "struct v7_val" must be free()-ed
+#define V7_STR_ALLOCATED   2  // v.str.buf must be free()-ed
+#define V7_JS_FUNC         4  // Function object is a JavsScript code
+#define V7_PROP_FUNC       8  // Function object is a native property function
+#define V7_VAL_DEALLOCATED 16 // Value has been deallocated
+};
+
+#define V7_MKVAL(_p,_t,_c,_v) {0,(_p),0,0,{(_v)},(_t),(_c),0,0}
+#define V7_MKNUM(_v) V7_MKVAL(0,V7_TYPE_NUM,V7_CLASS_NONE,\
+  (char *) (unsigned long) (_v))
+
+struct v7_pstate {
+  const char *source_code;
+  const char *pc;             // Current parsing position
+  int line_no;                // Line number
+};
+
+struct v7 {
+  struct v7_val root_scope;   // "global" object (root-level execution context)
+  struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
+  int sp;                     // Stack pointer
+  int flags;
+#define V7_SCANNING  1        // Pre-scan to initialize lexical scopes, no exec
+#define V7_NO_EXEC   2        // Non-executing code block: if (false) { block }
+
+  struct v7_pstate pstate;    // Parsing state
+  const char *tok;            // Parsed terminal token (ident, number, string)
+  unsigned long tok_len;      // Length of the parsed terminal token
+
+  struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
+  struct v7_val *this_obj;    // Current "this" object
+  struct v7_val *ctx;         // Current execution context
+  struct v7_val *cf;          // Currently executing function
+  struct v7_val *functions;   // List of declared function
+  struct v7_val *free_values; // List of free (deallocated) values
+  struct v7_prop *free_props; // List of free (deallocated) props
+};
+
 //#define V7_CACHE_OBJS
 #define MAX_STRING_LITERAL_LENGTH 2000
 #ifndef ARRAY_SIZE
@@ -65,7 +161,7 @@
 
 // Print current function name and stringified object
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
-  O == NULL ? "@" : v7_to_string(O, x, sizeof(x))); } while (0)
+  O == NULL ? "@" : v7_stringify(O, x, sizeof(x))); } while (0)
 
 // Initializer for "struct v7_val", object type
 #define MKOBJ(_proto) V7_MKVAL(_proto, V7_TYPE_OBJ, V7_CLASS_OBJECT, 0)
@@ -162,18 +258,44 @@ V7_PRIVATE int is_num(const struct v7_val *v);
 V7_PRIVATE int is_bool(const struct v7_val *v);
 V7_PRIVATE int is_string(const struct v7_val *v);
 V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
-V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_c_func_t ctor);
+V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
 V7_PRIVATE void inc_ref_count(struct v7_val *);
 V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type);
-V7_PRIVATE enum v7_err v7_set(struct v7 *v7, struct v7_val *obj,
-                              struct v7_val *k, struct v7_val *v);
+V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
+                               struct v7_val *k, struct v7_val *v);
 V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len);
 V7_PRIVATE struct v7_prop *mkprop(struct v7 *v7);
 V7_PRIVATE void free_prop(struct v7 *v7, struct v7_prop *p);
 V7_PRIVATE struct v7_val str_to_val(const char *buf, size_t len);
 V7_PRIVATE struct v7_val *find(struct v7 *v7, const struct v7_val *key);
 V7_PRIVATE struct v7_val *get2(struct v7_val *obj, const struct v7_val *key);
+V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *, int, int);
+
+V7_PRIVATE enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type);
+V7_PRIVATE enum v7_err v7_append(struct v7 *, struct v7_val *, struct v7_val *);
+V7_PRIVATE struct v7_val *v7_mkv(struct v7 *v7, enum v7_type t, ...);
+V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v);
+V7_PRIVATE int v7_sp(struct v7 *v7);
+V7_PRIVATE struct v7_val **v7_top(struct v7 *);
+V7_PRIVATE struct v7_val *v7_top_val(struct v7 *);
+V7_PRIVATE const char *v7_strerror(enum v7_err);
+V7_PRIVATE int v7_is_class(const struct v7_val *obj, enum v7_class cls);
+V7_PRIVATE void v7_set_class(struct v7_val *obj, enum v7_class cls);
+V7_PRIVATE void v7_init_func(struct v7_val *v, v7_func_t func);
+V7_PRIVATE void v7_init_str(struct v7_val *, const char *, unsigned long, int);
+V7_PRIVATE void v7_init_num(struct v7_val *, double);
+V7_PRIVATE void v7_init_bool(struct v7_val *, int);
+V7_PRIVATE enum v7_err v7_push(struct v7 *, struct v7_val *);
+V7_PRIVATE void free_props(struct v7 *v7);
+V7_PRIVATE void free_values(struct v7 *v7);
+V7_PRIVATE struct v7_val v7_str_to_val(const char *buf);
+V7_PRIVATE enum v7_err v7_del2(struct v7 *v7, struct v7_val *,
+  const char *, unsigned long);
+
+// Generic function to set an attribute in an object.
+V7_PRIVATE enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
+                    enum v7_type key_type, enum v7_type val_type, ...);
 
 V7_PRIVATE void init_array(void);
 V7_PRIVATE void init_boolean(void);
