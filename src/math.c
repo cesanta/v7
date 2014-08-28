@@ -1,40 +1,47 @@
 #include "internal.h"
 
 V7_PRIVATE enum v7_err Math_random(struct v7_c_func_arg *cfa) {
-  srand((unsigned) (unsigned long) cfa);   // TODO: make better randomness
-  v7_init_num(cfa->result, (double) rand() / RAND_MAX);
+  static int srand_called = 0;
+
+  if (!srand_called) {
+    srand((unsigned) (unsigned long) cfa);
+    srand_called++;
+  }
+
+  v7_push_number(cfa->v7, (double) rand() / RAND_MAX);
+
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Math_sin(struct v7_c_func_arg *cfa) {
-  v7_init_num(cfa->result, cfa->num_args == 1 ? sin(cfa->args[0]->v.num) : 0.0);
+  v7_push_number(cfa->v7, cfa->num_args == 1 ? sin(cfa->args[0]->v.num) : 0.0);
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Math_sqrt(struct v7_c_func_arg *cfa) {
-  v7_init_num(cfa->result, cfa->num_args == 1 ? sqrt(cfa->args[0]->v.num) : 0.0);
+  v7_push_number(cfa->v7, cfa->num_args == 1 ? sqrt(cfa->args[0]->v.num) : 0.0);
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Math_tan(struct v7_c_func_arg *cfa) {
-  v7_init_num(cfa->result, cfa->num_args == 1 ? tan(cfa->args[0]->v.num) : 0.0);
+  v7_push_number(cfa->v7, cfa->num_args == 1 ? tan(cfa->args[0]->v.num) : 0.0);
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Math_pow(struct v7_c_func_arg *cfa) {
-  v7_init_num(cfa->result, cfa->num_args == 2 ?
+  v7_push_number(cfa->v7, cfa->num_args == 2 ?
               pow(cfa->args[0]->v.num, cfa->args[1]->v.num) : 0.0);
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Math_floor(struct v7_c_func_arg *cfa) {
-  v7_init_num(cfa->result, cfa->num_args == 1 ?
+  v7_push_number(cfa->v7, cfa->num_args == 1 ?
               floor(cfa->args[0]->v.num) : 0.0);
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Math_ceil(struct v7_c_func_arg *cfa) {
-  v7_init_num(cfa->result, cfa->num_args == 1 ?
+  v7_push_number(cfa->v7, cfa->num_args == 1 ?
               ceil(cfa->args[0]->v.num) : 0.0);
   return V7_OK;
 }

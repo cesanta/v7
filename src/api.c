@@ -44,6 +44,15 @@ struct v7_val *v7_push_number(struct v7 *v7, double num) {
   return v;
 }
 
+struct v7_val *v7_push_bool(struct v7 *v7, int is_true) {
+  struct v7_val *v = NULL;
+  if (v7_make_and_push(v7, V7_TYPE_BOOL) == V7_OK) {
+    v = v7_top_val(v7);
+    v7_init_bool(v, is_true);
+  }
+  return v;
+}
+
 struct v7_val *v7_push_string(struct v7 *v7, const char *str, int n, int own) {
   struct v7_val *v = NULL;
   if (n >= 0 && v7_make_and_push(v7, V7_TYPE_STR) == V7_OK) {

@@ -312,17 +312,13 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
 V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *this_obj,
    int num_args, int called_as_ctor) {
-  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f, *res;
+  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f;
 
   if (!EXECUTING(v7->flags)) return V7_OK;
   f = v[0];
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
   CHECK(f != NULL, V7_TYPE_ERROR);
   CHECK(v7_is_class(f, V7_CLASS_FUNCTION), V7_CALLED_NON_FUNCTION);
-
-  // Push return value on stack
-  v7_make_and_push(v7, V7_TYPE_UNDEF);
-  res = v7_top(v7)[-1];
 
 
   // Stack looks as follows:
@@ -347,10 +343,12 @@ V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *this_obj,
     v7->pstate = old_pstate;
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
   } else {
-    struct v7_c_func_arg arg = {
-      v7, this_obj, res, v + 1, num_args, called_as_ctor
-    };
+    int old_sp = v7->sp;
+    struct v7_c_func_arg arg = {v7, this_obj, v + 1, num_args, called_as_ctor};
     TRY(f->v.c_func(&arg));
+    if (old_sp == v7->sp) {
+      v7_make_and_push(v7, V7_TYPE_UNDEF);
+    }
   }
   return V7_OK;
 }

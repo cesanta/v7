@@ -15,15 +15,11 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
+  enum v7_err e;
 
-  v7_init_bool(cfa->result, 1);
   for (i = 0; i < cfa->num_args; i++) {
-    TRACE_OBJ(cfa->args[i]);
-    if (cfa->args[i]->type != V7_TYPE_STR ||
-        v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf) != V7_OK) {
-      cfa->result->v.num = 0.0;
-      break;
-    }
+    if (cfa->args[i]->type != V7_TYPE_STR) return V7_TYPE_ERROR;
+    if ((e = v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) != V7_OK) return e;
   }
   return V7_OK;
 }
@@ -103,27 +99,27 @@ V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
 }
 
 V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0];
+  struct v7_val *v = cfa->args[0], *result;
 
-  v7_init_str(cfa->result, NULL, 0, 0);
+  result = v7_push_string(cfa->v7, NULL, 0, 0);
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    cfa->result->v.str.len = v->v.str.len * 3 / 4 + 1;
-    cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
+    result->v.str.len = v->v.str.len * 3 / 4 + 1;
+    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
     base64_decode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
-                  cfa->result->v.str.buf);
+                  result->v.str.buf);
   }
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0];
+  struct v7_val *v = cfa->args[0], *result;
 
-  v7_init_str(cfa->result, NULL, 0, 0);
+  result = v7_push_string(cfa->v7, NULL, 0, 0);
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    cfa->result->v.str.len = v->v.str.len * 3 / 2 + 1;
-    cfa->result->v.str.buf = (char *) malloc(cfa->result->v.str.len + 1);
+    result->v.str.len = v->v.str.len * 3 / 2 + 1;
+    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
     base64_encode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
-                  cfa->result->v.str.buf);
+                  result->v.str.buf);
   }
   return V7_OK;
 }
@@ -141,25 +137,26 @@ V7_PRIVATE enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   char buf[2048];
   size_t n;
 
-  cfa->result->type = V7_TYPE_NULL;
   if ((v = v7_get(cfa->this_obj, "fp")) != NULL &&
       (n = fread(buf, 1, sizeof(buf), (FILE *) (unsigned long) v->v.num)) > 0) {
-    v7_init_str(cfa->result, buf, n, 1);
+    v7_push_string(cfa->v7, buf, n, 1);
+  } else {
+    v7_make_and_push(cfa->v7, V7_TYPE_NULL);
   }
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Std_write(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0];
+  struct v7_val *v = cfa->args[0], *result;
   size_t n, i;
 
-  v7_init_num(cfa->result, 0);
+  result = v7_push_number(cfa->v7, 0);
   if ((v = v7_get(cfa->this_obj, "fp")) != NULL) {
     for (i = 0; (int) i < cfa->num_args; i++) {
       if (is_string(cfa->args[i]) &&
           (n = fwrite(cfa->args[i]->v.str.buf, 1, cfa->args[i]->v.str.len,
                       (FILE *) (unsigned long) v->v.num)) > 0) {
-        cfa->result->v.num += n;
+        result->v.num += n;
       }
     }
   }
@@ -168,25 +165,28 @@ V7_PRIVATE enum v7_err Std_write(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Std_close(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
-  v7_init_bool(cfa->result, 0);
+  int ok = 0;
   if ((v = v7_get(cfa->this_obj, "fp")) != NULL &&
       fclose((FILE *) (unsigned long) v->v.num) == 0) {
-    v7_init_bool(cfa->result, 1);
+    ok = 1;
   }
+  v7_push_bool(cfa->v7, ok);
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
-  struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1];
+  struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1], *result = NULL;
   FILE *fp;
 
-  cfa->result->type = V7_TYPE_NULL;
+  result->type = V7_TYPE_NULL;
   if (cfa->num_args == 2 && is_string(v1) && is_string(v2) &&
       (fp = fopen(v1->v.str.buf, v2->v.str.buf)) != NULL) {
-    v7_set_class(cfa->result, V7_CLASS_OBJECT);
-    cfa->result->proto = &s_file;
-    v7_setv(cfa->v7, cfa->result, V7_TYPE_STR, V7_TYPE_NUM,
+    result = v7_push_new_object(cfa->v7);
+    result->proto = &s_file;
+    v7_setv(cfa->v7, result, V7_TYPE_STR, V7_TYPE_NUM,
             "fp", 2, 0, (double) (unsigned long) fp);  // after v7_set_class !
+  } else {
+    v7_make_and_push(cfa->v7, V7_TYPE_NULL);
   }
   return V7_OK;
 }

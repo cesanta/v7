@@ -384,45 +384,39 @@ static void bin2str(char *to, const unsigned char *p, size_t len) {
 }
 
 V7_PRIVATE enum v7_err Crypto_md5(struct v7_c_func_arg *cfa) {
-  v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
-    cfa->result->v.str.len = 16;
-    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
-    v7_md5(cfa->args[0], cfa->result->v.str.buf);
+    char buf[16];
+    v7_md5(cfa->args[0], buf);
+    v7_push_string(cfa->v7, buf, sizeof(buf), 1);
   }
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Crypto_md5_hex(struct v7_c_func_arg *cfa) {
-  v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
-    char hash[16];
+    char hash[16], buf[sizeof(hash) * 2];
     v7_md5(cfa->args[0], hash);
-    cfa->result->v.str.len = sizeof(hash) * 2;
-    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
-    bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
+    bin2str(buf, (unsigned char *) hash, sizeof(hash));
+    v7_push_string(cfa->v7, buf, sizeof(buf), 1);
   }
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Crypto_sha1(struct v7_c_func_arg *cfa) {
-  v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
-    cfa->result->v.str.len = 20;
-    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
-    v7_sha1(cfa->args[0], cfa->result->v.str.buf);
+    char buf[20];
+    v7_sha1(cfa->args[0], buf);
+    v7_push_string(cfa->v7, buf, sizeof(buf), 1);
   }
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Crypto_sha1_hex(struct v7_c_func_arg *cfa) {
-  v7_init_str(cfa->result, NULL, 0, 0);
   if (cfa->num_args == 1 && cfa->args[0]->type == V7_TYPE_STR) {
-    char hash[20];
+    char hash[20], buf[sizeof(hash) * 2];
     v7_sha1(cfa->args[0], hash);
-    cfa->result->v.str.len = sizeof(hash) * 2;
-    cfa->result->v.str.buf = (char *) calloc(1, cfa->result->v.str.len + 1);
-    bin2str(cfa->result->v.str.buf, (unsigned char *) hash, sizeof(hash));
+    bin2str(buf, (unsigned char *) hash, sizeof(hash));
+    v7_push_string(cfa->v7, buf, sizeof(buf), 1);
   }
   return V7_OK;
 }
