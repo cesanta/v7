@@ -310,19 +310,15 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   return V7_OK;
 }
 
-enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
-                    int called_as_ctor) {
-  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f, *res;
+V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *this_obj,
+   int num_args, int called_as_ctor) {
+  struct v7_val **top = v7_top(v7), **v = top - (num_args + 1), *f;
 
   if (!EXECUTING(v7->flags)) return V7_OK;
   f = v[0];
   CHECK(v7->sp > num_args, V7_INTERNAL_ERROR);
   CHECK(f != NULL, V7_TYPE_ERROR);
   CHECK(v7_is_class(f, V7_CLASS_FUNCTION), V7_CALLED_NON_FUNCTION);
-
-  // Push return value on stack
-  v7_make_and_push(v7, V7_TYPE_UNDEF);
-  res = v7_top(v7)[-1];
 
 
   // Stack looks as follows:
@@ -347,10 +343,12 @@ enum v7_err v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args,
     v7->pstate = old_pstate;
     CHECK(v7_top(v7) >= top, V7_INTERNAL_ERROR);
   } else {
-    struct v7_c_func_arg arg = {
-      v7, this_obj, res, v + 1, num_args, called_as_ctor
-    };
+    int old_sp = v7->sp;
+    struct v7_c_func_arg arg = {v7, this_obj, v + 1, num_args, called_as_ctor};
     TRY(f->v.c_func(&arg));
+    if (old_sp == v7->sp) {
+      v7_make_and_push(v7, V7_TYPE_UNDEF);
+    }
   }
   return V7_OK;
 }
@@ -373,7 +371,7 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
   }
   TRY(match(v7, ')'));
 
-  TRY(v7_call(v7, this_obj, num_args, called_as_ctor));
+  TRY(v7_call2(v7, this_obj, num_args, called_as_ctor));
 
   return V7_OK;
 }
@@ -415,21 +413,6 @@ static enum v7_err parse_string_literal(struct v7 *v7) {
   TRY(match(v7, *begin));
   skip_whitespaces_and_comments(v7);
 
-  return V7_OK;
-}
-
-enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
-  struct v7_prop **head, *prop;
-  CHECK(v7_is_class(arr, V7_CLASS_ARRAY), V7_INTERNAL_ERROR);
-  // Append to the end of the list, to make indexing work
-  for (head = &arr->v.array; *head != NULL; head = &head[0]->next);
-  prop = mkprop(v7);
-  CHECK(prop != NULL, V7_OUT_OF_MEMORY);
-  prop->next = *head;
-  *head = prop;
-  prop->key = NULL;
-  prop->val = val;
-  inc_ref_count(val);
   return V7_OK;
 }
 
@@ -482,7 +465,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
     if (EXECUTING(v7->flags)) {
       struct v7_val **v = v7_top(v7) - 3;
       CHECK(v[0]->type == V7_TYPE_OBJ, V7_INTERNAL_ERROR);
-      TRY(v7_set(v7, v[0], v[1], v[2]));
+      TRY(v7_set2(v7, v[0], v[1], v[2]));
       TRY(inc_stack(v7, -2));
     }
     test_and_skip_char(v7, ',');
@@ -491,25 +474,9 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
   return V7_OK;
 }
 
-enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, struct v7_val *key) {
-  struct v7_prop **p;
-  CHECK(obj->type == V7_TYPE_OBJ, V7_TYPE_ERROR);
-  for (p = &obj->props; *p != NULL; p = &p[0]->next) {
-    if (cmp(key, p[0]->key) == 0) {
-      struct v7_prop *next = p[0]->next;
-      free_prop(v7, p[0]);
-      p[0] = next;
-      break;
-    }
-  }
-  return V7_OK;
-}
-
 static enum v7_err parse_delete(struct v7 *v7) {
-  struct v7_val key;
   TRY(parse_expression(v7));
-  key = str_to_val(v7->tok, v7->tok_len);  // Must go after parse_expression
-  TRY(v7_del(v7, v7->cur_obj, &key));
+  TRY(v7_del2(v7, v7->cur_obj, v7->tok, v7->tok_len));
   return V7_OK;
 }
 
@@ -608,7 +575,6 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
 
   return V7_OK;
 }
-
 
 static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
   struct v7_val *v = NULL, *ns = NULL, *cur_obj = NULL;

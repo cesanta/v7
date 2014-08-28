@@ -1,23 +1,25 @@
 #include "internal.h"
 
 V7_PRIVATE enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
   struct v7_val *arg = cfa->args[0];
 
-  v7_init_num(cfa->result, cfa->num_args > 0 ? arg->v.num : 0.0);
+  v7_init_num(obj, cfa->num_args > 0 ? arg->v.num : 0.0);
 
   if (cfa->num_args > 0 && !is_num(arg) && !is_bool(arg)) {
     if (is_string(arg)) {
-      v7_init_num(cfa->result, strtod(arg->v.str.buf, NULL));
+      v7_init_num(obj, strtod(arg->v.str.buf, NULL));
     } else {
-      v7_init_num(cfa->result, NAN);
+      v7_init_num(obj, NAN);
     }
   }
 
   if (cfa->called_as_constructor) {
-    cfa->this_obj->proto = &s_prototypes[V7_CLASS_NUMBER];
-    cfa->this_obj->ctor = &s_constructors[V7_CLASS_NUMBER];
-    cfa->this_obj->v.num = cfa->result->v.num;
+    obj->type = V7_TYPE_OBJ;
+    obj->proto = &s_prototypes[V7_CLASS_NUMBER];
+    obj->ctor = &s_constructors[V7_CLASS_NUMBER];
   }
+
   return V7_OK;
 }
 
@@ -27,7 +29,7 @@ V7_PRIVATE enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
 
   snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
   len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
-  v7_init_str(cfa->result, buf, len, 1);
+  v7_push_string(cfa->v7, buf, len, 1);
   return V7_OK;
 }
 

@@ -411,7 +411,7 @@ V7_PRIVATE int slre_match(const char *regexp, const char *s, int s_len,
 
 
 V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : cfa->result;
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
   struct v7_val *str = cfa->args[0];
 
   if(cfa->num_args > 0){
