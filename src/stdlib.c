@@ -127,7 +127,7 @@ V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
 V7_PRIVATE enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->args[0];
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    return do_exec(cfa->v7, v->v.str.buf, cfa->v7->sp);
+    return do_exec(cfa->v7, "<eval>", v->v.str.buf, cfa->v7->sp);
   }
   return V7_OK;
 }

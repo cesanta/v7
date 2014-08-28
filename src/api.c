@@ -53,9 +53,10 @@ struct v7_val *v7_push_bool(struct v7 *v7, int is_true) {
   return v;
 }
 
-struct v7_val *v7_push_string(struct v7 *v7, const char *str, int n, int own) {
+struct v7_val *v7_push_string(struct v7 *v7, const char *str, unsigned long n,
+ int own) {
   struct v7_val *v = NULL;
-  if (n >= 0 && v7_make_and_push(v7, V7_TYPE_STR) == V7_OK) {
+  if (v7_make_and_push(v7, V7_TYPE_STR) == V7_OK) {
     v = v7_top_val(v7);
     v7_init_str(v, str, n, own);
   }
@@ -72,7 +73,12 @@ struct v7_val *v7_push_func(struct v7 *v7, v7_func_t func) {
 }
 
 struct v7_val *v7_push_new_object(struct v7 *v7) {
-  return v7_make_and_push(v7, V7_TYPE_OBJ) == V7_OK ? v7_top_val(v7) : NULL;
+  struct v7_val *v = NULL;
+  if (v7_make_and_push(v7, V7_TYPE_OBJ) == V7_OK) {
+    v = v7_top_val(v7);
+    v7_set_class(v, V7_CLASS_OBJECT);
+  }
+  return v;
 }
 
 struct v7_val *v7_push_val(struct v7 *v7, struct v7_val *v) {
@@ -134,8 +140,7 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
 }
 
 const char *v7_get_error_string(const struct v7 *v7) {
-  (void) v7;
-  return v7_strerror(V7_ERROR);
+  return v7->error_message;
 }
 
 struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
@@ -153,7 +158,7 @@ enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, const char *key) {
 }
 
 enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
-  return do_exec(v7, source_code, 0);
+  return do_exec(v7, "<exec>", source_code, 0);
 }
 
 static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
@@ -234,7 +239,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
     rewind(fp);
     fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
-    status = do_exec(v7, p, v7->sp);
+    status = do_exec(v7, path, p, v7->sp);
     free(p);
   }
 

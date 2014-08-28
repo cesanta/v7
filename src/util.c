@@ -466,12 +466,14 @@ V7_PRIVATE enum v7_err v7_del2(struct v7 *v7, struct v7_val *obj,
   return V7_OK;
 }
 
-V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *source_code, int sp) {
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
+  const char *source_code, int sp) {
   int has_ret = 0;
   struct v7_pstate old_pstate = v7->pstate;
   enum v7_err err = V7_OK;
 
   v7->pstate.source_code = v7->pstate.pc = source_code;
+  v7->pstate.file_name = file_name;
   v7->pstate.line_no = 1;
   skip_whitespaces_and_comments(v7);
 
