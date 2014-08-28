@@ -7,7 +7,7 @@ SOURCES = $(SLRE)/slre.c \
           src/object.c src/regex.c src/string.c src/json.c src/stdlib.c \
           src/parser.c src/tokenizer.c src/api.c src/main.c
 
-all: v7 t
+all: v7 js
 
 v7.c: src/internal.h $(SOURCES) v7.h Makefile
 	cat src/internal.h $(SLRE)/slre.h $(SOURCES) | sed -E '/#include .(internal|slre).h./d' > $@

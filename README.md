@@ -60,6 +60,29 @@ Please take a look at [Smart.js](https://github.com/cesanta/Smart.js)
 
 ## API documentation
 
+    struct v7 *v7_create(void);       // Creates and initializes V7 engine
+    void v7_destroy(struct v7 **);    // Cleanes up and deallocates V7 engine
+    enum v7_err v7_exec(struct v7 *, const char *str);        // Executes string
+    enum v7_err v7_exec_file(struct v7 *, const char *path);  // Executes file
+    struct v7_val *v7_rootns(struct v7 *);  // Returns global obj (root namespace)
+    char *v7_stringify(const struct v7_val *v, char *buf, int bsiz);
+    const char *v7_get_error_string(const struct v7 *);  // Returns error string
+    int v7_is_true(const struct v7_val *);
+    void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
+    enum v7_err v7_set(struct v7 *, struct v7_val *, const char *, struct v7_val *);
+    enum v7_err v7_del(struct v7 *, struct v7_val *obj, const char *key);
+    struct v7_val *v7_get(struct v7_val *obj, const char *key);
+    struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
+    struct v7_val *v7_push_number(struct v7 *, double num);
+    struct v7_val *v7_push_bool(struct v7 *, int is_true);
+    struct v7_val *v7_push_string(struct v7 *, const char *str, int len, int own);
+    struct v7_val *v7_push_new_object(struct v7 *);
+    struct v7_val *v7_push_val(struct v7 *, struct v7_val *);
+    struct v7_val *v7_push_func(struct v7 *, v7_func_t);
+    enum v7_type v7_type(const struct v7_val *);
+    double v7_number(const struct v7_val *);
+    const char *v7_string(const struct v7_val *, unsigned long *len);
+
 ## Licensing
 
 V7 is released under commercial and
