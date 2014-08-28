@@ -20,7 +20,7 @@ V7 is targeted to conform to the ECMAScript specification version 5.
 ## Restrictions
 
 - V7 enforces [strict mode](http://goo.gl/Rhqzs2), even if `use strict`
-is not specified in the source code. Benefits of strict mode are 
+is not specified in the source code. Benefits of strict mode are
 outlined [here](http://goo.gl/MlBicD)
 - All strings passed to `v7_exec()` functions must be immutable. This is to
 simplify memory management and reduce memory usage. V7 stores references to
@@ -32,26 +32,29 @@ Please take a look at [Smart.js](https://github.com/cesanta/Smart.js)
 
 ## Example: exporting existing C/C++ function `foo()` into Javascript
 
-    // C code. exported_foo() glues C function "foo" to Javascript
+    // Javascript code
+    var y = foo(1, 2);   // Invokes `exported_foo()` glue function
+
+<!-- -->
+
+    // C code. exported_foo() glues C function "foo" to Javascript.
     static enum v7_err exported_foo(struct v7_c_func_arg *cfa) {
       if (cfa->num_args != 2) {
-        return V7_ERROR;                // Signal error: expecting 2 arguments
+        // JavaScript code called us with wrong number of arguments
+        // Signal error
+        return V7_ERROR;
       } else {
+        // Extract numeric values from JavaScript arguments
         double arg0 = v7_number(cfa->args[0]);
         double arg1 = v7_number(cfa->args[1]);
-        double result = foo(arg0, arg1);
-        v7_push_number(cfa->v7, result);  // Push result
-        return V7_OK;                     // Signal success
+        double result = foo(arg0, arg1);      // Call real foo() function
+        v7_push_number(cfa->v7, result);      // Push result to JavaScript
+        return V7_OK;                         // Signal success
       }
     }
     ...
     // Export variable "foo" as C function to the root namespace
     v7_set_func(v7, v7_rootns(v7), "foo", v7_push_func(v7, &exported_foo));
-
-<!-- -->
-
-    // Javascript code
-    var y = foo(1, 2);
 
 ## Example: loading complex JSON configuration
 
