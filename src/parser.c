@@ -619,6 +619,9 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
   return V7_OK;
 }
 
+// Member Access            left-to-right    x . x
+// Computed Member Access   left-to-right    x [ x ]
+// new (with argument list) n/a              new x ( x )
 static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   struct v7_val *old_this = v7->this_obj;
 
@@ -640,6 +643,10 @@ static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   return V7_OK;
 }
 
+// x . y () . z () ()
+
+// Function Call                 left-to-right     x ( x )
+// new (without argument list)   right-to-left     new x
 static enum v7_err parse_precedence_2(struct v7 *v7) {
   int has_new = 0;
   struct v7_val *old_this_obj = v7->this_obj, *cur_this = v7->this_obj;
@@ -653,6 +660,7 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
     }
   }
   TRY(parse_precedence_1(v7, has_new));
+
   while (*v7->pstate.pc == '(') {
     // Use cur_this, not v7->this_obj: v7->this_obj could have been changed
     TRY(parse_function_call(v7, cur_this, has_new));
@@ -667,6 +675,8 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
   return V7_OK;
 }
 
+// Postfix Increment    n/a      x ++
+// Postfix Decrement    n/a      x --
 static enum v7_err parse_precedence_3(struct v7 *v7) {
   TRY(parse_precedence_2(v7));
   if ((v7->pstate.pc[0] == '+' && v7->pstate.pc[1] == '+') ||
@@ -683,6 +693,15 @@ static enum v7_err parse_precedence_3(struct v7 *v7) {
   return V7_OK;
 }
 
+// Logical NOT        right-to-left    ! x
+// Bitwise NOT        right-to-left    ~ x
+// Unary Plus         right-to-left    + x
+// Unary Negation     right-to-left    - x
+// Prefix Increment   right-to-left    ++ x
+// Prefix Decrement   right-to-left    -- x
+// typeof             right-to-left    typeof x
+// void               right-to-left    void x
+// delete             right-to-left    delete x
 static enum v7_err parse_precedence4(struct v7 *v7) {
   int has_neg = 0, has_typeof = 0;
 

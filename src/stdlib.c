@@ -15,12 +15,21 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
-  enum v7_err e;
+  struct v7_val *obj = v7_push_new_object(cfa->v7);
+
+  // Push new object as a context for the loading new module
+  obj->next = cfa->v7->ctx;
+  cfa->v7->ctx = obj;
 
   for (i = 0; i < cfa->num_args; i++) {
-    if (cfa->args[i]->type != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if ((e = v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) != V7_OK) return e;
+    if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
+    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
   }
+
+  // Pop context, and return it
+  cfa->v7->ctx = obj->next;
+  v7_push_val(cfa->v7, obj);
+
   return V7_OK;
 }
 
@@ -178,7 +187,6 @@ V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1], *result = NULL;
   FILE *fp;
 
-  result->type = V7_TYPE_NULL;
   if (cfa->num_args == 2 && is_string(v1) && is_string(v2) &&
       (fp = fopen(v1->v.str.buf, v2->v.str.buf)) != NULL) {
     result = v7_push_new_object(cfa->v7);

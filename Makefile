@@ -7,7 +7,7 @@ SOURCES = $(SLRE)/slre.c \
           src/object.c src/regex.c src/string.c src/json.c src/stdlib.c \
           src/parser.c src/tokenizer.c src/api.c src/main.c
 
-all: v7 js
+all: v7 unit_test
 
 v7.c: src/internal.h $(SOURCES) v7.h Makefile
 	cat src/internal.h $(SLRE)/slre.h $(SOURCES) | sed -E '/#include .(internal|slre).h./d' > $@
@@ -23,7 +23,7 @@ $(SLRE)/slre.c:
 unit_test: $(SOURCES) v7.h tests/unit_test.c
 	g++ $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
 
-run: js
+run:
 	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t
 	./t
 

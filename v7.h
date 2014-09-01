@@ -38,22 +38,6 @@ enum v7_err {
   V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED, V7_NUM_ERRORS
 };
 
-struct v7 *v7_create(void);       // Creates and initializes V7 engine
-void v7_destroy(struct v7 **);    // Cleanes up and deallocates V7 engine
-
-enum v7_err v7_exec(struct v7 *, const char *source_code);  // Executes string
-enum v7_err v7_exec_file(struct v7 *, const char *path);    // Executes file
-
-struct v7_val *v7_rootns(struct v7 *);  // Returns global obj (root namespace)
-char *v7_stringify(const struct v7_val *v, char *buf, int bsiz);
-const char *v7_get_error_string(const struct v7 *);  // Returns error string
-int v7_is_true(const struct v7_val *);
-void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
-
-enum v7_err v7_set(struct v7 *, struct v7_val *, const char *, struct v7_val *);
-enum v7_err v7_del(struct v7 *, struct v7_val *obj, const char *key);
-struct v7_val *v7_get(struct v7_val *obj, const char *key);
-
 // This structure is passed as an argument to the C/JS glue function
 struct v7_c_func_arg {
   struct v7 *v7;
@@ -63,6 +47,23 @@ struct v7_c_func_arg {
   int called_as_constructor;
 };
 typedef enum v7_err (*v7_func_t)(struct v7_c_func_arg *arg);
+
+
+struct v7 *v7_create(void);       // Creates and initializes V7 engine
+void v7_destroy(struct v7 **);    // Cleanes up and deallocates V7 engine
+
+struct v7_val *v7_exec(struct v7 *, const char *str);         // Executes string
+struct v7_val *v7_exec_file(struct v7 *, const char *path);   // Executes file
+
+struct v7_val *v7_global(struct v7 *);  // Returns global obj (root namespace)
+char *v7_stringify(const struct v7_val *v, char *buf, int bsiz);
+const char *v7_get_error_string(const struct v7 *);  // Returns error string
+int v7_is_true(const struct v7_val *);
+void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
+
+enum v7_err v7_set(struct v7 *, struct v7_val *, const char *, struct v7_val *);
+enum v7_err v7_del(struct v7 *, struct v7_val *obj, const char *key);
+struct v7_val *v7_get(struct v7_val *obj, const char *key);
 
 struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
 
