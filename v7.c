@@ -2264,12 +2264,21 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
-  enum v7_err e;
+  struct v7_val *obj = v7_push_new_object(cfa->v7);
+
+  // Push new object as a context for the loading new module
+  obj->next = cfa->v7->ctx;
+  cfa->v7->ctx = obj;
 
   for (i = 0; i < cfa->num_args; i++) {
-    if (cfa->args[i]->type != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if ((e = v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) != V7_OK) return e;
+    if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
+    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
   }
+
+  // Pop context, and return it
+  cfa->v7->ctx = obj->next;
+  v7_push_val(cfa->v7, obj);
+
   return V7_OK;
 }
 
@@ -2427,7 +2436,6 @@ V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1], *result = NULL;
   FILE *fp;
 
-  result->type = V7_TYPE_NULL;
   if (cfa->num_args == 2 && is_string(v1) && is_string(v2) &&
       (fp = fopen(v1->v.str.buf, v2->v.str.buf)) != NULL) {
     result = v7_push_new_object(cfa->v7);
@@ -3109,6 +3117,9 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, int op) {
   return V7_OK;
 }
 
+// Member Access            left-to-right    x . x
+// Computed Member Access   left-to-right    x [ x ]
+// new (with argument list) n/a              new x ( x )
 static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   struct v7_val *old_this = v7->this_obj;
 
@@ -3130,6 +3141,10 @@ static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   return V7_OK;
 }
 
+// x . y () . z () ()
+
+// Function Call                 left-to-right     x ( x )
+// new (without argument list)   right-to-left     new x
 static enum v7_err parse_precedence_2(struct v7 *v7) {
   int has_new = 0;
   struct v7_val *old_this_obj = v7->this_obj, *cur_this = v7->this_obj;
@@ -3143,6 +3158,7 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
     }
   }
   TRY(parse_precedence_1(v7, has_new));
+
   while (*v7->pstate.pc == '(') {
     // Use cur_this, not v7->this_obj: v7->this_obj could have been changed
     TRY(parse_function_call(v7, cur_this, has_new));
@@ -3157,6 +3173,8 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
   return V7_OK;
 }
 
+// Postfix Increment    n/a      x ++
+// Postfix Decrement    n/a      x --
 static enum v7_err parse_precedence_3(struct v7 *v7) {
   TRY(parse_precedence_2(v7));
   if ((v7->pstate.pc[0] == '+' && v7->pstate.pc[1] == '+') ||
@@ -3173,6 +3191,15 @@ static enum v7_err parse_precedence_3(struct v7 *v7) {
   return V7_OK;
 }
 
+// Logical NOT        right-to-left    ! x
+// Bitwise NOT        right-to-left    ~ x
+// Unary Plus         right-to-left    + x
+// Unary Negation     right-to-left    - x
+// Prefix Increment   right-to-left    ++ x
+// Prefix Decrement   right-to-left    -- x
+// typeof             right-to-left    typeof x
+// void               right-to-left    void x
+// delete             right-to-left    delete x
 static enum v7_err parse_precedence4(struct v7 *v7) {
   int has_neg = 0, has_typeof = 0;
 
@@ -4034,7 +4061,7 @@ struct v7 *v7_create(void) {
   return v7;
 }
 
-struct v7_val *v7_rootns(struct v7 *v7) {
+struct v7_val *v7_global(struct v7 *v7) {
   return &v7->root_scope;
 }
 
@@ -4172,10 +4199,6 @@ enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, const char *key) {
   return v7_del2(v7, obj, key, strlen(key));
 }
 
-enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
-  return do_exec(v7, "<exec>", source_code, 0);
-}
-
 static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m, *head = v->v.array;
   int n = snprintf(buf, bsiz, "%s", "[");
@@ -4239,10 +4262,16 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
   return buf;
 }
 
-enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
+struct v7_val *v7_exec(struct v7 *v7, const char *source_code) {
+  enum v7_err er = do_exec(v7, "<exec>", source_code, 0);
+  return v7->sp > 0 && er == V7_OK ? v7_top_val(v7) : NULL;
+}
+
+struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   FILE *fp;
   char *p;
   long file_size;
+  int old_sp = v7->sp;
   enum v7_err status = V7_INTERNAL_ERROR;
 
   if ((fp = fopen(path, "r")) == NULL) {
@@ -4258,20 +4287,21 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
     free(p);
   }
 
-  return status;
+  return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
+  //return status;
 }
 
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
-  int i, error_code;
+  int i;//, error_code;
 
   // Execute inline code
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
-      if ((error_code = v7_exec(v7, argv[i + 1])) != V7_OK) {
+      if (!v7_exec(v7, argv[i + 1])) {
         fprintf(stderr, "Error executing [%s]: %s\n", argv[i + 1],
-                v7_strerror(error_code));
+                v7_get_error_string(v7));
       }
       i++;
     }
@@ -4279,9 +4309,8 @@ int main(int argc, char *argv[]) {
 
   // Execute files
   for (; i < argc; i++) {
-    if ((error_code = v7_exec_file(v7, argv[i])) != V7_OK) {
-      fprintf(stderr, "%s line %d: %s\n", argv[i], v7->pstate.line_no,
-              v7_strerror(error_code));
+    if (!v7_exec_file(v7, argv[i])) {
+      fprintf(stderr, "%s\n", v7_get_error_string(v7));
     }
   }
 

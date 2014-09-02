@@ -78,6 +78,10 @@ try { b(); ff(); } catch (e) { hoisting1 = true; a = 12; }
 // test(hoisting1, 'hoisting1'); // Rhino does not support strict
 
 
+a = function(x) { return { foo: function(y) { return x + y} } };
+//print(a(2).foo(3))
+
+
 var factorial = function(x) { return x <= 1 ? 1 : x * factorial(x - 1); };
 test(factorial(5) == 120, 'factorial 1');
 test(factorial(-2) == 1, 'factorial 2');

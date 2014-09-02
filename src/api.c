@@ -19,7 +19,7 @@ struct v7 *v7_create(void) {
   return v7;
 }
 
-struct v7_val *v7_rootns(struct v7 *v7) {
+struct v7_val *v7_global(struct v7 *v7) {
   return &v7->root_scope;
 }
 
@@ -157,10 +157,6 @@ enum v7_err v7_del(struct v7 *v7, struct v7_val *obj, const char *key) {
   return v7_del2(v7, obj, key, strlen(key));
 }
 
-enum v7_err v7_exec(struct v7 *v7, const char *source_code) {
-  return do_exec(v7, "<exec>", source_code, 0);
-}
-
 static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   const struct v7_prop *m, *head = v->v.array;
   int n = snprintf(buf, bsiz, "%s", "[");
@@ -224,10 +220,16 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
   return buf;
 }
 
-enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
+struct v7_val *v7_exec(struct v7 *v7, const char *source_code) {
+  enum v7_err er = do_exec(v7, "<exec>", source_code, 0);
+  return v7->sp > 0 && er == V7_OK ? v7_top_val(v7) : NULL;
+}
+
+struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   FILE *fp;
   char *p;
   long file_size;
+  int old_sp = v7->sp;
   enum v7_err status = V7_INTERNAL_ERROR;
 
   if ((fp = fopen(path, "r")) == NULL) {
@@ -243,5 +245,6 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path) {
     free(p);
   }
 
-  return status;
+  return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
+  //return status;
 }
