@@ -39,6 +39,12 @@ static const int s_op_lengths[NUM_OPS] = {
   1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4
 };
 
+static enum v7_tok next_tok(struct v7 *v7) {
+  v7->cur_tok = get_next_token(&v7->pstate.pc, &v7->cur_tok_vec,
+                               &v7->cur_tok_dbl);
+  return v7->cur_tok;
+}
+
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
   char *str;
@@ -1041,6 +1047,9 @@ static enum v7_err parse_declaration(struct v7 *v7) { // <#parse_decl#>
 
   do {
     inc_stack(v7, old_sp - v7_sp(v7));  // Clean up the stack after prev decl
+
+    //next_tok(v7);
+    //CHECK(v7->cur_tok == TOK_IDENTIFIER, V7_SYNTAX_ERROR);
     TRY(parse_identifier(v7));
     if (*v7->pstate.pc == '=') {
       TRY(parse_assign(v7, v7->ctx, OP_ASSIGN));
@@ -1283,15 +1292,13 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
 }
 
 V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
-  struct v7_vec vec;
-  enum v7_tok tok;
   struct v7_pstate old = v7->pstate;
 
-  tok = next_tok(v7->pstate.pc, &vec, NULL);
-  v7->pstate.pc += vec.len;
+  next_tok(v7);
+  //v7->cur_tok =  get_next_token(&v7->pstate.pc, &v7->cur_tok_vec, &v7->cur_tok_dbl);
   skip_whitespaces_and_comments(v7); // TODO(lsm): remove this
 
-  switch (tok) {
+  switch (v7->cur_tok) {
     case TOK_VAR: TRY(parse_declaration(v7)); break;
     case TOK_RETURN: TRY(parse_return_statement(v7, has_return)); break;
     case TOK_IF: TRY(parse_if_statement(v7, has_return)); break;
