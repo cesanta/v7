@@ -488,6 +488,7 @@ V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
     }
   }
 
+  //printf("%s: [%s] %d %d\n", __func__, file_name, v7->pstate.line_no, err);
   assert(v7->root_scope.proto == &s_global);
   v7->pstate = old_pstate;
 
