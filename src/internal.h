@@ -178,14 +178,11 @@ struct v7 {
 #define V7_NO_EXEC   2        // Non-executing code block: if (false) { block }
 
   struct v7_pstate pstate;    // Parsing state
+  enum v7_tok cur_tok;        // Current token
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
 
   char error_message[100];    // Placeholder for the error message
-
-  enum v7_tok cur_tok;        // Current token
-  struct v7_vec cur_tok_vec;  // Vector corresponding to the current token
-  double cur_tok_dbl;         // Double value for current token
 
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
@@ -267,7 +264,8 @@ extern struct v7_val s_file;
 
 
 // Forward declarations
-V7_PRIVATE enum v7_tok get_next_token(const char **, struct v7_vec *, double *);
+V7_PRIVATE int skip_to_next_tok(const char **ptr);
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);

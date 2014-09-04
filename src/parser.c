@@ -40,8 +40,15 @@ static const int s_op_lengths[NUM_OPS] = {
 };
 
 static enum v7_tok next_tok(struct v7 *v7) {
-  v7->cur_tok = get_next_token(&v7->pstate.pc, &v7->cur_tok_vec,
-                               &v7->cur_tok_dbl);
+  double d;
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  v7->tok = v7->pstate.pc;
+  v7->cur_tok = get_tok(&v7->pstate.pc, &d);
+  v7->tok_len = v7->pstate.pc - v7->tok;
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  return v7->cur_tok;
+  //v7->cur_tok = get_next_token(&v7->pstate.pc, &v7->cur_tok_vec,
+  //                             &v7->cur_tok_dbl);
   return v7->cur_tok;
 }
 
@@ -1294,11 +1301,7 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
 V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
   struct v7_pstate old = v7->pstate;
 
-  next_tok(v7);
-  //v7->cur_tok =  get_next_token(&v7->pstate.pc, &v7->cur_tok_vec, &v7->cur_tok_dbl);
-  skip_whitespaces_and_comments(v7); // TODO(lsm): remove this
-
-  switch (v7->cur_tok) {
+  switch (next_tok(v7)) {
     case TOK_VAR: TRY(parse_declaration(v7)); break;
     case TOK_RETURN: TRY(parse_return_statement(v7, has_return)); break;
     case TOK_IF: TRY(parse_if_statement(v7, has_return)); break;
