@@ -72,35 +72,6 @@ enum v7_class {
   V7_CLASS_REGEXP, V7_CLASS_STRING, V7_NUM_CLASSES
 };
 
-enum v7_tok {
-  TOK_END_OF_INPUT, TOK_NUMBER, TOK_STRING_LITERAL, TOK_IDENTIFIER,
-
-  // Punctuators
-  TOK_OPEN_CURLY, TOK_CLOSE_CURLY, TOK_OPEN_PAREN, TOK_CLOSE_PAREN,
-  TOK_OPEN_BRACKET, TOK_CLOSE_BRACKET, TOK_DOT, TOK_COLON, TOK_SEMICOLON,
-  TOK_COMMA, TOK_EQ_EQ, TOK_EQ, TOK_ASSIGN, TOK_NE, TOK_NE_NE, TOK_NOT,
-  TOK_REM_ASSIGN, TOK_REM, TOK_MUL_ASSIGN, TOK_MUL, TOK_DIV_ASSIGN, TOK_DIV,
-  TOK_XOR_ASSIGN, TOK_XOR, TOK_PLUS_PLUS, TOK_PLUS_ASSING, TOK_PLUS,
-  TOK_MINUS_MINUS, TOK_MINUS_ASSING, TOK_MINUS, TOK_LOGICAL_AND,
-  TOK_LOGICAL_AND_ASSING, TOK_AND, TOK_LOGICAL_OR, TOK_LOGICAL_OR_ASSING,
-  TOK_OR, TOK_QUESTION, TOK_TILDA, TOK_LE, TOK_LT, TOK_GE, TOK_GT,
-  TOK_LSHIFT_ASSIGN, TOK_LSHIFT, TOK_RSHIFT_ASSIGN, TOK_RSHIFT,
-
-  // Keywords. must be in the same order as tokenizer.c::s_keywords array
-  TOK_BREAK, TOK_CASE, TOK_CATCH, TOK_CONTINUE, TOK_DEBUGGER, TOK_DEFAULT,
-  TOK_DELETE, TOK_DO, TOK_ELSE, TOK_FALSE, TOK_FINALLY, TOK_FOR, TOK_FUNCTION,
-  TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL, TOK_RETURN, TOK_SWITCH,
-  TOK_THIS, TOK_THROW, TOK_TRUE, TOK_TRY, TOK_TYPEOF, TOK_UNDEFINED, TOK_VAR,
-  TOK_VOID, TOK_WHILE, TOK_WITH,
-
-  // TODO(lsm): process these reserved words too
-  TOK_CLASS, TOK_ENUM, TOK_EXTENDS, TOK_SUPER, TOK_CONST, TOK_EXPORT,
-  TOK_IMPORT, TOK_IMPLEMENTS, TOK_LET, TOK_PRIVATE, TOK_PUBLIC, TOK_INTERFACE,
-  TOK_PACKAGE, TOK_PROTECTED, TOK_STATIC, TOK_YIELD,
-
-  NUM_TOKENS
-};
-
 typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
 
 struct v7_prop {
@@ -201,10 +172,6 @@ struct v7 {
 
   char error_message[100];    // Placeholder for the error message
 
-  enum v7_tok cur_tok;        // Current token
-  struct v7_vec cur_tok_vec;  // Vector corresponding to the current token
-  double cur_tok_dbl;         // Double value for current token
-
   struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
   struct v7_val *this_obj;    // Current "this" object
   struct v7_val *ctx;         // Current execution context
@@ -283,9 +250,37 @@ extern struct v7_val s_file;
     SET_RO_PROP_V(_obj, _name, _val); \
   } while (0)
 
+enum v7_tok {
+  TOK_END_OF_INPUT, TOK_NUMBER, TOK_STRING_LITERAL, TOK_IDENTIFIER,
+
+  // Punctuators
+  TOK_OPEN_CURLY, TOK_CLOSE_CURLY, TOK_OPEN_PAREN, TOK_CLOSE_PAREN,
+  TOK_OPEN_BRACKET, TOK_CLOSE_BRACKET, TOK_DOT, TOK_COLON, TOK_SEMICOLON,
+  TOK_COMMA, TOK_EQ_EQ, TOK_EQ, TOK_ASSIGN, TOK_NE, TOK_NE_NE, TOK_NOT,
+  TOK_REM_ASSIGN, TOK_REM, TOK_MUL_ASSIGN, TOK_MUL, TOK_DIV_ASSIGN, TOK_DIV,
+  TOK_XOR_ASSIGN, TOK_XOR, TOK_PLUS_PLUS, TOK_PLUS_ASSING, TOK_PLUS,
+  TOK_MINUS_MINUS, TOK_MINUS_ASSING, TOK_MINUS, TOK_LOGICAL_AND,
+  TOK_LOGICAL_AND_ASSING, TOK_AND, TOK_LOGICAL_OR, TOK_LOGICAL_OR_ASSING,
+  TOK_OR, TOK_QUESTION, TOK_TILDA, TOK_LE, TOK_LT, TOK_GE, TOK_GT,
+  TOK_LSHIFT_ASSIGN, TOK_LSHIFT, TOK_RSHIFT_ASSIGN, TOK_RSHIFT,
+
+  // Keywords. must be in the same order as tokenizer.c::s_keywords array
+  TOK_BREAK, TOK_CASE, TOK_CATCH, TOK_CONTINUE, TOK_DEBUGGER, TOK_DEFAULT,
+  TOK_DELETE, TOK_DO, TOK_ELSE, TOK_FALSE, TOK_FINALLY, TOK_FOR, TOK_FUNCTION,
+  TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL, TOK_RETURN, TOK_SWITCH,
+  TOK_THIS, TOK_THROW, TOK_TRUE, TOK_TRY, TOK_TYPEOF, TOK_UNDEFINED, TOK_VAR,
+  TOK_VOID, TOK_WHILE, TOK_WITH,
+
+  // TODO(lsm): process these reserved words too
+  TOK_CLASS, TOK_ENUM, TOK_EXTENDS, TOK_SUPER, TOK_CONST, TOK_EXPORT,
+  TOK_IMPORT, TOK_IMPLEMENTS, TOK_LET, TOK_PRIVATE, TOK_PUBLIC, TOK_INTERFACE,
+  TOK_PACKAGE, TOK_PROTECTED, TOK_STATIC, TOK_YIELD,
+
+  NUM_TOKENS
+};
 
 // Forward declarations
-V7_PRIVATE enum v7_tok get_next_token(const char **, struct v7_vec *, double *);
+V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec, double *n);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -872,7 +867,6 @@ V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
     }
   }
 
-  //printf("%s: [%s] %d %d\n", __func__, file_name, v7->pstate.line_no, err);
   assert(v7->root_scope.proto == &s_global);
   v7->pstate = old_pstate;
 
@@ -2269,7 +2263,7 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
-  int i, failed = 0;
+  int i;
   struct v7_val *obj = v7_push_new_object(cfa->v7);
 
   // Push new object as a context for the loading new module
@@ -2278,19 +2272,12 @@ V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
 
   for (i = 0; i < cfa->num_args; i++) {
     if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) {
-      failed++;
-      break;
-    };
+    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
   }
 
   // Pop context, and return it
   cfa->v7->ctx = obj->next;
-  if (failed) {
-    v7_make_and_push(cfa->v7, V7_TYPE_NULL);
-  } else {
-    v7_push_val(cfa->v7, obj);
-  }
+  v7_push_val(cfa->v7, obj);
 
   return V7_OK;
 }
@@ -2534,12 +2521,6 @@ static const int s_op_lengths[NUM_OPS] = {
   2, 2, 3, 3,
   1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4
 };
-
-static enum v7_tok next_tok(struct v7 *v7) {
-  v7->cur_tok = get_next_token(&v7->pstate.pc, &v7->cur_tok_vec,
-                               &v7->cur_tok_dbl);
-  return v7->cur_tok;
-}
 
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, int op) {
@@ -3558,9 +3539,6 @@ static enum v7_err parse_declaration(struct v7 *v7) { // <#parse_decl#>
 
   do {
     inc_stack(v7, old_sp - v7_sp(v7));  // Clean up the stack after prev decl
-
-    //next_tok(v7);
-    //CHECK(v7->cur_tok == TOK_IDENTIFIER, V7_SYNTAX_ERROR);
     TRY(parse_identifier(v7));
     if (*v7->pstate.pc == '=') {
       TRY(parse_assign(v7, v7->ctx, OP_ASSIGN));
@@ -3803,13 +3781,15 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
 }
 
 V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
+  struct v7_vec vec;
+  enum v7_tok tok;
   struct v7_pstate old = v7->pstate;
 
-  next_tok(v7);
-  //v7->cur_tok =  get_next_token(&v7->pstate.pc, &v7->cur_tok_vec, &v7->cur_tok_dbl);
+  tok = next_tok(v7->pstate.pc, &vec, NULL);
+  v7->pstate.pc += vec.len;
   skip_whitespaces_and_comments(v7); // TODO(lsm): remove this
 
-  switch (v7->cur_tok) {
+  switch (tok) {
     case TOK_VAR: TRY(parse_declaration(v7)); break;
     case TOK_RETURN: TRY(parse_return_statement(v7, has_return)); break;
     case TOK_IF: TRY(parse_if_statement(v7, has_return)); break;
@@ -3950,7 +3930,9 @@ static int parse_str_literal(const char *s) {
   return len;
 }
 
-static enum v7_tok next(const char *s, struct v7_vec *vec, double *n) {
+V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec,double *n) {
+
+  skip_to_next_tok(&s);
   vec->p = s;
   vec->len = 1;
 
@@ -4043,18 +4025,6 @@ static enum v7_tok next(const char *s, struct v7_vec *vec, double *n) {
   }
 }
 
-V7_PRIVATE enum v7_tok get_next_token(const char **s, struct v7_vec *vec,
-                                      double *n) {
-  enum v7_tok t;
-
-  skip_to_next_tok(s);
-  t = next(*s, vec, n);
-  *s += vec->len;
-  skip_to_next_tok(s);
-
-  return t;
-}
-
 #ifdef TEST_RUN
 int main(void) {
   const char *src = "for (var fo = 1; fore < 1.17; foo++) { print(23, 'x')} ";
@@ -4062,8 +4032,9 @@ int main(void) {
   enum v7_tok tok;
   double num;
 
-  while ((tok = get_next_token(&src, &vec, &num)) != TOK_END_OF_INPUT) {
+  while ((tok = next_tok(src, &vec, &num)) != TOK_END_OF_INPUT) {
     printf("%d [%.*s]\n", tok, vec.len, vec.p);
+    src = vec.p + vec.len;
   }
   printf("%d [%.*s]\n", tok, vec.len, vec.p);
 

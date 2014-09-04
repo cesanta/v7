@@ -14,7 +14,7 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
-  int i, failed = 0;
+  int i;
   struct v7_val *obj = v7_push_new_object(cfa->v7);
 
   // Push new object as a context for the loading new module
@@ -23,19 +23,12 @@ V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
 
   for (i = 0; i < cfa->num_args; i++) {
     if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) {
-      failed++;
-      break;
-    };
+    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
   }
 
   // Pop context, and return it
   cfa->v7->ctx = obj->next;
-  if (failed) {
-    v7_make_and_push(cfa->v7, V7_TYPE_NULL);
-  } else {
-    v7_push_val(cfa->v7, obj);
-  }
+  v7_push_val(cfa->v7, obj);
 
   return V7_OK;
 }

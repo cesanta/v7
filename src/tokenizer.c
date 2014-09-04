@@ -125,7 +125,9 @@ static int parse_str_literal(const char *s) {
   return len;
 }
 
-static enum v7_tok next(const char *s, struct v7_vec *vec, double *n) {
+V7_PRIVATE enum v7_tok next_tok(const char *s, struct v7_vec *vec,double *n) {
+
+  skip_to_next_tok(&s);
   vec->p = s;
   vec->len = 1;
 
@@ -218,18 +220,6 @@ static enum v7_tok next(const char *s, struct v7_vec *vec, double *n) {
   }
 }
 
-V7_PRIVATE enum v7_tok get_next_token(const char **s, struct v7_vec *vec,
-                                      double *n) {
-  enum v7_tok t;
-
-  skip_to_next_tok(s);
-  t = next(*s, vec, n);
-  *s += vec->len;
-  skip_to_next_tok(s);
-
-  return t;
-}
-
 #ifdef TEST_RUN
 int main(void) {
   const char *src = "for (var fo = 1; fore < 1.17; foo++) { print(23, 'x')} ";
@@ -237,8 +227,9 @@ int main(void) {
   enum v7_tok tok;
   double num;
 
-  while ((tok = get_next_token(&src, &vec, &num)) != TOK_END_OF_INPUT) {
+  while ((tok = next_tok(src, &vec, &num)) != TOK_END_OF_INPUT) {
     printf("%d [%.*s]\n", tok, vec.len, vec.p);
+    src = vec.p + vec.len;
   }
   printf("%d [%.*s]\n", tok, vec.len, vec.p);
 
