@@ -413,6 +413,7 @@ V7_PRIVATE int slre_match(const char *regexp, const char *s, int s_len,
 V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
   struct v7_val *str = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
 
   if(cfa->num_args > 0){
     if(!is_string(str)){
@@ -420,7 +421,7 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
       str = v7_top_val(cfa->v7);
     }
     // TODO: copy str --> regex
-    
+
     if(cfa->num_args > 1){
       struct v7_val *flags = cfa->args[1];
       if(!is_string(flags)){
@@ -437,7 +438,7 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
       }
     }
   }
-  
+
   v7_set_class(obj, V7_CLASS_REGEXP);
   return V7_OK;
 }
