@@ -419,7 +419,7 @@ V7_PRIVATE const char *v7_strerror(enum v7_err e) {
     "no error", "error", "eval error", "range error", "reference error",
     "syntax error", "type error", "URI error",
     "out of memory", "internal error", "stack overflow", "stack underflow",
-    "called non-function", "not implemented"
+    "called non-function", "not implemented", "string literal too long"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
@@ -475,13 +475,13 @@ V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
   v7->pstate.source_code = v7->pstate.pc = source_code;
   v7->pstate.file_name = file_name;
   v7->pstate.line_no = 1;
-  skip_whitespaces_and_comments(v7);
 
   // Prior calls to v7_exec() may have left current_scope modified, reset now
   // TODO(lsm): free scope chain
   v7->this_obj = &v7->root_scope;
 
-  while ((err == V7_OK) && (*v7->pstate.pc != '\0')) {
+  next_tok(v7);
+  while ((err == V7_OK) && (v7->cur_tok != TOK_END_OF_INPUT)) {
     // Reset stack on each statement
     if ((err = inc_stack(v7, sp - v7->sp)) == V7_OK) {
       err = parse_statement(v7, &has_ret);
