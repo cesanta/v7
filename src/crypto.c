@@ -69,7 +69,7 @@ static void MD5Transform(uint32_t state[4],
 	uint32_t a, b, c, d, in[MD5_BLOCK_LENGTH / 4];
 
 #if BYTE_ORDER == LITTLE_ENDIAN
-	bcopy(block, in, sizeof(in));
+	memcpy(block, in, sizeof(in));
 #else
 	for (a = 0; a < MD5_BLOCK_LENGTH / 4; a++) {
 		in[a] = (u_int32_t)(
@@ -167,11 +167,11 @@ static void MD5Update(MD5_CTX *ctx, const unsigned char *input, size_t len) {
 	need = MD5_BLOCK_LENGTH - have;
 
 	/* Update bitcount */
-	ctx->count += (u_int64_t)len << 3;
+	ctx->count += (uint64_t)len << 3;
 
 	if (len >= need) {
 		if (have != 0) {
-			bcopy(input, ctx->buffer + have, need);
+			memcpy(input, ctx->buffer + have, need);
 			MD5Transform(ctx->state, ctx->buffer);
 			input += need;
 			len -= need;
@@ -188,7 +188,7 @@ static void MD5Update(MD5_CTX *ctx, const unsigned char *input, size_t len) {
 
 	/* Handle any remaining bytes of data. */
 	if (len != 0)
-		bcopy(input, ctx->buffer + have, len);
+		memcpy(input, ctx->buffer + have, len);
 }
 
 static void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
