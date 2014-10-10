@@ -61,7 +61,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   //cfa->result->type = V7_TYPE_NULL;
   memset(caps, 0, sizeof(caps));
 
-  if (cfa->num_args == 1 &&
+  /* if (cfa->num_args == 1 &&
       v7_is_class(cfa->args[0], V7_CLASS_REGEXP) &&
       (n = slre_match(cfa->args[0]->v.regex, s->buf, (int) s->len,
                       caps, ARRAY_SIZE(caps) - 1, 0)) > 0) {
@@ -74,7 +74,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
       v7_append(cfa->v7, result,
                 v7_mkv(cfa->v7, V7_TYPE_STR, caps[i].ptr, (long) caps[i].len, 1));
     }
-  }
+  } */
   return V7_OK;
 }
 
@@ -128,14 +128,14 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
 
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
-    while ((n = slre_match(regex, p1, (int) (e - p1),
+    /* while ((n = slre_match(regex, p1, (int) (e - p1),
                            caps, ARRAY_SIZE(caps), 0)) > 0) {
       if (limit >= 0 && limit <= num_elems) break;
       v7_append(cfa->v7, result,
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, caps[0].ptr - p1, 1));
       p1 += n;
       num_elems++;
-    }
+    } */
     if (limit < 0 || limit > num_elems) {
       v7_append(cfa->v7, result,
                 v7_mkv(cfa->v7, V7_TYPE_STR, p1, e - p1, 1));
