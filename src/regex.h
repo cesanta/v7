@@ -1,19 +1,23 @@
+// Copyright (c) 2013-2014 Cesanta Software Limited
+// All rights reserved
+//
+// This software is dual-licensed: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 2 as
+// published by the Free Software Foundation. For the terms of this
+// license, see <http://www.gnu.org/licenses/>.
+//
+// You are free to use this software under the terms of the GNU General
+// Public License, but WITHOUT ANY WARRANTY; without even the implied
+// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+//
+// Alternatively, you can license this software under a commercial
+// license, as set out in <http://cesanta.com/products.html>.
 
 #ifndef regex_h
 #define regex_h
 
 #define RE_MAX_SUB 32
-
-struct RE_FLAGS{
-	uint16_t unused:5;
-	/* execution flag */
-	uint16_t re_g:1;
-	/* compiler flags */
-	uint16_t re_i:1;
-	uint16_t re_m:1;
-	/* parser flag */
-	uint16_t re:1;
-};
 
 struct re_tok{
 	const char *start;	/* points to the beginning of the token */
@@ -86,7 +90,7 @@ struct Reinst{
  */
 struct Reprog{
 	struct Reinst *start, *end;
-	struct RE_FLAGS flags;
+	struct v7_val_flags flags;
 	unsigned int subexpr_num;
 	struct Reclass charset[16];
 };
@@ -100,7 +104,7 @@ struct Rethread{
 	struct Resub sub;
 };
 
-struct Reprog *re_compiler(const char *pattern, struct RE_FLAGS flags, const char **errorp);
+struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
 uint8_t re_exec(struct Reprog *prog, const char *string, struct Resub *loot);
 void re_free(struct Reprog *prog);
 

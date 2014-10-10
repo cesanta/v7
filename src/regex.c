@@ -7,7 +7,7 @@
 #define RE_MAX_THREADS 1000
 
 struct re_env{
-	struct RE_FLAGS flags;
+	struct v7_val_flags flags;
 	const char *src;
 	Rune curr_rune;
 
@@ -717,7 +717,7 @@ static void program_print(struct Reprog *prog){
 }
 #endif
 
-struct Reprog *re_compiler(const char *pattern, struct RE_FLAGS flags, const char **p_err_msg){
+struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **p_err_msg){
 	struct re_env e;
 	struct Renode *nd;
 	struct Reinst *split, *jump;
@@ -785,7 +785,7 @@ static void re_newthread(struct Rethread *t, struct Reinst *pc, const char *star
 
 #define RE_NO_MATCH() if(!(thr=0)) continue
 
-static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, struct RE_FLAGS flags, struct Resub *loot){
+static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, struct v7_val_flags flags, struct Resub *loot){
 	struct Rethread threads[RE_MAX_THREADS];
 	struct Resub sub, tmpsub;
 	Rune c, r;
@@ -804,7 +804,7 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
 		for(thr=1; thr;){
 			switch(pc->opcode){
 				case I_END:
-					memcpy(loot->sub, sub.sub, sizeof loot->sub); 
+					memcpy(loot->sub, sub.sub, sizeof loot->sub);
 					return 1;
 				case I_ANY:
 				case I_ANYNL:
@@ -1069,8 +1069,8 @@ int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst
 
 #define RE_TEST_STR_SIZE	2000
 
-static struct RE_FLAGS get_flags(const char *ch){
-	struct RE_FLAGS flags = {0,0,0,0};
+static struct v7_val_flags get_flags(const char *ch){
+	struct v7_val_flags flags = {0,0,0,0,0,0,0,0,0};
 	uint8_t rep = 1;
 	for(;rep && *ch;ch++){
 		switch(*ch){
@@ -1095,7 +1095,7 @@ int main(int argc, char **argv){
 	const char *error;
 	struct Reprog *pr;
 	struct Resub sub;
-	struct RE_FLAGS flags = {0,0,0,1};
+	struct v7_val_flags flags = {0,0,0,0,0,0,0,0,1};
 	unsigned int i, k=0;
 
 	if(argc > 1){
@@ -1258,9 +1258,9 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
       uint32_t ind = flags->v.str.len;
       while(ind){
         switch(flags->v.str.buf[--ind]){
-          case 'g': obj->regexp_fl_g=1;  break;
-          case 'i': obj->regexp_fl_i=1;  break;
-          case 'm': obj->regexp_fl_m=1;  break;
+          case 'g': obj->fl.re_g=1;  break;
+          case 'i': obj->fl.re_i=1;  break;
+          case 'm': obj->fl.re_m=1;  break;
         }
       }
     }
@@ -1271,15 +1271,15 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result) {
-  v7_init_bool(result, this_obj->regexp_fl_g);
+  v7_init_bool(result, this_obj->fl.re_g);
 }
 
 V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result) {
-  v7_init_bool(result, this_obj->regexp_fl_i);
+  v7_init_bool(result, this_obj->fl.re_i);
 }
 
 V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result) {
-  v7_init_bool(result, this_obj->regexp_fl_m);
+  v7_init_bool(result, this_obj->fl.re_m);
 }
 
 V7_PRIVATE void init_regex(void) {

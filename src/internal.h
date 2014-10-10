@@ -155,7 +155,7 @@ struct v7_val {
 
   union{
     uint16_t flags;            // Flags - defined below
-    struct{
+    struct v7_val_flags{
       uint16_t fl_val_alloc:1;
 #define V7_VAL_ALLOCATED   1   // Whole "struct v7_val" must be free()-ed
       uint16_t fl_str_alloc:1;
@@ -167,13 +167,11 @@ struct v7_val {
       uint16_t fl_val_dealloc:1;
 #define V7_VAL_DEALLOCATED 16  // Value has been deallocated
 
-      uint16_t regexp_fl_g:1;
-#define V7_REGEXP_FL_G     32  // RegExp flag g
-      uint16_t regexp_fl_i:1;
-#define V7_REGEXP_FL_I     64  // RegExp flag i
-      uint16_t regexp_fl_m:1;
-#define V7_REGEXP_FL_M     128 // RegExp flag m
-    };
+  uint16_t re_g:1; // execution RegExp flag g
+  uint16_t re_i:1; // compiler & execution RegExp flag i
+  uint16_t re_m:1; // execution RegExp flag m
+  uint16_t re:1;   // parser RegExp flag re
+    } fl;
   };
 };
 

@@ -155,7 +155,7 @@ struct v7_val {
 
   union{
     uint16_t flags;            // Flags - defined below
-    struct{
+    struct v7_val_flags{
       uint16_t fl_val_alloc:1;
 #define V7_VAL_ALLOCATED   1   // Whole "struct v7_val" must be free()-ed
       uint16_t fl_str_alloc:1;
@@ -167,13 +167,11 @@ struct v7_val {
       uint16_t fl_val_dealloc:1;
 #define V7_VAL_DEALLOCATED 16  // Value has been deallocated
 
-      uint16_t regexp_fl_g:1;
-#define V7_REGEXP_FL_G     32  // RegExp flag g
-      uint16_t regexp_fl_i:1;
-#define V7_REGEXP_FL_I     64  // RegExp flag i
-      uint16_t regexp_fl_m:1;
-#define V7_REGEXP_FL_M     128 // RegExp flag m
-    };
+  uint16_t re_g:1; // execution RegExp flag g
+  uint16_t re_i:1; // compiler & execution RegExp flag i
+  uint16_t re_m:1; // execution RegExp flag m
+  uint16_t re:1;   // parser RegExp flag re
+    } fl;
   };
 };
 
@@ -412,22 +410,26 @@ char*	utfutf(char *s1, char *s2);
 }
 #endif
 #endif
+// Copyright (c) 2013-2014 Cesanta Software Limited
+// All rights reserved
+//
+// This software is dual-licensed: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 2 as
+// published by the Free Software Foundation. For the terms of this
+// license, see <http://www.gnu.org/licenses/>.
+//
+// You are free to use this software under the terms of the GNU General
+// Public License, but WITHOUT ANY WARRANTY; without even the implied
+// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+//
+// Alternatively, you can license this software under a commercial
+// license, as set out in <http://cesanta.com/products.html>.
 
 #ifndef regex_h
 #define regex_h
 
 #define RE_MAX_SUB 32
-
-struct RE_FLAGS{
-	uint16_t unused:5;
-	/* execution flag */
-	uint16_t re_g:1;
-	/* compiler flags */
-	uint16_t re_i:1;
-	uint16_t re_m:1;
-	/* parser flag */
-	uint16_t re:1;
-};
 
 struct re_tok{
 	const char *start;	/* points to the beginning of the token */
@@ -500,7 +502,7 @@ struct Reinst{
  */
 struct Reprog{
 	struct Reinst *start, *end;
-	struct RE_FLAGS flags;
+	struct v7_val_flags flags;
 	unsigned int subexpr_num;
 	struct Reclass charset[16];
 };
@@ -514,7 +516,7 @@ struct Rethread{
 	struct Resub sub;
 };
 
-struct Reprog *re_compiler(const char *pattern, struct RE_FLAGS flags, const char **errorp);
+struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
 uint8_t re_exec(struct Reprog *prog, const char *string, struct Resub *loot);
 void re_free(struct Reprog *prog);
 
@@ -1727,7 +1729,7 @@ V7_PRIVATE void init_object(void) {
 #define RE_MAX_THREADS 1000
 
 struct re_env{
-	struct RE_FLAGS flags;
+	struct v7_val_flags flags;
 	const char *src;
 	Rune curr_rune;
 
@@ -2437,7 +2439,7 @@ static void program_print(struct Reprog *prog){
 }
 #endif
 
-struct Reprog *re_compiler(const char *pattern, struct RE_FLAGS flags, const char **p_err_msg){
+struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **p_err_msg){
 	struct re_env e;
 	struct Renode *nd;
 	struct Reinst *split, *jump;
@@ -2505,7 +2507,7 @@ static void re_newthread(struct Rethread *t, struct Reinst *pc, const char *star
 
 #define RE_NO_MATCH() if(!(thr=0)) continue
 
-static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, struct RE_FLAGS flags, struct Resub *loot){
+static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, struct v7_val_flags flags, struct Resub *loot){
 	struct Rethread threads[RE_MAX_THREADS];
 	struct Resub sub, tmpsub;
 	Rune c, r;
@@ -2524,7 +2526,7 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
 		for(thr=1; thr;){
 			switch(pc->opcode){
 				case I_END:
-					memcpy(loot->sub, sub.sub, sizeof loot->sub); 
+					memcpy(loot->sub, sub.sub, sizeof loot->sub);
 					return 1;
 				case I_ANY:
 				case I_ANYNL:
@@ -2789,8 +2791,8 @@ int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst
 
 #define RE_TEST_STR_SIZE	2000
 
-static struct RE_FLAGS get_flags(const char *ch){
-	struct RE_FLAGS flags = {0,0,0,0};
+static struct v7_val_flags get_flags(const char *ch){
+	struct v7_val_flags flags = {0,0,0,0,0,0,0,0,0};
 	uint8_t rep = 1;
 	for(;rep && *ch;ch++){
 		switch(*ch){
@@ -2815,7 +2817,7 @@ int main(int argc, char **argv){
 	const char *error;
 	struct Reprog *pr;
 	struct Resub sub;
-	struct RE_FLAGS flags = {0,0,0,1};
+	struct v7_val_flags flags = {0,0,0,0,0,0,0,0,1};
 	unsigned int i, k=0;
 
 	if(argc > 1){
@@ -2978,9 +2980,9 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
       uint32_t ind = flags->v.str.len;
       while(ind){
         switch(flags->v.str.buf[--ind]){
-          case 'g': obj->regexp_fl_g=1;  break;
-          case 'i': obj->regexp_fl_i=1;  break;
-          case 'm': obj->regexp_fl_m=1;  break;
+          case 'g': obj->fl.re_g=1;  break;
+          case 'i': obj->fl.re_i=1;  break;
+          case 'm': obj->fl.re_m=1;  break;
         }
       }
     }
@@ -2991,15 +2993,15 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result) {
-  v7_init_bool(result, this_obj->regexp_fl_g);
+  v7_init_bool(result, this_obj->fl.re_g);
 }
 
 V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result) {
-  v7_init_bool(result, this_obj->regexp_fl_i);
+  v7_init_bool(result, this_obj->fl.re_i);
 }
 
 V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result) {
-  v7_init_bool(result, this_obj->regexp_fl_m);
+  v7_init_bool(result, this_obj->fl.re_m);
 }
 
 V7_PRIVATE void init_regex(void) {
@@ -5363,9 +5365,9 @@ static enum v7_err parse_regex(struct v7 *v7) {
     struct v7_val *top = v7_top(v7)[-1];
     v7_set_class(top, V7_CLASS_REGEXP);
     top->v.regex = v7_strdup(regex, strlen(regex));
-    top->regexp_fl_g = fl_g;
-    top->regexp_fl_i = fl_i;
-    top->regexp_fl_m = fl_m;
+    top->fl.re_g = fl_g;
+    top->fl.re_i = fl_i;
+    top->fl.re_m = fl_m;
   }
 
   return V7_OK;

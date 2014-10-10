@@ -521,9 +521,9 @@ static enum v7_err parse_regex(struct v7 *v7) {
     struct v7_val *top = v7_top(v7)[-1];
     v7_set_class(top, V7_CLASS_REGEXP);
     top->v.regex = v7_strdup(regex, strlen(regex));
-    top->regexp_fl_g = fl_g;
-    top->regexp_fl_i = fl_i;
-    top->regexp_fl_m = fl_m;
+    top->fl.re_g = fl_g;
+    top->fl.re_i = fl_i;
+    top->fl.re_m = fl_m;
   }
 
   return V7_OK;
