@@ -38,9 +38,18 @@ typedef unsigned short uint16_t;
 typedef unsigned short u_int16_t;
 typedef unsigned char uint8_t;
 typedef unsigned char u_int8_t;
+typedef signed char sint8_t;
 
 // some substitutes
 #define bcopy memcpy
+#define reg_malloc malloc
+#define reg_free free
+
+#ifndef V7_EX_TRY_CATCH
+#define V7_EX_TRY_CATCH(catch_point) setjmp(catch_point)
+
+#define V7_EX_THROW(c, m, message) do{m = message; longjmp(c, 1);}while(0)
+#endif
 ////////////////////////
 
 struct v7;      // Opaque structure. V7 engine handler.
