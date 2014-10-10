@@ -19,16 +19,16 @@
 
 #define RE_MAX_SUB 32
 
-struct re_tok{
-	const char *start;	/* points to the beginning of the token */
-	const char *end;	/* points to the end of the token */
-};
+
 /*
  *	Sub expression matches
  */
 struct Resub{
 	unsigned int subexpr_num;
-	struct re_tok sub[RE_MAX_SUB];
+	struct re_tok{
+		const char *start;	/* points to the beginning of the token */
+		const char *end;	/* points to the end of the token */
+	} sub[RE_MAX_SUB];
 };
 
 struct Rerange{ Rune s; Rune e; };
