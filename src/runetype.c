@@ -1030,7 +1030,7 @@ Rune	__totitle1[] =
 };
 
 static Rune*
-bsearch(Rune c, Rune *t, int n, int ne)
+rune_bsearch(Rune c, Rune *t, int n, int ne)
 {
 	Rune *p;
 	int m;
@@ -1054,10 +1054,10 @@ tolowerrune(Rune c)
 {
 	Rune *p;
 
-	p = bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
+	p = rune_bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
 	if(p && c >= p[0] && c <= p[1])
 		return c + p[2] - 500;
-	p = bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
+	p = rune_bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
 	if(p && c == p[0])
 		return c + p[1] - 500;
 	return c;
@@ -1068,10 +1068,10 @@ toupperrune(Rune c)
 {
 	Rune *p;
 
-	p = bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
+	p = rune_bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
 	if(p && c >= p[0] && c <= p[1])
 		return c + p[2] - 500;
-	p = bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
+	p = rune_bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
 	if(p && c == p[0])
 		return c + p[1] - 500;
 	return c;
@@ -1082,7 +1082,7 @@ totitlerune(Rune c)
 {
 	Rune *p;
 
-	p = bsearch(c, __totitle1, nelem(__totitle1)/2, 2);
+	p = rune_bsearch(c, __totitle1, nelem(__totitle1)/2, 2);
 	if(p && c == p[0])
 		return c + p[1] - 500;
 	return c;
@@ -1093,10 +1093,10 @@ islowerrune(Rune c)
 {
 	Rune *p;
 
-	p = bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
+	p = rune_bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
 	if(p && c >= p[0] && c <= p[1])
 		return 1;
-	p = bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
+	p = rune_bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
 	if(p && c == p[0])
 		return 1;
 	return 0;
@@ -1107,10 +1107,10 @@ isupperrune(Rune c)
 {
 	Rune *p;
 
-	p = bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
+	p = rune_bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
 	if(p && c >= p[0] && c <= p[1])
 		return 1;
-	p = bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
+	p = rune_bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
 	if(p && c == p[0])
 		return 1;
 	return 0;
@@ -1129,10 +1129,10 @@ isalpharune(Rune c)
 
 	if(isupperrune(c) || islowerrune(c))
 		return 1;
-	p = bsearch(c, __alpha2, nelem(__alpha2)/2, 2);
+	p = rune_bsearch(c, __alpha2, nelem(__alpha2)/2, 2);
 	if(p && c >= p[0] && c <= p[1])
 		return 1;
-	p = bsearch(c, __alpha1, nelem(__alpha1), 1);
+	p = rune_bsearch(c, __alpha1, nelem(__alpha1), 1);
 	if(p && c == p[0])
 		return 1;
 	return 0;
@@ -1149,7 +1149,7 @@ isspacerune(Rune c)
 {
 	Rune *p;
 
-	p = bsearch(c, __space2, nelem(__space2)/2, 2);
+	p = rune_bsearch(c, __space2, nelem(__space2)/2, 2);
 	if(p && c >= p[0] && c <= p[1])
 		return 1;
 	return 0;

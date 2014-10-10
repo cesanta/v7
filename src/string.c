@@ -53,7 +53,7 @@ V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
-  struct slre_cap caps[100];
+  /* struct slre_cap caps[100];
   const struct v7_string *s = &cfa->this_obj->v.str;
   struct v7_val *result;
   int i, n;
@@ -61,7 +61,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   //cfa->result->type = V7_TYPE_NULL;
   memset(caps, 0, sizeof(caps));
 
-  /* if (cfa->num_args == 1 &&
+  if (cfa->num_args == 1 &&
       v7_is_class(cfa->args[0], V7_CLASS_REGEXP) &&
       (n = slre_match(cfa->args[0]->v.regex, s->buf, (int) s->len,
                       caps, ARRAY_SIZE(caps) - 1, 0)) > 0) {
@@ -123,12 +123,12 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
     }
   } else if (instanceof(cfa->args[0], &s_constructors[V7_CLASS_REGEXP])) {
     char regex[MAX_STRING_LITERAL_LENGTH];
-    struct slre_cap caps[40];
+    /* struct slre_cap caps[40];
     int n = 0;
 
     snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
     p1 = s->buf;
-    /* while ((n = slre_match(regex, p1, (int) (e - p1),
+    while ((n = slre_match(regex, p1, (int) (e - p1),
                            caps, ARRAY_SIZE(caps), 0)) > 0) {
       if (limit >= 0 && limit <= num_elems) break;
       v7_append(cfa->v7, result,
