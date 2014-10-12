@@ -1,6 +1,7 @@
-CFLAGS = -W -Wall -pedantic -Wno-comment -g -O0 $(PROF) $(CFLAGS_EXTRA)
+WARNS = -Wno-comment -Wno-variadic-macros
 SLRE = ../slre
-CFLAGS += -I$(SLRE) -I.
+V7_FLAGS = -I$(SLRE) -I.
+CFLAGS = -W -Wall -pedantic $(WARNS) -g -O0 $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
 SOURCES = $(SLRE)/slre.c \
           src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
@@ -13,21 +14,25 @@ v7.c: src/internal.h $(SOURCES) v7.h Makefile
 	cat src/internal.h $(SLRE)/slre.h $(SOURCES) | sed -E '/#include .(internal|slre).h./d' > $@
 
 v: unit_test
-	valgrind -q --leak-check=full --show-reachable=yes --leak-resolution=high --num-callers=100 ./unit_test
+	valgrind -q --leak-check=full --show-reachable=yes \
+	--leak-resolution=high --num-callers=100 ./unit_test
 #	valgrind -q --leak-check=full ./v7 tests/run_tests.js
 #	gcov -a unit_test.c
 
 $(SLRE)/slre.c:
 	cd .. && git clone https://github.com/cesanta/slre
 
-unit_test: $(SOURCES) v7.h tests/unit_test.c
+unit_test: $(SOURCES) v7.h tests/unit_test.c src/internal.h
 	g++ $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
 
-run:
+xrun: unit_test
 	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t
 	./t
 
-u: v7.c
+run: unit_test
+	./unit_test
+
+all_warnings: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
 	./$@
 
@@ -43,7 +48,8 @@ t: v7
 	./v7 tests/run_ecma262_tests.js
 
 w: v7.c
-	wine cl unit_test.c $(SOURCES) /I$(SLRE) && wine unit_test.exe
+	wine cl tests/unit_test.c $(SOURCES) $(V7_FLAGS) /Zi -DV7_PRIVATE=""
+	wine unit_test.exe
 
 clean:
-	rm -rf *.gc* *.dSYM *.exe *.obj a.out u unit_test v7 t
+	rm -rf *.gc* *.dSYM *.exe *.obj *.pdb a.out u unit_test v7 t

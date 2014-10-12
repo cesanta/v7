@@ -5,13 +5,14 @@ struct { const char *p; int len; } s_keywords[] = {
   {"break", 5}, {"case", 4}, {"catch", 4}, {"continue", 8}, {"debugger", 8},
   {"default", 7}, {"delete", 6}, {"do", 2}, {"else", 4}, {"false", 5},
   {"finally", 7}, {"for", 3}, {"function", 8}, {"if", 2}, {"in", 2},
-  {"Infinity", 8}, {"instanceof", 10}, {"NaN", 3},
-  {"new", 3}, {"null", 4}, {"return", 6}, {"switch", 6},
+  {"instanceof", 10}, {"new", 3}, {"null", 4}, {"return", 6}, {"switch", 6},
   {"this", 4}, {"throw", 5}, {"true", 4}, {"try", 3}, {"typeof", 6},
   {"undefined", 9}, {"var", 3}, {"void", 4}, {"while", 5}, {"with", 4}
 };
 
-V7_PRIVATE int skip_to_next_tok(const char **ptr) {
+// Move ptr to the next token, skipping comments and whitespaces.
+// Return number of new line characters detected.
+static int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
@@ -83,14 +84,14 @@ static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1, int ch2,
 
 static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
                           enum v7_tok tok2, enum v7_tok tok3) {
+  (*s)++;
   if (s[0][0] == ch1) {
-    (*s) += 2;
+    (*s)++;
     return tok1;
   } else if (s[0][0] == ch2) {
-    (*s) += 2;
+    (*s)++;
     return tok2;
   } else {
-    (*s)++;
     return tok3;
   }
 }
@@ -101,33 +102,34 @@ static void parse_number(const char *s, const char **end, double *num) {
 
 static enum v7_tok parse_str_literal(const char **p) {
   const char *s = *p;
-  int len = 1, quote = *s++;
+  int quote = *s++;
 
   // Scan string literal into the buffer, handle escape sequences
-  while (s[len] != quote && s[len] != '\0') {
-    switch (s[len]) {
+  while (*s != quote && *s != '\0') {
+    switch (*s) {
       case '\\':
-        len++;
-        switch (s[len]) {
+        s++;
+        switch (*s) {
           case 'b': case 'f': case 'n': case 'r': case 't':
-          case 'v': case '\\': len++; break;
-          default: if (s[len] == quote) len++; break;
+          case 'v': case '\\': s++; break;
+          default: if (*s == quote) s++; break;
         }
         break;
       default: break;
     }
-    len++;
+    s++;
   }
 
-  if (s[len] == quote) {
-    *p = &s[len + 1];
+  if (*s == quote) {
+    s++;
+    *p = s;
     return TOK_STRING_LITERAL;
   } else {
     return TOK_END_OF_INPUT;
   }
 }
 
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
+static enum v7_tok get_tok(const char **s, double *n) {
   const char *p = *s;
 
   switch (*p) {
@@ -161,8 +163,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
 
     case '_': case '$':
     case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G':
-    case 'H': case 'I': case 'J': case 'K': case 'L': case 'M':
-    case 'N': ident(s); return kw(p, *s - p, 1, TOK_NAN);
+    case 'H': case 'I': case 'J': case 'K': case 'L': case 'M': case 'N':
     case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U':
     case 'V': case 'W': case 'X': case 'Y':
     case 'Z': ident(s); return TOK_IDENTIFIER;
@@ -230,13 +231,15 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl);
   v7->tok_len = v7->pstate.pc - v7->tok;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
-  printf("--> %d [%.*s]\n", v7->cur_tok, (int) v7->tok_len, v7->tok);
+  TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int) v7->tok_len, v7->tok,
+             v7->pstate.line_no);
   return v7->cur_tok;
 }
 
 #ifdef TEST_RUN
 int main(void) {
-  const char *src = "for (var fo++ = 1; /= <= 1.17; x<<) { == <<=, 'x')} ";
+  const char *src = "for (var fo++ = -1; /= <= 1.17; x<<) { == <<=, 'x')} "
+    "Infinity %=x<<=2";
   enum v7_tok tok;
   double num;
   const char *p = src;

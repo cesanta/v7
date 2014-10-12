@@ -414,6 +414,37 @@ V7_PRIVATE enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
   return V7_OK;
 }
 
+V7_PRIVATE enum v7_err push_number(struct v7 *v7, double num) {
+  TRY(v7_make_and_push(v7, V7_TYPE_NUM));
+  v7_init_num(v7_top_val(v7), num);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_bool(struct v7 *v7, int is_true) {
+  TRY(v7_make_and_push(v7, V7_TYPE_BOOL));
+  v7_init_bool(v7_top_val(v7), is_true);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_string(struct v7 *v7, const char *str,
+                                   unsigned long n, int own) {
+  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  v7_init_str(v7_top_val(v7), str, n, own);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_func(struct v7 *v7, v7_func_t func) {
+  TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
+  v7_init_func(v7_top_val(v7), func);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_new_object(struct v7 *v7) {
+  TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
+  v7_set_class(v7_top_val(v7), V7_CLASS_OBJECT);
+  return V7_OK;
+}
+
 V7_PRIVATE const char *v7_strerror(enum v7_err e) {
   V7_PRIVATE const char *strings[] = {
     "no error", "error", "eval error", "range error", "reference error",
