@@ -1,23 +1,8 @@
-// Copyright (c) 2013-2014 Cesanta Software Limited
-// All rights reserved
-//
-// This software is dual-licensed: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License version 2 as
-// published by the Free Software Foundation. For the terms of this
-// license, see <http://www.gnu.org/licenses/>.
-//
-// You are free to use this software under the terms of the GNU General
-// Public License, but WITHOUT ANY WARRANTY; without even the implied
-// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU General Public License for more details.
-//
-// Alternatively, you can license this software under a commercial
-// license, as set out in <http://cesanta.com/products.html>.
-
 #ifndef V7_INTERNAL_H_INCLUDED
 #define  V7_INTERNAL_H_INCLUDED
 
 #include "v7.h"
+#include "utf.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -102,6 +87,79 @@ enum v7_tok {
   NUM_TOKENS
 };
 
+#define RE_MAX_SUB 32
+
+// Sub expression matches
+struct Resub{
+  unsigned int subexpr_num;
+  struct re_tok{
+    const char *start;  // points to the beginning of the token
+    const char *end;    // points to the end of the token
+  } sub[RE_MAX_SUB];
+};
+
+struct Rerange{ Rune s; Rune e; };
+// character class, each pair of rune's defines a range
+struct Reclass{
+  struct Rerange *end;
+  struct Rerange spans[32];
+};
+
+// Parser Information
+struct Renode{
+  uint8_t type;
+  union{
+    Rune c;             // character
+    struct Reclass *cp; // class pointer
+    struct{
+      struct Renode *x;
+      union{
+        struct Renode *y;
+        uint8_t n;
+        struct{
+          uint8_t ng;  // not greedy flag
+          uint16_t min;
+          uint16_t max;
+        };
+      };
+    };
+  };
+};
+
+// Machine instructions
+struct Reinst{
+  uint8_t opcode;
+  union{
+    uint8_t n;
+    Rune c;             // character
+    struct Reclass *cp; // class pointer
+    struct{
+      struct Reinst *x;
+      union{
+        struct{
+          uint16_t min;
+          uint16_t max;
+        };
+        struct Reinst *y;
+      };
+    };
+  };
+};
+
+// struct Reprogram definition
+struct Reprog{
+  struct Reinst *start, *end;
+  unsigned int subexpr_num;
+  struct Reclass charset[16];
+};
+
+// struct Rethread definition
+struct Rethread{
+  struct Reinst *pc;
+  const char *start;
+  struct Resub sub;
+};
+
 typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
 
 struct v7_prop {
@@ -156,21 +214,21 @@ struct v7_val {
   union{
     uint16_t flags;            // Flags - defined below
     struct v7_val_flags{
-      uint16_t fl_val_alloc:1;
-#define V7_VAL_ALLOCATED   1   // Whole "struct v7_val" must be free()-ed
-      uint16_t fl_str_alloc:1;
-#define V7_STR_ALLOCATED   2   // v.str.buf must be free()-ed
-      uint16_t fl_js_func:1;
-#define V7_JS_FUNC         4   // Function object is a JavsScript code
-      uint16_t fl_prop_func:1;
-#define V7_PROP_FUNC       8   // Function object is a native property function
-      uint16_t fl_val_dealloc:1;
-#define V7_VAL_DEALLOCATED 16  // Value has been deallocated
+      uint16_t fl_val_alloc:1;   // Whole "struct v7_val" must be free()-ed
+#define V7_VAL_ALLOCATED   1
+      uint16_t fl_str_alloc:1;   // v.str.buf must be free()-ed
+#define V7_STR_ALLOCATED   2
+      uint16_t fl_js_func:1;     // Function object is a JavsScript code
+#define V7_JS_FUNC         4
+      uint16_t fl_prop_func:1;   // Function object is a native property function
+#define V7_PROP_FUNC       8
+      uint16_t fl_val_dealloc:1; // Value has been deallocated
+#define V7_VAL_DEALLOCATED 16
 
-  uint16_t re_g:1; // execution RegExp flag g
-  uint16_t re_i:1; // compiler & execution RegExp flag i
-  uint16_t re_m:1; // execution RegExp flag m
-  uint16_t re:1;   // parser RegExp flag re
+      uint16_t re_g:1; // execution RegExp flag g
+      uint16_t re_i:1; // compiler & execution RegExp flag i
+      uint16_t re_m:1; // execution RegExp flag m
+      uint16_t re:1;   // parser RegExp flag re
     } fl;
   };
 };
@@ -281,6 +339,12 @@ extern struct v7_val s_file;
 
 
 // Forward declarations
+
+V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
+V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
+V7_PRIVATE void re_free(struct Reprog *prog);
+V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst);
+
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
