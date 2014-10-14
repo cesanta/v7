@@ -30,13 +30,13 @@ extern "C" {
 // #define V7_CACHE_OBJS
 
 // custom types
-typedef unsigned long uint64_t;
+// typedef unsigned long uint64_t;
 typedef unsigned long u_int64_t;
-typedef unsigned int uint32_t;
+// typedef unsigned int uint32_t;
 typedef unsigned int u_int32_t;
 typedef unsigned short uint16_t;
 typedef unsigned short u_int16_t;
-typedef unsigned char uint8_t;
+// typedef unsigned char uint8_t;
 typedef unsigned char u_int8_t;
 typedef signed char sint8_t;
 
@@ -64,7 +64,7 @@ enum v7_err {
   V7_OK, V7_ERROR, V7_EVAL_ERROR, V7_RANGE_ERROR, V7_REFERENCE_ERROR,
   V7_SYNTAX_ERROR, V7_TYPE_ERROR, V7_URI_ERROR,
   V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR, V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW,
-  V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED, V7_NUM_ERRORS
+  V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED, V7_STR_TOO_LONG, V7_NUM_ERRORS
 };
 
 // This structure is passed as an argument to the C/JS glue function

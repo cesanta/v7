@@ -223,6 +223,9 @@ V7_PRIVATE void init_stdlib(void) {
   SET_METHOD(s_global, "eval", Std_eval);
   SET_METHOD(s_global, "open", Std_open);
 
+  SET_RO_PROP(s_global, "Infinity", V7_TYPE_NUM, num, INFINITY);
+  SET_RO_PROP(s_global, "NaN", V7_TYPE_NUM, num, NAN);
+
   SET_METHOD(s_file, "read", Std_read);
   SET_METHOD(s_file, "write", Std_write);
   SET_METHOD(s_file, "close", Std_close);

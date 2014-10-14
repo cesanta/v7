@@ -144,21 +144,25 @@ static const char *test_v7_exec(void) {
 
   ASSERT((v = v7_exec(v7, "b = a + 3;")) != NULL);
   ASSERT(check_num(v, 10.0));
-  ASSERT((v = v7_exec(v7, "print(this);")) != NULL);
-
   ASSERT((v = v7_exec(v7, "c = b * (a + 3) / 2;")) != NULL);
   ASSERT(check_num(v, 50.0));
   ASSERT((v = v7_exec(v7, "print(this);")) != NULL);
 
-  ASSERT((v = v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a;")) != NULL);
+  ASSERT((v = v7_exec(v7, "var x = 1.23; x")) != NULL);
+  ASSERT(check_num(v, 1.23));
+
+  ASSERT((v = v7_exec(v7, "b = 7; a = b *= 4;")) != NULL);
+
+  ASSERT((v = v7_exec(v7, "var x = 12 + 2 - a + b+ 3 / 4 * a; x;")) != NULL);
+  ASSERT((v = v7_exec(v7, "x + 1")) != NULL);
   ASSERT((v = v7_exec(v7, "b + 2; x + 3 + 1 z = x -2;")) != NULL);
-  ASSERT((v = v7_exec(v7, "x; var y, z;")) == NULL);
+  ASSERT((v = v7_exec(v7, "x; var y, z;")) != NULL);
   ASSERT((v = v7_exec(v7, "1 2 3")) != NULL);
 
-  ASSERT((v = v7_exec(v7, "var k = true;")) != NULL);
+  ASSERT((v = v7_exec(v7, "var k = true; k ")) != NULL);
   ASSERT(check_bool(v, 1));
 
-  ASSERT((v = v7_exec(v7, "var blah = 'kuku';")) != NULL);
+  ASSERT((v = v7_exec(v7, "var blah = 'kuku'; blah")) != NULL);
   ASSERT(check_str(v, "kuku"));
 
   // Test that k.y does exist
@@ -190,14 +194,13 @@ static const char *test_v7_exec(void) {
   ASSERT((v = v7_exec(v7, "var z = 'key1'; k[z]['x']")) != NULL);
   ASSERT(check_num(v, 3.0));
 
-  ASSERT((v = v7_exec(v7, "var stk = 1;")) != NULL);
+  ASSERT((v = v7_exec(v7, "var stk = 1; stk")) != NULL);
   ASSERT(check_num(v, 1.0));
 
-  ASSERT((v = v7_exec(v7, "var f1 = function(x, y) { } ; ")) != NULL);
-  ASSERT(v7_type(v) == V7_TYPE_OBJ);
-  //ASSERT(memcmp(v7_top(v7)[-1]->v.func.source_code, "(x, y) { } ", 10) == 0);
+  ASSERT((v = v7_exec(v7, "var f1 = function(x, y) { }; typeof f1 ")) != NULL);
+  ASSERT(check_str(v, "function"));
 
-  ASSERT((v = v7_exec(v7, "var f1 = function(x, y) { return x * y; };")) != NULL);
+  ASSERT((v = v7_exec(v7, "var f1 = function(x, y) { return x * y }")) != NULL);
   //ASSERT(v7_is_class(v7_top(v7)[-1], V7_CLASS_FUNCTION));
   ASSERT((v = v7_exec(v7, "f1(2, 3)")) != NULL);
   ASSERT(check_num(v, 6.0));
@@ -240,7 +243,7 @@ static const char *test_v7_exec(void) {
   ASSERT((v = v7_exec(v7, "a = { x: function(p) { print(this); } }")) != NULL);
   ASSERT((v = v7_exec(v7, "a.x(2);")) != NULL);
 
-  ASSERT((v = v7_exec(v7, "74.toString()")) != NULL);
+  ASSERT((v = v7_exec(v7, "(74).toString()")) != NULL);
   ASSERT(check_str(v, "74"));
   ASSERT((v = v7_exec(v7, "'hello'.length")) != NULL);
   ASSERT(check_num(v, 5.0));
@@ -319,10 +322,10 @@ static const char *test_v7_exec(void) {
   ASSERT((v = v7_exec(v7, "7 >= 0")) != NULL);
   ASSERT(check_bool(v, 1.0));
 
-  ASSERT((v = v7_exec(v7, "if (false) 3; ")) != NULL);
+  ASSERT((v = v7_exec(v7, "if (false) 3; ")) == NULL);
   ASSERT((v = v7_exec(v7, "if (true) { if (1) {2;} 5; } ")) != NULL);
   ASSERT(check_num(v, 5.0));
-  ASSERT((v = v7_exec(v7, "if ('') 3; ")) != NULL);
+  ASSERT((v = v7_exec(v7, "if ('') 3; ")) == NULL);
   ASSERT((v = v7_exec(v7, "if ('0') 9; ")) != NULL);
   ASSERT(check_num(v, 9.0));
   ASSERT((v = v7_exec(v7, "if (false) 1; else 3;")) != NULL);
@@ -335,7 +338,7 @@ static const char *test_v7_exec(void) {
   ASSERT((v = v7_exec(v7, "a = 32; 2 + a++;")) != NULL);
   ASSERT(check_num(v, 35.0));
 
-  ASSERT((v = v7_exec(v7, "print(['hi', 1, true, null, /\\s+/])")) != NULL);
+  ASSERT((v = v7_exec(v7, "print(['hi', 1, true, null, /\\s+/])")) == NULL);
 
   ASSERT((v = v7_exec(v7, "a = {};")) != NULL);
   ASSERT((v = v7_exec(v7, "a.foo = function(x) { var y = "

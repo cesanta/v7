@@ -36,49 +36,24 @@ void v7_destroy(struct v7 **v7) {
 }
 
 struct v7_val *v7_push_number(struct v7 *v7, double num) {
-  struct v7_val *v = NULL;
-  if (v7_make_and_push(v7, V7_TYPE_NUM) == V7_OK) {
-    v = v7_top_val(v7);
-    v7_init_num(v, num);
-  }
-  return v;
+  return push_number(v7, num) == V7_OK ? v7_top_val(v7) : NULL;
 }
 
 struct v7_val *v7_push_bool(struct v7 *v7, int is_true) {
-  struct v7_val *v = NULL;
-  if (v7_make_and_push(v7, V7_TYPE_BOOL) == V7_OK) {
-    v = v7_top_val(v7);
-    v7_init_bool(v, is_true);
-  }
-  return v;
+  return push_bool(v7, is_true) == V7_OK ? v7_top_val(v7) : NULL;
 }
 
-struct v7_val *v7_push_string(struct v7 *v7, const char *str, unsigned long n,
- int own) {
-  struct v7_val *v = NULL;
-  if (v7_make_and_push(v7, V7_TYPE_STR) == V7_OK) {
-    v = v7_top_val(v7);
-    v7_init_str(v, str, n, own);
-  }
-  return v;
+struct v7_val *v7_push_string(struct v7 *v7, const char *str,
+                              unsigned long n, int own) {
+  return push_string(v7, str, n, own) == V7_OK ? v7_top_val(v7) : NULL;
 }
 
 struct v7_val *v7_push_func(struct v7 *v7, v7_func_t func) {
-  struct v7_val *v = NULL;
-  if (v7_make_and_push(v7, V7_TYPE_OBJ) == V7_OK) {
-    v = v7_top_val(v7);
-    v7_init_func(v, func);
-  }
-  return v;
+  return push_func(v7, func) == V7_OK ? v7_top_val(v7) : NULL;
 }
 
 struct v7_val *v7_push_new_object(struct v7 *v7) {
-  struct v7_val *v = NULL;
-  if (v7_make_and_push(v7, V7_TYPE_OBJ) == V7_OK) {
-    v = v7_top_val(v7);
-    v7_set_class(v, V7_CLASS_OBJECT);
-  }
-  return v;
+  return push_new_object(v7) == V7_OK ? v7_top_val(v7) : NULL;
 }
 
 struct v7_val *v7_push_val(struct v7 *v7, struct v7_val *v) {

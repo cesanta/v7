@@ -4,8 +4,8 @@
 //
 // To run this test, start a terminal and run "make js"
 
-
 var numFailedTests = 0, numPassedTests = 0;
+
 function test(condition, msg) {
   if (condition) {
     numPassedTests++;
@@ -15,12 +15,15 @@ function test(condition, msg) {
   }
 }
 
+a = [];
+a.push(5);
+test(a[0] == 5, 'blah');
 
 var func1 = function(x) {
   var param = 4;
   param++;
   return function(y) { return x * y * param; }
-}
+};
 
 var closure1 = func1(2), closure2 = func1(3);
 test(closure1(7) == 70, 'closure1');
@@ -62,6 +65,9 @@ a = { foo: 1, bar: 2, baz: 3 }, b = [];
 for (var key in a) b.push(key);
 b.sort();
 test(b.length == 3 && b[0] == 'bar' && b[1] == 'baz' && b[2] == 'foo', 'for3');
+
+a = '';
+a.substr().split(' ');
 
 (function() {
   var a = { b: 'aa bb cc dd' };

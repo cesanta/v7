@@ -414,12 +414,43 @@ V7_PRIVATE enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
   return V7_OK;
 }
 
+V7_PRIVATE enum v7_err push_number(struct v7 *v7, double num) {
+  TRY(v7_make_and_push(v7, V7_TYPE_NUM));
+  v7_init_num(v7_top_val(v7), num);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_bool(struct v7 *v7, int is_true) {
+  TRY(v7_make_and_push(v7, V7_TYPE_BOOL));
+  v7_init_bool(v7_top_val(v7), is_true);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_string(struct v7 *v7, const char *str,
+                                   unsigned long n, int own) {
+  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  v7_init_str(v7_top_val(v7), str, n, own);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_func(struct v7 *v7, v7_func_t func) {
+  TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
+  v7_init_func(v7_top_val(v7), func);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err push_new_object(struct v7 *v7) {
+  TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
+  v7_set_class(v7_top_val(v7), V7_CLASS_OBJECT);
+  return V7_OK;
+}
+
 V7_PRIVATE const char *v7_strerror(enum v7_err e) {
   V7_PRIVATE const char *strings[] = {
     "no error", "error", "eval error", "range error", "reference error",
     "syntax error", "type error", "URI error",
     "out of memory", "internal error", "stack overflow", "stack underflow",
-    "called non-function", "not implemented"
+    "called non-function", "not implemented", "string literal too long"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
@@ -475,13 +506,13 @@ V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
   v7->pstate.source_code = v7->pstate.pc = source_code;
   v7->pstate.file_name = file_name;
   v7->pstate.line_no = 1;
-  skip_whitespaces_and_comments(v7);
 
   // Prior calls to v7_exec() may have left current_scope modified, reset now
   // TODO(lsm): free scope chain
   v7->this_obj = &v7->root_scope;
 
-  while ((err == V7_OK) && (*v7->pstate.pc != '\0')) {
+  next_tok(v7);
+  while ((err == V7_OK) && (v7->cur_tok != TOK_END_OF_INPUT)) {
     // Reset stack on each statement
     if ((err = inc_stack(v7, sp - v7->sp)) == V7_OK) {
       err = parse_statement(v7, &has_ret);

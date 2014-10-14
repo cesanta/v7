@@ -24,6 +24,9 @@
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #define __unused
+typedef unsigned __int64 uint64_t;
+typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
 #else
 #include <stdint.h>
 #endif
@@ -62,22 +65,24 @@ enum v7_tok {
   TOK_END_OF_INPUT, TOK_NUMBER, TOK_STRING_LITERAL, TOK_IDENTIFIER,
 
   // Punctuators
-  TOK_OPEN_CURLY, TOK_CLOSE_CURLY, TOK_OPEN_PAREN, TOK_CLOSE_PAREN,
+  TOK_OPEN_CURLY, TOK_CLOSE_CURLY, TOK_OPEN_PAREN, TOK_CLOSE_PAREN, TOK_COMMA,
   TOK_OPEN_BRACKET, TOK_CLOSE_BRACKET, TOK_DOT, TOK_COLON, TOK_SEMICOLON,
-  TOK_COMMA, TOK_EQ_EQ, TOK_EQ, TOK_ASSIGN, TOK_NE, TOK_NE_NE, TOK_NOT,
-  TOK_REM_ASSIGN, TOK_REM, TOK_MUL_ASSIGN, TOK_MUL, TOK_DIV_ASSIGN, TOK_DIV,
-  TOK_XOR_ASSIGN, TOK_XOR, TOK_PLUS_PLUS, TOK_PLUS_ASSING, TOK_PLUS,
-  TOK_MINUS_MINUS, TOK_MINUS_ASSING, TOK_MINUS, TOK_LOGICAL_AND,
-  TOK_LOGICAL_AND_ASSING, TOK_AND, TOK_LOGICAL_OR, TOK_LOGICAL_OR_ASSING,
-  TOK_OR, TOK_QUESTION, TOK_TILDA, TOK_LE, TOK_LT, TOK_GE, TOK_GT,
-  TOK_LSHIFT_ASSIGN, TOK_LSHIFT, TOK_RSHIFT_ASSIGN, TOK_RSHIFT,
+  TOK_EQ, TOK_EQ_EQ, TOK_NE, TOK_NE_NE,  // Equality ops, in this order
+  TOK_ASSIGN, TOK_REM_ASSIGN, TOK_MUL_ASSIGN, TOK_DIV_ASSIGN, TOK_XOR_ASSIGN,
+  TOK_PLUS_ASSIGN, TOK_MINUS_ASSIGN, TOK_LOGICAL_OR_ASSING,
+  TOK_LOGICAL_AND_ASSING, TOK_LSHIFT_ASSIGN, TOK_RSHIFT_ASSIGN, // Assignments
+  TOK_AND, TOK_LOGICAL_OR,
+  TOK_PLUS_PLUS, TOK_PLUS, TOK_MINUS_MINUS, TOK_MINUS, TOK_LOGICAL_AND,
+  TOK_OR, TOK_QUESTION, TOK_TILDA, TOK_REM, TOK_MUL, TOK_DIV, TOK_XOR,
+  TOK_LE, TOK_LT, TOK_GE, TOK_GT,  // Relational ops, must go in this order
+  TOK_LSHIFT, TOK_RSHIFT, TOK_NOT,
 
   // Keywords. must be in the same order as tokenizer.c::s_keywords array
   TOK_BREAK, TOK_CASE, TOK_CATCH, TOK_CONTINUE, TOK_DEBUGGER, TOK_DEFAULT,
   TOK_DELETE, TOK_DO, TOK_ELSE, TOK_FALSE, TOK_FINALLY, TOK_FOR, TOK_FUNCTION,
-  TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL, TOK_RETURN, TOK_SWITCH,
-  TOK_THIS, TOK_THROW, TOK_TRUE, TOK_TRY, TOK_TYPEOF, TOK_UNDEFINED, TOK_VAR,
-  TOK_VOID, TOK_WHILE, TOK_WITH,
+  TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL,
+  TOK_RETURN, TOK_SWITCH, TOK_THIS, TOK_THROW, TOK_TRUE, TOK_TRY, TOK_TYPEOF,
+  TOK_UNDEFINED, TOK_VAR, TOK_VOID, TOK_WHILE, TOK_WITH,
 
   // TODO(lsm): process these reserved words too
   TOK_CLASS, TOK_ENUM, TOK_EXTENDS, TOK_SUPER, TOK_CONST, TOK_EXPORT,
@@ -234,8 +239,8 @@ struct v7_val {
 };
 
 #define V7_MKVAL(_p,_t,_c,_v) {0,(_p),0,0,{(_v)},(_t),(_c),0,0}
-#define V7_MKNUM(_v) V7_MKVAL(0,V7_TYPE_NUM,V7_CLASS_NONE,\
-  (char *) (unsigned long) (_v))
+//#define V7_MKNUM(_v) V7_MKVAL(0,V7_TYPE_NUM,V7_CLASS_NONE,\
+//  (char *) (unsigned long) (_v))
 
 struct v7_pstate {
   const char *file_name;
@@ -256,6 +261,10 @@ struct v7 {
   enum v7_tok cur_tok;        // Current token
   const char *tok;            // Parsed terminal token (ident, number, string)
   unsigned long tok_len;      // Length of the parsed terminal token
+  double cur_tok_dbl;
+
+  const char *key;            // Key for the assignment operation
+  unsigned long key_len;      // Key length for the assignment operation
 
   char error_message[100];    // Placeholder for the error message
 
@@ -271,6 +280,7 @@ struct v7 {
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
+
 #define CHECK(cond, code) do { \
   if (!(cond)) { \
     snprintf(v7->error_message, sizeof(v7->error_message), \
@@ -278,7 +288,18 @@ struct v7 {
       v7_strerror(code)); \
     return (code); \
   } } while (0)
-#define TRY(call) do {enum v7_err _e = call; CHECK(_e == V7_OK, _e); } while (0)
+
+//#define TRACE_CALL printf
+#define TRACE_CALL
+
+extern int __lev;
+#define TRY(call) do { \
+  enum v7_err _e; \
+  TRACE_CALL("> %s %d\n", #call, __LINE__);  \
+  _e = call;      \
+  CHECK(_e == V7_OK, _e);     \
+  TRACE_CALL("< %s %d\n", #call, __LINE__); \
+} while (0)
 
 // Print current function name and stringified object
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
@@ -347,6 +368,12 @@ V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr,
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
+
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+//V7_PRIVATE int skip_to_next_tok(const char **ptr);
+//V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
+
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -387,6 +414,11 @@ V7_PRIVATE void v7_init_str(struct v7_val *, const char *, unsigned long, int);
 V7_PRIVATE void v7_init_num(struct v7_val *, double);
 V7_PRIVATE void v7_init_bool(struct v7_val *, int);
 V7_PRIVATE enum v7_err v7_push(struct v7 *, struct v7_val *);
+V7_PRIVATE enum v7_err push_bool(struct v7 *, int is_true);
+V7_PRIVATE enum v7_err push_string(struct v7 *, const char *, unsigned long, int);
+V7_PRIVATE enum v7_err push_func(struct v7 *v7, v7_func_t func);
+V7_PRIVATE enum v7_err push_new_object(struct v7 *v7);
+V7_PRIVATE enum v7_err push_number(struct v7 *v7, double num);
 V7_PRIVATE void free_props(struct v7 *v7);
 V7_PRIVATE void free_values(struct v7 *v7);
 V7_PRIVATE struct v7_val v7_str_to_val(const char *buf);

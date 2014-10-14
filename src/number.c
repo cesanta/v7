@@ -33,14 +33,12 @@ V7_PRIVATE enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
+#define NUMCTOR s_constructors[V7_CLASS_NUMBER]
 V7_PRIVATE void init_number(void) {
   init_standard_constructor(V7_CLASS_NUMBER, Number_ctor);
-  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MAX_VALUE",
-              V7_TYPE_NUM, num, LONG_MAX);
-  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "MIN_VALUE",
-              V7_TYPE_NUM, num, LONG_MIN);
-  SET_RO_PROP(s_constructors[V7_CLASS_NUMBER], "NaN",
-              V7_TYPE_NUM, num, NAN);
+  SET_RO_PROP(NUMCTOR, "MAX_VALUE", V7_TYPE_NUM, num, LONG_MAX);
+  SET_RO_PROP(NUMCTOR, "MIN_VALUE", V7_TYPE_NUM, num, LONG_MIN);
+  SET_RO_PROP(NUMCTOR, "NaN", V7_TYPE_NUM, num, NAN);
   SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
   SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
 }
