@@ -1694,6 +1694,7 @@ V7_PRIVATE void init_object(void) {
   SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
 }
 
+#define REPLACE_SUB
 
 #define RE_MAX_REP 0xFFFF
 #define RE_MAX_THREADS 1000
@@ -1718,7 +1719,7 @@ struct re_env{
   const char *err_msg;
 };
 
-typedef enum{
+enum RE_CODE{
   I_END = 10,                     // Terminate: match found
   I_ANY,      P_ANY = I_ANY,      // Any character except newline, .
   I_ANYNL,                        // Any character including newline, .
@@ -1752,49 +1753,49 @@ typedef enum{
   L_SET_N,                        // negative character set
   L_WORD,                         // "\b" word boundary
   L_WORD_N                        // "\B" non-word boundary
-} CODE;
+};
 
-typedef enum{
-  INVALID_DEC_DIGIT   =   -1,
-  INVALID_HEX_DIGIT   =   -2,
-  INVALID_ESC_CHAR    =   -3,
-  UNTERM_ESC_SEQ      =   -4,
-  SYNTAX_ERROR        =   -5,
-  UNMATCH_LBR         =   -6,
-  UNMATCH_RBR         =   -7,
-  NUM_OVERFLOW        =   -8,
-  INF_LOOP_M_EMP_STR  =   -9,
-  TOO_MANY_CH_SETS    =   -10,
-  INV_CH_SET_RANGE    =   -11,
-  CH_SET_TOO_LARGE    =   -12,
-  MALFORMED_CH_SET    =   -13,
-  INVALID_BACK_REF    =   -14,
-  TOO_MANY_CAPTURES   =   -15,
-  INVALID_QUANTIFIER  =   -16,
+enum RE_MESSAGE{
+  INVALID_DEC_DIGIT  = -1,
+  INVALID_HEX_DIGIT  = -2,
+  INVALID_ESC_CHAR   = -3,
+  UNTERM_ESC_SEQ     = -4,
+  SYNTAX_ERROR       = -5,
+  UNMATCH_LBR        = -6,
+  UNMATCH_RBR        = -7,
+  NUM_OVERFLOW       = -8,
+  INF_LOOP_M_EMP_STR = -9,
+  TOO_MANY_CH_SETS   = -10,
+  INV_CH_SET_RANGE   = -11,
+  CH_SET_TOO_LARGE   = -12,
+  MALFORMED_CH_SET   = -13,
+  INVALID_BACK_REF   = -14,
+  TOO_MANY_CAPTURES  = -15,
+  INVALID_QUANTIFIER = -16,
 
-  BAD_CHAR_AFTER_USD  =   -64
-} MESSAGE;
+  BAD_CHAR_AFTER_USD = -64
+};
 
-static const char *re_err_msg(MESSAGE err){
+static const char *re_err_msg(enum RE_MESSAGE err){
   switch(err){
-    case INVALID_DEC_DIGIT:     return "invalid DEC digit";
-    case INVALID_HEX_DIGIT:     return "invalid HEX digit";
-    case INVALID_ESC_CHAR:      return "invalid escape character";
-    case UNTERM_ESC_SEQ:        return "unterminated escape sequence";
-    case SYNTAX_ERROR:          return "syntax error";
-    case UNMATCH_LBR:           return "'(' unmatched";
-    case UNMATCH_RBR:           return "')' unmatched";
-    case NUM_OVERFLOW:          return "numeric overflow";
-    case INF_LOOP_M_EMP_STR:    return "infinite loop matching the empty string";
-    case TOO_MANY_CH_SETS:      return "too many character sets";
-    case INV_CH_SET_RANGE:      return "invalid character set range";
-    case CH_SET_TOO_LARGE:      return "char set too large; increase struct Reclass.spans size";
-    case MALFORMED_CH_SET:      return "malformed '[]'";
-    case INVALID_BACK_REF:      return "invalid back-reference";
-    case TOO_MANY_CAPTURES:     return "too many captures";
-    case INVALID_QUANTIFIER:        return "invalid quantifier";
+    case INVALID_DEC_DIGIT:  return "invalid DEC digit";
+    case INVALID_HEX_DIGIT:  return "invalid HEX digit";
+    case INVALID_ESC_CHAR:   return "invalid escape character";
+    case UNTERM_ESC_SEQ:     return "unterminated escape sequence";
+    case SYNTAX_ERROR:       return "syntax error";
+    case UNMATCH_LBR:        return "'(' unmatched";
+    case UNMATCH_RBR:        return "')' unmatched";
+    case NUM_OVERFLOW:       return "numeric overflow";
+    case INF_LOOP_M_EMP_STR: return "infinite loop matching the empty string";
+    case TOO_MANY_CH_SETS:   return "too many character sets";
+    case INV_CH_SET_RANGE:   return "invalid character set range";
+    case CH_SET_TOO_LARGE:   return "char set too large; increase struct Reclass.spans size";
+    case MALFORMED_CH_SET:   return "malformed '[]'";
+    case INVALID_BACK_REF:   return "invalid back-reference";
+    case TOO_MANY_CAPTURES:  return "too many captures";
+    case INVALID_QUANTIFIER: return "invalid quantifier";
 
-    case BAD_CHAR_AFTER_USD:    return "bad character after '$' in replace pattern";
+    case BAD_CHAR_AFTER_USD: return "bad character after '$' in replace pattern";
   }
   return "";
 }
@@ -1927,7 +1928,7 @@ static uint8_t re_endofcount(Rune c){
 
 static void re_ex_num_overfl(struct re_env *e){V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(NUM_OVERFLOW));}
 
-static CODE re_countrep(struct re_env *e){
+static enum RE_CODE re_countrep(struct re_env *e){
   e->min_rep = 0;
   while(!re_endofcount(e->curr_rune = *e->src++))
     e->min_rep = e->min_rep * 10 + re_dec_digit(e, e->curr_rune);
@@ -1943,10 +1944,10 @@ static CODE re_countrep(struct re_env *e){
   return L_COUNT;
 }
 
-static CODE re_lexset(struct re_env *e){
+static enum RE_CODE re_lexset(struct re_env *e){
   Rune ch;
   uint8_t esc, ch_fl = 0, dash_fl = 0;
-  CODE type = L_SET;
+  enum RE_CODE type = L_SET;
 
   re_nchset(e);
 
@@ -2035,8 +2036,8 @@ static int re_lexer(struct re_env *e){
   return L_CH;
 }
 
-#define RE_NEXT(env)        (env)->lookahead = re_lexer(env)
-#define RE_ACCEPT(env, t)   ((env)->lookahead == (t) ? RE_NEXT(env), 1: 0)
+#define RE_NEXT(env)      (env)->lookahead = re_lexer(env)
+#define RE_ACCEPT(env, t) ((env)->lookahead == (t) ? RE_NEXT(env), 1: 0)
 
 static struct Renode *re_nnode(struct re_env *e, int type){
   memset(e->pend, 0, sizeof(struct Renode));
@@ -2072,11 +2073,11 @@ static struct Renode *re_parse_la(struct re_env *e){
   struct Renode *nd;
   int min, max;
   switch(e->lookahead){
-    case '^':       RE_NEXT(e); return re_nnode(e, P_BOL);
-    case '$':       RE_NEXT(e); return re_nnode(e, P_EOL);
-    case L_EOS:     RE_NEXT(e); return re_nnode(e, P_EOS);
-    case L_WORD:    RE_NEXT(e); return re_nnode(e, P_WORD);
-    case L_WORD_N:  RE_NEXT(e); return re_nnode(e, P_WORD_N);
+    case '^':      RE_NEXT(e); return re_nnode(e, P_BOL);
+    case '$':      RE_NEXT(e); return re_nnode(e, P_EOL);
+    case L_EOS:    RE_NEXT(e); return re_nnode(e, P_EOS);
+    case L_WORD:   RE_NEXT(e); return re_nnode(e, P_WORD);
+    case L_WORD_N: RE_NEXT(e); return re_nnode(e, P_WORD_N);
   }
 
   switch(e->lookahead){
@@ -2338,8 +2339,8 @@ static void re_compile(struct re_env *e, struct Renode *nd){
       inst->cp = nd->cp;
       break;
 
-    case P_WORD:    re_newinst(e->prog, I_WORD); break;
-    case P_WORD_N:  re_newinst(e->prog, I_WORD_N); break;
+    case P_WORD:   re_newinst(e->prog, I_WORD); break;
+    case P_WORD_N: re_newinst(e->prog, I_WORD_N); break;
   }
 }
 
@@ -2361,21 +2362,21 @@ static void node_print(struct Renode *nd){
   if(!nd){printf("Empty"); return;}
   switch(nd->type){
     case P_ALT:     printf("{"); node_print(nd->x); printf(" | "); node_print(nd->y); printf("}"); break;
-    case P_ANY:     printf("."); break;
-    case P_BOL:     printf("^"); break;
-    case P_BRA:     printf("(%d,", nd->n); node_print(nd->x); printf(")"); break;
-    case P_CAT:     printf("{"); node_print(nd->x); printf(" & "); node_print(nd->y); printf("}"); break;
-    case P_CH:      printf(nd->c >= 32 && nd->c < 127 ? "'%c'" : "'\\u%04X'", nd->c); break;
-    case P_EOL:     printf("$"); break;
-    case P_EOS:     printf("\\0"); break;
-    case P_LA:      printf("LA("); node_print(nd->x); printf(")"); break;
-    case P_LA_N:    printf("LA_N("); node_print(nd->x); printf(")"); break;
-    case P_REF:     printf("\\%d", nd->n); break;
-    case P_REP:     node_print(nd->x); printf(nd->ng ? "{%d,%d}?" : "{%d,%d}", nd->min, nd->max); break;
-    case P_SET:     printf("["); print_set(nd->cp); break;
-    case P_SET_N:   printf("[^"); print_set(nd->cp); break;
-    case P_WORD:    printf("\\b"); break;
-    case P_WORD_N:  printf("\\B"); break;
+    case P_ANY:    printf("."); break;
+    case P_BOL:    printf("^"); break;
+    case P_BRA:    printf("(%d,", nd->n); node_print(nd->x); printf(")"); break;
+    case P_CAT:    printf("{"); node_print(nd->x); printf(" & "); node_print(nd->y); printf("}"); break;
+    case P_CH:     printf(nd->c >= 32 && nd->c < 127 ? "'%c'" : "'\\u%04X'", nd->c); break;
+    case P_EOL:    printf("$"); break;
+    case P_EOS:    printf("\\0"); break;
+    case P_LA:     printf("LA("); node_print(nd->x); printf(")"); break;
+    case P_LA_N:   printf("LA_N("); node_print(nd->x); printf(")"); break;
+    case P_REF:    printf("\\%d", nd->n); break;
+    case P_REP:    node_print(nd->x); printf(nd->ng ? "{%d,%d}?" : "{%d,%d}", nd->min, nd->max); break;
+    case P_SET:    printf("["); print_set(nd->cp); break;
+    case P_SET_N:  printf("[^"); print_set(nd->cp); break;
+    case P_WORD:   printf("\\b"); break;
+    case P_WORD_N: printf("\\B"); break;
   }
 }
 
