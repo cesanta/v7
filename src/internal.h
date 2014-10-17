@@ -45,14 +45,6 @@ typedef unsigned char uint8_t;
 #define INFINITY    atof("INFINITY")  // TODO: fix this
 #endif
 
-// If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
-// the structure, but append it to the list of free structures.
-// Subsequent allocations try to grab a structure from the free list,
-// which speeds up allocation.
-//#define V7_CACHE_OBJS
-
-// Maximum length of the string literal
-#define MAX_STRING_LITERAL_LENGTH 2000
 
 // Different classes of V7_TYPE_OBJ type
 enum v7_class {
@@ -92,8 +84,6 @@ enum v7_tok {
   NUM_TOKENS
 };
 
-#define RE_MAX_SUB 32
-
 // Sub expression matches
 struct Resub{
   unsigned int subexpr_num;
@@ -107,7 +97,7 @@ struct Rerange{ Rune s; Rune e; };
 // character class, each pair of rune's defines a range
 struct Reclass{
   struct Rerange *end;
-  struct Rerange spans[32];
+  struct Rerange spans[RE_MAX_RANGES];
 };
 
 // Parser Information
@@ -155,7 +145,7 @@ struct Reinst{
 struct Reprog{
   struct Reinst *start, *end;
   unsigned int subexpr_num;
-  struct Reclass charset[16];
+  struct Reclass charset[RE_MAX_SETS];
 };
 
 // struct Rethread definition

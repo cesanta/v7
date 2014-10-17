@@ -1,9 +1,5 @@
 #include "internal.h"
 
-#define REPLACE_SUB
-
-#define RE_MAX_REP 0xFFFF
-#define RE_MAX_THREADS 1000
 
 struct re_env{
   struct v7_val_flags flags;
@@ -918,7 +914,7 @@ uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *star
 }
 
 static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
  struct Resub *dstsub
 #else
  char **dst
@@ -927,12 +923,12 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
  ){
   int size = 0, sz, sbn, n;
   char tmps[300], *d =
-#ifndef REPLACE_SUB
+#ifndef RE_REPLACE_SUB
     dst ? *dst :
 #endif
     tmps;
   Rune curr_rune;
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
   dstsub->subexpr_num = 0;
 #endif
 
@@ -945,7 +941,7 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '&':
           sz = loot->sub[0].end - loot->sub[0].start;
           size += sz;
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[0];
 #else
           if(dst){
@@ -966,7 +962,7 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           if(sbn >= loot->subexpr_num) break;
           sz = loot->sub[sbn].end - loot->sub[sbn].start;
           size += sz;
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[sbn];
 #else
           if(dst){
@@ -978,7 +974,7 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '`':
           sz = loot->sub[0].start - src;
           size += sz;
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num].start = src;
           dstsub->sub[dstsub->subexpr_num++].end = loot->sub[0].start;
 #else
@@ -991,7 +987,7 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '\'':
           sz = strlen(loot->sub[0].end);
           size += sz;
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num].start = loot->sub[0].end;
           dstsub->sub[dstsub->subexpr_num++].end = loot->sub[0].end + sz;
 #else
@@ -1003,7 +999,7 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           break;
         case '$':
           size++;
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num].start = rstr - 1;
           dstsub->sub[dstsub->subexpr_num++].end = rstr;
 #else
@@ -1014,7 +1010,7 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
       }
     }else{
       size += (sz = runetochar(d, &curr_rune));
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
       if(!dstsub->subexpr_num || dstsub->sub[dstsub->subexpr_num-1].end != rstr - sz){
         dstsub->sub[dstsub->subexpr_num].start = rstr - sz;
         dstsub->sub[dstsub->subexpr_num++].end = rstr;
@@ -1024,14 +1020,14 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
 #endif
     }
   }
-#ifndef REPLACE_SUB
+#ifndef RE_REPLACE_SUB
   if(dst) *d = '\0';
 #endif
   return size;
 }
 
 int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst){
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
   struct Resub newsub;
   struct re_tok *t = newsub.sub;
   char *d;
@@ -1049,7 +1045,7 @@ int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst
   *dst = NULL;
   if(osz) *dst = reg_malloc(osz + 1);
   if(!*dst) return 0;
-#ifdef REPLACE_SUB
+#ifdef RE_REPLACE_SUB
   d = *dst;
   do{
     size_t len = t->end - t->start;

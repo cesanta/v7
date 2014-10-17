@@ -23,24 +23,36 @@ extern "C" {
 
 #define V7_VERSION "1.0"
 
-/////custom defines/////
-// conditional compiling macros
+/////conditional compiling macros/////
 // #define V7_DEBUG
 // #define V7_DISABLE_CRYPTO
+
+// If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
+// the structure, but append it to the list of free structures.
+// Subsequent allocations try to grab a structure from the free list,
+// which speeds up allocation.
 // #define V7_CACHE_OBJS
 
-// custom types
+#define RE_REPLACE_SUB
+
+/////custom defines/////
+// Maximum length of the string literal
+#define MAX_STRING_LITERAL_LENGTH 2000
+
+#define RE_MAX_SUB 32
+#define RE_MAX_RANGES 32
+#define RE_MAX_SETS 16
+#define RE_MAX_REP 0xFFFF
+#define RE_MAX_THREADS 1000
+
+/////custom types/////
 // typedef unsigned long uint64_t;
-typedef unsigned long u_int64_t;
 // typedef unsigned int uint32_t;
-typedef unsigned int u_int32_t;
 typedef unsigned short uint16_t;
-typedef unsigned short u_int16_t;
 // typedef unsigned char uint8_t;
-typedef unsigned char u_int8_t;
 typedef signed char sint8_t;
 
-// some substitutes
+/////some substitutes/////
 #define bcopy memcpy
 #define reg_malloc malloc
 #define reg_free free
