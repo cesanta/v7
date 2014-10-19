@@ -174,6 +174,12 @@ struct v7_vec {
   int len;
 };
 
+struct v7_regexp {
+  char *buf;                // \0-terminated regexp
+  unsigned long len;        // regexp length
+  struct Reprog *prog;      // Pointer to compiled regexp
+};
+
 struct v7_string {
   char *buf;                // Pointer to buffer with string data
   unsigned long len;        // String length
@@ -187,12 +193,12 @@ struct v7_func {
 };
 
 union v7_scalar {
-  char *regex;              // \0-terminated regex
+  struct v7_regexp re;      // 
   double num;               // Holds "Number" or "Boolean" value
   struct v7_string str;     // Holds "String" value
   struct v7_func func;      // \0-terminated function code
   struct v7_prop *array;    // List of array elements
-  v7_func_t c_func;       // Pointer to the C function
+  v7_func_t c_func;         // Pointer to the C function
   v7_prop_func_t prop_func; // Object's property function, e.g. String.length
 };
 
@@ -209,15 +215,15 @@ struct v7_val {
   union{
     uint16_t flags;            // Flags - defined below
     struct v7_val_flags{
-      uint16_t fl_val_alloc:1;   // Whole "struct v7_val" must be free()-ed
+      uint16_t val_alloc:1;   // Whole "struct v7_val" must be free()-ed
 #define V7_VAL_ALLOCATED   1
-      uint16_t fl_str_alloc:1;   // v.str.buf must be free()-ed
+      uint16_t str_alloc:1;   // v.str.buf must be free()-ed
 #define V7_STR_ALLOCATED   2
-      uint16_t fl_js_func:1;     // Function object is a JavsScript code
+      uint16_t js_func:1;     // Function object is a JavsScript code
 #define V7_JS_FUNC         4
-      uint16_t fl_prop_func:1;   // Function object is a native property function
+      uint16_t prop_func:1;   // Function object is a native property function
 #define V7_PROP_FUNC       8
-      uint16_t fl_val_dealloc:1; // Value has been deallocated
+      uint16_t val_dealloc:1; // Value has been deallocated
 #define V7_VAL_DEALLOCATED 16
 
       uint16_t re_g:1; // execution RegExp flag g
@@ -271,13 +277,14 @@ struct v7 {
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#define CHECK(cond, code) do { \
-  if (!(cond)) { \
+#define THROW(err_code) do{ \
     snprintf(v7->error_message, sizeof(v7->error_message), \
       "%s line %d: %s", v7->pstate.file_name, v7->pstate.line_no, \
-      v7_strerror(code)); \
-    return (code); \
-  } } while (0)
+      v7_strerror(err_code)); \
+    return(err_code); \
+  }while(0)
+
+#define CHECK(cond, code) if(!(cond)) THROW(code)
 
 //#define TRACE_CALL printf
 #define TRACE_CALL
@@ -355,6 +362,9 @@ V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags f
 V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
 V7_PRIVATE void re_free(struct Reprog *prog);
 V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst);
+
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len);
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);

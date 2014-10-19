@@ -358,42 +358,34 @@ static enum v7_err parse_delete_statement(struct v7 *v7) {
 }
 
 static enum v7_err parse_regex(struct v7 *v7) {
-  char regex[MAX_STRING_LITERAL_LENGTH];
-  size_t i;
+  size_t i, j;
+  uint8_t done = 0;
 
-  CHECK(*v7->pstate.pc == '/', V7_SYNTAX_ERROR);
-  for (i = 0, v7->pstate.pc++; i < sizeof(regex) - 1 && *v7->pstate.pc != '/' &&
-    *v7->pstate.pc != '\0'; i++, v7->pstate.pc++) {
-    if (*v7->pstate.pc == '\\' && v7->pstate.pc[1] == '/') v7->pstate.pc++;
-    regex[i] = *v7->pstate.pc;
-  }
-  regex[i] = '\0';
-
-  CHECK(*v7->pstate.pc++ == '/', V7_SYNTAX_ERROR);
-  uint8_t fl_g=0, fl_i=0, fl_m=0, rep;
-  do{
-    switch(*v7->pstate.pc){
-      case 'g': fl_g=1; rep=1; break;
-      case 'i': fl_i=1; rep=1; break;
-      case 'm': fl_m=1; rep=1; break;
-      default :         rep=0; break;
+  if(!EXECUTING(v7->flags)) return V7_OK;
+  // CHECK(*v7->tok == '/', V7_SYNTAX_ERROR);
+  
+  for(i = 1; !done; i++){
+    switch(v7->tok[i]){
+      case '\0': case '\r': case '\n':
+        THROW(V7_SYNTAX_ERROR);
+      case '/':
+        if('\\' == v7->tok[i-1]) continue;
+        done = 1;
+        break;
     }
-    v7->pstate.pc += rep;
-  }while(rep);
-//  skip_whitespaces_and_comments(v7);
-
-  //EXPECT(v7, TOK_DIV);
-
-  if (EXECUTING(v7->flags)) {
-    TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
-    struct v7_val *top = v7_top(v7)[-1];
-    v7_set_class(top, V7_CLASS_REGEXP);
-    top->v.regex = v7_strdup(regex, strlen(regex));
-    top->fl.re_g = fl_g;
-    top->fl.re_i = fl_i;
-    top->fl.re_m = fl_m;
+  }
+  done = 0;
+  for(j = i; !done; j++){
+    switch(v7->tok[j]){
+      default : done = 1; j--;
+      case 'g': case 'i': case 'm': break;
+      case '\0': case '\r': case '\n':
+        THROW(V7_SYNTAX_ERROR);
+    }
   }
 
+  TRY(regex_xctor(v7, NULL, &v7->tok[1], i-2, &v7->tok[i], j-i));
+  v7->pstate.pc = &v7->tok[j];
   return V7_OK;
 }
 

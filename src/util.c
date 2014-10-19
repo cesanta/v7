@@ -141,7 +141,11 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
   } else if (v->type == V7_TYPE_STR && (v->flags & V7_STR_ALLOCATED)) {
     free(v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_REGEXP) && (v->flags & V7_STR_ALLOCATED)) {
-    free(v->v.regex);
+    if(v->v.re.prog){
+      if(v->v.re.prog->start) reg_free(v->v.re.prog->start);
+      reg_free(v->v.re.prog);
+    }
+    if(v->v.re.buf) free(v->v.re.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
     if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
       free(v->v.func.source_code);

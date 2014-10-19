@@ -785,7 +785,8 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
   struct Resub sub, tmpsub;
   Rune c, r;
   struct Rerange *p;
-  uint8_t thr_num = 1, thr;
+  uint16_t thr_num = 1;
+  uint8_t thr;
   int i;
 
   // queue initial thread
@@ -1180,7 +1181,7 @@ int main(int argc, char **argv){
                 for(i = 0; i < sub.subexpr_num; ++i){
                   int n = sub.sub[i].end - sub.sub[i].start;
                   if(n > 0) printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i, (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
-                  else        printf("match %d: n=0 ''\n", i);
+                  else        printf("match: %-3d ''\n", i);
                 }
 
                 if(rstr){
@@ -1212,7 +1213,7 @@ int main(int argc, char **argv){
         for(i = 0; i < sub.subexpr_num; ++i){
           int n = sub.sub[i].end - sub.sub[i].start;
           if(n > 0) printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i, (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
-          else printf("match %d: n=0 ''\n", i);
+          else printf("match: %-3d ''\n", i);
         }
 
         if(argc > 4){
@@ -1231,56 +1232,135 @@ int main(int argc, char **argv){
 #else
 
 
-V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
-  struct v7_val *str = cfa->args[0];
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
-
-  if(cfa->num_args > 0){
-    if(!is_string(str)){
-      TRY(toString(cfa->v7, str));
-      str = v7_top_val(cfa->v7);
-    }
-    // TODO: copy str --> regex
-
-    if(cfa->num_args > 1){
-      struct v7_val *flags = cfa->args[1];
-      if(!is_string(flags)){
-        TRY(toString(cfa->v7, flags));
-        flags = v7_top_val(cfa->v7);
-      }
-      uint32_t ind = flags->v.str.len;
-      while(ind){
-        switch(flags->v.str.buf[--ind]){
-          case 'g': obj->fl.re_g=1;  break;
-          case 'i': obj->fl.re_i=1;  break;
-          case 'm': obj->fl.re_m=1;  break;
-        }
-      }
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len){
+  
+  if(NULL == obj){
+    obj = v7_push_new_object(v7);
+    obj->fl.val_alloc = 1;
+  }
+  v7_set_class(obj, V7_CLASS_REGEXP);
+  obj->v.re.prog = NULL;
+  obj->fl.re=1;
+  while(fl_len){
+    switch(fl[--fl_len]){
+      case 'g': obj->fl.re_g=1;  break;
+      case 'i': obj->fl.re_i=1;  break;
+      case 'm': obj->fl.re_m=1;  break;
     }
   }
-
-  v7_set_class(obj, V7_CLASS_REGEXP);
+  obj->v.re.buf = v7_strdup(re, re_len);
+  obj->v.re.len = 0;
+  if(NULL != obj->v.re.buf){
+    obj->v.re.len = re_len;
+    obj->fl.str_alloc = 1;
+  }
+  
   return V7_OK;
 }
 
-V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = NULL;
+  if(cfa->called_as_constructor) obj = cfa->this_obj;
+  struct v7_val *re = cfa->args[0];
+  size_t re_len = 0;
+  struct v7_val *fl = NULL;
+  size_t fl_len = 0;
+  struct v7 *v7 = cfa->v7; // Needed for TRY() macro below
+
+  if(cfa->num_args > 0){
+    if(!is_string(re)){ // If argument is not a string, do type conversion
+      TRY(toString(cfa->v7, re));
+      re = v7_top_val(cfa->v7);
+    }
+
+    if(cfa->num_args > 1){
+      fl = cfa->args[1];
+      if(!is_string(fl)){ // If argument is not a string, do type conversion
+        TRY(toString(cfa->v7, fl));
+        fl = v7_top_val(cfa->v7);
+      }
+    }
+    regex_xctor(cfa->v7, obj, re->v.str.buf, re->v.str.len, fl->v.str.buf, fl->v.str.len);
+  }
+
+  return V7_OK;
+}
+
+V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_g);
 }
 
-V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_i);
 }
 
-V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_m);
 }
 
-V7_PRIVATE void init_regex(void) {
+V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *result){
+  v7_init_str(result, this_obj->v.re.buf, this_obj->v.re.len, 1);
+}
+
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
+  if(NULL == re_obj->v.re.prog){
+    re_obj->v.re.prog = re_compiler(re_obj->v.re.buf, re_obj->fl, NULL);
+    if(NULL == re_obj->v.re.prog) return V7_ERROR;
+  }
+
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
+  struct v7_val *arg = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  int found = 0;
+
+  if(cfa->num_args > 0){
+    if(!is_string(arg)){// If argument is not a string, do type conversion
+      TRY(toString(cfa->v7, arg));
+      arg = v7_top_val(cfa->v7);
+    }
+    TRY(regex_check_prog(cfa->this_obj));
+    
+    //TODO(vrz)
+  }
+  //TODO(vrz)
+
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
+  struct v7_val *arg = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+	struct Resub sub;
+  int found = 0;
+
+  if(cfa->num_args > 0){
+    if(!is_string(arg)){// If argument is not a string, do type conversion
+      TRY(toString(cfa->v7, arg));
+      arg = v7_top_val(cfa->v7);
+    }
+    TRY(regex_check_prog(cfa->this_obj));
+    found = !re_exec(cfa->this_obj->v.re.prog, cfa->this_obj->fl, arg->v.str.buf, &sub);
+    //TODO(vrz)
+  }
+  v7_push_bool(cfa->v7, found);
+
+  return V7_OK;
+}
+
+V7_PRIVATE void init_regex(void){
   init_standard_constructor(V7_CLASS_REGEXP, Regex_ctor);
-  SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
+
+  SET_METHOD(s_prototypes[V7_CLASS_REGEXP], "exec", Regex_exec);
+  SET_METHOD(s_prototypes[V7_CLASS_REGEXP], "test", Regex_test);
+
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "global", Regex_global);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "ignoreCase", Regex_ignoreCase);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "multiline", Regex_multiline);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "source", Regex_source);
+
+  SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
 }
 #endif

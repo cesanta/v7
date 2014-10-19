@@ -254,6 +254,12 @@ struct v7_vec {
   int len;
 };
 
+struct v7_regexp {
+  char *buf;                // \0-terminated regexp
+  unsigned long len;        // regexp length
+  struct Reprog *prog;      // Pointer to compiled regexp
+};
+
 struct v7_string {
   char *buf;                // Pointer to buffer with string data
   unsigned long len;        // String length
@@ -267,12 +273,12 @@ struct v7_func {
 };
 
 union v7_scalar {
-  char *regex;              // \0-terminated regex
+  struct v7_regexp re;      // 
   double num;               // Holds "Number" or "Boolean" value
   struct v7_string str;     // Holds "String" value
   struct v7_func func;      // \0-terminated function code
   struct v7_prop *array;    // List of array elements
-  v7_func_t c_func;       // Pointer to the C function
+  v7_func_t c_func;         // Pointer to the C function
   v7_prop_func_t prop_func; // Object's property function, e.g. String.length
 };
 
@@ -289,15 +295,15 @@ struct v7_val {
   union{
     uint16_t flags;            // Flags - defined below
     struct v7_val_flags{
-      uint16_t fl_val_alloc:1;   // Whole "struct v7_val" must be free()-ed
+      uint16_t val_alloc:1;   // Whole "struct v7_val" must be free()-ed
 #define V7_VAL_ALLOCATED   1
-      uint16_t fl_str_alloc:1;   // v.str.buf must be free()-ed
+      uint16_t str_alloc:1;   // v.str.buf must be free()-ed
 #define V7_STR_ALLOCATED   2
-      uint16_t fl_js_func:1;     // Function object is a JavsScript code
+      uint16_t js_func:1;     // Function object is a JavsScript code
 #define V7_JS_FUNC         4
-      uint16_t fl_prop_func:1;   // Function object is a native property function
+      uint16_t prop_func:1;   // Function object is a native property function
 #define V7_PROP_FUNC       8
-      uint16_t fl_val_dealloc:1; // Value has been deallocated
+      uint16_t val_dealloc:1; // Value has been deallocated
 #define V7_VAL_DEALLOCATED 16
 
       uint16_t re_g:1; // execution RegExp flag g
@@ -351,13 +357,14 @@ struct v7 {
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#define CHECK(cond, code) do { \
-  if (!(cond)) { \
+#define THROW(err_code) do{ \
     snprintf(v7->error_message, sizeof(v7->error_message), \
       "%s line %d: %s", v7->pstate.file_name, v7->pstate.line_no, \
-      v7_strerror(code)); \
-    return (code); \
-  } } while (0)
+      v7_strerror(err_code)); \
+    return(err_code); \
+  }while(0)
+
+#define CHECK(cond, code) if(!(cond)) THROW(code)
 
 //#define TRACE_CALL printf
 #define TRACE_CALL
@@ -435,6 +442,9 @@ V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags f
 V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
 V7_PRIVATE void re_free(struct Reprog *prog);
 V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst);
+
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len);
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
@@ -665,7 +675,11 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
   } else if (v->type == V7_TYPE_STR && (v->flags & V7_STR_ALLOCATED)) {
     free(v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_REGEXP) && (v->flags & V7_STR_ALLOCATED)) {
-    free(v->v.regex);
+    if(v->v.re.prog){
+      if(v->v.re.prog->start) reg_free(v->v.re.prog->start);
+      reg_free(v->v.re.prog);
+    }
+    if(v->v.re.buf) free(v->v.re.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
     if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
       free(v->v.func.source_code);
@@ -2530,7 +2544,8 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
   struct Resub sub, tmpsub;
   Rune c, r;
   struct Rerange *p;
-  uint8_t thr_num = 1, thr;
+  uint16_t thr_num = 1;
+  uint8_t thr;
   int i;
 
   // queue initial thread
@@ -2925,7 +2940,7 @@ int main(int argc, char **argv){
                 for(i = 0; i < sub.subexpr_num; ++i){
                   int n = sub.sub[i].end - sub.sub[i].start;
                   if(n > 0) printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i, (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
-                  else        printf("match %d: n=0 ''\n", i);
+                  else        printf("match: %-3d ''\n", i);
                 }
 
                 if(rstr){
@@ -2957,7 +2972,7 @@ int main(int argc, char **argv){
         for(i = 0; i < sub.subexpr_num; ++i){
           int n = sub.sub[i].end - sub.sub[i].start;
           if(n > 0) printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i, (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
-          else printf("match %d: n=0 ''\n", i);
+          else printf("match: %-3d ''\n", i);
         }
 
         if(argc > 4){
@@ -2976,57 +2991,136 @@ int main(int argc, char **argv){
 #else
 
 
-V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
-  struct v7_val *str = cfa->args[0];
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
-
-  if(cfa->num_args > 0){
-    if(!is_string(str)){
-      TRY(toString(cfa->v7, str));
-      str = v7_top_val(cfa->v7);
-    }
-    // TODO: copy str --> regex
-
-    if(cfa->num_args > 1){
-      struct v7_val *flags = cfa->args[1];
-      if(!is_string(flags)){
-        TRY(toString(cfa->v7, flags));
-        flags = v7_top_val(cfa->v7);
-      }
-      uint32_t ind = flags->v.str.len;
-      while(ind){
-        switch(flags->v.str.buf[--ind]){
-          case 'g': obj->fl.re_g=1;  break;
-          case 'i': obj->fl.re_i=1;  break;
-          case 'm': obj->fl.re_m=1;  break;
-        }
-      }
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len){
+  
+  if(NULL == obj){
+    obj = v7_push_new_object(v7);
+    obj->fl.val_alloc = 1;
+  }
+  v7_set_class(obj, V7_CLASS_REGEXP);
+  obj->v.re.prog = NULL;
+  obj->fl.re=1;
+  while(fl_len){
+    switch(fl[--fl_len]){
+      case 'g': obj->fl.re_g=1;  break;
+      case 'i': obj->fl.re_i=1;  break;
+      case 'm': obj->fl.re_m=1;  break;
     }
   }
-
-  v7_set_class(obj, V7_CLASS_REGEXP);
+  obj->v.re.buf = v7_strdup(re, re_len);
+  obj->v.re.len = 0;
+  if(NULL != obj->v.re.buf){
+    obj->v.re.len = re_len;
+    obj->fl.str_alloc = 1;
+  }
+  
   return V7_OK;
 }
 
-V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
+  struct v7_val *obj = NULL;
+  if(cfa->called_as_constructor) obj = cfa->this_obj;
+  struct v7_val *re = cfa->args[0];
+  size_t re_len = 0;
+  struct v7_val *fl = NULL;
+  size_t fl_len = 0;
+  struct v7 *v7 = cfa->v7; // Needed for TRY() macro below
+
+  if(cfa->num_args > 0){
+    if(!is_string(re)){ // If argument is not a string, do type conversion
+      TRY(toString(cfa->v7, re));
+      re = v7_top_val(cfa->v7);
+    }
+
+    if(cfa->num_args > 1){
+      fl = cfa->args[1];
+      if(!is_string(fl)){ // If argument is not a string, do type conversion
+        TRY(toString(cfa->v7, fl));
+        fl = v7_top_val(cfa->v7);
+      }
+    }
+    regex_xctor(cfa->v7, obj, re->v.str.buf, re->v.str.len, fl->v.str.buf, fl->v.str.len);
+  }
+
+  return V7_OK;
+}
+
+V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_g);
 }
 
-V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_i);
 }
 
-V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_m);
 }
 
-V7_PRIVATE void init_regex(void) {
+V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *result){
+  v7_init_str(result, this_obj->v.re.buf, this_obj->v.re.len, 1);
+}
+
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
+  if(NULL == re_obj->v.re.prog){
+    re_obj->v.re.prog = re_compiler(re_obj->v.re.buf, re_obj->fl, NULL);
+    if(NULL == re_obj->v.re.prog) return V7_ERROR;
+  }
+
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
+  struct v7_val *arg = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  int found = 0;
+
+  if(cfa->num_args > 0){
+    if(!is_string(arg)){// If argument is not a string, do type conversion
+      TRY(toString(cfa->v7, arg));
+      arg = v7_top_val(cfa->v7);
+    }
+    TRY(regex_check_prog(cfa->this_obj));
+    
+    //TODO(vrz)
+  }
+  //TODO(vrz)
+
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
+  struct v7_val *arg = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+	struct Resub sub;
+  int found = 0;
+
+  if(cfa->num_args > 0){
+    if(!is_string(arg)){// If argument is not a string, do type conversion
+      TRY(toString(cfa->v7, arg));
+      arg = v7_top_val(cfa->v7);
+    }
+    TRY(regex_check_prog(cfa->this_obj));
+    found = !re_exec(cfa->this_obj->v.re.prog, cfa->this_obj->fl, arg->v.str.buf, &sub);
+    //TODO(vrz)
+  }
+  v7_push_bool(cfa->v7, found);
+
+  return V7_OK;
+}
+
+V7_PRIVATE void init_regex(void){
   init_standard_constructor(V7_CLASS_REGEXP, Regex_ctor);
-  SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
+
+  SET_METHOD(s_prototypes[V7_CLASS_REGEXP], "exec", Regex_exec);
+  SET_METHOD(s_prototypes[V7_CLASS_REGEXP], "test", Regex_test);
+
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "global", Regex_global);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "ignoreCase", Regex_ignoreCase);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "multiline", Regex_multiline);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "source", Regex_source);
+
+  SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
 }
 #endif
 /*
@@ -5222,42 +5316,34 @@ static enum v7_err parse_delete_statement(struct v7 *v7) {
 }
 
 static enum v7_err parse_regex(struct v7 *v7) {
-  char regex[MAX_STRING_LITERAL_LENGTH];
-  size_t i;
+  size_t i, j;
+  uint8_t done = 0;
 
-  CHECK(*v7->pstate.pc == '/', V7_SYNTAX_ERROR);
-  for (i = 0, v7->pstate.pc++; i < sizeof(regex) - 1 && *v7->pstate.pc != '/' &&
-    *v7->pstate.pc != '\0'; i++, v7->pstate.pc++) {
-    if (*v7->pstate.pc == '\\' && v7->pstate.pc[1] == '/') v7->pstate.pc++;
-    regex[i] = *v7->pstate.pc;
-  }
-  regex[i] = '\0';
-
-  CHECK(*v7->pstate.pc++ == '/', V7_SYNTAX_ERROR);
-  uint8_t fl_g=0, fl_i=0, fl_m=0, rep;
-  do{
-    switch(*v7->pstate.pc){
-      case 'g': fl_g=1; rep=1; break;
-      case 'i': fl_i=1; rep=1; break;
-      case 'm': fl_m=1; rep=1; break;
-      default :         rep=0; break;
+  if(!EXECUTING(v7->flags)) return V7_OK;
+  // CHECK(*v7->tok == '/', V7_SYNTAX_ERROR);
+  
+  for(i = 1; !done; i++){
+    switch(v7->tok[i]){
+      case '\0': case '\r': case '\n':
+        THROW(V7_SYNTAX_ERROR);
+      case '/':
+        if('\\' == v7->tok[i-1]) continue;
+        done = 1;
+        break;
     }
-    v7->pstate.pc += rep;
-  }while(rep);
-//  skip_whitespaces_and_comments(v7);
-
-  //EXPECT(v7, TOK_DIV);
-
-  if (EXECUTING(v7->flags)) {
-    TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
-    struct v7_val *top = v7_top(v7)[-1];
-    v7_set_class(top, V7_CLASS_REGEXP);
-    top->v.regex = v7_strdup(regex, strlen(regex));
-    top->fl.re_g = fl_g;
-    top->fl.re_i = fl_i;
-    top->fl.re_m = fl_m;
+  }
+  done = 0;
+  for(j = i; !done; j++){
+    switch(v7->tok[j]){
+      default : done = 1; j--;
+      case 'g': case 'i': case 'm': break;
+      case '\0': case '\r': case '\n':
+        THROW(V7_SYNTAX_ERROR);
+    }
   }
 
+  TRY(regex_xctor(v7, NULL, &v7->tok[1], i-2, &v7->tok[i], j-i));
+  v7->pstate.pc = &v7->tok[j];
   return V7_OK;
 }
 
@@ -6499,7 +6585,10 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
       snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
     }
   } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
-    snprintf(buf, bsiz, "/%s/", v->v.regex);
+    int sz = snprintf(buf, bsiz, "/%s/", v->v.re.buf);
+    if(v->fl.re_g) sz += snprintf(buf+sz, bsiz, "g");
+    if(v->fl.re_i) sz += snprintf(buf+sz, bsiz, "i");
+    if(v->fl.re_m) snprintf(buf+sz, bsiz, "m");
   } else if (v->type == V7_TYPE_OBJ) {
     obj_to_string(v, buf, bsiz);
   } else {
