@@ -17,11 +17,7 @@ V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
     v7_init_str(obj, NULL, 0, 0);
   }
 
-  if (cfa->called_as_constructor) {
-    cfa->this_obj->type = V7_TYPE_OBJ;
-    cfa->this_obj->proto = &s_prototypes[V7_CLASS_STRING];
-    cfa->this_obj->ctor = &s_constructors[V7_CLASS_STRING];
-  }
+  v7_set_class(obj, V7_CLASS_STRING);
   return V7_OK;
 }
 
