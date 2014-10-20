@@ -140,12 +140,12 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
     v->v.array = NULL;
   } else if (v->type == V7_TYPE_STR && (v->flags & V7_STR_ALLOCATED)) {
     free(v->v.str.buf);
-  } else if (v7_is_class(v, V7_CLASS_REGEXP) && (v->flags & V7_STR_ALLOCATED)) {
+  } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
     if(v->v.re.prog){
       if(v->v.re.prog->start) reg_free(v->v.re.prog->start);
       reg_free(v->v.re.prog);
     }
-    if(v->v.re.buf) free(v->v.re.buf);
+    if(v->v.re.buf && (v->flags & V7_STR_ALLOCATED)) free(v->v.re.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
     if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
       free(v->v.func.source_code);
@@ -454,7 +454,8 @@ V7_PRIVATE const char *v7_strerror(enum v7_err e) {
     "no error", "error", "eval error", "range error", "reference error",
     "syntax error", "type error", "URI error",
     "out of memory", "internal error", "stack overflow", "stack underflow",
-    "called non-function", "not implemented", "string literal too long"
+    "called non-function", "not implemented", "string literal too long",
+    "RegExp error"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
