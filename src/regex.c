@@ -1239,7 +1239,7 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
     obj->fl.val_alloc = 1;
   }
   v7_set_class(obj, V7_CLASS_REGEXP);
-  obj->v.re.prog = NULL;
+  obj->v.str.prog = NULL;
   obj->fl.re=1;
   while(fl_len){
     switch(fl[--fl_len]){
@@ -1248,10 +1248,10 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
       case 'm': obj->fl.re_m=1;  break;
     }
   }
-  obj->v.re.buf = v7_strdup(re, re_len);
-  obj->v.re.len = 0;
-  if(NULL != obj->v.re.buf){
-    obj->v.re.len = re_len;
+  obj->v.str.buf = v7_strdup(re, re_len);
+  obj->v.str.len = 0;
+  if(NULL != obj->v.str.buf){
+    obj->v.str.len = re_len;
     obj->fl.str_alloc = 1;
   }
   
@@ -1299,14 +1299,14 @@ V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result){
 }
 
 V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *result){
-  v7_init_str(result, this_obj->v.re.buf, this_obj->v.re.len, 1);
+  v7_init_str(result, this_obj->v.str.buf, this_obj->v.str.len, 1);
 }
 
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
-  if(NULL == re_obj->v.re.prog){
-    re_obj->v.re.prog = re_compiler(re_obj->v.re.buf, re_obj->fl, NULL);
-    if(  -1 == re_obj->v.re.prog) return V7_REGEXP_ERROR;
-    if(NULL == re_obj->v.re.prog) return V7_OUT_OF_MEMORY;
+  if(NULL == re_obj->v.str.prog){
+    re_obj->v.str.prog = re_compiler(re_obj->v.str.buf, re_obj->fl, NULL);
+    if(  -1 == re_obj->v.str.prog) return V7_REGEXP_ERROR;
+    if(NULL == re_obj->v.str.prog) return V7_OUT_OF_MEMORY;
   }
 
   return V7_OK;
@@ -1327,7 +1327,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
     }
     TRY(regex_check_prog(cfa->this_obj));
     //TODO(vrz) - g-flag
-    if(!re_exec(cfa->this_obj->v.re.prog, cfa->this_obj->fl, arg->v.str.buf, &sub)){
+    if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub)){
       arr = v7_push_new_object(v7);
       v7_set_class(arr, V7_CLASS_ARRAY);
       ptok = sub.sub;
@@ -1362,7 +1362,7 @@ V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
       arg = v7_top_val(v7);
     }
     TRY(regex_check_prog(cfa->this_obj));
-    found = !re_exec(cfa->this_obj->v.re.prog, cfa->this_obj->fl, arg->v.str.buf, &sub);
+    found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub);
   }
   v7_push_bool(v7, found);
 

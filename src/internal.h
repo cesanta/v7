@@ -174,16 +174,11 @@ struct v7_vec {
   int len;
 };
 
-struct v7_regexp {
-  char *buf;                // \0-terminated regexp
-  unsigned long len;        // regexp length
-  struct Reprog *prog;      // Pointer to compiled regexp
-};
-
 struct v7_string {
-  char *buf;                // Pointer to buffer with string data
-  unsigned long len;        // String length
-  char loc[16];             // Small strings are stored here
+  char *buf;                // Pointer to buffer with string/regexp data
+  unsigned long len;        // String/regexp length
+  char loc[16];             // Small strings/regexp are stored here
+  struct Reprog *prog;      // Pointer to compiled regexp
 };
 
 struct v7_func {
@@ -193,7 +188,6 @@ struct v7_func {
 };
 
 union v7_scalar {
-  struct v7_regexp re;      // 
   double num;               // Holds "Number" or "Boolean" value
   struct v7_string str;     // Holds "String" value
   struct v7_func func;      // \0-terminated function code

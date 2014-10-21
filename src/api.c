@@ -184,7 +184,7 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
       snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
     }
   } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
-    int sz = snprintf(buf, bsiz, "/%s/", v->v.re.buf);
+    int sz = snprintf(buf, bsiz, "/%s/", v->v.str.buf);
     if(v->fl.re_g) sz += snprintf(buf+sz, bsiz, "g");
     if(v->fl.re_i) sz += snprintf(buf+sz, bsiz, "i");
     if(v->fl.re_m) snprintf(buf+sz, bsiz, "m");
