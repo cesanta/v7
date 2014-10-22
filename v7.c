@@ -5251,7 +5251,7 @@ static enum v7_err push_string_literal(struct v7 *v7) {
   if (!EXECUTING(v7->flags)) return V7_OK;
   TRY(v7_make_and_push(v7, V7_TYPE_STR));
   v = v7_top_val(v7);
-  v7_init_str(v, (char *) malloc(v7->tok_len - 1), 0, 1);
+  v7_init_str(v, &v7->tok[1], v7->tok_len - 1, 1);
   CHECK(v->v.str.buf != NULL, V7_OUT_OF_MEMORY);
   p = v->v.str.buf;
 
