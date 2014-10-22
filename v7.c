@@ -4554,7 +4554,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   int shift = 0;
 
   if(cfa->num_args > 0){
-    if(!instanceof(cfa->args[0], &s_constructors[V7_CLASS_REGEXP]) && !is_string(arg)){ // If argument is not a RegExp/string, do type conversion
+    if(!instanceof(arg, &s_constructors[V7_CLASS_REGEXP]) && !is_string(arg)){ // If argument is not a RegExp/string, do type conversion
       TRY(toString(v7, arg));
       arg = v7_top_val(v7);
     }
@@ -4566,8 +4566,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
           v7_set_class(arr, V7_CLASS_ARRAY);
         }
         shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
-        v7_append(v7, arr,
-          v7_mkv(v7, V7_TYPE_STR, sub.sub[0].start, sub.sub[0].end - sub.sub[0].start, 1));
+        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[0].start, sub.sub[0].end - sub.sub[0].start, 1));
       }
     }while(arg->fl.re_g && shift < cfa->this_obj->v.str.len);
   }
@@ -4575,69 +4574,35 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-// Implementation of memmem()
-V7_PRIVATE const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
-  const char *end;
-  if (al == 0 || bl == 0 || al < bl) return NULL;
-  for (end = a + (al - bl); a < end; a++) if (!memcmp(a, b, bl)) return a;
-  return NULL;
-}
-
 V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
-  const struct v7_string *s = &cfa->this_obj->v.str;
-  const char *p1, *p2, *e = s->buf + s->len;
-  int limit = cfa->num_args == 2 && cfa->args[1]->type == V7_TYPE_NUM ?
-  cfa->args[1]->v.num : -1;
-  int num_elems = 0;
-  struct v7_val *result = v7_push_new_object(cfa->v7);
+  struct v7_val *arg = cfa->args[0];
+  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  struct Resub sub, sub1;
+  struct v7_val *arr = v7_push_new_object(v7);
+  int limit = 100000, elem = 0, shift = 0, i, len;
 
-  v7_set_class(result, V7_CLASS_ARRAY);
-  if (cfa->num_args == 0) {
-    v7_append(cfa->v7, result,
-              v7_mkv(cfa->v7, V7_TYPE_STR, s->buf, s->len, 1));
-  } else if (cfa->args[0]->type == V7_TYPE_STR) {
-    const struct v7_string *sep = &cfa->args[0]->v.str;
-    if (sep->len == 0) {
-      // Separator is empty. Split string by characters.
-      for (p1 = s->buf; p1 < e; p1++) {
-        if (limit >= 0 && limit <= num_elems) break;
-        v7_append(cfa->v7, result, v7_mkv(cfa->v7, V7_TYPE_STR, p1, 1, 1));
-        num_elems++;
-      }
-    } else {
-      p1 = s->buf;
-      while ((p2 = memstr(p1, e - p1, sep->buf, sep->len)) != NULL) {
-        if (limit >= 0 && limit <= num_elems) break;
-        v7_append(cfa->v7, result,
-                  v7_mkv(cfa->v7, V7_TYPE_STR, p1, p2 - p1, 1));
-        p1 = p2 + sep->len;
-        num_elems++;
-      }
-      if (limit < 0 || limit > num_elems) {
-        v7_append(cfa->v7, result,
-                  v7_mkv(cfa->v7, V7_TYPE_STR, p1, e - p1, 1));
-      }
+  v7_set_class(arr, V7_CLASS_ARRAY);
+  if(cfa->num_args > 0){
+    if(cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM) limit = cfa->args[1]->v.num;
+    if(!instanceof(arg, &s_constructors[V7_CLASS_REGEXP]) && !is_string(arg)){ // If argument is not a RegExp/string, do type conversion
+      TRY(toString(v7, arg));
+      arg = v7_top_val(v7);
     }
-  } else if (instanceof(cfa->args[0], &s_constructors[V7_CLASS_REGEXP])) {
-    char regex[MAX_STRING_LITERAL_LENGTH];
-    /* struct slre_cap caps[40];
-    int n = 0;
-
-    snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
-    p1 = s->buf;
-    while ((n = slre_match(regex, p1, (int) (e - p1),
-                           caps, ARRAY_SIZE(caps), 0)) > 0) {
-      if (limit >= 0 && limit <= num_elems) break;
-      v7_append(cfa->v7, result,
-                v7_mkv(cfa->v7, V7_TYPE_STR, p1, caps[0].ptr - p1, 1));
-      p1 += n;
-      num_elems++;
-    } */
-    if (limit < 0 || limit > num_elems) {
-      v7_append(cfa->v7, result,
-                v7_mkv(cfa->v7, V7_TYPE_STR, p1, e - p1, 1));
+    TRY(regex_check_prog(arg));
+    for(; elem < limit && shift < cfa->this_obj->v.str.len; elem++){
+      if(re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf + shift, &sub)) break;
+      v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift, sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
+      for(i = 1; i < sub.subexpr_num; i++)
+        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start, sub.sub[i].end - sub.sub[i].start, 1));
+      shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+      sub1=sub;
     }
+    len = cfa->this_obj->v.str.len - shift;
+    if(shift > 0 && elem < limit && len > 0)
+      v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub1.sub[0].end, len, 1));
   }
+  if(0 == shift) v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len, 1));
+
   return V7_OK;
 }
 
@@ -4692,7 +4657,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
   int shift = -1;
 
   if(cfa->num_args > 0){
-    if(!instanceof(cfa->args[0], &s_constructors[V7_CLASS_REGEXP]) && !is_string(arg)){ // If argument is not a RegExp/string, do type conversion
+    if(!instanceof(arg, &s_constructors[V7_CLASS_REGEXP]) && !is_string(arg)){ // If argument is not a RegExp/string, do type conversion
       TRY(toString(v7, arg));
       arg = v7_top_val(v7);
     }
