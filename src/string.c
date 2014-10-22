@@ -52,8 +52,8 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   struct v7_val *arg = cfa->args[0];
   struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
   struct Resub sub;
-  struct v7_val *arr = NULL, *v;
-  int shift = 0, len;
+  struct v7_val *arr = NULL;
+  int shift = 0;
 
   if(cfa->num_args > 0){
     if(!instanceof(cfa->args[0], &s_constructors[V7_CLASS_REGEXP]) && !is_string(arg)){ // If argument is not a RegExp/string, do type conversion
@@ -68,18 +68,9 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
           v7_set_class(arr, V7_CLASS_ARRAY);
         }
         shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
-        len = sub.sub[0].end - sub.sub[0].start;
-        TRY(v7_make_and_push(v7, V7_TYPE_STR));
-        v = v7_top_val(v7);
-        v7_init_str(v, (char *) malloc(len+1), 0, 1);
-        CHECK(v->v.str.buf != NULL, V7_OUT_OF_MEMORY);
-        memcpy(v->v.str.buf, sub.sub[0].start, len);
-        v->v.str.buf[len] = '\0';
-        v->v.str.len = len;
-        v7_append(v7, arr, v);
-        TRY(inc_stack(v7, -1));
+        v7_append(v7, arr,
+          v7_mkv(v7, V7_TYPE_STR, sub.sub[0].start, sub.sub[0].end - sub.sub[0].start, 1));
       }
-      
     }while(arg->fl.re_g && shift < cfa->this_obj->v.str.len);
   }
   if(0 == shift) TRY(v7_make_and_push(v7, V7_TYPE_NULL));

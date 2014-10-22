@@ -1234,16 +1234,8 @@ int main(int argc, char **argv){
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len){
   
-  if(NULL == obj){
-    obj = v7_push_new_object(v7);
-    obj->fl.val_alloc = 1;
-  }
+  if(NULL == obj) obj = v7_push_new_object(v7);
   v7_init_str(obj, re, re_len, 1);
-  obj->v.str.len = 0;
-  if(NULL != obj->v.str.buf){
-    obj->v.str.len = re_len;
-  }
-  
   v7_set_class(obj, V7_CLASS_REGEXP);
   obj->v.str.prog = NULL;
   obj->fl.re=1;
@@ -1316,9 +1308,9 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
   struct v7_val *arg = cfa->args[0];
   struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
   struct Resub sub;
-  struct v7_val *arr = NULL, *v;
-  struct re_tok *ptok;
-  int i, len;
+  struct re_tok *ptok = sub.sub;
+  struct v7_val *arr = NULL;
+  int i;
 
   if(cfa->num_args > 0){
     if(!is_string(arg)){// If argument is not a string, do type conversion
@@ -1330,19 +1322,8 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
     if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub)){
       arr = v7_push_new_object(v7);
       v7_set_class(arr, V7_CLASS_ARRAY);
-      ptok = sub.sub;
-      for(i=0; i<sub.subexpr_num; i++, ptok++){
-        len = ptok->end - ptok->start;
-        TRY(v7_make_and_push(v7, V7_TYPE_STR));
-        v = v7_top_val(v7);
-        v7_init_str(v, (char *) malloc(len+1), 0, 1);
-        CHECK(v->v.str.buf != NULL, V7_OUT_OF_MEMORY);
-        memcpy(v->v.str.buf, ptok->start, len);
-        v->v.str.buf[len] = '\0';
-        v->v.str.len = len;
-        v7_append(v7, arr, v);
-      }
-      TRY(inc_stack(v7, -i));
+      for(i=0; i<sub.subexpr_num; i++, ptok++)
+        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start, ptok->end - ptok->start, 1));
       return V7_OK;
     }
   }
