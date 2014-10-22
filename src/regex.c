@@ -1238,6 +1238,12 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
     obj = v7_push_new_object(v7);
     obj->fl.val_alloc = 1;
   }
+  v7_init_str(obj, re, re_len, 1);
+  obj->v.str.len = 0;
+  if(NULL != obj->v.str.buf){
+    obj->v.str.len = re_len;
+  }
+  
   v7_set_class(obj, V7_CLASS_REGEXP);
   obj->v.str.prog = NULL;
   obj->fl.re=1;
@@ -1247,12 +1253,6 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
       case 'i': obj->fl.re_i=1;  break;
       case 'm': obj->fl.re_m=1;  break;
     }
-  }
-  obj->v.str.buf = v7_strdup(re, re_len);
-  obj->v.str.len = 0;
-  if(NULL != obj->v.str.buf){
-    obj->v.str.len = re_len;
-    obj->fl.str_alloc = 1;
   }
   
   return V7_OK;
