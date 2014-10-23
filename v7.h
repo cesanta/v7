@@ -33,8 +33,6 @@ extern "C" {
 // which speeds up allocation.
 // #define V7_CACHE_OBJS
 
-#define RE_REPLACE_SUB
-
 /////custom defines/////
 // Maximum length of the string literal
 #define MAX_STRING_LITERAL_LENGTH 2000

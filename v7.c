@@ -2667,24 +2667,11 @@ uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *star
   return !re_match(prog->start, start, start, flags, loot);
 }
 
-static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
-#ifdef RE_REPLACE_SUB
- struct Resub *dstsub
-#else
- char **dst
-// if(dst==NULL) just to calculate out string length
-#endif
- ){
+static int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub){
   int size = 0, sz, sbn, n;
-  char tmps[300], *d =
-#ifndef RE_REPLACE_SUB
-    dst ? *dst :
-#endif
-    tmps;
+  char tmps[300], *d = tmps;
   Rune curr_rune;
-#ifdef RE_REPLACE_SUB
   dstsub->subexpr_num = 0;
-#endif
 
   while(!(n = re_nextc(&curr_rune, &rstr, 1)) && curr_rune){
     if(n < 0) return n;
@@ -2695,14 +2682,7 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '&':
           sz = loot->sub[0].end - loot->sub[0].start;
           size += sz;
-#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[0];
-#else
-          if(dst){
-              memcpy(d, loot->sub[0].start, sz);
-              d += sz;
-          }
-#endif
           break;
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
@@ -2716,90 +2696,53 @@ static int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           if(sbn >= loot->subexpr_num) break;
           sz = loot->sub[sbn].end - loot->sub[sbn].start;
           size += sz;
-#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[sbn];
-#else
-          if(dst){
-            memcpy(d, loot->sub[sbn].start, sz);
-            d += sz;
-          }
-#endif
           break;
         case '`':
           sz = loot->sub[0].start - src;
           size += sz;
-#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num].start = src;
           dstsub->sub[dstsub->subexpr_num++].end = loot->sub[0].start;
-#else
-          if(dst){
-            memcpy(d, src, sz);
-            d += sz;
-          }
-#endif
           break;
         case '\'':
           sz = strlen(loot->sub[0].end);
           size += sz;
-#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num].start = loot->sub[0].end;
           dstsub->sub[dstsub->subexpr_num++].end = loot->sub[0].end + sz;
-#else
-          if(dst){
-            memcpy(d, loot->sub[0].end, sz);
-            d += sz;
-          }
-#endif
           break;
         case '$':
           size++;
-#ifdef RE_REPLACE_SUB
           dstsub->sub[dstsub->subexpr_num].start = rstr - 1;
           dstsub->sub[dstsub->subexpr_num++].end = rstr;
-#else
-          if(dst) *d++ = '$';
-#endif
           break;
         default: return BAD_CHAR_AFTER_USD;
       }
     }else{
       size += (sz = runetochar(d, &curr_rune));
-#ifdef RE_REPLACE_SUB
       if(!dstsub->subexpr_num || dstsub->sub[dstsub->subexpr_num-1].end != rstr - sz){
         dstsub->sub[dstsub->subexpr_num].start = rstr - sz;
         dstsub->sub[dstsub->subexpr_num++].end = rstr;
       }else dstsub->sub[dstsub->subexpr_num-1].end = rstr;
-#else
-      if(dst) d += sz;
-#endif
     }
   }
-#ifndef RE_REPLACE_SUB
-  if(dst) *d = '\0';
-#endif
   return size;
 }
 
+#ifdef RE_TEST
+
 int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst){
-#ifdef RE_REPLACE_SUB
   struct Resub newsub;
   struct re_tok *t = newsub.sub;
   char *d;
   int osz = re_rplc(loot, src, rstr, &newsub);
   int i = newsub.subexpr_num;
-#else
-  int osz = re_rplc(loot, src, rstr, NULL);
-#endif
-#ifdef RE_TEST
   if(osz < 0){
     printf("re_rplc return: '%s'\n", re_err_msg(osz));
     return 0;
   }
-#endif
   *dst = NULL;
   if(osz) *dst = reg_malloc(osz + 1);
   if(!*dst) return 0;
-#ifdef RE_REPLACE_SUB
   d = *dst;
   do{
     size_t len = t->end - t->start;
@@ -2809,12 +2752,7 @@ int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst
   }while(--i);
   *d = '\0';
   return osz;
-#else
-  return re_rplc(loot, src, rstr, dst);
-#endif
 }
-
-#ifdef RE_TEST
 
 #define RE_TEST_STR_SIZE    2000
 
