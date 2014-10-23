@@ -359,6 +359,7 @@ V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr,
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len);
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int re_fl);
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);

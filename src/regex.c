@@ -1233,7 +1233,6 @@ int main(int argc, char **argv){
 
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len){
-  
   if(NULL == obj) obj = v7_push_new_object(v7);
   v7_init_str(obj, re, re_len, 1);
   v7_set_class(obj, V7_CLASS_REGEXP);
@@ -1246,35 +1245,28 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
       case 'm': obj->fl.re_m=1;  break;
     }
   }
-  
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = NULL;
-  if(cfa->called_as_constructor) obj = cfa->this_obj;
-  struct v7_val *re = cfa->args[0];
-  size_t re_len = 0;
-  struct v7_val *fl = NULL;
-  size_t fl_len = 0;
   struct v7 *v7 = cfa->v7; // Needed for TRY() macro below
+  size_t fl_len = 0;
+  const char *fl_start = NULL;
+  struct v7_val *re = cfa->args[0],
+                *fl = NULL,
+                *obj = NULL;
+  if(cfa->called_as_constructor) obj = cfa->this_obj;
 
   if(cfa->num_args > 0){
-    if(!is_string(re)){ // If argument is not a string, do type conversion
-      TRY(toString(v7, re));
-      re = v7_top_val(v7);
-    }
-
+    TRY(check_str_re_conv(v7, &re, 0));
     if(cfa->num_args > 1){
       fl = cfa->args[1];
-      if(!is_string(fl)){ // If argument is not a string, do type conversion
-        TRY(toString(v7, fl));
-        fl = v7_top_val(v7);
-      }
+      TRY(check_str_re_conv(v7, &fl, 0));
+      fl_len = fl->v.str.len;
+      fl_start = fl->v.str.buf;
     }
-    regex_xctor(v7, obj, re->v.str.buf, re->v.str.len, fl->v.str.buf, fl->v.str.len);
+    regex_xctor(v7, obj, re->v.str.buf, re->v.str.len, fl_start, fl_len);
   }
-
   return V7_OK;
 }
 
@@ -1300,23 +1292,18 @@ V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
     if(  -1 == re_obj->v.str.prog) return V7_REGEXP_ERROR;
     if(NULL == re_obj->v.str.prog) return V7_OUT_OF_MEMORY;
   }
-
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
-  struct v7_val *arg = cfa->args[0];
   struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0], *arr = NULL;
   struct Resub sub;
   struct re_tok *ptok = sub.sub;
-  struct v7_val *arr = NULL;
   int i;
 
   if(cfa->num_args > 0){
-    if(!is_string(arg)){// If argument is not a string, do type conversion
-      TRY(toString(v7, arg));
-      arg = v7_top_val(v7);
-    }
+    TRY(check_str_re_conv(v7, &arg, 0));
     TRY(regex_check_prog(cfa->this_obj));
     //TODO(vrz) - g-flag
     if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub)){
@@ -1332,21 +1319,17 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
 }
 
 V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
-  struct v7_val *arg = cfa->args[0];
   struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   int found = 0;
 
   if(cfa->num_args > 0){
-    if(!is_string(arg)){// If argument is not a string, do type conversion
-      TRY(toString(v7, arg));
-      arg = v7_top_val(v7);
-    }
+    TRY(check_str_re_conv(v7, &arg, 0));
     TRY(regex_check_prog(cfa->this_obj));
     found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub);
   }
   v7_push_bool(v7, found);
-
   return V7_OK;
 }
 

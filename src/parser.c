@@ -8,11 +8,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
   char *str;
 
   if (a->type == V7_TYPE_STR && op == TOK_PLUS) {
-    if (b->type != V7_TYPE_STR) {
-      // Do type conversion, result pushed on stack
-      TRY(toString(v7, b));
-      b = v7_top_val(v7);
-    }
+    TRY(check_str_re_conv(v7, &b, 0)); // Do type conversion, result pushed on stack
     str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
@@ -477,10 +473,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
       // If we're doing an assignment,
       // then parse_assign() looks at v7->key, v7->key_len for the key.
       // Initialize key properly for cases like "a.b['c'] = d;"
-      if (expr_val->type != V7_TYPE_STR) {
-        TRY(toString(v7, expr_val));
-        expr_val = v7_top_val(v7);
-      }
+      TRY(check_str_re_conv(v7, &expr_val, 0));
       v7->key = expr_val->v.str.buf;
       v7->key_len = expr_val->v.str.len;
     }
