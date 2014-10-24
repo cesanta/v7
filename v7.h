@@ -42,6 +42,7 @@ extern "C" {
 #define RE_MAX_SETS 16
 #define RE_MAX_REP 0xFFFF
 #define RE_MAX_THREADS 1000
+#define V7_RE_MAX_REPL_SUB 255
 
 /////custom types/////
 // typedef unsigned long uint64_t;
