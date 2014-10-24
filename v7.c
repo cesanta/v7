@@ -434,6 +434,7 @@ extern struct v7_val s_file;
 
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
 V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
 V7_PRIVATE void re_free(struct Reprog *prog);
 V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst);
 
@@ -2667,7 +2668,7 @@ uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *star
   return !re_match(prog->start, start, start, flags, loot);
 }
 
-static int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub){
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub){
   int size = 0, sz, sbn, n;
   char tmps[300], *d = tmps;
   Rune curr_rune;
@@ -4575,14 +4576,23 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
   struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
-  int shift = -1;
+  int shift = -1, utf_shift = -1;
 
   if(cfa->num_args > 0){
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
     if(!re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf, &sub)) shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
   }
-  v7_push_number(v7, shift);
+  if(shift > 0){ // calc shift for UTF-8
+    Rune rune;
+    const char *str = cfa->this_obj->v.str.buf;
+    utf_shift = 0;
+    do{
+      str += chartorune(&rune, str);
+      utf_shift++;
+    }while(str - cfa->this_obj->v.str.buf < shift);
+  }
+  v7_push_number(v7, utf_shift);
   return V7_OK;
 }
 

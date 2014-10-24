@@ -354,6 +354,7 @@ extern struct v7_val s_file;
 
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
 V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
 V7_PRIVATE void re_free(struct Reprog *prog);
 V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst);
 

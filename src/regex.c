@@ -914,7 +914,7 @@ uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *star
   return !re_match(prog->start, start, start, flags, loot);
 }
 
-static int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub){
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub){
   int size = 0, sz, sbn, n;
   char tmps[300], *d = tmps;
   Rune curr_rune;
