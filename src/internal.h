@@ -354,9 +354,8 @@ extern struct v7_val s_file;
 
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
 V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
-V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
 V7_PRIVATE void re_free(struct Reprog *prog);
-V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst);
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len);
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);

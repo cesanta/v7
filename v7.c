@@ -434,9 +434,8 @@ extern struct v7_val s_file;
 
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
 V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
-V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
 V7_PRIVATE void re_free(struct Reprog *prog);
-V7_PRIVATE int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst);
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len);
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
@@ -2941,7 +2940,7 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
 }
 
 V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7 *v7 = cfa->v7; // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
   size_t fl_len = 0;
   const char *fl_start = NULL;
   struct v7_val *re = cfa->args[0],
@@ -2960,6 +2959,7 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
     regex_xctor(v7, obj, re->v.str.buf, re->v.str.len, fl_start, fl_len);
   }
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result){
@@ -2988,7 +2988,7 @@ V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
 }
 
 V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
   struct v7_val *arg = cfa->args[0], *arr = NULL;
   struct Resub sub;
   struct re_tok *ptok = sub.sub;
@@ -3008,10 +3008,11 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
   }
   TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   int found = 0;
@@ -3023,6 +3024,7 @@ V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
   }
   v7_push_bool(v7, found);
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE void init_regex(void){
@@ -4431,10 +4433,10 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int
 }
 
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
   struct v7_val *arg = cfa->args[0],
                 *obj = cfa->this_obj;
-  if(!cfa->called_as_constructor) obj = v7_push_new_object(cfa->v7);
+  if(!cfa->called_as_constructor) obj = v7_push_new_object(v7);
   const char *str = NULL;
   size_t len = 0;
   int own = 0;
@@ -4448,6 +4450,7 @@ V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   v7_init_str(obj, str, len, own);
   v7_set_class(obj, V7_CLASS_STRING);
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *result) {
@@ -4478,7 +4481,7 @@ V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   struct v7_val *arr = NULL;
@@ -4500,10 +4503,11 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   }
   if(0 == shift) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
   struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7);
   struct Resub sub, sub1;
   int limit = 1000000, elem = 0, shift = 0, i, len;
@@ -4526,6 +4530,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   if(elem < limit && len > 0)
     v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift, len, 1));
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
@@ -4573,7 +4578,7 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   int shift = -1, utf_shift = -1;
@@ -4594,6 +4599,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
   }
   v7_push_number(v7, utf_shift);
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE void init_string(void) {
