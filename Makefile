@@ -23,7 +23,7 @@ $(SLRE)/slre.c:
 	cd .. && git clone https://github.com/cesanta/slre
 
 unit_test: $(SOURCES) v7.h tests/unit_test.c src/internal.h
-	g++ $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
+	$(CC) $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
 
 xrun: unit_test
 	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t
