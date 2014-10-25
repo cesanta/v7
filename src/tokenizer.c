@@ -2,7 +2,7 @@
 
 // NOTE(lsm): Must be in the same order as enum for keywords
 struct { const char *p; int len; } s_keywords[] = {
-  {"break", 5}, {"case", 4}, {"catch", 4}, {"continue", 8}, {"debugger", 8},
+  {"break", 5}, {"case", 4}, {"catch", 5}, {"continue", 8}, {"debugger", 8},
   {"default", 7}, {"delete", 6}, {"do", 2}, {"else", 4}, {"false", 5},
   {"finally", 7}, {"for", 3}, {"function", 8}, {"if", 2}, {"in", 2},
   {"instanceof", 10}, {"new", 3}, {"null", 4}, {"return", 6}, {"switch", 6},
