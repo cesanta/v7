@@ -3,31 +3,53 @@
 #define EXPECT(v7, t) \
   do {if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; next_tok(v7);} while (0)
 
+static struct v7_val *_prop_func_2_value(struct v7 *v7, struct v7_val *f){
+  struct v7_val *v = f;
+  if(v->flags & V7_PROP_FUNC){
+    f->v.prop_func(v7->cur_obj, NULL, v);
+    /* v7->sp--;
+    // TRY(inc_stack(v7, -1));
+    inc_stack(v7, -1); */
+  }
+  return v;
+}
+
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, enum v7_tok op) {
   char *str;
 
+  a = _prop_func_2_value(v7, a);
+  b = _prop_func_2_value(v7, b);
   if (a->type == V7_TYPE_STR && op == TOK_PLUS) {
     TRY(check_str_re_conv(v7, &b, 0)); // Do type conversion, result pushed on stack
     str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
+    // v7_push(v7, res);
     memcpy(str, a->v.str.buf, a->v.str.len);
     memcpy(str + a->v.str.len, b->v.str.buf, b->v.str.len);
     str[res->v.str.len] = '\0';
     return V7_OK;
   } else if (a->type == V7_TYPE_NUM && b->type == V7_TYPE_NUM) {
-    v7_init_num(res, res->v.num);
+    struct v7_val *v = res;
+    if(res->flags & V7_PROP_FUNC) v = v7_push_new_object(v7);
+    v7_init_num(v, res->v.num);
     switch (op) {
-      case TOK_PLUS: res->v.num = a->v.num + b->v.num; break;
-      case TOK_MINUS: res->v.num = a->v.num - b->v.num; break;
-      case TOK_MUL: res->v.num = a->v.num * b->v.num; break;
-      case TOK_DIV: res->v.num = a->v.num / b->v.num; break;
-      case TOK_REM: res->v.num = (unsigned long) a->v.num %
+      case TOK_PLUS: v->v.num = a->v.num + b->v.num; break;
+      case TOK_MINUS: v->v.num = a->v.num - b->v.num; break;
+      case TOK_MUL: v->v.num = a->v.num * b->v.num; break;
+      case TOK_DIV: v->v.num = a->v.num / b->v.num; break;
+      case TOK_REM: v->v.num = (unsigned long) a->v.num %
         (unsigned long) b->v.num; break;
-      case TOK_XOR: res->v.num = (unsigned long) a->v.num ^
+      case TOK_XOR: v->v.num = (unsigned long) a->v.num ^
         (unsigned long) b->v.num; break;
       default: return V7_INTERNAL_ERROR;
+    }
+    if(res->flags & V7_PROP_FUNC){
+      res->v.prop_func(v7->cur_obj, v, NULL);
+      v7->sp--;
+      TRY(inc_stack(v7, -1));
+      v7_push(v7, v);
     }
     return V7_OK;
   } else {
@@ -452,10 +474,10 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
     if (EXECUTING(v7->flags)) {
       struct v7_val key = str_to_val(v7->tok, v7->tok_len);
       ns = get2(ns, &key);
-      if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
+      /* if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
         ns->v.prop_func(v7->cur_obj, v);
         ns = v;
-      }
+      } */
     }
     next_tok(v7);
   } else {
@@ -465,10 +487,10 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
       struct v7_val *expr_val = v7_top_val(v7);
 
       ns = get2(ns, expr_val);
-      if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
+      /* if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
         ns->v.prop_func(v7->cur_obj, v);
         ns = v;
-      }
+      } */
 
       // If we're doing an assignment,
       // then parse_assign() looks at v7->key, v7->key_len for the key.
@@ -554,8 +576,19 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
     next_tok(v7);
     if (EXECUTING(v7->flags)) {
       struct v7_val *v = v7_top(v7)[-1];
-      CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
-      v->v.num += increment;
+      if(v->flags & V7_PROP_FUNC){
+        struct v7_val *v1 = v;
+        v->v.prop_func(v7->cur_obj, NULL, v);
+        CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
+        v->v.num += increment;
+        v1->v.prop_func(v7->cur_obj, v, NULL);
+        v7->sp--;
+        TRY(inc_stack(v7, -1));
+        v7_push(v7, v);
+      }else{
+        CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
+        v->v.num += increment;
+      }
     }
   }
   return V7_OK;
@@ -593,6 +626,13 @@ static enum v7_err parse_unary(struct v7 *v7) {
 
   if (EXECUTING(v7->flags) && unary != TOK_END_OF_INPUT) {
     struct v7_val *result = v7_top_val(v7);
+    if(result->flags & V7_PROP_FUNC){
+      switch(unary){
+        case TOK_PLUS: case TOK_MINUS: case TOK_NOT: case TOK_TYPEOF:
+        result = _prop_func_2_value(v7, result);
+        v7_push(v7, result);
+      }
+    }
     switch (unary) {
       case TOK_PLUS:
         CHECK(is_num(result), V7_TYPE_ERROR);

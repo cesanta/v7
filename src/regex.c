@@ -1209,20 +1209,25 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
   #undef v7
 }
 
-V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *result){
+V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_g);
 }
 
-V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *result){
+V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_i);
 }
 
-V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *result){
+V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
   v7_init_bool(result, this_obj->fl.re_m);
 }
 
-V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *result){
+V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
   v7_init_str(result, this_obj->v.str.buf, this_obj->v.str.len, 1);
+}
+
+V7_PRIVATE void Regex_lastIndex(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  if(arg) this_obj->v.str.lastIndex = arg->v.num;
+  else    v7_init_num(result, this_obj->v.str.lastIndex);
 }
 
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
@@ -1284,6 +1289,7 @@ V7_PRIVATE void init_regex(void){
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "ignoreCase", Regex_ignoreCase);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "multiline", Regex_multiline);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "source", Regex_source);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "lastIndex", Regex_lastIndex);
 
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
 }

@@ -155,7 +155,7 @@ struct Rethread{
   struct Resub sub;
 };
 
-typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
+typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result);
 
 struct v7_prop {
   struct v7_prop *next;
@@ -179,6 +179,7 @@ struct v7_string {
   unsigned long len;        // String/regexp length
   char loc[16];             // Small strings/regexp are stored here
   struct Reprog *prog;      // Pointer to compiled regexp
+  unsigned long lastIndex;
 };
 
 struct v7_func {
