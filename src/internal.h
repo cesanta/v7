@@ -215,7 +215,11 @@ struct v7 {
   } } while (0)
 
 //#define TRACE_CALL printf
+#ifdef _WIN32
 #define TRACE_CALL
+#else
+#define TRACE_CALL(fmt, ...)
+#endif
 
 extern int __lev;
 #define TRY(call) do { \

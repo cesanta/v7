@@ -214,7 +214,11 @@ struct v7 {
   } } while (0)
 
 //#define TRACE_CALL printf
+#ifdef _WIN32
 #define TRACE_CALL
+#else
+#define TRACE_CALL(fmt, ...)
+#endif
 
 extern int __lev;
 #define TRY(call) do { \
@@ -3068,11 +3072,13 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
   if (v7->cur_tok == TOK_NEW) {
     has_new++;
     next_tok(v7);
+    #if 0
     if (EXECUTING(v7->flags)) {
       v7_make_and_push(v7, V7_TYPE_OBJ);
       cur_this = v7->this_obj = v7_top(v7)[-1];
       v7_set_class(cur_this, V7_CLASS_OBJECT);
     }
+    #endif
   }
   TRY(parse_precedence_1(v7, has_new));
 #if 0
@@ -3727,7 +3733,7 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
 
 // NOTE(lsm): Must be in the same order as enum for keywords
 struct { const char *p; int len; } s_keywords[] = {
-  {"break", 5}, {"case", 4}, {"catch", 4}, {"continue", 8}, {"debugger", 8},
+  {"break", 5}, {"case", 4}, {"catch", 5}, {"continue", 8}, {"debugger", 8},
   {"default", 7}, {"delete", 6}, {"do", 2}, {"else", 4}, {"false", 5},
   {"finally", 7}, {"for", 3}, {"function", 8}, {"if", 2}, {"in", 2},
   {"instanceof", 10}, {"new", 3}, {"null", 4}, {"return", 6}, {"switch", 6},
