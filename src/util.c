@@ -290,7 +290,8 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
 V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
                               int own_prop) {
   struct v7_prop *m;
-  for (; obj != NULL; obj = obj->proto) {
+  int proto = 0;
+  for (; obj != NULL; obj = obj->proto, proto=1) {
     if (v7_is_class(obj, V7_CLASS_ARRAY) && key->type == V7_TYPE_NUM) {
       int i = (int) key->v.num;
       for (m = obj->v.array; m != NULL; m = m->next) {
@@ -298,10 +299,9 @@ V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
       }
     } else if (obj->type == V7_TYPE_OBJ) {
       for (m = obj->props; m != NULL; m = m->next) {
-        if (cmp(m->key, key) == 0) return m;
+        if (cmp(m->key, key) == 0 && (!own_prop || !proto || (proto && m->val->fl.prop_func))) return m;
       }
     }
-    if (own_prop) break;
     if (obj->proto == obj) break;
   }
   return NULL;
@@ -350,9 +350,13 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
 
   // Find attribute inside object
   if ((m = v7_get2(obj, k, 1)) != NULL) {
-    v7_freeval(v7, m->val);
     inc_ref_count(v);
-    m->val = v;
+    if(m->val->flags & V7_PROP_FUNC){
+      m->val->v.prop_func(obj, v, NULL);
+    }else{
+      v7_freeval(v7, m->val);
+      m->val = v;
+    }
   } else {
     TRY(vinsert(v7, &obj->props, k, v));
   }

@@ -1183,6 +1183,7 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
       case 'm': obj->fl.re_m=1;  break;
     }
   }
+  obj->v.str.lastIndex = 0;
   return V7_OK;
 }
 

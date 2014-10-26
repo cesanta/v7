@@ -7,6 +7,7 @@ static struct v7_val *_prop_func_2_value(struct v7 *v7, struct v7_val *f){
   struct v7_val *v = f;
   if(v->flags & V7_PROP_FUNC){
     f->v.prop_func(v7->cur_obj, NULL, v);
+    v->fl.prop_func = 0;
     /* v7->sp--;
     // TRY(inc_stack(v7, -1));
     inc_stack(v7, -1); */
@@ -47,8 +48,8 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     }
     if(res->flags & V7_PROP_FUNC){
       res->v.prop_func(v7->cur_obj, v, NULL);
-      v7->sp--;
-      TRY(inc_stack(v7, -1));
+      inc_ref_count(v);
+      TRY(inc_stack(v7, -2));
       v7_push(v7, v);
     }
     return V7_OK;
@@ -457,12 +458,10 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
 }
 
 static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
-  struct v7_val *v = NULL, *ns = NULL, *cur_obj = NULL;
+  struct v7_val *ns = NULL, *cur_obj = NULL;
 
   if (EXECUTING(v7->flags)) {
     ns = v7_top(v7)[-1];
-    v7_make_and_push(v7, V7_TYPE_UNDEF);
-    v = v7_top(v7)[-1];
     v7->cur_obj = v7->this_obj = cur_obj = ns;
   }
   CHECK(!EXECUTING(v7->flags) || ns != NULL, V7_SYNTAX_ERROR);
@@ -505,7 +504,11 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
   v7->cur_obj = v7->this_obj = cur_obj;
 
   if (EXECUTING(v7->flags)) {
-    TRY(v7_push(v7, ns == NULL ? v : ns));
+    if(NULL == ns){
+      TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
+    }else{
+      TRY(v7_push(v7, ns));
+    }
   }
 
   return V7_OK;
@@ -582,8 +585,8 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
         CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
         v->v.num += increment;
         v1->v.prop_func(v7->cur_obj, v, NULL);
-        v7->sp--;
-        TRY(inc_stack(v7, -1));
+        inc_ref_count(v);
+        TRY(inc_stack(v7, -2));
         v7_push(v7, v);
       }else{
         CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
