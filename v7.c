@@ -1,18 +1,20 @@
-// Copyright (c) 2013-2014 Cesanta Software Limited
-// All rights reserved
-//
-// This software is dual-licensed: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License version 2 as
-// published by the Free Software Foundation. For the terms of this
-// license, see <http://www.gnu.org/licenses/>.
-//
-// You are free to use this software under the terms of the GNU General
-// Public License, but WITHOUT ANY WARRANTY; without even the implied
-// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU General Public License for more details.
-//
-// Alternatively, you can license this software under a commercial
-// license, as set out in <http://cesanta.com/products.html>.
+/*
+ * Copyright (c) 2013-2014 Cesanta Software Limited
+ * All rights reserved
+ *
+ * This software is dual-licensed: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation. For the terms of this
+ * license, see <http://www.gnu.org/licenses/>.
+ *
+ * You are free to use this software under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * Alternatively, you can license this software under a commercial
+ * license, as set out in <http://cesanta.com/products.html>.
+ */
 
 #ifndef V7_HEAD_H_INCLUDED
 #define V7_HEAD_H_INCLUDED
@@ -111,7 +113,7 @@ typedef unsigned char uint8_t;
 #include <stdint.h>
 #endif
 
-// MSVC6 doesn't have standard C math constants defined
+/* MSVC6 doesn't have standard C math constants defined */
 #ifndef M_PI
 #define M_E         2.71828182845904523536028747135266250
 #define M_LOG2E     1.44269504088896340735992468100189214
@@ -122,11 +124,11 @@ typedef unsigned char uint8_t;
 #define M_SQRT2     1.41421356237309504880168872420969808
 #define M_SQRT1_2   0.707106781186547524400844362104849039
 #define NAN         atof("NAN")
-#define INFINITY    atof("INFINITY")  // TODO: fix this
+#define INFINITY    atof("INFINITY")  /* TODO: fix this */
 #endif
 
 
-// Different classes of V7_TYPE_OBJ type
+/* Different classes of V7_TYPE_OBJ type */
 enum v7_class {
   V7_CLASS_NONE, V7_CLASS_ARRAY, V7_CLASS_BOOLEAN, V7_CLASS_DATE,
   V7_CLASS_ERROR, V7_CLASS_FUNCTION, V7_CLASS_NUMBER, V7_CLASS_OBJECT,
@@ -136,27 +138,27 @@ enum v7_class {
 enum v7_tok {
   TOK_END_OF_INPUT, TOK_NUMBER, TOK_STRING_LITERAL, TOK_IDENTIFIER,
 
-  // Punctuators
+  /* Punctuators */
   TOK_OPEN_CURLY, TOK_CLOSE_CURLY, TOK_OPEN_PAREN, TOK_CLOSE_PAREN, TOK_COMMA,
   TOK_OPEN_BRACKET, TOK_CLOSE_BRACKET, TOK_DOT, TOK_COLON, TOK_SEMICOLON,
-  TOK_EQ, TOK_EQ_EQ, TOK_NE, TOK_NE_NE,  // Equality ops, in this order
+  TOK_EQ, TOK_EQ_EQ, TOK_NE, TOK_NE_NE,  /* Equality ops, in this order */
   TOK_ASSIGN, TOK_REM_ASSIGN, TOK_MUL_ASSIGN, TOK_DIV_ASSIGN, TOK_XOR_ASSIGN,
   TOK_PLUS_ASSIGN, TOK_MINUS_ASSIGN, TOK_LOGICAL_OR_ASSING,
-  TOK_LOGICAL_AND_ASSING, TOK_LSHIFT_ASSIGN, TOK_RSHIFT_ASSIGN, // Assignments
+  TOK_LOGICAL_AND_ASSING, TOK_LSHIFT_ASSIGN, TOK_RSHIFT_ASSIGN, /* Assigns */
   TOK_AND, TOK_LOGICAL_OR,
   TOK_PLUS_PLUS, TOK_PLUS, TOK_MINUS_MINUS, TOK_MINUS, TOK_LOGICAL_AND,
   TOK_OR, TOK_QUESTION, TOK_TILDA, TOK_REM, TOK_MUL, TOK_DIV, TOK_XOR,
-  TOK_LE, TOK_LT, TOK_GE, TOK_GT,  // Relational ops, must go in this order
+  TOK_LE, TOK_LT, TOK_GE, TOK_GT,  /* Relational ops, must go in this order */
   TOK_LSHIFT, TOK_RSHIFT, TOK_NOT,
 
-  // Keywords. must be in the same order as tokenizer.c::s_keywords array
+  /* Keywords. must be in the same order as tokenizer.c::s_keywords array */
   TOK_BREAK, TOK_CASE, TOK_CATCH, TOK_CONTINUE, TOK_DEBUGGER, TOK_DEFAULT,
   TOK_DELETE, TOK_DO, TOK_ELSE, TOK_FALSE, TOK_FINALLY, TOK_FOR, TOK_FUNCTION,
   TOK_IF, TOK_IN, TOK_INSTANCEOF, TOK_NEW, TOK_NULL,
   TOK_RETURN, TOK_SWITCH, TOK_THIS, TOK_THROW, TOK_TRUE, TOK_TRY, TOK_TYPEOF,
   TOK_UNDEFINED, TOK_VAR, TOK_VOID, TOK_WHILE, TOK_WITH,
 
-  // TODO(lsm): process these reserved words too
+  /* TODO(lsm): process these reserved words too */
   TOK_CLASS, TOK_ENUM, TOK_EXTENDS, TOK_SUPER, TOK_CONST, TOK_EXPORT,
   TOK_IMPORT, TOK_IMPLEMENTS, TOK_LET, TOK_PRIVATE, TOK_PUBLIC, TOK_INTERFACE,
   TOK_PACKAGE, TOK_PROTECTED, TOK_STATIC, TOK_YIELD,
@@ -164,12 +166,12 @@ enum v7_tok {
   NUM_TOKENS
 };
 
-// Sub expression matches
+/* Sub expression matches */
 struct Resub{
   unsigned int subexpr_num;
   struct re_tok{
-    const char *start;  // points to the beginning of the token
-    const char *end;    // points to the end of the token
+    const char *start;  /* points to the beginning of the token */
+    const char *end;    /* points to the end of the token */
   } sub[RE_MAX_SUB];
 };
 
@@ -180,19 +182,19 @@ struct Reclass{
   struct Rerange spans[RE_MAX_RANGES];
 };
 
-// Parser Information
+/* Parser Information */
 struct Renode{
   uint8_t type;
   union{
-    Rune c;             // character
-    struct Reclass *cp; // class pointer
+    Rune c;             /* character */
+    struct Reclass *cp; /* class pointer */
     struct{
       struct Renode *x;
       union{
         struct Renode *y;
         uint8_t n;
         struct{
-          uint8_t ng;  // not greedy flag
+          uint8_t ng;  /* not greedy flag */
           uint16_t min;
           uint16_t max;
         };
@@ -201,13 +203,13 @@ struct Renode{
   };
 };
 
-// Machine instructions
+/* Machine instructions */
 struct Reinst{
   uint8_t opcode;
   union{
     uint8_t n;
-    Rune c;             // character
-    struct Reclass *cp; // class pointer
+    Rune c;             /* character */
+    struct Reclass *cp; /* class pointer */
     struct{
       struct Reinst *x;
       union{
@@ -221,14 +223,14 @@ struct Reinst{
   };
 };
 
-// struct Reprogram definition
+/* struct Reprogram definition */
 struct Reprog{
   struct Reinst *start, *end;
   unsigned int subexpr_num;
   struct Reclass charset[RE_MAX_SETS];
 };
 
-// struct Rethread definition
+/* struct Rethread definition */
 struct Rethread{
   struct Reinst *pc;
   const char *start;
@@ -242,110 +244,108 @@ struct v7_prop {
   struct v7_val *key;
   struct v7_val *val;
   unsigned short flags;
-#define V7_PROP_NOT_WRITABLE   1  // property is not changeable
-#define V7_PROP_NOT_ENUMERABLE 2  // not enumerable in for..in loop
-#define V7_PROP_NOT_DELETABLE  4  // delete-ing this property must fail
-#define V7_PROP_ALLOCATED      8  // v7_prop must be free()-ed
+#define V7_PROP_NOT_WRITABLE   1  /* property is not changeable */
+#define V7_PROP_NOT_ENUMERABLE 2  /* not enumerable in for..in loop */
+#define V7_PROP_NOT_DELETABLE  4  /* delete-ing this property must fail */
+#define V7_PROP_ALLOCATED      8  /* v7_prop must be free()-ed */
 };
 
-// Vector, describes some memory location pointed by 'p' with length 'len'
+/* Vector, describes some memory location pointed by 'p' with length 'len' */
 struct v7_vec {
   const char *p;
   int len;
 };
 
 struct v7_string {
-  char *buf;                // Pointer to buffer with string/regexp data
-  unsigned long len;        // String/regexp length
-  char loc[16];             // Small strings/regexp are stored here
-  struct Reprog *prog;      // Pointer to compiled regexp
+  char *buf;                /* Pointer to buffer with string/regexp data */
+  unsigned long len;        /* String/regexp length */
+  char loc[16];             /* Small strings/regexp are stored here */
+  struct Reprog *prog;      /* Pointer to compiled regexp */
   unsigned long lastIndex;
 };
 
 struct v7_func {
-  char *source_code;        // \0-terminated function source code
-  int line_no;              // Line number where function begins
-  struct v7_val *var_obj;   // Function var object: var decls and func defs
+  char *source_code;        /* \0-terminated function source code */
+  int line_no;              /* Line number where function begins */
+  struct v7_val *var_obj;   /* Function var object: var decls and func defs */
 };
 
 union v7_scalar {
-  double num;               // Holds "Number" or "Boolean" value
-  struct v7_string str;     // Holds "String" value
-  struct v7_func func;      // \0-terminated function code
-  struct v7_prop *array;    // List of array elements
-  v7_func_t c_func;         // Pointer to the C function
-  v7_prop_func_t prop_func; // Object's property function, e.g. String.length
+  double num;               /* Holds "Number" or "Boolean" value */
+  struct v7_string str;     /* Holds "String" value */
+  struct v7_func func;      /* \0-terminated function code */
+  struct v7_prop *array;    /* List of array elements */
+  v7_func_t c_func;         /* Pointer to the C function */
+  v7_prop_func_t prop_func; /* Object's property function, e.g. String.length */
 };
 
 struct v7_val {
   struct v7_val *next;
-  struct v7_val *proto;       // Prototype
-  struct v7_val *ctor;        // Constructor object
-  struct v7_prop *props;      // Object's key/value list
-  union v7_scalar v;          // The value itself
-  enum v7_type type;          // Value type
-  enum v7_class cls;          // Object's internal [[Class]] property
-  short ref_count;            // Reference counter
+  struct v7_val *proto;       /* Prototype */
+  struct v7_val *ctor;        /* Constructor object */
+  struct v7_prop *props;      /* Object's key/value list */
+  union v7_scalar v;          /* The value itself */
+  enum v7_type type;          /* Value type */
+  enum v7_class cls;          /* Object's internal [[Class]] property */
+  short ref_count;            /* Reference counter */
 
   union{
-    uint16_t flags;            // Flags - defined below
+    uint16_t flags;            /* Flags - defined below */
     struct v7_val_flags{
-      uint16_t val_alloc:1;   // Whole "struct v7_val" must be free()-ed
+      uint16_t val_alloc:1;   /* Whole "struct v7_val" must be free()-ed */
 #define V7_VAL_ALLOCATED   1
-      uint16_t str_alloc:1;   // v.str.buf must be free()-ed
+      uint16_t str_alloc:1;   /* v.str.buf must be free()-ed */
 #define V7_STR_ALLOCATED   2
-      uint16_t js_func:1;     // Function object is a JavsScript code
+      uint16_t js_func:1;     /* Function object is a JavsScript code */
 #define V7_JS_FUNC         4
-      uint16_t prop_func:1;   // Function object is a native property function
+      uint16_t prop_func:1;   /* Function object is a native property function */
 #define V7_PROP_FUNC       8
-      uint16_t val_dealloc:1; // Value has been deallocated
+      uint16_t val_dealloc:1; /* Value has been deallocated */
 #define V7_VAL_DEALLOCATED 16
 
-      uint16_t re_g:1; // execution RegExp flag g
-      uint16_t re_i:1; // compiler & execution RegExp flag i
-      uint16_t re_m:1; // execution RegExp flag m
-      uint16_t re:1;   // parser RegExp flag re
+      uint16_t re_g:1; /* execution RegExp flag g */
+      uint16_t re_i:1; /* compiler & execution RegExp flag i */
+      uint16_t re_m:1; /* execution RegExp flag m */
+      uint16_t re:1;   /* parser RegExp flag re */
     } fl;
   };
 };
 
 #define V7_MKVAL(_p,_t,_c,_v) {0,(_p),0,0,{(_v)},(_t),(_c),0,0}
-//#define V7_MKNUM(_v) V7_MKVAL(0,V7_TYPE_NUM,V7_CLASS_NONE,\
-//  (char *) (unsigned long) (_v))
 
 struct v7_pstate {
   const char *file_name;
   const char *source_code;
-  const char *pc;             // Current parsing position
-  int line_no;                // Line number
+  const char *pc;              /* Current parsing position */
+  int line_no;                 /* Line number */
 };
 
 struct v7 {
-  struct v7_val root_scope;   // "global" object (root-level execution context)
-  struct v7_val *stack[200];  // TODO: make it non-fixed, auto-grow
-  int sp;                     // Stack pointer
+  struct v7_val root_scope;   /* "global" object (root-level execution context) */
+  struct v7_val *stack[200];  /* TODO: make it non-fixed, auto-grow */
+  int sp;                     /* Stack pointer */
   int flags;
-#define V7_SCANNING  1        // Pre-scan to initialize lexical scopes, no exec
-#define V7_NO_EXEC   2        // Non-executing code block: if (false) { block }
+#define V7_SCANNING  1        /* Pre-scan to initialize lexical scopes, no exec */
+#define V7_NO_EXEC   2        /* Non-executing code block: if (false) { block } */
 
-  struct v7_pstate pstate;    // Parsing state
-  enum v7_tok cur_tok;        // Current token
-  const char *tok;            // Parsed terminal token (ident, number, string)
-  unsigned long tok_len;      // Length of the parsed terminal token
+  struct v7_pstate pstate;    /* Parsing state */
+  enum v7_tok cur_tok;        /* Current token */
+  const char *tok;            /* Parsed terminal token (ident, number, string) */
+  unsigned long tok_len;      /* Length of the parsed terminal token */
   double cur_tok_dbl;
 
-  const char *key;            // Key for the assignment operation
-  unsigned long key_len;      // Key length for the assignment operation
+  const char *key;            /* Key for the assignment operation */
+  unsigned long key_len;      /* Key length for the assignment operation */
 
-  char error_message[100];    // Placeholder for the error message
+  char error_message[100];    /* Placeholder for the error message */
 
-  struct v7_val *cur_obj;     // Current namespace object ('x=1; x.y=1;', etc)
-  struct v7_val *this_obj;    // Current "this" object
-  struct v7_val *ctx;         // Current execution context
-  struct v7_val *cf;          // Currently executing function
-  struct v7_val *functions;   // List of declared function
-  struct v7_val *free_values; // List of free (deallocated) values
-  struct v7_prop *free_props; // List of free (deallocated) props
+  struct v7_val *cur_obj;     /* Current namespace object ('x=1; x.y=1;', etc) */
+  struct v7_val *this_obj;    /* Current "this" object */
+  struct v7_val *ctx;         /* Current execution context */
+  struct v7_val *cf;          /* Currently executing function */
+  struct v7_val *functions;   /* List of declared function */
+  struct v7_val *free_values; /* List of free (deallocated) values */
+  struct v7_prop *free_props; /* List of free (deallocated) props */
 };
 
 #ifndef ARRAY_SIZE
@@ -361,8 +361,11 @@ struct v7 {
 
 #define CHECK(cond, code) if(!(cond)) THROW(code)
 
-//#define TRACE_CALL printf
-#define TRACE_CALL
+#ifdef _WIN32
+#define TRACE_CALL  /* printf */
+#else
+#define TRACE_CALL(fmt, ...)
+#endif
 
 extern int __lev;
 #define TRY(call) do { \
@@ -373,14 +376,14 @@ extern int __lev;
   TRACE_CALL("< %s %d\n", #call, __LINE__); \
 } while (0)
 
-// Print current function name and stringified object
+/* Print current function name and stringified object */
 #define TRACE_OBJ(O) do { char x[4000]; printf("==> %s [%s]\n", __func__, \
   O == NULL ? "@" : v7_stringify(O, x, sizeof(x))); } while (0)
 
-// Initializer for "struct v7_val", object type
+/* Initializer for "struct v7_val", object type */
 #define MKOBJ(_proto) V7_MKVAL(_proto, V7_TYPE_OBJ, V7_CLASS_OBJECT, 0)
 
-// True if current code is executing. TODO(lsm): use bit fields, per vrz@
+/* True if current code is executing. TODO(lsm): use bit fields, per vrz@ */
 #define EXECUTING(_fl) (!((_fl) & (V7_NO_EXEC | V7_SCANNING)))
 
 #ifndef V7_PRIVATE
@@ -394,7 +397,7 @@ extern struct v7_val s_json;
 extern struct v7_val s_file;
 #endif
 
-// Adds a read-only attribute "val" by key "name" to the object "obj"
+/* Adds a read-only attribute "val" by key "name" to the object "obj" */
 #define SET_RO_PROP_V(obj, name, val) \
   do { \
     static struct v7_val key = MKOBJ(&s_prototypes[V7_CLASS_STRING]); \
@@ -404,7 +407,7 @@ extern struct v7_val s_file;
     obj.props = &prop; \
   } while (0)
 
-// Adds read-only attribute with given initializers to the object "_o"
+/* Adds read-only attribute with given initializers to the object "_o" */
 #define SET_RO_PROP2(_o, _name, _t, _proto, _attr, _initializer, _fl) \
   do { \
     static struct v7_val _val = MKOBJ(_proto); \
@@ -417,11 +420,11 @@ extern struct v7_val s_file;
 #define SET_RO_PROP(obj, name, _t, attr, _v) \
     SET_RO_PROP2(obj, name, _t, &s_prototypes[V7_CLASS_OBJECT], attr, _v, 0)
 
-// Adds property function "_func" with key "_name" to the object "_obj"
+/* Adds property function "_func" with key "_name" to the object "_obj" */
 #define SET_PROP_FUNC(_obj, _name, _func) \
     SET_RO_PROP2(_obj, _name, V7_TYPE_NULL, 0, prop_func, _func, V7_PROP_FUNC)
 
-// Adds method "_func" with key "_name" to the object "_obj"
+/* Adds method "_func" with key "_name" to the object "_obj" */
 #define SET_METHOD(_obj, _name, _func) \
   do {  \
     static struct v7_val _val = MKOBJ(&s_prototypes[V7_CLASS_STRING]); \
@@ -431,7 +434,7 @@ extern struct v7_val s_file;
   } while (0)
 
 
-// Forward declarations
+/* Forward declarations */
 
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
 V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
@@ -447,9 +450,9 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
-//V7_PRIVATE int skip_to_next_tok(const char **ptr);
-//V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -501,7 +504,7 @@ V7_PRIVATE struct v7_val v7_str_to_val(const char *buf);
 V7_PRIVATE enum v7_err v7_del2(struct v7 *v7, struct v7_val *,
   const char *, unsigned long);
 
-// Generic function to set an attribute in an object.
+/* Generic function to set an attribute in an object. */
 V7_PRIVATE enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
                     enum v7_type key_type, enum v7_type val_type, ...);
 
@@ -6194,7 +6197,7 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
 
 // NOTE(lsm): Must be in the same order as enum for keywords
 struct { const char *p; int len; } s_keywords[] = {
-  {"break", 5}, {"case", 4}, {"catch", 4}, {"continue", 8}, {"debugger", 8},
+  {"break", 5}, {"case", 4}, {"catch", 5}, {"continue", 8}, {"debugger", 8},
   {"default", 7}, {"delete", 6}, {"do", 2}, {"else", 4}, {"false", 5},
   {"finally", 7}, {"for", 3}, {"function", 8}, {"if", 2}, {"in", 2},
   {"instanceof", 10}, {"new", 3}, {"null", 4}, {"return", 6}, {"switch", 6},

@@ -18,7 +18,7 @@ v: unit_test
 #	gcov -a unit_test.c
 
 unit_test: $(SOURCES) v7.h tests/unit_test.c src/v7_license.h src/utf.h src/internal.h
-	g++ $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
+	$(CC) $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
 
 xrun: unit_test
 	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t

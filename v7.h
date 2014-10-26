@@ -27,14 +27,16 @@ extern "C" {
 // #define V7_DEBUG
 // #define V7_DISABLE_CRYPTO
 
-// If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
-// the structure, but append it to the list of free structures.
-// Subsequent allocations try to grab a structure from the free list,
-// which speeds up allocation.
-// #define V7_CACHE_OBJS
+/*
+ * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
+ * the structure, but append it to the list of free structures.
+ * Subsequent allocations try to grab a structure from the free list,
+ * which speeds up allocation.
+ * #define V7_CACHE_OBJS
+ */
 
 /////custom defines/////
-// Maximum length of the string literal
+/* Maximum length of the string literal */
 #define MAX_STRING_LITERAL_LENGTH 2000
 
 #define RE_MAX_SUB 32
