@@ -1245,17 +1245,27 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
   struct v7_val *arg = cfa->args[0], *arr = NULL;
   struct Resub sub;
   struct re_tok *ptok = sub.sub;
-  int i;
 
   if(cfa->num_args > 0){
+    const char *begin = arg->v.str.buf;
+    Rune rune;
+    if(cfa->this_obj->fl.re_g){
+      int utf_shift;
+      for(utf_shift = 0; utf_shift < cfa->this_obj->v.str.lastIndex; utf_shift++)
+        begin += chartorune(&rune, begin);
+    }
     TRY(check_str_re_conv(v7, &arg, 0));
     TRY(regex_check_prog(cfa->this_obj));
-    //TODO(vrz) - g-flag
-    if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub)){
+    if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, begin, &sub)){
+      int i;
       arr = v7_push_new_object(v7);
       v7_set_class(arr, V7_CLASS_ARRAY);
       for(i=0; i<sub.subexpr_num; i++, ptok++)
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start, ptok->end - ptok->start, 1));
+      if(cfa->this_obj->fl.re_g){
+        for(;cfa->this_obj->fl.re_g && begin < sub.sub->end; cfa->this_obj->v.str.lastIndex++)
+          begin += chartorune(&rune, begin);
+      }
       return V7_OK;
     }
   }
