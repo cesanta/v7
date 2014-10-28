@@ -22,39 +22,39 @@ struct re_env{
 };
 
 enum RE_CODE{
-  I_END = 10,                     // Terminate: match found
-  I_ANY,      P_ANY = I_ANY,      // Any character except newline, .
-  I_ANYNL,                        // Any character including newline, .
-  I_BOL,      P_BOL = I_BOL,      // Beginning of line, ^
+  I_END = 10,                     /* Terminate: match found */
+  I_ANY,      P_ANY = I_ANY,      /* Any character except newline, . */
+  I_ANYNL,                        /* Any character including newline, . */
+  I_BOL,      P_BOL = I_BOL,      /* Beginning of line, ^ */
   I_CH,       P_CH = I_CH,
-  I_EOL,      P_EOL = I_EOL,      // End of line, $
-  I_EOS,      P_EOS = I_EOS,      // End of string, \0
+  I_EOL,      P_EOL = I_EOL,      /* End of line, $ */
+  I_EOS,      P_EOS = I_EOS,      /* End of string, \0 */
   I_JUMP,
   I_LA,       P_LA = I_LA,
   I_LA_N,     P_LA_N = I_LA_N,
-  I_LBRA,     P_BRA = I_LBRA,     // Left bracket, (
+  I_LBRA,     P_BRA = I_LBRA,     /* Left bracket, ( */
   I_REF,      P_REF = I_REF,
   I_REP,      P_REP = I_REP,
   I_REP_INI,
-  I_RBRA,                         // Right bracket, )
-  I_SET,      P_SET = I_SET,      // Character set, []
-  I_SET_N,    P_SET_N = I_SET_N,  // Negated character set, []
+  I_RBRA,                         /* Right bracket, ) */
+  I_SET,      P_SET = I_SET,      /* Character set, [] */
+  I_SET_N,    P_SET_N = I_SET_N,  /* Negated character set, [] */
   I_SPLIT,
   I_WORD,     P_WORD = I_WORD,
   I_WORD_N,   P_WORD_N = I_WORD_N,
-  P_ALT,                          // Alternation, |
-  P_CAT,                          // Concatentation, implicit operator
+  P_ALT,                          /* Alternation, | */
+  P_CAT,                          /* Concatentation, implicit operator */
   L_CH = 256,
-  L_COUNT,                        // {M,N}
-  L_EOS,                          // End of string, \0
-  L_LA,                           // "(?=" lookahead
-  L_LA_CAP,                       // "(?:" lookahead, capture
-  L_LA_N,                         // "(?!" negative lookahead
-  L_REF,                          // "\1" back-reference
-  L_SET,                          // character set
-  L_SET_N,                        // negative character set
-  L_WORD,                         // "\b" word boundary
-  L_WORD_N                        // "\B" non-word boundary
+  L_COUNT,                        /* {M,N} */
+  L_EOS,                          /* End of string, \0 */
+  L_LA,                           /* "(?=" lookahead */
+  L_LA_CAP,                       /* "(?:" lookahead, capture */
+  L_LA_N,                         /* "(?!" negative lookahead */
+  L_REF,                          /* "\1" back-reference */
+  L_SET,                          /* character set */
+  L_SET_N,                        /* negative character set */
+  L_WORD,                         /* "\b" word boundary */
+  L_WORD_N                        /* "\B" non-word boundary */
 };
 
 enum RE_MESSAGE{
@@ -789,10 +789,10 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
   uint8_t thr;
   int i;
 
-  // queue initial thread
+  /* queue initial thread */
   re_newthread(threads, pc, start, loot);
 
-  // run threads in stack order
+  /* run threads in stack order */
   do{
     pc = threads[--thr_num].pc;
     start = threads[thr_num].start;
@@ -894,7 +894,7 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
           if(iswordchar(start[0])) i = !i;
           if(pc->opcode == I_WORD_N) i = !i;
           if(i) break;
-          // RE_NO_MATCH();
+          /* RE_NO_MATCH(); */
 
         default: RE_NO_MATCH();
       }
@@ -1188,7 +1188,7 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
 }
 
 V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   size_t fl_len = 0;
   const char *fl_start = NULL;
   struct v7_val *re = cfa->args[0],
@@ -1211,18 +1211,22 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  if(NULL == result || arg) return;
   v7_init_bool(result, this_obj->fl.re_g);
 }
 
 V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  if(NULL == result || arg) return;
   v7_init_bool(result, this_obj->fl.re_i);
 }
 
 V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  if(NULL == result || arg) return;
   v7_init_bool(result, this_obj->fl.re_m);
 }
 
 V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  if(NULL == result || arg) return;
   v7_init_str(result, this_obj->v.str.buf, this_obj->v.str.len, 1);
 }
 
@@ -1241,7 +1245,7 @@ V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
 }
 
 V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0], *arr = NULL;
   struct Resub sub;
   struct re_tok *ptok = sub.sub;
@@ -1275,7 +1279,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
 }
 
 V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   int found = 0;

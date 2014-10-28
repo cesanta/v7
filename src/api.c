@@ -178,7 +178,7 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
   } else if (v7_is_class(v, V7_CLASS_ARRAY)) {
     arr_to_string(v, buf, bsiz);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
-    if (v->flags & V7_JS_FUNC) {
+    if (v->fl.js_func) {
       snprintf(buf, bsiz, "'function%s'", v->v.func.source_code);
     } else {
       snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
