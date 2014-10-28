@@ -1,5 +1,5 @@
 WARNS = -Wno-comment -Wno-variadic-macros
-V7_FLAGS = -I$(SLRE) -I.
+V7_FLAGS = -I./src -I.
 CFLAGS = -W -Wall -pedantic $(WARNS) -g -O0 $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
 SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
@@ -21,7 +21,7 @@ unit_test: $(SOURCES) v7.h tests/unit_test.c src/v7_license.h src/utf.h src/inte
 	$(CC) $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
 
 xrun: unit_test
-	$(CC) -W -Wall -I. -I../slre src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t
+	$(CC) -W -Wall -I. -I./src src/tokenizer.c -DTEST_RUN -DV7_PRIVATE= -o t
 	./t
 
 run: unit_test
