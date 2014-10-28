@@ -194,7 +194,10 @@ union v7_scalar {
   struct v7_func func;      /* \0-terminated function code */
   struct v7_prop *array;    /* List of array elements */
   v7_func_t c_func;         /* Pointer to the C function */
-  v7_prop_func_t prop_func; /* Object's property function, e.g. String.length */
+  struct {
+    v7_prop_func_t prop_func; /* Object's property function, e.g. String.length */
+    struct v7_val *this_obj;  /* Current "this" object for property function */
+  };
 };
 
 struct v7_val {

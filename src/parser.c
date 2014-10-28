@@ -3,24 +3,19 @@
 #define EXPECT(v7, t) \
   do {if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; next_tok(v7);} while (0)
 
-static struct v7_val *_prop_func_2_value(struct v7 *v7, struct v7_val *f){
-  struct v7_val *v = f;
-  if(v->flags & V7_PROP_FUNC){
-    f->v.prop_func(v7->cur_obj, NULL, v);
-    v->fl.prop_func = 0;
-    /* v7->sp--;
-    // TRY(inc_stack(v7, -1));
-    inc_stack(v7, -1); */
+static void _prop_func_2_value(struct v7 *v7, struct v7_val *f){
+  if(f->flags & V7_PROP_FUNC){
+    f->v.prop_func(f->v.this_obj, NULL, f);
+    f->fl.prop_func = 0;
   }
-  return v;
 }
 
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, enum v7_tok op) {
   char *str;
 
-  a = _prop_func_2_value(v7, a);
-  b = _prop_func_2_value(v7, b);
+  _prop_func_2_value(v7, a);
+  _prop_func_2_value(v7, b);
   if (a->type == V7_TYPE_STR && op == TOK_PLUS) {
     TRY(check_str_re_conv(v7, &b, 0)); // Do type conversion, result pushed on stack
     str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
@@ -47,7 +42,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
       default: return V7_INTERNAL_ERROR;
     }
     if(res->flags & V7_PROP_FUNC){
-      res->v.prop_func(v7->cur_obj, v, NULL);
+      res->v.prop_func(res->v.this_obj, v, NULL);
       inc_ref_count(v);
       TRY(inc_stack(v7, -2));
       v7_push(v7, v);
@@ -251,6 +246,9 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
   EXPECT(v7, TOK_OPEN_PAREN);
   while (v7->cur_tok != TOK_CLOSE_PAREN) {
     TRY(parse_expression(v7));
+    if(EXECUTING(v7->flags)){
+      _prop_func_2_value(v7, v7_top_val(v7));
+    }
     if (v7->cur_tok == TOK_COMMA) {
       next_tok(v7);
     }
@@ -473,10 +471,6 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
     if (EXECUTING(v7->flags)) {
       struct v7_val key = str_to_val(v7->tok, v7->tok_len);
       ns = get2(ns, &key);
-      /* if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
-        ns->v.prop_func(v7->cur_obj, v);
-        ns = v;
-      } */
     }
     next_tok(v7);
   } else {
@@ -486,10 +480,6 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
       struct v7_val *expr_val = v7_top_val(v7);
 
       ns = get2(ns, expr_val);
-      /* if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
-        ns->v.prop_func(v7->cur_obj, v);
-        ns = v;
-      } */
 
       // If we're doing an assignment,
       // then parse_assign() looks at v7->key, v7->key_len for the key.
@@ -581,10 +571,10 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
       struct v7_val *v = v7_top(v7)[-1];
       if(v->flags & V7_PROP_FUNC){
         struct v7_val *v1 = v;
-        v->v.prop_func(v7->cur_obj, NULL, v);
+        v->v.prop_func(v->v.this_obj, NULL, v);
         CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
         v->v.num += increment;
-        v1->v.prop_func(v7->cur_obj, v, NULL);
+        v1->v.prop_func(v1->v.this_obj, v, NULL);
         inc_ref_count(v);
         TRY(inc_stack(v7, -2));
         v7_push(v7, v);
@@ -632,7 +622,7 @@ static enum v7_err parse_unary(struct v7 *v7) {
     if(result->flags & V7_PROP_FUNC){
       switch(unary){
         case TOK_PLUS: case TOK_MINUS: case TOK_NOT: case TOK_TYPEOF:
-        result = _prop_func_2_value(v7, result);
+        _prop_func_2_value(v7, result);
         v7_push(v7, result);
       }
     }

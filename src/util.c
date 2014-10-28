@@ -143,17 +143,19 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
       if(v->v.str.prog->start) reg_free(v->v.str.prog->start);
       reg_free(v->v.str.prog);
     }
-    if(v->v.str.buf && (v->flags & V7_STR_ALLOCATED)) free(v->v.str.buf);
+    if(v->v.str.buf && v->fl.str_alloc) free(v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
-    if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
+    if (v->fl.str_alloc && v->fl.js_func) {
       free(v->v.func.source_code);
       v7_freeval(v7, v->v.func.var_obj);
     }
+  } else if (v7_is_class(v, V7_TYPE_NULL)) {
+    if (v->fl.prop_func && v->v.this_obj) v7_freeval(v7, v->v.this_obj);
   }
 
-  if (v->flags & V7_VAL_ALLOCATED) {
-    v->flags &= ~V7_VAL_ALLOCATED;
-    v->flags |= ~V7_VAL_DEALLOCATED;
+  if (v->fl.val_alloc) {
+    v->fl.val_alloc = 0;
+    v->fl.val_dealloc = 1;
     memset(v, 0, sizeof(*v));
 #ifdef V7_CACHE_OBJS
     v->next = v7->free_values;
@@ -290,6 +292,7 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
 V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
                               int own_prop) {
   struct v7_prop *m;
+  struct v7_val *o = obj;
   int proto = 0;
   for (; obj != NULL; obj = obj->proto, proto=1) {
     if (v7_is_class(obj, V7_CLASS_ARRAY) && key->type == V7_TYPE_NUM) {
@@ -299,7 +302,14 @@ V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
       }
     } else if (obj->type == V7_TYPE_OBJ) {
       for (m = obj->props; m != NULL; m = m->next) {
-        if (cmp(m->key, key) == 0 && (!own_prop || !proto || (proto && m->val->fl.prop_func))) return m;
+        if(cmp(m->key, key) == 0){
+          if(m->val->fl.prop_func){
+            inc_ref_count(o);
+            m->val->v.this_obj = o;
+            return m;
+          }
+          if(!own_prop || !proto) return m;
+        }
       }
     }
     if (obj->proto == obj) break;
@@ -352,7 +362,7 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
   if ((m = v7_get2(obj, k, 1)) != NULL) {
     inc_ref_count(v);
     if(m->val->flags & V7_PROP_FUNC){
-      m->val->v.prop_func(obj, v, NULL);
+      m->val->v.prop_func(m->val->v.this_obj, v, NULL);
     }else{
       v7_freeval(v7, m->val);
       m->val = v;

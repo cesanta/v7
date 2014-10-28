@@ -7,6 +7,7 @@ V7_PRIVATE enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
 }
 V7_PRIVATE void Arr_length(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result) {
   struct v7_prop *p;
+  if(NULL == result || arg) return;
   v7_init_num(result, 0.0);
   for (p = this_obj->v.array; p != NULL; p = p->next) {
     result->v.num += 1.0;
