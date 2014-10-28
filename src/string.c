@@ -1,7 +1,7 @@
 #include "internal.h"
 
 V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int re_fl){
-  // If argument is not (RegExp + re_fl) or string, do type conversion
+  /* If argument is not (RegExp + re_fl) or string, do type conversion */
   if(!is_string(*arg) && !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))){
     TRY(toString(v7, *arg));
     *arg = v7_top_val(v7);
@@ -13,7 +13,7 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int
 }
 
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0],
                 *obj = cfa->this_obj;
   if(!cfa->called_as_constructor) obj = v7_push_new_object(v7);
@@ -34,6 +34,7 @@ V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result) {
+  if(NULL == result || arg) return;
   v7_init_num(result, this_obj->v.str.len);
 }
 
@@ -61,7 +62,7 @@ V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   struct v7_val *arr = NULL;
@@ -87,7 +88,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7);
   struct Resub sub, sub1;
   int limit = 1000000, elem = 0, shift = 0, i, len;
@@ -123,7 +124,7 @@ V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
     const struct v7_string *a = &cfa->this_obj->v.str,
     *b = &cfa->args[0]->v.str;
 
-    // Scan the string, advancing one byte at a time
+    /* Scan the string, advancing one byte at a time */
     for (; i >= 0 && a->len >= b->len && i <= (int) (a->len - b->len); i++) {
       if (memcmp(a->buf + i, b->buf, b->len) == 0) {
         index = i;
@@ -158,7 +159,7 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   int shift = -1, utf_shift = -1;
@@ -168,7 +169,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
     TRY(regex_check_prog(arg));
     if(!re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf, &sub)) shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
   }
-  if(shift > 0){ // calc shift for UTF-8
+  if(shift > 0){ /* calc shift for UTF-8 */
     Rune rune;
     const char *str = cfa->this_obj->v.str.buf;
     utf_shift = 0;
@@ -183,7 +184,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
-  #define v7 (cfa->v7) // Needed for TRY() macro below
+  #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *result = v7_push_new_object(v7);
   const char *out_str = cfa->this_obj->v.str.buf;
   uint8_t own = 1;
@@ -215,7 +216,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
         out_sub_num++;
       }
 
-      if(NULL != arr){ // replace function
+      if(NULL != arr){ /* replace function */
         Rune rune;
         int old_sp = v7->sp, utf_shift = 0;
         for(i = 0; i < loot.subexpr_num; i++)
@@ -232,7 +233,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
           v7_append(v7, arr, rez_str);
         }
         TRY(inc_stack(v7, old_sp - v7->sp));
-      }else{ // replace string
+      }else{ /* replace string */
         struct Resub newsub;
         re_rplc(&loot, p, str_func->v.str.buf, &newsub);
         for(i = 0; i < newsub.subexpr_num; i++){

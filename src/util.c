@@ -3,7 +3,7 @@
 V7_PRIVATE void obj_sanity_check(const struct v7_val *obj) {
   assert(obj != NULL);
   assert(obj->ref_count >= 0);
-  assert(!(obj->flags & V7_VAL_DEALLOCATED));
+  assert(!obj->fl.val_dealloc);
 }
 
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
@@ -56,7 +56,7 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p,
   v->proto = &s_prototypes[V7_CLASS_STRING];
   v->v.str.buf = (char *) p;
   v->v.str.len = len;
-  v->flags &= ~V7_STR_ALLOCATED;
+  v->fl.str_alloc = 0;
   if (own) {
     if (len < sizeof(v->v.str.loc) - 1) {
       v->v.str.buf = v->v.str.loc;
@@ -64,7 +64,7 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p,
       v->v.str.loc[len] = '\0';
     } else {
       v->v.str.buf = v7_strdup(p, len);
-      v->flags |= V7_STR_ALLOCATED;
+      v->fl.str_alloc = 1;
     }
   }
 }
@@ -97,7 +97,7 @@ V7_PRIVATE void free_prop(struct v7 *v7, struct v7_prop *p) {
   if (p->key != NULL) v7_freeval(v7, p->key);
   v7_freeval(v7, p->val);
   p->val = p->key = NULL;
-  if (p->flags & V7_VAL_ALLOCATED) {
+  if (p->flags & V7_PROP_ALLOCATED) {
 #ifdef V7_CACHE_OBJS
     p->next = v7->free_props;
     v7->free_props = p;
@@ -143,17 +143,19 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
       if(v->v.str.prog->start) reg_free(v->v.str.prog->start);
       reg_free(v->v.str.prog);
     }
-    if(v->v.str.buf && (v->flags & V7_STR_ALLOCATED)) free(v->v.str.buf);
+    if(v->v.str.buf && v->fl.str_alloc) free(v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
-    if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
+    if (v->fl.str_alloc && v->fl.js_func) {
       free(v->v.func.source_code);
       v7_freeval(v7, v->v.func.var_obj);
     }
+  } else if (v7_is_class(v, V7_TYPE_NULL)) {
+    if (v->fl.prop_func && v->v.this_obj) v7_freeval(v7, v->v.this_obj);
   }
 
-  if (v->flags & V7_VAL_ALLOCATED) {
-    v->flags &= ~V7_VAL_ALLOCATED;
-    v->flags |= ~V7_VAL_DEALLOCATED;
+  if (v->fl.val_alloc) {
+    v->fl.val_alloc = 0;
+    v->fl.val_dealloc = 1;
     memset(v, 0, sizeof(*v));
 #ifdef V7_CACHE_OBJS
     v->next = v7->free_values;
@@ -209,7 +211,8 @@ V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type) {
 
   if (v != NULL) {
     assert(v->ref_count == 0);
-    v->flags = V7_VAL_ALLOCATED;
+    v->flags = 0;
+    v->fl.val_alloc = 1; /* V7_VAL_ALLOCATED */
     v->type = type;
     switch (type) {
       case V7_TYPE_NUM: v->proto = &s_prototypes[V7_CLASS_NUMBER]; break;
@@ -290,6 +293,7 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
 V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
                               int own_prop) {
   struct v7_prop *m;
+  struct v7_val *o = obj;
   int proto = 0;
   for (; obj != NULL; obj = obj->proto, proto=1) {
     if (v7_is_class(obj, V7_CLASS_ARRAY) && key->type == V7_TYPE_NUM) {
@@ -299,7 +303,14 @@ V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
       }
     } else if (obj->type == V7_TYPE_OBJ) {
       for (m = obj->props; m != NULL; m = m->next) {
-        if (cmp(m->key, key) == 0 && (!own_prop || !proto || (proto && m->val->fl.prop_func))) return m;
+        if(cmp(m->key, key) == 0){
+          if(m->val->fl.prop_func){
+            inc_ref_count(o);
+            m->val->v.this_obj = o;
+            return m;
+          }
+          if(!own_prop || !proto) return m;
+        }
       }
     }
     if (obj->proto == obj) break;
@@ -351,8 +362,8 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
   // Find attribute inside object
   if ((m = v7_get2(obj, k, 1)) != NULL) {
     inc_ref_count(v);
-    if(m->val->flags & V7_PROP_FUNC){
-      m->val->v.prop_func(obj, v, NULL);
+    if(m->val->fl.prop_func){
+      m->val->v.prop_func(m->val->v.this_obj, v, NULL);
     }else{
       v7_freeval(v7, m->val);
       m->val = v;
