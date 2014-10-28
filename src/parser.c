@@ -4,7 +4,7 @@
   do {if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; next_tok(v7);} while (0)
 
 static void _prop_func_2_value(struct v7 *v7, struct v7_val *f){
-  if(f->flags & V7_PROP_FUNC){
+  if(f->fl.prop_func){
     f->v.prop_func(f->v.this_obj, NULL, f);
     f->fl.prop_func = 0;
   }
@@ -28,7 +28,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     return V7_OK;
   } else if (a->type == V7_TYPE_NUM && b->type == V7_TYPE_NUM) {
     struct v7_val *v = res;
-    if(res->flags & V7_PROP_FUNC) v = v7_push_new_object(v7);
+    if(res->fl.prop_func) v = v7_push_new_object(v7);
     v7_init_num(v, res->v.num);
     switch (op) {
       case TOK_PLUS: v->v.num = a->v.num + b->v.num; break;
@@ -41,7 +41,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
         (unsigned long) b->v.num; break;
       default: return V7_INTERNAL_ERROR;
     }
-    if(res->flags & V7_PROP_FUNC){
+    if(res->fl.prop_func){
       res->v.prop_func(res->v.this_obj, v, NULL);
       inc_ref_count(v);
       TRY(inc_stack(v7, -2));
@@ -115,7 +115,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
     f = v7_top_val(v7);
     v7_set_class(f, V7_CLASS_FUNCTION);
-    f->flags |= V7_JS_FUNC;
+    f->fl.js_func = 1;
 
     f->v.func.source_code = (char *) src;
     f->v.func.line_no = line_no;
@@ -208,7 +208,7 @@ V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *this_obj,
   //            ...                    |
   //            <argument_N>        ---+
   // top  --->  <return_value>
-  if (f->flags & V7_JS_FUNC) {
+  if (f->fl.js_func) {
     struct v7_pstate old_pstate = v7->pstate;
     enum v7_tok tok = v7->cur_tok;
 
@@ -569,7 +569,7 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
     next_tok(v7);
     if (EXECUTING(v7->flags)) {
       struct v7_val *v = v7_top(v7)[-1];
-      if(v->flags & V7_PROP_FUNC){
+      if(v->fl.prop_func){
         struct v7_val *v1 = v;
         v->v.prop_func(v->v.this_obj, NULL, v);
         CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
@@ -619,7 +619,7 @@ static enum v7_err parse_unary(struct v7 *v7) {
 
   if (EXECUTING(v7->flags) && unary != TOK_END_OF_INPUT) {
     struct v7_val *result = v7_top_val(v7);
-    if(result->flags & V7_PROP_FUNC){
+    if(result->fl.prop_func){
       switch(unary){
         case TOK_PLUS: case TOK_MINUS: case TOK_NOT: case TOK_TYPEOF:
         _prop_func_2_value(v7, result);

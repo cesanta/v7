@@ -214,15 +214,11 @@ struct v7_val {
     uint16_t flags;            /* Flags - defined below */
     struct v7_val_flags{
       uint16_t val_alloc:1;   /* Whole "struct v7_val" must be free()-ed */
-#define V7_VAL_ALLOCATED   1
       uint16_t str_alloc:1;   /* v.str.buf must be free()-ed */
-#define V7_STR_ALLOCATED   2
       uint16_t js_func:1;     /* Function object is a JavsScript code */
-#define V7_JS_FUNC         4
       uint16_t prop_func:1;   /* Function object is a native property function */
 #define V7_PROP_FUNC       8
       uint16_t val_dealloc:1; /* Value has been deallocated */
-#define V7_VAL_DEALLOCATED 16
 
       uint16_t re_g:1; /* execution RegExp flag g */
       uint16_t re_i:1; /* compiler & execution RegExp flag i */

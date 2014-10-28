@@ -296,15 +296,11 @@ struct v7_val {
     uint16_t flags;            /* Flags - defined below */
     struct v7_val_flags{
       uint16_t val_alloc:1;   /* Whole "struct v7_val" must be free()-ed */
-#define V7_VAL_ALLOCATED   1
       uint16_t str_alloc:1;   /* v.str.buf must be free()-ed */
-#define V7_STR_ALLOCATED   2
       uint16_t js_func:1;     /* Function object is a JavsScript code */
-#define V7_JS_FUNC         4
       uint16_t prop_func:1;   /* Function object is a native property function */
 #define V7_PROP_FUNC       8
       uint16_t val_dealloc:1; /* Value has been deallocated */
-#define V7_VAL_DEALLOCATED 16
 
       uint16_t re_g:1; /* execution RegExp flag g */
       uint16_t re_i:1; /* compiler & execution RegExp flag i */
@@ -539,7 +535,7 @@ V7_PRIVATE struct v7_val s_file = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE void obj_sanity_check(const struct v7_val *obj) {
   assert(obj != NULL);
   assert(obj->ref_count >= 0);
-  assert(!(obj->flags & V7_VAL_DEALLOCATED));
+  assert(!obj->fl.val_dealloc);
 }
 
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
@@ -592,7 +588,7 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p,
   v->proto = &s_prototypes[V7_CLASS_STRING];
   v->v.str.buf = (char *) p;
   v->v.str.len = len;
-  v->flags &= ~V7_STR_ALLOCATED;
+  v->fl.str_alloc = 0;
   if (own) {
     if (len < sizeof(v->v.str.loc) - 1) {
       v->v.str.buf = v->v.str.loc;
@@ -600,7 +596,7 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p,
       v->v.str.loc[len] = '\0';
     } else {
       v->v.str.buf = v7_strdup(p, len);
-      v->flags |= V7_STR_ALLOCATED;
+      v->fl.str_alloc = 1;
     }
   }
 }
@@ -633,7 +629,7 @@ V7_PRIVATE void free_prop(struct v7 *v7, struct v7_prop *p) {
   if (p->key != NULL) v7_freeval(v7, p->key);
   v7_freeval(v7, p->val);
   p->val = p->key = NULL;
-  if (p->flags & V7_VAL_ALLOCATED) {
+  if (p->flags & V7_PROP_ALLOCATED) {
 #ifdef V7_CACHE_OBJS
     p->next = v7->free_props;
     v7->free_props = p;
@@ -747,7 +743,8 @@ V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type) {
 
   if (v != NULL) {
     assert(v->ref_count == 0);
-    v->flags = V7_VAL_ALLOCATED;
+    v->flags = 0;
+    v->fl.val_alloc = 1; /* V7_VAL_ALLOCATED */
     v->type = type;
     switch (type) {
       case V7_TYPE_NUM: v->proto = &s_prototypes[V7_CLASS_NUMBER]; break;
@@ -897,7 +894,7 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
   // Find attribute inside object
   if ((m = v7_get2(obj, k, 1)) != NULL) {
     inc_ref_count(v);
-    if(m->val->flags & V7_PROP_FUNC){
+    if(m->val->fl.prop_func){
       m->val->v.prop_func(m->val->v.this_obj, v, NULL);
     }else{
       v7_freeval(v7, m->val);
@@ -5005,7 +5002,7 @@ V7_PRIVATE void init_stdlib(void) {
   do {if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; next_tok(v7);} while (0)
 
 static void _prop_func_2_value(struct v7 *v7, struct v7_val *f){
-  if(f->flags & V7_PROP_FUNC){
+  if(f->fl.prop_func){
     f->v.prop_func(f->v.this_obj, NULL, f);
     f->fl.prop_func = 0;
   }
@@ -5029,7 +5026,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     return V7_OK;
   } else if (a->type == V7_TYPE_NUM && b->type == V7_TYPE_NUM) {
     struct v7_val *v = res;
-    if(res->flags & V7_PROP_FUNC) v = v7_push_new_object(v7);
+    if(res->fl.prop_func) v = v7_push_new_object(v7);
     v7_init_num(v, res->v.num);
     switch (op) {
       case TOK_PLUS: v->v.num = a->v.num + b->v.num; break;
@@ -5042,7 +5039,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
         (unsigned long) b->v.num; break;
       default: return V7_INTERNAL_ERROR;
     }
-    if(res->flags & V7_PROP_FUNC){
+    if(res->fl.prop_func){
       res->v.prop_func(res->v.this_obj, v, NULL);
       inc_ref_count(v);
       TRY(inc_stack(v7, -2));
@@ -5116,7 +5113,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
     f = v7_top_val(v7);
     v7_set_class(f, V7_CLASS_FUNCTION);
-    f->flags |= V7_JS_FUNC;
+    f->fl.js_func = 1;
 
     f->v.func.source_code = (char *) src;
     f->v.func.line_no = line_no;
@@ -5209,7 +5206,7 @@ V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *this_obj,
   //            ...                    |
   //            <argument_N>        ---+
   // top  --->  <return_value>
-  if (f->flags & V7_JS_FUNC) {
+  if (f->fl.js_func) {
     struct v7_pstate old_pstate = v7->pstate;
     enum v7_tok tok = v7->cur_tok;
 
@@ -5570,7 +5567,7 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
     next_tok(v7);
     if (EXECUTING(v7->flags)) {
       struct v7_val *v = v7_top(v7)[-1];
-      if(v->flags & V7_PROP_FUNC){
+      if(v->fl.prop_func){
         struct v7_val *v1 = v;
         v->v.prop_func(v->v.this_obj, NULL, v);
         CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
@@ -5620,7 +5617,7 @@ static enum v7_err parse_unary(struct v7 *v7) {
 
   if (EXECUTING(v7->flags) && unary != TOK_END_OF_INPUT) {
     struct v7_val *result = v7_top_val(v7);
-    if(result->flags & V7_PROP_FUNC){
+    if(result->fl.prop_func){
       switch(unary){
         case TOK_PLUS: case TOK_MINUS: case TOK_NOT: case TOK_TYPEOF:
         _prop_func_2_value(v7, result);
@@ -6648,7 +6645,7 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
   } else if (v7_is_class(v, V7_CLASS_ARRAY)) {
     arr_to_string(v, buf, bsiz);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
-    if (v->flags & V7_JS_FUNC) {
+    if (v->fl.js_func) {
       snprintf(buf, bsiz, "'function%s'", v->v.func.source_code);
     } else {
       snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
