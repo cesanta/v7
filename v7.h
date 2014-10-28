@@ -50,7 +50,6 @@ extern "C" {
 typedef unsigned short uint16_t;
 typedef signed char sint8_t;
 
-#define bcopy memcpy
 #define reg_malloc malloc
 #define reg_free free
 
