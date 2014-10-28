@@ -1,23 +1,8 @@
-/*
- * Copyright (c) 2013-2014 Cesanta Software Limited
- * All rights reserved
- *
- * This software is dual-licensed: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. For the terms of this
- * license, see <http://www.gnu.org/licenses/>.
- *
- * You are free to use this software under the terms of the GNU General
- * Public License, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * Alternatively, you can license this software under a commercial
- * license, as set out in <http://cesanta.com/products.html>.
- */
+#ifndef V7_INTERNAL_H_INCLUDED
+#define  V7_INTERNAL_H_INCLUDED
 
 #include "v7.h"
-#include "slre.h"
+#include "utf.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -31,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
@@ -59,16 +45,6 @@ typedef unsigned char uint8_t;
 #define INFINITY    atof("INFINITY")  /* TODO: fix this */
 #endif
 
-/*
- * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
- * the structure, but append it to the list of free structures.
- * Subsequent allocations try to grab a structure from the free list,
- * which speeds up allocation.
- * #define V7_CACHE_OBJS
- */
-
-/* Maximum length of the string literal */
-#define MAX_STRING_LITERAL_LENGTH 2000
 
 /* Different classes of V7_TYPE_OBJ type */
 enum v7_class {
@@ -108,7 +84,78 @@ enum v7_tok {
   NUM_TOKENS
 };
 
-typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
+/* Sub expression matches */
+struct Resub{
+  unsigned int subexpr_num;
+  struct re_tok{
+    const char *start;  /* points to the beginning of the token */
+    const char *end;    /* points to the end of the token */
+  } sub[RE_MAX_SUB];
+};
+
+struct Rerange{ Rune s; Rune e; };
+// character class, each pair of rune's defines a range
+struct Reclass{
+  struct Rerange *end;
+  struct Rerange spans[RE_MAX_RANGES];
+};
+
+/* Parser Information */
+struct Renode{
+  uint8_t type;
+  union{
+    Rune c;             /* character */
+    struct Reclass *cp; /* class pointer */
+    struct{
+      struct Renode *x;
+      union{
+        struct Renode *y;
+        uint8_t n;
+        struct{
+          uint8_t ng;  /* not greedy flag */
+          uint16_t min;
+          uint16_t max;
+        };
+      };
+    };
+  };
+};
+
+/* Machine instructions */
+struct Reinst{
+  uint8_t opcode;
+  union{
+    uint8_t n;
+    Rune c;             /* character */
+    struct Reclass *cp; /* class pointer */
+    struct{
+      struct Reinst *x;
+      union{
+        struct{
+          uint16_t min;
+          uint16_t max;
+        };
+        struct Reinst *y;
+      };
+    };
+  };
+};
+
+/* struct Reprogram definition */
+struct Reprog{
+  struct Reinst *start, *end;
+  unsigned int subexpr_num;
+  struct Reclass charset[RE_MAX_SETS];
+};
+
+/* struct Rethread definition */
+struct Rethread{
+  struct Reinst *pc;
+  const char *start;
+  struct Resub sub;
+};
+
+typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result);
 
 struct v7_prop {
   struct v7_prop *next;
@@ -128,9 +175,11 @@ struct v7_vec {
 };
 
 struct v7_string {
-  char *buf;                /* Pointer to buffer with string data */
-  unsigned long len;        /* String length */
-  char loc[16];             /* Small strings are stored here */
+  char *buf;                /* Pointer to buffer with string/regexp data */
+  unsigned long len;        /* String/regexp length */
+  char loc[16];             /* Small strings/regexp are stored here */
+  struct Reprog *prog;      /* Pointer to compiled regexp */
+  unsigned long lastIndex;
 };
 
 struct v7_func {
@@ -140,7 +189,6 @@ struct v7_func {
 };
 
 union v7_scalar {
-  char *regex;              /* \0-terminated regex */
   double num;               /* Holds "Number" or "Boolean" value */
   struct v7_string str;     /* Holds "String" value */
   struct v7_func func;      /* \0-terminated function code */
@@ -159,12 +207,26 @@ struct v7_val {
   enum v7_class cls;          /* Object's internal [[Class]] property */
   short ref_count;            /* Reference counter */
 
-  unsigned short flags;       /* Flags - defined below */
-#define V7_VAL_ALLOCATED   1  /* Whole "struct v7_val" must be free()-ed */
-#define V7_STR_ALLOCATED   2  /* v.str.buf must be free()-ed */
-#define V7_JS_FUNC         4  /* Function object is a JavsScript code */
-#define V7_PROP_FUNC       8  /* Function object is a native property function */
-#define V7_VAL_DEALLOCATED 16 /* Value has been deallocated */
+  union{
+    uint16_t flags;            /* Flags - defined below */
+    struct v7_val_flags{
+      uint16_t val_alloc:1;   /* Whole "struct v7_val" must be free()-ed */
+#define V7_VAL_ALLOCATED   1
+      uint16_t str_alloc:1;   /* v.str.buf must be free()-ed */
+#define V7_STR_ALLOCATED   2
+      uint16_t js_func:1;     /* Function object is a JavsScript code */
+#define V7_JS_FUNC         4
+      uint16_t prop_func:1;   /* Function object is a native property function */
+#define V7_PROP_FUNC       8
+      uint16_t val_dealloc:1; /* Value has been deallocated */
+#define V7_VAL_DEALLOCATED 16
+
+      uint16_t re_g:1; /* execution RegExp flag g */
+      uint16_t re_i:1; /* compiler & execution RegExp flag i */
+      uint16_t re_m:1; /* execution RegExp flag m */
+      uint16_t re:1;   /* parser RegExp flag re */
+    } fl;
+  };
 };
 
 #define V7_MKVAL(_p,_t,_c,_v) {0,(_p),0,0,{(_v)},(_t),(_c),0,0}
@@ -208,13 +270,14 @@ struct v7 {
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#define CHECK(cond, code) do { \
-  if (!(cond)) { \
+#define THROW(err_code) do{ \
     snprintf(v7->error_message, sizeof(v7->error_message), \
       "%s line %d: %s", v7->pstate.file_name, v7->pstate.line_no, \
-      v7_strerror(code)); \
-    return (code); \
-  } } while (0)
+      v7_strerror(err_code)); \
+    return(err_code); \
+  }while(0)
+
+#define CHECK(cond, code) if(!(cond)) THROW(code)
 
 #ifdef _WIN32
 #define TRACE_CALL  /* printf */
@@ -289,6 +352,23 @@ extern struct v7_val s_file;
   } while (0)
 
 
+/* Forward declarations */
+
+V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
+V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
+V7_PRIVATE void re_free(struct Reprog *prog);
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
+
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len);
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int re_fl);
+
+V7_PRIVATE int skip_to_next_tok(const char **ptr);
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
+
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
@@ -358,3 +438,7 @@ V7_PRIVATE void init_number(void);
 V7_PRIVATE void init_object(void);
 V7_PRIVATE void init_string(void);
 V7_PRIVATE void init_regex(void);
+
+
+
+#endif // V7_INTERNAL_H_INCLUDED

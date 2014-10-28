@@ -16,6 +16,74 @@
  * license, as set out in <http://cesanta.com/products.html>.
  */
 
+#ifndef V7_HEAD_H_INCLUDED
+#define V7_HEAD_H_INCLUDED
+
+#endif // V7_HEAD_H_INCLUDED
+#ifndef _UTF_H_
+#define _UTF_H_ 1
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+typedef unsigned char uchar;
+
+typedef unsigned short Rune;	/* 16 bits */
+
+#define nelem(a) (sizeof(a)/sizeof(a)[0])
+
+enum
+{
+	UTFmax		= 3,		/* maximum bytes per rune */
+	Runesync	= 0x80,		/* cannot represent part of a UTF sequence (<) */
+	Runeself	= 0x80,		/* rune and UTF sequences are the same (<) */
+	Runeerror	= 0xFFFD	/* decoding error in UTF */
+	/* Runemax		= 0xFFFC */	/* maximum rune value */
+};
+
+/* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
+int		chartorune(Rune *rune, const char *str);
+int		fullrune(char *str, int n);
+int		isdigitrune(Rune c);
+int		isnewline(Rune c);
+int		iswordchar(Rune c);
+int		isalpharune(Rune c);
+int		islowerrune(Rune c);
+int		isspacerune(Rune c);
+int		istitlerune(Rune c);
+int		isupperrune(Rune c);
+int		runelen(Rune c);
+int		runenlen(Rune *r, int nrune);
+Rune*	runestrcat(Rune *s1, Rune *s2);
+Rune*	runestrchr(Rune *s, Rune c);
+int		runestrcmp(Rune *s1, Rune *s2);
+Rune*	runestrcpy(Rune *s1, Rune *s2);
+Rune*	runestrdup(Rune *s) ;
+Rune*	runestrecpy(Rune *s1, Rune *es1, Rune *s2);
+long	runestrlen(Rune *s);
+Rune*	runestrncat(Rune *s1, Rune *s2, long n);
+int		runestrncmp(Rune *s1, Rune *s2, long n);
+Rune*	runestrncpy(Rune *s1, Rune *s2, long n);
+Rune*	runestrrchr(Rune *s, Rune c);
+Rune*	runestrstr(Rune *s1, Rune *s2);
+int		runetochar(char *str, Rune *rune);
+Rune	tolowerrune(Rune c);
+Rune	totitlerune(Rune c);
+Rune	toupperrune(Rune c);
+char*	utfecpy(char *to, char *e, char *from);
+int		utflen(char *s);
+int		utfnlen(char *s, long m);
+char*	utfrrune(char *s, long c);
+char*	utfrune(char *s, long c);
+char*	utfutf(char *s1, char *s2);
+
+#if defined(__cplusplus)
+}
+#endif
+#endif
+#ifndef V7_INTERNAL_H_INCLUDED
+#define  V7_INTERNAL_H_INCLUDED
+
 #include "v7.h"
 
 #include <sys/stat.h>
@@ -30,6 +98,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
@@ -58,16 +127,6 @@ typedef unsigned char uint8_t;
 #define INFINITY    atof("INFINITY")  /* TODO: fix this */
 #endif
 
-/*
- * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
- * the structure, but append it to the list of free structures.
- * Subsequent allocations try to grab a structure from the free list,
- * which speeds up allocation.
- * #define V7_CACHE_OBJS
- */
-
-/* Maximum length of the string literal */
-#define MAX_STRING_LITERAL_LENGTH 2000
 
 /* Different classes of V7_TYPE_OBJ type */
 enum v7_class {
@@ -107,7 +166,78 @@ enum v7_tok {
   NUM_TOKENS
 };
 
-typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *result);
+/* Sub expression matches */
+struct Resub{
+  unsigned int subexpr_num;
+  struct re_tok{
+    const char *start;  /* points to the beginning of the token */
+    const char *end;    /* points to the end of the token */
+  } sub[RE_MAX_SUB];
+};
+
+struct Rerange{ Rune s; Rune e; };
+// character class, each pair of rune's defines a range
+struct Reclass{
+  struct Rerange *end;
+  struct Rerange spans[RE_MAX_RANGES];
+};
+
+/* Parser Information */
+struct Renode{
+  uint8_t type;
+  union{
+    Rune c;             /* character */
+    struct Reclass *cp; /* class pointer */
+    struct{
+      struct Renode *x;
+      union{
+        struct Renode *y;
+        uint8_t n;
+        struct{
+          uint8_t ng;  /* not greedy flag */
+          uint16_t min;
+          uint16_t max;
+        };
+      };
+    };
+  };
+};
+
+/* Machine instructions */
+struct Reinst{
+  uint8_t opcode;
+  union{
+    uint8_t n;
+    Rune c;             /* character */
+    struct Reclass *cp; /* class pointer */
+    struct{
+      struct Reinst *x;
+      union{
+        struct{
+          uint16_t min;
+          uint16_t max;
+        };
+        struct Reinst *y;
+      };
+    };
+  };
+};
+
+/* struct Reprogram definition */
+struct Reprog{
+  struct Reinst *start, *end;
+  unsigned int subexpr_num;
+  struct Reclass charset[RE_MAX_SETS];
+};
+
+/* struct Rethread definition */
+struct Rethread{
+  struct Reinst *pc;
+  const char *start;
+  struct Resub sub;
+};
+
+typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result);
 
 struct v7_prop {
   struct v7_prop *next;
@@ -127,9 +257,11 @@ struct v7_vec {
 };
 
 struct v7_string {
-  char *buf;                /* Pointer to buffer with string data */
-  unsigned long len;        /* String length */
-  char loc[16];             /* Small strings are stored here */
+  char *buf;                /* Pointer to buffer with string/regexp data */
+  unsigned long len;        /* String/regexp length */
+  char loc[16];             /* Small strings/regexp are stored here */
+  struct Reprog *prog;      /* Pointer to compiled regexp */
+  unsigned long lastIndex;
 };
 
 struct v7_func {
@@ -139,7 +271,6 @@ struct v7_func {
 };
 
 union v7_scalar {
-  char *regex;              /* \0-terminated regex */
   double num;               /* Holds "Number" or "Boolean" value */
   struct v7_string str;     /* Holds "String" value */
   struct v7_func func;      /* \0-terminated function code */
@@ -158,12 +289,26 @@ struct v7_val {
   enum v7_class cls;          /* Object's internal [[Class]] property */
   short ref_count;            /* Reference counter */
 
-  unsigned short flags;       /* Flags - defined below */
-#define V7_VAL_ALLOCATED   1  /* Whole "struct v7_val" must be free()-ed */
-#define V7_STR_ALLOCATED   2  /* v.str.buf must be free()-ed */
-#define V7_JS_FUNC         4  /* Function object is a JavsScript code */
-#define V7_PROP_FUNC       8  /* Function object is a native property function */
-#define V7_VAL_DEALLOCATED 16 /* Value has been deallocated */
+  union{
+    uint16_t flags;            /* Flags - defined below */
+    struct v7_val_flags{
+      uint16_t val_alloc:1;   /* Whole "struct v7_val" must be free()-ed */
+#define V7_VAL_ALLOCATED   1
+      uint16_t str_alloc:1;   /* v.str.buf must be free()-ed */
+#define V7_STR_ALLOCATED   2
+      uint16_t js_func:1;     /* Function object is a JavsScript code */
+#define V7_JS_FUNC         4
+      uint16_t prop_func:1;   /* Function object is a native property function */
+#define V7_PROP_FUNC       8
+      uint16_t val_dealloc:1; /* Value has been deallocated */
+#define V7_VAL_DEALLOCATED 16
+
+      uint16_t re_g:1; /* execution RegExp flag g */
+      uint16_t re_i:1; /* compiler & execution RegExp flag i */
+      uint16_t re_m:1; /* execution RegExp flag m */
+      uint16_t re:1;   /* parser RegExp flag re */
+    } fl;
+  };
 };
 
 #define V7_MKVAL(_p,_t,_c,_v) {0,(_p),0,0,{(_v)},(_t),(_c),0,0}
@@ -207,13 +352,14 @@ struct v7 {
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#define CHECK(cond, code) do { \
-  if (!(cond)) { \
+#define THROW(err_code) do{ \
     snprintf(v7->error_message, sizeof(v7->error_message), \
       "%s line %d: %s", v7->pstate.file_name, v7->pstate.line_no, \
-      v7_strerror(code)); \
-    return (code); \
-  } } while (0)
+      v7_strerror(err_code)); \
+    return(err_code); \
+  }while(0)
+
+#define CHECK(cond, code) if(!(cond)) THROW(code)
 
 #ifdef _WIN32
 #define TRACE_CALL  /* printf */
@@ -288,6 +434,23 @@ extern struct v7_val s_file;
   } while (0)
 
 
+/* Forward declarations */
+
+V7_PRIVATE struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **errorp);
+V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *string, struct Resub *loot);
+V7_PRIVATE void re_free(struct Reprog *prog);
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub);
+
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len);
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int re_fl);
+
+V7_PRIVATE int skip_to_next_tok(const char **ptr);
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
+
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
@@ -357,498 +520,10 @@ V7_PRIVATE void init_number(void);
 V7_PRIVATE void init_object(void);
 V7_PRIVATE void init_string(void);
 V7_PRIVATE void init_regex(void);
-/*
- * Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
- * Copyright (c) 2013 Cesanta Software Limited
- * All rights reserved
- *
- * This library is dual-licensed: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. For the terms of this
- * license, see <http://www.gnu.org/licenses/>.
- *
- * You are free to use this library under the terms of the GNU General
- * Public License, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * Alternatively, you can license this library under a commercial
- * license, as set out in <http://cesanta.com/products.html>.
- */
 
-/*
- * This is a regular expression library that implements a subset of Perl RE.
- * Please refer to README.md for a detailed reference.
- */
 
-#ifndef SLRE_HEADER_DEFINED
-#define SLRE_HEADER_DEFINED
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct slre_cap {
-  const char *ptr;
-  int len;
-};
-
-
-int slre_match(const char *regexp, const char *buf, int buf_len,
-               struct slre_cap *caps, int num_caps, int flags);
-
-/* Possible flags for slre_match() */
-enum { SLRE_IGNORE_CASE = 1 };
-
-
-/* slre_match() failure codes */
-#define SLRE_NO_MATCH               -1
-#define SLRE_UNEXPECTED_QUANTIFIER  -2
-#define SLRE_UNBALANCED_BRACKETS    -3
-#define SLRE_INTERNAL_ERROR         -4
-#define SLRE_INVALID_CHARACTER_SET  -5
-#define SLRE_INVALID_METACHARACTER  -6
-#define SLRE_CAPS_ARRAY_TOO_SMALL   -7
-#define SLRE_TOO_MANY_BRANCHES      -8
-#define SLRE_TOO_MANY_BRACKETS      -9
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif  /* SLRE_HEADER_DEFINED */
-/*
- * Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
- * Copyright (c) 2013 Cesanta Software Limited
- * All rights reserved
- *
- * This library is dual-licensed: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. For the terms of this
- * license, see <http://www.gnu.org/licenses/>.
- *
- * You are free to use this library under the terms of the GNU General
- * Public License, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * Alternatively, you can license this library under a commercial
- * license, as set out in <http://cesanta.com/products.html>.
- */
-
-#include <stdio.h>
-#include <ctype.h>
-#include <string.h>
-
-
-#define MAX_BRANCHES 100
-#define MAX_BRACKETS 100
-#define FAIL_IF(condition, error_code) if (condition) return (error_code)
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(ar) (sizeof(ar) / sizeof((ar)[0]))
-#endif
-
-#ifdef SLRE_DEBUG
-#define DBG(x) printf x
-#else
-#define DBG(x)
-#endif
-
-struct bracket_pair {
-  const char *ptr;  /* Points to the first char after '(' in regex  */
-  int len;          /* Length of the text between '(' and ')'       */
-  int branches;     /* Index in the branches array for this pair    */
-  int num_branches; /* Number of '|' in this bracket pair           */
-};
-
-struct branch {
-  int bracket_index;    /* index for 'struct bracket_pair brackets' */
-                        /* array defined below                      */
-  const char *schlong;  /* points to the '|' character in the regex */
-};
-
-struct regex_info {
-  /*
-   * Describes all bracket pairs in the regular expression.
-   * First entry is always present, and grabs the whole regex.
-   */
-  struct bracket_pair brackets[MAX_BRACKETS];
-  int num_brackets;
-
-  /*
-   * Describes alternations ('|' operators) in the regular expression.
-   * Each branch falls into a specific branch pair.
-   */
-  struct branch branches[MAX_BRANCHES];
-  int num_branches;
-
-  /* Array of captures provided by the user */
-  struct slre_cap *caps;
-  int num_caps;
-
-  /* E.g. SLRE_IGNORE_CASE. See enum below */
-  int flags;
-};
-
-static int is_metacharacter(const unsigned char *s) {
-  static const char *metacharacters = "^$().[]*+?|\\Ssdbfnrtv";
-  return strchr(metacharacters, *s) != NULL;
-}
-
-static int op_len(const char *re) {
-  return re[0] == '\\' && re[1] == 'x' ? 4 : re[0] == '\\' ? 2 : 1;
-}
-
-static int set_len(const char *re, int re_len) {
-  int len = 0;
-
-  while (len < re_len && re[len] != ']') {
-    len += op_len(re + len);
-  }
-
-  return len <= re_len ? len + 1 : -1;
-}
-
-static int get_op_len(const char *re, int re_len) {
-  return re[0] == '[' ? set_len(re + 1, re_len - 1) + 1 : op_len(re);
-}
-
-static int is_quantifier(const char *re) {
-  return re[0] == '*' || re[0] == '+' || re[0] == '?';
-}
-
-static int toi(int x) {
-  return isdigit(x) ? x - '0' : x - 'W';
-}
-
-static int hextoi(const unsigned char *s) {
-  return (toi(tolower(s[0])) << 4) | toi(tolower(s[1]));
-}
-
-static int match_op(const unsigned char *re, const unsigned char *s,
-                    struct regex_info *info) {
-  int result = 0;
-  switch (*re) {
-    case '\\':
-      /* Metacharacters */
-      switch (re[1]) {
-        case 'S': FAIL_IF(isspace(*s), SLRE_NO_MATCH); result++; break;
-        case 's': FAIL_IF(!isspace(*s), SLRE_NO_MATCH); result++; break;
-        case 'd': FAIL_IF(!isdigit(*s), SLRE_NO_MATCH); result++; break;
-        case 'b': FAIL_IF(*s != '\b', SLRE_NO_MATCH); result++; break;
-        case 'f': FAIL_IF(*s != '\f', SLRE_NO_MATCH); result++; break;
-        case 'n': FAIL_IF(*s != '\n', SLRE_NO_MATCH); result++; break;
-        case 'r': FAIL_IF(*s != '\r', SLRE_NO_MATCH); result++; break;
-        case 't': FAIL_IF(*s != '\t', SLRE_NO_MATCH); result++; break;
-        case 'v': FAIL_IF(*s != '\v', SLRE_NO_MATCH); result++; break;
-
-        case 'x':
-          /* Match byte, \xHH where HH is hexadecimal byte representaion */
-          FAIL_IF(hextoi(re + 2) != *s, SLRE_NO_MATCH);
-          result++;
-          break;
-
-        default:
-          /* Valid metacharacter check is done in bar() */
-          FAIL_IF(re[1] != s[0], SLRE_NO_MATCH);
-          result++;
-          break;
-      }
-      break;
-
-    case '|': FAIL_IF(1, SLRE_INTERNAL_ERROR); break;
-    case '$': FAIL_IF(1, SLRE_NO_MATCH); break;
-    case '.': result++; break;
-
-    default:
-      if (info->flags & SLRE_IGNORE_CASE) {
-        FAIL_IF(tolower(*re) != tolower(*s), SLRE_NO_MATCH);
-      } else {
-        FAIL_IF(*re != *s, SLRE_NO_MATCH);
-      }
-      result++;
-      break;
-  }
-
-  return result;
-}
-
-static int match_set(const char *re, int re_len, const char *s,
-                     struct regex_info *info) {
-  int len = 0, result = -1, invert = re[0] == '^';
-
-  if (invert) re++, re_len--;
-
-  while (len <= re_len && re[len] != ']' && result <= 0) {
-    /* Support character range */
-    if (re[len] != '-' && re[len + 1] == '-' && re[len + 2] != ']' &&
-        re[len + 2] != '\0') {
-      result = info->flags &&  SLRE_IGNORE_CASE ?
-        *s >= re[len] && *s <= re[len + 2] :
-        tolower(*s) >= tolower(re[len]) && tolower(*s) <= tolower(re[len + 2]);
-      len += 3;
-    } else {
-      result = match_op((unsigned char *) re + len, (unsigned char *) s, info);
-      len += op_len(re + len);
-    }
-  }
-  return (!invert && result > 0) || (invert && result <= 0) ? 1 : -1;
-}
-
-static int doh(const char *s, int s_len, struct regex_info *info, int bi);
-
-static int bar(const char *re, int re_len, const char *s, int s_len,
-               struct regex_info *info, int bi) {
-  /* i is offset in re, j is offset in s, bi is brackets index */
-  int i, j, n, step;
-
-  for (i = j = 0; i < re_len && j <= s_len; i += step) {
-
-    /* Handle quantifiers. Get the length of the chunk. */
-    step = re[i] == '(' ? info->brackets[bi + 1].len + 2 :
-      get_op_len(re + i, re_len - i);
-
-    DBG(("%s [%.*s] [%.*s] re_len=%d step=%d i=%d j=%d\n", __func__,
-         re_len - i, re + i, s_len - j, s + j, re_len, step, i, j));
-
-    FAIL_IF(is_quantifier(&re[i]), SLRE_UNEXPECTED_QUANTIFIER);
-    FAIL_IF(step <= 0, SLRE_INVALID_CHARACTER_SET);
-
-    if (i + step < re_len && is_quantifier(re + i + step)) {
-      DBG(("QUANTIFIER: [%.*s]%c [%.*s]\n", step, re + i,
-           re[i + step], s_len - j, s + j));
-      if (re[i + step] == '?') {
-        int result = bar(re + i, step, s + j, s_len - j, info, bi);
-        j += result > 0 ? result : 0;
-        i++;
-      } else if (re[i + step] == '+' || re[i + step] == '*') {
-        int j2 = j, nj = j, n1, n2 = -1, ni, non_greedy = 0;
-
-        /* Points to the regexp code after the quantifier */
-        ni = i + step + 1;
-        if (ni < re_len && re[ni] == '?') {
-          non_greedy = 1;
-          ni++;
-        }
-
-        do {
-          if ((n1 = bar(re + i, step, s + j2, s_len - j2, info, bi)) > 0) {
-            j2 += n1;
-          }
-          if (re[i + step] == '+' && n1 < 0) break;
-
-          if (ni >= re_len) {
-            /* After quantifier, there is nothing */
-            nj = j2;
-          } else if ((n2 = bar(re + ni, re_len - ni, s + j2,
-                               s_len - j2, info, bi)) >= 0) {
-            /* Regex after quantifier matched */
-            nj = j2 + n2;
-          }
-          if (nj > j && non_greedy) break;
-        } while (n1 > 0);
-
-        if (n1 < 0 && re[i + step] == '*' &&
-            (n2 = bar(re + ni, re_len - ni, s + j, s_len - j, info, bi)) > 0) {
-          nj = j + n2;
-        }
-
-        DBG(("STAR/PLUS END: %d %d %d %d %d\n", j, nj, re_len - ni, n1, n2));
-        FAIL_IF(re[i + step] == '+' && nj == j, SLRE_NO_MATCH);
-
-        /* If while loop body above was not executed for the * quantifier,  */
-        /* make sure the rest of the regex matches                          */
-        FAIL_IF(nj == j && ni < re_len && n2 < 0, SLRE_NO_MATCH);
-
-        /* Returning here cause we've matched the rest of RE already */
-        return nj;
-      }
-      continue;
-    }
-
-    if (re[i] == '[') {
-      n = match_set(re + i + 1, re_len - (i + 2), s + j, info);
-      DBG(("SET %.*s [%.*s] -> %d\n", step, re + i, s_len - j, s + j, n));
-      FAIL_IF(n <= 0, SLRE_NO_MATCH);
-      j += n;
-    } else if (re[i] == '(') {
-      n = SLRE_NO_MATCH;
-      bi++;
-      FAIL_IF(bi >= info->num_brackets, SLRE_INTERNAL_ERROR);
-      DBG(("CAPTURING [%.*s] [%.*s] [%s]\n",
-           step, re + i, s_len - j, s + j, re + i + step));
-
-      if (re_len - (i + step) <= 0) {
-        /* Nothing follows brackets */
-        n = doh(s + j, s_len - j, info, bi);
-      } else {
-        int j2;
-        for (j2 = 0; j2 <= s_len - j; j2++) {
-          if ((n = doh(s + j, s_len - (j + j2), info, bi)) >= 0 &&
-              bar(re + i + step, re_len - (i + step),
-                  s + j + n, s_len - (j + n), info, bi) >= 0) break;
-        }
-      }
-
-      DBG(("CAPTURED [%.*s] [%.*s]:%d\n", step, re + i, s_len - j, s + j, n));
-      FAIL_IF(n < 0, n);
-      if (info->caps != NULL) {
-        info->caps[bi - 1].ptr = s + j;
-        info->caps[bi - 1].len = n;
-      }
-      j += n;
-    } else if (re[i] == '^') {
-      FAIL_IF(j != 0, SLRE_NO_MATCH);
-    } else if (re[i] == '$') {
-      FAIL_IF(j != s_len, SLRE_NO_MATCH);
-    } else {
-      FAIL_IF(j >= s_len, SLRE_NO_MATCH);
-      n = match_op((unsigned char *) (re + i), (unsigned char *) (s + j), info);
-      FAIL_IF(n <= 0, n);
-      j += n;
-    }
-  }
-
-  return j;
-}
-
-/* Process branch points */
-static int doh(const char *s, int s_len, struct regex_info *info, int bi) {
-  const struct bracket_pair *b = &info->brackets[bi];
-  int i = 0, len, result;
-  const char *p;
-
-  do {
-    p = i == 0 ? b->ptr : info->branches[b->branches + i - 1].schlong + 1;
-    len = b->num_branches == 0 ? b->len :
-      i == b->num_branches ? (int) (b->ptr + b->len - p) :
-      (int) (info->branches[b->branches + i].schlong - p);
-    DBG(("%s %d %d [%.*s] [%.*s]\n", __func__, bi, i, len, p, s_len, s));
-    result = bar(p, len, s, s_len, info, bi);
-    DBG(("%s <- %d\n", __func__, result));
-  } while (result <= 0 && i++ < b->num_branches);  /* At least 1 iteration */
-
-  return result;
-}
-
-static int baz(const char *s, int s_len, struct regex_info *info) {
-  int i, result = -1, is_anchored = info->brackets[0].ptr[0] == '^';
-
-  for (i = 0; i <= s_len; i++) {
-    result = doh(s + i, s_len - i, info, 0);
-    if (result >= 0) {
-      result += i;
-      break;
-    }
-    if (is_anchored) break;
-  }
-
-  return result;
-}
-
-static void setup_branch_points(struct regex_info *info) {
-  int i, j;
-  struct branch tmp;
-
-  /* First, sort branches. Must be stable, no qsort. Use bubble algo. */
-  for (i = 0; i < info->num_branches; i++) {
-    for (j = i + 1; j < info->num_branches; j++) {
-      if (info->branches[i].bracket_index > info->branches[j].bracket_index) {
-        tmp = info->branches[i];
-        info->branches[i] = info->branches[j];
-        info->branches[j] = tmp;
-      }
-    }
-  }
-
-  /*
-   * For each bracket, set their branch points. This way, for every bracket
-   * (i.e. every chunk of regex) we know all branch points before matching.
-   */
-  for (i = j = 0; i < info->num_brackets; i++) {
-    info->brackets[i].num_branches = 0;
-    info->brackets[i].branches = j;
-    while (j < info->num_branches && info->branches[j].bracket_index == i) {
-      info->brackets[i].num_branches++;
-      j++;
-    }
-  }
-}
-
-static int foo(const char *re, int re_len, const char *s, int s_len,
-               struct regex_info *info) {
-  int i, step, depth = 0;
-
-  /* First bracket captures everything */
-  info->brackets[0].ptr = re;
-  info->brackets[0].len = re_len;
-  info->num_brackets = 1;
-
-  /* Make a single pass over regex string, memorize brackets and branches */
-  for (i = 0; i < re_len; i += step) {
-    step = get_op_len(re + i, re_len - i);
-
-    if (re[i] == '|') {
-      FAIL_IF(info->num_branches >= (int) ARRAY_SIZE(info->branches),
-              SLRE_TOO_MANY_BRANCHES);
-      info->branches[info->num_branches].bracket_index =
-        info->brackets[info->num_brackets - 1].len == -1 ?
-        info->num_brackets - 1 : depth;
-      info->branches[info->num_branches].schlong = &re[i];
-      info->num_branches++;
-    } else if (re[i] == '\\') {
-      FAIL_IF(i >= re_len - 1, SLRE_INVALID_METACHARACTER);
-      if (re[i + 1] == 'x') {
-        /* Hex digit specification must follow */
-        FAIL_IF(re[i + 1] == 'x' && i >= re_len - 3,
-                SLRE_INVALID_METACHARACTER);
-        FAIL_IF(re[i + 1] ==  'x' && !(isxdigit(re[i + 2]) &&
-                isxdigit(re[i + 3])), SLRE_INVALID_METACHARACTER);
-      } else {
-        FAIL_IF(!is_metacharacter((unsigned char *) re + i + 1),
-                SLRE_INVALID_METACHARACTER);
-      }
-    } else if (re[i] == '(') {
-      FAIL_IF(info->num_brackets >= (int) ARRAY_SIZE(info->brackets),
-              SLRE_TOO_MANY_BRACKETS);
-      depth++;  /* Order is important here. Depth increments first. */
-      info->brackets[info->num_brackets].ptr = re + i + 1;
-      info->brackets[info->num_brackets].len = -1;
-      info->num_brackets++;
-      FAIL_IF(info->num_caps > 0 && info->num_brackets - 1 > info->num_caps,
-              SLRE_CAPS_ARRAY_TOO_SMALL);
-    } else if (re[i] == ')') {
-      int ind = info->brackets[info->num_brackets - 1].len == -1 ?
-        info->num_brackets - 1 : depth;
-      info->brackets[ind].len = (int) (&re[i] - info->brackets[ind].ptr);
-      DBG(("SETTING BRACKET %d [%.*s]\n",
-           ind, info->brackets[ind].len, info->brackets[ind].ptr));
-      depth--;
-      FAIL_IF(depth < 0, SLRE_UNBALANCED_BRACKETS);
-      FAIL_IF(i > 0 && re[i - 1] == '(', SLRE_NO_MATCH);
-    }
-  }
-
-  FAIL_IF(depth != 0, SLRE_UNBALANCED_BRACKETS);
-  setup_branch_points(info);
-
-  return baz(s, s_len, info);
-}
-
-int slre_match(const char *regexp, const char *s, int s_len,
-               struct slre_cap *caps, int num_caps, int flags) {
-  struct regex_info info;
-
-  /* Initialize info structure */
-  info.flags = flags;
-  info.num_brackets = info.num_branches = 0;
-  info.num_caps = num_caps;
-  info.caps = caps;
-
-  DBG(("========================> [%s] [%.*s]\n", regexp, s_len, s));
-  return foo(regexp, (int) strlen(regexp), s, s_len, &info);
-}
+#endif // V7_INTERNAL_H_INCLUDED
 
 V7_PRIVATE struct v7_val s_constructors[V7_NUM_CLASSES];
 V7_PRIVATE struct v7_val s_prototypes[V7_NUM_CLASSES];
@@ -996,10 +671,12 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
       free_prop(v7, p);
     }
     v->v.array = NULL;
-  } else if (v->type == V7_TYPE_STR && (v->flags & V7_STR_ALLOCATED)) {
-    free(v->v.str.buf);
-  } else if (v7_is_class(v, V7_CLASS_REGEXP) && (v->flags & V7_STR_ALLOCATED)) {
-    free(v->v.regex);
+  } else if (v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING) || v7_is_class(v, V7_CLASS_REGEXP)) {
+    if(v->v.str.prog){
+      if(v->v.str.prog->start) reg_free(v->v.str.prog->start);
+      reg_free(v->v.str.prog);
+    }
+    if(v->v.str.buf && (v->flags & V7_STR_ALLOCATED)) free(v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
     if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
       free(v->v.func.source_code);
@@ -1146,7 +823,8 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
 V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
                               int own_prop) {
   struct v7_prop *m;
-  for (; obj != NULL; obj = obj->proto) {
+  int proto = 0;
+  for (; obj != NULL; obj = obj->proto, proto=1) {
     if (v7_is_class(obj, V7_CLASS_ARRAY) && key->type == V7_TYPE_NUM) {
       int i = (int) key->v.num;
       for (m = obj->v.array; m != NULL; m = m->next) {
@@ -1154,10 +832,9 @@ V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
       }
     } else if (obj->type == V7_TYPE_OBJ) {
       for (m = obj->props; m != NULL; m = m->next) {
-        if (cmp(m->key, key) == 0) return m;
+        if (cmp(m->key, key) == 0 && (!own_prop || !proto || (proto && m->val->fl.prop_func))) return m;
       }
     }
-    if (own_prop) break;
     if (obj->proto == obj) break;
   }
   return NULL;
@@ -1206,9 +883,13 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
 
   // Find attribute inside object
   if ((m = v7_get2(obj, k, 1)) != NULL) {
-    v7_freeval(v7, m->val);
     inc_ref_count(v);
-    m->val = v;
+    if(m->val->flags & V7_PROP_FUNC){
+      m->val->v.prop_func(obj, v, NULL);
+    }else{
+      v7_freeval(v7, m->val);
+      m->val = v;
+    }
   } else {
     TRY(vinsert(v7, &obj->props, k, v));
   }
@@ -1308,7 +989,8 @@ V7_PRIVATE const char *v7_strerror(enum v7_err e) {
     "no error", "error", "eval error", "range error", "reference error",
     "syntax error", "type error", "URI error",
     "out of memory", "internal error", "stack overflow", "stack underflow",
-    "called non-function", "not implemented", "string literal too long"
+    "called non-function", "not implemented", "string literal too long",
+    "RegExp error"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
@@ -1377,7 +1059,6 @@ V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
     }
   }
 
-  //printf("%s: [%s] %d %d\n", __func__, file_name, v7->pstate.line_no, err);
   assert(v7->root_scope.proto == &s_global);
   v7->pstate = old_pstate;
 
@@ -1837,7 +1518,7 @@ V7_PRIVATE enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
   v7_set_class(obj, V7_CLASS_ARRAY);
   return V7_OK;
 }
-V7_PRIVATE void Arr_length(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Arr_length(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result) {
   struct v7_prop *p;
   v7_init_num(result, 0.0);
   for (p = this_obj->v.array; p != NULL; p = p->next) {
@@ -2080,43 +1761,2727 @@ V7_PRIVATE void init_object(void) {
   SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
 }
 
-V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
-  v7_set_class(obj, V7_CLASS_OBJECT);
+
+struct re_env{
+  struct v7_val_flags flags;
+  const char *src;
+  Rune curr_rune;
+
+  struct Reprog *prog;
+  struct Renode *pstart, *pend;
+
+  struct Renode *sub[RE_MAX_SUB];
+  unsigned int subexpr_num;
+  unsigned int sets_num;
+
+  int lookahead;
+  struct Reclass *curr_set;
+  int min_rep, max_rep;
+
+  jmp_buf catch_point;
+  const char *err_msg;
+};
+
+enum RE_CODE{
+  I_END = 10,                     // Terminate: match found
+  I_ANY,      P_ANY = I_ANY,      // Any character except newline, .
+  I_ANYNL,                        // Any character including newline, .
+  I_BOL,      P_BOL = I_BOL,      // Beginning of line, ^
+  I_CH,       P_CH = I_CH,
+  I_EOL,      P_EOL = I_EOL,      // End of line, $
+  I_EOS,      P_EOS = I_EOS,      // End of string, \0
+  I_JUMP,
+  I_LA,       P_LA = I_LA,
+  I_LA_N,     P_LA_N = I_LA_N,
+  I_LBRA,     P_BRA = I_LBRA,     // Left bracket, (
+  I_REF,      P_REF = I_REF,
+  I_REP,      P_REP = I_REP,
+  I_REP_INI,
+  I_RBRA,                         // Right bracket, )
+  I_SET,      P_SET = I_SET,      // Character set, []
+  I_SET_N,    P_SET_N = I_SET_N,  // Negated character set, []
+  I_SPLIT,
+  I_WORD,     P_WORD = I_WORD,
+  I_WORD_N,   P_WORD_N = I_WORD_N,
+  P_ALT,                          // Alternation, |
+  P_CAT,                          // Concatentation, implicit operator
+  L_CH = 256,
+  L_COUNT,                        // {M,N}
+  L_EOS,                          // End of string, \0
+  L_LA,                           // "(?=" lookahead
+  L_LA_CAP,                       // "(?:" lookahead, capture
+  L_LA_N,                         // "(?!" negative lookahead
+  L_REF,                          // "\1" back-reference
+  L_SET,                          // character set
+  L_SET_N,                        // negative character set
+  L_WORD,                         // "\b" word boundary
+  L_WORD_N                        // "\B" non-word boundary
+};
+
+enum RE_MESSAGE{
+  INVALID_DEC_DIGIT  = -1,
+  INVALID_HEX_DIGIT  = -2,
+  INVALID_ESC_CHAR   = -3,
+  UNTERM_ESC_SEQ     = -4,
+  SYNTAX_ERROR       = -5,
+  UNMATCH_LBR        = -6,
+  UNMATCH_RBR        = -7,
+  NUM_OVERFLOW       = -8,
+  INF_LOOP_M_EMP_STR = -9,
+  TOO_MANY_CH_SETS   = -10,
+  INV_CH_SET_RANGE   = -11,
+  CH_SET_TOO_LARGE   = -12,
+  MALFORMED_CH_SET   = -13,
+  INVALID_BACK_REF   = -14,
+  TOO_MANY_CAPTURES  = -15,
+  INVALID_QUANTIFIER = -16,
+
+  BAD_CHAR_AFTER_USD = -64
+};
+
+static const char *re_err_msg(enum RE_MESSAGE err){
+  switch(err){
+    case INVALID_DEC_DIGIT:  return "invalid DEC digit";
+    case INVALID_HEX_DIGIT:  return "invalid HEX digit";
+    case INVALID_ESC_CHAR:   return "invalid escape character";
+    case UNTERM_ESC_SEQ:     return "unterminated escape sequence";
+    case SYNTAX_ERROR:       return "syntax error";
+    case UNMATCH_LBR:        return "'(' unmatched";
+    case UNMATCH_RBR:        return "')' unmatched";
+    case NUM_OVERFLOW:       return "numeric overflow";
+    case INF_LOOP_M_EMP_STR: return "infinite loop matching the empty string";
+    case TOO_MANY_CH_SETS:   return "too many character sets";
+    case INV_CH_SET_RANGE:   return "invalid character set range";
+    case CH_SET_TOO_LARGE:   return "char set too large; increase struct Reclass.spans size";
+    case MALFORMED_CH_SET:   return "malformed '[]'";
+    case INVALID_BACK_REF:   return "invalid back-reference";
+    case TOO_MANY_CAPTURES:  return "too many captures";
+    case INVALID_QUANTIFIER: return "invalid quantifier";
+
+    case BAD_CHAR_AFTER_USD: return "bad character after '$' in replace pattern";
+  }
+  return "";
+}
+
+static sint8_t dec(int c){
+  if(isdigitrune(c)) return c - '0';
+  return INVALID_DEC_DIGIT;
+}
+
+static uint8_t re_dec_digit(struct re_env *e, int c){
+  sint8_t ret = dec(c);
+  if(ret < 0) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_DEC_DIGIT));
+  return ret;
+}
+
+static sint8_t hex(int c){
+  if(isdigitrune(c)) return c - '0';
+  if(c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if(c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return INVALID_HEX_DIGIT;
+}
+
+static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag){
+  sint8_t hd;
+  *src += chartorune(r, *src);
+  if(re_flag && *r == '\\'){
+    *src += chartorune(r, *src);
+    switch(*r){
+      case 0: return UNTERM_ESC_SEQ;
+      case 'c': *r = **src & 31; ++*src; return 0;
+      case 'f': *r = '\f'; return 0;
+      case 'n': *r = '\n'; return 0;
+      case 'r': *r = '\r'; return 0;
+      case 't': *r = '\t'; return 0;
+      case 'u':
+        hd = hex(**src); ++*src; if(hd < 0) return INVALID_HEX_DIGIT;
+        *r = hd << 12;
+        hd = hex(**src); ++*src; if(hd < 0) return INVALID_HEX_DIGIT;
+        *r += hd << 8;
+        hd = hex(**src); ++*src; if(hd < 0) return INVALID_HEX_DIGIT;
+        *r += hd << 4;
+        hd = hex(**src); ++*src; if(hd < 0) return INVALID_HEX_DIGIT;
+        *r += hd;
+        if(!*r){*r = '0'; return 1;}
+        return 0;
+      case 'v': *r = '\v'; return 0;
+      case 'x':
+        hd = hex(**src); ++*src; if(hd < 0) return INVALID_HEX_DIGIT;
+        *r = hd << 4;
+        hd = hex(**src); ++*src; if(hd < 0) return INVALID_HEX_DIGIT;
+        *r += hd;
+        if(!*r){*r = '0'; return 1;}
+        return 0;
+    }
+    if(!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r)) return INVALID_ESC_CHAR;
+    return 1;
+  }
+  return 0;
+}
+
+static uint8_t re_nextc_env(struct re_env *e){
+  sint8_t ret = re_nextc(&e->curr_rune, &e->src, e->flags.re);
+  if(ret < 0) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(ret));
+  return ret;
+}
+
+static void re_nchset(struct re_env *e){
+  if(e->sets_num >= nelem(e->prog->charset))
+    V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(TOO_MANY_CH_SETS));
+  e->curr_set = e->prog->charset + e->sets_num++;
+  e->curr_set->end = e->curr_set->spans;
+}
+
+static void re_rng2set(struct re_env *e, Rune start, Rune end){
+  if(start > end)
+    V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INV_CH_SET_RANGE));
+  if(e->curr_set->end + 2 == e->curr_set->spans + nelem(e->curr_set->spans))
+    V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(CH_SET_TOO_LARGE));
+  *e->curr_set->end++ = (struct Rerange){start, end};
+}
+
+#define re_char2set(e, c) re_rng2set(e, c, c)
+
+#define re_d_2set(e) re_rng2set(e, '0', '9')
+
+static void re_D_2set(struct re_env *e){
+  re_rng2set(e, 0, '0'-1);
+  re_rng2set(e, '9'+1, 0xFFFF);
+}
+
+static void re_s_2set(struct re_env *e){
+  re_char2set(e, 0x9);
+  re_rng2set(e, 0xA, 0xD);
+  re_char2set(e, 0x20);
+  re_char2set(e, 0xA0);
+  re_rng2set(e, 0x2028, 0x2029);
+  re_char2set(e, 0xFEFF);
+}
+
+static void re_S_2set(struct re_env *e){
+  re_rng2set(e, 0, 0x9-1);
+  re_rng2set(e, 0x9+1, 0xA-1);
+  re_rng2set(e, 0xD+1, 0x20-1);
+  re_rng2set(e, 0x20+1, 0xA0-1);
+  re_rng2set(e, 0xA0+1, 0x2028-1);
+  re_rng2set(e, 0x2029+1, 0xFEFF-1);
+  re_rng2set(e, 0xFEFF+1, 0xFFFF);
+}
+
+static void re_w_2set(struct re_env *e){
+  re_d_2set(e);
+  re_rng2set(e, 'A', 'Z');
+  re_char2set(e, '_');
+  re_rng2set(e, 'a', 'z');
+}
+
+static void re_W_2set(struct re_env *e){
+  re_rng2set(e, 0, '0'-1);
+  re_rng2set(e, '9'+1, 'A'-1);
+  re_rng2set(e, 'Z'+1, '_'-1);
+  re_rng2set(e, '_'+1, 'a'-1);
+  re_rng2set(e, 'z'+1, 0xFFFF);
+}
+
+
+static uint8_t re_endofcount(Rune c){
+  switch(c){case ',': case '}': return 1;}
+  return 0;
+}
+
+static void re_ex_num_overfl(struct re_env *e){V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(NUM_OVERFLOW));}
+
+static enum RE_CODE re_countrep(struct re_env *e){
+  e->min_rep = 0;
+  while(!re_endofcount(e->curr_rune = *e->src++))
+    e->min_rep = e->min_rep * 10 + re_dec_digit(e, e->curr_rune);
+  if(e->min_rep >= RE_MAX_REP) re_ex_num_overfl(e);
+
+  if(e->curr_rune != ','){e->max_rep = e->min_rep; return L_COUNT;}
+  e->max_rep = 0;
+  while((e->curr_rune = *e->src++) != '}')
+    e->max_rep = e->max_rep * 10 + re_dec_digit(e, e->curr_rune);
+  if(!e->max_rep){e->max_rep = RE_MAX_REP; return L_COUNT;}
+  if(e->max_rep >= RE_MAX_REP) re_ex_num_overfl(e);
+
+  return L_COUNT;
+}
+
+static enum RE_CODE re_lexset(struct re_env *e){
+  Rune ch;
+  uint8_t esc, ch_fl = 0, dash_fl = 0;
+  enum RE_CODE type = L_SET;
+
+  re_nchset(e);
+
+  esc = re_nextc_env(e);
+  if(!esc && e->curr_rune == '^'){type = L_SET_N; esc = re_nextc_env(e);}
+
+  for(; esc || e->curr_rune != ']'; esc = re_nextc_env(e)){
+    if(!e->curr_rune) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(MALFORMED_CH_SET));
+    if(esc){
+      if(strchr("DdSsWw", e->curr_rune)){
+        if(ch_fl){re_char2set(e, ch); if(dash_fl) re_char2set(e, '-');}
+        switch(e->curr_rune){
+          case 'D': re_D_2set(e); break;
+          case 'd': re_d_2set(e); break;
+          case 'S': re_S_2set(e); break;
+          case 's': re_s_2set(e); break;
+          case 'W': re_W_2set(e); break;
+          case 'w': re_w_2set(e); break;
+        }
+        ch_fl = dash_fl = 0;
+        continue;
+      }
+      switch(e->curr_rune){
+        case '-': case '\\': case '.': case '/': case ']': case '|': break;
+        case '0': e->curr_rune = 0; break;
+        case 'b': e->curr_rune = '\b'; break;
+        default: V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_ESC_CHAR));
+      }
+    }else{
+      if(e->curr_rune == '-'){
+        if(ch_fl){
+          if(dash_fl){re_rng2set(e, ch, '-'); ch_fl = dash_fl = 0;}
+          else dash_fl = 1;
+        }else{ch = '-'; ch_fl = 1;}
+        continue;
+      }
+    }
+    if(ch_fl){
+      if(dash_fl){re_rng2set(e, ch, e->curr_rune); ch_fl = dash_fl = 0;}
+      else{re_char2set(e, ch); ch = e->curr_rune;}
+    }else{ch = e->curr_rune; ch_fl = 1;}
+  }
+  if(ch_fl){re_char2set(e, ch); if(dash_fl) re_char2set(e, '-');}
+  return type;
+}
+
+static int re_lexer(struct re_env *e){
+  if(re_nextc_env(e)){
+    switch(e->curr_rune){
+      case '0': e->curr_rune = 0; return L_EOS;
+      case 'b': return L_WORD;
+      case 'B': return L_WORD_N;
+      case 'd': re_nchset(e); re_d_2set(e); return L_SET;
+      case 'D': re_nchset(e); re_d_2set(e); return L_SET_N;
+      case 's': re_nchset(e); re_s_2set(e); return L_SET;
+      case 'S': re_nchset(e); re_s_2set(e); return L_SET_N;
+      case 'w': re_nchset(e); re_w_2set(e); return L_SET;
+      case 'W': re_nchset(e); re_w_2set(e); return L_SET_N;
+    }
+    if(isdigitrune(e->curr_rune)){
+      e->curr_rune -= '0';
+      if(isdigitrune(*e->src)) e->curr_rune = e->curr_rune * 10 + *e->src++ - '0';
+      return L_REF;
+    }
+    return L_CH;
+  }
+
+  if(e->flags.re) switch(e->curr_rune){
+    case 0:
+    case '$': case ')': case '*': case '+':
+    case '.': case '?': case '^': case '|':
+      return e->curr_rune;
+    case '{':       return re_countrep(e);
+    case '[':       return re_lexset(e);
+    case '(':
+      if(e->src[0] == '?')
+        switch(e->src[1]){
+          case '=': e->src += 2; return L_LA;
+          case ':': e->src += 2; return L_LA_CAP;
+          case '!': e->src += 2; return L_LA_N;
+        }
+      return '(';
+  }
+  else if(e->curr_rune == 0) return 0;
+
+  return L_CH;
+}
+
+#define RE_NEXT(env)      (env)->lookahead = re_lexer(env)
+#define RE_ACCEPT(env, t) ((env)->lookahead == (t) ? RE_NEXT(env), 1: 0)
+
+static struct Renode *re_nnode(struct re_env *e, int type){
+  memset(e->pend, 0, sizeof(struct Renode));
+  e->pend->type = type;
+  return e->pend++;
+}
+
+static uint8_t re_isndnull(struct Renode *nd){
+  if(!nd) return 1;
+  switch(nd->type){
+    default: return 1;
+    case P_ANY: case P_CH: case P_SET: case P_SET_N: return 0;
+    case P_BRA: case P_REF: return re_isndnull(nd->x);
+    case P_CAT: return re_isndnull(nd->x) && re_isndnull(nd->y);
+    case P_ALT: return re_isndnull(nd->x) || re_isndnull(nd->y);
+    case P_REP: return re_isndnull(nd->x) || !nd->min;
+  }
+}
+
+static struct Renode *re_nrep(struct re_env *e, struct Renode *nd, int ng, int min, int max){
+  struct Renode *rep = re_nnode(e, P_REP);
+  if(max == RE_MAX_REP && re_isndnull(nd)) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INF_LOOP_M_EMP_STR));
+  rep->ng = ng;
+  rep->min = min;
+  rep->max = max;
+  rep->x = nd;
+  return rep;
+}
+
+static struct Renode *re_parser(struct re_env *e);
+
+static struct Renode *re_parse_la(struct re_env *e){
+  struct Renode *nd;
+  int min, max;
+  switch(e->lookahead){
+    case '^':      RE_NEXT(e); return re_nnode(e, P_BOL);
+    case '$':      RE_NEXT(e); return re_nnode(e, P_EOL);
+    case L_EOS:    RE_NEXT(e); return re_nnode(e, P_EOS);
+    case L_WORD:   RE_NEXT(e); return re_nnode(e, P_WORD);
+    case L_WORD_N: RE_NEXT(e); return re_nnode(e, P_WORD_N);
+  }
+
+  switch(e->lookahead){
+    case L_CH:
+      nd = re_nnode(e, P_CH);
+      nd->c = e->curr_rune;
+      RE_NEXT(e);
+      break;
+    case L_SET:
+      nd = re_nnode(e, P_SET);
+      nd->cp = e->curr_set;
+      RE_NEXT(e);
+      break;
+    case L_SET_N:
+      nd = re_nnode(e, P_SET_N);
+      nd->cp = e->curr_set;
+      RE_NEXT(e);
+      break;
+    case L_REF:
+      nd = re_nnode(e, P_REF);
+      if(!e->curr_rune || e->curr_rune > e->subexpr_num || !e->sub[e->curr_rune]) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_BACK_REF));
+      nd->n = e->curr_rune;
+      nd->x = e->sub[e->curr_rune];
+      RE_NEXT(e);
+      break;
+    case '.':
+      RE_NEXT(e);
+      nd = re_nnode(e, P_ANY);
+      break;
+    case '(':
+      RE_NEXT(e);
+      nd = re_nnode(e, P_BRA);
+      if(e->subexpr_num == RE_MAX_SUB) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(TOO_MANY_CAPTURES));
+      nd->n = e->subexpr_num++;
+      nd->x = re_parser(e);
+      e->sub[nd->n] = nd;
+      if(!RE_ACCEPT(e, ')')) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(UNMATCH_LBR));
+      break;
+    case L_LA:
+      RE_NEXT(e);
+      nd = re_nnode(e, P_LA);
+      nd->x = re_parser(e);
+      if(!RE_ACCEPT(e, ')')) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(UNMATCH_LBR));
+      break;
+    case L_LA_CAP:
+      RE_NEXT(e);
+      nd = re_parser(e);
+      if(!RE_ACCEPT(e, ')')) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(UNMATCH_LBR));
+      break;
+    case L_LA_N:
+      RE_NEXT(e);
+      nd = re_nnode(e, P_LA_N);
+      nd->x = re_parser(e);
+      if(!RE_ACCEPT(e, ')')) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(UNMATCH_LBR));
+      break;
+    default:
+      V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(SYNTAX_ERROR));
+  }
+
+  switch(e->lookahead){
+    case '*':
+      RE_NEXT(e);
+      return re_nrep(e, nd, RE_ACCEPT(e, '?'), 0, RE_MAX_REP);
+    case '+':
+      RE_NEXT(e);
+      return re_nrep(e, nd, RE_ACCEPT(e, '?'), 1, RE_MAX_REP);
+    case '?':
+      RE_NEXT(e);
+      return re_nrep(e, nd, RE_ACCEPT(e, '?'), 0, 1);
+    case L_COUNT:
+      min = e->min_rep, max = e->max_rep;
+      RE_NEXT(e);
+      if(max < min) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_QUANTIFIER));
+      return re_nrep(e, nd, RE_ACCEPT(e, '?'), min, max);
+  }
+  return nd;
+}
+
+static uint8_t re_endofcat(Rune c, uint8_t re_flag){
+  switch(c){
+    case 0: return 1;
+    case '|': case ')': if(re_flag) return 1;
+  }
+  return 0;
+}
+
+static struct Renode *re_parser(struct re_env *e){
+  struct Renode *alt = NULL, *cat, *nd;
+  if(!re_endofcat(e->lookahead, e->flags.re)){
+    cat = re_parse_la(e);
+    while(!re_endofcat(e->lookahead, e->flags.re)){
+      nd = cat;
+      cat = re_nnode(e, P_CAT);
+      cat->x = nd;
+      cat->y = re_parse_la(e);
+    }
+    alt = cat;
+  }
+  if(e->lookahead == '|'){
+    RE_NEXT(e);
+    nd = alt;
+    alt = re_nnode(e, P_ALT);
+    alt->x = nd;
+    alt->y = re_parser(e);
+  }
+  return alt;
+}
+
+
+static unsigned int re_nodelen(struct Renode *nd){
+  unsigned int n = 0;
+  if(!nd) return 0;
+  switch(nd->type){
+    case P_ALT: n = 2;
+    case P_CAT: return re_nodelen(nd->x) + re_nodelen(nd->y) + n;
+    case P_BRA: case P_LA: case P_LA_N: return re_nodelen(nd->x) + 2;
+    case P_REP:
+      n = nd->max - nd->min;
+      switch(nd->min){
+        case 0:
+          if(!n) return 0;
+          if(nd->max >= RE_MAX_REP) return re_nodelen(nd->x) + 2;
+        case 1:
+          if(!n) return re_nodelen(nd->x);
+          if(nd->max >= RE_MAX_REP) return re_nodelen(nd->x) + 1;
+        default:
+          n = 4;
+          if(nd->max >= RE_MAX_REP) n++;
+          return re_nodelen(nd->x) + n;
+      }
+    default: return 1;
+  }
+}
+
+static struct Reinst *re_newinst(struct Reprog *prog, int opcode){
+  memset(prog->end, 0, sizeof(struct Reinst));
+  prog->end->opcode = opcode;
+  return prog->end++;
+}
+
+static void re_compile(struct re_env *e, struct Renode *nd){
+  struct Reinst *inst, *split, *jump, *rep;
+  unsigned int n;
+
+  if(!nd) return;
+
+  switch(nd->type){
+    case P_ALT:
+      split = re_newinst(e->prog, I_SPLIT);
+      re_compile(e, nd->x);
+      jump = re_newinst(e->prog, I_JUMP);
+      re_compile(e, nd->y);
+      split->x = split + 1;
+      split->y = jump + 1;
+      jump->x = e->prog->end;
+      break;
+
+    case P_ANY: re_newinst(e->prog, I_ANY); break;
+
+    case P_BOL: re_newinst(e->prog, I_BOL); break;
+
+    case P_BRA:
+      inst = re_newinst(e->prog, I_LBRA);
+      inst->n = nd->n;
+      re_compile(e, nd->x);
+      inst = re_newinst(e->prog, I_RBRA);
+      inst->n = nd->n;
+      break;
+
+    case P_CAT:
+      re_compile(e, nd->x);
+      re_compile(e, nd->y);
+      break;
+
+    case P_CH:
+      inst = re_newinst(e->prog, I_CH);
+      inst->c = nd->c;
+      if(e->flags.re_i) inst->c = tolowerrune(nd->c);
+      break;
+
+    case P_EOL: re_newinst(e->prog, I_EOL); break;
+
+    case P_EOS: re_newinst(e->prog, I_EOS); break;
+
+    case P_LA:
+      split = re_newinst(e->prog, I_LA);
+      re_compile(e, nd->x);
+      re_newinst(e->prog, I_END);
+      split->x = split + 1;
+      split->y = e->prog->end;
+      break;
+    case P_LA_N:
+      split = re_newinst(e->prog, I_LA_N);
+      re_compile(e, nd->x);
+      re_newinst(e->prog, I_END);
+      split->x = split + 1;
+      split->y = e->prog->end;
+      break;
+
+    case P_REF:
+      inst = re_newinst(e->prog, I_REF);
+      inst->n = nd->n;
+      break;
+
+    case P_REP:
+      n = nd->max - nd->min;
+      switch(nd->min){
+        case 0: if(!n) break;
+          if(nd->max >= RE_MAX_REP){
+            split = re_newinst(e->prog, I_SPLIT);
+            re_compile(e, nd->x);
+            jump = re_newinst(e->prog, I_JUMP);
+            jump->x = split;
+            split->x = split + 1; split->y = e->prog->end;
+            if(nd->ng){split->y = split + 1; split->x = e->prog->end;}
+            break;
+          }
+        case 1: if(!n){
+            re_compile(e, nd->x);
+            break;
+          }
+          if(nd->max >= RE_MAX_REP){
+            inst = e->prog->end;
+            re_compile(e, nd->x);
+            split = re_newinst(e->prog, I_SPLIT);
+            split->x = inst; split->y = e->prog->end;
+            if(nd->ng){split->y = inst; split->x = e->prog->end;}
+            break;
+          }
+        default:
+          inst = re_newinst(e->prog, I_REP_INI);
+          inst->min = nd->min;
+          inst->max = n;
+          rep = re_newinst(e->prog, I_REP);
+          split = re_newinst(e->prog, I_SPLIT);
+          re_compile(e, nd->x);
+          jump = re_newinst(e->prog, I_JUMP);
+          jump->x = rep;
+          rep->x = e->prog->end;
+          split->x = split + 1; split->y = e->prog->end;
+          if(nd->ng){split->y = split + 1; split->x = e->prog->end;}
+          if(nd->max >= RE_MAX_REP){
+            inst = split + 1;
+            split = re_newinst(e->prog, I_SPLIT);
+            split->x = inst; split->y = e->prog->end;
+            if(nd->ng){split->y = inst; split->x = e->prog->end;}
+            break;
+          }
+          break;
+      }
+      break;
+
+    case P_SET:
+      inst = re_newinst(e->prog, I_SET);
+      inst->cp = nd->cp;
+      break;
+    case P_SET_N:
+      inst = re_newinst(e->prog, I_SET_N);
+      inst->cp = nd->cp;
+      break;
+
+    case P_WORD:   re_newinst(e->prog, I_WORD); break;
+    case P_WORD_N: re_newinst(e->prog, I_WORD_N); break;
+  }
+}
+
+#ifdef RE_TEST
+static void print_set(struct Reclass *cp){
+  struct Rerange *p;
+  for(p = cp->spans; p < cp->end; p++){
+    printf("%s", p == cp->spans ? "'": ",'");
+    printf(p->s >= 32 && p->s < 127 ? "%c" : (p->s < 256 ? "\\x%02X": "\\u%04X"), p->s);
+    if(p->s != p->e){
+      printf(p->e >= 32 && p->e < 127 ? "-%c" : (p->e < 256 ? "-\\x%02X": "-\\u%04X"), p->e);
+    }
+    printf("'");
+  }
+  printf("]");
+}
+
+static void node_print(struct Renode *nd){
+  if(!nd){printf("Empty"); return;}
+  switch(nd->type){
+    case P_ALT:     printf("{"); node_print(nd->x); printf(" | "); node_print(nd->y); printf("}"); break;
+    case P_ANY:    printf("."); break;
+    case P_BOL:    printf("^"); break;
+    case P_BRA:    printf("(%d,", nd->n); node_print(nd->x); printf(")"); break;
+    case P_CAT:    printf("{"); node_print(nd->x); printf(" & "); node_print(nd->y); printf("}"); break;
+    case P_CH:     printf(nd->c >= 32 && nd->c < 127 ? "'%c'" : "'\\u%04X'", nd->c); break;
+    case P_EOL:    printf("$"); break;
+    case P_EOS:    printf("\\0"); break;
+    case P_LA:     printf("LA("); node_print(nd->x); printf(")"); break;
+    case P_LA_N:   printf("LA_N("); node_print(nd->x); printf(")"); break;
+    case P_REF:    printf("\\%d", nd->n); break;
+    case P_REP:    node_print(nd->x); printf(nd->ng ? "{%d,%d}?" : "{%d,%d}", nd->min, nd->max); break;
+    case P_SET:    printf("["); print_set(nd->cp); break;
+    case P_SET_N:  printf("[^"); print_set(nd->cp); break;
+    case P_WORD:   printf("\\b"); break;
+    case P_WORD_N: printf("\\B"); break;
+  }
+}
+
+static void program_print(struct Reprog *prog){
+  struct Reinst *inst;
+  for(inst = prog->start; inst < prog->end; ++inst){
+    printf("%3d: ", inst - prog->start);
+    switch(inst->opcode){
+      case I_END:     puts("end"); break;
+      case I_ANY:     puts("."); break;
+      case I_ANYNL:   puts(". | '\\r' | '\\n'"); break;
+      case I_BOL:     puts("^"); break;
+      case I_CH:      printf(inst->c >= 32 && inst->c < 127 ? "'%c'\n" : "'\\u%04X'\n", inst->c); break;
+      case I_EOL:     puts("$"); break;
+      case I_EOS:     puts("\\0"); break;
+      case I_JUMP:    printf("-->%d\n", inst->x - prog->start); break;
+      case I_LA:      printf("la %d %d\n", inst->x - prog->start, inst->y - prog->start); break;
+      case I_LA_N:    printf("la_n %d %d\n", inst->x - prog->start, inst->y - prog->start); break;
+      case I_LBRA:    printf("( %d\n", inst->n); break;
+      case I_RBRA:    printf(") %d\n", inst->n); break;
+      case I_SPLIT:   printf("-->%d | -->%d\n", inst->x - prog->start, inst->y - prog->start); break;
+      case I_REF:     printf("\\%d\n", inst->n); break;
+      case I_REP:     printf("repeat -->%d\n", inst->x - prog->start); break;
+      case I_REP_INI: printf("init_rep %d %d\n", inst->min, inst->min + inst->max); break;
+      case I_SET:     printf("["); print_set(inst->cp); puts(""); break;
+      case I_SET_N:   printf("[^"); print_set(inst->cp); puts(""); break;
+      case I_WORD:    puts("\\w"); break;
+      case I_WORD_N:  puts("\\W"); break;
+    }
+  }
+}
+#endif
+
+struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const char **p_err_msg){
+  struct re_env e;
+  struct Renode *nd;
+  struct Reinst *split, *jump;
+
+  e.prog = reg_malloc(sizeof (struct Reprog));
+  e.pstart = e.pend = reg_malloc(sizeof (struct Renode) * strlen(pattern) * 2);
+
+  if(V7_EX_TRY_CATCH(e.catch_point)){
+    if(p_err_msg) *p_err_msg = e.err_msg;
+    reg_free(e.pstart);
+    reg_free(e.prog);
+    return -1;
+  }
+
+  e.src = pattern;
+  e.sets_num = 0;
+  e.subexpr_num = 1;
+  e.flags = flags;
+  memset(e.sub, 0, sizeof(e.sub));
+
+  RE_NEXT(&e);
+  nd = re_parser(&e);
+  if(e.lookahead == ')') V7_EX_THROW(e.catch_point, e.err_msg, re_err_msg(UNMATCH_RBR));
+  if(e.lookahead != 0) V7_EX_THROW(e.catch_point, e.err_msg, re_err_msg(SYNTAX_ERROR));
+
+  e.prog->subexpr_num = e.subexpr_num;
+  e.prog->start = e.prog->end = reg_malloc((re_nodelen(nd) + 6) * sizeof (struct Reinst));
+
+  split = re_newinst(e.prog, I_SPLIT);
+  split->x = split + 3;
+  split->y = split + 1;
+  re_newinst(e.prog, I_ANYNL);
+  jump = re_newinst(e.prog, I_JUMP);
+  jump->x = split;
+  re_newinst(e.prog, I_LBRA);
+  re_compile(&e, nd);
+  re_newinst(e.prog, I_RBRA);
+  re_newinst(e.prog, I_END);
+
+#ifdef RE_TEST
+  node_print(nd);
+  putchar('\n');
+  program_print(e.prog);
+#endif
+
+  reg_free(e.pstart);
+
+  if(p_err_msg) *p_err_msg = NULL;
+  return e.prog;
+}
+
+void re_free(struct Reprog *prog){
+  if(prog){
+    reg_free(prog->start);
+    reg_free(prog);
+  }
+}
+
+
+static void re_newthread(struct Rethread *t, struct Reinst *pc, const char *start, struct Resub *sub){
+  t->pc = pc;
+  t->start = start;
+  t->sub = *sub;
+}
+
+#define RE_NO_MATCH() if(!(thr=0)) continue
+
+static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, struct v7_val_flags flags, struct Resub *loot){
+  struct Rethread threads[RE_MAX_THREADS];
+  struct Resub sub, tmpsub;
+  Rune c, r;
+  struct Rerange *p;
+  uint16_t thr_num = 1;
+  uint8_t thr;
+  int i;
+
+  // queue initial thread
+  re_newthread(threads, pc, start, loot);
+
+  // run threads in stack order
+  do{
+    pc = threads[--thr_num].pc;
+    start = threads[thr_num].start;
+    sub = threads[thr_num].sub;
+    for(thr=1; thr;){
+      switch(pc->opcode){
+        case I_END:
+          memcpy(loot->sub, sub.sub, sizeof loot->sub);
+          return 1;
+        case I_ANY:
+        case I_ANYNL:
+          start += chartorune(&c, start);
+          if(!c || (pc->opcode == I_ANY && isnewline(c))) RE_NO_MATCH();
+          break;
+
+        case I_BOL:
+          if(start == bol) break;
+          if(flags.re_m && isnewline(start[-1])) break;
+          RE_NO_MATCH();
+        case I_CH:
+          start += chartorune(&c, start);
+          if(c && (flags.re_i ? tolowerrune(c):c) == pc->c) break;
+          RE_NO_MATCH();
+        case I_EOL:
+          if(!*start) break;
+          if(flags.re_m && isnewline(*start)) break;
+          RE_NO_MATCH();
+        case I_EOS: if(!*start) break;
+          RE_NO_MATCH();
+
+        case I_JUMP: pc = pc->x; continue;
+
+        case I_LA:
+          if(re_match(pc->x, start, bol, flags, &sub)){pc = pc->y; continue;}
+          RE_NO_MATCH();
+        case I_LA_N:
+          tmpsub = sub;
+          if(!re_match(pc->x, start, bol, flags, &tmpsub)){pc = pc->y; continue;}
+          RE_NO_MATCH();
+
+        case I_LBRA: sub.sub[pc->n].start = start; break;
+
+        case I_REF:
+          i = sub.sub[pc->n].end - sub.sub[pc->n].start;
+          if(flags.re_i){
+            int num = i;
+            const char *s = start, *p = sub.sub[pc->n].start;
+            Rune rr;
+            for(; num && *s && *p; num--){
+              s += chartorune(&r, s);
+              p += chartorune(&rr, p);
+              if(tolowerrune(r) != tolowerrune(rr)) break;
+            }
+            if(num) RE_NO_MATCH();
+          }else if(strncmp(start, sub.sub[pc->n].start, i)) RE_NO_MATCH();
+          if(i > 0) start += i;
+          break;
+
+        case I_REP:
+          if(pc->min){pc->min--; pc++;}
+          else if(!pc->max--){pc = pc->x; continue;}
+          break;
+
+        case I_REP_INI:
+          (pc + 1)->min = pc->min;
+          (pc + 1)->max = pc->max;
+          break;
+
+        case I_RBRA: sub.sub[pc->n].end = start; break;
+
+        case I_SET:
+        case I_SET_N:
+          start += chartorune(&c, start);
+          if(!c) RE_NO_MATCH();
+
+          i = 1;
+          for(p = pc->cp->spans; i && p < pc->cp->end; p++)
+            if(flags.re_i){
+              for(r = p->s; r <= p->e; ++r)
+                if(tolowerrune(c) == tolowerrune(r)){i=0; break;}
+            }else if(p->s <= c && c <= p->e) i=0;
+
+          if(pc->opcode == I_SET) i = !i;
+          if(i) break;
+          RE_NO_MATCH();
+
+        case I_SPLIT:
+          if(thr_num >= RE_MAX_THREADS){
+            fprintf(stderr, "re_match: backtrack overflow!\n");
+            return 0;
+          }
+          re_newthread(&threads[thr_num++], pc->y, start, &sub);
+          pc = pc->x;
+          continue;
+
+        case I_WORD:
+        case I_WORD_N:
+          i = (start > bol && iswordchar(start[-1]));
+          if(iswordchar(start[0])) i = !i;
+          if(pc->opcode == I_WORD_N) i = !i;
+          if(i) break;
+          // RE_NO_MATCH();
+
+        default: RE_NO_MATCH();
+      }
+      pc++;
+    }
+  }while(thr_num);
+  return 0;
+}
+
+uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags, const char *start, struct Resub *loot){
+  struct Resub tmpsub;
+
+  if(!loot) loot = &tmpsub;
+
+  loot->subexpr_num = prog->subexpr_num;
+  memset(loot->sub, 0, sizeof(loot->sub));
+  return !re_match(prog->start, start, start, flags, loot);
+}
+
+V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr, struct Resub *dstsub){
+  int size = 0, sz, sbn, n;
+  char tmps[300], *d = tmps;
+  Rune curr_rune;
+  dstsub->subexpr_num = 0;
+
+  while(!(n = re_nextc(&curr_rune, &rstr, 1)) && curr_rune){
+    if(n < 0) return n;
+    if(curr_rune == '$'){
+      n = re_nextc(&curr_rune, &rstr, 1);
+      if(n < 0) return n;
+      switch(curr_rune){
+        case '&':
+          sz = loot->sub[0].end - loot->sub[0].start;
+          size += sz;
+          dstsub->sub[dstsub->subexpr_num++] = loot->sub[0];
+          break;
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+          sbn = dec(curr_rune);
+          if(rstr[0] && isdigitrune(rstr[0])){
+            n = re_nextc(&curr_rune, &rstr, 1);
+            if(n < 0) return n;
+            sz = dec(curr_rune);
+            sbn = sbn * 10 + sz;
+          }
+          if(sbn >= loot->subexpr_num) break;
+          sz = loot->sub[sbn].end - loot->sub[sbn].start;
+          size += sz;
+          dstsub->sub[dstsub->subexpr_num++] = loot->sub[sbn];
+          break;
+        case '`':
+          sz = loot->sub[0].start - src;
+          size += sz;
+          dstsub->sub[dstsub->subexpr_num].start = src;
+          dstsub->sub[dstsub->subexpr_num++].end = loot->sub[0].start;
+          break;
+        case '\'':
+          sz = strlen(loot->sub[0].end);
+          size += sz;
+          dstsub->sub[dstsub->subexpr_num].start = loot->sub[0].end;
+          dstsub->sub[dstsub->subexpr_num++].end = loot->sub[0].end + sz;
+          break;
+        case '$':
+          size++;
+          dstsub->sub[dstsub->subexpr_num].start = rstr - 1;
+          dstsub->sub[dstsub->subexpr_num++].end = rstr;
+          break;
+        default: return BAD_CHAR_AFTER_USD;
+      }
+    }else{
+      size += (sz = runetochar(d, &curr_rune));
+      if(!dstsub->subexpr_num || dstsub->sub[dstsub->subexpr_num-1].end != rstr - sz){
+        dstsub->sub[dstsub->subexpr_num].start = rstr - sz;
+        dstsub->sub[dstsub->subexpr_num++].end = rstr;
+      }else dstsub->sub[dstsub->subexpr_num-1].end = rstr;
+    }
+  }
+  return size;
+}
+
+#ifdef RE_TEST
+
+int re_replace(struct Resub *loot, const char *src, const char *rstr, char **dst){
+  struct Resub newsub;
+  struct re_tok *t = newsub.sub;
+  char *d;
+  int osz = re_rplc(loot, src, rstr, &newsub);
+  int i = newsub.subexpr_num;
+  if(osz < 0){
+    printf("re_rplc return: '%s'\n", re_err_msg(osz));
+    return 0;
+  }
+  *dst = NULL;
+  if(osz) *dst = reg_malloc(osz + 1);
+  if(!*dst) return 0;
+  d = *dst;
+  do{
+    size_t len = t->end - t->start;
+    memcpy(d, t->start, len);
+    d += len;
+    t++;
+  }while(--i);
+  *d = '\0';
+  return osz;
+}
+
+#define RE_TEST_STR_SIZE    2000
+
+static struct v7_val_flags get_flags(const char *ch){
+  struct v7_val_flags flags = {0,0,0,0,0,0,0,0,0};
+  uint8_t rep = 1;
+  for(;rep && *ch;ch++){
+    switch(*ch){
+      case 'g': flags.re_g = 1; rep=1; break;
+      case 'i': flags.re_i = 1; rep=1; break;
+      case 'm': flags.re_m = 1; rep=1; break;
+      case 'r': flags.re = 1; rep=1; break;
+      default : rep=0;
+    }
+  }
+  return flags;
+}
+
+static void usage(void){
+  printf("usage: regex_test.exe \"pattern\" [\"flags: gimr\"[ \"source\"[ \"replaceStr\"]]]\n   or: regex_test.exe -f file_path [>out.txt]\n");
+}
+
+int main(int argc, char **argv){
+  const char *src;
+  char *dst;
+  const char *rstr;
+  const char *error;
+  struct Reprog *pr;
+  struct Resub sub;
+  struct v7_val_flags flags = {0,0,0,0,0,0,0,0,1};
+  unsigned int i, k=0;
+
+  if(argc > 1){
+    if(strcmp(argv[1], "-f") == 0){
+      FILE *fp;
+      char str[RE_TEST_STR_SIZE];
+      long file_size;
+      if(argc < 3){
+        usage();
+        return 0;
+      }
+      if((fp = fopen(argv[2], "r")) == NULL){
+        printf("file: \"%s\" not found", argv[2]);
+      }else if(fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0){
+        fclose(fp);
+      }else{
+        rewind(fp);
+        while(fgets(str, RE_TEST_STR_SIZE, fp)){
+          char *patt = NULL, *fl_str = NULL, *curr = str, *beg = NULL;
+          src = rstr = NULL;
+          k++;
+          if((curr = strchr(curr, '"')) == NULL) continue;
+          beg = ++curr;
+          while(*curr){
+            if((curr = strchr(curr, '"')) == NULL) break;
+            if(*(curr + 1) == ' ' || *(curr + 1) == '\r' || *(curr + 1) == '\n' || *(curr + 1) == '\0') break;
+            curr++;
+          }
+          if(curr == NULL || *curr == '\0') return 1;
+          *curr = '\0';
+          patt = beg;
+
+          if((curr = strchr(++curr, '"'))){
+            beg = ++curr;
+            while(*curr){
+              if((curr = strchr(curr, '"')) == NULL) break;
+              if(*(curr + 1) == ' ' || *(curr + 1) == '\r' || *(curr + 1) == '\n' || *(curr + 1) == '\0') break;
+              curr++;
+            }
+            if(curr != NULL && *curr != '\0'){
+              *curr = '\0';
+              fl_str = beg;
+              if((curr = strchr(++curr, '"'))){
+                beg = ++curr;
+                while(*curr){
+                  if((curr = strchr(curr, '"')) == NULL) break;
+                  if(*(curr + 1) == ' ' || *(curr + 1) == '\r' || *(curr + 1) == '\n' || *(curr + 1) == '\0') break;
+                  curr++;
+                }
+                if(curr != NULL && *curr != '\0'){
+                  *curr = '\0';
+                  src = beg;
+                  if((curr = strchr(++curr, '"'))){
+                    beg = ++curr;
+                    while(*curr){
+                      if((curr = strchr(curr, '"')) == NULL) break;
+                      if(*(curr + 1) == ' ' || *(curr + 1) == '\r' || *(curr + 1) == '\n' || *(curr + 1) == '\0') break;
+                      curr++;
+                    }
+                    if(curr != NULL && *curr != '\0'){
+                      *curr = '\0';
+                      rstr = beg;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if(patt){
+            if(k>1) puts("");
+            printf("%03d: \"%s\"", k, patt);
+            if(fl_str){
+              printf(" \"%s\"", fl_str);
+              flags = get_flags(fl_str);
+            }
+            if(src) printf(" \"%s\"", src);
+            if(rstr) printf(" \"%s\"", rstr);
+            printf("\n");
+            pr = re_compiler(patt, flags, &error);
+            if(!pr){
+              printf("re_compiler: %s\n", error);
+              return 1;
+            }
+            printf("number of subexpressions = %d\n", pr->subexpr_num);
+            if(src){
+              if(!re_exec(pr, flags, src, &sub)){
+                for(i = 0; i < sub.subexpr_num; ++i){
+                  int n = sub.sub[i].end - sub.sub[i].start;
+                  if(n > 0) printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i, (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
+                  else        printf("match: %-3d ''\n", i);
+                }
+
+                if(rstr){
+                  if(re_replace(&sub, src, rstr, &dst)){
+                    printf("output: \"%s\"\n", dst);
+                  }
+                }
+              }else   printf("no match\n");
+            }
+            re_free(pr);
+          }
+        }
+        fclose(fp);
+      }
+      return 0;
+    }
+
+
+    if(argc > 2) flags = get_flags(argv[2]);
+    pr = re_compiler(argv[1], flags, &error);
+    if(!pr){
+      fprintf(stderr, "re_compiler: %s\n", error);
+      return 1;
+    }
+    printf("number of subexpressions = %d\n", pr->subexpr_num);
+    if(argc > 3){
+      src = argv[3];
+      if(!re_exec(pr, flags, src, &sub)){
+        for(i = 0; i < sub.subexpr_num; ++i){
+          int n = sub.sub[i].end - sub.sub[i].start;
+          if(n > 0) printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i, (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
+          else printf("match: %-3d ''\n", i);
+        }
+
+        if(argc > 4){
+          rstr = argv[4];
+          if(re_replace(&sub, src, rstr, &dst)){
+              printf("output: \"%s\"\n\n", dst);
+          }
+        }
+      }else   printf("no match\n");
+      re_free(pr);
+    }
+  }else usage();
+
+  return 0;
+}
+#else
+
+
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char *re, size_t re_len, const char *fl, size_t fl_len){
+  if(NULL == obj) obj = v7_push_new_object(v7);
+  v7_init_str(obj, re, re_len, 1);
+  v7_set_class(obj, V7_CLASS_REGEXP);
+  obj->v.str.prog = NULL;
+  obj->fl.re=1;
+  while(fl_len){
+    switch(fl[--fl_len]){
+      case 'g': obj->fl.re_g=1;  break;
+      case 'i': obj->fl.re_i=1;  break;
+      case 'm': obj->fl.re_m=1;  break;
+    }
+  }
+  obj->v.str.lastIndex = 0;
   return V7_OK;
 }
 
-V7_PRIVATE void init_regex(void) {
+V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  size_t fl_len = 0;
+  const char *fl_start = NULL;
+  struct v7_val *re = cfa->args[0],
+                *fl = NULL,
+                *obj = NULL;
+  if(cfa->called_as_constructor) obj = cfa->this_obj;
+
+  if(cfa->num_args > 0){
+    TRY(check_str_re_conv(v7, &re, 0));
+    if(cfa->num_args > 1){
+      fl = cfa->args[1];
+      TRY(check_str_re_conv(v7, &fl, 0));
+      fl_len = fl->v.str.len;
+      fl_start = fl->v.str.buf;
+    }
+    regex_xctor(v7, obj, re->v.str.buf, re->v.str.len, fl_start, fl_len);
+  }
+  return V7_OK;
+  #undef v7
+}
+
+V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  v7_init_bool(result, this_obj->fl.re_g);
+}
+
+V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  v7_init_bool(result, this_obj->fl.re_i);
+}
+
+V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  v7_init_bool(result, this_obj->fl.re_m);
+}
+
+V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  v7_init_str(result, this_obj->v.str.buf, this_obj->v.str.len, 1);
+}
+
+V7_PRIVATE void Regex_lastIndex(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
+  if(arg) this_obj->v.str.lastIndex = arg->v.num;
+  else    v7_init_num(result, this_obj->v.str.lastIndex);
+}
+
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
+  if(NULL == re_obj->v.str.prog){
+    re_obj->v.str.prog = re_compiler(re_obj->v.str.buf, re_obj->fl, NULL);
+    if(  -1 == re_obj->v.str.prog) return V7_REGEXP_ERROR;
+    if(NULL == re_obj->v.str.prog) return V7_OUT_OF_MEMORY;
+  }
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0], *arr = NULL;
+  struct Resub sub;
+  struct re_tok *ptok = sub.sub;
+
+  if(cfa->num_args > 0){
+    const char *begin = arg->v.str.buf;
+    Rune rune;
+    if(cfa->this_obj->fl.re_g){
+      int utf_shift;
+      for(utf_shift = 0; utf_shift < cfa->this_obj->v.str.lastIndex; utf_shift++)
+        begin += chartorune(&rune, begin);
+    }
+    TRY(check_str_re_conv(v7, &arg, 0));
+    TRY(regex_check_prog(cfa->this_obj));
+    if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, begin, &sub)){
+      int i;
+      arr = v7_push_new_object(v7);
+      v7_set_class(arr, V7_CLASS_ARRAY);
+      for(i=0; i<sub.subexpr_num; i++, ptok++)
+        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start, ptok->end - ptok->start, 1));
+      if(cfa->this_obj->fl.re_g){
+        for(;cfa->this_obj->fl.re_g && begin < sub.sub->end; cfa->this_obj->v.str.lastIndex++)
+          begin += chartorune(&rune, begin);
+      }
+      return V7_OK;
+    }
+  }
+  TRY(v7_make_and_push(v7, V7_TYPE_NULL));
+  return V7_OK;
+  #undef v7
+}
+
+V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0];
+  struct Resub sub;
+  int found = 0;
+
+  if(cfa->num_args > 0){
+    TRY(check_str_re_conv(v7, &arg, 0));
+    TRY(regex_check_prog(cfa->this_obj));
+    found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub);
+  }
+  v7_push_bool(v7, found);
+  return V7_OK;
+  #undef v7
+}
+
+V7_PRIVATE void init_regex(void){
   init_standard_constructor(V7_CLASS_REGEXP, Regex_ctor);
+
+  SET_METHOD(s_prototypes[V7_CLASS_REGEXP], "exec", Regex_exec);
+  SET_METHOD(s_prototypes[V7_CLASS_REGEXP], "test", Regex_test);
+
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "global", Regex_global);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "ignoreCase", Regex_ignoreCase);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "multiline", Regex_multiline);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "source", Regex_source);
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_REGEXP], "lastIndex", Regex_lastIndex);
+
   SET_RO_PROP_V(s_global, "RegExp", s_constructors[V7_CLASS_REGEXP]);
+}
+#endif
+/*
+ * The authors of this software are Rob Pike and Ken Thompson.
+ *              Copyright (c) 2002 by Lucent Technologies.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose without fee is hereby granted, provided that this entire notice
+ * is included in all copies of any software which is or includes a copy
+ * or modification of this software and in all copies of the supporting
+ * documentation for such software.
+ * THIS SOFTWARE IS BEING PROVIDED "AS IS", WITHOUT ANY EXPRESS OR IMPLIED
+ * WARRANTY.  IN PARTICULAR, NEITHER THE AUTHORS NOR LUCENT TECHNOLOGIES MAKE
+ * ANY REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
+ * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
+ */
+#include <stdarg.h>
+#include <string.h>
+
+enum
+{
+	Bit1	= 7,
+	Bitx	= 6,
+	Bit2	= 5,
+	Bit3	= 4,
+	Bit4	= 3,
+	Bit5	= 2,
+
+	T1	= ((1<<(Bit1+1))-1) ^ 0xFF,	/* 0000 0000 */
+	Tx	= ((1<<(Bitx+1))-1) ^ 0xFF,	/* 1000 0000 */
+	T2	= ((1<<(Bit2+1))-1) ^ 0xFF,	/* 1100 0000 */
+	T3	= ((1<<(Bit3+1))-1) ^ 0xFF,	/* 1110 0000 */
+	T4	= ((1<<(Bit4+1))-1) ^ 0xFF,	/* 1111 0000 */
+	T5	= ((1<<(Bit5+1))-1) ^ 0xFF,	/* 1111 1000 */
+
+	Rune1	= (1<<(Bit1+0*Bitx))-1,		/* 0000 0000 0000 0000 0111 1111 */
+	Rune2	= (1<<(Bit2+1*Bitx))-1,		/* 0000 0000 0000 0111 1111 1111 */
+	Rune3	= (1<<(Bit3+2*Bitx))-1,		/* 0000 0000 1111 1111 1111 1111 */
+	Rune4	= (1<<(Bit4+3*Bitx))-1,		/* 0011 1111 1111 1111 1111 1111 */
+
+	Maskx	= (1<<Bitx)-1,			/* 0011 1111 */
+	Testx	= Maskx ^ 0xFF,			/* 1100 0000 */
+
+	Bad	= Runeerror
+};
+
+int
+chartorune(Rune *rune, const char *str)
+{
+	int c, c1, c2/* , c3 */;
+	unsigned short l;
+
+	/*
+	 * one character sequence
+	 *	00000-0007F => T1
+	 */
+	c = *(uchar*)str;
+	if(c < Tx) {
+		*rune = c;
+		return 1;
+	}
+
+	/*
+	 * two character sequence
+	 *	0080-07FF => T2 Tx
+	 */
+	c1 = *(uchar*)(str+1) ^ Tx;
+	if(c1 & Testx)
+		goto bad;
+	if(c < T3) {
+		if(c < T2)
+			goto bad;
+		l = ((c << Bitx) | c1) & Rune2;
+		if(l <= Rune1)
+			goto bad;
+		*rune = l;
+		return 2;
+	}
+
+	/*
+	 * three character sequence
+	 *	0800-FFFF => T3 Tx Tx
+	 */
+	c2 = *(uchar*)(str+2) ^ Tx;
+	if(c2 & Testx)
+		goto bad;
+	if(c < T4) {
+		l = ((((c << Bitx) | c1) << Bitx) | c2) & Rune3;
+		if(l <= Rune2)
+			goto bad;
+		*rune = l;
+		return 3;
+	}
+
+	/*
+	 * four character sequence
+	 *	10000-10FFFF => T4 Tx Tx Tx
+	 */
+	/* if(UTFmax >= 4) {
+		c3 = *(uchar*)(str+3) ^ Tx;
+		if(c3 & Testx)
+			goto bad;
+		if(c < T5) {
+			l = ((((((c << Bitx) | c1) << Bitx) | c2) << Bitx) | c3) & Rune4;
+			if(l <= Rune3)
+				goto bad;
+			if(l > Runemax)
+				goto bad;
+			*rune = l;
+			return 4;
+		}
+	} */
+
+	/*
+	 * bad decoding
+	 */
+bad:
+	*rune = Bad;
+	return 1;
+}
+
+int
+runetochar(char *str, Rune *rune)
+{
+	unsigned short c;
+
+	/*
+	 * one character sequence
+	 *	00000-0007F => 00-7F
+	 */
+	c = *rune;
+	if(c <= Rune1) {
+		str[0] = c;
+		return 1;
+	}
+
+	/*
+	 * two character sequence
+	 *	00080-007FF => T2 Tx
+	 */
+	if(c <= Rune2) {
+		str[0] = T2 | (c >> 1*Bitx);
+		str[1] = Tx | (c & Maskx);
+		return 2;
+	}
+
+	/*
+	 * three character sequence
+	 *	00800-0FFFF => T3 Tx Tx
+	 */
+	/* if(c > Runemax) 
+		c = Runeerror; */
+	/* if(c <= Rune3) { */
+		str[0] = T3 |  (c >> 2*Bitx);
+		str[1] = Tx | ((c >> 1*Bitx) & Maskx);
+		str[2] = Tx |  (c & Maskx);
+		return 3;
+	/* } */
+
+	/*
+	 * four character sequence
+	 *	010000-1FFFFF => T4 Tx Tx Tx
+	 */
+	/* str[0] = T4 |  (c >> 3*Bitx);
+	str[1] = Tx | ((c >> 2*Bitx) & Maskx);
+	str[2] = Tx | ((c >> 1*Bitx) & Maskx);
+	str[3] = Tx |  (c & Maskx);
+	return 4; */
+}
+
+/* int
+runelen(long c)
+{
+	Rune rune;
+	char str[10];
+
+	rune = c;
+	return runetochar(str, &rune);
+} */
+int runelen(Rune c){
+	if(c <= Rune1)					return 1;
+	if(c <= Rune2)					return 2;
+	/* if(c <= Rune3 || c > Runemax) */	return 3;
+	/* return 4; */
+}
+
+/* int
+runenlen(Rune *r, int nrune)
+{
+	int nb, c;
+
+	nb = 0;
+	while(nrune--) {
+		c = *r++;
+		if(c <= Rune1)
+			nb++;
+		else
+		if(c <= Rune2)
+			nb += 2;
+		else
+		if(c <= Rune3 || c > Runemax)
+			nb += 3;
+		else
+			nb += 4;
+	}
+	return nb;
+} */
+int runenlen(Rune *r, int nrune){
+	int nb = 0;
+	while(nrune--) nb += runelen(*r++);
+	return nb;
+}
+
+int
+fullrune(char *str, int n)
+{
+	int c;
+
+	if(n <= 0)
+		return 0;
+	c = *(uchar*)str;
+	if(c < Tx)
+		return 1;
+	if(c < T3)
+		return n >= 2;
+	if(UTFmax == 3 || c < T4)
+		return n >= 3;
+	return n >= 4;
+}
+/*
+ * The authors of this software are Rob Pike and Ken Thompson.
+ *              Copyright (c) 2002 by Lucent Technologies.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose without fee is hereby granted, provided that this entire notice
+ * is included in all copies of any software which is or includes a copy
+ * or modification of this software and in all copies of the supporting
+ * documentation for such software.
+ * THIS SOFTWARE IS BEING PROVIDED "AS IS", WITHOUT ANY EXPRESS OR IMPLIED
+ * WARRANTY.  IN PARTICULAR, NEITHER THE AUTHORS NOR LUCENT TECHNOLOGIES MAKE
+ * ANY REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
+ * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
+ */
+#include <stdarg.h>
+#include <string.h>
+
+/*
+ * alpha ranges -
+ *	only covers ranges not in lower||upper
+ */
+static
+Rune	__alpha2[] =
+{
+	0x00d8,	0x00f6,	/* Ø - ö */
+	0x00f8,	0x01f5,	/* ø - ǵ */
+	0x0250,	0x02a8,	/* ɐ - ʨ */
+	0x038e,	0x03a1,	/* Ύ - Ρ */
+	0x03a3,	0x03ce,	/* Σ - ώ */
+	0x03d0,	0x03d6,	/* ϐ - ϖ */
+	0x03e2,	0x03f3,	/* Ϣ - ϳ */
+	0x0490,	0x04c4,	/* Ґ - ӄ */
+	0x0561,	0x0587,	/* ա - և */
+	0x05d0,	0x05ea,	/* א - ת */
+	0x05f0,	0x05f2,	/* װ - ײ */
+	0x0621,	0x063a,	/* ء - غ */
+	0x0640,	0x064a,	/* ـ - ي */
+	0x0671,	0x06b7,	/* ٱ - ڷ */
+	0x06ba,	0x06be,	/* ں - ھ */
+	0x06c0,	0x06ce,	/* ۀ - ێ */
+	0x06d0,	0x06d3,	/* ې - ۓ */
+	0x0905,	0x0939,	/* अ - ह */
+	0x0958,	0x0961,	/* क़ - ॡ */
+	0x0985,	0x098c,	/* অ - ঌ */
+	0x098f,	0x0990,	/* এ - ঐ */
+	0x0993,	0x09a8,	/* ও - ন */
+	0x09aa,	0x09b0,	/* প - র */
+	0x09b6,	0x09b9,	/* শ - হ */
+	0x09dc,	0x09dd,	/* ড় - ঢ় */
+	0x09df,	0x09e1,	/* য় - ৡ */
+	0x09f0,	0x09f1,	/* ৰ - ৱ */
+	0x0a05,	0x0a0a,	/* ਅ - ਊ */
+	0x0a0f,	0x0a10,	/* ਏ - ਐ */
+	0x0a13,	0x0a28,	/* ਓ - ਨ */
+	0x0a2a,	0x0a30,	/* ਪ - ਰ */
+	0x0a32,	0x0a33,	/* ਲ - ਲ਼ */
+	0x0a35,	0x0a36,	/* ਵ - ਸ਼ */
+	0x0a38,	0x0a39,	/* ਸ - ਹ */
+	0x0a59,	0x0a5c,	/* ਖ਼ - ੜ */
+	0x0a85,	0x0a8b,	/* અ - ઋ */
+	0x0a8f,	0x0a91,	/* એ - ઑ */
+	0x0a93,	0x0aa8,	/* ઓ - ન */
+	0x0aaa,	0x0ab0,	/* પ - ર */
+	0x0ab2,	0x0ab3,	/* લ - ળ */
+	0x0ab5,	0x0ab9,	/* વ - હ */
+	0x0b05,	0x0b0c,	/* ଅ - ଌ */
+	0x0b0f,	0x0b10,	/* ଏ - ଐ */
+	0x0b13,	0x0b28,	/* ଓ - ନ */
+	0x0b2a,	0x0b30,	/* ପ - ର */
+	0x0b32,	0x0b33,	/* ଲ - ଳ */
+	0x0b36,	0x0b39,	/* ଶ - ହ */
+	0x0b5c,	0x0b5d,	/* ଡ଼ - ଢ଼ */
+	0x0b5f,	0x0b61,	/* ୟ - ୡ */
+	0x0b85,	0x0b8a,	/* அ - ஊ */
+	0x0b8e,	0x0b90,	/* எ - ஐ */
+	0x0b92,	0x0b95,	/* ஒ - க */
+	0x0b99,	0x0b9a,	/* ங - ச */
+	0x0b9e,	0x0b9f,	/* ஞ - ட */
+	0x0ba3,	0x0ba4,	/* ண - த */
+	0x0ba8,	0x0baa,	/* ந - ப */
+	0x0bae,	0x0bb5,	/* ம - வ */
+	0x0bb7,	0x0bb9,	/* ஷ - ஹ */
+	0x0c05,	0x0c0c,	/* అ - ఌ */
+	0x0c0e,	0x0c10,	/* ఎ - ఐ */
+	0x0c12,	0x0c28,	/* ఒ - న */
+	0x0c2a,	0x0c33,	/* ప - ళ */
+	0x0c35,	0x0c39,	/* వ - హ */
+	0x0c60,	0x0c61,	/* ౠ - ౡ */
+	0x0c85,	0x0c8c,	/* ಅ - ಌ */
+	0x0c8e,	0x0c90,	/* ಎ - ಐ */
+	0x0c92,	0x0ca8,	/* ಒ - ನ */
+	0x0caa,	0x0cb3,	/* ಪ - ಳ */
+	0x0cb5,	0x0cb9,	/* ವ - ಹ */
+	0x0ce0,	0x0ce1,	/* ೠ - ೡ */
+	0x0d05,	0x0d0c,	/* അ - ഌ */
+	0x0d0e,	0x0d10,	/* എ - ഐ */
+	0x0d12,	0x0d28,	/* ഒ - ന */
+	0x0d2a,	0x0d39,	/* പ - ഹ */
+	0x0d60,	0x0d61,	/* ൠ - ൡ */
+	0x0e01,	0x0e30,	/* ก - ะ */
+	0x0e32,	0x0e33,	/* า - ำ */
+	0x0e40,	0x0e46,	/* เ - ๆ */
+	0x0e5a,	0x0e5b,	/* ๚ - ๛ */
+	0x0e81,	0x0e82,	/* ກ - ຂ */
+	0x0e87,	0x0e88,	/* ງ - ຈ */
+	0x0e94,	0x0e97,	/* ດ - ທ */
+	0x0e99,	0x0e9f,	/* ນ - ຟ */
+	0x0ea1,	0x0ea3,	/* ມ - ຣ */
+	0x0eaa,	0x0eab,	/* ສ - ຫ */
+	0x0ead,	0x0eae,	/* ອ - ຮ */
+	0x0eb2,	0x0eb3,	/* າ - ຳ */
+	0x0ec0,	0x0ec4,	/* ເ - ໄ */
+	0x0edc,	0x0edd,	/* ໜ - ໝ */
+	0x0f18,	0x0f19,	/* ༘ - ༙ */
+	0x0f40,	0x0f47,	/* ཀ - ཇ */
+	0x0f49,	0x0f69,	/* ཉ - ཀྵ */
+	0x10d0,	0x10f6,	/* ა - ჶ */
+	0x1100,	0x1159,	/* ᄀ - ᅙ */
+	0x115f,	0x11a2,	/* ᅟ - ᆢ */
+	0x11a8,	0x11f9,	/* ᆨ - ᇹ */
+	0x1e00,	0x1e9b,	/* Ḁ - ẛ */
+	0x1f50,	0x1f57,	/* ὐ - ὗ */
+	0x1f80,	0x1fb4,	/* ᾀ - ᾴ */
+	0x1fb6,	0x1fbc,	/* ᾶ - ᾼ */
+	0x1fc2,	0x1fc4,	/* ῂ - ῄ */
+	0x1fc6,	0x1fcc,	/* ῆ - ῌ */
+	0x1fd0,	0x1fd3,	/* ῐ - ΐ */
+	0x1fd6,	0x1fdb,	/* ῖ - Ί */
+	0x1fe0,	0x1fec,	/* ῠ - Ῥ */
+	0x1ff2,	0x1ff4,	/* ῲ - ῴ */
+	0x1ff6,	0x1ffc,	/* ῶ - ῼ */
+	0x210a,	0x2113,	/* ℊ - ℓ */
+	0x2115,	0x211d,	/* ℕ - ℝ */
+	0x2120,	0x2122,	/* ℠ - ™ */
+	0x212a,	0x2131,	/* K - ℱ */
+	0x2133,	0x2138,	/* ℳ - ℸ */
+	0x3041,	0x3094,	/* ぁ - ゔ */
+	0x30a1,	0x30fa,	/* ァ - ヺ */
+	0x3105,	0x312c,	/* ㄅ - ㄬ */
+	0x3131,	0x318e,	/* ㄱ - ㆎ */
+	0x3192,	0x319f,	/* ㆒ - ㆟ */
+	0x3260,	0x327b,	/* ㉠ - ㉻ */
+	0x328a,	0x32b0,	/* ㊊ - ㊰ */
+	0x32d0,	0x32fe,	/* ㋐ - ㋾ */
+	0x3300,	0x3357,	/* ㌀ - ㍗ */
+	0x3371,	0x3376,	/* ㍱ - ㍶ */
+	0x337b,	0x3394,	/* ㍻ - ㎔ */
+	0x3399,	0x339e,	/* ㎙ - ㎞ */
+	0x33a9,	0x33ad,	/* ㎩ - ㎭ */
+	0x33b0,	0x33c1,	/* ㎰ - ㏁ */
+	0x33c3,	0x33c5,	/* ㏃ - ㏅ */
+	0x33c7,	0x33d7,	/* ㏇ - ㏗ */
+	0x33d9,	0x33dd,	/* ㏙ - ㏝ */
+	0x4e00,	0x9fff,	/* 一 - 鿿 */
+	0xac00,	0xd7a3,	/* 가 - 힣 */
+	0xf900,	0xfb06,	/* 豈 - ﬆ */
+	0xfb13,	0xfb17,	/* ﬓ - ﬗ */
+	0xfb1f,	0xfb28,	/* ײַ - ﬨ */
+	0xfb2a,	0xfb36,	/* שׁ - זּ */
+	0xfb38,	0xfb3c,	/* טּ - לּ */
+	0xfb40,	0xfb41,	/* נּ - סּ */
+	0xfb43,	0xfb44,	/* ףּ - פּ */
+	0xfb46,	0xfbb1,	/* צּ - ﮱ */
+	0xfbd3,	0xfd3d,	/* ﯓ - ﴽ */
+	0xfd50,	0xfd8f,	/* ﵐ - ﶏ */
+	0xfd92,	0xfdc7,	/* ﶒ - ﷇ */
+	0xfdf0,	0xfdf9,	/* ﷰ - ﷹ */
+	0xfe70,	0xfe72,	/* ﹰ - ﹲ */
+	0xfe76,	0xfefc,	/* ﹶ - ﻼ */
+	0xff66,	0xff6f,	/* ｦ - ｯ */
+	0xff71,	0xff9d,	/* ｱ - ﾝ */
+	0xffa0,	0xffbe,	/* ﾠ - ﾾ */
+	0xffc2,	0xffc7,	/* ￂ - ￇ */
+	0xffca,	0xffcf,	/* ￊ - ￏ */
+	0xffd2,	0xffd7,	/* ￒ - ￗ */
+	0xffda,	0xffdc,	/* ￚ - ￜ */
+};
+
+/*
+ * alpha singlets -
+ *	only covers ranges not in lower||upper
+ */
+static
+Rune	__alpha1[] =
+{
+	0x00aa,	/* ª */
+	0x00b5,	/* µ */
+	0x00ba,	/* º */
+	0x03da,	/* Ϛ */
+	0x03dc,	/* Ϝ */
+	0x03de,	/* Ϟ */
+	0x03e0,	/* Ϡ */
+	0x06d5,	/* ە */
+	0x09b2,	/* ল */
+	0x0a5e,	/* ਫ਼ */
+	0x0a8d,	/* ઍ */
+	0x0ae0,	/* ૠ */
+	0x0b9c,	/* ஜ */
+	0x0cde,	/* ೞ */
+	0x0e4f,	/* ๏ */
+	0x0e84,	/* ຄ */
+	0x0e8a,	/* ຊ */
+	0x0e8d,	/* ຍ */
+	0x0ea5,	/* ລ */
+	0x0ea7,	/* ວ */
+	0x0eb0,	/* ະ */
+	0x0ebd,	/* ຽ */
+	0x1fbe,	/* ι */
+	0x207f,	/* ⁿ */
+	0x20a8,	/* ₨ */
+	0x2102,	/* ℂ */
+	0x2107,	/* ℇ */
+	0x2124,	/* ℤ */
+	0x2126,	/* Ω */
+	0x2128,	/* ℨ */
+	0xfb3e,	/* מּ */
+	0xfe74,	/* ﹴ */
+};
+
+/*
+ * space ranges
+ */
+static
+Rune	__space2[] =
+{
+	0x0009,	0x000a,	/* tab and newline */
+	0x0020,	0x0020,	/* space */
+	0x00a0,	0x00a0,	/*   */
+	0x2000,	0x200b,	/*   - ​ */
+	0x2028,	0x2029,	/*   -   */
+	0x3000,	0x3000,	/* 　 */
+	0xfeff,	0xfeff,	/* ﻿ */
+};
+
+/*
+ * lower case ranges
+ *	3rd col is conversion excess 500
+ */
+static
+Rune	__toupper2[] =
+{
+	0x0061,	0x007a, 468,	/* a-z A-Z */
+	0x00e0,	0x00f6, 468,	/* à-ö À-Ö */
+	0x00f8,	0x00fe, 468,	/* ø-þ Ø-Þ */
+	0x0256,	0x0257, 295,	/* ɖ-ɗ Ɖ-Ɗ */
+	0x0258,	0x0259, 298,	/* ɘ-ə Ǝ-Ə */
+	0x028a,	0x028b, 283,	/* ʊ-ʋ Ʊ-Ʋ */
+	0x03ad,	0x03af, 463,	/* έ-ί Έ-Ί */
+	0x03b1,	0x03c1, 468,	/* α-ρ Α-Ρ */
+	0x03c3,	0x03cb, 468,	/* σ-ϋ Σ-Ϋ */
+	0x03cd,	0x03ce, 437,	/* ύ-ώ Ύ-Ώ */
+	0x0430,	0x044f, 468,	/* а-я А-Я */
+	0x0451,	0x045c, 420,	/* ё-ќ Ё-Ќ */
+	0x045e,	0x045f, 420,	/* ў-џ Ў-Џ */
+	0x0561,	0x0586, 452,	/* ա-ֆ Ա-Ֆ */
+	0x1f00,	0x1f07, 508,	/* ἀ-ἇ Ἀ-Ἇ */
+	0x1f10,	0x1f15, 508,	/* ἐ-ἕ Ἐ-Ἕ */
+	0x1f20,	0x1f27, 508,	/* ἠ-ἧ Ἠ-Ἧ */
+	0x1f30,	0x1f37, 508,	/* ἰ-ἷ Ἰ-Ἷ */
+	0x1f40,	0x1f45, 508,	/* ὀ-ὅ Ὀ-Ὅ */
+	0x1f60,	0x1f67, 508,	/* ὠ-ὧ Ὠ-Ὧ */
+	0x1f70,	0x1f71, 574,	/* ὰ-ά Ὰ-Ά */
+	0x1f72,	0x1f75, 586,	/* ὲ-ή Ὲ-Ή */
+	0x1f76,	0x1f77, 600,	/* ὶ-ί Ὶ-Ί */
+	0x1f78,	0x1f79, 628,	/* ὸ-ό Ὸ-Ό */
+	0x1f7a,	0x1f7b, 612,	/* ὺ-ύ Ὺ-Ύ */
+	0x1f7c,	0x1f7d, 626,	/* ὼ-ώ Ὼ-Ώ */
+	0x1f80,	0x1f87, 508,	/* ᾀ-ᾇ ᾈ-ᾏ */
+	0x1f90,	0x1f97, 508,	/* ᾐ-ᾗ ᾘ-ᾟ */
+	0x1fa0,	0x1fa7, 508,	/* ᾠ-ᾧ ᾨ-ᾯ */
+	0x1fb0,	0x1fb1, 508,	/* ᾰ-ᾱ Ᾰ-Ᾱ */
+	0x1fd0,	0x1fd1, 508,	/* ῐ-ῑ Ῐ-Ῑ */
+	0x1fe0,	0x1fe1, 508,	/* ῠ-ῡ Ῠ-Ῡ */
+	0x2170,	0x217f, 484,	/* ⅰ-ⅿ Ⅰ-Ⅿ */
+	0x24d0,	0x24e9, 474,	/* ⓐ-ⓩ Ⓐ-Ⓩ */
+	0xff41,	0xff5a, 468,	/* ａ-ｚ Ａ-Ｚ */
+};
+
+/*
+ * lower case singlets
+ *	2nd col is conversion excess 500
+ */
+static
+Rune	__toupper1[] =
+{
+	0x00ff, 621,	/* ÿ Ÿ */
+	0x0101, 499,	/* ā Ā */
+	0x0103, 499,	/* ă Ă */
+	0x0105, 499,	/* ą Ą */
+	0x0107, 499,	/* ć Ć */
+	0x0109, 499,	/* ĉ Ĉ */
+	0x010b, 499,	/* ċ Ċ */
+	0x010d, 499,	/* č Č */
+	0x010f, 499,	/* ď Ď */
+	0x0111, 499,	/* đ Đ */
+	0x0113, 499,	/* ē Ē */
+	0x0115, 499,	/* ĕ Ĕ */
+	0x0117, 499,	/* ė Ė */
+	0x0119, 499,	/* ę Ę */
+	0x011b, 499,	/* ě Ě */
+	0x011d, 499,	/* ĝ Ĝ */
+	0x011f, 499,	/* ğ Ğ */
+	0x0121, 499,	/* ġ Ġ */
+	0x0123, 499,	/* ģ Ģ */
+	0x0125, 499,	/* ĥ Ĥ */
+	0x0127, 499,	/* ħ Ħ */
+	0x0129, 499,	/* ĩ Ĩ */
+	0x012b, 499,	/* ī Ī */
+	0x012d, 499,	/* ĭ Ĭ */
+	0x012f, 499,	/* į Į */
+	0x0131, 268,	/* ı I */
+	0x0133, 499,	/* ĳ Ĳ */
+	0x0135, 499,	/* ĵ Ĵ */
+	0x0137, 499,	/* ķ Ķ */
+	0x013a, 499,	/* ĺ Ĺ */
+	0x013c, 499,	/* ļ Ļ */
+	0x013e, 499,	/* ľ Ľ */
+	0x0140, 499,	/* ŀ Ŀ */
+	0x0142, 499,	/* ł Ł */
+	0x0144, 499,	/* ń Ń */
+	0x0146, 499,	/* ņ Ņ */
+	0x0148, 499,	/* ň Ň */
+	0x014b, 499,	/* ŋ Ŋ */
+	0x014d, 499,	/* ō Ō */
+	0x014f, 499,	/* ŏ Ŏ */
+	0x0151, 499,	/* ő Ő */
+	0x0153, 499,	/* œ Œ */
+	0x0155, 499,	/* ŕ Ŕ */
+	0x0157, 499,	/* ŗ Ŗ */
+	0x0159, 499,	/* ř Ř */
+	0x015b, 499,	/* ś Ś */
+	0x015d, 499,	/* ŝ Ŝ */
+	0x015f, 499,	/* ş Ş */
+	0x0161, 499,	/* š Š */
+	0x0163, 499,	/* ţ Ţ */
+	0x0165, 499,	/* ť Ť */
+	0x0167, 499,	/* ŧ Ŧ */
+	0x0169, 499,	/* ũ Ũ */
+	0x016b, 499,	/* ū Ū */
+	0x016d, 499,	/* ŭ Ŭ */
+	0x016f, 499,	/* ů Ů */
+	0x0171, 499,	/* ű Ű */
+	0x0173, 499,	/* ų Ų */
+	0x0175, 499,	/* ŵ Ŵ */
+	0x0177, 499,	/* ŷ Ŷ */
+	0x017a, 499,	/* ź Ź */
+	0x017c, 499,	/* ż Ż */
+	0x017e, 499,	/* ž Ž */
+	0x017f, 200,	/* ſ S */
+	0x0183, 499,	/* ƃ Ƃ */
+	0x0185, 499,	/* ƅ Ƅ */
+	0x0188, 499,	/* ƈ Ƈ */
+	0x018c, 499,	/* ƌ Ƌ */
+	0x0192, 499,	/* ƒ Ƒ */
+	0x0199, 499,	/* ƙ Ƙ */
+	0x01a1, 499,	/* ơ Ơ */
+	0x01a3, 499,	/* ƣ Ƣ */
+	0x01a5, 499,	/* ƥ Ƥ */
+	0x01a8, 499,	/* ƨ Ƨ */
+	0x01ad, 499,	/* ƭ Ƭ */
+	0x01b0, 499,	/* ư Ư */
+	0x01b4, 499,	/* ƴ Ƴ */
+	0x01b6, 499,	/* ƶ Ƶ */
+	0x01b9, 499,	/* ƹ Ƹ */
+	0x01bd, 499,	/* ƽ Ƽ */
+	0x01c5, 499,	/* ǅ Ǆ */
+	0x01c6, 498,	/* ǆ Ǆ */
+	0x01c8, 499,	/* ǈ Ǉ */
+	0x01c9, 498,	/* ǉ Ǉ */
+	0x01cb, 499,	/* ǋ Ǌ */
+	0x01cc, 498,	/* ǌ Ǌ */
+	0x01ce, 499,	/* ǎ Ǎ */
+	0x01d0, 499,	/* ǐ Ǐ */
+	0x01d2, 499,	/* ǒ Ǒ */
+	0x01d4, 499,	/* ǔ Ǔ */
+	0x01d6, 499,	/* ǖ Ǖ */
+	0x01d8, 499,	/* ǘ Ǘ */
+	0x01da, 499,	/* ǚ Ǚ */
+	0x01dc, 499,	/* ǜ Ǜ */
+	0x01df, 499,	/* ǟ Ǟ */
+	0x01e1, 499,	/* ǡ Ǡ */
+	0x01e3, 499,	/* ǣ Ǣ */
+	0x01e5, 499,	/* ǥ Ǥ */
+	0x01e7, 499,	/* ǧ Ǧ */
+	0x01e9, 499,	/* ǩ Ǩ */
+	0x01eb, 499,	/* ǫ Ǫ */
+	0x01ed, 499,	/* ǭ Ǭ */
+	0x01ef, 499,	/* ǯ Ǯ */
+	0x01f2, 499,	/* ǲ Ǳ */
+	0x01f3, 498,	/* ǳ Ǳ */
+	0x01f5, 499,	/* ǵ Ǵ */
+	0x01fb, 499,	/* ǻ Ǻ */
+	0x01fd, 499,	/* ǽ Ǽ */
+	0x01ff, 499,	/* ǿ Ǿ */
+	0x0201, 499,	/* ȁ Ȁ */
+	0x0203, 499,	/* ȃ Ȃ */
+	0x0205, 499,	/* ȅ Ȅ */
+	0x0207, 499,	/* ȇ Ȇ */
+	0x0209, 499,	/* ȉ Ȉ */
+	0x020b, 499,	/* ȋ Ȋ */
+	0x020d, 499,	/* ȍ Ȍ */
+	0x020f, 499,	/* ȏ Ȏ */
+	0x0211, 499,	/* ȑ Ȑ */
+	0x0213, 499,	/* ȓ Ȓ */
+	0x0215, 499,	/* ȕ Ȕ */
+	0x0217, 499,	/* ȗ Ȗ */
+	0x0253, 290,	/* ɓ Ɓ */
+	0x0254, 294,	/* ɔ Ɔ */
+	0x025b, 297,	/* ɛ Ɛ */
+	0x0260, 295,	/* ɠ Ɠ */
+	0x0263, 293,	/* ɣ Ɣ */
+	0x0268, 291,	/* ɨ Ɨ */
+	0x0269, 289,	/* ɩ Ɩ */
+	0x026f, 289,	/* ɯ Ɯ */
+	0x0272, 287,	/* ɲ Ɲ */
+	0x0283, 282,	/* ʃ Ʃ */
+	0x0288, 282,	/* ʈ Ʈ */
+	0x0292, 281,	/* ʒ Ʒ */
+	0x03ac, 462,	/* ά Ά */
+	0x03cc, 436,	/* ό Ό */
+	0x03d0, 438,	/* ϐ Β */
+	0x03d1, 443,	/* ϑ Θ */
+	0x03d5, 453,	/* ϕ Φ */
+	0x03d6, 446,	/* ϖ Π */
+	0x03e3, 499,	/* ϣ Ϣ */
+	0x03e5, 499,	/* ϥ Ϥ */
+	0x03e7, 499,	/* ϧ Ϧ */
+	0x03e9, 499,	/* ϩ Ϩ */
+	0x03eb, 499,	/* ϫ Ϫ */
+	0x03ed, 499,	/* ϭ Ϭ */
+	0x03ef, 499,	/* ϯ Ϯ */
+	0x03f0, 414,	/* ϰ Κ */
+	0x03f1, 420,	/* ϱ Ρ */
+	0x0461, 499,	/* ѡ Ѡ */
+	0x0463, 499,	/* ѣ Ѣ */
+	0x0465, 499,	/* ѥ Ѥ */
+	0x0467, 499,	/* ѧ Ѧ */
+	0x0469, 499,	/* ѩ Ѩ */
+	0x046b, 499,	/* ѫ Ѫ */
+	0x046d, 499,	/* ѭ Ѭ */
+	0x046f, 499,	/* ѯ Ѯ */
+	0x0471, 499,	/* ѱ Ѱ */
+	0x0473, 499,	/* ѳ Ѳ */
+	0x0475, 499,	/* ѵ Ѵ */
+	0x0477, 499,	/* ѷ Ѷ */
+	0x0479, 499,	/* ѹ Ѹ */
+	0x047b, 499,	/* ѻ Ѻ */
+	0x047d, 499,	/* ѽ Ѽ */
+	0x047f, 499,	/* ѿ Ѿ */
+	0x0481, 499,	/* ҁ Ҁ */
+	0x0491, 499,	/* ґ Ґ */
+	0x0493, 499,	/* ғ Ғ */
+	0x0495, 499,	/* ҕ Ҕ */
+	0x0497, 499,	/* җ Җ */
+	0x0499, 499,	/* ҙ Ҙ */
+	0x049b, 499,	/* қ Қ */
+	0x049d, 499,	/* ҝ Ҝ */
+	0x049f, 499,	/* ҟ Ҟ */
+	0x04a1, 499,	/* ҡ Ҡ */
+	0x04a3, 499,	/* ң Ң */
+	0x04a5, 499,	/* ҥ Ҥ */
+	0x04a7, 499,	/* ҧ Ҧ */
+	0x04a9, 499,	/* ҩ Ҩ */
+	0x04ab, 499,	/* ҫ Ҫ */
+	0x04ad, 499,	/* ҭ Ҭ */
+	0x04af, 499,	/* ү Ү */
+	0x04b1, 499,	/* ұ Ұ */
+	0x04b3, 499,	/* ҳ Ҳ */
+	0x04b5, 499,	/* ҵ Ҵ */
+	0x04b7, 499,	/* ҷ Ҷ */
+	0x04b9, 499,	/* ҹ Ҹ */
+	0x04bb, 499,	/* һ Һ */
+	0x04bd, 499,	/* ҽ Ҽ */
+	0x04bf, 499,	/* ҿ Ҿ */
+	0x04c2, 499,	/* ӂ Ӂ */
+	0x04c4, 499,	/* ӄ Ӄ */
+	0x04c8, 499,	/* ӈ Ӈ */
+	0x04cc, 499,	/* ӌ Ӌ */
+	0x04d1, 499,	/* ӑ Ӑ */
+	0x04d3, 499,	/* ӓ Ӓ */
+	0x04d5, 499,	/* ӕ Ӕ */
+	0x04d7, 499,	/* ӗ Ӗ */
+	0x04d9, 499,	/* ә Ә */
+	0x04db, 499,	/* ӛ Ӛ */
+	0x04dd, 499,	/* ӝ Ӝ */
+	0x04df, 499,	/* ӟ Ӟ */
+	0x04e1, 499,	/* ӡ Ӡ */
+	0x04e3, 499,	/* ӣ Ӣ */
+	0x04e5, 499,	/* ӥ Ӥ */
+	0x04e7, 499,	/* ӧ Ӧ */
+	0x04e9, 499,	/* ө Ө */
+	0x04eb, 499,	/* ӫ Ӫ */
+	0x04ef, 499,	/* ӯ Ӯ */
+	0x04f1, 499,	/* ӱ Ӱ */
+	0x04f3, 499,	/* ӳ Ӳ */
+	0x04f5, 499,	/* ӵ Ӵ */
+	0x04f9, 499,	/* ӹ Ӹ */
+	0x1e01, 499,	/* ḁ Ḁ */
+	0x1e03, 499,	/* ḃ Ḃ */
+	0x1e05, 499,	/* ḅ Ḅ */
+	0x1e07, 499,	/* ḇ Ḇ */
+	0x1e09, 499,	/* ḉ Ḉ */
+	0x1e0b, 499,	/* ḋ Ḋ */
+	0x1e0d, 499,	/* ḍ Ḍ */
+	0x1e0f, 499,	/* ḏ Ḏ */
+	0x1e11, 499,	/* ḑ Ḑ */
+	0x1e13, 499,	/* ḓ Ḓ */
+	0x1e15, 499,	/* ḕ Ḕ */
+	0x1e17, 499,	/* ḗ Ḗ */
+	0x1e19, 499,	/* ḙ Ḙ */
+	0x1e1b, 499,	/* ḛ Ḛ */
+	0x1e1d, 499,	/* ḝ Ḝ */
+	0x1e1f, 499,	/* ḟ Ḟ */
+	0x1e21, 499,	/* ḡ Ḡ */
+	0x1e23, 499,	/* ḣ Ḣ */
+	0x1e25, 499,	/* ḥ Ḥ */
+	0x1e27, 499,	/* ḧ Ḧ */
+	0x1e29, 499,	/* ḩ Ḩ */
+	0x1e2b, 499,	/* ḫ Ḫ */
+	0x1e2d, 499,	/* ḭ Ḭ */
+	0x1e2f, 499,	/* ḯ Ḯ */
+	0x1e31, 499,	/* ḱ Ḱ */
+	0x1e33, 499,	/* ḳ Ḳ */
+	0x1e35, 499,	/* ḵ Ḵ */
+	0x1e37, 499,	/* ḷ Ḷ */
+	0x1e39, 499,	/* ḹ Ḹ */
+	0x1e3b, 499,	/* ḻ Ḻ */
+	0x1e3d, 499,	/* ḽ Ḽ */
+	0x1e3f, 499,	/* ḿ Ḿ */
+	0x1e41, 499,	/* ṁ Ṁ */
+	0x1e43, 499,	/* ṃ Ṃ */
+	0x1e45, 499,	/* ṅ Ṅ */
+	0x1e47, 499,	/* ṇ Ṇ */
+	0x1e49, 499,	/* ṉ Ṉ */
+	0x1e4b, 499,	/* ṋ Ṋ */
+	0x1e4d, 499,	/* ṍ Ṍ */
+	0x1e4f, 499,	/* ṏ Ṏ */
+	0x1e51, 499,	/* ṑ Ṑ */
+	0x1e53, 499,	/* ṓ Ṓ */
+	0x1e55, 499,	/* ṕ Ṕ */
+	0x1e57, 499,	/* ṗ Ṗ */
+	0x1e59, 499,	/* ṙ Ṙ */
+	0x1e5b, 499,	/* ṛ Ṛ */
+	0x1e5d, 499,	/* ṝ Ṝ */
+	0x1e5f, 499,	/* ṟ Ṟ */
+	0x1e61, 499,	/* ṡ Ṡ */
+	0x1e63, 499,	/* ṣ Ṣ */
+	0x1e65, 499,	/* ṥ Ṥ */
+	0x1e67, 499,	/* ṧ Ṧ */
+	0x1e69, 499,	/* ṩ Ṩ */
+	0x1e6b, 499,	/* ṫ Ṫ */
+	0x1e6d, 499,	/* ṭ Ṭ */
+	0x1e6f, 499,	/* ṯ Ṯ */
+	0x1e71, 499,	/* ṱ Ṱ */
+	0x1e73, 499,	/* ṳ Ṳ */
+	0x1e75, 499,	/* ṵ Ṵ */
+	0x1e77, 499,	/* ṷ Ṷ */
+	0x1e79, 499,	/* ṹ Ṹ */
+	0x1e7b, 499,	/* ṻ Ṻ */
+	0x1e7d, 499,	/* ṽ Ṽ */
+	0x1e7f, 499,	/* ṿ Ṿ */
+	0x1e81, 499,	/* ẁ Ẁ */
+	0x1e83, 499,	/* ẃ Ẃ */
+	0x1e85, 499,	/* ẅ Ẅ */
+	0x1e87, 499,	/* ẇ Ẇ */
+	0x1e89, 499,	/* ẉ Ẉ */
+	0x1e8b, 499,	/* ẋ Ẋ */
+	0x1e8d, 499,	/* ẍ Ẍ */
+	0x1e8f, 499,	/* ẏ Ẏ */
+	0x1e91, 499,	/* ẑ Ẑ */
+	0x1e93, 499,	/* ẓ Ẓ */
+	0x1e95, 499,	/* ẕ Ẕ */
+	0x1ea1, 499,	/* ạ Ạ */
+	0x1ea3, 499,	/* ả Ả */
+	0x1ea5, 499,	/* ấ Ấ */
+	0x1ea7, 499,	/* ầ Ầ */
+	0x1ea9, 499,	/* ẩ Ẩ */
+	0x1eab, 499,	/* ẫ Ẫ */
+	0x1ead, 499,	/* ậ Ậ */
+	0x1eaf, 499,	/* ắ Ắ */
+	0x1eb1, 499,	/* ằ Ằ */
+	0x1eb3, 499,	/* ẳ Ẳ */
+	0x1eb5, 499,	/* ẵ Ẵ */
+	0x1eb7, 499,	/* ặ Ặ */
+	0x1eb9, 499,	/* ẹ Ẹ */
+	0x1ebb, 499,	/* ẻ Ẻ */
+	0x1ebd, 499,	/* ẽ Ẽ */
+	0x1ebf, 499,	/* ế Ế */
+	0x1ec1, 499,	/* ề Ề */
+	0x1ec3, 499,	/* ể Ể */
+	0x1ec5, 499,	/* ễ Ễ */
+	0x1ec7, 499,	/* ệ Ệ */
+	0x1ec9, 499,	/* ỉ Ỉ */
+	0x1ecb, 499,	/* ị Ị */
+	0x1ecd, 499,	/* ọ Ọ */
+	0x1ecf, 499,	/* ỏ Ỏ */
+	0x1ed1, 499,	/* ố Ố */
+	0x1ed3, 499,	/* ồ Ồ */
+	0x1ed5, 499,	/* ổ Ổ */
+	0x1ed7, 499,	/* ỗ Ỗ */
+	0x1ed9, 499,	/* ộ Ộ */
+	0x1edb, 499,	/* ớ Ớ */
+	0x1edd, 499,	/* ờ Ờ */
+	0x1edf, 499,	/* ở Ở */
+	0x1ee1, 499,	/* ỡ Ỡ */
+	0x1ee3, 499,	/* ợ Ợ */
+	0x1ee5, 499,	/* ụ Ụ */
+	0x1ee7, 499,	/* ủ Ủ */
+	0x1ee9, 499,	/* ứ Ứ */
+	0x1eeb, 499,	/* ừ Ừ */
+	0x1eed, 499,	/* ử Ử */
+	0x1eef, 499,	/* ữ Ữ */
+	0x1ef1, 499,	/* ự Ự */
+	0x1ef3, 499,	/* ỳ Ỳ */
+	0x1ef5, 499,	/* ỵ Ỵ */
+	0x1ef7, 499,	/* ỷ Ỷ */
+	0x1ef9, 499,	/* ỹ Ỹ */
+	0x1f51, 508,	/* ὑ Ὑ */
+	0x1f53, 508,	/* ὓ Ὓ */
+	0x1f55, 508,	/* ὕ Ὕ */
+	0x1f57, 508,	/* ὗ Ὗ */
+	0x1fb3, 509,	/* ᾳ ᾼ */
+	0x1fc3, 509,	/* ῃ ῌ */
+	0x1fe5, 507,	/* ῥ Ῥ */
+	0x1ff3, 509,	/* ῳ ῼ */
+};
+
+/*
+ * upper case ranges
+ *	3rd col is conversion excess 500
+ */
+static
+Rune	__tolower2[] =
+{
+	0x0041,	0x005a, 532,	/* A-Z a-z */
+	0x00c0,	0x00d6, 532,	/* À-Ö à-ö */
+	0x00d8,	0x00de, 532,	/* Ø-Þ ø-þ */
+	0x0189,	0x018a, 705,	/* Ɖ-Ɗ ɖ-ɗ */
+	0x018e,	0x018f, 702,	/* Ǝ-Ə ɘ-ə */
+	0x01b1,	0x01b2, 717,	/* Ʊ-Ʋ ʊ-ʋ */
+	0x0388,	0x038a, 537,	/* Έ-Ί έ-ί */
+	0x038e,	0x038f, 563,	/* Ύ-Ώ ύ-ώ */
+	0x0391,	0x03a1, 532,	/* Α-Ρ α-ρ */
+	0x03a3,	0x03ab, 532,	/* Σ-Ϋ σ-ϋ */
+	0x0401,	0x040c, 580,	/* Ё-Ќ ё-ќ */
+	0x040e,	0x040f, 580,	/* Ў-Џ ў-џ */
+	0x0410,	0x042f, 532,	/* А-Я а-я */
+	0x0531,	0x0556, 548,	/* Ա-Ֆ ա-ֆ */
+	0x10a0,	0x10c5, 548,	/* Ⴀ-Ⴥ ა-ჵ */
+	0x1f08,	0x1f0f, 492,	/* Ἀ-Ἇ ἀ-ἇ */
+	0x1f18,	0x1f1d, 492,	/* Ἐ-Ἕ ἐ-ἕ */
+	0x1f28,	0x1f2f, 492,	/* Ἠ-Ἧ ἠ-ἧ */
+	0x1f38,	0x1f3f, 492,	/* Ἰ-Ἷ ἰ-ἷ */
+	0x1f48,	0x1f4d, 492,	/* Ὀ-Ὅ ὀ-ὅ */
+	0x1f68,	0x1f6f, 492,	/* Ὠ-Ὧ ὠ-ὧ */
+	0x1f88,	0x1f8f, 492,	/* ᾈ-ᾏ ᾀ-ᾇ */
+	0x1f98,	0x1f9f, 492,	/* ᾘ-ᾟ ᾐ-ᾗ */
+	0x1fa8,	0x1faf, 492,	/* ᾨ-ᾯ ᾠ-ᾧ */
+	0x1fb8,	0x1fb9, 492,	/* Ᾰ-Ᾱ ᾰ-ᾱ */
+	0x1fba,	0x1fbb, 426,	/* Ὰ-Ά ὰ-ά */
+	0x1fc8,	0x1fcb, 414,	/* Ὲ-Ή ὲ-ή */
+	0x1fd8,	0x1fd9, 492,	/* Ῐ-Ῑ ῐ-ῑ */
+	0x1fda,	0x1fdb, 400,	/* Ὶ-Ί ὶ-ί */
+	0x1fe8,	0x1fe9, 492,	/* Ῠ-Ῡ ῠ-ῡ */
+	0x1fea,	0x1feb, 388,	/* Ὺ-Ύ ὺ-ύ */
+	0x1ff8,	0x1ff9, 372,	/* Ὸ-Ό ὸ-ό */
+	0x1ffa,	0x1ffb, 374,	/* Ὼ-Ώ ὼ-ώ */
+	0x2160,	0x216f, 516,	/* Ⅰ-Ⅿ ⅰ-ⅿ */
+	0x24b6,	0x24cf, 526,	/* Ⓐ-Ⓩ ⓐ-ⓩ */
+	0xff21,	0xff3a, 532,	/* Ａ-Ｚ ａ-ｚ */
+};
+
+/*
+ * upper case singlets
+ *	2nd col is conversion excess 500
+ */
+static
+Rune	__tolower1[] =
+{
+	0x0100, 501,	/* Ā ā */
+	0x0102, 501,	/* Ă ă */
+	0x0104, 501,	/* Ą ą */
+	0x0106, 501,	/* Ć ć */
+	0x0108, 501,	/* Ĉ ĉ */
+	0x010a, 501,	/* Ċ ċ */
+	0x010c, 501,	/* Č č */
+	0x010e, 501,	/* Ď ď */
+	0x0110, 501,	/* Đ đ */
+	0x0112, 501,	/* Ē ē */
+	0x0114, 501,	/* Ĕ ĕ */
+	0x0116, 501,	/* Ė ė */
+	0x0118, 501,	/* Ę ę */
+	0x011a, 501,	/* Ě ě */
+	0x011c, 501,	/* Ĝ ĝ */
+	0x011e, 501,	/* Ğ ğ */
+	0x0120, 501,	/* Ġ ġ */
+	0x0122, 501,	/* Ģ ģ */
+	0x0124, 501,	/* Ĥ ĥ */
+	0x0126, 501,	/* Ħ ħ */
+	0x0128, 501,	/* Ĩ ĩ */
+	0x012a, 501,	/* Ī ī */
+	0x012c, 501,	/* Ĭ ĭ */
+	0x012e, 501,	/* Į į */
+	0x0130, 301,	/* İ i */
+	0x0132, 501,	/* Ĳ ĳ */
+	0x0134, 501,	/* Ĵ ĵ */
+	0x0136, 501,	/* Ķ ķ */
+	0x0139, 501,	/* Ĺ ĺ */
+	0x013b, 501,	/* Ļ ļ */
+	0x013d, 501,	/* Ľ ľ */
+	0x013f, 501,	/* Ŀ ŀ */
+	0x0141, 501,	/* Ł ł */
+	0x0143, 501,	/* Ń ń */
+	0x0145, 501,	/* Ņ ņ */
+	0x0147, 501,	/* Ň ň */
+	0x014a, 501,	/* Ŋ ŋ */
+	0x014c, 501,	/* Ō ō */
+	0x014e, 501,	/* Ŏ ŏ */
+	0x0150, 501,	/* Ő ő */
+	0x0152, 501,	/* Œ œ */
+	0x0154, 501,	/* Ŕ ŕ */
+	0x0156, 501,	/* Ŗ ŗ */
+	0x0158, 501,	/* Ř ř */
+	0x015a, 501,	/* Ś ś */
+	0x015c, 501,	/* Ŝ ŝ */
+	0x015e, 501,	/* Ş ş */
+	0x0160, 501,	/* Š š */
+	0x0162, 501,	/* Ţ ţ */
+	0x0164, 501,	/* Ť ť */
+	0x0166, 501,	/* Ŧ ŧ */
+	0x0168, 501,	/* Ũ ũ */
+	0x016a, 501,	/* Ū ū */
+	0x016c, 501,	/* Ŭ ŭ */
+	0x016e, 501,	/* Ů ů */
+	0x0170, 501,	/* Ű ű */
+	0x0172, 501,	/* Ų ų */
+	0x0174, 501,	/* Ŵ ŵ */
+	0x0176, 501,	/* Ŷ ŷ */
+	0x0178, 379,	/* Ÿ ÿ */
+	0x0179, 501,	/* Ź ź */
+	0x017b, 501,	/* Ż ż */
+	0x017d, 501,	/* Ž ž */
+	0x0181, 710,	/* Ɓ ɓ */
+	0x0182, 501,	/* Ƃ ƃ */
+	0x0184, 501,	/* Ƅ ƅ */
+	0x0186, 706,	/* Ɔ ɔ */
+	0x0187, 501,	/* Ƈ ƈ */
+	0x018b, 501,	/* Ƌ ƌ */
+	0x0190, 703,	/* Ɛ ɛ */
+	0x0191, 501,	/* Ƒ ƒ */
+	0x0193, 705,	/* Ɠ ɠ */
+	0x0194, 707,	/* Ɣ ɣ */
+	0x0196, 711,	/* Ɩ ɩ */
+	0x0197, 709,	/* Ɨ ɨ */
+	0x0198, 501,	/* Ƙ ƙ */
+	0x019c, 711,	/* Ɯ ɯ */
+	0x019d, 713,	/* Ɲ ɲ */
+	0x01a0, 501,	/* Ơ ơ */
+	0x01a2, 501,	/* Ƣ ƣ */
+	0x01a4, 501,	/* Ƥ ƥ */
+	0x01a7, 501,	/* Ƨ ƨ */
+	0x01a9, 718,	/* Ʃ ʃ */
+	0x01ac, 501,	/* Ƭ ƭ */
+	0x01ae, 718,	/* Ʈ ʈ */
+	0x01af, 501,	/* Ư ư */
+	0x01b3, 501,	/* Ƴ ƴ */
+	0x01b5, 501,	/* Ƶ ƶ */
+	0x01b7, 719,	/* Ʒ ʒ */
+	0x01b8, 501,	/* Ƹ ƹ */
+	0x01bc, 501,	/* Ƽ ƽ */
+	0x01c4, 502,	/* Ǆ ǆ */
+	0x01c5, 501,	/* ǅ ǆ */
+	0x01c7, 502,	/* Ǉ ǉ */
+	0x01c8, 501,	/* ǈ ǉ */
+	0x01ca, 502,	/* Ǌ ǌ */
+	0x01cb, 501,	/* ǋ ǌ */
+	0x01cd, 501,	/* Ǎ ǎ */
+	0x01cf, 501,	/* Ǐ ǐ */
+	0x01d1, 501,	/* Ǒ ǒ */
+	0x01d3, 501,	/* Ǔ ǔ */
+	0x01d5, 501,	/* Ǖ ǖ */
+	0x01d7, 501,	/* Ǘ ǘ */
+	0x01d9, 501,	/* Ǚ ǚ */
+	0x01db, 501,	/* Ǜ ǜ */
+	0x01de, 501,	/* Ǟ ǟ */
+	0x01e0, 501,	/* Ǡ ǡ */
+	0x01e2, 501,	/* Ǣ ǣ */
+	0x01e4, 501,	/* Ǥ ǥ */
+	0x01e6, 501,	/* Ǧ ǧ */
+	0x01e8, 501,	/* Ǩ ǩ */
+	0x01ea, 501,	/* Ǫ ǫ */
+	0x01ec, 501,	/* Ǭ ǭ */
+	0x01ee, 501,	/* Ǯ ǯ */
+	0x01f1, 502,	/* Ǳ ǳ */
+	0x01f2, 501,	/* ǲ ǳ */
+	0x01f4, 501,	/* Ǵ ǵ */
+	0x01fa, 501,	/* Ǻ ǻ */
+	0x01fc, 501,	/* Ǽ ǽ */
+	0x01fe, 501,	/* Ǿ ǿ */
+	0x0200, 501,	/* Ȁ ȁ */
+	0x0202, 501,	/* Ȃ ȃ */
+	0x0204, 501,	/* Ȅ ȅ */
+	0x0206, 501,	/* Ȇ ȇ */
+	0x0208, 501,	/* Ȉ ȉ */
+	0x020a, 501,	/* Ȋ ȋ */
+	0x020c, 501,	/* Ȍ ȍ */
+	0x020e, 501,	/* Ȏ ȏ */
+	0x0210, 501,	/* Ȑ ȑ */
+	0x0212, 501,	/* Ȓ ȓ */
+	0x0214, 501,	/* Ȕ ȕ */
+	0x0216, 501,	/* Ȗ ȗ */
+	0x0386, 538,	/* Ά ά */
+	0x038c, 564,	/* Ό ό */
+	0x03e2, 501,	/* Ϣ ϣ */
+	0x03e4, 501,	/* Ϥ ϥ */
+	0x03e6, 501,	/* Ϧ ϧ */
+	0x03e8, 501,	/* Ϩ ϩ */
+	0x03ea, 501,	/* Ϫ ϫ */
+	0x03ec, 501,	/* Ϭ ϭ */
+	0x03ee, 501,	/* Ϯ ϯ */
+	0x0460, 501,	/* Ѡ ѡ */
+	0x0462, 501,	/* Ѣ ѣ */
+	0x0464, 501,	/* Ѥ ѥ */
+	0x0466, 501,	/* Ѧ ѧ */
+	0x0468, 501,	/* Ѩ ѩ */
+	0x046a, 501,	/* Ѫ ѫ */
+	0x046c, 501,	/* Ѭ ѭ */
+	0x046e, 501,	/* Ѯ ѯ */
+	0x0470, 501,	/* Ѱ ѱ */
+	0x0472, 501,	/* Ѳ ѳ */
+	0x0474, 501,	/* Ѵ ѵ */
+	0x0476, 501,	/* Ѷ ѷ */
+	0x0478, 501,	/* Ѹ ѹ */
+	0x047a, 501,	/* Ѻ ѻ */
+	0x047c, 501,	/* Ѽ ѽ */
+	0x047e, 501,	/* Ѿ ѿ */
+	0x0480, 501,	/* Ҁ ҁ */
+	0x0490, 501,	/* Ґ ґ */
+	0x0492, 501,	/* Ғ ғ */
+	0x0494, 501,	/* Ҕ ҕ */
+	0x0496, 501,	/* Җ җ */
+	0x0498, 501,	/* Ҙ ҙ */
+	0x049a, 501,	/* Қ қ */
+	0x049c, 501,	/* Ҝ ҝ */
+	0x049e, 501,	/* Ҟ ҟ */
+	0x04a0, 501,	/* Ҡ ҡ */
+	0x04a2, 501,	/* Ң ң */
+	0x04a4, 501,	/* Ҥ ҥ */
+	0x04a6, 501,	/* Ҧ ҧ */
+	0x04a8, 501,	/* Ҩ ҩ */
+	0x04aa, 501,	/* Ҫ ҫ */
+	0x04ac, 501,	/* Ҭ ҭ */
+	0x04ae, 501,	/* Ү ү */
+	0x04b0, 501,	/* Ұ ұ */
+	0x04b2, 501,	/* Ҳ ҳ */
+	0x04b4, 501,	/* Ҵ ҵ */
+	0x04b6, 501,	/* Ҷ ҷ */
+	0x04b8, 501,	/* Ҹ ҹ */
+	0x04ba, 501,	/* Һ һ */
+	0x04bc, 501,	/* Ҽ ҽ */
+	0x04be, 501,	/* Ҿ ҿ */
+	0x04c1, 501,	/* Ӂ ӂ */
+	0x04c3, 501,	/* Ӄ ӄ */
+	0x04c7, 501,	/* Ӈ ӈ */
+	0x04cb, 501,	/* Ӌ ӌ */
+	0x04d0, 501,	/* Ӑ ӑ */
+	0x04d2, 501,	/* Ӓ ӓ */
+	0x04d4, 501,	/* Ӕ ӕ */
+	0x04d6, 501,	/* Ӗ ӗ */
+	0x04d8, 501,	/* Ә ә */
+	0x04da, 501,	/* Ӛ ӛ */
+	0x04dc, 501,	/* Ӝ ӝ */
+	0x04de, 501,	/* Ӟ ӟ */
+	0x04e0, 501,	/* Ӡ ӡ */
+	0x04e2, 501,	/* Ӣ ӣ */
+	0x04e4, 501,	/* Ӥ ӥ */
+	0x04e6, 501,	/* Ӧ ӧ */
+	0x04e8, 501,	/* Ө ө */
+	0x04ea, 501,	/* Ӫ ӫ */
+	0x04ee, 501,	/* Ӯ ӯ */
+	0x04f0, 501,	/* Ӱ ӱ */
+	0x04f2, 501,	/* Ӳ ӳ */
+	0x04f4, 501,	/* Ӵ ӵ */
+	0x04f8, 501,	/* Ӹ ӹ */
+	0x1e00, 501,	/* Ḁ ḁ */
+	0x1e02, 501,	/* Ḃ ḃ */
+	0x1e04, 501,	/* Ḅ ḅ */
+	0x1e06, 501,	/* Ḇ ḇ */
+	0x1e08, 501,	/* Ḉ ḉ */
+	0x1e0a, 501,	/* Ḋ ḋ */
+	0x1e0c, 501,	/* Ḍ ḍ */
+	0x1e0e, 501,	/* Ḏ ḏ */
+	0x1e10, 501,	/* Ḑ ḑ */
+	0x1e12, 501,	/* Ḓ ḓ */
+	0x1e14, 501,	/* Ḕ ḕ */
+	0x1e16, 501,	/* Ḗ ḗ */
+	0x1e18, 501,	/* Ḙ ḙ */
+	0x1e1a, 501,	/* Ḛ ḛ */
+	0x1e1c, 501,	/* Ḝ ḝ */
+	0x1e1e, 501,	/* Ḟ ḟ */
+	0x1e20, 501,	/* Ḡ ḡ */
+	0x1e22, 501,	/* Ḣ ḣ */
+	0x1e24, 501,	/* Ḥ ḥ */
+	0x1e26, 501,	/* Ḧ ḧ */
+	0x1e28, 501,	/* Ḩ ḩ */
+	0x1e2a, 501,	/* Ḫ ḫ */
+	0x1e2c, 501,	/* Ḭ ḭ */
+	0x1e2e, 501,	/* Ḯ ḯ */
+	0x1e30, 501,	/* Ḱ ḱ */
+	0x1e32, 501,	/* Ḳ ḳ */
+	0x1e34, 501,	/* Ḵ ḵ */
+	0x1e36, 501,	/* Ḷ ḷ */
+	0x1e38, 501,	/* Ḹ ḹ */
+	0x1e3a, 501,	/* Ḻ ḻ */
+	0x1e3c, 501,	/* Ḽ ḽ */
+	0x1e3e, 501,	/* Ḿ ḿ */
+	0x1e40, 501,	/* Ṁ ṁ */
+	0x1e42, 501,	/* Ṃ ṃ */
+	0x1e44, 501,	/* Ṅ ṅ */
+	0x1e46, 501,	/* Ṇ ṇ */
+	0x1e48, 501,	/* Ṉ ṉ */
+	0x1e4a, 501,	/* Ṋ ṋ */
+	0x1e4c, 501,	/* Ṍ ṍ */
+	0x1e4e, 501,	/* Ṏ ṏ */
+	0x1e50, 501,	/* Ṑ ṑ */
+	0x1e52, 501,	/* Ṓ ṓ */
+	0x1e54, 501,	/* Ṕ ṕ */
+	0x1e56, 501,	/* Ṗ ṗ */
+	0x1e58, 501,	/* Ṙ ṙ */
+	0x1e5a, 501,	/* Ṛ ṛ */
+	0x1e5c, 501,	/* Ṝ ṝ */
+	0x1e5e, 501,	/* Ṟ ṟ */
+	0x1e60, 501,	/* Ṡ ṡ */
+	0x1e62, 501,	/* Ṣ ṣ */
+	0x1e64, 501,	/* Ṥ ṥ */
+	0x1e66, 501,	/* Ṧ ṧ */
+	0x1e68, 501,	/* Ṩ ṩ */
+	0x1e6a, 501,	/* Ṫ ṫ */
+	0x1e6c, 501,	/* Ṭ ṭ */
+	0x1e6e, 501,	/* Ṯ ṯ */
+	0x1e70, 501,	/* Ṱ ṱ */
+	0x1e72, 501,	/* Ṳ ṳ */
+	0x1e74, 501,	/* Ṵ ṵ */
+	0x1e76, 501,	/* Ṷ ṷ */
+	0x1e78, 501,	/* Ṹ ṹ */
+	0x1e7a, 501,	/* Ṻ ṻ */
+	0x1e7c, 501,	/* Ṽ ṽ */
+	0x1e7e, 501,	/* Ṿ ṿ */
+	0x1e80, 501,	/* Ẁ ẁ */
+	0x1e82, 501,	/* Ẃ ẃ */
+	0x1e84, 501,	/* Ẅ ẅ */
+	0x1e86, 501,	/* Ẇ ẇ */
+	0x1e88, 501,	/* Ẉ ẉ */
+	0x1e8a, 501,	/* Ẋ ẋ */
+	0x1e8c, 501,	/* Ẍ ẍ */
+	0x1e8e, 501,	/* Ẏ ẏ */
+	0x1e90, 501,	/* Ẑ ẑ */
+	0x1e92, 501,	/* Ẓ ẓ */
+	0x1e94, 501,	/* Ẕ ẕ */
+	0x1ea0, 501,	/* Ạ ạ */
+	0x1ea2, 501,	/* Ả ả */
+	0x1ea4, 501,	/* Ấ ấ */
+	0x1ea6, 501,	/* Ầ ầ */
+	0x1ea8, 501,	/* Ẩ ẩ */
+	0x1eaa, 501,	/* Ẫ ẫ */
+	0x1eac, 501,	/* Ậ ậ */
+	0x1eae, 501,	/* Ắ ắ */
+	0x1eb0, 501,	/* Ằ ằ */
+	0x1eb2, 501,	/* Ẳ ẳ */
+	0x1eb4, 501,	/* Ẵ ẵ */
+	0x1eb6, 501,	/* Ặ ặ */
+	0x1eb8, 501,	/* Ẹ ẹ */
+	0x1eba, 501,	/* Ẻ ẻ */
+	0x1ebc, 501,	/* Ẽ ẽ */
+	0x1ebe, 501,	/* Ế ế */
+	0x1ec0, 501,	/* Ề ề */
+	0x1ec2, 501,	/* Ể ể */
+	0x1ec4, 501,	/* Ễ ễ */
+	0x1ec6, 501,	/* Ệ ệ */
+	0x1ec8, 501,	/* Ỉ ỉ */
+	0x1eca, 501,	/* Ị ị */
+	0x1ecc, 501,	/* Ọ ọ */
+	0x1ece, 501,	/* Ỏ ỏ */
+	0x1ed0, 501,	/* Ố ố */
+	0x1ed2, 501,	/* Ồ ồ */
+	0x1ed4, 501,	/* Ổ ổ */
+	0x1ed6, 501,	/* Ỗ ỗ */
+	0x1ed8, 501,	/* Ộ ộ */
+	0x1eda, 501,	/* Ớ ớ */
+	0x1edc, 501,	/* Ờ ờ */
+	0x1ede, 501,	/* Ở ở */
+	0x1ee0, 501,	/* Ỡ ỡ */
+	0x1ee2, 501,	/* Ợ ợ */
+	0x1ee4, 501,	/* Ụ ụ */
+	0x1ee6, 501,	/* Ủ ủ */
+	0x1ee8, 501,	/* Ứ ứ */
+	0x1eea, 501,	/* Ừ ừ */
+	0x1eec, 501,	/* Ử ử */
+	0x1eee, 501,	/* Ữ ữ */
+	0x1ef0, 501,	/* Ự ự */
+	0x1ef2, 501,	/* Ỳ ỳ */
+	0x1ef4, 501,	/* Ỵ ỵ */
+	0x1ef6, 501,	/* Ỷ ỷ */
+	0x1ef8, 501,	/* Ỹ ỹ */
+	0x1f59, 492,	/* Ὑ ὑ */
+	0x1f5b, 492,	/* Ὓ ὓ */
+	0x1f5d, 492,	/* Ὕ ὕ */
+	0x1f5f, 492,	/* Ὗ ὗ */
+	0x1fbc, 491,	/* ᾼ ᾳ */
+	0x1fcc, 491,	/* ῌ ῃ */
+	0x1fec, 493,	/* Ῥ ῥ */
+	0x1ffc, 491,	/* ῼ ῳ */
+};
+
+/*
+ * title characters are those between
+ * upper and lower case. ie DZ Dz dz
+ */
+static
+Rune	__totitle1[] =
+{
+	0x01c4, 501,	/* Ǆ ǅ */
+	0x01c6, 499,	/* ǆ ǅ */
+	0x01c7, 501,	/* Ǉ ǈ */
+	0x01c9, 499,	/* ǉ ǈ */
+	0x01ca, 501,	/* Ǌ ǋ */
+	0x01cc, 499,	/* ǌ ǋ */
+	0x01f1, 501,	/* Ǳ ǲ */
+	0x01f3, 499,	/* ǳ ǲ */
+};
+
+static Rune*
+rune_bsearch(Rune c, Rune *t, int n, int ne)
+{
+	Rune *p;
+	int m;
+
+	while(n > 1) {
+		m = n/2;
+		p = t + m*ne;
+		if(c >= p[0]) {
+			t = p;
+			n = n-m;
+		} else
+			n = m;
+	}
+	if(n && c >= t[0])
+		return t;
+	return 0;
+}
+
+Rune
+tolowerrune(Rune c)
+{
+	Rune *p;
+
+	p = rune_bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
+	if(p && c >= p[0] && c <= p[1])
+		return c + p[2] - 500;
+	p = rune_bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
+	if(p && c == p[0])
+		return c + p[1] - 500;
+	return c;
+}
+
+Rune
+toupperrune(Rune c)
+{
+	Rune *p;
+
+	p = rune_bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
+	if(p && c >= p[0] && c <= p[1])
+		return c + p[2] - 500;
+	p = rune_bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
+	if(p && c == p[0])
+		return c + p[1] - 500;
+	return c;
+}
+
+Rune
+totitlerune(Rune c)
+{
+	Rune *p;
+
+	p = rune_bsearch(c, __totitle1, nelem(__totitle1)/2, 2);
+	if(p && c == p[0])
+		return c + p[1] - 500;
+	return c;
+}
+
+int
+islowerrune(Rune c)
+{
+	Rune *p;
+
+	p = rune_bsearch(c, __toupper2, nelem(__toupper2)/3, 3);
+	if(p && c >= p[0] && c <= p[1])
+		return 1;
+	p = rune_bsearch(c, __toupper1, nelem(__toupper1)/2, 2);
+	if(p && c == p[0])
+		return 1;
+	return 0;
+}
+
+int
+isupperrune(Rune c)
+{
+	Rune *p;
+
+	p = rune_bsearch(c, __tolower2, nelem(__tolower2)/3, 3);
+	if(p && c >= p[0] && c <= p[1])
+		return 1;
+	p = rune_bsearch(c, __tolower1, nelem(__tolower1)/2, 2);
+	if(p && c == p[0])
+		return 1;
+	return 0;
+}
+
+int isdigitrune(Rune c){return c >= '0' && c <= '9';}
+
+int isnewline(Rune c){return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;}
+
+int iswordchar(Rune c){return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');}
+
+int
+isalpharune(Rune c)
+{
+	Rune *p;
+
+	if(isupperrune(c) || islowerrune(c))
+		return 1;
+	p = rune_bsearch(c, __alpha2, nelem(__alpha2)/2, 2);
+	if(p && c >= p[0] && c <= p[1])
+		return 1;
+	p = rune_bsearch(c, __alpha1, nelem(__alpha1), 1);
+	if(p && c == p[0])
+		return 1;
+	return 0;
+}
+
+int
+istitlerune(Rune c)
+{
+	return isupperrune(c) && islowerrune(c);
+}
+
+int
+isspacerune(Rune c)
+{
+	Rune *p;
+
+	p = rune_bsearch(c, __space2, nelem(__space2)/2, 2);
+	if(p && c >= p[0] && c <= p[1])
+		return 1;
+	return 0;
+}
+
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int re_fl){
+  // If argument is not (RegExp + re_fl) or string, do type conversion
+  if(!is_string(*arg) && !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))){
+    TRY(toString(v7, *arg));
+    *arg = v7_top_val(v7);
+    inc_ref_count(*arg);
+    TRY(inc_stack(v7, -2));
+    TRY(v7_push(v7, *arg));
+ }
+  return V7_OK;
 }
 
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
-  struct v7_val *arg = cfa->args[0];
-  struct v7 *v7 = cfa->v7;  // Needed for TRY() macro below
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0],
+                *obj = cfa->this_obj;
+  if(!cfa->called_as_constructor) obj = v7_push_new_object(v7);
+  const char *str = NULL;
+  size_t len = 0;
+  int own = 0;
 
-  // If argument is not a string, do type conversion
-  if (cfa->num_args == 1 && !is_string(arg)) {
-    TRY(toString(cfa->v7, arg));
-    arg = v7_top_val(cfa->v7);
+  if(cfa->num_args > 0){
+    TRY(check_str_re_conv(v7, &arg, 0));
+    str = arg->v.str.buf;
+    len = arg->v.str.len;
+    own = 1;
   }
-
-  if (cfa->num_args == 1 && arg->type == V7_TYPE_STR) {
-    v7_init_str(obj, arg->v.str.buf, arg->v.str.len, 1);
-  } else {
-    v7_init_str(obj, NULL, 0, 0);
-  }
-
-  if (cfa->called_as_constructor) {
-    cfa->this_obj->type = V7_TYPE_OBJ;
-    cfa->this_obj->proto = &s_prototypes[V7_CLASS_STRING];
-    cfa->this_obj->ctor = &s_constructors[V7_CLASS_STRING];
-  }
+  v7_init_str(obj, str, len, own);
+  v7_set_class(obj, V7_CLASS_STRING);
   return V7_OK;
+  #undef v7
 }
 
-V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *result) {
+V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result) {
   v7_init_num(result, this_obj->v.str.len);
 }
 
@@ -2144,95 +4509,56 @@ V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
-  struct slre_cap caps[100];
-  const struct v7_string *s = &cfa->this_obj->v.str;
-  struct v7_val *result;
-  int i, n;
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0];
+  struct Resub sub;
+  struct v7_val *arr = NULL;
+  int shift = 0;
 
-  //cfa->result->type = V7_TYPE_NULL;
-  memset(caps, 0, sizeof(caps));
-
-  if (cfa->num_args == 1 &&
-      v7_is_class(cfa->args[0], V7_CLASS_REGEXP) &&
-      (n = slre_match(cfa->args[0]->v.regex, s->buf, (int) s->len,
-                      caps, ARRAY_SIZE(caps) - 1, 0)) > 0) {
-    result = v7_push_new_object(cfa->v7);
-    v7_set_class(result, V7_CLASS_ARRAY);
-    v7_append(cfa->v7, result,
-              v7_mkv(cfa->v7, V7_TYPE_STR, s->buf, (long) n, 1));
-    for (i = 0; i < (int) ARRAY_SIZE(caps); i++) {
-      if (caps[i].len == 0) break;
-      v7_append(cfa->v7, result,
-                v7_mkv(cfa->v7, V7_TYPE_STR, caps[i].ptr, (long) caps[i].len, 1));
-    }
+  if(cfa->num_args > 0){
+    TRY(check_str_re_conv(v7, &arg, 1));
+    TRY(regex_check_prog(arg));
+    do{
+      if(!re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf + shift, &sub)){
+        if(NULL == arr){
+          arr = v7_push_new_object(v7);
+          v7_set_class(arr, V7_CLASS_ARRAY);
+        }
+        shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[0].start, sub.sub[0].end - sub.sub[0].start, 1));
+      }
+    }while(arg->fl.re_g && shift < cfa->this_obj->v.str.len);
   }
+  if(0 == shift) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
-}
-
-// Implementation of memmem()
-V7_PRIVATE const char *memstr(const char *a, size_t al, const char *b, size_t bl) {
-  const char *end;
-  if (al == 0 || bl == 0 || al < bl) return NULL;
-  for (end = a + (al - bl); a < end; a++) if (!memcmp(a, b, bl)) return a;
-  return NULL;
+  #undef v7
 }
 
 V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
-  const struct v7_string *s = &cfa->this_obj->v.str;
-  const char *p1, *p2, *e = s->buf + s->len;
-  int limit = cfa->num_args == 2 && cfa->args[1]->type == V7_TYPE_NUM ?
-  cfa->args[1]->v.num : -1;
-  int num_elems = 0;
-  struct v7_val *result = v7_push_new_object(cfa->v7);
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7);
+  struct Resub sub, sub1;
+  int limit = 1000000, elem = 0, shift = 0, i, len;
 
-  v7_set_class(result, V7_CLASS_ARRAY);
-  if (cfa->num_args == 0) {
-    v7_append(cfa->v7, result,
-              v7_mkv(cfa->v7, V7_TYPE_STR, s->buf, s->len, 1));
-  } else if (cfa->args[0]->type == V7_TYPE_STR) {
-    const struct v7_string *sep = &cfa->args[0]->v.str;
-    if (sep->len == 0) {
-      // Separator is empty. Split string by characters.
-      for (p1 = s->buf; p1 < e; p1++) {
-        if (limit >= 0 && limit <= num_elems) break;
-        v7_append(cfa->v7, result, v7_mkv(cfa->v7, V7_TYPE_STR, p1, 1, 1));
-        num_elems++;
-      }
-    } else {
-      p1 = s->buf;
-      while ((p2 = memstr(p1, e - p1, sep->buf, sep->len)) != NULL) {
-        if (limit >= 0 && limit <= num_elems) break;
-        v7_append(cfa->v7, result,
-                  v7_mkv(cfa->v7, V7_TYPE_STR, p1, p2 - p1, 1));
-        p1 = p2 + sep->len;
-        num_elems++;
-      }
-      if (limit < 0 || limit > num_elems) {
-        v7_append(cfa->v7, result,
-                  v7_mkv(cfa->v7, V7_TYPE_STR, p1, e - p1, 1));
-      }
-    }
-  } else if (instanceof(cfa->args[0], &s_constructors[V7_CLASS_REGEXP])) {
-    char regex[MAX_STRING_LITERAL_LENGTH];
-    struct slre_cap caps[40];
-    int n = 0;
-
-    snprintf(regex, sizeof(regex), "(%s)", cfa->args[0]->v.regex);
-    p1 = s->buf;
-    while ((n = slre_match(regex, p1, (int) (e - p1),
-                           caps, ARRAY_SIZE(caps), 0)) > 0) {
-      if (limit >= 0 && limit <= num_elems) break;
-      v7_append(cfa->v7, result,
-                v7_mkv(cfa->v7, V7_TYPE_STR, p1, caps[0].ptr - p1, 1));
-      p1 += n;
-      num_elems++;
-    }
-    if (limit < 0 || limit > num_elems) {
-      v7_append(cfa->v7, result,
-                v7_mkv(cfa->v7, V7_TYPE_STR, p1, e - p1, 1));
+  v7_set_class(arr, V7_CLASS_ARRAY);
+  if(cfa->num_args > 0){
+    if(cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM) limit = cfa->args[1]->v.num;
+    TRY(check_str_re_conv(v7, &arg, 1));
+    TRY(regex_check_prog(arg));
+    for(; elem < limit && shift < cfa->this_obj->v.str.len; elem++){
+      if(re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf + shift, &sub)) break;
+      v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift, sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
+      for(i = 1; i < sub.subexpr_num; i++)
+        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start, sub.sub[i].end - sub.sub[i].start, 1));
+      shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+      sub1=sub;
     }
   }
+  len = cfa->this_obj->v.str.len - shift;
+  if(elem < limit && len > 0)
+    v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift, len, 1));
   return V7_OK;
+  #undef v7
 }
 
 V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
@@ -2279,6 +4605,116 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
+V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  struct v7_val *arg = cfa->args[0];
+  struct Resub sub;
+  int shift = -1, utf_shift = -1;
+
+  if(cfa->num_args > 0){
+    TRY(check_str_re_conv(v7, &arg, 1));
+    TRY(regex_check_prog(arg));
+    if(!re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf, &sub)) shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
+  }
+  if(shift > 0){ // calc shift for UTF-8
+    Rune rune;
+    const char *str = cfa->this_obj->v.str.buf;
+    utf_shift = 0;
+    do{
+      str += chartorune(&rune, str);
+      utf_shift++;
+    }while(str - cfa->this_obj->v.str.buf < shift);
+  }
+  v7_push_number(v7, utf_shift);
+  return V7_OK;
+  #undef v7
+}
+
+V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
+  #define v7 (cfa->v7) // Needed for TRY() macro below
+  struct v7_val *result = v7_push_new_object(v7);
+  const char *out_str = cfa->this_obj->v.str.buf;
+  uint8_t own = 1;
+  size_t out_len = cfa->this_obj->v.str.len;
+  int old_sp = v7->sp;
+
+  if(cfa->num_args > 1){
+    const char * const str_end = cfa->this_obj->v.str.buf + cfa->this_obj->v.str.len;
+    char *p = cfa->this_obj->v.str.buf;
+    uint32_t out_sub_num = 0;
+    struct v7_val *re = cfa->args[0], *str_func = cfa->args[1], *arr = NULL;
+    struct re_tok out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
+    struct Resub loot;
+    TRY(check_str_re_conv(v7, &re, 1));
+    TRY(regex_check_prog(re));
+    if(v7_is_class(str_func, V7_CLASS_FUNCTION)){
+      arr = v7_push_new_object(v7);
+      v7_set_class(arr, V7_CLASS_ARRAY);
+      TRY(v7_push(v7, str_func));
+    }else TRY(check_str_re_conv(v7, &str_func, 0));
+
+    out_len = 0;
+    do{
+      int i;
+      if(re_exec(re->v.str.prog, re->fl, p, &loot)) break;
+      if(p != loot.sub->start){
+        *ptok++ = (struct re_tok){p, loot.sub->start};
+        out_len += loot.sub->start - p;
+        out_sub_num++;
+      }
+
+      if(NULL != arr){ // replace function
+        Rune rune;
+        int old_sp = v7->sp, utf_shift = 0;
+        for(i = 0; i < loot.subexpr_num; i++)
+          v7_push_string(v7, loot.sub[i].start, loot.sub[i].end - loot.sub[i].start, 1);
+        for(i = 0; p + i < loot.sub[0].start; i += chartorune(&rune, p + i), utf_shift++);
+        TRY(push_number(v7, utf_shift));
+        TRY(v7_push(v7, cfa->this_obj));
+        struct v7_val *rez_str = v7_call(v7, cfa->this_obj, loot.subexpr_num + 2);
+        TRY(check_str_re_conv(v7, &rez_str, 0));
+        if(rez_str->v.str.len){
+          *ptok++ = (struct re_tok){rez_str->v.str.buf, rez_str->v.str.buf + rez_str->v.str.len};
+          out_len += rez_str->v.str.len;
+          out_sub_num++;
+          v7_append(v7, arr, rez_str);
+        }
+        TRY(inc_stack(v7, old_sp - v7->sp));
+      }else{ // replace string
+        struct Resub newsub;
+        re_rplc(&loot, p, str_func->v.str.buf, &newsub);
+        for(i = 0; i < newsub.subexpr_num; i++){
+          *ptok++ = (struct re_tok){newsub.sub[i].start, newsub.sub[i].end};
+          out_len += newsub.sub[i].end - newsub.sub[i].start;
+          out_sub_num++;
+        }
+      }
+      p = loot.sub->end;
+    }while(re->fl.re_g && p < str_end);
+    if(p < str_end){
+      *ptok++ = (struct re_tok){p, str_end};
+      out_len += str_end - p;
+      out_sub_num++;
+    }
+    out_str = malloc(out_len+1);
+    CHECK(out_str, V7_OUT_OF_MEMORY);
+    ptok = out_sub; p = out_str;
+    do{
+      size_t ln = ptok->end - ptok->start;
+      memcpy(p, ptok->start, ln);
+      p += ln;
+      ptok++;
+    }while(--out_sub_num);
+    *p = '\0';
+    own = 0;
+  }
+  TRY(inc_stack(v7, old_sp - v7->sp));
+  v7_init_str(result, out_str, out_len, own);
+  result->fl.str_alloc = 1;
+  return V7_OK;
+  #undef v7
+}
+
 V7_PRIVATE void init_string(void) {
   init_standard_constructor(V7_CLASS_STRING, String_ctor);
   SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
@@ -2288,6 +4724,8 @@ V7_PRIVATE void init_string(void) {
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "search", Str_search);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "replace", Str_replace);
 
   SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
 }
@@ -2321,7 +4759,7 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
-  int i, failed = 0;
+  int i;
   struct v7_val *obj = v7_push_new_object(cfa->v7);
 
   // Push new object as a context for the loading new module
@@ -2330,19 +4768,12 @@ V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
 
   for (i = 0; i < cfa->num_args; i++) {
     if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) {
-      failed++;
-      break;
-    };
+    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
   }
 
   // Pop context, and return it
   cfa->v7->ctx = obj->next;
-  if (failed) {
-    v7_make_and_push(cfa->v7, V7_TYPE_NULL);
-  } else {
-    v7_push_val(cfa->v7, obj);
-  }
+  v7_push_val(cfa->v7, obj);
 
   return V7_OK;
 }
@@ -2554,35 +4985,54 @@ V7_PRIVATE void init_stdlib(void) {
 #define EXPECT(v7, t) \
   do {if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; next_tok(v7);} while (0)
 
+static struct v7_val *_prop_func_2_value(struct v7 *v7, struct v7_val *f){
+  struct v7_val *v = f;
+  if(v->flags & V7_PROP_FUNC){
+    f->v.prop_func(v7->cur_obj, NULL, v);
+    v->fl.prop_func = 0;
+    /* v7->sp--;
+    // TRY(inc_stack(v7, -1));
+    inc_stack(v7, -1); */
+  }
+  return v;
+}
+
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, enum v7_tok op) {
   char *str;
 
+  a = _prop_func_2_value(v7, a);
+  b = _prop_func_2_value(v7, b);
   if (a->type == V7_TYPE_STR && op == TOK_PLUS) {
-    if (b->type != V7_TYPE_STR) {
-      // Do type conversion, result pushed on stack
-      TRY(toString(v7, b));
-      b = v7_top_val(v7);
-    }
+    TRY(check_str_re_conv(v7, &b, 0)); // Do type conversion, result pushed on stack
     str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
+    // v7_push(v7, res);
     memcpy(str, a->v.str.buf, a->v.str.len);
     memcpy(str + a->v.str.len, b->v.str.buf, b->v.str.len);
     str[res->v.str.len] = '\0';
     return V7_OK;
   } else if (a->type == V7_TYPE_NUM && b->type == V7_TYPE_NUM) {
-    v7_init_num(res, res->v.num);
+    struct v7_val *v = res;
+    if(res->flags & V7_PROP_FUNC) v = v7_push_new_object(v7);
+    v7_init_num(v, res->v.num);
     switch (op) {
-      case TOK_PLUS: res->v.num = a->v.num + b->v.num; break;
-      case TOK_MINUS: res->v.num = a->v.num - b->v.num; break;
-      case TOK_MUL: res->v.num = a->v.num * b->v.num; break;
-      case TOK_DIV: res->v.num = a->v.num / b->v.num; break;
-      case TOK_REM: res->v.num = (unsigned long) a->v.num %
+      case TOK_PLUS: v->v.num = a->v.num + b->v.num; break;
+      case TOK_MINUS: v->v.num = a->v.num - b->v.num; break;
+      case TOK_MUL: v->v.num = a->v.num * b->v.num; break;
+      case TOK_DIV: v->v.num = a->v.num / b->v.num; break;
+      case TOK_REM: v->v.num = (unsigned long) a->v.num %
         (unsigned long) b->v.num; break;
-      case TOK_XOR: res->v.num = (unsigned long) a->v.num ^
+      case TOK_XOR: v->v.num = (unsigned long) a->v.num ^
         (unsigned long) b->v.num; break;
       default: return V7_INTERNAL_ERROR;
+    }
+    if(res->flags & V7_PROP_FUNC){
+      res->v.prop_func(v7->cur_obj, v, NULL);
+      inc_ref_count(v);
+      TRY(inc_stack(v7, -2));
+      v7_push(v7, v);
     }
     return V7_OK;
   } else {
@@ -2805,7 +5255,7 @@ static enum v7_err push_string_literal(struct v7 *v7) {
   if (!EXECUTING(v7->flags)) return V7_OK;
   TRY(v7_make_and_push(v7, V7_TYPE_STR));
   v = v7_top_val(v7);
-  v7_init_str(v, (char *) malloc(v7->tok_len - 1), 0, 1);
+  v7_init_str(v, &v7->tok[1], v7->tok_len - 1, 1);
   CHECK(v->v.str.buf != NULL, V7_OUT_OF_MEMORY);
   p = v->v.str.buf;
 
@@ -2909,23 +5359,34 @@ static enum v7_err parse_delete_statement(struct v7 *v7) {
 }
 
 static enum v7_err parse_regex(struct v7 *v7) {
-  char regex[MAX_STRING_LITERAL_LENGTH];
-  size_t i;
+  size_t i, j;
+  uint8_t done = 0;
 
-  CHECK(*v7->pstate.pc == '/', V7_SYNTAX_ERROR);
-  for (i = 0, v7->pstate.pc++; i < sizeof(regex) - 1 && *v7->pstate.pc != '/' &&
-    *v7->pstate.pc != '\0'; i++, v7->pstate.pc++) {
-    if (*v7->pstate.pc == '\\' && v7->pstate.pc[1] == '/') v7->pstate.pc++;
-    regex[i] = *v7->pstate.pc;
+  if(!EXECUTING(v7->flags)) return V7_OK;
+  // CHECK(*v7->tok == '/', V7_SYNTAX_ERROR);
+  
+  for(i = 1; !done; i++){
+    switch(v7->tok[i]){
+      case '\0': case '\r': case '\n':
+        THROW(V7_SYNTAX_ERROR);
+      case '/':
+        if('\\' == v7->tok[i-1]) continue;
+        done = 1;
+        break;
+    }
   }
-  regex[i] = '\0';
-  EXPECT(v7, TOK_DIV);
-  if (EXECUTING(v7->flags)) {
-    TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
-    v7_set_class(v7_top(v7)[-1], V7_CLASS_REGEXP);
-    v7_top(v7)[-1]->v.regex = v7_strdup(regex, strlen(regex));
+  done = 0;
+  for(j = i; !done; j++){
+    switch(v7->tok[j]){
+      default : done = 1; j--;
+      case 'g': case 'i': case 'm': break;
+      case '\0': case '\r': case '\n':
+        THROW(V7_SYNTAX_ERROR);
+    }
   }
 
+  TRY(regex_xctor(v7, NULL, &v7->tok[1], i-2, &v7->tok[i], j-i));
+  v7->pstate.pc = &v7->tok[j];
   return V7_OK;
 }
 
@@ -2979,12 +5440,10 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
 }
 
 static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
-  struct v7_val *v = NULL, *ns = NULL, *cur_obj = NULL;
+  struct v7_val *ns = NULL, *cur_obj = NULL;
 
   if (EXECUTING(v7->flags)) {
     ns = v7_top(v7)[-1];
-    v7_make_and_push(v7, V7_TYPE_UNDEF);
-    v = v7_top(v7)[-1];
     v7->cur_obj = v7->this_obj = cur_obj = ns;
   }
   CHECK(!EXECUTING(v7->flags) || ns != NULL, V7_SYNTAX_ERROR);
@@ -2996,10 +5455,10 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
     if (EXECUTING(v7->flags)) {
       struct v7_val key = str_to_val(v7->tok, v7->tok_len);
       ns = get2(ns, &key);
-      if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
+      /* if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
         ns->v.prop_func(v7->cur_obj, v);
         ns = v;
-      }
+      } */
     }
     next_tok(v7);
   } else {
@@ -3009,18 +5468,15 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
       struct v7_val *expr_val = v7_top_val(v7);
 
       ns = get2(ns, expr_val);
-      if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
+      /* if (ns != NULL && (ns->flags & V7_PROP_FUNC)) {
         ns->v.prop_func(v7->cur_obj, v);
         ns = v;
-      }
+      } */
 
       // If we're doing an assignment,
       // then parse_assign() looks at v7->key, v7->key_len for the key.
       // Initialize key properly for cases like "a.b['c'] = d;"
-      if (expr_val->type != V7_TYPE_STR) {
-        TRY(toString(v7, expr_val));
-        expr_val = v7_top_val(v7);
-      }
+      TRY(check_str_re_conv(v7, &expr_val, 0));
       v7->key = expr_val->v.str.buf;
       v7->key_len = expr_val->v.str.len;
     }
@@ -3030,7 +5486,11 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
   v7->cur_obj = v7->this_obj = cur_obj;
 
   if (EXECUTING(v7->flags)) {
-    TRY(v7_push(v7, ns == NULL ? v : ns));
+    if(NULL == ns){
+      TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
+    }else{
+      TRY(v7_push(v7, ns));
+    }
   }
 
   return V7_OK;
@@ -3101,8 +5561,19 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
     next_tok(v7);
     if (EXECUTING(v7->flags)) {
       struct v7_val *v = v7_top(v7)[-1];
-      CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
-      v->v.num += increment;
+      if(v->flags & V7_PROP_FUNC){
+        struct v7_val *v1 = v;
+        v->v.prop_func(v7->cur_obj, NULL, v);
+        CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
+        v->v.num += increment;
+        v1->v.prop_func(v7->cur_obj, v, NULL);
+        inc_ref_count(v);
+        TRY(inc_stack(v7, -2));
+        v7_push(v7, v);
+      }else{
+        CHECK(v->type == V7_TYPE_NUM, V7_TYPE_ERROR);
+        v->v.num += increment;
+      }
     }
   }
   return V7_OK;
@@ -3140,6 +5611,13 @@ static enum v7_err parse_unary(struct v7 *v7) {
 
   if (EXECUTING(v7->flags) && unary != TOK_END_OF_INPUT) {
     struct v7_val *result = v7_top_val(v7);
+    if(result->flags & V7_PROP_FUNC){
+      switch(unary){
+        case TOK_PLUS: case TOK_MINUS: case TOK_NOT: case TOK_TYPEOF:
+        result = _prop_func_2_value(v7, result);
+        v7_push(v7, result);
+      }
+    }
     switch (unary) {
       case TOK_PLUS:
         CHECK(is_num(result), V7_TYPE_ERROR);
@@ -3739,7 +6217,7 @@ struct { const char *p; int len; } s_keywords[] = {
 
 // Move ptr to the next token, skipping comments and whitespaces.
 // Return number of new line characters detected.
-static int skip_to_next_tok(const char **ptr) {
+V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
@@ -3856,7 +6334,7 @@ static enum v7_tok parse_str_literal(const char **p) {
   }
 }
 
-static enum v7_tok get_tok(const char **s, double *n) {
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
   const char *p = *s;
 
   switch (*p) {
@@ -4167,7 +6645,10 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
       snprintf(buf, bsiz, "'c_func_%p'", v->v.c_func);
     }
   } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
-    snprintf(buf, bsiz, "/%s/", v->v.regex);
+    int sz = snprintf(buf, bsiz, "/%s/", v->v.str.buf);
+    if(v->fl.re_g) sz += snprintf(buf+sz, bsiz, "g");
+    if(v->fl.re_i) sz += snprintf(buf+sz, bsiz, "i");
+    if(v->fl.re_m) snprintf(buf+sz, bsiz, "m");
   } else if (v->type == V7_TYPE_OBJ) {
     obj_to_string(v, buf, bsiz);
   } else {

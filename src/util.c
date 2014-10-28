@@ -138,10 +138,12 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
       free_prop(v7, p);
     }
     v->v.array = NULL;
-  } else if (v->type == V7_TYPE_STR && (v->flags & V7_STR_ALLOCATED)) {
-    free(v->v.str.buf);
-  } else if (v7_is_class(v, V7_CLASS_REGEXP) && (v->flags & V7_STR_ALLOCATED)) {
-    free(v->v.regex);
+  } else if (v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING) || v7_is_class(v, V7_CLASS_REGEXP)) {
+    if(v->v.str.prog){
+      if(v->v.str.prog->start) reg_free(v->v.str.prog->start);
+      reg_free(v->v.str.prog);
+    }
+    if(v->v.str.buf && (v->flags & V7_STR_ALLOCATED)) free(v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
     if ((v->flags & V7_STR_ALLOCATED) && (v->flags & V7_JS_FUNC)) {
       free(v->v.func.source_code);
@@ -288,7 +290,8 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
 V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
                               int own_prop) {
   struct v7_prop *m;
-  for (; obj != NULL; obj = obj->proto) {
+  int proto = 0;
+  for (; obj != NULL; obj = obj->proto, proto=1) {
     if (v7_is_class(obj, V7_CLASS_ARRAY) && key->type == V7_TYPE_NUM) {
       int i = (int) key->v.num;
       for (m = obj->v.array; m != NULL; m = m->next) {
@@ -296,10 +299,9 @@ V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
       }
     } else if (obj->type == V7_TYPE_OBJ) {
       for (m = obj->props; m != NULL; m = m->next) {
-        if (cmp(m->key, key) == 0) return m;
+        if (cmp(m->key, key) == 0 && (!own_prop || !proto || (proto && m->val->fl.prop_func))) return m;
       }
     }
-    if (own_prop) break;
     if (obj->proto == obj) break;
   }
   return NULL;
@@ -348,9 +350,13 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
 
   // Find attribute inside object
   if ((m = v7_get2(obj, k, 1)) != NULL) {
-    v7_freeval(v7, m->val);
     inc_ref_count(v);
-    m->val = v;
+    if(m->val->flags & V7_PROP_FUNC){
+      m->val->v.prop_func(obj, v, NULL);
+    }else{
+      v7_freeval(v7, m->val);
+      m->val = v;
+    }
   } else {
     TRY(vinsert(v7, &obj->props, k, v));
   }
@@ -450,7 +456,8 @@ V7_PRIVATE const char *v7_strerror(enum v7_err e) {
     "no error", "error", "eval error", "range error", "reference error",
     "syntax error", "type error", "URI error",
     "out of memory", "internal error", "stack overflow", "stack underflow",
-    "called non-function", "not implemented", "string literal too long"
+    "called non-function", "not implemented", "string literal too long",
+    "RegExp error"
   };
   assert(ARRAY_SIZE(strings) == V7_NUM_ERRORS);
   return e >= (int) ARRAY_SIZE(strings) ? "?" : strings[e];
@@ -519,7 +526,6 @@ V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *file_name,
     }
   }
 
-  //printf("%s: [%s] %d %d\n", __func__, file_name, v7->pstate.line_no, err);
   assert(v7->root_scope.proto == &s_global);
   v7->pstate = old_pstate;
 

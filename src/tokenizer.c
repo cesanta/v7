@@ -12,7 +12,7 @@ struct { const char *p; int len; } s_keywords[] = {
 
 // Move ptr to the next token, skipping comments and whitespaces.
 // Return number of new line characters detected.
-static int skip_to_next_tok(const char **ptr) {
+V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
@@ -129,7 +129,7 @@ static enum v7_tok parse_str_literal(const char **p) {
   }
 }
 
-static enum v7_tok get_tok(const char **s, double *n) {
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
   const char *p = *s;
 
   switch (*p) {

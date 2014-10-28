@@ -23,6 +23,48 @@ extern "C" {
 
 #define V7_VERSION "1.0"
 
+/////conditional compiling macros/////
+// #define V7_DEBUG
+// #define V7_DISABLE_CRYPTO
+
+/*
+ * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
+ * the structure, but append it to the list of free structures.
+ * Subsequent allocations try to grab a structure from the free list,
+ * which speeds up allocation.
+ * #define V7_CACHE_OBJS
+ */
+
+/////custom defines/////
+/* Maximum length of the string literal */
+#define MAX_STRING_LITERAL_LENGTH 2000
+
+#define RE_MAX_SUB 32
+#define RE_MAX_RANGES 32
+#define RE_MAX_SETS 16
+#define RE_MAX_REP 0xFFFF
+#define RE_MAX_THREADS 1000
+#define V7_RE_MAX_REPL_SUB 255
+
+/////custom types/////
+// typedef unsigned long uint64_t;
+// typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
+// typedef unsigned char uint8_t;
+typedef signed char sint8_t;
+
+/////some substitutes/////
+#define bcopy memcpy
+#define reg_malloc malloc
+#define reg_free free
+
+#ifndef V7_EX_TRY_CATCH
+#define V7_EX_TRY_CATCH(catch_point) setjmp(catch_point)
+
+#define V7_EX_THROW(c, m, message) do{m = message; longjmp(c, 1);}while(0)
+#endif
+////////////////////////
+
 struct v7;      // Opaque structure. V7 engine handler.
 struct v7_val;  // Opaque structure. Holds V7 value, which has v7_type type.
 
@@ -35,7 +77,8 @@ enum v7_err {
   V7_OK, V7_ERROR, V7_EVAL_ERROR, V7_RANGE_ERROR, V7_REFERENCE_ERROR,
   V7_SYNTAX_ERROR, V7_TYPE_ERROR, V7_URI_ERROR,
   V7_OUT_OF_MEMORY, V7_INTERNAL_ERROR, V7_STACK_OVERFLOW, V7_STACK_UNDERFLOW,
-  V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED, V7_STR_TOO_LONG, V7_NUM_ERRORS
+  V7_CALLED_NON_FUNCTION, V7_NOT_IMPLEMENTED, V7_STR_TOO_LONG, V7_REGEXP_ERROR,
+  V7_NUM_ERRORS
 };
 
 // This structure is passed as an argument to the C/JS glue function
