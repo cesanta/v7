@@ -176,7 +176,9 @@ static void re_rng2set(struct re_env *e, Rune start, Rune end){
     V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INV_CH_SET_RANGE));
   if(e->curr_set->end + 2 == e->curr_set->spans + nelem(e->curr_set->spans))
     V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(CH_SET_TOO_LARGE));
-  *e->curr_set->end++ = (struct Rerange){start, end};
+  e->curr_set->end->s = start;
+  e->curr_set->end->e = end;
+  e->curr_set->end++;
 }
 
 #define re_char2set(e, c) re_rng2set(e, c, c)
@@ -352,20 +354,20 @@ static uint8_t re_isndnull(struct Renode *nd){
   switch(nd->type){
     default: return 1;
     case P_ANY: case P_CH: case P_SET: case P_SET_N: return 0;
-    case P_BRA: case P_REF: return re_isndnull(nd->x);
-    case P_CAT: return re_isndnull(nd->x) && re_isndnull(nd->y);
-    case P_ALT: return re_isndnull(nd->x) || re_isndnull(nd->y);
-    case P_REP: return re_isndnull(nd->x) || !nd->min;
+    case P_BRA: case P_REF: return re_isndnull(nd->par.xy.x);
+    case P_CAT: return re_isndnull(nd->par.xy.x) && re_isndnull(nd->par.xy.y.y);
+    case P_ALT: return re_isndnull(nd->par.xy.x) || re_isndnull(nd->par.xy.y.y);
+    case P_REP: return re_isndnull(nd->par.xy.x) || !nd->par.xy.y.rp.min;
   }
 }
 
 static struct Renode *re_nrep(struct re_env *e, struct Renode *nd, int ng, int min, int max){
   struct Renode *rep = re_nnode(e, P_REP);
   if(max == RE_MAX_REP && re_isndnull(nd)) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INF_LOOP_M_EMP_STR));
-  rep->ng = ng;
-  rep->min = min;
-  rep->max = max;
-  rep->x = nd;
+  rep->par.xy.y.rp.ng = ng;
+  rep->par.xy.y.rp.min = min;
+  rep->par.xy.y.rp.max = max;
+  rep->par.xy.x = nd;
   return rep;
 }
 
@@ -385,24 +387,24 @@ static struct Renode *re_parse_la(struct re_env *e){
   switch(e->lookahead){
     case L_CH:
       nd = re_nnode(e, P_CH);
-      nd->c = e->curr_rune;
+      nd->par.c = e->curr_rune;
       RE_NEXT(e);
       break;
     case L_SET:
       nd = re_nnode(e, P_SET);
-      nd->cp = e->curr_set;
+      nd->par.cp = e->curr_set;
       RE_NEXT(e);
       break;
     case L_SET_N:
       nd = re_nnode(e, P_SET_N);
-      nd->cp = e->curr_set;
+      nd->par.cp = e->curr_set;
       RE_NEXT(e);
       break;
     case L_REF:
       nd = re_nnode(e, P_REF);
       if(!e->curr_rune || e->curr_rune > e->subexpr_num || !e->sub[e->curr_rune]) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_BACK_REF));
-      nd->n = e->curr_rune;
-      nd->x = e->sub[e->curr_rune];
+      nd->par.xy.y.n = e->curr_rune;
+      nd->par.xy.x = e->sub[e->curr_rune];
       RE_NEXT(e);
       break;
     case '.':
@@ -413,15 +415,15 @@ static struct Renode *re_parse_la(struct re_env *e){
       RE_NEXT(e);
       nd = re_nnode(e, P_BRA);
       if(e->subexpr_num == RE_MAX_SUB) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(TOO_MANY_CAPTURES));
-      nd->n = e->subexpr_num++;
-      nd->x = re_parser(e);
-      e->sub[nd->n] = nd;
+      nd->par.xy.y.n = e->subexpr_num++;
+      nd->par.xy.x = re_parser(e);
+      e->sub[nd->par.xy.y.n] = nd;
       if(!RE_ACCEPT(e, ')')) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(UNMATCH_LBR));
       break;
     case L_LA:
       RE_NEXT(e);
       nd = re_nnode(e, P_LA);
-      nd->x = re_parser(e);
+      nd->par.xy.x = re_parser(e);
       if(!RE_ACCEPT(e, ')')) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(UNMATCH_LBR));
       break;
     case L_LA_CAP:
@@ -432,7 +434,7 @@ static struct Renode *re_parse_la(struct re_env *e){
     case L_LA_N:
       RE_NEXT(e);
       nd = re_nnode(e, P_LA_N);
-      nd->x = re_parser(e);
+      nd->par.xy.x = re_parser(e);
       if(!RE_ACCEPT(e, ')')) V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(UNMATCH_LBR));
       break;
     default:
@@ -473,8 +475,8 @@ static struct Renode *re_parser(struct re_env *e){
     while(!re_endofcat(e->lookahead, e->flags.re)){
       nd = cat;
       cat = re_nnode(e, P_CAT);
-      cat->x = nd;
-      cat->y = re_parse_la(e);
+      cat->par.xy.x = nd;
+      cat->par.xy.y.y = re_parse_la(e);
     }
     alt = cat;
   }
@@ -482,8 +484,8 @@ static struct Renode *re_parser(struct re_env *e){
     RE_NEXT(e);
     nd = alt;
     alt = re_nnode(e, P_ALT);
-    alt->x = nd;
-    alt->y = re_parser(e);
+    alt->par.xy.x = nd;
+    alt->par.xy.y.y = re_parser(e);
   }
   return alt;
 }
@@ -494,21 +496,21 @@ static unsigned int re_nodelen(struct Renode *nd){
   if(!nd) return 0;
   switch(nd->type){
     case P_ALT: n = 2;
-    case P_CAT: return re_nodelen(nd->x) + re_nodelen(nd->y) + n;
-    case P_BRA: case P_LA: case P_LA_N: return re_nodelen(nd->x) + 2;
+    case P_CAT: return re_nodelen(nd->par.xy.x) + re_nodelen(nd->par.xy.y.y) + n;
+    case P_BRA: case P_LA: case P_LA_N: return re_nodelen(nd->par.xy.x) + 2;
     case P_REP:
-      n = nd->max - nd->min;
-      switch(nd->min){
+      n = nd->par.xy.y.rp.max - nd->par.xy.y.rp.min;
+      switch(nd->par.xy.y.rp.min){
         case 0:
           if(!n) return 0;
-          if(nd->max >= RE_MAX_REP) return re_nodelen(nd->x) + 2;
+          if(nd->par.xy.y.rp.max >= RE_MAX_REP) return re_nodelen(nd->par.xy.x) + 2;
         case 1:
-          if(!n) return re_nodelen(nd->x);
-          if(nd->max >= RE_MAX_REP) return re_nodelen(nd->x) + 1;
+          if(!n) return re_nodelen(nd->par.xy.x);
+          if(nd->par.xy.y.rp.max >= RE_MAX_REP) return re_nodelen(nd->par.xy.x) + 1;
         default:
           n = 4;
-          if(nd->max >= RE_MAX_REP) n++;
-          return re_nodelen(nd->x) + n;
+          if(nd->par.xy.y.rp.max >= RE_MAX_REP) n++;
+          return re_nodelen(nd->par.xy.x) + n;
       }
     default: return 1;
   }
@@ -529,12 +531,12 @@ static void re_compile(struct re_env *e, struct Renode *nd){
   switch(nd->type){
     case P_ALT:
       split = re_newinst(e->prog, I_SPLIT);
-      re_compile(e, nd->x);
+      re_compile(e, nd->par.xy.x);
       jump = re_newinst(e->prog, I_JUMP);
-      re_compile(e, nd->y);
-      split->x = split + 1;
-      split->y = jump + 1;
-      jump->x = e->prog->end;
+      re_compile(e, nd->par.xy.y.y);
+      split->par.xy.x = split + 1;
+      split->par.xy.y.y = jump + 1;
+      jump->par.xy.x = e->prog->end;
       break;
 
     case P_ANY: re_newinst(e->prog, I_ANY); break;
@@ -543,21 +545,21 @@ static void re_compile(struct re_env *e, struct Renode *nd){
 
     case P_BRA:
       inst = re_newinst(e->prog, I_LBRA);
-      inst->n = nd->n;
-      re_compile(e, nd->x);
+      inst->par.n = nd->par.xy.y.n;
+      re_compile(e, nd->par.xy.x);
       inst = re_newinst(e->prog, I_RBRA);
-      inst->n = nd->n;
+      inst->par.n = nd->par.xy.y.n;
       break;
 
     case P_CAT:
-      re_compile(e, nd->x);
-      re_compile(e, nd->y);
+      re_compile(e, nd->par.xy.x);
+      re_compile(e, nd->par.xy.y.y);
       break;
 
     case P_CH:
       inst = re_newinst(e->prog, I_CH);
-      inst->c = nd->c;
-      if(e->flags.re_i) inst->c = tolowerrune(nd->c);
+      inst->par.c = nd->par.c;
+      if(e->flags.re_i) inst->par.c = tolowerrune(nd->par.c);
       break;
 
     case P_EOL: re_newinst(e->prog, I_EOL); break;
@@ -566,66 +568,66 @@ static void re_compile(struct re_env *e, struct Renode *nd){
 
     case P_LA:
       split = re_newinst(e->prog, I_LA);
-      re_compile(e, nd->x);
+      re_compile(e, nd->par.xy.x);
       re_newinst(e->prog, I_END);
-      split->x = split + 1;
-      split->y = e->prog->end;
+      split->par.xy.x = split + 1;
+      split->par.xy.y.y = e->prog->end;
       break;
     case P_LA_N:
       split = re_newinst(e->prog, I_LA_N);
-      re_compile(e, nd->x);
+      re_compile(e, nd->par.xy.x);
       re_newinst(e->prog, I_END);
-      split->x = split + 1;
-      split->y = e->prog->end;
+      split->par.xy.x = split + 1;
+      split->par.xy.y.y = e->prog->end;
       break;
 
     case P_REF:
       inst = re_newinst(e->prog, I_REF);
-      inst->n = nd->n;
+      inst->par.n = nd->par.xy.y.n;
       break;
 
     case P_REP:
-      n = nd->max - nd->min;
-      switch(nd->min){
+      n = nd->par.xy.y.rp.max - nd->par.xy.y.rp.min;
+      switch(nd->par.xy.y.rp.min){
         case 0: if(!n) break;
-          if(nd->max >= RE_MAX_REP){
+          if(nd->par.xy.y.rp.max >= RE_MAX_REP){
             split = re_newinst(e->prog, I_SPLIT);
-            re_compile(e, nd->x);
+            re_compile(e, nd->par.xy.x);
             jump = re_newinst(e->prog, I_JUMP);
-            jump->x = split;
-            split->x = split + 1; split->y = e->prog->end;
-            if(nd->ng){split->y = split + 1; split->x = e->prog->end;}
+            jump->par.xy.x = split;
+            split->par.xy.x = split + 1; split->par.xy.y.y = e->prog->end;
+            if(nd->par.xy.y.rp.ng){split->par.xy.y.y = split + 1; split->par.xy.x = e->prog->end;}
             break;
           }
         case 1: if(!n){
-            re_compile(e, nd->x);
+            re_compile(e, nd->par.xy.x);
             break;
           }
-          if(nd->max >= RE_MAX_REP){
+          if(nd->par.xy.y.rp.max >= RE_MAX_REP){
             inst = e->prog->end;
-            re_compile(e, nd->x);
+            re_compile(e, nd->par.xy.x);
             split = re_newinst(e->prog, I_SPLIT);
-            split->x = inst; split->y = e->prog->end;
-            if(nd->ng){split->y = inst; split->x = e->prog->end;}
+            split->par.xy.x = inst; split->par.xy.y.y = e->prog->end;
+            if(nd->par.xy.y.rp.ng){split->par.xy.y.y = inst; split->par.xy.x = e->prog->end;}
             break;
           }
         default:
           inst = re_newinst(e->prog, I_REP_INI);
-          inst->min = nd->min;
-          inst->max = n;
+          inst->par.xy.y.rp.min = nd->par.xy.y.rp.min;
+          inst->par.xy.y.rp.max = n;
           rep = re_newinst(e->prog, I_REP);
           split = re_newinst(e->prog, I_SPLIT);
-          re_compile(e, nd->x);
+          re_compile(e, nd->par.xy.x);
           jump = re_newinst(e->prog, I_JUMP);
-          jump->x = rep;
-          rep->x = e->prog->end;
-          split->x = split + 1; split->y = e->prog->end;
-          if(nd->ng){split->y = split + 1; split->x = e->prog->end;}
-          if(nd->max >= RE_MAX_REP){
+          jump->par.xy.x = rep;
+          rep->par.xy.x = e->prog->end;
+          split->par.xy.x = split + 1; split->par.xy.y.y = e->prog->end;
+          if(nd->par.xy.y.rp.ng){split->par.xy.y.y = split + 1; split->par.xy.x = e->prog->end;}
+          if(nd->par.xy.y.rp.max >= RE_MAX_REP){
             inst = split + 1;
             split = re_newinst(e->prog, I_SPLIT);
-            split->x = inst; split->y = e->prog->end;
-            if(nd->ng){split->y = inst; split->x = e->prog->end;}
+            split->par.xy.x = inst; split->par.xy.y.y = e->prog->end;
+            if(nd->par.xy.y.rp.ng){split->par.xy.y.y = inst; split->par.xy.x = e->prog->end;}
             break;
           }
           break;
@@ -634,11 +636,11 @@ static void re_compile(struct re_env *e, struct Renode *nd){
 
     case P_SET:
       inst = re_newinst(e->prog, I_SET);
-      inst->cp = nd->cp;
+      inst->par.cp = nd->par.cp;
       break;
     case P_SET_N:
       inst = re_newinst(e->prog, I_SET_N);
-      inst->cp = nd->cp;
+      inst->par.cp = nd->par.cp;
       break;
 
     case P_WORD:   re_newinst(e->prog, I_WORD); break;
@@ -702,7 +704,7 @@ static void program_print(struct Reprog *prog){
       case I_SPLIT:   printf("-->%d | -->%d\n", inst->x - prog->start, inst->y - prog->start); break;
       case I_REF:     printf("\\%d\n", inst->n); break;
       case I_REP:     printf("repeat -->%d\n", inst->x - prog->start); break;
-      case I_REP_INI: printf("init_rep %d %d\n", inst->min, inst->min + inst->max); break;
+      case I_REP_INI: printf("init_rep %d %d\n", inst->y.rp.min, inst->y.rp.min + inst->y.rp.max); break;
       case I_SET:     printf("["); print_set(inst->cp); puts(""); break;
       case I_SET_N:   printf("[^"); print_set(inst->cp); puts(""); break;
       case I_WORD:    puts("\\w"); break;
@@ -724,7 +726,7 @@ struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const
     if(p_err_msg) *p_err_msg = e.err_msg;
     reg_free(e.pstart);
     reg_free(e.prog);
-    return -1;
+    return (struct Reprog *)-1;
   }
 
   e.src = pattern;
@@ -742,11 +744,11 @@ struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags, const
   e.prog->start = e.prog->end = reg_malloc((re_nodelen(nd) + 6) * sizeof (struct Reinst));
 
   split = re_newinst(e.prog, I_SPLIT);
-  split->x = split + 3;
-  split->y = split + 1;
+  split->par.xy.x = split + 3;
+  split->par.xy.y.y = split + 1;
   re_newinst(e.prog, I_ANYNL);
   jump = re_newinst(e.prog, I_JUMP);
-  jump->x = split;
+  jump->par.xy.x = split;
   re_newinst(e.prog, I_LBRA);
   re_compile(&e, nd);
   re_newinst(e.prog, I_RBRA);
@@ -814,7 +816,7 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
           RE_NO_MATCH();
         case I_CH:
           start += chartorune(&c, start);
-          if(c && (flags.re_i ? tolowerrune(c):c) == pc->c) break;
+          if(c && (flags.re_i ? tolowerrune(c):c) == pc->par.c) break;
           RE_NO_MATCH();
         case I_EOL:
           if(!*start) break;
@@ -823,23 +825,23 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
         case I_EOS: if(!*start) break;
           RE_NO_MATCH();
 
-        case I_JUMP: pc = pc->x; continue;
+        case I_JUMP: pc = pc->par.xy.x; continue;
 
         case I_LA:
-          if(re_match(pc->x, start, bol, flags, &sub)){pc = pc->y; continue;}
+          if(re_match(pc->par.xy.x, start, bol, flags, &sub)){pc = pc->par.xy.y.y; continue;}
           RE_NO_MATCH();
         case I_LA_N:
           tmpsub = sub;
-          if(!re_match(pc->x, start, bol, flags, &tmpsub)){pc = pc->y; continue;}
+          if(!re_match(pc->par.xy.x, start, bol, flags, &tmpsub)){pc = pc->par.xy.y.y; continue;}
           RE_NO_MATCH();
 
-        case I_LBRA: sub.sub[pc->n].start = start; break;
+        case I_LBRA: sub.sub[pc->par.n].start = start; break;
 
         case I_REF:
-          i = sub.sub[pc->n].end - sub.sub[pc->n].start;
+          i = sub.sub[pc->par.n].end - sub.sub[pc->par.n].start;
           if(flags.re_i){
             int num = i;
-            const char *s = start, *p = sub.sub[pc->n].start;
+            const char *s = start, *p = sub.sub[pc->par.n].start;
             Rune rr;
             for(; num && *s && *p; num--){
               s += chartorune(&r, s);
@@ -847,21 +849,21 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
               if(tolowerrune(r) != tolowerrune(rr)) break;
             }
             if(num) RE_NO_MATCH();
-          }else if(strncmp(start, sub.sub[pc->n].start, i)) RE_NO_MATCH();
+          }else if(strncmp(start, sub.sub[pc->par.n].start, i)) RE_NO_MATCH();
           if(i > 0) start += i;
           break;
 
         case I_REP:
-          if(pc->min){pc->min--; pc++;}
-          else if(!pc->max--){pc = pc->x; continue;}
+          if(pc->par.xy.y.rp.min){pc->par.xy.y.rp.min--; pc++;}
+          else if(!pc->par.xy.y.rp.max--){pc = pc->par.xy.x; continue;}
           break;
 
         case I_REP_INI:
-          (pc + 1)->min = pc->min;
-          (pc + 1)->max = pc->max;
+          (pc + 1)->par.xy.y.rp.min = pc->par.xy.y.rp.min;
+          (pc + 1)->par.xy.y.rp.max = pc->par.xy.y.rp.max;
           break;
 
-        case I_RBRA: sub.sub[pc->n].end = start; break;
+        case I_RBRA: sub.sub[pc->par.n].end = start; break;
 
         case I_SET:
         case I_SET_N:
@@ -869,7 +871,7 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
           if(!c) RE_NO_MATCH();
 
           i = 1;
-          for(p = pc->cp->spans; i && p < pc->cp->end; p++)
+          for(p = pc->par.cp->spans; i && p < pc->par.cp->end; p++)
             if(flags.re_i){
               for(r = p->s; r <= p->e; ++r)
                 if(tolowerrune(c) == tolowerrune(r)){i=0; break;}
@@ -884,8 +886,8 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol, s
             fprintf(stderr, "re_match: backtrack overflow!\n");
             return 0;
           }
-          re_newthread(&threads[thr_num++], pc->y, start, &sub);
-          pc = pc->x;
+          re_newthread(&threads[thr_num++], pc->par.xy.y.y, start, &sub);
+          pc = pc->par.xy.x;
           continue;
 
         case I_WORD:
@@ -1175,12 +1177,12 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj, const char
   v7_init_str(obj, re, re_len, 1);
   v7_set_class(obj, V7_CLASS_REGEXP);
   obj->v.str.prog = NULL;
-  obj->fl.re=1;
+  obj->fl.fl.re=1;
   while(fl_len){
     switch(fl[--fl_len]){
-      case 'g': obj->fl.re_g=1;  break;
-      case 'i': obj->fl.re_i=1;  break;
-      case 'm': obj->fl.re_m=1;  break;
+      case 'g': obj->fl.fl.re_g=1;  break;
+      case 'i': obj->fl.fl.re_i=1;  break;
+      case 'm': obj->fl.fl.re_m=1;  break;
     }
   }
   obj->v.str.lastIndex = 0;
@@ -1212,17 +1214,17 @@ V7_PRIVATE enum v7_err Regex_ctor(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE void Regex_global(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
   if(NULL == result || arg) return;
-  v7_init_bool(result, this_obj->fl.re_g);
+  v7_init_bool(result, this_obj->fl.fl.re_g);
 }
 
 V7_PRIVATE void Regex_ignoreCase(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
   if(NULL == result || arg) return;
-  v7_init_bool(result, this_obj->fl.re_i);
+  v7_init_bool(result, this_obj->fl.fl.re_i);
 }
 
 V7_PRIVATE void Regex_multiline(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
   if(NULL == result || arg) return;
-  v7_init_bool(result, this_obj->fl.re_m);
+  v7_init_bool(result, this_obj->fl.fl.re_m);
 }
 
 V7_PRIVATE void Regex_source(struct v7_val *this_obj, struct v7_val *arg, struct v7_val *result){
@@ -1237,8 +1239,8 @@ V7_PRIVATE void Regex_lastIndex(struct v7_val *this_obj, struct v7_val *arg, str
 
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj){
   if(NULL == re_obj->v.str.prog){
-    re_obj->v.str.prog = re_compiler(re_obj->v.str.buf, re_obj->fl, NULL);
-    if(  -1 == re_obj->v.str.prog) return V7_REGEXP_ERROR;
+    re_obj->v.str.prog = re_compiler(re_obj->v.str.buf, re_obj->fl.fl, NULL);
+    if(  -1 == (int)re_obj->v.str.prog) return V7_REGEXP_ERROR;
     if(NULL == re_obj->v.str.prog) return V7_OUT_OF_MEMORY;
   }
   return V7_OK;
@@ -1253,21 +1255,21 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa){
   if(cfa->num_args > 0){
     const char *begin = arg->v.str.buf;
     Rune rune;
-    if(cfa->this_obj->fl.re_g){
-      int utf_shift;
+    if(cfa->this_obj->fl.fl.re_g){
+      unsigned long utf_shift;
       for(utf_shift = 0; utf_shift < cfa->this_obj->v.str.lastIndex; utf_shift++)
         begin += chartorune(&rune, begin);
     }
     TRY(check_str_re_conv(v7, &arg, 0));
     TRY(regex_check_prog(cfa->this_obj));
-    if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, begin, &sub)){
+    if(!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl, begin, &sub)){
       int i;
       arr = v7_push_new_object(v7);
       v7_set_class(arr, V7_CLASS_ARRAY);
       for(i=0; i<sub.subexpr_num; i++, ptok++)
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start, ptok->end - ptok->start, 1));
-      if(cfa->this_obj->fl.re_g){
-        for(;cfa->this_obj->fl.re_g && begin < sub.sub->end; cfa->this_obj->v.str.lastIndex++)
+      if(cfa->this_obj->fl.fl.re_g){
+        for(;cfa->this_obj->fl.fl.re_g && begin < sub.sub->end; cfa->this_obj->v.str.lastIndex++)
           begin += chartorune(&rune, begin);
       }
       return V7_OK;
@@ -1287,7 +1289,7 @@ V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa){
   if(cfa->num_args > 0){
     TRY(check_str_re_conv(v7, &arg, 0));
     TRY(regex_check_prog(cfa->this_obj));
-    found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl, arg->v.str.buf, &sub);
+    found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl, arg->v.str.buf, &sub);
   }
   v7_push_bool(v7, found);
   return V7_OK;
