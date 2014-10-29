@@ -86,7 +86,7 @@ enum v7_tok {
 
 /* Sub expression matches */
 struct Resub{
-  unsigned int subexpr_num;
+  int subexpr_num;
   struct re_tok{
     const char *start;  /* points to the beginning of the token */
     const char *end;    /* points to the end of the token */
@@ -94,7 +94,7 @@ struct Resub{
 };
 
 struct Rerange{ Rune s; Rune e; };
-// character class, each pair of rune's defines a range
+/* character class, each pair of rune's defines a range */
 struct Reclass{
   struct Rerange *end;
   struct Rerange spans[RE_MAX_RANGES];
@@ -115,10 +115,10 @@ struct Renode{
           uint8_t ng;  /* not greedy flag */
           uint16_t min;
           uint16_t max;
-        };
-      };
-    };
-  };
+        } rp;
+      } y;
+    } xy;
+  } par;
 };
 
 /* Machine instructions */
@@ -134,11 +134,11 @@ struct Reinst{
         struct{
           uint16_t min;
           uint16_t max;
-        };
+        } rp;
         struct Reinst *y;
-      };
-    };
-  };
+      } y;
+    } xy;
+  } par;
 };
 
 /* struct Reprogram definition */
@@ -195,9 +195,9 @@ union v7_scalar {
   struct v7_prop *array;    /* List of array elements */
   v7_func_t c_func;         /* Pointer to the C function */
   struct {
-    v7_prop_func_t prop_func; /* Object's property function, e.g. String.length */
-    struct v7_val *this_obj;  /* Current "this" object for property function */
-  };
+    v7_prop_func_t f;       /* Object's property function, e.g. String.length */
+    struct v7_val *o;       /* Current "this" object for property function */
+  } prop_func;
 };
 
 struct v7_val {
@@ -225,10 +225,10 @@ struct v7_val {
       uint16_t re_m:1; /* execution RegExp flag m */
       uint16_t re:1;   /* parser RegExp flag re */
     } fl;
-  };
+  } fl;
 };
 
-#define V7_MKVAL(_p,_t,_c,_v) {0,(_p),0,0,{(_v)},(_t),(_c),0,0}
+#define V7_MKVAL(_p,_t,_c,_v) {0,(_p),0,0,{(_v)},(_t),(_c),0,{0}}
 
 struct v7_pstate {
   const char *file_name;
@@ -276,7 +276,7 @@ struct v7 {
     return(err_code); \
   }while(0)
 
-#define CHECK(cond, code) if(!(cond)) THROW(code)
+#define CHECK(cond, code) do{ if(!(cond)) THROW(code); }while(0)
 
 #ifdef _WIN32
 #define TRACE_CALL  /* printf */
@@ -285,12 +285,16 @@ struct v7 {
 #endif
 
 extern int __lev;
-#define TRY(call) do { \
+/* #define TRY(call) do { \
   enum v7_err _e; \
   TRACE_CALL("> %s %d\n", #call, __LINE__);  \
   _e = call;      \
   CHECK(_e == V7_OK, _e);     \
   TRACE_CALL("< %s %d\n", #call, __LINE__); \
+} while (0) */
+#define TRY(call) do { \
+  enum v7_err _e = call;      \
+  CHECK(_e == V7_OK, _e);     \
 } while (0)
 
 /* Print current function name and stringified object */
@@ -330,7 +334,7 @@ extern struct v7_val s_file;
     static struct v7_val _val = MKOBJ(_proto); \
     _val.v._attr = (_initializer); \
     _val.type = (_t); \
-    _val.flags = (_fl); \
+    _val.fl.flags = (_fl); \
     SET_RO_PROP_V(_o, _name, _val); \
   } while (0)
 
@@ -339,7 +343,7 @@ extern struct v7_val s_file;
 
 /* Adds property function "_func" with key "_name" to the object "_obj" */
 #define SET_PROP_FUNC(_obj, _name, _func) \
-    SET_RO_PROP2(_obj, _name, V7_TYPE_NULL, 0, prop_func, _func, V7_PROP_FUNC)
+    SET_RO_PROP2(_obj, _name, V7_TYPE_NULL, 0, prop_func.f, _func, V7_PROP_FUNC)
 
 /* Adds method "_func" with key "_name" to the object "_obj" */
 #define SET_METHOD(_obj, _name, _func) \
@@ -384,6 +388,7 @@ V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
 V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
 V7_PRIVATE void inc_ref_count(struct v7_val *);
+V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f);
 V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type);
 V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
                                struct v7_val *k, struct v7_val *v);
@@ -440,4 +445,4 @@ V7_PRIVATE void init_regex(void);
 
 
 
-#endif // V7_INTERNAL_H_INCLUDED
+#endif /* V7_INTERNAL_H_INCLUDED */

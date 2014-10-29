@@ -14,12 +14,12 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg, int
 
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   #define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0],
-                *obj = cfa->this_obj;
-  if(!cfa->called_as_constructor) obj = v7_push_new_object(v7);
   const char *str = NULL;
   size_t len = 0;
   int own = 0;
+  struct v7_val *arg = cfa->args[0],
+                *obj = cfa->this_obj;
+  if(!cfa->called_as_constructor) obj = v7_push_new_object(v7);
 
   if(cfa->num_args > 0){
     TRY(check_str_re_conv(v7, &arg, 0));
@@ -66,13 +66,13 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   struct v7_val *arg = cfa->args[0];
   struct Resub sub;
   struct v7_val *arr = NULL;
-  int shift = 0;
+  unsigned long shift = 0;
 
   if(cfa->num_args > 0){
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
     do{
-      if(!re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf + shift, &sub)){
+      if(!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf + shift, &sub)){
         if(NULL == arr){
           arr = v7_push_new_object(v7);
           v7_set_class(arr, V7_CLASS_ARRAY);
@@ -80,7 +80,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
         shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[0].start, sub.sub[0].end - sub.sub[0].start, 1));
       }
-    }while(arg->fl.re_g && shift < cfa->this_obj->v.str.len);
+    }while(arg->fl.fl.re_g && shift < cfa->this_obj->v.str.len);
   }
   if(0 == shift) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
@@ -91,7 +91,8 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7);
   struct Resub sub, sub1;
-  int limit = 1000000, elem = 0, shift = 0, i, len;
+  int limit = 1000000, elem = 0, i, len;
+  unsigned long shift = 0;
 
   v7_set_class(arr, V7_CLASS_ARRAY);
   if(cfa->num_args > 0){
@@ -99,7 +100,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
     for(; elem < limit && shift < cfa->this_obj->v.str.len; elem++){
-      if(re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf + shift, &sub)) break;
+      if(re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf + shift, &sub)) break;
       v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift, sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
       for(i = 1; i < sub.subexpr_num; i++)
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start, sub.sub[i].end - sub.sub[i].start, 1));
@@ -167,7 +168,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
   if(cfa->num_args > 0){
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
-    if(!re_exec(arg->v.str.prog, arg->fl, cfa->this_obj->v.str.buf, &sub)) shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
+    if(!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf, &sub)) shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
   }
   if(shift > 0){ /* calc shift for UTF-8 */
     Rune rune;
@@ -209,9 +210,11 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
     out_len = 0;
     do{
       int i;
-      if(re_exec(re->v.str.prog, re->fl, p, &loot)) break;
+      if(re_exec(re->v.str.prog, re->fl.fl, p, &loot)) break;
       if(p != loot.sub->start){
-        *ptok++ = (struct re_tok){p, loot.sub->start};
+        ptok->start = p;
+        ptok->end = loot.sub->start;
+        ptok++;
         out_len += loot.sub->start - p;
         out_sub_num++;
       }
@@ -219,15 +222,18 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
       if(NULL != arr){ /* replace function */
         Rune rune;
         int old_sp = v7->sp, utf_shift = 0;
+        struct v7_val *rez_str;
         for(i = 0; i < loot.subexpr_num; i++)
           v7_push_string(v7, loot.sub[i].start, loot.sub[i].end - loot.sub[i].start, 1);
         for(i = 0; p + i < loot.sub[0].start; i += chartorune(&rune, p + i), utf_shift++);
         TRY(push_number(v7, utf_shift));
         TRY(v7_push(v7, cfa->this_obj));
-        struct v7_val *rez_str = v7_call(v7, cfa->this_obj, loot.subexpr_num + 2);
+        rez_str = v7_call(v7, cfa->this_obj, loot.subexpr_num + 2);
         TRY(check_str_re_conv(v7, &rez_str, 0));
         if(rez_str->v.str.len){
-          *ptok++ = (struct re_tok){rez_str->v.str.buf, rez_str->v.str.buf + rez_str->v.str.len};
+          ptok->start = rez_str->v.str.buf;
+          ptok->end = rez_str->v.str.buf + rez_str->v.str.len;
+          ptok++;
           out_len += rez_str->v.str.len;
           out_sub_num++;
           v7_append(v7, arr, rez_str);
@@ -237,21 +243,25 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
         struct Resub newsub;
         re_rplc(&loot, p, str_func->v.str.buf, &newsub);
         for(i = 0; i < newsub.subexpr_num; i++){
-          *ptok++ = (struct re_tok){newsub.sub[i].start, newsub.sub[i].end};
+          ptok->start = newsub.sub[i].start;
+          ptok->end = newsub.sub[i].end;
+          ptok++;
           out_len += newsub.sub[i].end - newsub.sub[i].start;
           out_sub_num++;
         }
       }
-      p = loot.sub->end;
-    }while(re->fl.re_g && p < str_end);
+      p = (char *)loot.sub->end;
+    }while(re->fl.fl.re_g && p < str_end);
     if(p < str_end){
-      *ptok++ = (struct re_tok){p, str_end};
+      ptok->start = p;
+      ptok->end = str_end;
+      ptok++;
       out_len += str_end - p;
       out_sub_num++;
     }
     out_str = malloc(out_len+1);
     CHECK(out_str, V7_OUT_OF_MEMORY);
-    ptok = out_sub; p = out_str;
+    ptok = out_sub; p = (char *)out_str;
     do{
       size_t ln = ptok->end - ptok->start;
       memcpy(p, ptok->start, ln);
@@ -263,7 +273,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa){
   }
   TRY(inc_stack(v7, old_sp - v7->sp));
   v7_init_str(result, out_str, out_len, own);
-  result->fl.str_alloc = 1;
+  result->fl.fl.str_alloc = 1;
   return V7_OK;
   #undef v7
 }

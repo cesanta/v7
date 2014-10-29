@@ -65,18 +65,18 @@ static enum v7_err adder(struct v7_c_func_arg *cfa) {
 }
 
 static int check_bool(struct v7 *v7, struct v7_val *v, int is_true) {
-  _prop_func_2_value(v7, v);
+  _prop_func_2_value(v7, &v);
   return v7_type(v) == V7_TYPE_BOOL && !!v7_number(v) == !!is_true;
 }
 
 static int check_str(struct v7 *v7, struct v7_val *v, const char *val) {
   unsigned long len;
-  _prop_func_2_value(v7, v);
+  _prop_func_2_value(v7, &v);
   return v7_type(v) == V7_TYPE_STR && !strcmp(v7_string(v, &len), val);
 }
 
 static int check_num(struct v7 *v7, struct v7_val *v, double an) {
-  _prop_func_2_value(v7, v);
+  _prop_func_2_value(v7, &v);
   double bn = v7_number(v);
   return v7_type(v) == V7_TYPE_NUM &&
   ((an == bn) || (isinf(an) && isinf(bn)) || (isnan(an) && isnan(bn)));
