@@ -276,7 +276,7 @@ struct v7 {
     return(err_code); \
   }while(0)
 
-#define CHECK(cond, code) if(!(cond)) THROW(code)
+#define CHECK(cond, code) do{ if(!(cond)) THROW(code); }while(0)
 
 #ifdef _WIN32
 #define TRACE_CALL(fmt, ...)  /* printf(fmt, ...) */
@@ -285,12 +285,16 @@ struct v7 {
 #endif
 
 extern int __lev;
-#define TRY(call) do { \
+/* #define TRY(call) do { \
   enum v7_err _e; \
   TRACE_CALL("> %s %d\n", #call, __LINE__);  \
   _e = call;      \
   CHECK(_e == V7_OK, _e);     \
   TRACE_CALL("< %s %d\n", #call, __LINE__); \
+} while (0) */
+#define TRY(call) do { \
+  enum v7_err _e = call;      \
+  CHECK(_e == V7_OK, _e);     \
 } while (0)
 
 /* Print current function name and stringified object */
