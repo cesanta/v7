@@ -31,7 +31,7 @@ all_warnings: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
 	./$@
 
-v7: src/v7_license.h src/utf.h src/internal.h $(SOURCES) v7.h v7.c
+v7: src/v7_license.h src/utf.h src/internal.h $(SOURCES) v7.h
 	$(CC) $(SOURCES) -o $@ -DV7_EXE -DV7_PRIVATE="" $(CFLAGS) -lm
 #	$(CC) $(SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
 
