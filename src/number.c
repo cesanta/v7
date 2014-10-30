@@ -1,7 +1,8 @@
 #include "internal.h"
 
 V7_PRIVATE enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
+  struct v7_val *obj =
+      cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
   struct v7_val *arg = cfa->args[0];
 
   v7_init_num(obj, cfa->num_args > 0 ? arg->v.num : 0.0);
@@ -24,7 +25,7 @@ V7_PRIVATE enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
-  int len, digits = cfa->num_args > 0 ? (int) cfa->args[0]->v.num : 0;
+  int len, digits = cfa->num_args > 0 ? (int)cfa->args[0]->v.num : 0;
   char fmt[10], buf[100];
 
   snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);

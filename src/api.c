@@ -9,7 +9,7 @@ struct v7 *v7_create(void) {
     init_stdlib();  // One-time initialization
   }
 
-  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+  if ((v7 = (struct v7 *)calloc(1, sizeof(*v7))) != NULL) {
     v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
     v7->root_scope.proto = &s_global;
     v7->root_scope.ref_count = 1;
@@ -43,8 +43,8 @@ struct v7_val *v7_push_bool(struct v7 *v7, int is_true) {
   return push_bool(v7, is_true) == V7_OK ? v7_top_val(v7) : NULL;
 }
 
-struct v7_val *v7_push_string(struct v7 *v7, const char *str,
-                              unsigned long n, int own) {
+struct v7_val *v7_push_string(struct v7 *v7, const char *str, unsigned long n,
+                              int own) {
   return push_string(v7, str, n, own) == V7_OK ? v7_top_val(v7) : NULL;
 }
 
@@ -60,13 +60,9 @@ struct v7_val *v7_push_val(struct v7 *v7, struct v7_val *v) {
   return v7_push(v7, v) == V7_OK ? v : NULL;
 }
 
-enum v7_type v7_type(const struct v7_val *v) {
-  return v->type;
-}
+enum v7_type v7_type(const struct v7_val *v) { return v->type; }
 
-double v7_number(const struct v7_val *v) {
-  return v->v.num;
-}
+double v7_number(const struct v7_val *v) { return v->v.num; }
 
 const char *v7_string(const struct v7_val *v, unsigned long *plen) {
   if (plen != NULL) *plen = v->v.str.len;
@@ -80,16 +76,17 @@ struct v7_val *v7_get(struct v7_val *obj, const char *key) {
 
 int v7_is_true(const struct v7_val *v) {
   return (v->type == V7_TYPE_BOOL && v->v.num != 0.0) ||
-  (v->type == V7_TYPE_NUM && v->v.num != 0.0 && !isnan(v->v.num)) ||
-  (v->type == V7_TYPE_STR && v->v.str.len > 0) ||
-  (v->type == V7_TYPE_OBJ);
+         (v->type == V7_TYPE_NUM && v->v.num != 0.0 && !isnan(v->v.num)) ||
+         (v->type == V7_TYPE_STR && v->v.str.len > 0) ||
+         (v->type == V7_TYPE_OBJ);
 }
 
 enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   struct v7_prop **head, *prop;
   CHECK(v7_is_class(arr, V7_CLASS_ARRAY), V7_INTERNAL_ERROR);
   // Append to the end of the list, to make indexing work
-  for (head = &arr->v.array; *head != NULL; head = &head[0]->next);
+  for (head = &arr->v.array; *head != NULL; head = &head[0]->next)
+    ;
   prop = mkprop(v7);
   CHECK(prop != NULL, V7_OUT_OF_MEMORY);
   prop->next = *head;
@@ -109,8 +106,10 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
         v7_set2(v7, v, p->key, p->val);
       }
       break;
-      // TODO(lsm): add the rest of types
-    default: abort(); break;
+    // TODO(lsm): add the rest of types
+    default:
+      abort();
+      break;
   }
 }
 
@@ -124,7 +123,7 @@ struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args) {
 }
 
 enum v7_err v7_set(struct v7 *v7, struct v7_val *obj, const char *key,
-   struct v7_val *val) {
+                   struct v7_val *val) {
   return v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, strlen(key), 1, val);
 }
 
@@ -137,9 +136,9 @@ static void arr_to_string(const struct v7_val *v, char *buf, int bsiz) {
   int n = snprintf(buf, bsiz, "%s", "[");
 
   for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    if (m != head) n += snprintf(buf + n, bsiz - n, "%s", ", ");
     v7_stringify(m->val, buf + n, bsiz - n);
-    n = (int) strlen(buf);
+    n = (int)strlen(buf);
   }
   n += snprintf(buf + n, bsiz - n, "%s", "]");
 }
@@ -149,12 +148,12 @@ static void obj_to_string(const struct v7_val *v, char *buf, int bsiz) {
   int n = snprintf(buf, bsiz, "%s", "{");
 
   for (m = head; m != NULL && n < bsiz - 1; m = m->next) {
-    if (m != head) n += snprintf(buf + n , bsiz - n, "%s", ", ");
+    if (m != head) n += snprintf(buf + n, bsiz - n, "%s", ", ");
     v7_stringify(m->key, buf + n, bsiz - n);
-    n = (int) strlen(buf);
-    n += snprintf(buf + n , bsiz - n, "%s", ": ");
+    n = (int)strlen(buf);
+    n += snprintf(buf + n, bsiz - n, "%s", ": ");
     v7_stringify(m->val, buf + n, bsiz - n);
-    n = (int) strlen(buf);
+    n = (int)strlen(buf);
   }
   n += snprintf(buf + n, bsiz - n, "%s", "}");
 }
@@ -168,13 +167,13 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (is_num(v)) {
     // TODO: check this on 32-bit arch
-    if (v->v.num > ((uint64_t) 1 << 52) || ceil(v->v.num) != v->v.num) {
+    if (v->v.num > ((uint64_t)1 << 52) || ceil(v->v.num) != v->v.num) {
       snprintf(buf, bsiz, "%lg", v->v.num);
     } else {
-      snprintf(buf, bsiz, "%lu", (unsigned long) v->v.num);
+      snprintf(buf, bsiz, "%lu", (unsigned long)v->v.num);
     }
   } else if (is_string(v)) {
-    snprintf(buf, bsiz, "%.*s", (int) v->v.str.len, v->v.str.buf);
+    snprintf(buf, bsiz, "%.*s", (int)v->v.str.len, v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_ARRAY)) {
     arr_to_string(v, buf, bsiz);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {
@@ -185,9 +184,9 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
     }
   } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
     int sz = snprintf(buf, bsiz, "/%s/", v->v.str.buf);
-    if(v->fl.fl.re_g) sz += snprintf(buf+sz, bsiz, "g");
-    if(v->fl.fl.re_i) sz += snprintf(buf+sz, bsiz, "i");
-    if(v->fl.fl.re_m) snprintf(buf+sz, bsiz, "m");
+    if (v->fl.fl.re_g) sz += snprintf(buf + sz, bsiz, "g");
+    if (v->fl.fl.re_i) sz += snprintf(buf + sz, bsiz, "i");
+    if (v->fl.fl.re_m) snprintf(buf + sz, bsiz, "m");
   } else if (v->type == V7_TYPE_OBJ) {
     obj_to_string(v, buf, bsiz);
   } else {
@@ -213,16 +212,16 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   if ((fp = fopen(path, "r")) == NULL) {
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
-  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
+  } else if ((p = (char *)calloc(1, (size_t)file_size + 1)) == NULL) {
     fclose(fp);
   } else {
     rewind(fp);
-    fread(p, 1, (size_t) file_size, fp);
+    fread(p, 1, (size_t)file_size, fp);
     fclose(fp);
     status = do_exec(v7, path, p, v7->sp);
     free(p);
   }
 
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
-  //return status;
+  // return status;
 }
