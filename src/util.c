@@ -1,13 +1,7 @@
 #include "internal.h"
 
-V7_PRIVATE void obj_sanity_check(const struct v7_val *obj) {
-  assert(obj != NULL);
-  assert(obj->ref_count >= 0);
-  assert(!obj->fl.fl.val_dealloc);
-}
-
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
-  obj_sanity_check(obj);
+  OBJ_SANITY_CHECK(obj);
   if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
     while (obj != NULL) {
       if (obj->ctor == ctor) return 1;
@@ -23,23 +17,18 @@ V7_PRIVATE int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
 }
 
 V7_PRIVATE int is_string(const struct v7_val *v) {
-  obj_sanity_check(v);
+  OBJ_SANITY_CHECK(v);
   return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
 }
 
 V7_PRIVATE int is_num(const struct v7_val *v) {
-  obj_sanity_check(v);
+  OBJ_SANITY_CHECK(v);
   return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
 }
 
 V7_PRIVATE int is_bool(const struct v7_val *v) {
-  obj_sanity_check(v);
+  OBJ_SANITY_CHECK(v);
   return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
-}
-
-V7_PRIVATE void inc_ref_count(struct v7_val *v) {
-  obj_sanity_check(v);
-  v->ref_count++;
 }
 
 V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f) {
@@ -328,7 +317,7 @@ V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
       for (m = obj->props; m != NULL; m = m->next) {
         if (cmp(m->key, key) == 0) {
           if (m->val->fl.fl.prop_func) {
-            inc_ref_count(o);
+            INC_REF_COUNT(o);
             m->val->v.prop_func.o = o;
             return m;
           }
@@ -351,8 +340,8 @@ V7_PRIVATE enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
   struct v7_prop *m = mkprop(v7);
   CHECK(m != NULL, V7_OUT_OF_MEMORY);
 
-  inc_ref_count(key);
-  inc_ref_count(val);
+  INC_REF_COUNT(key);
+  INC_REF_COUNT(val);
   m->key = key;
   m->val = val;
   m->next = *h;
@@ -384,7 +373,7 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
 
   /* Find attribute inside object */
   if ((m = v7_get2(obj, k, 1)) != NULL) {
-    inc_ref_count(v);
+    INC_REF_COUNT(v);
     if (m->val->fl.fl.prop_func) {
       m->val->v.prop_func.f(m->val->v.prop_func.o, v, NULL);
       v7_freeval(v7, m->val->v.prop_func.o);
@@ -450,7 +439,7 @@ V7_PRIVATE enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
   /* TODO: do not leak here */
   CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
 
-  inc_ref_count(k);
+  INC_REF_COUNT(k);
   TRY(v7_set2(v7, obj, k, v));
   v7_freeval(v7, k);
 
@@ -509,7 +498,7 @@ V7_PRIVATE struct v7_val *v7_top_val(struct v7 *v7) {
 }
 
 V7_PRIVATE enum v7_err v7_push(struct v7 *v7, struct v7_val *v) {
-  inc_ref_count(v);
+  INC_REF_COUNT(v);
   TRY(inc_stack(v7, 1));
   v7->stack[v7->sp - 1] = v;
   return V7_OK;

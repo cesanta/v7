@@ -536,6 +536,25 @@ extern struct v7_val s_file;
     SET_RO_PROP_V(_obj, _name, _val);                                  \
   } while (0)
 
+#define OBJ_SANITY_CHECK(obj)          \
+  do {                                 \
+    assert((obj) != NULL);             \
+    assert((obj)->ref_count >= 0);     \
+    assert(!(obj)->fl.fl.val_dealloc); \
+  } while (0)
+
+#define INC_REF_COUNT(v) \
+  do {                   \
+    OBJ_SANITY_CHECK(v); \
+    (v)->ref_count++;    \
+  } while (0)
+
+#define DEC_REF_COUNT(v) \
+  do {                   \
+    OBJ_SANITY_CHECK(v); \
+    (v)->ref_count--;    \
+  } while (0)
+
 /* Forward declarations */
 
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
@@ -575,7 +594,6 @@ V7_PRIVATE int is_string(const struct v7_val *v);
 V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
 V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
-V7_PRIVATE void inc_ref_count(struct v7_val *);
 V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f);
 V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type);
 V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
@@ -643,14 +661,8 @@ V7_PRIVATE struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_file = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 
-V7_PRIVATE void obj_sanity_check(const struct v7_val *obj) {
-  assert(obj != NULL);
-  assert(obj->ref_count >= 0);
-  assert(!obj->fl.fl.val_dealloc);
-}
-
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
-  obj_sanity_check(obj);
+  OBJ_SANITY_CHECK(obj);
   if (obj->type == V7_TYPE_OBJ && ctor != NULL) {
     while (obj != NULL) {
       if (obj->ctor == ctor) return 1;
@@ -666,23 +678,18 @@ V7_PRIVATE int v7_is_class(const struct v7_val *obj, enum v7_class cls) {
 }
 
 V7_PRIVATE int is_string(const struct v7_val *v) {
-  obj_sanity_check(v);
+  OBJ_SANITY_CHECK(v);
   return v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING);
 }
 
 V7_PRIVATE int is_num(const struct v7_val *v) {
-  obj_sanity_check(v);
+  OBJ_SANITY_CHECK(v);
   return v->type == V7_TYPE_NUM || v7_is_class(v, V7_CLASS_NUMBER);
 }
 
 V7_PRIVATE int is_bool(const struct v7_val *v) {
-  obj_sanity_check(v);
+  OBJ_SANITY_CHECK(v);
   return v->type == V7_TYPE_BOOL || v7_is_class(v, V7_CLASS_BOOLEAN);
-}
-
-V7_PRIVATE void inc_ref_count(struct v7_val *v) {
-  obj_sanity_check(v);
-  v->ref_count++;
 }
 
 V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f) {
@@ -971,7 +978,7 @@ V7_PRIVATE struct v7_prop *v7_get2(struct v7_val *obj, const struct v7_val *key,
       for (m = obj->props; m != NULL; m = m->next) {
         if (cmp(m->key, key) == 0) {
           if (m->val->fl.fl.prop_func) {
-            inc_ref_count(o);
+            INC_REF_COUNT(o);
             m->val->v.prop_func.o = o;
             return m;
           }
@@ -994,8 +1001,8 @@ V7_PRIVATE enum v7_err vinsert(struct v7 *v7, struct v7_prop **h,
   struct v7_prop *m = mkprop(v7);
   CHECK(m != NULL, V7_OUT_OF_MEMORY);
 
-  inc_ref_count(key);
-  inc_ref_count(val);
+  INC_REF_COUNT(key);
+  INC_REF_COUNT(val);
   m->key = key;
   m->val = val;
   m->next = *h;
@@ -1027,7 +1034,7 @@ V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
 
   /* Find attribute inside object */
   if ((m = v7_get2(obj, k, 1)) != NULL) {
-    inc_ref_count(v);
+    INC_REF_COUNT(v);
     if (m->val->fl.fl.prop_func) {
       m->val->v.prop_func.f(m->val->v.prop_func.o, v, NULL);
       v7_freeval(v7, m->val->v.prop_func.o);
@@ -1093,7 +1100,7 @@ V7_PRIVATE enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
   /* TODO: do not leak here */
   CHECK(k != NULL && v != NULL, V7_OUT_OF_MEMORY);
 
-  inc_ref_count(k);
+  INC_REF_COUNT(k);
   TRY(v7_set2(v7, obj, k, v));
   v7_freeval(v7, k);
 
@@ -1152,7 +1159,7 @@ V7_PRIVATE struct v7_val *v7_top_val(struct v7 *v7) {
 }
 
 V7_PRIVATE enum v7_err v7_push(struct v7 *v7, struct v7_val *v) {
-  inc_ref_count(v);
+  INC_REF_COUNT(v);
   TRY(inc_stack(v7, 1));
   v7->stack[v7->sp - 1] = v;
   return V7_OK;
@@ -1650,7 +1657,7 @@ V7_PRIVATE void init_crypto(void) {
   SET_METHOD(s_crypto, "sha1_hex", Crypto_sha1_hex);
 
   v7_set_class(&s_crypto, V7_CLASS_OBJECT);
-  inc_ref_count(&s_crypto);
+  INC_REF_COUNT(&s_crypto);
 
   SET_RO_PROP_V(s_global, "Crypto", s_crypto);
 }
@@ -5036,7 +5043,7 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
       !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))) {
     TRY(toString(v7, *arg));
     *arg = v7_top_val(v7);
-    inc_ref_count(*arg);
+    INC_REF_COUNT(*arg);
     TRY(inc_stack(v7, -2));
     TRY(v7_push(v7, *arg));
   }
@@ -5603,9 +5610,11 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
 
   _prop_func_2_value(v7, &a);
   _prop_func_2_value(v7, &b);
-  if (a->type == V7_TYPE_STR && op == TOK_PLUS) {
-    TRY(check_str_re_conv(v7, &b,
-                          0)); /* Do type conversion, result pushed on stack */
+  if ((a->type == V7_TYPE_STR || b->type == V7_TYPE_STR) && op == TOK_PLUS) {
+    /* Do type conversion, result pushed on stack */
+    TRY(check_str_re_conv(v7, &a, 0));
+    TRY(check_str_re_conv(v7, &b, 0));
+
     str = (char *)malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
@@ -5641,9 +5650,10 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     }
     if (res->fl.fl.prop_func) {
       res->v.prop_func.f(res->v.prop_func.o, v, NULL);
-      inc_ref_count(v);
+      INC_REF_COUNT(v);
       TRY(inc_stack(v7, -2));
       v7_push(v7, v);
+      DEC_REF_COUNT(v);
     }
     return V7_OK;
   } else {
@@ -5720,7 +5730,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     /* printf("PFD [%.*s]\n", 45, f->v.func.source_code); */
 
     f->v.func.var_obj = v7->ctx;
-    inc_ref_count(v7->ctx);
+    INC_REF_COUNT(v7->ctx);
 
     v7->flags |= V7_NO_EXEC;
   } else if (EXECUTING(v7->flags) && v != NULL) {
@@ -5732,7 +5742,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
     ctx = make_value(v7, V7_TYPE_OBJ);
     v7_set_class(ctx, V7_CLASS_OBJECT);
-    inc_ref_count(ctx);
+    INC_REF_COUNT(ctx);
 
     ctx->next = v7->ctx;
     v7->ctx = ctx;
@@ -5852,9 +5862,10 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
     TRY(parse_expression(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v = v7_top_val(v7);
-      _prop_func_2_value(v7, &v);
-      inc_ref_count(v);
+      INC_REF_COUNT(v);
       TRY(inc_stack(v7, -1));
+      DEC_REF_COUNT(v);
+      _prop_func_2_value(v7, &v);
       v7_push(v7, v);
     }
     if (v7->cur_tok == TOK_COMMA) {
@@ -6241,9 +6252,10 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
         v7_init_num(v1, v->v.num);
         v->v.num += increment;
       }
-      inc_ref_count(v1);
+      INC_REF_COUNT(v1);
       TRY(inc_stack(v7, -2));
       v7_push(v7, v1);
+      DEC_REF_COUNT(v1);
     }
   }
   return V7_OK;
@@ -6605,7 +6617,7 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
   /* Collapse stack, leave only one value on top */
   if (EXECUTING(v7->flags)) {
     struct v7_val *result = v7_top(v7)[-1];
-    inc_ref_count(result);
+    INC_REF_COUNT(result);
     TRY(inc_stack(v7, old_sp - v7->sp));
     TRY(v7_push(v7, result));
     assert(result->ref_count > 1);
@@ -7415,7 +7427,7 @@ enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   *head = prop;
   prop->key = NULL;
   prop->val = val;
-  inc_ref_count(val);
+  INC_REF_COUNT(val);
   return V7_OK;
 }
 

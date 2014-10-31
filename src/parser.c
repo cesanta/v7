@@ -12,9 +12,11 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
 
   _prop_func_2_value(v7, &a);
   _prop_func_2_value(v7, &b);
-  if (a->type == V7_TYPE_STR && op == TOK_PLUS) {
-    TRY(check_str_re_conv(v7, &b,
-                          0)); /* Do type conversion, result pushed on stack */
+  if ((a->type == V7_TYPE_STR || b->type == V7_TYPE_STR) && op == TOK_PLUS) {
+    /* Do type conversion, result pushed on stack */
+    TRY(check_str_re_conv(v7, &a, 0));
+    TRY(check_str_re_conv(v7, &b, 0));
+
     str = (char *)malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
@@ -50,9 +52,10 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     }
     if (res->fl.fl.prop_func) {
       res->v.prop_func.f(res->v.prop_func.o, v, NULL);
-      inc_ref_count(v);
+      INC_REF_COUNT(v);
       TRY(inc_stack(v7, -2));
       v7_push(v7, v);
+      DEC_REF_COUNT(v);
     }
     return V7_OK;
   } else {
@@ -129,7 +132,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     /* printf("PFD [%.*s]\n", 45, f->v.func.source_code); */
 
     f->v.func.var_obj = v7->ctx;
-    inc_ref_count(v7->ctx);
+    INC_REF_COUNT(v7->ctx);
 
     v7->flags |= V7_NO_EXEC;
   } else if (EXECUTING(v7->flags) && v != NULL) {
@@ -141,7 +144,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
 
     ctx = make_value(v7, V7_TYPE_OBJ);
     v7_set_class(ctx, V7_CLASS_OBJECT);
-    inc_ref_count(ctx);
+    INC_REF_COUNT(ctx);
 
     ctx->next = v7->ctx;
     v7->ctx = ctx;
@@ -261,9 +264,10 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
     TRY(parse_expression(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v = v7_top_val(v7);
-      _prop_func_2_value(v7, &v);
-      inc_ref_count(v);
+      INC_REF_COUNT(v);
       TRY(inc_stack(v7, -1));
+      DEC_REF_COUNT(v);
+      _prop_func_2_value(v7, &v);
       v7_push(v7, v);
     }
     if (v7->cur_tok == TOK_COMMA) {
@@ -650,9 +654,10 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
         v7_init_num(v1, v->v.num);
         v->v.num += increment;
       }
-      inc_ref_count(v1);
+      INC_REF_COUNT(v1);
       TRY(inc_stack(v7, -2));
       v7_push(v7, v1);
+      DEC_REF_COUNT(v1);
     }
   }
   return V7_OK;
@@ -1014,7 +1019,7 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
   /* Collapse stack, leave only one value on top */
   if (EXECUTING(v7->flags)) {
     struct v7_val *result = v7_top(v7)[-1];
-    inc_ref_count(result);
+    INC_REF_COUNT(result);
     TRY(inc_stack(v7, old_sp - v7->sp));
     TRY(v7_push(v7, result));
     assert(result->ref_count > 1);

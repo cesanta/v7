@@ -93,7 +93,7 @@ enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   *head = prop;
   prop->key = NULL;
   prop->val = val;
-  inc_ref_count(val);
+  INC_REF_COUNT(val);
   return V7_OK;
 }
 
