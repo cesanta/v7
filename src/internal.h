@@ -454,6 +454,25 @@ extern struct v7_val s_file;
     SET_RO_PROP_V(_obj, _name, _val);                                  \
   } while (0)
 
+#define OBJ_SANITY_CHECK(obj)          \
+  do {                                 \
+    assert((obj) != NULL);             \
+    assert((obj)->ref_count >= 0);     \
+    assert(!(obj)->fl.fl.val_dealloc); \
+  } while (0)
+
+#define INC_REF_COUNT(v) \
+  do {                   \
+    OBJ_SANITY_CHECK(v); \
+    (v)->ref_count++;    \
+  } while (0)
+
+#define DEC_REF_COUNT(v) \
+  do {                   \
+    OBJ_SANITY_CHECK(v); \
+    (v)->ref_count--;    \
+  } while (0)
+
 /* Forward declarations */
 
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
@@ -493,7 +512,6 @@ V7_PRIVATE int is_string(const struct v7_val *v);
 V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
 V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
-V7_PRIVATE void inc_ref_count(struct v7_val *);
 V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f);
 V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type);
 V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,

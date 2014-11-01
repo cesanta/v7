@@ -7,7 +7,7 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
       !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))) {
     TRY(toString(v7, *arg));
     *arg = v7_top_val(v7);
-    inc_ref_count(*arg);
+    INC_REF_COUNT(*arg);
     TRY(inc_stack(v7, -2));
     TRY(v7_push(v7, *arg));
   }

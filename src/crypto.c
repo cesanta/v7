@@ -428,7 +428,7 @@ V7_PRIVATE void init_crypto(void) {
   SET_METHOD(s_crypto, "sha1_hex", Crypto_sha1_hex);
 
   v7_set_class(&s_crypto, V7_CLASS_OBJECT);
-  inc_ref_count(&s_crypto);
+  INC_REF_COUNT(&s_crypto);
 
   SET_RO_PROP_V(s_global, "Crypto", s_crypto);
 }
