@@ -37,101 +37,121 @@ V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE enum v7_err Str_fromCharCode(struct v7_c_func_arg *cfa) {
-  long n, len = 0;
+  long n, blen = 0;
   struct v7_val *str;
   char *p;
-  // TODO(vrz) args type conversion
-  for (n = 0; n < cfa->num_args; n++) len += runelen((Rune)cfa->args[n]->v.num);
-  str = v7_push_string(cfa->v7, (char *)&cfa->args[0], len + 1, 1);
-  p = str->v.str.buf;
-  for (n = 0; n < cfa->num_args; n++) {
-    Rune rune = (Rune)cfa->args[n]->v.num;
-    p += runetochar(p, &rune);
+  Rune runes[500];
+  for (n = 0; n < cfa->num_args; n++){
+    if (!is_num(cfa->args[n])) {
+      // TODO(vrz) type conversion
+    }
+    blen += runelen((Rune)cfa->args[n]->v.num);
+    runes[n] = (Rune)cfa->args[n]->v.num;
   }
+  str = v7_push_string(cfa->v7, (char *)&cfa->args[0], blen, 1);
+  p = str->v.str.buf;
+  for (n = 0; n < cfa->num_args; n++)
+    p += runetochar(p, &runes[n]);
   *p = '\0';
-  str->v.str.len = len;
+  str->v.str.len = blen;
   return V7_OK;
 }
 
 V7_PRIVATE enum v7_err Str_valueOf(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   if (!is_string(cfa->this_obj)) THROW(V7_TYPE_ERROR);
-  v7_push_string(v7, cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len, 1);
+  TRY(push_string(v7, cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len, 1));
   return V7_OK;
 #undef v7
 }
 
-static const char *StrAt(struct v7_c_func_arg *cfa) {
+static enum v7_err _charAt(struct v7_c_func_arg *cfa, const char **p) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
   if (cfa->num_args > 0) {
-    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len), idx;
-    if (V7_TYPE_NUM != cfa->args[0]->type) {
-      // TODO(vrz)
+    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len), idx = cfa->args[0]->v.num;
+    if (!is_num(cfa->args[0])) {
+      // TODO(vrz) type conversion
     }
-    idx = cfa->args[0]->v.num;
     if (idx < 0) idx = len - idx;
-    if (idx > 0 && idx < len) return utfnshift(cfa->this_obj->v.str.buf, idx);
+    if (idx >= 0 && idx < len) return *p = utfnshift(cfa->this_obj->v.str.buf, idx), V7_OK;
   }
-  return NULL;
+  return *p = NULL, V7_OK;
+#undef v7
 }
 
 V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
-  const char *p = StrAt(cfa);
-  v7_push_string(cfa->v7, p, p == NULL ? 0 : 1, 1);
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  const char *p;
+  TRY(_charAt(cfa, &p));
+  TRY(push_string(v7, p, p == NULL ? 0 : 1, 1));
   return V7_OK;
+#undef v7
 }
 
 V7_PRIVATE enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
-  const char *p = StrAt(cfa);
-  v7_push_number(cfa->v7, p == NULL ? NAN : p[0]);
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  const char *p;
+  Rune rune;
+  TRY(_charAt(cfa, &p));
+  TRY(push_number(v7, p == NULL ? NAN : (chartorune(&rune, p), rune)));
   return V7_OK;
+#undef v7
 }
 
 V7_PRIVATE enum v7_err Str_concat(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long n, len = cfa->this_obj->v.str.len;
+  long n, blen;
   struct v7_val *str;
   char *p;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  blen = cfa->this_obj->v.str.len;
   for (n = 0; n < cfa->num_args; n++) {
     TRY(check_str_re_conv(v7, &cfa->args[n], 0));
-    len += cfa->args[n]->v.str.len;
+    blen += cfa->args[n]->v.str.len;
   }
-  str = v7_push_string(v7, cfa->this_obj->v.str.buf, len + 1, 1);
+  str = v7_push_string(v7, cfa->this_obj->v.str.buf, blen, 1);
   p = str->v.str.buf + cfa->this_obj->v.str.len;
   for (n = 0; n < cfa->num_args; n++) {
     memcpy(p, cfa->args[n]->v.str.buf, cfa->args[n]->v.str.len);
     p += cfa->args[n]->v.str.len;
   }
   *p = '\0';
-  str->v.str.len = len;
+  str->v.str.len = blen;
   return V7_OK;
 #undef v7
 }
 
-static long indexOf(char **pp, char *const end, char *p, long len) {
-  long i;
-  Rune rune;
-  for (i = 0; *pp < end; i++) {
-    if (0 == memcmp(*pp, p, len)) return i;
-    *pp += chartorune(&rune, *pp);
-  }
-  return -1;
+static long _indexOf(char *pp, char *const end, char *p, long blen, uint8_t last) {
+  long i, idx = -1;
+  for (i = 0; pp <= (end - blen); i++, pp = utfnshift(pp, 1))
+    if (0 == memcmp(pp, p, blen)){
+      idx = i;
+      if(!last) break;
+    }
+  return idx;
 }
 
 V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long idx = -1;
-  char *p = cfa->this_obj->v.str.buf, *const end = p + cfa->this_obj->v.str.len;
+  long idx = -1, pos = 0;
+  char *p, *end;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
     TRY(check_str_re_conv(v7, &cfa->args[0], 0));
     if (cfa->num_args > 1) {
-      if (V7_TYPE_NUM != cfa->args[1]->type) {
-        // TODO(vrz)
+      if (!is_num(cfa->args[1])) {
+        // TODO(vrz) type conversion
       }
-      p = utfnshift(p, cfa->args[1]->v.num);
+      // TODO(vrz)
+      p = utfnshift(p, pos = cfa->args[1]->v.num);
     }
-    idx = indexOf(&p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len);
+    idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 0);
   }
-  v7_push_number(v7, idx);
+  if(idx >= 0) idx += pos;
+  TRY(push_number(v7, idx));
   return V7_OK;
 #undef v7
 }
@@ -139,27 +159,57 @@ V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
 V7_PRIVATE enum v7_err Str_lastIndexOf(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   long idx = -1;
-  char *p = cfa->this_obj->v.str.buf, *end = p + cfa->this_obj->v.str.len;
+  char *p, *end;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
-    long i;
     TRY(check_str_re_conv(v7, &cfa->args[0], 0));
     if (cfa->num_args > 1) {
-      if (V7_TYPE_NUM != cfa->args[1]->type) {
-        // TODO(vrz)
+      if (!is_num(cfa->args[1])) {
+        // TODO(vrz) type conversion
       }
-      end = utfnshift(end, cfa->args[1]->v.num);
+      // TODO(vrz)
+      end = utfnshift(p, cfa->args[1]->v.num+1);
     }
-    while (-1 != (i = indexOf(&p, end, cfa->args[0]->v.str.buf,
-                              cfa->args[0]->v.str.len)))
-      idx = i;
+    idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 1);
   }
-  v7_push_number(v7, idx);
+  TRY(push_number(v7, idx));
   return V7_OK;
 #undef v7
 }
 
 V7_PRIVATE enum v7_err Str_localeCompare(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
+  struct v7_val *arg = cfa->args[0];
+  long i, ln = 0, ret = 0;
+  Rune s, t;
+  char *ps, *pt, *end;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  TRY(check_str_re_conv(v7, &arg, 0));
+  ps = cfa->this_obj->v.str.buf;
+  pt = arg->v.str.buf;
+  end = ps + cfa->this_obj->v.str.len;
+  if (arg->v.str.len < cfa->this_obj->v.str.len){
+    end = ps + arg->v.str.len;
+    ln = 1;
+  } else if (arg->v.str.len > cfa->this_obj->v.str.len) {
+    ln = -1;
+  }
+  for (i=0; ps < end; i++) {
+    ps += chartorune(&s, ps);
+    pt += chartorune(&t, pt);
+    if (s < t) {
+      ret = -1;
+      break;
+    }
+    if (s > t) {
+      ret = 1;
+      break;
+    }
+  }
+  if (0 == ret) ret = ln;
+  TRY(push_number(v7, ret));
   return V7_OK;
 #undef v7
 }
@@ -172,6 +222,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   unsigned long shift = 0;
 
   if (cfa->num_args > 0) {
+    TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
     do {
@@ -195,11 +246,14 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
 V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *result = v7_push_new_object(v7);
-  const char *out_str = cfa->this_obj->v.str.buf;
+  const char *out_str;
   uint8_t own = 1;
-  size_t out_len = cfa->this_obj->v.str.len;
+  size_t out_len;
   int old_sp = v7->sp;
 
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  out_str = cfa->this_obj->v.str.buf;
+  out_len = cfa->this_obj->v.str.len;
   if (cfa->num_args > 1) {
     const char *const str_end =
         cfa->this_obj->v.str.buf + cfa->this_obj->v.str.len;
@@ -233,8 +287,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         int old_sp = v7->sp;
         struct v7_val *rez_str;
         for (i = 0; i < loot.subexpr_num; i++)
-          v7_push_string(v7, loot.sub[i].start,
-                         loot.sub[i].end - loot.sub[i].start, 1);
+          TRY(push_string(v7, loot.sub[i].start, loot.sub[i].end - loot.sub[i].start, 1));
         TRY(push_number(v7, utfnlen(p, loot.sub[0].start - p)));
         TRY(v7_push(v7, cfa->this_obj));
         rez_str = v7_call(v7, cfa->this_obj, loot.subexpr_num + 2);
@@ -295,6 +348,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
   int shift = -1, utf_shift = -1;
 
   if (cfa->num_args > 0) {
+    TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
     if (!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf, &sub))
@@ -302,13 +356,45 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
   }
   if (shift > 0) /* calc shift for UTF-8 */
     utf_shift = utfnlen(cfa->this_obj->v.str.buf, shift);
-  v7_push_number(v7, utf_shift);
+  TRY(push_number(v7, utf_shift));
   return V7_OK;
 #undef v7
 }
 
 V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
+  char *begin, *end;
+  long from = 0, to = 0, len;
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  to = len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len);
+  begin = cfa->this_obj->v.str.buf;
+  end = begin + cfa->this_obj->v.str.len;
+  if (cfa->num_args > 0) {
+    if (!is_num(cfa->args[0])) {
+      // TODO(vrz) type conversion
+    }
+    from = cfa->args[0]->v.num;
+    if (from < 0){
+      from += len;
+      if (from < 0) from = 0;
+    }else if (from > len) from = len;
+    if (cfa->num_args > 1) {
+      if (!is_num(cfa->args[1])) {
+        // TODO(vrz) type conversion
+      }
+      to = cfa->args[1]->v.num;
+      if (to < 0){
+        to += len;
+        if (to < 0) to = 0;
+      }else if (to > len) to = len;
+    }
+  }
+  if (from > to) to = from;
+  end = utfnshift(begin, to);
+  begin = utfnshift(begin, from);
+  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  v7_init_str(v7_top_val(v7), begin, end - begin, 1);
   return V7_OK;
 #undef v7
 }
@@ -321,6 +407,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   unsigned long shift = 0;
 
   v7_set_class(arr, V7_CLASS_ARRAY);
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
   if (cfa->num_args > 0) {
     if (cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM)
       limit = cfa->args[1]->v.num;
@@ -356,16 +443,16 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
       utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len);
 
   if (0 == cfa->num_args) return V7_OK;
-  if (V7_TYPE_NUM != cfa->args[0]->type) {
-    // TODO(vrz)
+  if (!is_num(cfa->args[0])) {
+    // TODO(vrz) type conversion
   }
   start = (long)cfa->args[0]->v.num;
   if (start < 0) start += utf_len;
   if (start < 0) start = 0;
   len = rem = utf_len - start;
   if (cfa->num_args > 1) {
-    if (V7_TYPE_NUM != cfa->args[1]->type) {
-      // TODO(vrz)
+    if (!is_num(cfa->args[1])) {
+      // TODO(vrz) type conversion
     }
     len = (long)cfa->args[1]->v.num;
     if (len < 0) return V7_OK;
