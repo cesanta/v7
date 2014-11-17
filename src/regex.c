@@ -151,70 +151,76 @@ static sint8_t hex(int c) {
   return INVALID_HEX_DIGIT;
 }
 
-static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
+V7_PRIVATE sint8_t re_nextexc(Rune *r, const char **src) {
   sint8_t hd;
   *src += chartorune(r, *src);
+  switch (*r) {
+    case 0:
+      return UNTERM_ESC_SEQ;
+    case 'c':
+      *r = **src & 31;
+      ++*src;
+      return 0;
+    case 'f':
+      *r = '\f';
+      return 0;
+    case 'n':
+      *r = '\n';
+      return 0;
+    case 'r':
+      *r = '\r';
+      return 0;
+    case 't':
+      *r = '\t';
+      return 0;
+    case 'u':
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r = hd << 12;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd << 8;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd << 4;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd;
+      if (!*r) {
+        *r = '0';
+        return 1;
+      }
+      return 0;
+    case 'v':
+      *r = '\v';
+      return 0;
+    case 'x':
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r = hd << 4;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd;
+      if (!*r) {
+        *r = '0';
+        return 1;
+      }
+      return 0;
+  }
+  return 2;
+}
+
+static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
+  *src += chartorune(r, *src);
   if (re_flag && *r == '\\') {
-    *src += chartorune(r, *src);
-    switch (*r) {
-      case 0:
-        return UNTERM_ESC_SEQ;
-      case 'c':
-        *r = **src & 31;
-        ++*src;
-        return 0;
-      case 'f':
-        *r = '\f';
-        return 0;
-      case 'n':
-        *r = '\n';
-        return 0;
-      case 'r':
-        *r = '\r';
-        return 0;
-      case 't':
-        *r = '\t';
-        return 0;
-      case 'u':
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r = hd << 12;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd << 8;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd << 4;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd;
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        return 0;
-      case 'v':
-        *r = '\v';
-        return 0;
-      case 'x':
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r = hd << 4;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd;
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        return 0;
-    }
+    sint8_t ret = re_nextexc(r, src);
+    if(2 != ret) return ret;
     if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
       return INVALID_ESC_CHAR;
     return 1;
@@ -903,9 +909,9 @@ static void node_print(struct Renode *nd) {
   switch (nd->type) {
     case P_ALT:
       printf("{");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(" | ");
-      node_print(nd->y);
+      node_print(nd->par.xy.y.y);
       printf("}");
       break;
     case P_ANY:
@@ -915,19 +921,19 @@ static void node_print(struct Renode *nd) {
       printf("^");
       break;
     case P_BRA:
-      printf("(%d,", nd->n);
-      node_print(nd->x);
+      printf("(%d,", nd->par.xy.y.n);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_CAT:
       printf("{");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(" & ");
-      node_print(nd->y);
+      node_print(nd->par.xy.y.y);
       printf("}");
       break;
     case P_CH:
-      printf(nd->c >= 32 && nd->c < 127 ? "'%c'" : "'\\u%04X'", nd->c);
+      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" : "'\\u%04X'", nd->par.c);
       break;
     case P_EOL:
       printf("$");
@@ -937,28 +943,28 @@ static void node_print(struct Renode *nd) {
       break;
     case P_LA:
       printf("LA(");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_LA_N:
       printf("LA_N(");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_REF:
-      printf("\\%d", nd->n);
+      printf("\\%d", nd->par.xy.y.n);
       break;
     case P_REP:
-      node_print(nd->x);
-      printf(nd->ng ? "{%d,%d}?" : "{%d,%d}", nd->min, nd->max);
+      node_print(nd->par.xy.x);
+      printf(nd->par.xy.y.rp.ng ? "{%d,%d}?" : "{%d,%d}", nd->par.xy.y.rp.min, nd->par.xy.y.rp.max);
       break;
     case P_SET:
       printf("[");
-      print_set(nd->cp);
+      print_set(nd->par.cp);
       break;
     case P_SET_N:
       printf("[^");
-      print_set(nd->cp);
+      print_set(nd->par.cp);
       break;
     case P_WORD:
       printf("\\b");
@@ -987,8 +993,8 @@ static void program_print(struct Reprog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->c >= 32 && inst->c < 127 ? "'%c'\n" : "'\\u%04X'\n",
-               inst->c);
+        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n",
+               inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -997,41 +1003,41 @@ static void program_print(struct Reprog *prog) {
         puts("\\0");
         break;
       case I_JUMP:
-        printf("-->%d\n", inst->x - prog->start);
+        printf("-->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %d %d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("la %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %d %d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("la_n %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
-        printf("( %d\n", inst->n);
+        printf("( %d\n", inst->par.n);
         break;
       case I_RBRA:
-        printf(") %d\n", inst->n);
+        printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%d | -->%d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
-        printf("\\%d\n", inst->n);
+        printf("\\%d\n", inst->par.n);
         break;
       case I_REP:
-        printf("repeat -->%d\n", inst->x - prog->start);
+        printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
-        printf("init_rep %d %d\n", inst->y.rp.min,
-               inst->y.rp.min + inst->y.rp.max);
+        printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
+               inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
         break;
       case I_SET:
         printf("[");
-        print_set(inst->cp);
+        print_set(inst->par.cp);
         puts("");
         break;
       case I_SET_N:
         printf("[^");
-        print_set(inst->cp);
+        print_set(inst->par.cp);
         puts("");
         break;
       case I_WORD:

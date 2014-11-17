@@ -475,6 +475,7 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
+V7_PRIVATE sint8_t re_nextexc(Rune *r, const char **src);  
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
                                       struct v7_val_flags flags,
                                       const char **errorp);
