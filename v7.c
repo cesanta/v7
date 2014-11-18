@@ -558,7 +558,7 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
-V7_PRIVATE sint8_t re_nextexc(Rune *r, const char **src);  
+V7_PRIVATE sint8_t nextesc(Rune *r, const char **src);  
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
                                       struct v7_val_flags flags,
                                       const char **errorp);
@@ -2071,7 +2071,7 @@ static sint8_t hex(int c) {
   return INVALID_HEX_DIGIT;
 }
 
-V7_PRIVATE sint8_t re_nextexc(Rune *r, const char **src) {
+V7_PRIVATE sint8_t nextesc(Rune *r, const char **src) {
   sint8_t hd;
   *src += chartorune(r, *src);
   switch (*r) {
@@ -2139,7 +2139,7 @@ V7_PRIVATE sint8_t re_nextexc(Rune *r, const char **src) {
 static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
   *src += chartorune(r, *src);
   if (re_flag && *r == '\\') {
-    sint8_t ret = re_nextexc(r, src);
+    sint8_t ret = nextesc(r, src);
     if(2 != ret) return ret;
     if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
       return INVALID_ESC_CHAR;
