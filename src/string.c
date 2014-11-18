@@ -1,19 +1,5 @@
 #include "internal.h"
 
-V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
-                                         int re_fl) {
-  /* If argument is not (RegExp + re_fl) or string, do type conversion */
-  if (!is_string(*arg) &&
-      !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))) {
-    TRY(toString(v7, *arg));
-    *arg = v7_top_val(v7);
-    INC_REF_COUNT(*arg);
-    TRY(inc_stack(v7, -2));
-    TRY(v7_push(v7, *arg));
-  }
-  return V7_OK;
-}
-
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   const char *str = NULL;
