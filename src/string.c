@@ -48,7 +48,7 @@ V7_PRIVATE enum v7_err Str_fromCharCode(struct v7_c_func_arg *cfa) {
     blen += runelen((Rune)cfa->args[n]->v.num);
     runes[n] = (Rune)cfa->args[n]->v.num;
   }
-  str = v7_push_string(cfa->v7, (char *)&cfa->args[0], blen, 1);
+  str = v7_push_string(cfa->v7, NULL, blen, 1);
   p = str->v.str.buf;
   for (n = 0; n < cfa->num_args; n++) p += runetochar(p, &runes[n]);
   *p = '\0';
@@ -494,7 +494,7 @@ V7_PRIVATE enum v7_err Str_toLowerCase(struct v7_c_func_arg *cfa) {
     runes[n] = tolowerrune(runes[n]);
     blen += runelen(runes[n]);
   }
-  str = v7_push_string(v7, (char *)cfa, blen, 1);
+  str = v7_push_string(v7, NULL, blen, 1);
   p = str->v.str.buf;
   end = p + blen;
   for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
@@ -519,7 +519,7 @@ V7_PRIVATE enum v7_err Str_toLocaleLowerCase(struct v7_c_func_arg *cfa) {
     runes[n] = tolowerrune(runes[n]);
     blen += runelen(runes[n]);
   }
-  str = v7_push_string(v7, (char *)cfa, blen, 1);
+  str = v7_push_string(v7, NULL, blen, 1);
   p = str->v.str.buf;
   end = p + blen;
   for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
@@ -544,7 +544,7 @@ V7_PRIVATE enum v7_err Str_toUpperCase(struct v7_c_func_arg *cfa) {
     runes[n] = toupperrune(runes[n]);
     blen += runelen(runes[n]);
   }
-  str = v7_push_string(v7, (char *)cfa, blen, 1);
+  str = v7_push_string(v7, NULL, blen, 1);
   p = str->v.str.buf;
   end = p + blen;
   for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
@@ -569,7 +569,7 @@ V7_PRIVATE enum v7_err Str_toLocaleUpperCase(struct v7_c_func_arg *cfa) {
     runes[n] = toupperrune(runes[n]);
     blen += runelen(runes[n]);
   }
-  str = v7_push_string(v7, (char *)cfa, blen, 1);
+  str = v7_push_string(v7, NULL, blen, 1);
   p = str->v.str.buf;
   end = p + blen;
   for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
