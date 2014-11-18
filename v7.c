@@ -7997,7 +7997,7 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
     if (v->v.num > ((uint64_t)1 << 52) || ceil(v->v.num) != v->v.num) {
       snprintf(buf, bsiz, "%lg", v->v.num);
     } else {
-      snprintf(buf, bsiz, "%lu", (unsigned long)v->v.num);
+      snprintf(buf, bsiz, "%ld", (unsigned long)v->v.num);
     }
   } else if (is_string(v)) {
     snprintf(buf, bsiz, "%.*s", (int)v->v.str.len, v->v.str.buf);
