@@ -558,7 +558,7 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
-V7_PRIVATE sint8_t nextesc(Rune *r, const char **src);  
+V7_PRIVATE sint8_t nextesc(Rune *r, const char **src);
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
                                       struct v7_val_flags flags,
                                       const char **errorp);
@@ -572,8 +572,6 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *re, size_t re_len,
                                    const char *fl, size_t fl_len);
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
-V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
-                                         int re_fl);
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
@@ -594,6 +592,9 @@ V7_PRIVATE int is_num(const struct v7_val *v);
 V7_PRIVATE int is_bool(const struct v7_val *v);
 V7_PRIVATE int is_string(const struct v7_val *v);
 V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
+                                         int re_fl);
+V7_PRIVATE double _conv_to_num(struct v7_val *arg);
 V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
 V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f);
@@ -709,8 +710,10 @@ V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f) {
 V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *)malloc(len + 1);
   if (p == NULL) return NULL;
-  if (ptr) memcpy(p, ptr, len);
-  else memset(p, 0, len);
+  if (ptr)
+    memcpy(p, ptr, len);
+  else
+    memset(p, 0, len);
   p[len] = '\0';
   return p;
 }
@@ -725,8 +728,10 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p, unsigned long len,
   if (own) {
     if (len < sizeof(v->v.str.loc) - 1) {
       v->v.str.buf = v->v.str.loc;
-      if (p) memcpy(v->v.str.loc, p, len);
-      else memset(v->v.str.loc, 0, len);
+      if (p)
+        memcpy(v->v.str.loc, p, len);
+      else
+        memset(v->v.str.loc, 0, len);
       v->v.str.loc[len] = '\0';
     } else {
       v->v.str.buf = v7_strdup(p, len);
@@ -1245,6 +1250,12 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
     TRY(v7_push(v7, *arg));
   }
   return V7_OK;
+}
+
+V7_PRIVATE double _conv_to_num(struct v7_val *arg) {
+  if (is_num(arg) || is_bool(arg)) return arg->v.num;
+  if (is_string(arg)) return strtod(arg->v.str.buf, NULL);
+  return NAN;
 }
 
 #ifndef V7_DISABLE_CRYPTO

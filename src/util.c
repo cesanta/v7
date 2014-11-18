@@ -46,8 +46,10 @@ V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f) {
 V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *)malloc(len + 1);
   if (p == NULL) return NULL;
-  if (ptr) memcpy(p, ptr, len);
-  else memset(p, 0, len);
+  if (ptr)
+    memcpy(p, ptr, len);
+  else
+    memset(p, 0, len);
   p[len] = '\0';
   return p;
 }
@@ -62,8 +64,10 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p, unsigned long len,
   if (own) {
     if (len < sizeof(v->v.str.loc) - 1) {
       v->v.str.buf = v->v.str.loc;
-      if (p) memcpy(v->v.str.loc, p, len);
-      else memset(v->v.str.loc, 0, len);
+      if (p)
+        memcpy(v->v.str.loc, p, len);
+      else
+        memset(v->v.str.loc, 0, len);
       v->v.str.loc[len] = '\0';
     } else {
       v->v.str.buf = v7_strdup(p, len);
@@ -582,4 +586,10 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
     TRY(v7_push(v7, *arg));
   }
   return V7_OK;
+}
+
+V7_PRIVATE double _conv_to_num(struct v7_val *arg) {
+  if (is_num(arg) || is_bool(arg)) return arg->v.num;
+  if (is_string(arg)) return strtod(arg->v.str.buf, NULL);
+  return NAN;
 }
