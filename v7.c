@@ -6118,7 +6118,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
 
   _prop_func_2_value(v7, &a);
   _prop_func_2_value(v7, &b);
-  if ((a->type == V7_TYPE_STR || b->type == V7_TYPE_STR) && op == TOK_PLUS) {
+  if (op == TOK_PLUS && (a->type == V7_TYPE_STR || b->type == V7_TYPE_STR)) {
     /* Do type conversion, result pushed on stack */
     TRY(check_str_re_conv(v7, &a, 0));
     TRY(check_str_re_conv(v7, &b, 0));
@@ -6130,28 +6130,29 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     memcpy(str + a->v.str.len, b->v.str.buf, b->v.str.len);
     str[res->v.str.len] = '\0';
     return V7_OK;
-  } else if (a->type == V7_TYPE_NUM && b->type == V7_TYPE_NUM) {
+  } else {
     struct v7_val *v = res;
+    double an = _conv_to_num(a), bn = _conv_to_num(b);
     if (res->fl.fl.prop_func) v = v7_push_new_object(v7);
     v7_init_num(v, res->v.num);
     switch (op) {
       case TOK_PLUS:
-        v->v.num = a->v.num + b->v.num;
+        v->v.num = an + bn;
         break;
       case TOK_MINUS:
-        v->v.num = a->v.num - b->v.num;
+        v->v.num = an - bn;
         break;
       case TOK_MUL:
-        v->v.num = a->v.num * b->v.num;
+        v->v.num = an * bn;
         break;
       case TOK_DIV:
-        v->v.num = a->v.num / b->v.num;
+        v->v.num = an / bn;
         break;
       case TOK_REM:
-        v->v.num = (unsigned long)a->v.num % (unsigned long)b->v.num;
+        v->v.num = (unsigned long)an % (unsigned long)bn;
         break;
       case TOK_XOR:
-        v->v.num = (unsigned long)a->v.num ^ (unsigned long)b->v.num;
+        v->v.num = (unsigned long)an ^ (unsigned long)bn;
         break;
       default:
         return V7_INTERNAL_ERROR;
@@ -6164,8 +6165,6 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
       DEC_REF_COUNT(v);
     }
     return V7_OK;
-  } else {
-    return V7_TYPE_ERROR;
   }
 }
 
@@ -6403,13 +6402,12 @@ static enum v7_err push_string_literal(struct v7 *v7) {
   /* Scan string literal into the buffer, handle escape sequences */
   while (ps < end) {
     ps += chartorune(&rune, ps);
-    if (rune == '\\')
-      switch (nextesc(&rune, &ps)) {
+    if (rune == '\\') switch (nextesc(&rune, &ps)) {
         case 0:
         case 1:
           break;
         case 2:
-          switch (rune){
+          switch (rune) {
             case '\\':
             case '\'':
             case '"':
