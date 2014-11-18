@@ -338,6 +338,21 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       (*s)++;
       return TOK_CLOSE_BRACKET;
     case '.':
+      switch (*(*s+1)) {
+        // Numbers
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        parse_number(p, s, n);
+        return TOK_NUMBER;
+      }
       (*s)++;
       return TOK_DOT;
     case ';':
