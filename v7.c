@@ -6376,56 +6376,39 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
 }
 
 static enum v7_err push_string_literal(struct v7 *v7) {
-  /* TODO(lsm): do not use stack buffer here, only dynamic alloc */
-  /* char buf[MAX_STRING_LITERAL_LENGTH]; */
   struct v7_val *v;
   char *p;
-  size_t i;
+  const char *ps = &v7->tok[1], *end = ps + v7->tok_len - 2;
+  Rune rune;
 
   if (!EXECUTING(v7->flags)) return V7_OK;
-  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  TRY(push_string(v7, &v7->tok[1], v7->tok_len - 2, 1));
   v = v7_top_val(v7);
-  v7_init_str(v, &v7->tok[1], v7->tok_len - 1, 1);
   CHECK(v->v.str.buf != NULL, V7_OUT_OF_MEMORY);
   p = v->v.str.buf;
 
   /* Scan string literal into the buffer, handle escape sequences */
-  for (i = 1; i < v7->tok_len - 1; i++) {
-    switch (v7->tok[i]) {
-      case '\\':
-        i++;
-        switch (v7->tok[i]) {
-          /* TODO: add escapes for quotes, \XXX, \xXX, \uXXXX */
-          case 'b':
-            *p++ = '\b';
-            break;
-          case 'f':
-            *p++ = '\f';
-            break;
-          case 'n':
-            *p++ = '\n';
-            break;
-          case 'r':
-            *p++ = '\r';
-            break;
-          case 't':
-            *p++ = '\t';
-            break;
-          case 'v':
-            *p++ = '\v';
-            break;
-          case '\\':
-            *p++ = '\\';
-            break;
-          default:
-            if (v7->tok[i] == v7->tok[0]) *p++ = v7->tok[i];
-            break;
-        }
-        break;
-      default:
-        *p++ = v7->tok[i];
-        break;
-    }
+  while (ps < end) {
+    ps += chartorune(&rune, ps);
+    if (rune == '\\')
+      switch (nextesc(&rune, &ps)) {
+        case 0:
+        case 1:
+          break;
+        case 2:
+          switch (rune){
+            case '\\':
+            case '\'':
+            case '"':
+              break;
+            default:
+              *p++ = '\\';
+          }
+          break;
+        default:
+          return V7_SYNTAX_ERROR;
+      }
+    p += runetochar(p, &rune);
   }
   v->v.str.len = p - v->v.str.buf;
   assert(v->v.str.len < v7->tok_len - 1);
