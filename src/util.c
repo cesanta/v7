@@ -593,3 +593,9 @@ V7_PRIVATE double _conv_to_num(struct v7_val *arg) {
   if (is_string(arg)) return strtod(arg->v.str.buf, NULL);
   return NAN;
 }
+
+V7_PRIVATE long _conv_to_int(struct v7_val *arg) {
+  double tmp = _conv_to_num(arg);
+  if (NAN == tmp) return 0;
+  return tmp;
+}

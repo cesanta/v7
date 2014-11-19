@@ -511,7 +511,10 @@ V7_PRIVATE int is_string(const struct v7_val *v);
 V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
 V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
                                          int re_fl);
+
 V7_PRIVATE double _conv_to_num(struct v7_val *arg);
+V7_PRIVATE long _conv_to_int(struct v7_val *arg);
+
 V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
 V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f);
