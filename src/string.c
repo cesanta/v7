@@ -28,11 +28,8 @@ V7_PRIVATE enum v7_err Str_fromCharCode(struct v7_c_func_arg *cfa) {
   char *p;
   Rune runes[500];
   for (n = 0; n < cfa->num_args; n++) {
-    if (!is_num(cfa->args[n])) {
-      // TODO(vrz) type conversion
-    }
-    blen += runelen((Rune)cfa->args[n]->v.num);
-    runes[n] = (Rune)cfa->args[n]->v.num;
+    runes[n] = _conv_to_int(cfa->args[n]);
+    blen += runelen(runes[n]);
   }
   str = v7_push_string(cfa->v7, NULL, blen, 1);
   p = str->v.str.buf;
@@ -54,11 +51,7 @@ static enum v7_err _charAt(struct v7_c_func_arg *cfa, const char **p) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
   if (cfa->num_args > 0) {
-    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len),
-         idx = cfa->args[0]->v.num;
-    if (!is_num(cfa->args[0])) {
-      // TODO(vrz) type conversion
-    }
+    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len), idx = _conv_to_int(cfa->args[0]);
     if (idx < 0) idx = len - idx;
     if (idx >= 0 && idx < len)
       return *p = utfnshift(cfa->this_obj->v.str.buf, idx), V7_OK;
@@ -130,11 +123,7 @@ V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   if (cfa->num_args > 0) {
     TRY(check_str_re_conv(v7, &cfa->args[0], 0));
     if (cfa->num_args > 1) {
-      if (!is_num(cfa->args[1])) {
-        // TODO(vrz) type conversion
-      }
-      // TODO(vrz)
-      p = utfnshift(p, pos = cfa->args[1]->v.num);
+      p = utfnshift(p, pos = _conv_to_int(cfa->args[1]));
     }
     idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 0);
   }
@@ -154,11 +143,7 @@ V7_PRIVATE enum v7_err Str_lastIndexOf(struct v7_c_func_arg *cfa) {
   if (cfa->num_args > 0) {
     TRY(check_str_re_conv(v7, &cfa->args[0], 0));
     if (cfa->num_args > 1) {
-      if (!is_num(cfa->args[1])) {
-        // TODO(vrz) type conversion
-      }
-      // TODO(vrz)
-      end = utfnshift(p, cfa->args[1]->v.num + 1);
+      end = utfnshift(p, _conv_to_int(cfa->args[1]) + 1);
     }
     idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 1);
   }
@@ -360,20 +345,14 @@ V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
   begin = cfa->this_obj->v.str.buf;
   end = begin + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
-    if (!is_num(cfa->args[0])) {
-      // TODO(vrz) type conversion
-    }
-    from = cfa->args[0]->v.num;
+    from = _conv_to_int(cfa->args[0]);
     if (from < 0) {
       from += len;
       if (from < 0) from = 0;
     } else if (from > len)
       from = len;
     if (cfa->num_args > 1) {
-      if (!is_num(cfa->args[1])) {
-        // TODO(vrz) type conversion
-      }
-      to = cfa->args[1]->v.num;
+      to = _conv_to_int(cfa->args[1]);
       if (to < 0) {
         to += len;
         if (to < 0) to = 0;
@@ -436,19 +415,13 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   begin = cfa->this_obj->v.str.buf;
   end = begin + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
-    if (!is_num(cfa->args[0])) {
-      // TODO(vrz) type conversion
-    }
-    from = cfa->args[0]->v.num;
-    if (NAN == cfa->args[0]->v.num && from < 0) from = 0;
+    from = _conv_to_int(cfa->args[0]);
+    if (from < 0) from = 0;
     if (from > len) from = len;
 
     if (cfa->num_args > 1) {
-      if (!is_num(cfa->args[1])) {
-        // TODO(vrz) type conversion
-      }
-      to = cfa->args[1]->v.num;
-      if (NAN == cfa->args[1]->v.num && to < 0) to = 0;
+      to = _conv_to_int(cfa->args[1]);
+      if (to < 0) to = 0;
       if (to > len) to = len;
     }
   }
