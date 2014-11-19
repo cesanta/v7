@@ -51,11 +51,13 @@ static enum v7_err _charAt(struct v7_c_func_arg *cfa, const char **p) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
   if (cfa->num_args > 0) {
-    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len), idx = _conv_to_int(cfa->args[0]);
+    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len),
+         idx = _conv_to_int(cfa->args[0]);
     if (idx < 0) idx = len - idx;
     if (idx >= 0 && idx < len)
       return *p = utfnshift(cfa->this_obj->v.str.buf, idx), V7_OK;
-  }
+  } else
+    return *p = cfa->this_obj->v.str.buf, V7_OK;
   return *p = NULL, V7_OK;
 #undef v7
 }
