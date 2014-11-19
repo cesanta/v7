@@ -5253,7 +5253,8 @@ V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   if (cfa->called_as_constructor) {
     v7_init_str(obj, str, len, own);
     v7_set_class(obj, V7_CLASS_STRING);
-  }
+  } else
+    v7_push_string(v7, str, len, 1);
   return V7_OK;
 #undef v7
 }
