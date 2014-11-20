@@ -2175,10 +2175,10 @@ V7_PRIVATE sint8_t nextesc(Rune *r, const char **src) {
 static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
   *src += chartorune(r, *src);
   if (re_flag && *r == '\\') {
-    sint8_t ret = nextesc(r, src);
-    if(2 != ret) return ret;
+    /* sint8_t ret = */ nextesc(r, src);
+    /* if(2 != ret) return ret;
     if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
-      return INVALID_ESC_CHAR;
+      return INVALID_ESC_CHAR; */
     return 1;
   }
   return 0;
@@ -2331,12 +2331,13 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         continue;
       }
       switch (e->curr_rune) {
-        case '-':
+        default:
+        /* case '-':
         case '\\':
         case '.':
         case '/':
         case ']':
-        case '|':
+        case '|': */
           break;
         case '0':
           e->curr_rune = 0;
@@ -2344,8 +2345,8 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         case 'b':
           e->curr_rune = '\b';
           break;
-        default:
-          V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_ESC_CHAR));
+        /* default:
+          V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_ESC_CHAR)); */
       }
     } else {
       if (e->curr_rune == '-') {
