@@ -595,8 +595,8 @@ V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
 V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
                                          int re_fl);
 
-V7_PRIVATE double _conv_to_num(struct v7_val *arg);
-V7_PRIVATE long _conv_to_int(struct v7_val *arg);
+V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg);
+V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg);
 
 V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
@@ -1255,14 +1255,15 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
   return V7_OK;
 }
 
-V7_PRIVATE double _conv_to_num(struct v7_val *arg) {
+V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg) {
+  _prop_func_2_value(v7, &arg);
   if (is_num(arg) || is_bool(arg)) return arg->v.num;
   if (is_string(arg)) return strtod(arg->v.str.buf, NULL);
   return NAN;
 }
 
-V7_PRIVATE long _conv_to_int(struct v7_val *arg) {
-  double tmp = _conv_to_num(arg);
+V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
+  double tmp = _conv_to_num(v7, arg);
   if (NAN == tmp) return 0;
   return tmp;
 }
@@ -5266,7 +5267,7 @@ V7_PRIVATE enum v7_err Str_fromCharCode(struct v7_c_func_arg *cfa) {
   char *p;
   Rune runes[500];
   for (n = 0; n < cfa->num_args; n++) {
-    runes[n] = _conv_to_int(cfa->args[n]);
+    runes[n] = _conv_to_int(cfa->v7, cfa->args[n]);
     blen += runelen(runes[n]);
   }
   str = v7_push_string(cfa->v7, NULL, blen, 1);
@@ -5290,7 +5291,7 @@ static enum v7_err _charAt(struct v7_c_func_arg *cfa, const char **p) {
   TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
   if (cfa->num_args > 0) {
     long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len),
-         idx = _conv_to_int(cfa->args[0]);
+         idx = _conv_to_int(v7, cfa->args[0]);
     if (idx < 0) idx = len - idx;
     if (idx >= 0 && idx < len)
       return *p = utfnshift(cfa->this_obj->v.str.buf, idx), V7_OK;
@@ -5363,7 +5364,7 @@ V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   if (cfa->num_args > 0) {
     TRY(check_str_re_conv(v7, &cfa->args[0], 0));
     if (cfa->num_args > 1) {
-      p = utfnshift(p, pos = _conv_to_int(cfa->args[1]));
+      p = utfnshift(p, pos = _conv_to_int(v7, cfa->args[1]));
     }
     idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 0);
   }
@@ -5383,7 +5384,7 @@ V7_PRIVATE enum v7_err Str_lastIndexOf(struct v7_c_func_arg *cfa) {
   if (cfa->num_args > 0) {
     TRY(check_str_re_conv(v7, &cfa->args[0], 0));
     if (cfa->num_args > 1) {
-      end = utfnshift(p, _conv_to_int(cfa->args[1]) + 1);
+      end = utfnshift(p, _conv_to_int(v7, cfa->args[1]) + 1);
     }
     idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 1);
   }
@@ -5585,14 +5586,14 @@ V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
   begin = cfa->this_obj->v.str.buf;
   end = begin + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
-    from = _conv_to_int(cfa->args[0]);
+    from = _conv_to_int(v7, cfa->args[0]);
     if (from < 0) {
       from += len;
       if (from < 0) from = 0;
     } else if (from > len)
       from = len;
     if (cfa->num_args > 1) {
-      to = _conv_to_int(cfa->args[1]);
+      to = _conv_to_int(v7, cfa->args[1]);
       if (to < 0) {
         to += len;
         if (to < 0) to = 0;
@@ -5655,12 +5656,12 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   begin = cfa->this_obj->v.str.buf;
   end = begin + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
-    from = _conv_to_int(cfa->args[0]);
+    from = _conv_to_int(v7, cfa->args[0]);
     if (from < 0) from = 0;
     if (from > len) from = len;
 
     if (cfa->num_args > 1) {
-      to = _conv_to_int(cfa->args[1]);
+      to = _conv_to_int(v7, cfa->args[1]);
       if (to < 0) to = 0;
       if (to > len) to = len;
     }
@@ -6118,7 +6119,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     return V7_OK;
   } else {
     struct v7_val *v = res;
-    double an = _conv_to_num(a), bn = _conv_to_num(b);
+    double an = _conv_to_num(v7, a), bn = _conv_to_num(v7, b);
     if (res->fl.fl.prop_func) v = v7_push_new_object(v7);
     v7_init_num(v, res->v.num);
     switch (op) {
@@ -6786,13 +6787,13 @@ static enum v7_err parse_unary(struct v7 *v7) {
     }
     switch (unary) {
       case TOK_TILDA:
-        TRY(push_number(v7, ~(long)_conv_to_num(result)));
+        TRY(push_number(v7, ~(long)_conv_to_num(v7, result)));
         break;
       case TOK_PLUS:
-        TRY(push_number(v7, _conv_to_num(result)));
+        TRY(push_number(v7, _conv_to_num(v7, result)));
         break;
       case TOK_MINUS:
-        TRY(push_number(v7, -_conv_to_num(result)));
+        TRY(push_number(v7, -_conv_to_num(v7, result)));
         break;
       case TOK_NOT:
         TRY(push_bool(v7, !v7_is_true(result)));
@@ -6828,7 +6829,7 @@ static enum v7_err parse_mul_div_rem(struct v7 *v7) {
 static enum v7_err logical_op(struct v7 *v7, enum v7_tok op, int sp1, int sp2) {
   struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7->stack[sp2 - 1];
   int res = 0;
-  double n1 = _conv_to_num(v1), n2 = _conv_to_num(v2);
+  double n1 = _conv_to_num(v7, v1), n2 = _conv_to_num(v7, v2);
 
   if (v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM) {
     switch (op) {
@@ -6922,7 +6923,7 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
     TRY(parse_equality(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = _conv_to_num(v1), b = _conv_to_num(v2);
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v1->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a & b;
@@ -6939,7 +6940,7 @@ static enum v7_err parse_bitwise_xor(struct v7 *v7) {
     TRY(parse_bitwise_and(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = _conv_to_num(v1), b = _conv_to_num(v2);
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a ^ b;
@@ -6956,7 +6957,7 @@ static enum v7_err parse_bitwise_or(struct v7 *v7) {
     TRY(parse_bitwise_xor(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = _conv_to_num(v1), b = _conv_to_num(v2);
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a | b;

@@ -588,14 +588,15 @@ V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
   return V7_OK;
 }
 
-V7_PRIVATE double _conv_to_num(struct v7_val *arg) {
+V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg) {
+  _prop_func_2_value(v7, &arg);
   if (is_num(arg) || is_bool(arg)) return arg->v.num;
   if (is_string(arg)) return strtod(arg->v.str.buf, NULL);
   return NAN;
 }
 
-V7_PRIVATE long _conv_to_int(struct v7_val *arg) {
-  double tmp = _conv_to_num(arg);
+V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
+  double tmp = _conv_to_num(v7, arg);
   if (NAN == tmp) return 0;
   return tmp;
 }

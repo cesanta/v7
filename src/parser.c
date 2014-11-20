@@ -26,7 +26,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     return V7_OK;
   } else {
     struct v7_val *v = res;
-    double an = _conv_to_num(a), bn = _conv_to_num(b);
+    double an = _conv_to_num(v7, a), bn = _conv_to_num(v7, b);
     if (res->fl.fl.prop_func) v = v7_push_new_object(v7);
     v7_init_num(v, res->v.num);
     switch (op) {
@@ -694,13 +694,13 @@ static enum v7_err parse_unary(struct v7 *v7) {
     }
     switch (unary) {
       case TOK_TILDA:
-        TRY(push_number(v7, ~(long)_conv_to_num(result)));
+        TRY(push_number(v7, ~(long)_conv_to_num(v7, result)));
         break;
       case TOK_PLUS:
-        TRY(push_number(v7, _conv_to_num(result)));
+        TRY(push_number(v7, _conv_to_num(v7, result)));
         break;
       case TOK_MINUS:
-        TRY(push_number(v7, -_conv_to_num(result)));
+        TRY(push_number(v7, -_conv_to_num(v7, result)));
         break;
       case TOK_NOT:
         TRY(push_bool(v7, !v7_is_true(result)));
@@ -736,7 +736,7 @@ static enum v7_err parse_mul_div_rem(struct v7 *v7) {
 static enum v7_err logical_op(struct v7 *v7, enum v7_tok op, int sp1, int sp2) {
   struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7->stack[sp2 - 1];
   int res = 0;
-  double n1 = _conv_to_num(v1), n2 = _conv_to_num(v2);
+  double n1 = _conv_to_num(v7, v1), n2 = _conv_to_num(v7, v2);
 
   if (v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM) {
     switch (op) {
@@ -830,7 +830,7 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
     TRY(parse_equality(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = _conv_to_num(v1), b = _conv_to_num(v2);
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v1->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a & b;
@@ -847,7 +847,7 @@ static enum v7_err parse_bitwise_xor(struct v7 *v7) {
     TRY(parse_bitwise_and(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = _conv_to_num(v1), b = _conv_to_num(v2);
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a ^ b;
@@ -864,7 +864,7 @@ static enum v7_err parse_bitwise_or(struct v7 *v7) {
     TRY(parse_bitwise_xor(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = _conv_to_num(v1), b = _conv_to_num(v2);
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a | b;
