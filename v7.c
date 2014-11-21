@@ -1264,7 +1264,7 @@ V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg) {
 
 V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
   double tmp = _conv_to_num(v7, arg);
-  if (NAN == tmp) return 0;
+  if (isnan(tmp) || isinf(tmp)) return 0;
   return tmp;
 }
 
@@ -2346,8 +2346,9 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         case 'b':
           e->curr_rune = '\b';
           break;
-        /* default:
-          V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_ESC_CHAR)); */
+          /* default:
+            V7_EX_THROW(e->catch_point, e->err_msg,
+            re_err_msg(INVALID_ESC_CHAR)); */
       }
     } else {
       if (e->curr_rune == '-') {
@@ -2951,8 +2952,7 @@ static void program_print(struct Reprog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n",
-               inst->par.c);
+        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n", inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -2985,8 +2985,7 @@ static void program_print(struct Reprog *prog) {
         printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
-        printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
-               inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
+        printf("init_rep %d %d\n", inst->par.xy.y.rp.min, inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
         break;
       case I_SET:
         printf("[");
@@ -3234,22 +3233,35 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol,
 uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags,
                 const char *start, struct Resub *loot) {
   struct Resub tmpsub;
+  const char *st = start;
 
-  if (!loot) loot = &tmpsub;
-
-  loot->subexpr_num = prog->subexpr_num;
-  memset(loot->sub, 0, sizeof(loot->sub));
-  return !re_match(prog->start, start, start, flags, loot);
+  if (loot) memset(loot, 0, sizeof(*loot));
+  if (!flags.re_g || !loot) {
+    if (!loot) loot = &tmpsub;
+    loot->subexpr_num = prog->subexpr_num;
+    return !re_match(prog->start, start, start, flags, loot);
+  }
+  while (re_match(prog->start, st, start, flags, &tmpsub)) {
+    unsigned int i;
+    st = tmpsub.sub[0].end;
+    for (i = 0; i < prog->subexpr_num; i++) {
+      struct re_tok *l = &loot->sub[loot->subexpr_num + i], *s = &tmpsub.sub[i];
+      l->start = s->start;
+      l->end = s->end;
+    }
+    loot->subexpr_num += prog->subexpr_num;
+  }
+  return !loot->subexpr_num;
 }
 
 V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
                        struct Resub *dstsub) {
-  int size = 0, sz, sbn, n;
-  char tmps[300], *d = tmps;
+  int size = 0, n;
   Rune curr_rune;
-  dstsub->subexpr_num = 0;
 
+  memset(dstsub, 0, sizeof(*dstsub));
   while (!(n = re_nextc(&curr_rune, &rstr, 1)) && curr_rune) {
+    int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
       n = re_nextc(&curr_rune, &rstr, 1);
@@ -3269,9 +3281,9 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '6':
         case '7':
         case '8':
-        case '9':
-          sbn = dec(curr_rune);
-          if (rstr[0] && isdigitrune(rstr[0])) {
+        case '9': {
+          int sbn = dec(curr_rune);
+          if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
             n = re_nextc(&curr_rune, &rstr, 1);
             if (n < 0) return n;
             sz = dec(curr_rune);
@@ -3282,6 +3294,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           size += sz;
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[sbn];
           break;
+        }
         case '`':
           sz = loot->sub[0].start - src;
           size += sz;
@@ -3303,6 +3316,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           return BAD_CHAR_AFTER_USD;
       }
     } else {
+      char tmps[300], *d = tmps;
       size += (sz = runetochar(d, &curr_rune));
       if (!dstsub->subexpr_num ||
           dstsub->sub[dstsub->subexpr_num - 1].end != rstr - sz) {
@@ -3637,10 +3651,11 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
   struct re_tok *ptok = sub.sub;
 
   if (cfa->num_args > 0) {
-    char *begin = arg->v.str.buf;
+    char *begin;
+    TRY(check_str_re_conv(v7, &arg, 0));
+    begin = arg->v.str.buf;
     if (cfa->this_obj->fl.fl.re_g)
       begin = utfnshift(begin, cfa->this_obj->v.str.lastIndex);
-    TRY(check_str_re_conv(v7, &arg, 0));
     TRY(regex_check_prog(cfa->this_obj));
     if (!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl, begin,
                  &sub)) {
@@ -5346,6 +5361,7 @@ V7_PRIVATE enum v7_err Str_concat(struct v7_c_func_arg *cfa) {
 static long _indexOf(char *pp, char *const end, char *p, long blen,
                      uint8_t last) {
   long i, idx = -1;
+  if (0 == blen || end - pp == 0) return 0;
   for (i = 0; pp <= (end - blen); i++, pp = utfnshift(pp, 1))
     if (0 == memcmp(pp, p, blen)) {
       idx = i;
@@ -5362,11 +5378,17 @@ V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   p = cfa->this_obj->v.str.buf;
   end = p + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &cfa->args[0], 0));
-    if (cfa->num_args > 1) {
-      p = utfnshift(p, pos = _conv_to_int(v7, cfa->args[1]));
-    }
-    idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 0);
+    if (V7_TYPE_UNDEF != cfa->args[0]->type &&
+        V7_TYPE_NULL != cfa->args[0]->type) {
+      TRY(check_str_re_conv(v7, &cfa->args[0], 0));
+      if (cfa->num_args > 1) {
+        p = utfnshift(p, pos = _conv_to_int(v7, cfa->args[1]));
+      }
+      if (p < end)
+        idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len,
+                       0);
+    } else
+      idx = 0;
   }
   if (idx >= 0) idx += pos;
   TRY(push_number(v7, idx));
@@ -5518,7 +5540,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         TRY(inc_stack(v7, old_sp - v7->sp));
       } else { /* replace string */
         struct Resub newsub;
-        re_rplc(&loot, p, str_func->v.str.buf, &newsub);
+        re_rplc(&loot, cfa->this_obj->v.str.buf, str_func->v.str.buf, &newsub);
         for (i = 0; i < newsub.subexpr_num; i++) {
           ptok->start = newsub.sub[i].start;
           ptok->end = newsub.sub[i].end;
@@ -5568,8 +5590,9 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
     TRY(regex_check_prog(arg));
     if (!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf, &sub))
       shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
-  }
-  if (shift > 0) /* calc shift for UTF-8 */
+  } else
+    utf_shift = 0;
+  if (shift >= 0) /* calc shift for UTF-8 */
     utf_shift = utfnlen(cfa->this_obj->v.str.buf, shift);
   TRY(push_number(v7, utf_shift));
   return V7_OK;
@@ -5622,20 +5645,25 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   if (cfa->num_args > 0) {
     if (cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM)
       limit = cfa->args[1]->v.num;
-    TRY(check_str_re_conv(v7, &arg, 1));
-    TRY(regex_check_prog(arg));
-    for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
-      if (re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf + shift,
-                  &sub))
-        break;
-      v7_append(v7, arr,
-                v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
-                       sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
-      for (i = 1; i < sub.subexpr_num; i++)
-        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
-                                  sub.sub[i].end - sub.sub[i].start, 1));
-      shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
-      sub1 = sub;
+    if (V7_TYPE_UNDEF != arg->type && V7_TYPE_NULL != arg->type) {
+      TRY(check_str_re_conv(v7, &arg, 1));
+      if (arg->v.str.len > 0) {
+        TRY(regex_check_prog(arg));
+        for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
+          if (re_exec(arg->v.str.prog, arg->fl.fl,
+                      cfa->this_obj->v.str.buf + shift, &sub))
+            break;
+          v7_append(
+              v7, arr,
+              v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
+                     sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
+          for (i = 1; i < sub.subexpr_num; i++)
+            v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
+                                      sub.sub[i].end - sub.sub[i].start, 1));
+          shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+          sub1 = sub;
+        }
+      }
     }
   }
   len = cfa->this_obj->v.str.len - shift;
@@ -6803,6 +6831,10 @@ static enum v7_err parse_unary(struct v7 *v7) {
         if (v7_is_class(result, V7_CLASS_FUNCTION)) str = "function";
         TRY(push_string(v7, str, strlen(str), 0));
         break;
+      case TOK_VOID:
+        TRY(inc_stack(v7, -1));
+        TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
+        break;
       default:
         break;
     }
@@ -7040,7 +7072,8 @@ static enum v7_err do_assign(struct v7 *v7, struct v7_val *obj, const char *key,
     switch (tok) {
       case TOK_ASSIGN:
         CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
-        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1, b));
+        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1,
+                    b));  // TODO(vrz) ERROR
         return V7_OK;
       case TOK_PLUS_ASSIGN:
         TRY(arith(v7, a, b, a, TOK_PLUS));
@@ -7996,11 +8029,16 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (is_num(v)) {
     // TODO: check this on 32-bit arch
-    if (v->v.num > ((uint64_t)1 << 52) || ceil(v->v.num) != v->v.num) {
+    if (INFINITY == v->v.num)
+      snprintf(buf, bsiz, "Infinity");
+    else if (-INFINITY == v->v.num)
+      snprintf(buf, bsiz, "-Infinity");
+    else if (isnan(v->v.num))
+      snprintf(buf, bsiz, "NaN");
+    else if (v->v.num > ((uint64_t)1 << 52) || ceil(v->v.num) != v->v.num)
       snprintf(buf, bsiz, "%lg", v->v.num);
-    } else {
+    else
       snprintf(buf, bsiz, "%ld", (unsigned long)v->v.num);
-    }
   } else if (is_string(v)) {
     snprintf(buf, bsiz, "%.*s", (int)v->v.str.len, v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_ARRAY)) {

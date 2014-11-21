@@ -389,8 +389,9 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         case 'b':
           e->curr_rune = '\b';
           break;
-        /* default:
-          V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_ESC_CHAR)); */
+          /* default:
+            V7_EX_THROW(e->catch_point, e->err_msg,
+            re_err_msg(INVALID_ESC_CHAR)); */
       }
     } else {
       if (e->curr_rune == '-') {
@@ -994,8 +995,7 @@ static void program_print(struct Reprog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n",
-               inst->par.c);
+        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n", inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -1028,8 +1028,7 @@ static void program_print(struct Reprog *prog) {
         printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
-        printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
-               inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
+        printf("init_rep %d %d\n", inst->par.xy.y.rp.min, inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
         break;
       case I_SET:
         printf("[");
@@ -1277,22 +1276,35 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol,
 uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags,
                 const char *start, struct Resub *loot) {
   struct Resub tmpsub;
+  const char *st = start;
 
-  if (!loot) loot = &tmpsub;
-
-  loot->subexpr_num = prog->subexpr_num;
-  memset(loot->sub, 0, sizeof(loot->sub));
-  return !re_match(prog->start, start, start, flags, loot);
+  if (loot) memset(loot, 0, sizeof(*loot));
+  if (!flags.re_g || !loot) {
+    if (!loot) loot = &tmpsub;
+    loot->subexpr_num = prog->subexpr_num;
+    return !re_match(prog->start, start, start, flags, loot);
+  }
+  while (re_match(prog->start, st, start, flags, &tmpsub)) {
+    unsigned int i;
+    st = tmpsub.sub[0].end;
+    for (i = 0; i < prog->subexpr_num; i++) {
+      struct re_tok *l = &loot->sub[loot->subexpr_num + i], *s = &tmpsub.sub[i];
+      l->start = s->start;
+      l->end = s->end;
+    }
+    loot->subexpr_num += prog->subexpr_num;
+  }
+  return !loot->subexpr_num;
 }
 
 V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
                        struct Resub *dstsub) {
-  int size = 0, sz, sbn, n;
-  char tmps[300], *d = tmps;
+  int size = 0, n;
   Rune curr_rune;
-  dstsub->subexpr_num = 0;
 
+  memset(dstsub, 0, sizeof(*dstsub));
   while (!(n = re_nextc(&curr_rune, &rstr, 1)) && curr_rune) {
+    int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
       n = re_nextc(&curr_rune, &rstr, 1);
@@ -1312,9 +1324,9 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '6':
         case '7':
         case '8':
-        case '9':
-          sbn = dec(curr_rune);
-          if (rstr[0] && isdigitrune(rstr[0])) {
+        case '9': {
+          int sbn = dec(curr_rune);
+          if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
             n = re_nextc(&curr_rune, &rstr, 1);
             if (n < 0) return n;
             sz = dec(curr_rune);
@@ -1325,6 +1337,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           size += sz;
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[sbn];
           break;
+        }
         case '`':
           sz = loot->sub[0].start - src;
           size += sz;
@@ -1346,6 +1359,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           return BAD_CHAR_AFTER_USD;
       }
     } else {
+      char tmps[300], *d = tmps;
       size += (sz = runetochar(d, &curr_rune));
       if (!dstsub->subexpr_num ||
           dstsub->sub[dstsub->subexpr_num - 1].end != rstr - sz) {
@@ -1680,10 +1694,11 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
   struct re_tok *ptok = sub.sub;
 
   if (cfa->num_args > 0) {
-    char *begin = arg->v.str.buf;
+    char *begin;
+    TRY(check_str_re_conv(v7, &arg, 0));
+    begin = arg->v.str.buf;
     if (cfa->this_obj->fl.fl.re_g)
       begin = utfnshift(begin, cfa->this_obj->v.str.lastIndex);
-    TRY(check_str_re_conv(v7, &arg, 0));
     TRY(regex_check_prog(cfa->this_obj));
     if (!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl, begin,
                  &sub)) {

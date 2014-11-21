@@ -597,6 +597,6 @@ V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg) {
 
 V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
   double tmp = _conv_to_num(v7, arg);
-  if (NAN == tmp) return 0;
+  if (isnan(tmp) || isinf(tmp)) return 0;
   return tmp;
 }

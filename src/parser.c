@@ -710,6 +710,10 @@ static enum v7_err parse_unary(struct v7 *v7) {
         if (v7_is_class(result, V7_CLASS_FUNCTION)) str = "function";
         TRY(push_string(v7, str, strlen(str), 0));
         break;
+      case TOK_VOID:
+        TRY(inc_stack(v7, -1));
+        TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
+        break;
       default:
         break;
     }
@@ -947,7 +951,8 @@ static enum v7_err do_assign(struct v7 *v7, struct v7_val *obj, const char *key,
     switch (tok) {
       case TOK_ASSIGN:
         CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
-        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1, b));
+        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1,
+                    b));  // TODO(vrz) ERROR
         return V7_OK;
       case TOK_PLUS_ASSIGN:
         TRY(arith(v7, a, b, a, TOK_PLUS));

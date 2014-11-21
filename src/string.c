@@ -108,6 +108,7 @@ V7_PRIVATE enum v7_err Str_concat(struct v7_c_func_arg *cfa) {
 static long _indexOf(char *pp, char *const end, char *p, long blen,
                      uint8_t last) {
   long i, idx = -1;
+  if (0 == blen || end - pp == 0) return 0;
   for (i = 0; pp <= (end - blen); i++, pp = utfnshift(pp, 1))
     if (0 == memcmp(pp, p, blen)) {
       idx = i;
@@ -124,11 +125,17 @@ V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
   p = cfa->this_obj->v.str.buf;
   end = p + cfa->this_obj->v.str.len;
   if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &cfa->args[0], 0));
-    if (cfa->num_args > 1) {
-      p = utfnshift(p, pos = _conv_to_int(v7, cfa->args[1]));
-    }
-    idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 0);
+    if (V7_TYPE_UNDEF != cfa->args[0]->type &&
+        V7_TYPE_NULL != cfa->args[0]->type) {
+      TRY(check_str_re_conv(v7, &cfa->args[0], 0));
+      if (cfa->num_args > 1) {
+        p = utfnshift(p, pos = _conv_to_int(v7, cfa->args[1]));
+      }
+      if (p < end)
+        idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len,
+                       0);
+    } else
+      idx = 0;
   }
   if (idx >= 0) idx += pos;
   TRY(push_number(v7, idx));
@@ -280,7 +287,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         TRY(inc_stack(v7, old_sp - v7->sp));
       } else { /* replace string */
         struct Resub newsub;
-        re_rplc(&loot, p, str_func->v.str.buf, &newsub);
+        re_rplc(&loot, cfa->this_obj->v.str.buf, str_func->v.str.buf, &newsub);
         for (i = 0; i < newsub.subexpr_num; i++) {
           ptok->start = newsub.sub[i].start;
           ptok->end = newsub.sub[i].end;
@@ -330,8 +337,9 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
     TRY(regex_check_prog(arg));
     if (!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf, &sub))
       shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
-  }
-  if (shift > 0) /* calc shift for UTF-8 */
+  } else
+    utf_shift = 0;
+  if (shift >= 0) /* calc shift for UTF-8 */
     utf_shift = utfnlen(cfa->this_obj->v.str.buf, shift);
   TRY(push_number(v7, utf_shift));
   return V7_OK;
@@ -384,20 +392,25 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
   if (cfa->num_args > 0) {
     if (cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM)
       limit = cfa->args[1]->v.num;
-    TRY(check_str_re_conv(v7, &arg, 1));
-    TRY(regex_check_prog(arg));
-    for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
-      if (re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf + shift,
-                  &sub))
-        break;
-      v7_append(v7, arr,
-                v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
-                       sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
-      for (i = 1; i < sub.subexpr_num; i++)
-        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
-                                  sub.sub[i].end - sub.sub[i].start, 1));
-      shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
-      sub1 = sub;
+    if (V7_TYPE_UNDEF != arg->type && V7_TYPE_NULL != arg->type) {
+      TRY(check_str_re_conv(v7, &arg, 1));
+      if (arg->v.str.len > 0) {
+        TRY(regex_check_prog(arg));
+        for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
+          if (re_exec(arg->v.str.prog, arg->fl.fl,
+                      cfa->this_obj->v.str.buf + shift, &sub))
+            break;
+          v7_append(
+              v7, arr,
+              v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
+                     sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
+          for (i = 1; i < sub.subexpr_num; i++)
+            v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
+                                      sub.sub[i].end - sub.sub[i].start, 1));
+          shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+          sub1 = sub;
+        }
+      }
     }
   }
   len = cfa->this_obj->v.str.len - shift;
