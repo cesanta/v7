@@ -6133,7 +6133,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
 
   _prop_func_2_value(v7, &a);
   _prop_func_2_value(v7, &b);
-  if (op == TOK_PLUS && (a->type == V7_TYPE_STR || b->type == V7_TYPE_STR)) {
+  if (op == TOK_PLUS && (is_string(a) || is_string(b))) {
     /* Do type conversion, result pushed on stack */
     TRY(check_str_re_conv(v7, &a, 0));
     TRY(check_str_re_conv(v7, &b, 0));
