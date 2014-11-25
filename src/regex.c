@@ -271,7 +271,6 @@ static void re_s_2set(struct re_env *e) {
 
 static void re_S_2set(struct re_env *e) {
   re_rng2set(e, 0, 0x9 - 1);
-  re_rng2set(e, 0x9 + 1, 0xA - 1);
   re_rng2set(e, 0xD + 1, 0x20 - 1);
   re_rng2set(e, 0x20 + 1, 0xA0 - 1);
   re_rng2set(e, 0xA0 + 1, 0x2028 - 1);
@@ -516,7 +515,7 @@ static struct Renode *re_nnode(struct re_env *e, int type) {
   return e->pend++;
 }
 
-static uint8_t re_isndnull(struct Renode *nd) {
+static uint8_t re_isemptynd(struct Renode *nd) {
   if (!nd) return 1;
   switch (nd->type) {
     default:
@@ -528,20 +527,20 @@ static uint8_t re_isndnull(struct Renode *nd) {
       return 0;
     case P_BRA:
     case P_REF:
-      return re_isndnull(nd->par.xy.x);
+      return re_isemptynd(nd->par.xy.x);
     case P_CAT:
-      return re_isndnull(nd->par.xy.x) && re_isndnull(nd->par.xy.y.y);
+      return re_isemptynd(nd->par.xy.x) && re_isemptynd(nd->par.xy.y.y);
     case P_ALT:
-      return re_isndnull(nd->par.xy.x) || re_isndnull(nd->par.xy.y.y);
+      return re_isemptynd(nd->par.xy.x) || re_isemptynd(nd->par.xy.y.y);
     case P_REP:
-      return re_isndnull(nd->par.xy.x) || !nd->par.xy.y.rp.min;
+      return re_isemptynd(nd->par.xy.x) || !nd->par.xy.y.rp.min;
   }
 }
 
 static struct Renode *re_nrep(struct re_env *e, struct Renode *nd, int ng,
-                              int min, int max) {
+                              uint16_t min, uint16_t max) {
   struct Renode *rep = re_nnode(e, P_REP);
-  if (max == RE_MAX_REP && re_isndnull(nd))
+  if (max == RE_MAX_REP && re_isemptynd(nd))
     V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INF_LOOP_M_EMP_STR));
   rep->par.xy.y.rp.ng = ng;
   rep->par.xy.y.rp.min = min;

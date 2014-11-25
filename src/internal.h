@@ -495,9 +495,6 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
-
-V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
-V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
