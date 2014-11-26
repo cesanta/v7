@@ -576,8 +576,11 @@ V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
-V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s);
+V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s);
+
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -7249,17 +7252,17 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
 
   /* Pass through the loop, don't execute it, just remember locations */
   v7->flags |= V7_NO_EXEC;
-  s2 = v7->pstate;
+  get_v7_state(v7, &s2);
   TRY(parse_expression(v7)); /* expr2 (condition) */
   EXPECT(v7, TOK_SEMICOLON);
 
-  s3 = v7->pstate;
+  get_v7_state(v7, &s3);
   TRY(parse_expression(v7)); /* expr3  (post-iteration) */
   EXPECT(v7, TOK_CLOSE_PAREN);
 
-  s_block = v7->pstate;
+  get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
-  s_end = v7->pstate;
+  get_v7_state(v7, &s_end);
 
   v7->flags = old_flags;
 
@@ -7267,19 +7270,19 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   if (EXECUTING(v7->flags)) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pstate = s2;
+      set_v7_state(v7, &s2);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_expression(v7)); /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top(v7)[-1]);
       if (is_true) break;
 
-      v7->pstate = s_block;
+      set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_compound_statement(v7, has_return)); /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
 
-      v7->pstate = s3;
+      set_v7_state(v7, &s3);
       TRY(parse_expression(v7)); /* expr3  (post-iteration) */
 
       TRY(inc_stack(v7, old_sp - v7->sp)); /* Clean up stack */
@@ -7287,7 +7290,7 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   }
 
   /* Jump to the code after the loop */
-  v7->pstate = s_end;
+  set_v7_state(v7, &s_end);
 
   return V7_OK;
 }
@@ -7296,15 +7299,16 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   int is_true, old_flags = v7->flags;
   struct v7_pstate s_cond, s_block, s_end;
 
+  EXPECT(v7, TOK_WHILE);
   EXPECT(v7, TOK_OPEN_PAREN);
-  s_cond = v7->pstate;
+  get_v7_state(v7, &s_cond);
   v7->flags |= V7_NO_EXEC;
   TRY(parse_expression(v7));
   EXPECT(v7, TOK_CLOSE_PAREN);
 
-  s_block = v7->pstate;
+  get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
-  s_end = v7->pstate;
+  get_v7_state(v7, &s_end);
 
   v7->flags = old_flags;
 
@@ -7312,14 +7316,14 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   if (EXECUTING(v7->flags)) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pstate = s_cond;
+      set_v7_state(v7, &s_cond);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_expression(v7)); /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top_val(v7));
       if (is_true) break;
 
-      v7->pstate = s_block;
+      set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_compound_statement(v7, has_return)); /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
@@ -7329,7 +7333,7 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   }
 
   /* Jump to the code after the loop */
-  v7->pstate = s_end;
+  set_v7_state(v7, &s_end);
 
   return V7_OK;
 }
@@ -7835,6 +7839,16 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
              v7->pstate.line_no);
   return v7->cur_tok;
+}
+
+V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  *s = v7->pstate;
+  s->pc = v7->tok;
+}
+
+V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  v7->pstate = *s;
+  next_tok(v7);
 }
 
 #ifdef TEST_RUN
