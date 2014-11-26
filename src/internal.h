@@ -266,7 +266,7 @@ struct v7_string {
   unsigned long len;   /* String/regexp length */
   char loc[16];        /* Small strings/regexp are stored here */
   struct Reprog *prog; /* Pointer to compiled regexp */
-  unsigned long lastIndex;
+  long lastIndex;
 };
 
 struct v7_func {

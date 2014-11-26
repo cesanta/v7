@@ -349,7 +349,7 @@ struct v7_string {
   unsigned long len;   /* String/regexp length */
   char loc[16];        /* Small strings/regexp are stored here */
   struct Reprog *prog; /* Pointer to compiled regexp */
-  unsigned long lastIndex;
+  long lastIndex;
 };
 
 struct v7_func {
@@ -3653,6 +3653,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
     char *begin;
     TRY(check_str_re_conv(v7, &arg, 0));
     begin = arg->v.str.buf;
+    if (cfa->this_obj->v.str.lastIndex < 0) cfa->this_obj->v.str.lastIndex = 0;
     if (cfa->this_obj->fl.fl.re_g)
       begin = utfnshift(begin, cfa->this_obj->v.str.lastIndex);
     TRY(regex_check_prog(cfa->this_obj));
@@ -3667,7 +3668,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
       if (cfa->this_obj->fl.fl.re_g)
         cfa->this_obj->v.str.lastIndex = utfnlen(begin, sub.sub->end - begin);
       return V7_OK;
-    }
+    } else cfa->this_obj->v.str.lastIndex = 0;
   }
   TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
@@ -3676,17 +3677,9 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0];
-  struct Resub sub;
-  int found = 0;
+  TRY(Regex_exec(cfa));
 
-  if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &arg, 0));
-    TRY(regex_check_prog(cfa->this_obj));
-    found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl,
-                     arg->v.str.buf, &sub);
-  }
-  v7_push_bool(v7, found);
+  v7_push_bool(v7, v7_top_val(v7)->type != V7_TYPE_NULL);
   return V7_OK;
 #undef v7
 }
