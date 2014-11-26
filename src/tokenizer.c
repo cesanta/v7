@@ -393,6 +393,16 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
+V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  *s = v7->pstate;
+  s->pc = v7->tok;
+}
+
+V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  v7->pstate = *s;
+  next_tok(v7);
+}
+
 #ifdef TEST_RUN
 int main(void) {
   const char *src =

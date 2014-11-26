@@ -493,8 +493,11 @@ V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
-V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s);
+V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s);
+
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
