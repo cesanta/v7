@@ -46,7 +46,10 @@ V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f) {
 V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *)malloc(len + 1);
   if (p == NULL) return NULL;
-  memcpy(p, ptr, len);
+  if (ptr)
+    memcpy(p, ptr, len);
+  else
+    memset(p, 0, len);
   p[len] = '\0';
   return p;
 }
@@ -61,7 +64,10 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p, unsigned long len,
   if (own) {
     if (len < sizeof(v->v.str.loc) - 1) {
       v->v.str.buf = v->v.str.loc;
-      memcpy(v->v.str.loc, p, len);
+      if (p)
+        memcpy(v->v.str.loc, p, len);
+      else
+        memset(v->v.str.loc, 0, len);
       v->v.str.loc[len] = '\0';
     } else {
       v->v.str.buf = v7_strdup(p, len);
@@ -566,4 +572,31 @@ V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj) {
   TRY(v7_call2(v7, obj, 0, 0));
 
   return V7_OK;
+}
+
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
+                                         int re_fl) {
+  /* If argument is not (RegExp + re_fl) or string, do type conversion */
+  if (!is_string(*arg) &&
+      !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))) {
+    TRY(toString(v7, *arg));
+    *arg = v7_top_val(v7);
+    INC_REF_COUNT(*arg);
+    TRY(inc_stack(v7, -2));
+    TRY(v7_push(v7, *arg));
+  }
+  return V7_OK;
+}
+
+V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg) {
+  _prop_func_2_value(v7, &arg);
+  if (is_num(arg) || is_bool(arg)) return arg->v.num;
+  if (is_string(arg)) return strtod(arg->v.str.buf, NULL);
+  return NAN;
+}
+
+V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
+  double tmp = _conv_to_num(v7, arg);
+  if (isnan(tmp) || isinf(tmp)) return 0;
+  return tmp;
 }

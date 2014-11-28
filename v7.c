@@ -73,6 +73,7 @@ Rune	toupperrune(Rune c);
 char*	utfecpy(char *to, char *e, char *from);
 int		utflen(char *s);
 int		utfnlen(char *s, long m);
+char*	utfnshift(char *s, long m);
 char*	utfrrune(char *s, long c);
 char*	utfrune(char *s, long c);
 char*	utfutf(char *s1, char *s2);
@@ -348,7 +349,7 @@ struct v7_string {
   unsigned long len;   /* String/regexp length */
   char loc[16];        /* Small strings/regexp are stored here */
   struct Reprog *prog; /* Pointer to compiled regexp */
-  unsigned long lastIndex;
+  long lastIndex;
 };
 
 struct v7_func {
@@ -557,6 +558,7 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
+V7_PRIVATE sint8_t nextesc(Rune *r, const char **src);
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
                                       struct v7_val_flags flags,
                                       const char **errorp);
@@ -570,17 +572,15 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *re, size_t re_len,
                                    const char *fl, size_t fl_len);
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
-V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
-                                         int re_fl);
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
-V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s);
+V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s);
 
-V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
-V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
 V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
@@ -592,6 +592,12 @@ V7_PRIVATE int is_num(const struct v7_val *v);
 V7_PRIVATE int is_bool(const struct v7_val *v);
 V7_PRIVATE int is_string(const struct v7_val *v);
 V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
+                                         int re_fl);
+
+V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg);
+V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg);
+
 V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
 V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f);
@@ -707,7 +713,10 @@ V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f) {
 V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len) {
   char *p = (char *)malloc(len + 1);
   if (p == NULL) return NULL;
-  memcpy(p, ptr, len);
+  if (ptr)
+    memcpy(p, ptr, len);
+  else
+    memset(p, 0, len);
   p[len] = '\0';
   return p;
 }
@@ -722,7 +731,10 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p, unsigned long len,
   if (own) {
     if (len < sizeof(v->v.str.loc) - 1) {
       v->v.str.buf = v->v.str.loc;
-      memcpy(v->v.str.loc, p, len);
+      if (p)
+        memcpy(v->v.str.loc, p, len);
+      else
+        memset(v->v.str.loc, 0, len);
       v->v.str.loc[len] = '\0';
     } else {
       v->v.str.buf = v7_strdup(p, len);
@@ -1227,6 +1239,33 @@ V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj) {
   TRY(v7_call2(v7, obj, 0, 0));
 
   return V7_OK;
+}
+
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
+                                         int re_fl) {
+  /* If argument is not (RegExp + re_fl) or string, do type conversion */
+  if (!is_string(*arg) &&
+      !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))) {
+    TRY(toString(v7, *arg));
+    *arg = v7_top_val(v7);
+    INC_REF_COUNT(*arg);
+    TRY(inc_stack(v7, -2));
+    TRY(v7_push(v7, *arg));
+  }
+  return V7_OK;
+}
+
+V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg) {
+  _prop_func_2_value(v7, &arg);
+  if (is_num(arg) || is_bool(arg)) return arg->v.num;
+  if (is_string(arg)) return strtod(arg->v.str.buf, NULL);
+  return NAN;
+}
+
+V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
+  double tmp = _conv_to_num(v7, arg);
+  if (isnan(tmp) || isinf(tmp)) return 0;
+  return tmp;
 }
 
 #ifndef V7_DISABLE_CRYPTO
@@ -2069,72 +2108,78 @@ static sint8_t hex(int c) {
   return INVALID_HEX_DIGIT;
 }
 
-static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
+V7_PRIVATE sint8_t nextesc(Rune *r, const char **src) {
   sint8_t hd;
   *src += chartorune(r, *src);
+  switch (*r) {
+    case 0:
+      return UNTERM_ESC_SEQ;
+    case 'c':
+      *r = **src & 31;
+      ++*src;
+      return 0;
+    case 'f':
+      *r = '\f';
+      return 0;
+    case 'n':
+      *r = '\n';
+      return 0;
+    case 'r':
+      *r = '\r';
+      return 0;
+    case 't':
+      *r = '\t';
+      return 0;
+    case 'u':
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r = hd << 12;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd << 8;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd << 4;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd;
+      if (!*r) {
+        *r = '0';
+        return 1;
+      }
+      return 0;
+    case 'v':
+      *r = '\v';
+      return 0;
+    case 'x':
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r = hd << 4;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd;
+      if (!*r) {
+        *r = '0';
+        return 1;
+      }
+      return 0;
+  }
+  return 2;
+}
+
+static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
+  *src += chartorune(r, *src);
   if (re_flag && *r == '\\') {
-    *src += chartorune(r, *src);
-    switch (*r) {
-      case 0:
-        return UNTERM_ESC_SEQ;
-      case 'c':
-        *r = **src & 31;
-        ++*src;
-        return 0;
-      case 'f':
-        *r = '\f';
-        return 0;
-      case 'n':
-        *r = '\n';
-        return 0;
-      case 'r':
-        *r = '\r';
-        return 0;
-      case 't':
-        *r = '\t';
-        return 0;
-      case 'u':
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r = hd << 12;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd << 8;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd << 4;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd;
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        return 0;
-      case 'v':
-        *r = '\v';
-        return 0;
-      case 'x':
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r = hd << 4;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd;
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        return 0;
-    }
+    /* sint8_t ret = */ nextesc(r, src);
+    /* if(2 != ret) return ret;
     if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
-      return INVALID_ESC_CHAR;
+      return INVALID_ESC_CHAR; */
     return 1;
   }
   return 0;
@@ -2183,7 +2228,6 @@ static void re_s_2set(struct re_env *e) {
 
 static void re_S_2set(struct re_env *e) {
   re_rng2set(e, 0, 0x9 - 1);
-  re_rng2set(e, 0x9 + 1, 0xA - 1);
   re_rng2set(e, 0xD + 1, 0x20 - 1);
   re_rng2set(e, 0x20 + 1, 0xA0 - 1);
   re_rng2set(e, 0xA0 + 1, 0x2028 - 1);
@@ -2287,12 +2331,13 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         continue;
       }
       switch (e->curr_rune) {
-        case '-':
+        default:
+        /* case '-':
         case '\\':
         case '.':
         case '/':
         case ']':
-        case '|':
+        case '|': */
           break;
         case '0':
           e->curr_rune = 0;
@@ -2300,8 +2345,9 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         case 'b':
           e->curr_rune = '\b';
           break;
-        default:
-          V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_ESC_CHAR));
+          /* default:
+            V7_EX_THROW(e->catch_point, e->err_msg,
+            re_err_msg(INVALID_ESC_CHAR)); */
       }
     } else {
       if (e->curr_rune == '-') {
@@ -2426,7 +2472,7 @@ static struct Renode *re_nnode(struct re_env *e, int type) {
   return e->pend++;
 }
 
-static uint8_t re_isndnull(struct Renode *nd) {
+static uint8_t re_isemptynd(struct Renode *nd) {
   if (!nd) return 1;
   switch (nd->type) {
     default:
@@ -2438,20 +2484,20 @@ static uint8_t re_isndnull(struct Renode *nd) {
       return 0;
     case P_BRA:
     case P_REF:
-      return re_isndnull(nd->par.xy.x);
+      return re_isemptynd(nd->par.xy.x);
     case P_CAT:
-      return re_isndnull(nd->par.xy.x) && re_isndnull(nd->par.xy.y.y);
+      return re_isemptynd(nd->par.xy.x) && re_isemptynd(nd->par.xy.y.y);
     case P_ALT:
-      return re_isndnull(nd->par.xy.x) || re_isndnull(nd->par.xy.y.y);
+      return re_isemptynd(nd->par.xy.x) || re_isemptynd(nd->par.xy.y.y);
     case P_REP:
-      return re_isndnull(nd->par.xy.x) || !nd->par.xy.y.rp.min;
+      return re_isemptynd(nd->par.xy.x) || !nd->par.xy.y.rp.min;
   }
 }
 
 static struct Renode *re_nrep(struct re_env *e, struct Renode *nd, int ng,
-                              int min, int max) {
+                              uint16_t min, uint16_t max) {
   struct Renode *rep = re_nnode(e, P_REP);
-  if (max == RE_MAX_REP && re_isndnull(nd))
+  if (max == RE_MAX_REP && re_isemptynd(nd))
     V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INF_LOOP_M_EMP_STR));
   rep->par.xy.y.rp.ng = ng;
   rep->par.xy.y.rp.min = min;
@@ -2821,9 +2867,9 @@ static void node_print(struct Renode *nd) {
   switch (nd->type) {
     case P_ALT:
       printf("{");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(" | ");
-      node_print(nd->y);
+      node_print(nd->par.xy.y.y);
       printf("}");
       break;
     case P_ANY:
@@ -2833,19 +2879,19 @@ static void node_print(struct Renode *nd) {
       printf("^");
       break;
     case P_BRA:
-      printf("(%d,", nd->n);
-      node_print(nd->x);
+      printf("(%d,", nd->par.xy.y.n);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_CAT:
       printf("{");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(" & ");
-      node_print(nd->y);
+      node_print(nd->par.xy.y.y);
       printf("}");
       break;
     case P_CH:
-      printf(nd->c >= 32 && nd->c < 127 ? "'%c'" : "'\\u%04X'", nd->c);
+      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" : "'\\u%04X'", nd->par.c);
       break;
     case P_EOL:
       printf("$");
@@ -2855,28 +2901,28 @@ static void node_print(struct Renode *nd) {
       break;
     case P_LA:
       printf("LA(");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_LA_N:
       printf("LA_N(");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_REF:
-      printf("\\%d", nd->n);
+      printf("\\%d", nd->par.xy.y.n);
       break;
     case P_REP:
-      node_print(nd->x);
-      printf(nd->ng ? "{%d,%d}?" : "{%d,%d}", nd->min, nd->max);
+      node_print(nd->par.xy.x);
+      printf(nd->par.xy.y.rp.ng ? "{%d,%d}?" : "{%d,%d}", nd->par.xy.y.rp.min, nd->par.xy.y.rp.max);
       break;
     case P_SET:
       printf("[");
-      print_set(nd->cp);
+      print_set(nd->par.cp);
       break;
     case P_SET_N:
       printf("[^");
-      print_set(nd->cp);
+      print_set(nd->par.cp);
       break;
     case P_WORD:
       printf("\\b");
@@ -2905,8 +2951,7 @@ static void program_print(struct Reprog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->c >= 32 && inst->c < 127 ? "'%c'\n" : "'\\u%04X'\n",
-               inst->c);
+        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n", inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -2915,41 +2960,40 @@ static void program_print(struct Reprog *prog) {
         puts("\\0");
         break;
       case I_JUMP:
-        printf("-->%d\n", inst->x - prog->start);
+        printf("-->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %d %d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("la %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %d %d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("la_n %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
-        printf("( %d\n", inst->n);
+        printf("( %d\n", inst->par.n);
         break;
       case I_RBRA:
-        printf(") %d\n", inst->n);
+        printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%d | -->%d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
-        printf("\\%d\n", inst->n);
+        printf("\\%d\n", inst->par.n);
         break;
       case I_REP:
-        printf("repeat -->%d\n", inst->x - prog->start);
+        printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
-        printf("init_rep %d %d\n", inst->y.rp.min,
-               inst->y.rp.min + inst->y.rp.max);
+        printf("init_rep %d %d\n", inst->par.xy.y.rp.min, inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
         break;
       case I_SET:
         printf("[");
-        print_set(inst->cp);
+        print_set(inst->par.cp);
         puts("");
         break;
       case I_SET_N:
         printf("[^");
-        print_set(inst->cp);
+        print_set(inst->par.cp);
         puts("");
         break;
       case I_WORD:
@@ -3188,22 +3232,35 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol,
 uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags,
                 const char *start, struct Resub *loot) {
   struct Resub tmpsub;
+  const char *st = start;
 
-  if (!loot) loot = &tmpsub;
-
-  loot->subexpr_num = prog->subexpr_num;
-  memset(loot->sub, 0, sizeof(loot->sub));
-  return !re_match(prog->start, start, start, flags, loot);
+  if (loot) memset(loot, 0, sizeof(*loot));
+  if (!flags.re_g || !loot) {
+    if (!loot) loot = &tmpsub;
+    loot->subexpr_num = prog->subexpr_num;
+    return !re_match(prog->start, start, start, flags, loot);
+  }
+  while (re_match(prog->start, st, start, flags, &tmpsub)) {
+    unsigned int i;
+    st = tmpsub.sub[0].end;
+    for (i = 0; i < prog->subexpr_num; i++) {
+      struct re_tok *l = &loot->sub[loot->subexpr_num + i], *s = &tmpsub.sub[i];
+      l->start = s->start;
+      l->end = s->end;
+    }
+    loot->subexpr_num += prog->subexpr_num;
+  }
+  return !loot->subexpr_num;
 }
 
 V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
                        struct Resub *dstsub) {
-  int size = 0, sz, sbn, n;
-  char tmps[300], *d = tmps;
+  int size = 0, n;
   Rune curr_rune;
-  dstsub->subexpr_num = 0;
 
+  memset(dstsub, 0, sizeof(*dstsub));
   while (!(n = re_nextc(&curr_rune, &rstr, 1)) && curr_rune) {
+    int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
       n = re_nextc(&curr_rune, &rstr, 1);
@@ -3223,9 +3280,9 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '6':
         case '7':
         case '8':
-        case '9':
-          sbn = dec(curr_rune);
-          if (rstr[0] && isdigitrune(rstr[0])) {
+        case '9': {
+          int sbn = dec(curr_rune);
+          if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
             n = re_nextc(&curr_rune, &rstr, 1);
             if (n < 0) return n;
             sz = dec(curr_rune);
@@ -3236,6 +3293,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           size += sz;
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[sbn];
           break;
+        }
         case '`':
           sz = loot->sub[0].start - src;
           size += sz;
@@ -3257,6 +3315,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           return BAD_CHAR_AFTER_USD;
       }
     } else {
+      char tmps[300], *d = tmps;
       size += (sz = runetochar(d, &curr_rune));
       if (!dstsub->subexpr_num ||
           dstsub->sub[dstsub->subexpr_num - 1].end != rstr - sz) {
@@ -3591,15 +3650,12 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
   struct re_tok *ptok = sub.sub;
 
   if (cfa->num_args > 0) {
-    const char *begin = arg->v.str.buf;
-    Rune rune;
-    if (cfa->this_obj->fl.fl.re_g) {
-      unsigned long utf_shift;
-      for (utf_shift = 0; utf_shift < cfa->this_obj->v.str.lastIndex;
-           utf_shift++)
-        begin += chartorune(&rune, begin);
-    }
+    char *begin;
     TRY(check_str_re_conv(v7, &arg, 0));
+    begin = arg->v.str.buf;
+    if (cfa->this_obj->v.str.lastIndex < 0) cfa->this_obj->v.str.lastIndex = 0;
+    if (cfa->this_obj->fl.fl.re_g)
+      begin = utfnshift(begin, cfa->this_obj->v.str.lastIndex);
     TRY(regex_check_prog(cfa->this_obj));
     if (!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl, begin,
                  &sub)) {
@@ -3609,13 +3665,10 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
       for (i = 0; i < sub.subexpr_num; i++, ptok++)
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start,
                                   ptok->end - ptok->start, 1));
-      if (cfa->this_obj->fl.fl.re_g) {
-        for (; cfa->this_obj->fl.fl.re_g && begin < sub.sub->end;
-             cfa->this_obj->v.str.lastIndex++)
-          begin += chartorune(&rune, begin);
-      }
+      if (cfa->this_obj->fl.fl.re_g)
+        cfa->this_obj->v.str.lastIndex = utfnlen(begin, sub.sub->end - begin);
       return V7_OK;
-    }
+    } else cfa->this_obj->v.str.lastIndex = 0;
   }
   TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
@@ -3624,17 +3677,9 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0];
-  struct Resub sub;
-  int found = 0;
+  TRY(Regex_exec(cfa));
 
-  if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &arg, 0));
-    TRY(regex_check_prog(cfa->this_obj));
-    found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl,
-                     arg->v.str.buf, &sub);
-  }
-  v7_push_bool(v7, found);
+  v7_push_bool(v7, v7_top_val(v7)->type != V7_TYPE_NULL);
   return V7_OK;
 #undef v7
 }
@@ -3880,6 +3925,170 @@ fullrune(char *str, int n)
 		return n >= 3;
 	return n >= 4;
 }
+
+int
+utfnlen(char *s, long m)
+{
+	int c;
+	long n;
+	Rune rune;
+	char *es;
+
+	es = s + m;
+	for(n = 0; s < es; n++) {
+		c = *(uchar*)s;
+		if(c < Runeself){
+			if(c == '\0')
+				break;
+			s++;
+			continue;
+		}
+		if(!fullrune(s, es-s))
+			break;
+		s += chartorune(&rune, s);
+	}
+	return n;
+}
+
+char*
+utfnshift(char *s, long m)
+{
+	int c;
+	long n;
+	Rune rune;
+
+	for(n = 0; n < m; n++) {
+		c = *(uchar*)s;
+		if(c < Runeself){
+			if(c == '\0')
+				break;
+			s++;
+			continue;
+		}
+		s += chartorune(&rune, s);
+	}
+	return s;
+}
+
+#if 0
+
+char*
+utfecpy(char *to, char *e, char *from)
+{
+	char *end;
+
+	if(to >= e)
+		return to;
+	end = memccpy(to, from, '\0', e - to);
+	if(end == NULL){
+		end = e-1;
+		while(end>to && (*--end&0xC0)==0x80)
+			;
+		*end = '\0';
+	}else{
+		end--;
+	}
+	return end;
+}
+
+int
+utflen(char *s)
+{
+	int c;
+	long n;
+	Rune rune;
+
+	n = 0;
+	for(;;) {
+		c = *(uchar*)s;
+		if(c < Runeself) {
+			if(c == 0)
+				return n;
+			s++;
+		} else
+			s += chartorune(&rune, s);
+		n++;
+	}
+}
+
+char*
+utfrrune(char *s, long c)
+{
+	long c1;
+	Rune r;
+	char *s1;
+
+	if(c < Runesync)		/* not part of utf sequence */
+		return strrchr(s, c);
+
+	s1 = 0;
+	for(;;) {
+		c1 = *(uchar*)s;
+		if(c1 < Runeself) {	/* one byte rune */
+			if(c1 == 0)
+				return s1;
+			if(c1 == c)
+				s1 = s;
+			s++;
+			continue;
+		}
+		c1 = chartorune(&r, s);
+		if(r == c)
+			s1 = s;
+		s += c1;
+	}
+}
+
+char*
+utfrune(char *s, long c)
+{
+	long c1;
+	Rune r;
+	int n;
+
+	if(c < Runesync)		/* not part of utf sequence */
+		return strchr(s, c);
+
+	for(;;) {
+		c1 = *(uchar*)s;
+		if(c1 < Runeself) {	/* one byte rune */
+			if(c1 == 0)
+				return 0;
+			if(c1 == c)
+				return s;
+			s++;
+			continue;
+		}
+		n = chartorune(&r, s);
+		if(r == c)
+			return s;
+		s += n;
+	}
+}
+
+/*
+ * Return pointer to first occurrence of s2 in s1,
+ * 0 if none
+ */
+char*
+utfutf(char *s1, char *s2)
+{
+	char *p;
+	long f, n1, n2;
+	Rune r;
+
+	n1 = chartorune(&r, s2);
+	f = r;
+	if(f <= Runesync)		/* represents self */
+		return strstr(s1, s2);
+
+	n2 = strlen(s2);
+	for(p=s1; NULL != (p=utfrune(p, f)); p+=n1)
+		if(strncmp(p, s2, n2) == 0)
+			return p;
+	return 0;
+}
+#endif
 /*
  * The authors of this software are Rob Pike and Ken Thompson.
  *              Copyright (c) 2002 by Lucent Technologies.
@@ -5036,67 +5245,201 @@ isspacerune(Rune c)
 	return 0;
 }
 
-V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
-                                         int re_fl) {
-  /* If argument is not (RegExp + re_fl) or string, do type conversion */
-  if (!is_string(*arg) &&
-      !(re_fl && instanceof(*arg, &s_constructors[V7_CLASS_REGEXP]))) {
-    TRY(toString(v7, *arg));
-    *arg = v7_top_val(v7);
-    INC_REF_COUNT(*arg);
-    TRY(inc_stack(v7, -2));
-    TRY(v7_push(v7, *arg));
-  }
-  return V7_OK;
-}
-
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   const char *str = NULL;
   size_t len = 0;
   int own = 0;
-  struct v7_val *arg = cfa->args[0], *obj = cfa->this_obj;
-  if (!cfa->called_as_constructor) obj = v7_push_new_object(v7);
+  struct v7_val *obj = cfa->this_obj;
 
   if (cfa->num_args > 0) {
+    struct v7_val *arg = cfa->args[0];
     TRY(check_str_re_conv(v7, &arg, 0));
     str = arg->v.str.buf;
     len = arg->v.str.len;
     own = 1;
   }
-  v7_init_str(obj, str, len, own);
-  v7_set_class(obj, V7_CLASS_STRING);
+  if (cfa->called_as_constructor) {
+    v7_init_str(obj, str, len, own);
+    v7_set_class(obj, V7_CLASS_STRING);
+  } else
+    v7_push_string(v7, str, len, 1);
   return V7_OK;
 #undef v7
 }
 
-V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg,
-                           struct v7_val *result) {
-  if (NULL == result || arg) return;
-  v7_init_num(result, this_obj->v.str.len);
-}
-
-static const char *StrAt(struct v7_c_func_arg *cfa) {
-  if (cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM &&
-      cfa->this_obj->type == V7_TYPE_STR &&
-      fabs(cfa->args[0]->v.num) < cfa->this_obj->v.str.len) {
-    int idx = (int)cfa->args[0]->v.num;
-    const char *p = cfa->this_obj->v.str.buf;
-    return idx > 0 ? p + idx : p + cfa->this_obj->v.str.len - idx;
+V7_PRIVATE enum v7_err Str_fromCharCode(struct v7_c_func_arg *cfa) {
+  long n, blen = 0;
+  struct v7_val *str;
+  char *p;
+  Rune runes[500];
+  for (n = 0; n < cfa->num_args; n++) {
+    runes[n] = _conv_to_int(cfa->v7, cfa->args[n]);
+    blen += runelen(runes[n]);
   }
-  return NULL;
+  str = v7_push_string(cfa->v7, NULL, blen, 1);
+  p = str->v.str.buf;
+  for (n = 0; n < cfa->num_args; n++) p += runetochar(p, &runes[n]);
+  *p = '\0';
+  str->v.str.len = blen;
+  return V7_OK;
 }
 
-V7_PRIVATE enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
-  const char *p = StrAt(cfa);
-  v7_push_number(cfa->v7, p == NULL ? NAN : p[0]);
+V7_PRIVATE enum v7_err Str_valueOf(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  if (!is_string(cfa->this_obj)) THROW(V7_TYPE_ERROR);
+  TRY(push_string(v7, cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len, 1));
   return V7_OK;
+#undef v7
+}
+
+static enum v7_err _charAt(struct v7_c_func_arg *cfa, const char **p) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  if (cfa->num_args > 0) {
+    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len),
+         idx = _conv_to_int(v7, cfa->args[0]);
+    if (idx < 0) idx = len - idx;
+    if (idx >= 0 && idx < len)
+      return *p = utfnshift(cfa->this_obj->v.str.buf, idx), V7_OK;
+  } else
+    return *p = cfa->this_obj->v.str.buf, V7_OK;
+  return *p = NULL, V7_OK;
+#undef v7
 }
 
 V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
-  const char *p = StrAt(cfa);
-  v7_push_string(cfa->v7, p, p == NULL ? 0 : 1, 1);
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  const char *p;
+  TRY(_charAt(cfa, &p));
+  TRY(push_string(v7, p, p == NULL ? 0 : 1, 1));
   return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  const char *p;
+  Rune rune;
+  TRY(_charAt(cfa, &p));
+  TRY(push_number(v7, p == NULL ? NAN : (chartorune(&rune, p), rune)));
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_concat(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  long n, blen;
+  struct v7_val *str;
+  char *p;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  blen = cfa->this_obj->v.str.len;
+  for (n = 0; n < cfa->num_args; n++) {
+    TRY(check_str_re_conv(v7, &cfa->args[n], 0));
+    blen += cfa->args[n]->v.str.len;
+  }
+  str = v7_push_string(v7, cfa->this_obj->v.str.buf, blen, 1);
+  p = str->v.str.buf + cfa->this_obj->v.str.len;
+  for (n = 0; n < cfa->num_args; n++) {
+    memcpy(p, cfa->args[n]->v.str.buf, cfa->args[n]->v.str.len);
+    p += cfa->args[n]->v.str.len;
+  }
+  *p = '\0';
+  str->v.str.len = blen;
+  return V7_OK;
+#undef v7
+}
+
+static long _indexOf(char *pp, char *const end, char *p, long blen,
+                     uint8_t last) {
+  long i, idx = -1;
+  if (0 == blen || end - pp == 0) return 0;
+  for (i = 0; pp <= (end - blen); i++, pp = utfnshift(pp, 1))
+    if (0 == memcmp(pp, p, blen)) {
+      idx = i;
+      if (!last) break;
+    }
+  return idx;
+}
+
+V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  long idx = -1, pos = 0;
+  char *p, *end;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
+  if (cfa->num_args > 0) {
+    if (V7_TYPE_UNDEF != cfa->args[0]->type &&
+        V7_TYPE_NULL != cfa->args[0]->type) {
+      TRY(check_str_re_conv(v7, &cfa->args[0], 0));
+      if (cfa->num_args > 1) {
+        p = utfnshift(p, pos = _conv_to_int(v7, cfa->args[1]));
+      }
+      if (p < end)
+        idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len,
+                       0);
+    } else
+      idx = 0;
+  }
+  if (idx >= 0) idx += pos;
+  TRY(push_number(v7, idx));
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_lastIndexOf(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  long idx = -1;
+  char *p, *end;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
+  if (cfa->num_args > 0) {
+    TRY(check_str_re_conv(v7, &cfa->args[0], 0));
+    if (cfa->num_args > 1) {
+      end = utfnshift(p, _conv_to_int(v7, cfa->args[1]) + 1);
+    }
+    idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len, 1);
+  }
+  TRY(push_number(v7, idx));
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_localeCompare(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  struct v7_val *arg = cfa->args[0];
+  long i, ln = 0, ret = 0;
+  Rune s, t;
+  char *ps, *pt, *end;
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  TRY(check_str_re_conv(v7, &arg, 0));
+  ps = cfa->this_obj->v.str.buf;
+  pt = arg->v.str.buf;
+  end = ps + cfa->this_obj->v.str.len;
+  if (arg->v.str.len < cfa->this_obj->v.str.len) {
+    end = ps + arg->v.str.len;
+    ln = 1;
+  } else if (arg->v.str.len > cfa->this_obj->v.str.len) {
+    ln = -1;
+  }
+  for (i = 0; ps < end; i++) {
+    ps += chartorune(&s, ps);
+    pt += chartorune(&t, pt);
+    if (s < t) {
+      ret = -1;
+      break;
+    }
+    if (s > t) {
+      ret = 1;
+      break;
+    }
+  }
+  if (0 == ret) ret = ln;
+  TRY(push_number(v7, ret));
+  return V7_OK;
+#undef v7
 }
 
 V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
@@ -5107,6 +5450,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
   unsigned long shift = 0;
 
   if (cfa->num_args > 0) {
+    TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
     do {
@@ -5127,119 +5471,17 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
 #undef v7
 }
 
-V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7);
-  struct Resub sub, sub1;
-  int limit = 1000000, elem = 0, i, len;
-  unsigned long shift = 0;
-
-  v7_set_class(arr, V7_CLASS_ARRAY);
-  if (cfa->num_args > 0) {
-    if (cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM)
-      limit = cfa->args[1]->v.num;
-    TRY(check_str_re_conv(v7, &arg, 1));
-    TRY(regex_check_prog(arg));
-    for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
-      if (re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf + shift,
-                  &sub))
-        break;
-      v7_append(v7, arr,
-                v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
-                       sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
-      for (i = 1; i < sub.subexpr_num; i++)
-        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
-                                  sub.sub[i].end - sub.sub[i].start, 1));
-      shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
-      sub1 = sub;
-    }
-  }
-  len = cfa->this_obj->v.str.len - shift;
-  if (elem < limit && len > 0)
-    v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
-                              len, 1));
-  return V7_OK;
-#undef v7
-}
-
-V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
-  double index = -1.0;
-  if (cfa->this_obj->type == V7_TYPE_STR && cfa->num_args > 0 &&
-      cfa->args[0]->type == V7_TYPE_STR) {
-    int i = cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM
-                ? (int)cfa->args[1]->v.num
-                : 0;
-    const struct v7_string *a = &cfa->this_obj->v.str,
-                           *b = &cfa->args[0]->v.str;
-
-    /* Scan the string, advancing one byte at a time */
-    for (; i >= 0 && a->len >= b->len && i <= (int)(a->len - b->len); i++) {
-      if (memcmp(a->buf + i, b->buf, b->len) == 0) {
-        index = i;
-        break;
-      }
-    }
-  }
-  v7_push_number(cfa->v7, index);
-  return V7_OK;
-}
-
-V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
-  struct v7_val *result = v7_push_string(cfa->v7, NULL, 0, 0);
-  long start = 0;
-
-  if (cfa->num_args > 0 && cfa->args[0]->type == V7_TYPE_NUM) {
-    start = (long)cfa->args[0]->v.num;
-  }
-  if (start < 0) {
-    start += (long)cfa->this_obj->v.str.len;
-  }
-  if (start >= 0 && start < (long)cfa->this_obj->v.str.len) {
-    long n = cfa->this_obj->v.str.len - start;
-    if (cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM) {
-      n = cfa->args[1]->v.num;
-    }
-    if (n > 0 && n <= ((long)cfa->this_obj->v.str.len - start)) {
-      v7_init_str(result, cfa->this_obj->v.str.buf + start, n, 1);
-    }
-  }
-  return V7_OK;
-}
-
-V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0];
-  struct Resub sub;
-  int shift = -1, utf_shift = -1;
-
-  if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &arg, 1));
-    TRY(regex_check_prog(arg));
-    if (!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf, &sub))
-      shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
-  }
-  if (shift > 0) { /* calc shift for UTF-8 */
-    Rune rune;
-    const char *str = cfa->this_obj->v.str.buf;
-    utf_shift = 0;
-    do {
-      str += chartorune(&rune, str);
-      utf_shift++;
-    } while (str - cfa->this_obj->v.str.buf < shift);
-  }
-  v7_push_number(v7, utf_shift);
-  return V7_OK;
-#undef v7
-}
-
 V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *result = v7_push_new_object(v7);
-  const char *out_str = cfa->this_obj->v.str.buf;
+  const char *out_str;
   uint8_t own = 1;
-  size_t out_len = cfa->this_obj->v.str.len;
+  size_t out_len;
   int old_sp = v7->sp;
 
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  out_str = cfa->this_obj->v.str.buf;
+  out_len = cfa->this_obj->v.str.len;
   if (cfa->num_args > 1) {
     const char *const str_end =
         cfa->this_obj->v.str.buf + cfa->this_obj->v.str.len;
@@ -5270,16 +5512,12 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
       }
 
       if (NULL != arr) { /* replace function */
-        Rune rune;
-        int old_sp = v7->sp, utf_shift = 0;
+        int old_sp = v7->sp;
         struct v7_val *rez_str;
         for (i = 0; i < loot.subexpr_num; i++)
-          v7_push_string(v7, loot.sub[i].start,
-                         loot.sub[i].end - loot.sub[i].start, 1);
-        for (i = 0; p + i < loot.sub[0].start;
-             i += chartorune(&rune, p + i), utf_shift++)
-          ;
-        TRY(push_number(v7, utf_shift));
+          TRY(push_string(v7, loot.sub[i].start,
+                          loot.sub[i].end - loot.sub[i].start, 1));
+        TRY(push_number(v7, utfnlen(p, loot.sub[0].start - p)));
         TRY(v7_push(v7, cfa->this_obj));
         rez_str = v7_call(v7, cfa->this_obj, loot.subexpr_num + 2);
         TRY(check_str_re_conv(v7, &rez_str, 0));
@@ -5294,7 +5532,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         TRY(inc_stack(v7, old_sp - v7->sp));
       } else { /* replace string */
         struct Resub newsub;
-        re_rplc(&loot, p, str_func->v.str.buf, &newsub);
+        re_rplc(&loot, cfa->this_obj->v.str.buf, str_func->v.str.buf, &newsub);
         for (i = 0; i < newsub.subexpr_num; i++) {
           ptok->start = newsub.sub[i].start;
           ptok->end = newsub.sub[i].end;
@@ -5332,17 +5570,294 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
 #undef v7
 }
 
+V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  struct v7_val *arg = cfa->args[0];
+  struct Resub sub;
+  int shift = -1, utf_shift = -1;
+
+  if (cfa->num_args > 0) {
+    TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+    TRY(check_str_re_conv(v7, &arg, 1));
+    TRY(regex_check_prog(arg));
+    if (!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf, &sub))
+      shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
+  } else
+    utf_shift = 0;
+  if (shift >= 0) /* calc shift for UTF-8 */
+    utf_shift = utfnlen(cfa->this_obj->v.str.buf, shift);
+  TRY(push_number(v7, utf_shift));
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  char *begin, *end;
+  long from = 0, to = 0, len;
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  to = len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len);
+  begin = cfa->this_obj->v.str.buf;
+  end = begin + cfa->this_obj->v.str.len;
+  if (cfa->num_args > 0) {
+    from = _conv_to_int(v7, cfa->args[0]);
+    if (from < 0) {
+      from += len;
+      if (from < 0) from = 0;
+    } else if (from > len)
+      from = len;
+    if (cfa->num_args > 1) {
+      to = _conv_to_int(v7, cfa->args[1]);
+      if (to < 0) {
+        to += len;
+        if (to < 0) to = 0;
+      } else if (to > len)
+        to = len;
+    }
+  }
+  if (from > to) to = from;
+  end = utfnshift(begin, to);
+  begin = utfnshift(begin, from);
+  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  v7_init_str(v7_top_val(v7), begin, end - begin, 1);
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7);
+  struct Resub sub, sub1;
+  int limit = 1000000, elem = 0, i, len;
+  unsigned long shift = 0;
+
+  v7_set_class(arr, V7_CLASS_ARRAY);
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  if (cfa->num_args > 0) {
+    if (cfa->num_args > 1 && cfa->args[1]->type == V7_TYPE_NUM)
+      limit = cfa->args[1]->v.num;
+    if (V7_TYPE_UNDEF != arg->type && V7_TYPE_NULL != arg->type) {
+      TRY(check_str_re_conv(v7, &arg, 1));
+      if (arg->v.str.len > 0) {
+        TRY(regex_check_prog(arg));
+        for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
+          if (re_exec(arg->v.str.prog, arg->fl.fl,
+                      cfa->this_obj->v.str.buf + shift, &sub))
+            break;
+          v7_append(
+              v7, arr,
+              v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
+                     sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
+          for (i = 1; i < sub.subexpr_num; i++)
+            v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
+                                      sub.sub[i].end - sub.sub[i].start, 1));
+          shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+          sub1 = sub;
+        }
+      }
+    }
+  }
+  len = cfa->this_obj->v.str.len - shift;
+  if (elem < limit && len > 0)
+    v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
+                              len, 1));
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  char *begin, *end;
+  long from = 0, to = 0, len;
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  to = len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len);
+  begin = cfa->this_obj->v.str.buf;
+  end = begin + cfa->this_obj->v.str.len;
+  if (cfa->num_args > 0) {
+    from = _conv_to_int(v7, cfa->args[0]);
+    if (from < 0) from = 0;
+    if (from > len) from = len;
+
+    if (cfa->num_args > 1) {
+      to = _conv_to_int(v7, cfa->args[1]);
+      if (to < 0) to = 0;
+      if (to > len) to = len;
+    }
+  }
+  if (from > to) {
+    long tmp = to;
+    to = from;
+    from = tmp;
+  }
+  end = utfnshift(begin, to);
+  begin = utfnshift(begin, from);
+  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  v7_init_str(v7_top_val(v7), begin, end - begin, 1);
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_toLowerCase(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  long n, blen = 0;
+  struct v7_val *str;
+  char *p, *end;
+  Rune runes[500];
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
+  for (n = 0; p < end; n++) {
+    p += chartorune(&runes[n], p);
+    runes[n] = tolowerrune(runes[n]);
+    blen += runelen(runes[n]);
+  }
+  str = v7_push_string(v7, NULL, blen, 1);
+  p = str->v.str.buf;
+  end = p + blen;
+  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
+  *p = '\0';
+  str->v.str.len = blen;
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_toLocaleLowerCase(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  long n, blen = 0;
+  struct v7_val *str;
+  char *p, *end;
+  Rune runes[500];
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
+  for (n = 0; p < end; n++) {
+    p += chartorune(&runes[n], p);
+    runes[n] = tolowerrune(runes[n]);
+    blen += runelen(runes[n]);
+  }
+  str = v7_push_string(v7, NULL, blen, 1);
+  p = str->v.str.buf;
+  end = p + blen;
+  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
+  *p = '\0';
+  str->v.str.len = blen;
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_toUpperCase(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  long n, blen = 0;
+  struct v7_val *str;
+  char *p, *end;
+  Rune runes[500];
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
+  for (n = 0; p < end; n++) {
+    p += chartorune(&runes[n], p);
+    runes[n] = toupperrune(runes[n]);
+    blen += runelen(runes[n]);
+  }
+  str = v7_push_string(v7, NULL, blen, 1);
+  p = str->v.str.buf;
+  end = p + blen;
+  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
+  *p = '\0';
+  str->v.str.len = blen;
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_toLocaleUpperCase(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  long n, blen = 0;
+  struct v7_val *str;
+  char *p, *end;
+  Rune runes[500];
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  end = p + cfa->this_obj->v.str.len;
+  for (n = 0; p < end; n++) {
+    p += chartorune(&runes[n], p);
+    runes[n] = toupperrune(runes[n]);
+    blen += runelen(runes[n]);
+  }
+  str = v7_push_string(v7, NULL, blen, 1);
+  p = str->v.str.buf;
+  end = p + blen;
+  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
+  *p = '\0';
+  str->v.str.len = blen;
+  return V7_OK;
+#undef v7
+}
+
+static int _isspase(Rune c) { return isspacerune(c) || isnewline(c); }
+
+V7_PRIVATE enum v7_err Str_trim(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  char *p, *begin = NULL, *end = NULL, *pend;
+  Rune rune = ' ';
+
+  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
+  p = cfa->this_obj->v.str.buf;
+  pend = p + cfa->this_obj->v.str.len;
+  while (p < pend) {
+    char *prevp = p;
+    Rune prevrune = rune;
+    p += chartorune(&rune, p);
+    if (!_isspase(rune)) {
+      end = NULL;
+      if (_isspase(prevrune))
+        if (NULL == begin) begin = prevp;
+    } else if (!_isspase(prevrune))
+      end = prevp;
+  }
+  if (NULL == end) end = cfa->this_obj->v.str.buf + cfa->this_obj->v.str.len;
+  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  v7_init_str(v7_top_val(v7), begin, end - begin, 1);
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg,
+                           struct v7_val *result) {
+  if (NULL == result || arg) return;
+  v7_init_num(result, utfnlen(this_obj->v.str.buf, this_obj->v.str.len));
+}
+
 V7_PRIVATE void init_string(void) {
   init_standard_constructor(V7_CLASS_STRING, String_ctor);
-  SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "fromCharCode", Str_fromCharCode);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "valueOf", Str_valueOf);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "concat", Str_concat);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "indexOf", Str_indexOf);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "lastIndexOf", Str_lastIndexOf);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "localeCompare", Str_localeCompare);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "search", Str_search);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "replace", Str_replace);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "search", Str_search);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "slice", Str_slice);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substring", Str_substr);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "toLowerCase", Str_toLowerCase);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "toLocaleLowerCase",
+             Str_toLocaleLowerCase);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "toUpperCase", Str_toUpperCase);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "toLocaleUpperCase",
+             Str_toLocaleUpperCase);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "trim", Str_trim);
+
+  SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
 
   SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
 }
@@ -5610,7 +6125,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
 
   _prop_func_2_value(v7, &a);
   _prop_func_2_value(v7, &b);
-  if ((a->type == V7_TYPE_STR || b->type == V7_TYPE_STR) && op == TOK_PLUS) {
+  if (op == TOK_PLUS && (is_string(a) || is_string(b))) {
     /* Do type conversion, result pushed on stack */
     TRY(check_str_re_conv(v7, &a, 0));
     TRY(check_str_re_conv(v7, &b, 0));
@@ -5622,28 +6137,29 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     memcpy(str + a->v.str.len, b->v.str.buf, b->v.str.len);
     str[res->v.str.len] = '\0';
     return V7_OK;
-  } else if (a->type == V7_TYPE_NUM && b->type == V7_TYPE_NUM) {
+  } else {
     struct v7_val *v = res;
+    double an = _conv_to_num(v7, a), bn = _conv_to_num(v7, b);
     if (res->fl.fl.prop_func) v = v7_push_new_object(v7);
     v7_init_num(v, res->v.num);
     switch (op) {
       case TOK_PLUS:
-        v->v.num = a->v.num + b->v.num;
+        v->v.num = an + bn;
         break;
       case TOK_MINUS:
-        v->v.num = a->v.num - b->v.num;
+        v->v.num = an - bn;
         break;
       case TOK_MUL:
-        v->v.num = a->v.num * b->v.num;
+        v->v.num = an * bn;
         break;
       case TOK_DIV:
-        v->v.num = a->v.num / b->v.num;
+        v->v.num = an / bn;
         break;
       case TOK_REM:
-        v->v.num = (unsigned long)a->v.num % (unsigned long)b->v.num;
+        v->v.num = (unsigned long)an % (unsigned long)bn;
         break;
       case TOK_XOR:
-        v->v.num = (unsigned long)a->v.num ^ (unsigned long)b->v.num;
+        v->v.num = (unsigned long)an ^ (unsigned long)bn;
         break;
       default:
         return V7_INTERNAL_ERROR;
@@ -5656,8 +6172,6 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
       DEC_REF_COUNT(v);
     }
     return V7_OK;
-  } else {
-    return V7_TYPE_ERROR;
   }
 }
 
@@ -5881,56 +6395,38 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
 }
 
 static enum v7_err push_string_literal(struct v7 *v7) {
-  /* TODO(lsm): do not use stack buffer here, only dynamic alloc */
-  /* char buf[MAX_STRING_LITERAL_LENGTH]; */
   struct v7_val *v;
   char *p;
-  size_t i;
+  const char *ps = &v7->tok[1], *end = ps + v7->tok_len - 2;
+  Rune rune;
 
   if (!EXECUTING(v7->flags)) return V7_OK;
-  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  TRY(push_string(v7, &v7->tok[1], v7->tok_len - 2, 1));
   v = v7_top_val(v7);
-  v7_init_str(v, &v7->tok[1], v7->tok_len - 1, 1);
   CHECK(v->v.str.buf != NULL, V7_OUT_OF_MEMORY);
   p = v->v.str.buf;
 
   /* Scan string literal into the buffer, handle escape sequences */
-  for (i = 1; i < v7->tok_len - 1; i++) {
-    switch (v7->tok[i]) {
-      case '\\':
-        i++;
-        switch (v7->tok[i]) {
-          /* TODO: add escapes for quotes, \XXX, \xXX, \uXXXX */
-          case 'b':
-            *p++ = '\b';
-            break;
-          case 'f':
-            *p++ = '\f';
-            break;
-          case 'n':
-            *p++ = '\n';
-            break;
-          case 'r':
-            *p++ = '\r';
-            break;
-          case 't':
-            *p++ = '\t';
-            break;
-          case 'v':
-            *p++ = '\v';
-            break;
-          case '\\':
-            *p++ = '\\';
-            break;
-          default:
-            if (v7->tok[i] == v7->tok[0]) *p++ = v7->tok[i];
-            break;
-        }
-        break;
-      default:
-        *p++ = v7->tok[i];
-        break;
-    }
+  while (ps < end) {
+    ps += chartorune(&rune, ps);
+    if (rune == '\\') switch (nextesc(&rune, &ps)) {
+        case 0:
+        case 1:
+          break;
+        case 2:
+          switch (rune) {
+            case '\\':
+            case '\'':
+            case '"':
+              break;
+            default:
+              *p++ = '\\';
+          }
+          break;
+        default:
+          return V7_SYNTAX_ERROR;
+      }
+    p += runetochar(p, &rune);
   }
   v->v.str.len = p - v->v.str.buf;
   assert(v->v.str.len < v7->tok_len - 1);
@@ -6300,6 +6796,7 @@ static enum v7_err parse_unary(struct v7 *v7) {
     struct v7_val *result = v7_top_val(v7);
     if (result->fl.fl.prop_func) {
       switch (unary) {
+        case TOK_TILDA:
         case TOK_PLUS:
         case TOK_MINUS:
         case TOK_NOT:
@@ -6309,12 +6806,14 @@ static enum v7_err parse_unary(struct v7 *v7) {
       }
     }
     switch (unary) {
+      case TOK_TILDA:
+        TRY(push_number(v7, ~(long)_conv_to_num(v7, result)));
+        break;
       case TOK_PLUS:
-        CHECK(is_num(result), V7_TYPE_ERROR);
+        TRY(push_number(v7, _conv_to_num(v7, result)));
         break;
       case TOK_MINUS:
-        CHECK(is_num(result), V7_TYPE_ERROR);
-        TRY(push_number(v7, -result->v.num));
+        TRY(push_number(v7, -_conv_to_num(v7, result)));
         break;
       case TOK_NOT:
         TRY(push_bool(v7, !v7_is_true(result)));
@@ -6323,6 +6822,10 @@ static enum v7_err parse_unary(struct v7 *v7) {
         str = type_names[result->type];
         if (v7_is_class(result, V7_CLASS_FUNCTION)) str = "function";
         TRY(push_string(v7, str, strlen(str), 0));
+        break;
+      case TOK_VOID:
+        TRY(inc_stack(v7, -1));
+        TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
         break;
       default:
         break;
@@ -6350,20 +6853,21 @@ static enum v7_err parse_mul_div_rem(struct v7 *v7) {
 static enum v7_err logical_op(struct v7 *v7, enum v7_tok op, int sp1, int sp2) {
   struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7->stack[sp2 - 1];
   int res = 0;
+  double n1 = _conv_to_num(v7, v1), n2 = _conv_to_num(v7, v2);
 
   if (v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM) {
     switch (op) {
       case TOK_GT:
-        res = v1->v.num > v2->v.num;
+        res = n1 > n2;
         break;
       case TOK_GE:
-        res = v1->v.num >= v2->v.num;
+        res = n1 >= n2;
         break;
       case TOK_LT:
-        res = v1->v.num < v2->v.num;
+        res = n1 < n2;
         break;
       case TOK_LE:
-        res = v1->v.num <= v2->v.num;
+        res = n1 <= n2;
         break;
       case TOK_EQ: /* FALLTHROUGH */
       case TOK_EQ_EQ:
@@ -6443,7 +6947,7 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
     TRY(parse_equality(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = v1->v.num, b = v2->v.num;
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v1->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a & b;
@@ -6460,7 +6964,7 @@ static enum v7_err parse_bitwise_xor(struct v7 *v7) {
     TRY(parse_bitwise_and(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = v1->v.num, b = v2->v.num;
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a ^ b;
@@ -6477,7 +6981,7 @@ static enum v7_err parse_bitwise_or(struct v7 *v7) {
     TRY(parse_bitwise_xor(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = v1->v.num, b = v2->v.num;
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a | b;
@@ -6560,7 +7064,8 @@ static enum v7_err do_assign(struct v7 *v7, struct v7_val *obj, const char *key,
     switch (tok) {
       case TOK_ASSIGN:
         CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
-        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1, b));
+        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1,
+                    b));  // TODO(vrz) ERROR
         return V7_OK;
       case TOK_PLUS_ASSIGN:
         TRY(arith(v7, a, b, a, TOK_PLUS));
@@ -6740,17 +7245,17 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
 
   /* Pass through the loop, don't execute it, just remember locations */
   v7->flags |= V7_NO_EXEC;
-  s2 = v7->pstate;
+  get_v7_state(v7, &s2);
   TRY(parse_expression(v7)); /* expr2 (condition) */
   EXPECT(v7, TOK_SEMICOLON);
 
-  s3 = v7->pstate;
+  get_v7_state(v7, &s3);
   TRY(parse_expression(v7)); /* expr3  (post-iteration) */
   EXPECT(v7, TOK_CLOSE_PAREN);
 
-  s_block = v7->pstate;
+  get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
-  s_end = v7->pstate;
+  get_v7_state(v7, &s_end);
 
   v7->flags = old_flags;
 
@@ -6758,19 +7263,19 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   if (EXECUTING(v7->flags)) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pstate = s2;
+      set_v7_state(v7, &s2);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_expression(v7)); /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top(v7)[-1]);
       if (is_true) break;
 
-      v7->pstate = s_block;
+      set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_compound_statement(v7, has_return)); /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
 
-      v7->pstate = s3;
+      set_v7_state(v7, &s3);
       TRY(parse_expression(v7)); /* expr3  (post-iteration) */
 
       TRY(inc_stack(v7, old_sp - v7->sp)); /* Clean up stack */
@@ -6778,7 +7283,7 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   }
 
   /* Jump to the code after the loop */
-  v7->pstate = s_end;
+  set_v7_state(v7, &s_end);
 
   return V7_OK;
 }
@@ -6787,15 +7292,16 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   int is_true, old_flags = v7->flags;
   struct v7_pstate s_cond, s_block, s_end;
 
+  EXPECT(v7, TOK_WHILE);
   EXPECT(v7, TOK_OPEN_PAREN);
-  s_cond = v7->pstate;
+  get_v7_state(v7, &s_cond);
   v7->flags |= V7_NO_EXEC;
   TRY(parse_expression(v7));
   EXPECT(v7, TOK_CLOSE_PAREN);
 
-  s_block = v7->pstate;
+  get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
-  s_end = v7->pstate;
+  get_v7_state(v7, &s_end);
 
   v7->flags = old_flags;
 
@@ -6803,14 +7309,14 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   if (EXECUTING(v7->flags)) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pstate = s_cond;
+      set_v7_state(v7, &s_cond);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_expression(v7)); /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top_val(v7));
       if (is_true) break;
 
-      v7->pstate = s_block;
+      set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_compound_statement(v7, has_return)); /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
@@ -6820,7 +7326,7 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   }
 
   /* Jump to the code after the loop */
-  v7->pstate = s_end;
+  set_v7_state(v7, &s_end);
 
   return V7_OK;
 }
@@ -7273,6 +7779,21 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       (*s)++;
       return TOK_CLOSE_BRACKET;
     case '.':
+      switch (*(*s+1)) {
+        // Numbers
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        parse_number(p, s, n);
+        return TOK_NUMBER;
+      }
       (*s)++;
       return TOK_DOT;
     case ';':
@@ -7311,6 +7832,16 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
              v7->pstate.line_no);
   return v7->cur_tok;
+}
+
+V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  *s = v7->pstate;
+  s->pc = v7->tok;
+}
+
+V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  v7->pstate = *s;
+  next_tok(v7);
 }
 
 #ifdef TEST_RUN
@@ -7501,11 +8032,16 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (is_num(v)) {
     // TODO: check this on 32-bit arch
-    if (v->v.num > ((uint64_t)1 << 52) || ceil(v->v.num) != v->v.num) {
+    if (INFINITY == v->v.num)
+      snprintf(buf, bsiz, "Infinity");
+    else if (-INFINITY == v->v.num)
+      snprintf(buf, bsiz, "-Infinity");
+    else if (isnan(v->v.num))
+      snprintf(buf, bsiz, "NaN");
+    else if (v->v.num > ((uint64_t)1 << 52) || ceil(v->v.num) != v->v.num)
       snprintf(buf, bsiz, "%lg", v->v.num);
-    } else {
-      snprintf(buf, bsiz, "%lu", (unsigned long)v->v.num);
-    }
+    else
+      snprintf(buf, bsiz, "%ld", (unsigned long)v->v.num);
   } else if (is_string(v)) {
     snprintf(buf, bsiz, "%.*s", (int)v->v.str.len, v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_ARRAY)) {

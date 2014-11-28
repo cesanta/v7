@@ -338,6 +338,21 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       (*s)++;
       return TOK_CLOSE_BRACKET;
     case '.':
+      switch (*(*s+1)) {
+        // Numbers
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        parse_number(p, s, n);
+        return TOK_NUMBER;
+      }
       (*s)++;
       return TOK_DOT;
     case ';':
@@ -376,6 +391,16 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
              v7->pstate.line_no);
   return v7->cur_tok;
+}
+
+V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  *s = v7->pstate;
+  s->pc = v7->tok;
+}
+
+V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  v7->pstate = *s;
+  next_tok(v7);
 }
 
 #ifdef TEST_RUN

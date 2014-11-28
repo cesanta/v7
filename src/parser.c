@@ -12,7 +12,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
 
   _prop_func_2_value(v7, &a);
   _prop_func_2_value(v7, &b);
-  if ((a->type == V7_TYPE_STR || b->type == V7_TYPE_STR) && op == TOK_PLUS) {
+  if (op == TOK_PLUS && (is_string(a) || is_string(b))) {
     /* Do type conversion, result pushed on stack */
     TRY(check_str_re_conv(v7, &a, 0));
     TRY(check_str_re_conv(v7, &b, 0));
@@ -24,28 +24,29 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     memcpy(str + a->v.str.len, b->v.str.buf, b->v.str.len);
     str[res->v.str.len] = '\0';
     return V7_OK;
-  } else if (a->type == V7_TYPE_NUM && b->type == V7_TYPE_NUM) {
+  } else {
     struct v7_val *v = res;
+    double an = _conv_to_num(v7, a), bn = _conv_to_num(v7, b);
     if (res->fl.fl.prop_func) v = v7_push_new_object(v7);
     v7_init_num(v, res->v.num);
     switch (op) {
       case TOK_PLUS:
-        v->v.num = a->v.num + b->v.num;
+        v->v.num = an + bn;
         break;
       case TOK_MINUS:
-        v->v.num = a->v.num - b->v.num;
+        v->v.num = an - bn;
         break;
       case TOK_MUL:
-        v->v.num = a->v.num * b->v.num;
+        v->v.num = an * bn;
         break;
       case TOK_DIV:
-        v->v.num = a->v.num / b->v.num;
+        v->v.num = an / bn;
         break;
       case TOK_REM:
-        v->v.num = (unsigned long)a->v.num % (unsigned long)b->v.num;
+        v->v.num = (unsigned long)an % (unsigned long)bn;
         break;
       case TOK_XOR:
-        v->v.num = (unsigned long)a->v.num ^ (unsigned long)b->v.num;
+        v->v.num = (unsigned long)an ^ (unsigned long)bn;
         break;
       default:
         return V7_INTERNAL_ERROR;
@@ -58,8 +59,6 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
       DEC_REF_COUNT(v);
     }
     return V7_OK;
-  } else {
-    return V7_TYPE_ERROR;
   }
 }
 
@@ -283,56 +282,38 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
 }
 
 static enum v7_err push_string_literal(struct v7 *v7) {
-  /* TODO(lsm): do not use stack buffer here, only dynamic alloc */
-  /* char buf[MAX_STRING_LITERAL_LENGTH]; */
   struct v7_val *v;
   char *p;
-  size_t i;
+  const char *ps = &v7->tok[1], *end = ps + v7->tok_len - 2;
+  Rune rune;
 
   if (!EXECUTING(v7->flags)) return V7_OK;
-  TRY(v7_make_and_push(v7, V7_TYPE_STR));
+  TRY(push_string(v7, &v7->tok[1], v7->tok_len - 2, 1));
   v = v7_top_val(v7);
-  v7_init_str(v, &v7->tok[1], v7->tok_len - 1, 1);
   CHECK(v->v.str.buf != NULL, V7_OUT_OF_MEMORY);
   p = v->v.str.buf;
 
   /* Scan string literal into the buffer, handle escape sequences */
-  for (i = 1; i < v7->tok_len - 1; i++) {
-    switch (v7->tok[i]) {
-      case '\\':
-        i++;
-        switch (v7->tok[i]) {
-          /* TODO: add escapes for quotes, \XXX, \xXX, \uXXXX */
-          case 'b':
-            *p++ = '\b';
-            break;
-          case 'f':
-            *p++ = '\f';
-            break;
-          case 'n':
-            *p++ = '\n';
-            break;
-          case 'r':
-            *p++ = '\r';
-            break;
-          case 't':
-            *p++ = '\t';
-            break;
-          case 'v':
-            *p++ = '\v';
-            break;
-          case '\\':
-            *p++ = '\\';
-            break;
-          default:
-            if (v7->tok[i] == v7->tok[0]) *p++ = v7->tok[i];
-            break;
-        }
-        break;
-      default:
-        *p++ = v7->tok[i];
-        break;
-    }
+  while (ps < end) {
+    ps += chartorune(&rune, ps);
+    if (rune == '\\') switch (nextesc(&rune, &ps)) {
+        case 0:
+        case 1:
+          break;
+        case 2:
+          switch (rune) {
+            case '\\':
+            case '\'':
+            case '"':
+              break;
+            default:
+              *p++ = '\\';
+          }
+          break;
+        default:
+          return V7_SYNTAX_ERROR;
+      }
+    p += runetochar(p, &rune);
   }
   v->v.str.len = p - v->v.str.buf;
   assert(v->v.str.len < v7->tok_len - 1);
@@ -702,6 +683,7 @@ static enum v7_err parse_unary(struct v7 *v7) {
     struct v7_val *result = v7_top_val(v7);
     if (result->fl.fl.prop_func) {
       switch (unary) {
+        case TOK_TILDA:
         case TOK_PLUS:
         case TOK_MINUS:
         case TOK_NOT:
@@ -711,12 +693,14 @@ static enum v7_err parse_unary(struct v7 *v7) {
       }
     }
     switch (unary) {
+      case TOK_TILDA:
+        TRY(push_number(v7, ~(long)_conv_to_num(v7, result)));
+        break;
       case TOK_PLUS:
-        CHECK(is_num(result), V7_TYPE_ERROR);
+        TRY(push_number(v7, _conv_to_num(v7, result)));
         break;
       case TOK_MINUS:
-        CHECK(is_num(result), V7_TYPE_ERROR);
-        TRY(push_number(v7, -result->v.num));
+        TRY(push_number(v7, -_conv_to_num(v7, result)));
         break;
       case TOK_NOT:
         TRY(push_bool(v7, !v7_is_true(result)));
@@ -725,6 +709,10 @@ static enum v7_err parse_unary(struct v7 *v7) {
         str = type_names[result->type];
         if (v7_is_class(result, V7_CLASS_FUNCTION)) str = "function";
         TRY(push_string(v7, str, strlen(str), 0));
+        break;
+      case TOK_VOID:
+        TRY(inc_stack(v7, -1));
+        TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
         break;
       default:
         break;
@@ -752,20 +740,21 @@ static enum v7_err parse_mul_div_rem(struct v7 *v7) {
 static enum v7_err logical_op(struct v7 *v7, enum v7_tok op, int sp1, int sp2) {
   struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7->stack[sp2 - 1];
   int res = 0;
+  double n1 = _conv_to_num(v7, v1), n2 = _conv_to_num(v7, v2);
 
   if (v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM) {
     switch (op) {
       case TOK_GT:
-        res = v1->v.num > v2->v.num;
+        res = n1 > n2;
         break;
       case TOK_GE:
-        res = v1->v.num >= v2->v.num;
+        res = n1 >= n2;
         break;
       case TOK_LT:
-        res = v1->v.num < v2->v.num;
+        res = n1 < n2;
         break;
       case TOK_LE:
-        res = v1->v.num <= v2->v.num;
+        res = n1 <= n2;
         break;
       case TOK_EQ: /* FALLTHROUGH */
       case TOK_EQ_EQ:
@@ -845,7 +834,7 @@ static enum v7_err parse_bitwise_and(struct v7 *v7) {
     TRY(parse_equality(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = v1->v.num, b = v2->v.num;
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v1->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a & b;
@@ -862,7 +851,7 @@ static enum v7_err parse_bitwise_xor(struct v7 *v7) {
     TRY(parse_bitwise_and(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = v1->v.num, b = v2->v.num;
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a ^ b;
@@ -879,7 +868,7 @@ static enum v7_err parse_bitwise_or(struct v7 *v7) {
     TRY(parse_bitwise_xor(v7));
     if (EXECUTING(v7->flags)) {
       struct v7_val *v1 = v7->stack[sp1 - 1], *v2 = v7_top(v7)[-1];
-      unsigned long a = v1->v.num, b = v2->v.num;
+      unsigned long a = _conv_to_num(v7, v1), b = _conv_to_num(v7, v2);
       CHECK(v1->type == V7_TYPE_NUM && v2->type == V7_TYPE_NUM, V7_TYPE_ERROR);
       TRY(v7_make_and_push(v7, V7_TYPE_NUM));
       v7_top(v7)[-1]->v.num = a | b;
@@ -962,7 +951,8 @@ static enum v7_err do_assign(struct v7 *v7, struct v7_val *obj, const char *key,
     switch (tok) {
       case TOK_ASSIGN:
         CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
-        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1, b));
+        TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1,
+                    b));  // TODO(vrz) ERROR
         return V7_OK;
       case TOK_PLUS_ASSIGN:
         TRY(arith(v7, a, b, a, TOK_PLUS));
@@ -1142,17 +1132,17 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
 
   /* Pass through the loop, don't execute it, just remember locations */
   v7->flags |= V7_NO_EXEC;
-  s2 = v7->pstate;
+  get_v7_state(v7, &s2);
   TRY(parse_expression(v7)); /* expr2 (condition) */
   EXPECT(v7, TOK_SEMICOLON);
 
-  s3 = v7->pstate;
+  get_v7_state(v7, &s3);
   TRY(parse_expression(v7)); /* expr3  (post-iteration) */
   EXPECT(v7, TOK_CLOSE_PAREN);
 
-  s_block = v7->pstate;
+  get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
-  s_end = v7->pstate;
+  get_v7_state(v7, &s_end);
 
   v7->flags = old_flags;
 
@@ -1160,19 +1150,19 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   if (EXECUTING(v7->flags)) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pstate = s2;
+      set_v7_state(v7, &s2);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_expression(v7)); /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top(v7)[-1]);
       if (is_true) break;
 
-      v7->pstate = s_block;
+      set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_compound_statement(v7, has_return)); /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
 
-      v7->pstate = s3;
+      set_v7_state(v7, &s3);
       TRY(parse_expression(v7)); /* expr3  (post-iteration) */
 
       TRY(inc_stack(v7, old_sp - v7->sp)); /* Clean up stack */
@@ -1180,7 +1170,7 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   }
 
   /* Jump to the code after the loop */
-  v7->pstate = s_end;
+  set_v7_state(v7, &s_end);
 
   return V7_OK;
 }
@@ -1189,15 +1179,16 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   int is_true, old_flags = v7->flags;
   struct v7_pstate s_cond, s_block, s_end;
 
+  EXPECT(v7, TOK_WHILE);
   EXPECT(v7, TOK_OPEN_PAREN);
-  s_cond = v7->pstate;
+  get_v7_state(v7, &s_cond);
   v7->flags |= V7_NO_EXEC;
   TRY(parse_expression(v7));
   EXPECT(v7, TOK_CLOSE_PAREN);
 
-  s_block = v7->pstate;
+  get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
-  s_end = v7->pstate;
+  get_v7_state(v7, &s_end);
 
   v7->flags = old_flags;
 
@@ -1205,14 +1196,14 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   if (EXECUTING(v7->flags)) {
     int old_sp = v7->sp;
     for (;;) {
-      v7->pstate = s_cond;
+      set_v7_state(v7, &s_cond);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_expression(v7)); /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top_val(v7));
       if (is_true) break;
 
-      v7->pstate = s_block;
+      set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
       TRY(parse_compound_statement(v7, has_return)); /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
@@ -1222,7 +1213,7 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   }
 
   /* Jump to the code after the loop */
-  v7->pstate = s_end;
+  set_v7_state(v7, &s_end);
 
   return V7_OK;
 }

@@ -151,72 +151,78 @@ static sint8_t hex(int c) {
   return INVALID_HEX_DIGIT;
 }
 
-static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
+V7_PRIVATE sint8_t nextesc(Rune *r, const char **src) {
   sint8_t hd;
   *src += chartorune(r, *src);
+  switch (*r) {
+    case 0:
+      return UNTERM_ESC_SEQ;
+    case 'c':
+      *r = **src & 31;
+      ++*src;
+      return 0;
+    case 'f':
+      *r = '\f';
+      return 0;
+    case 'n':
+      *r = '\n';
+      return 0;
+    case 'r':
+      *r = '\r';
+      return 0;
+    case 't':
+      *r = '\t';
+      return 0;
+    case 'u':
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r = hd << 12;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd << 8;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd << 4;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd;
+      if (!*r) {
+        *r = '0';
+        return 1;
+      }
+      return 0;
+    case 'v':
+      *r = '\v';
+      return 0;
+    case 'x':
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r = hd << 4;
+      hd = hex(**src);
+      ++*src;
+      if (hd < 0) return INVALID_HEX_DIGIT;
+      *r += hd;
+      if (!*r) {
+        *r = '0';
+        return 1;
+      }
+      return 0;
+  }
+  return 2;
+}
+
+static sint8_t re_nextc(Rune *r, const char **src, uint8_t re_flag) {
+  *src += chartorune(r, *src);
   if (re_flag && *r == '\\') {
-    *src += chartorune(r, *src);
-    switch (*r) {
-      case 0:
-        return UNTERM_ESC_SEQ;
-      case 'c':
-        *r = **src & 31;
-        ++*src;
-        return 0;
-      case 'f':
-        *r = '\f';
-        return 0;
-      case 'n':
-        *r = '\n';
-        return 0;
-      case 'r':
-        *r = '\r';
-        return 0;
-      case 't':
-        *r = '\t';
-        return 0;
-      case 'u':
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r = hd << 12;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd << 8;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd << 4;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd;
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        return 0;
-      case 'v':
-        *r = '\v';
-        return 0;
-      case 'x':
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r = hd << 4;
-        hd = hex(**src);
-        ++*src;
-        if (hd < 0) return INVALID_HEX_DIGIT;
-        *r += hd;
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        return 0;
-    }
+    /* sint8_t ret = */ nextesc(r, src);
+    /* if(2 != ret) return ret;
     if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
-      return INVALID_ESC_CHAR;
+      return INVALID_ESC_CHAR; */
     return 1;
   }
   return 0;
@@ -265,7 +271,6 @@ static void re_s_2set(struct re_env *e) {
 
 static void re_S_2set(struct re_env *e) {
   re_rng2set(e, 0, 0x9 - 1);
-  re_rng2set(e, 0x9 + 1, 0xA - 1);
   re_rng2set(e, 0xD + 1, 0x20 - 1);
   re_rng2set(e, 0x20 + 1, 0xA0 - 1);
   re_rng2set(e, 0xA0 + 1, 0x2028 - 1);
@@ -369,12 +374,13 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         continue;
       }
       switch (e->curr_rune) {
-        case '-':
+        default:
+        /* case '-':
         case '\\':
         case '.':
         case '/':
         case ']':
-        case '|':
+        case '|': */
           break;
         case '0':
           e->curr_rune = 0;
@@ -382,8 +388,9 @@ static enum RE_CODE re_lexset(struct re_env *e) {
         case 'b':
           e->curr_rune = '\b';
           break;
-        default:
-          V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INVALID_ESC_CHAR));
+          /* default:
+            V7_EX_THROW(e->catch_point, e->err_msg,
+            re_err_msg(INVALID_ESC_CHAR)); */
       }
     } else {
       if (e->curr_rune == '-') {
@@ -508,7 +515,7 @@ static struct Renode *re_nnode(struct re_env *e, int type) {
   return e->pend++;
 }
 
-static uint8_t re_isndnull(struct Renode *nd) {
+static uint8_t re_isemptynd(struct Renode *nd) {
   if (!nd) return 1;
   switch (nd->type) {
     default:
@@ -520,20 +527,20 @@ static uint8_t re_isndnull(struct Renode *nd) {
       return 0;
     case P_BRA:
     case P_REF:
-      return re_isndnull(nd->par.xy.x);
+      return re_isemptynd(nd->par.xy.x);
     case P_CAT:
-      return re_isndnull(nd->par.xy.x) && re_isndnull(nd->par.xy.y.y);
+      return re_isemptynd(nd->par.xy.x) && re_isemptynd(nd->par.xy.y.y);
     case P_ALT:
-      return re_isndnull(nd->par.xy.x) || re_isndnull(nd->par.xy.y.y);
+      return re_isemptynd(nd->par.xy.x) || re_isemptynd(nd->par.xy.y.y);
     case P_REP:
-      return re_isndnull(nd->par.xy.x) || !nd->par.xy.y.rp.min;
+      return re_isemptynd(nd->par.xy.x) || !nd->par.xy.y.rp.min;
   }
 }
 
 static struct Renode *re_nrep(struct re_env *e, struct Renode *nd, int ng,
-                              int min, int max) {
+                              uint16_t min, uint16_t max) {
   struct Renode *rep = re_nnode(e, P_REP);
-  if (max == RE_MAX_REP && re_isndnull(nd))
+  if (max == RE_MAX_REP && re_isemptynd(nd))
     V7_EX_THROW(e->catch_point, e->err_msg, re_err_msg(INF_LOOP_M_EMP_STR));
   rep->par.xy.y.rp.ng = ng;
   rep->par.xy.y.rp.min = min;
@@ -903,9 +910,9 @@ static void node_print(struct Renode *nd) {
   switch (nd->type) {
     case P_ALT:
       printf("{");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(" | ");
-      node_print(nd->y);
+      node_print(nd->par.xy.y.y);
       printf("}");
       break;
     case P_ANY:
@@ -915,19 +922,19 @@ static void node_print(struct Renode *nd) {
       printf("^");
       break;
     case P_BRA:
-      printf("(%d,", nd->n);
-      node_print(nd->x);
+      printf("(%d,", nd->par.xy.y.n);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_CAT:
       printf("{");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(" & ");
-      node_print(nd->y);
+      node_print(nd->par.xy.y.y);
       printf("}");
       break;
     case P_CH:
-      printf(nd->c >= 32 && nd->c < 127 ? "'%c'" : "'\\u%04X'", nd->c);
+      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" : "'\\u%04X'", nd->par.c);
       break;
     case P_EOL:
       printf("$");
@@ -937,28 +944,28 @@ static void node_print(struct Renode *nd) {
       break;
     case P_LA:
       printf("LA(");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_LA_N:
       printf("LA_N(");
-      node_print(nd->x);
+      node_print(nd->par.xy.x);
       printf(")");
       break;
     case P_REF:
-      printf("\\%d", nd->n);
+      printf("\\%d", nd->par.xy.y.n);
       break;
     case P_REP:
-      node_print(nd->x);
-      printf(nd->ng ? "{%d,%d}?" : "{%d,%d}", nd->min, nd->max);
+      node_print(nd->par.xy.x);
+      printf(nd->par.xy.y.rp.ng ? "{%d,%d}?" : "{%d,%d}", nd->par.xy.y.rp.min, nd->par.xy.y.rp.max);
       break;
     case P_SET:
       printf("[");
-      print_set(nd->cp);
+      print_set(nd->par.cp);
       break;
     case P_SET_N:
       printf("[^");
-      print_set(nd->cp);
+      print_set(nd->par.cp);
       break;
     case P_WORD:
       printf("\\b");
@@ -987,8 +994,7 @@ static void program_print(struct Reprog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->c >= 32 && inst->c < 127 ? "'%c'\n" : "'\\u%04X'\n",
-               inst->c);
+        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n", inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -997,41 +1003,40 @@ static void program_print(struct Reprog *prog) {
         puts("\\0");
         break;
       case I_JUMP:
-        printf("-->%d\n", inst->x - prog->start);
+        printf("-->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %d %d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("la %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %d %d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("la_n %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
-        printf("( %d\n", inst->n);
+        printf("( %d\n", inst->par.n);
         break;
       case I_RBRA:
-        printf(") %d\n", inst->n);
+        printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%d | -->%d\n", inst->x - prog->start, inst->y - prog->start);
+        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
-        printf("\\%d\n", inst->n);
+        printf("\\%d\n", inst->par.n);
         break;
       case I_REP:
-        printf("repeat -->%d\n", inst->x - prog->start);
+        printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
-        printf("init_rep %d %d\n", inst->y.rp.min,
-               inst->y.rp.min + inst->y.rp.max);
+        printf("init_rep %d %d\n", inst->par.xy.y.rp.min, inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
         break;
       case I_SET:
         printf("[");
-        print_set(inst->cp);
+        print_set(inst->par.cp);
         puts("");
         break;
       case I_SET_N:
         printf("[^");
-        print_set(inst->cp);
+        print_set(inst->par.cp);
         puts("");
         break;
       case I_WORD:
@@ -1270,22 +1275,35 @@ static uint8_t re_match(struct Reinst *pc, const char *start, const char *bol,
 uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags,
                 const char *start, struct Resub *loot) {
   struct Resub tmpsub;
+  const char *st = start;
 
-  if (!loot) loot = &tmpsub;
-
-  loot->subexpr_num = prog->subexpr_num;
-  memset(loot->sub, 0, sizeof(loot->sub));
-  return !re_match(prog->start, start, start, flags, loot);
+  if (loot) memset(loot, 0, sizeof(*loot));
+  if (!flags.re_g || !loot) {
+    if (!loot) loot = &tmpsub;
+    loot->subexpr_num = prog->subexpr_num;
+    return !re_match(prog->start, start, start, flags, loot);
+  }
+  while (re_match(prog->start, st, start, flags, &tmpsub)) {
+    unsigned int i;
+    st = tmpsub.sub[0].end;
+    for (i = 0; i < prog->subexpr_num; i++) {
+      struct re_tok *l = &loot->sub[loot->subexpr_num + i], *s = &tmpsub.sub[i];
+      l->start = s->start;
+      l->end = s->end;
+    }
+    loot->subexpr_num += prog->subexpr_num;
+  }
+  return !loot->subexpr_num;
 }
 
 V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
                        struct Resub *dstsub) {
-  int size = 0, sz, sbn, n;
-  char tmps[300], *d = tmps;
+  int size = 0, n;
   Rune curr_rune;
-  dstsub->subexpr_num = 0;
 
+  memset(dstsub, 0, sizeof(*dstsub));
   while (!(n = re_nextc(&curr_rune, &rstr, 1)) && curr_rune) {
+    int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
       n = re_nextc(&curr_rune, &rstr, 1);
@@ -1305,9 +1323,9 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
         case '6':
         case '7':
         case '8':
-        case '9':
-          sbn = dec(curr_rune);
-          if (rstr[0] && isdigitrune(rstr[0])) {
+        case '9': {
+          int sbn = dec(curr_rune);
+          if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
             n = re_nextc(&curr_rune, &rstr, 1);
             if (n < 0) return n;
             sz = dec(curr_rune);
@@ -1318,6 +1336,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           size += sz;
           dstsub->sub[dstsub->subexpr_num++] = loot->sub[sbn];
           break;
+        }
         case '`':
           sz = loot->sub[0].start - src;
           size += sz;
@@ -1339,6 +1358,7 @@ V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
           return BAD_CHAR_AFTER_USD;
       }
     } else {
+      char tmps[300], *d = tmps;
       size += (sz = runetochar(d, &curr_rune));
       if (!dstsub->subexpr_num ||
           dstsub->sub[dstsub->subexpr_num - 1].end != rstr - sz) {
@@ -1673,15 +1693,12 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
   struct re_tok *ptok = sub.sub;
 
   if (cfa->num_args > 0) {
-    const char *begin = arg->v.str.buf;
-    Rune rune;
-    if (cfa->this_obj->fl.fl.re_g) {
-      unsigned long utf_shift;
-      for (utf_shift = 0; utf_shift < cfa->this_obj->v.str.lastIndex;
-           utf_shift++)
-        begin += chartorune(&rune, begin);
-    }
+    char *begin;
     TRY(check_str_re_conv(v7, &arg, 0));
+    begin = arg->v.str.buf;
+    if (cfa->this_obj->v.str.lastIndex < 0) cfa->this_obj->v.str.lastIndex = 0;
+    if (cfa->this_obj->fl.fl.re_g)
+      begin = utfnshift(begin, cfa->this_obj->v.str.lastIndex);
     TRY(regex_check_prog(cfa->this_obj));
     if (!re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl, begin,
                  &sub)) {
@@ -1691,13 +1708,10 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
       for (i = 0; i < sub.subexpr_num; i++, ptok++)
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start,
                                   ptok->end - ptok->start, 1));
-      if (cfa->this_obj->fl.fl.re_g) {
-        for (; cfa->this_obj->fl.fl.re_g && begin < sub.sub->end;
-             cfa->this_obj->v.str.lastIndex++)
-          begin += chartorune(&rune, begin);
-      }
+      if (cfa->this_obj->fl.fl.re_g)
+        cfa->this_obj->v.str.lastIndex = utfnlen(begin, sub.sub->end - begin);
       return V7_OK;
-    }
+    } else cfa->this_obj->v.str.lastIndex = 0;
   }
   TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
@@ -1706,17 +1720,9 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Regex_test(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0];
-  struct Resub sub;
-  int found = 0;
+  TRY(Regex_exec(cfa));
 
-  if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &arg, 0));
-    TRY(regex_check_prog(cfa->this_obj));
-    found = !re_exec(cfa->this_obj->v.str.prog, cfa->this_obj->fl.fl,
-                     arg->v.str.buf, &sub);
-  }
-  v7_push_bool(v7, found);
+  v7_push_bool(v7, v7_top_val(v7)->type != V7_TYPE_NULL);
   return V7_OK;
 #undef v7
 }
