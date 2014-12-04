@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "internal.h"
 
 #ifdef V7_EXE

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "internal.h"
 
 V7_PRIVATE struct v7_val s_constructors[V7_NUM_CLASSES];

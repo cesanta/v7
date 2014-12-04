@@ -20,6 +20,11 @@
 #define V7_HEAD_H_INCLUDED
 
 #endif // V7_HEAD_H_INCLUDED
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef _UTF_H_
 #define _UTF_H_ 1
 #if defined(__cplusplus)
@@ -82,6 +87,11 @@ char*	utfutf(char *s1, char *s2);
 }
 #endif
 #endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
@@ -658,6 +668,11 @@ V7_PRIVATE void init_string(void);
 V7_PRIVATE void init_regex(void);
 
 #endif /* V7_INTERNAL_H_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE struct v7_val s_constructors[V7_NUM_CLASSES];
 V7_PRIVATE struct v7_val s_prototypes[V7_NUM_CLASSES];
@@ -666,6 +681,11 @@ V7_PRIVATE struct v7_val s_global = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_math = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_json = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
 V7_PRIVATE struct v7_val s_file = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {
   OBJ_SANITY_CHECK(obj);
@@ -1267,6 +1287,11 @@ V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
   if (isnan(tmp) || isinf(tmp)) return 0;
   return tmp;
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 #ifndef V7_DISABLE_CRYPTO
 
@@ -1701,6 +1726,11 @@ V7_PRIVATE void init_crypto(void) {
   SET_RO_PROP_V(s_global, "Crypto", s_crypto);
 }
 #endif  // V7_DISABLE_CRYPTO
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Array_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj =
@@ -1764,6 +1794,11 @@ V7_PRIVATE void init_array(void) {
 
   SET_RO_PROP_V(s_global, "Array", s_constructors[V7_CLASS_ARRAY]);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Boolean_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj =
@@ -1775,6 +1810,11 @@ V7_PRIVATE enum v7_err Boolean_ctor(struct v7_c_func_arg *cfa) {
 V7_PRIVATE void init_boolean(void) {
   init_standard_constructor(V7_CLASS_BOOLEAN, Boolean_ctor);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Date_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
@@ -1786,6 +1826,11 @@ V7_PRIVATE void init_date(void) {
   init_standard_constructor(V7_CLASS_DATE, Date_ctor);
   SET_RO_PROP_V(s_global, "Date", s_constructors[V7_CLASS_DATE]);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Error_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj =
@@ -1798,6 +1843,11 @@ V7_PRIVATE void init_error(void) {
   init_standard_constructor(V7_CLASS_ERROR, Error_ctor);
   SET_RO_PROP_V(s_global, "Error", s_constructors[V7_CLASS_ERROR]);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Function_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj =
@@ -1810,6 +1860,11 @@ V7_PRIVATE void init_function(void) {
   init_standard_constructor(V7_CLASS_FUNCTION, Function_ctor);
   SET_RO_PROP_V(s_global, "Function", s_constructors[V7_CLASS_FUNCTION]);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Math_random(struct v7_c_func_arg *cfa) {
   static int srand_called = 0;
@@ -1880,6 +1935,11 @@ V7_PRIVATE void init_math(void) {
 
   SET_RO_PROP_V(s_global, "Math", s_math);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj =
@@ -1924,6 +1984,11 @@ V7_PRIVATE void init_number(void) {
   SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
   SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Object_ctor(struct v7_c_func_arg *cfa) {
   struct v7_val *obj =
@@ -1956,6 +2021,11 @@ V7_PRIVATE void init_object(void) {
   SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
   SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 struct re_env {
   struct v7_val_flags flags;
@@ -5244,6 +5314,11 @@ isspacerune(Rune c)
 		return 1;
 	return 0;
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
@@ -5861,6 +5936,11 @@ V7_PRIVATE void init_string(void) {
 
   SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Json_stringify(struct v7_c_func_arg *cfa) {
   v7_push_string(cfa->v7, "implement me", 12, 0);
@@ -5876,6 +5956,11 @@ V7_PRIVATE void init_json(void) {
 
   SET_RO_PROP_V(s_global, "JSON", s_json);
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   char *p, buf[500];
@@ -6112,6 +6197,11 @@ V7_PRIVATE void init_stdlib(void) {
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 #define EXPECT(v7, t)                                 \
   do {                                                \
@@ -7440,6 +7530,11 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
 
   return V7_OK;
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 // NOTE(lsm): Must be in the same order as enum for keywords
 struct {
@@ -7864,6 +7959,11 @@ int main(void) {
   return 0;
 }
 #endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 struct v7 *v7_create(void) {
   static int prototypes_initialized = 0;
@@ -8095,6 +8195,11 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
   // return status;
 }
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
