@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Running pre-commit tests":
+make v7.c difftest

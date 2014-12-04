@@ -48,3 +48,12 @@ w: v7.c
 
 clean:
 	rm -rf *.gc* *.dSYM *.exe *.obj *.pdb a.out u unit_test v7 t
+
+setup-hooks:
+	for i in .hooks/*; do ln -s ../../.hooks/$$(basename $$i) .git/hooks; done
+
+difftest:
+	@TMP=`mktemp -t checkout-diff.XXXXXX`; \
+	git diff v7.c  >$$TMP ; \
+	if [ -s "$$TMP" ]; then echo found diffs in checkout:; git status -s;  exit 1; fi; \
+	rm $$TMP
