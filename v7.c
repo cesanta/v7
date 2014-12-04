@@ -6624,10 +6624,6 @@ static enum v7_err parse_regex(struct v7 *v7) {
       case 'i':
       case 'm':
         break;
-      case '\0':
-      case '\r':
-      case '\n':
-        THROW(V7_SYNTAX_ERROR);
     }
   }
 

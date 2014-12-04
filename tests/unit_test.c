@@ -464,10 +464,8 @@ static const char *test_stdlib(void) {
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/; re")) != NULL);
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/;")) != NULL);
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/ ")) != NULL);
-#ifdef TODO /* regexp doesn't parse when last char is EOL */
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/\n")) != NULL);
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/")) != NULL);
-#endif
 
   v7_destroy(&v7);
   return NULL;
