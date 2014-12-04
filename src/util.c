@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "internal.h"
 
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor) {

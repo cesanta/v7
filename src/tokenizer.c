@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "internal.h"
 
 // NOTE(lsm): Must be in the same order as enum for keywords

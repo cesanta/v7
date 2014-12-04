@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "internal.h"
 
 V7_PRIVATE enum v7_err Boolean_ctor(struct v7_c_func_arg *cfa) {
