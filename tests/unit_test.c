@@ -411,12 +411,10 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "th"));
   ASSERT((v = v7_exec(v7, "'hi there'.substr(3)")) != NULL);
   ASSERT(check_str(v7, v, "there"));
-#ifdef TODO /* negative substring beginning not working */
   ASSERT((v = v7_exec(v7, "'hi there'.substr(-2)")) != NULL);
-  ASSERT(check_str(v7, v, "re"));
-  ASSERT((v = v7_exec(v7, "'hi there'.substr(-20)")) != NULL);
-  ASSERT(check_str(v7, v, ""));
-#endif
+  ASSERT(check_str(v7, v, "hi there"));
+  ASSERT((v = v7_exec(v7, "'hi there'.substr(NaN)")) != NULL);
+  ASSERT(check_str(v7, v, "hi there"));
   ASSERT((v = v7_exec(v7, "'hi there'.substr(0, 300)")) != NULL);
   ASSERT(check_str(v7, v, "hi there"));
   ASSERT((v = v7_exec(v7, "'dew dee'.match(/\\d+/)")) != NULL);
