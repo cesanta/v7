@@ -405,18 +405,20 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v7, v, 5.0));
   ASSERT((v = v7_exec(v7, "'hi there'.indexOf('e', 6)")) != NULL);
   ASSERT(check_num(v7, v, 7.0));
-#ifdef TODO  /* access to `substr` prop returns undefined */
   ASSERT((v = v7_exec(v7, "'hi there'.substr(3, 2)")) != NULL);
+  ASSERT(check_str(v7, v, "th"));
+  ASSERT((v = v7_exec(v7, "'hi there'.substring(3, 5)")) != NULL);
   ASSERT(check_str(v7, v, "th"));
   ASSERT((v = v7_exec(v7, "'hi there'.substr(3)")) != NULL);
   ASSERT(check_str(v7, v, "there"));
+#ifdef TODO /* negative substring beginning not working */
   ASSERT((v = v7_exec(v7, "'hi there'.substr(-2)")) != NULL);
   ASSERT(check_str(v7, v, "re"));
   ASSERT((v = v7_exec(v7, "'hi there'.substr(-20)")) != NULL);
   ASSERT(check_str(v7, v, ""));
-  ASSERT((v = v7_exec(v7, "'hi there'.substr(0, 300)")) != NULL);
-  ASSERT(check_str(v7, v, ""));
 #endif
+  ASSERT((v = v7_exec(v7, "'hi there'.substr(0, 300)")) != NULL);
+  ASSERT(check_str(v7, v, "hi there"));
   ASSERT((v = v7_exec(v7, "'dew dee'.match(/\\d+/)")) != NULL);
   ASSERT(v7_type(v) == V7_TYPE_NULL);
   ASSERT((v = v7_exec(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)")) != NULL);
@@ -435,18 +437,18 @@ static const char *test_stdlib(void) {
 #ifdef TODO  /* doesn't split at every char */
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(''); m.length")) != NULL);
   ASSERT(check_num(v7, v, 8.0));
+#endif
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(' '); m.length")) != NULL);
   ASSERT(check_num(v7, v, 3.0));
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(' ', 2); m.length")) != NULL);
   ASSERT(check_num(v7, v, 2.0));
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(/ /, 2); m.length")) != NULL);
   ASSERT(check_num(v7, v, 2.0));
-#endif
-#ifdef TODO  /* access to `substr` prop returns undefined */
   ASSERT((v = v7_exec(v7, "'aa bb cc'.substr(0, 4).split(' ').length")) != NULL);
   ASSERT(check_num(v7, v, 2.0));
   ASSERT((v = v7_exec(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]")) != NULL);
   ASSERT(check_str(v7, v, "b"));
+#ifdef TODO  /* doesn't split at every char */
   ASSERT((v = v7_exec(v7, "{z: '123456'}.z.substr(0, 3).split('').length")) != NULL);
   ASSERT(check_num(v7, v, 3.0));
 #endif
