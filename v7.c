@@ -5741,7 +5741,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
 #undef v7
 }
 
-V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
+V7_PRIVATE enum v7_err _Str_strslice(struct v7_c_func_arg *cfa, int islen) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   char *begin, *end;
   long from = 0, to = 0, len;
@@ -5757,6 +5757,9 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
 
     if (cfa->num_args > 1) {
       to = _conv_to_int(v7, cfa->args[1]);
+      if (islen) {
+        to += from;
+      }
       if (to < 0) to = 0;
       if (to > len) to = len;
     }
@@ -5773,6 +5776,15 @@ V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
   return V7_OK;
 #undef v7
 }
+
+V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
+  return _Str_strslice(cfa, 1);
+}
+
+V7_PRIVATE enum v7_err Str_substring(struct v7_c_func_arg *cfa) {
+  return _Str_strslice(cfa, 0);
+}
+
 
 V7_PRIVATE enum v7_err Str_toLowerCase(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
@@ -5923,7 +5935,8 @@ V7_PRIVATE void init_string(void) {
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "search", Str_search);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "slice", Str_slice);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substring", Str_substr);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substring", Str_substring);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "toLowerCase", Str_toLowerCase);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "toLocaleLowerCase",
              Str_toLocaleLowerCase);
