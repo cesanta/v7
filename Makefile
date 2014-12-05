@@ -6,6 +6,8 @@ SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/object.c src/regex.c src/rune.c src/runetype.c src/string.c \
 		  src/json.c src/stdlib.c src/parser.c src/tokenizer.c src/api.c src/main.c
 
+.PHONY: cpplint
+
 all: v7 unit_test
 
 v7.c: src/v7_license.h src/utf.h src/internal.h $(SOURCES) v7.h Makefile
@@ -57,3 +59,6 @@ difftest:
 	git diff v7.c  >$$TMP ; \
 	if [ -s "$$TMP" ]; then echo found diffs in checkout:; git status -s;  exit 1; fi; \
 	rm $$TMP
+
+cpplint:
+	cpplint.py --verbose=0 --extensions=c,h src/*.[ch] v7.h 2>&1 >/dev/null| grep -v "Done processing" | grep -v "file excluded by"

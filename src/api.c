@@ -11,10 +11,10 @@ struct v7 *v7_create(void) {
 
   if (prototypes_initialized == 0) {
     prototypes_initialized++;
-    init_stdlib();  // One-time initialization
+    init_stdlib();  /* One-time initialization */
   }
 
-  if ((v7 = (struct v7 *)calloc(1, sizeof(*v7))) != NULL) {
+  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
     v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
     v7->root_scope.proto = &s_global;
     v7->root_scope.ref_count = 1;
@@ -89,9 +89,9 @@ int v7_is_true(const struct v7_val *v) {
 enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   struct v7_prop **head, *prop;
   CHECK(v7_is_class(arr, V7_CLASS_ARRAY), V7_INTERNAL_ERROR);
-  // Append to the end of the list, to make indexing work
-  for (head = &arr->v.array; *head != NULL; head = &head[0]->next)
-    ;
+  /* Append to the end of the list, to make indexing work */
+  for (head = &arr->v.array; *head != NULL; head = &head[0]->next) {
+  }
   prop = mkprop(v7);
   CHECK(prop != NULL, V7_OUT_OF_MEMORY);
   prop->next = *head;
@@ -111,7 +111,7 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
         v7_set2(v7, v, p->key, p->val);
       }
       break;
-    // TODO(lsm): add the rest of types
+      /* TODO(lsm): add the rest of types */
     default:
       abort();
       break;
@@ -171,7 +171,7 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
   } else if (is_bool(v)) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (is_num(v)) {
-    // TODO: check this on 32-bit arch
+    /* TODO: check this on 32-bit arch */
     if (INFINITY == v->v.num)
       snprintf(buf, bsiz, "Infinity");
     else if (-INFINITY == v->v.num)
@@ -222,16 +222,16 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   if ((fp = fopen(path, "r")) == NULL) {
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
-  } else if ((p = (char *)calloc(1, (size_t)file_size + 1)) == NULL) {
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     fclose(fp);
   } else {
     rewind(fp);
-    fread(p, 1, (size_t)file_size, fp);
+    fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
     status = do_exec(v7, path, p, v7->sp);
     free(p);
   }
 
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
-  // return status;
+  /* return status; */
 }

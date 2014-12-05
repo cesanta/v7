@@ -19,4 +19,4 @@
 #ifndef V7_HEAD_H_INCLUDED
 #define V7_HEAD_H_INCLUDED
 
-#endif // V7_HEAD_H_INCLUDED
+#endif  /* V7_HEAD_H_INCLUDED */

@@ -8,9 +8,9 @@
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
-  int i;//, error_code;
+  int i; /*, error_code; */
 
-  // Execute inline code
+  /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (!v7_exec(v7, argv[i + 1])) {
@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Execute files
+  /* Execute files */
   for (; i < argc; i++) {
     if (!v7_exec_file(v7, argv[i])) {
       fprintf(stderr, "%s\n", v7_get_error_string(v7));

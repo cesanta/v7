@@ -22,7 +22,7 @@ V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
   struct v7_val *obj = v7_push_new_object(cfa->v7);
 
-  // Push new object as a context for the loading new module
+  /* Push new object as a context for the loading new module */
   obj->next = cfa->v7->ctx;
   cfa->v7->ctx = obj;
 
@@ -31,7 +31,7 @@ V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
     if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
   }
 
-  // Pop context, and return it
+  /* Pop context, and return it */
   cfa->v7->ctx = obj->next;
   v7_push_val(cfa->v7, obj);
 
@@ -70,26 +70,26 @@ V7_PRIVATE void base64_encode(const unsigned char *src, int src_len,
   dst[j++] = '\0';
 }
 
-// Convert one byte of encoded base64 input stream to 6-bit chunk
+/* Convert one byte of encoded base64 input stream to 6-bit chunk */
 V7_PRIVATE unsigned char from_b64(unsigned char ch) {
-  // Inverse lookup map
+  /* Inverse lookup map */
   V7_PRIVATE const unsigned char tab[128] = {
-      255, 255, 255, 255, 255, 255, 255, 255,  //  0
-      255, 255, 255, 255, 255, 255, 255, 255,  //  8
-      255, 255, 255, 255, 255, 255, 255, 255,  //  16
-      255, 255, 255, 255, 255, 255, 255, 255,  //  24
-      255, 255, 255, 255, 255, 255, 255, 255,  //  32
-      255, 255, 255, 62,  255, 255, 255, 63,   //  40
-      52,  53,  54,  55,  56,  57,  58,  59,   //  48
-      60,  61,  255, 255, 255, 200, 255, 255,  //  56   '=' is 200, on index 61
-      255, 0,   1,   2,   3,   4,   5,   6,    //  64
-      7,   8,   9,   10,  11,  12,  13,  14,   //  72
-      15,  16,  17,  18,  19,  20,  21,  22,   //  80
-      23,  24,  25,  255, 255, 255, 255, 255,  //  88
-      255, 26,  27,  28,  29,  30,  31,  32,   //  96
-      33,  34,  35,  36,  37,  38,  39,  40,   //  104
-      41,  42,  43,  44,  45,  46,  47,  48,   //  112
-      49,  50,  51,  255, 255, 255, 255, 255,  //  120
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 0 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 8 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 16 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 24 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 32 */
+    255, 255, 255, 62,  255, 255, 255, 63,   /* 40 */
+    52,  53,  54,  55,  56,  57,  58,  59,   /* 48 */
+    60,  61,  255, 255, 255, 200, 255, 255,  /* 56 '=' is 200, on index 61 */
+    255, 0,   1,   2,   3,   4,   5,   6,    /* 64 */
+    7,   8,   9,   10,  11,  12,  13,  14,   /* 72 */
+    15,  16,  17,  18,  19,  20,  21,  22,   /* 80 */
+    23,  24,  25,  255, 255, 255, 255, 255,  /* 88 */
+    255, 26,  27,  28,  29,  30,  31,  32,   /* 96 */
+    33,  34,  35,  36,  37,  38,  39,  40,   /* 104 */
+    41,  42,  43,  44,  45,  46,  47,  48,   /* 112 */
+    49,  50,  51,  255, 255, 255, 255, 255,  /* 120 */
   };
   return tab[ch & 127];
 }
@@ -99,7 +99,7 @@ V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
          (b = from_b64(s[1])) != 255 && (c = from_b64(s[2])) != 255 &&
          (d = from_b64(s[3])) != 255) {
-    if (a == 200 || b == 200) break;  // '=' can't be there
+    if (a == 200 || b == 200) break;  /* '=' can't be there */
     *dst++ = a << 2 | b >> 4;
     if (c == 200) break;
     *dst++ = b << 4 | c >> 2;
@@ -117,8 +117,8 @@ V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   result = v7_push_string(cfa->v7, NULL, 0, 0);
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     result->v.str.len = v->v.str.len * 3 / 4 + 1;
-    result->v.str.buf = (char *)malloc(result->v.str.len + 1);
-    base64_decode((const unsigned char *)v->v.str.buf, (int)v->v.str.len,
+    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
+    base64_decode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   result->v.str.buf);
   }
   return V7_OK;
@@ -130,8 +130,8 @@ V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   result = v7_push_string(cfa->v7, NULL, 0, 0);
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     result->v.str.len = v->v.str.len * 3 / 2 + 1;
-    result->v.str.buf = (char *)malloc(result->v.str.len + 1);
-    base64_encode((const unsigned char *)v->v.str.buf, (int)v->v.str.len,
+    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
+    base64_encode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   result->v.str.buf);
   }
   return V7_OK;
@@ -196,7 +196,7 @@ V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
     result = v7_push_new_object(cfa->v7);
     result->proto = &s_file;
     v7_setv(cfa->v7, result, V7_TYPE_STR, V7_TYPE_NUM, "fp", 2, 0,
-            (double)(unsigned long) fp);  // after v7_set_class !
+            (double)(unsigned long) fp);  /* after v7_set_class ! */
   } else {
     v7_make_and_push(cfa->v7, V7_TYPE_NULL);
   }

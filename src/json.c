@@ -7,7 +7,7 @@
 
 V7_PRIVATE enum v7_err Json_stringify(struct v7_c_func_arg *cfa) {
   v7_push_string(cfa->v7, "implement me", 12, 0);
-  // TODO(lsm): implement JSON.stringify
+  /* TODO(lsm): implement JSON.stringify */
   return V7_OK;
 }
 

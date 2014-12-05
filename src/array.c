@@ -30,8 +30,8 @@ V7_PRIVATE enum v7_err Arr_push(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE int cmp_prop(const void *pa, const void *pb) {
-  const struct v7_prop *p1 = *(struct v7_prop **)pa;
-  const struct v7_prop *p2 = *(struct v7_prop **)pb;
+  const struct v7_prop *p1 = *(struct v7_prop **) pa;
+  const struct v7_prop *p2 = *(struct v7_prop **) pb;
   return cmp(p2->val, p1->val);
 }
 
@@ -40,11 +40,11 @@ V7_PRIVATE enum v7_err Arr_sort(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->this_obj;
   struct v7_prop *p, **arr;
 
-  // TODO(lsm): do proper error checking
+  /* TODO(lsm): do proper error checking */
   for (p = v->v.array; p != NULL; p = p->next) {
     length++;
   }
-  arr = (struct v7_prop **)malloc(length * sizeof(p));
+  arr = (struct v7_prop **) malloc(length * sizeof(p));
   for (i = 0, p = v->v.array; p != NULL; p = p->next) {
     arr[i++] = p;
   }
