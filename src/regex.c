@@ -26,42 +26,42 @@ struct re_env {
 };
 
 enum RE_CODE {
-  I_END = 10, /* Terminate: match found */
+  I_END = 10,  /* Terminate: match found */
   I_ANY,
-  P_ANY = I_ANY, /* Any character except newline, . */
-  I_ANYNL,       /* Any character including newline, . */
+  P_ANY = I_ANY,  /* Any character except newline, . */
+  I_ANYNL,        /* Any character including newline, . */
   I_BOL,
-  P_BOL = I_BOL, /* Beginning of line, ^ */
+  P_BOL = I_BOL,  /* Beginning of line, ^ */
   I_CH,
   P_CH = I_CH,
   I_EOL,
-  P_EOL = I_EOL, /* End of line, $ */
+  P_EOL = I_EOL,  /* End of line, $ */
   I_EOS,
-  P_EOS = I_EOS, /* End of string, \0 */
+  P_EOS = I_EOS,  /* End of string, \0 */
   I_JUMP,
   I_LA,
   P_LA = I_LA,
   I_LA_N,
   P_LA_N = I_LA_N,
   I_LBRA,
-  P_BRA = I_LBRA, /* Left bracket, ( */
+  P_BRA = I_LBRA,  /* Left bracket, ( */
   I_REF,
   P_REF = I_REF,
   I_REP,
   P_REP = I_REP,
   I_REP_INI,
-  I_RBRA, /* Right bracket, ) */
+  I_RBRA,  /* Right bracket, ) */
   I_SET,
-  P_SET = I_SET, /* Character set, [] */
+  P_SET = I_SET,  /* Character set, [] */
   I_SET_N,
-  P_SET_N = I_SET_N, /* Negated character set, [] */
+  P_SET_N = I_SET_N,  /* Negated character set, [] */
   I_SPLIT,
   I_WORD,
   P_WORD = I_WORD,
   I_WORD_N,
   P_WORD_N = I_WORD_N,
-  P_ALT, /* Alternation, | */
-  P_CAT, /* Concatentation, implicit operator */
+  P_ALT,  /* Alternation, | */
+  P_CAT,  /* Concatentation, implicit operator */
   L_CH = 256,
   L_COUNT,  /* {M,N} */
   L_EOS,    /* End of string, \0 */
@@ -476,7 +476,8 @@ static int re_lexer(struct re_env *e) {
     return L_CH;
   }
 
-  if (e->flags.re) switch (e->curr_rune) {
+  if (e->flags.re) {
+    switch (e->curr_rune) {
       case 0:
       case '$':
       case ')':
@@ -505,8 +506,9 @@ static int re_lexer(struct re_env *e) {
           }
         return '(';
     }
-  else if (e->curr_rune == 0)
+  } else if (e->curr_rune == 0) {
     return 0;
+  }
 
   return L_CH;
 }
@@ -939,7 +941,8 @@ static void node_print(struct Renode *nd) {
       printf("}");
       break;
     case P_CH:
-      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" : "'\\u%04X'", nd->par.c);
+      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" :
+             "'\\u%04X'", nd->par.c);
       break;
     case P_EOL:
       printf("$");
@@ -962,7 +965,8 @@ static void node_print(struct Renode *nd) {
       break;
     case P_REP:
       node_print(nd->par.xy.x);
-      printf(nd->par.xy.y.rp.ng ? "{%d,%d}?" : "{%d,%d}", nd->par.xy.y.rp.min, nd->par.xy.y.rp.max);
+      printf(nd->par.xy.y.rp.ng ? "{%d,%d}?" : "{%d,%d}", nd->par.xy.y.rp.min,
+             nd->par.xy.y.rp.max);
       break;
     case P_SET:
       printf("[");
@@ -999,7 +1003,8 @@ static void program_print(struct Reprog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n", inst->par.c);
+        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" :
+               "'\\u%04X'\n", inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -1011,10 +1016,12 @@ static void program_print(struct Reprog *prog) {
         printf("-->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
+        printf("la %d %d\n", inst->par.xy.x - prog->start,
+               inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
+        printf("la_n %d %d\n", inst->par.xy.x - prog->start,
+               inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
         printf("( %d\n", inst->par.n);
@@ -1023,7 +1030,8 @@ static void program_print(struct Reprog *prog) {
         printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
+        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start,
+               inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
         printf("\\%d\n", inst->par.n);
@@ -1032,7 +1040,8 @@ static void program_print(struct Reprog *prog) {
         printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
-        printf("init_rep %d %d\n", inst->par.xy.y.rp.min, inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
+        printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
+               inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
         break;
       case I_SET:
         printf("[");
@@ -1068,7 +1077,7 @@ struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags,
     if (p_err_msg) *p_err_msg = e.err_msg;
     reg_free(e.pstart);
     reg_free(e.prog);
-    return (struct Reprog *)-1;
+    return (struct Reprog *) -1;
   }
 
   e.src = pattern;
@@ -1716,7 +1725,9 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
       if (cfa->this_obj->fl.fl.re_g)
         cfa->this_obj->v.str.lastIndex = utfnlen(begin, sub.sub->end - begin);
       return V7_OK;
-    } else cfa->this_obj->v.str.lastIndex = 0;
+    } else {
+      cfa->this_obj->v.str.lastIndex = 0;
+    }
   }
   TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;

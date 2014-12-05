@@ -301,7 +301,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
           out_sub_num++;
         }
       }
-      p = (char *)loot.sub->end;
+      p = (char *) loot.sub->end;
     } while (re->fl.fl.re_g && p < str_end);
     if (p < str_end) {
       ptok->start = p;
@@ -313,7 +313,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
     out_str = malloc(out_len + 1);
     CHECK(out_str, V7_OUT_OF_MEMORY);
     ptok = out_sub;
-    p = (char *)out_str;
+    p = (char *) out_str;
     do {
       size_t ln = ptok->end - ptok->start;
       memcpy(p, ptok->start, ln);

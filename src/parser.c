@@ -22,7 +22,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     TRY(check_str_re_conv(v7, &a, 0));
     TRY(check_str_re_conv(v7, &b, 0));
 
-    str = (char *)malloc(a->v.str.len + b->v.str.len + 1);
+    str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
     memcpy(str, a->v.str.buf, a->v.str.len);
@@ -77,8 +77,10 @@ static enum v7_err arith_op(struct v7 *v7, enum v7_tok tok, int sp1, int sp2) {
   sp = v7->sp;
   TRY(arith(v7, v1, v2, v7_top_val(v7), tok));
 
-  /* arith() might push another value on stack if type conversion was made. */
-  /* if that happens, re-push the result again */
+  /*
+   * arith() might push another value on stack if type conversion was made.
+   * If that happens, re-push the result again
+   */
   if (v7->sp > sp) {
     TRY(v7_push(v7, v7->stack[sp - 1]));
   }
@@ -121,9 +123,11 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     next_tok(v7);
   }
 
-  /* 1. SCANNING: do nothing, just pass through the function code */
-  /* 2. EXECUTING && v == 0: don't execute but create a closure */
-  /* 3. EXECUTING && v != 0: execute the closure */
+  /*
+   * 1. SCANNING: do nothing, just pass through the function code
+   * 2. EXECUTING && v == 0: don't execute but create a closure
+   * 3. EXECUTING && v != 0: execute the closure
+   */
 
   if (EXECUTING(v7->flags) && v == NULL) {
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
@@ -131,7 +135,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7_set_class(f, V7_CLASS_FUNCTION);
     f->fl.fl.js_func = 1;
 
-    f->v.func.source_code = (char *)src;
+    f->v.func.source_code = (char *) src;
     f->v.func.line_no = line_no;
     /* printf("PFD [%.*s]\n", 45, f->v.func.source_code); */
 
@@ -185,8 +189,10 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     /* Cleanup execution context */
     v7->ctx = ctx->next;
     ctx->next = NULL;
-    /* assert(f->v.func.var_obj == NULL); */
-    /* f->v.func.var_obj = ctx; */
+#if 0
+    assert(f->v.func.var_obj == NULL);
+    f->v.func.var_obj = ctx;
+#endif
     v7_freeval(v7, ctx);
 
     v7->cf = f->next;
@@ -214,14 +220,16 @@ V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *this_obj,
   CHECK(f != NULL, V7_TYPE_ERROR);
   CHECK(v7_is_class(f, V7_CLASS_FUNCTION), V7_CALLED_NON_FUNCTION);
 
-  /* Stack looks as follows: */
-  /*  v   --->  <called_function>     v[0] */
-  /*            <argument_0>        ---+ */
-  /*            <argument_1>           | */
-  /*            <argument_2>           |  <-- num_args */
-  /*            ...                    | */
-  /*            <argument_N>        ---+ */
-  /* top  --->  <return_value> */
+  /*
+   * Stack looks as follows:
+   *  v   --->  <called_function>     v[0]
+   *            <argument_0>        ---+
+   *            <argument_1>           |
+   *            <argument_2>           |  <-- num_args
+   *            ...                    |
+   *            <argument_N>        ---+
+   * top  --->  <return_value>
+   */
   if (f->fl.fl.js_func) {
     struct v7_pstate old_pstate = v7->pstate;
     enum v7_tok tok = v7->cur_tok;
@@ -534,9 +542,11 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
 
       ns = get2(ns, expr_val);
 
-      /* If we're doing an assignment, */
-      /* then parse_assign() looks at v7->key, v7->key_len for the key. */
-      /* Initialize key properly for cases like "a.b['c'] = d;" */
+      /*
+       * If we're doing an assignment,
+       * then parse_assign() looks at v7->key, v7->key_len for the key.
+       * Initialize key properly for cases like "a.b['c'] = d;"
+       */
       TRY(check_str_re_conv(v7, &expr_val, 0));
       v7->key = expr_val->v.str.buf;
       v7->key_len = expr_val->v.str.len;
@@ -557,9 +567,11 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
   return V7_OK;
 }
 
-/* Member Access            left-to-right    x . x */
-/* Computed Member Access   left-to-right    x [ x ] */
-/* new (with argument list) n/a              new x ( x ) */
+/*
+ * Member Access            left-to-right    x . x
+ * Computed Member Access   left-to-right    x [ x ]
+ * new (with argument list) n/a              new x ( x )
+ */
 static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   struct v7_val *old_this = v7->this_obj;
 
@@ -580,10 +592,12 @@ static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   return V7_OK;
 }
 
-/* x . y () . z () () */
-
-/* Function Call                 left-to-right     x ( x ) */
-/* new (without argument list)   right-to-left     new x */
+/*
+ * x . y () . z () ()
+ *
+ * Function Call                 left-to-right     x ( x )
+ * new (without argument list)   right-to-left     new x
+ */
 static enum v7_err parse_precedence_2(struct v7 *v7) {
   int has_new = 0;
   struct v7_val *old_this_obj = v7->this_obj, *cur_this = v7->this_obj;
@@ -613,8 +627,10 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
   return V7_OK;
 }
 
-/* Postfix Increment    n/a      x ++ */
-/* Postfix Decrement    n/a      x -- */
+/*
+ * Postfix Increment    n/a      x ++
+ * Postfix Decrement    n/a      x --
+ */
 static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
   TRY(parse_precedence_2(v7));
   if (v7->cur_tok == TOK_PLUS_PLUS || v7->cur_tok == TOK_MINUS_MINUS) {
@@ -645,15 +661,17 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
   return V7_OK;
 }
 
-/* Logical NOT        right-to-left    ! x */
-/* Bitwise NOT        right-to-left    ~ x */
-/* Unary Plus         right-to-left    + x */
-/* Unary Negation     right-to-left    - x */
-/* Prefix Increment   right-to-left    ++ x */
-/* Prefix Decrement   right-to-left    -- x */
-/* typeof             right-to-left    typeof x */
-/* void               right-to-left    void x */
-/* delete             right-to-left    delete x */
+/*
+ * Logical NOT        right-to-left    ! x
+ * Bitwise NOT        right-to-left    ~ x
+ * Unary Plus         right-to-left    + x
+ * Unary Negation     right-to-left    - x
+ * Prefix Increment   right-to-left    ++ x
+ * Prefix Decrement   right-to-left    -- x
+ * typeof             right-to-left    typeof x
+ * void               right-to-left    void x
+ * delete             right-to-left    delete x
+ */
 static enum v7_err parse_unary(struct v7 *v7) {
   static const char *type_names[] = {"undefined", "object", "boolean",
                                      "string",    "number", "object"};
@@ -757,11 +775,11 @@ static enum v7_err logical_op(struct v7 *v7, enum v7_tok op, int sp1, int sp2) {
       case TOK_LE:
         res = n1 <= n2;
         break;
-      case TOK_EQ: /* FALLTHROUGH */
+      case TOK_EQ:  /* FALLTHROUGH */
       case TOK_EQ_EQ:
         res = cmp(v1, v2) == 0;
         break;
-      case TOK_NE: /* FALLTHROUGH */
+      case TOK_NE:  /* FALLTHROUGH */
       case TOK_NE_NE:
         res = cmp(v1, v2) != 0;
         break;
@@ -920,7 +938,7 @@ V7_PRIVATE enum v7_err parse_ternary(struct v7 *v7) {
     if (EXECUTING(v7->flags)) {
       CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
       condition_true = v7_is_true(v7_top(v7)[-1]);
-      TRY(inc_stack(v7, -1)); /* Remove condition result */
+      TRY(inc_stack(v7, -1));  /* Remove condition result */
     }
 
     EXPECT(v7, TOK_QUESTION);
@@ -941,19 +959,20 @@ static enum v7_err do_assign(struct v7 *v7, struct v7_val *obj, const char *key,
   if (EXECUTING(v7->flags)) {
     struct v7_val **top = v7_top(v7), *a = top[-2], *b = top[-1];
 
-    /* Stack layout at this point (assuming stack grows down): */
-    /* */
-    /*          | object's value (rvalue)    |    top[-2] */
-    /*          +----------------------------+ */
-    /*          | expression value (lvalue)  |    top[-1] */
-    /*          +----------------------------+ */
-    /* top -->  |       nothing yet          | */
-
+    /*
+     * Stack layout at this point (assuming stack grows down):
+     *
+     *          | object's value (rvalue)    |    top[-2]
+     *          +----------------------------+
+     *          | expression value (lvalue)  |    top[-1]
+     *          +----------------------------+
+     * top -->  |       nothing yet          |
+     */
     switch (tok) {
       case TOK_ASSIGN:
         CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
         TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1,
-                    b));  // TODO(vrz) ERROR
+                    b));  /* TODO(vrz) ERROR */
         return V7_OK;
       case TOK_PLUS_ASSIGN:
         TRY(arith(v7, a, b, a, TOK_PLUS));
@@ -990,7 +1009,7 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
   /* TODO(lsm): parse_yield() should be here, do we want to implement it? */
   TRY(parse_ternary(v7));
 
-  /* Parse assignment. */
+  /* Parse assignment */
   if (v7->cur_tok >= TOK_ASSIGN && v7->cur_tok <= TOK_LOGICAL_OR_ASSING) {
     /* Remember current reference */
     const char *key = v7->key;
@@ -1068,7 +1087,7 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
     TRY(parse_compound_statement(v7, has_return));
   }
 
-  v7->flags = old_flags; /* Restore old execution flags */
+  v7->flags = old_flags;  /* Restore old execution flags */
   return V7_OK;
 }
 
@@ -1134,11 +1153,11 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   /* Pass through the loop, don't execute it, just remember locations */
   v7->flags |= V7_NO_EXEC;
   get_v7_state(v7, &s2);
-  TRY(parse_expression(v7)); /* expr2 (condition) */
+  TRY(parse_expression(v7));  /* expr2 (condition) */
   EXPECT(v7, TOK_SEMICOLON);
 
   get_v7_state(v7, &s3);
-  TRY(parse_expression(v7)); /* expr3  (post-iteration) */
+  TRY(parse_expression(v7));  /* expr3  (post-iteration) */
   EXPECT(v7, TOK_CLOSE_PAREN);
 
   get_v7_state(v7, &s_block);
@@ -1153,14 +1172,14 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
     for (;;) {
       set_v7_state(v7, &s2);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_expression(v7)); /* Evaluate condition */
+      TRY(parse_expression(v7));  /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top(v7)[-1]);
       if (is_true) break;
 
       set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_compound_statement(v7, has_return)); /* Loop body */
+      TRY(parse_compound_statement(v7, has_return));  /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
 
       set_v7_state(v7, &s3);
@@ -1199,17 +1218,17 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
     for (;;) {
       set_v7_state(v7, &s_cond);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_expression(v7)); /* Evaluate condition */
+      TRY(parse_expression(v7));  /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top_val(v7));
       if (is_true) break;
 
       set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_compound_statement(v7, has_return)); /* Loop body */
+      TRY(parse_compound_statement(v7, has_return));  /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
 
-      TRY(inc_stack(v7, old_sp - v7->sp)); /* Clean up stack */
+      TRY(inc_stack(v7, old_sp - v7->sp));  /* Clean up stack */
     }
   }
 
@@ -1320,8 +1339,10 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
       break;
   }
 
-  /* Skip optional colons and semicolons. */
-  /* TODO(lsm): follow automatic semicolon insertion rules */
+  /*
+   * Skip optional colons and semicolons.
+   * TODO(lsm): follow automatic semicolon insertion rules
+   */
   while (v7->cur_tok == TOK_COMMA || v7->cur_tok == TOK_SEMICOLON) {
     next_tok(v7);
   }

@@ -19,7 +19,7 @@
 #ifndef V7_HEAD_H_INCLUDED
 #define V7_HEAD_H_INCLUDED
 
-#endif // V7_HEAD_H_INCLUDED
+#endif  /* V7_HEAD_H_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -27,66 +27,66 @@
 
 #ifndef _UTF_H_
 #define _UTF_H_ 1
+
 #if defined(__cplusplus)
 extern "C" {
-#endif
+#endif  /* __cplusplus */
 
 typedef unsigned char uchar;
 
-typedef unsigned short Rune;	/* 16 bits */
+typedef unsigned short Rune;  /* 16 bits */
 
 #define nelem(a) (sizeof(a)/sizeof(a)[0])
 
-enum
-{
-	UTFmax		= 3,		/* maximum bytes per rune */
-	Runesync	= 0x80,		/* cannot represent part of a UTF sequence (<) */
-	Runeself	= 0x80,		/* rune and UTF sequences are the same (<) */
-	Runeerror	= 0xFFFD	/* decoding error in UTF */
-	/* Runemax		= 0xFFFC */	/* maximum rune value */
+enum {
+  UTFmax    = 3,     /* maximum bytes per rune */
+  Runesync  = 0x80,  /* cannot represent part of a UTF sequence (<) */
+  Runeself  = 0x80,  /* rune and UTF sequences are the same (<) */
+  Runeerror = 0xFFFD /* decoding error in UTF */
+  /* Runemax    = 0xFFFC */ /* maximum rune value */
 };
 
 /* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
-int		chartorune(Rune *rune, const char *str);
-int		fullrune(char *str, int n);
-int		isdigitrune(Rune c);
-int		isnewline(Rune c);
-int		iswordchar(Rune c);
-int		isalpharune(Rune c);
-int		islowerrune(Rune c);
-int		isspacerune(Rune c);
-int		istitlerune(Rune c);
-int		isupperrune(Rune c);
-int		runelen(Rune c);
-int		runenlen(Rune *r, int nrune);
-Rune*	runestrcat(Rune *s1, Rune *s2);
-Rune*	runestrchr(Rune *s, Rune c);
-int		runestrcmp(Rune *s1, Rune *s2);
-Rune*	runestrcpy(Rune *s1, Rune *s2);
-Rune*	runestrdup(Rune *s) ;
-Rune*	runestrecpy(Rune *s1, Rune *es1, Rune *s2);
-long	runestrlen(Rune *s);
-Rune*	runestrncat(Rune *s1, Rune *s2, long n);
-int		runestrncmp(Rune *s1, Rune *s2, long n);
-Rune*	runestrncpy(Rune *s1, Rune *s2, long n);
-Rune*	runestrrchr(Rune *s, Rune c);
-Rune*	runestrstr(Rune *s1, Rune *s2);
-int		runetochar(char *str, Rune *rune);
-Rune	tolowerrune(Rune c);
-Rune	totitlerune(Rune c);
-Rune	toupperrune(Rune c);
-char*	utfecpy(char *to, char *e, char *from);
-int		utflen(char *s);
-int		utfnlen(char *s, long m);
-char*	utfnshift(char *s, long m);
-char*	utfrrune(char *s, long c);
-char*	utfrune(char *s, long c);
-char*	utfutf(char *s1, char *s2);
+int   chartorune(Rune *rune, const char *str);
+int   fullrune(char *str, int n);
+int   isdigitrune(Rune c);
+int   isnewline(Rune c);
+int   iswordchar(Rune c);
+int   isalpharune(Rune c);
+int   islowerrune(Rune c);
+int   isspacerune(Rune c);
+int   istitlerune(Rune c);
+int   isupperrune(Rune c);
+int   runelen(Rune c);
+int   runenlen(Rune *r, int nrune);
+Rune* runestrcat(Rune *s1, Rune *s2);
+Rune* runestrchr(Rune *s, Rune c);
+int   runestrcmp(Rune *s1, Rune *s2);
+Rune* runestrcpy(Rune *s1, Rune *s2);
+Rune* runestrdup(Rune *s);
+Rune* runestrecpy(Rune *s1, Rune *es1, Rune *s2);
+long  runestrlen(Rune *s);
+Rune* runestrncat(Rune *s1, Rune *s2, long n);
+int   runestrncmp(Rune *s1, Rune *s2, long n);
+Rune* runestrncpy(Rune *s1, Rune *s2, long n);
+Rune* runestrrchr(Rune *s, Rune c);
+Rune* runestrstr(Rune *s1, Rune *s2);
+int   runetochar(char *str, Rune *rune);
+Rune  tolowerrune(Rune c);
+Rune  totitlerune(Rune c);
+Rune  toupperrune(Rune c);
+char* utfecpy(char *to, char *e, char *from);
+int   utflen(char *s);
+int   utfnlen(char *s, long m);
+char* utfnshift(char *s, long m);
+char* utfrrune(char *s, long c);
+char* utfrune(char *s, long c);
+char* utfutf(char *s1, char *s2);
 
 #if defined(__cplusplus)
 }
-#endif
-#endif
+#endif  /* __cplusplus */
+#endif  /* _UTF_H_ */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -95,7 +95,7 @@ char*	utfutf(char *s1, char *s2);
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
-#include "v7.h"
+#include "../v7.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -731,7 +731,7 @@ V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f) {
 }
 
 V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len) {
-  char *p = (char *)malloc(len + 1);
+  char *p = (char *) malloc(len + 1);
   if (p == NULL) return NULL;
   if (ptr)
     memcpy(p, ptr, len);
@@ -745,7 +745,7 @@ V7_PRIVATE void v7_init_str(struct v7_val *v, const char *p, unsigned long len,
                             int own) {
   v->type = V7_TYPE_STR;
   v->proto = &s_prototypes[V7_CLASS_STRING];
-  v->v.str.buf = (char *)p;
+  v->v.str.buf = (char *) p;
   v->v.str.len = len;
   v->fl.fl.str_alloc = 0;
   if (own) {
@@ -865,7 +865,7 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
 V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr) {
   int i;
 
-  CHECK(v7->sp + incr < (int)ARRAY_SIZE(v7->stack), V7_STACK_OVERFLOW);
+  CHECK(v7->sp + incr < (int) ARRAY_SIZE(v7->stack), V7_STACK_OVERFLOW);
   CHECK(v7->sp + incr >= 0, V7_STACK_UNDERFLOW);
 
   /* Free values pushed on stack (like string literals and functions) */
@@ -902,7 +902,7 @@ V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type) {
   if ((v = v7->free_values) != NULL) {
     v7->free_values = v->next;
   } else {
-    v = (struct v7_val *)calloc(1, sizeof(*v));
+    v = (struct v7_val *) calloc(1, sizeof(*v));
   }
 
   if (v != NULL) {
@@ -932,7 +932,7 @@ V7_PRIVATE struct v7_prop *mkprop(struct v7 *v7) {
   if ((m = v7->free_props) != NULL) {
     v7->free_props = m->next;
   } else {
-    m = (struct v7_prop *)calloc(1, sizeof(*m));
+    m = (struct v7_prop *) calloc(1, sizeof(*m));
   }
   if (m != NULL) m->flags = V7_PROP_ALLOCATED;
   return m;
@@ -942,13 +942,13 @@ V7_PRIVATE struct v7_val str_to_val(const char *buf, size_t len) {
   struct v7_val v;
   memset(&v, 0, sizeof(v));
   v.type = V7_TYPE_STR;
-  v.v.str.buf = (char *)buf;
+  v.v.str.buf = (char *) buf;
   v.v.str.len = len;
   return v;
 }
 
 V7_PRIVATE struct v7_val v7_str_to_val(const char *buf) {
-  return str_to_val((char *)buf, strlen(buf));
+  return str_to_val((char *) buf, strlen(buf));
 }
 
 V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
@@ -988,10 +988,10 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
       return an != bn;
     case V7_TYPE_STR:
       res = memcmp(as->buf, bs->buf, as->len < bs->len ? as->len : bs->len);
-      return res != 0 ? res : (int)as->len - (int)bs->len;
+      return res != 0 ? res : (int) as->len - (int) bs->len;
       return as->len != bs->len || memcmp(as->buf, bs->buf, as->len) != 0;
     default:
-      return (int)(a - b);
+      return (int) (a - b);
   }
 }
 
@@ -1184,7 +1184,7 @@ V7_PRIVATE const char *v7_strerror(enum v7_err e) {
 
 V7_PRIVATE struct v7_val **v7_top(struct v7 *v7) { return &v7->stack[v7->sp]; }
 
-V7_PRIVATE int v7_sp(struct v7 *v7) { return (int)(v7_top(v7) - v7->stack); }
+V7_PRIVATE int v7_sp(struct v7 *v7) { return (int) (v7_top(v7) - v7->stack); }
 
 V7_PRIVATE struct v7_val *v7_top_val(struct v7 *v7) {
   return v7->sp > 0 ? v7->stack[v7->sp - 1] : NULL;
@@ -1295,7 +1295,7 @@ V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
 
 #ifndef V7_DISABLE_CRYPTO
 
-//////////////////////////////// START OF MD5 THIRD PARTY CODE
+/*************************** START OF MD5 THIRD PARTY CODE */
 /*
  * This code implements the MD5 message-digest algorithm.
  * The algorithm is due to Ron Rivest.  This code was
@@ -1312,9 +1312,9 @@ V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
 #define	MD5_DIGEST_LENGTH		16
 
 typedef struct MD5Context {
-	uint32_t state[4];			/* state */
-	uint64_t count;			/* number of bits, mod 2^64 */
-	uint8_t buffer[MD5_BLOCK_LENGTH];	/* input buffer */
+  uint32_t state[4];			/* state */
+  uint64_t count;			/* number of bits, mod 2^64 */
+  uint8_t buffer[MD5_BLOCK_LENGTH];	/* input buffer */
 } MD5_CTX;
 
 #define PUT_64BIT_LE(cp, value) do {					\
@@ -1334,17 +1334,17 @@ typedef struct MD5Context {
 (cp)[0] = (value); } while (0)
 
 static uint8_t PADDING[MD5_BLOCK_LENGTH] = {
-	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 void MD5Init(MD5_CTX *ctx) {
-	ctx->count = 0;
-	ctx->state[0] = 0x67452301;
-	ctx->state[1] = 0xefcdab89;
-	ctx->state[2] = 0x98badcfe;
-	ctx->state[3] = 0x10325476;
+  ctx->count = 0;
+  ctx->state[0] = 0x67452301;
+  ctx->state[1] = 0xefcdab89;
+  ctx->state[2] = 0x98badcfe;
+  ctx->state[3] = 0x10325476;
 }
 
 /* #define F1(x, y, z) (x & y | ~x & z) */
@@ -1359,159 +1359,161 @@ void MD5Init(MD5_CTX *ctx) {
 
 static void MD5Transform(uint32_t state[4],
                          const uint8_t block[MD5_BLOCK_LENGTH]) {
-	uint32_t a, b, c, d, in[MD5_BLOCK_LENGTH / 4];
+  uint32_t a, b, c, d, in[MD5_BLOCK_LENGTH / 4];
 
 #if BYTE_ORDER == LITTLE_ENDIAN
-	memcpy(in, block, sizeof(in));
+  memcpy(in, block, sizeof(in));
 #else
-	for (a = 0; a < MD5_BLOCK_LENGTH / 4; a++) {
-		in[a] = (u_int32_t)(
+  for (a = 0; a < MD5_BLOCK_LENGTH / 4; a++) {
+    in[a] = (u_int32_t)(
                         (u_int32_t)(block[a * 4 + 0]) |
                         (u_int32_t)(block[a * 4 + 1]) <<  8 |
                         (u_int32_t)(block[a * 4 + 2]) << 16 |
                         (u_int32_t)(block[a * 4 + 3]) << 24);
-	}
+  }
 #endif
 
-	a = state[0];
-	b = state[1];
-	c = state[2];
-	d = state[3];
+  a = state[0];
+  b = state[1];
+  c = state[2];
+  d = state[3];
 
-	MD5STEP(F1, a, b, c, d, in[ 0] + 0xd76aa478,  7);
-	MD5STEP(F1, d, a, b, c, in[ 1] + 0xe8c7b756, 12);
-	MD5STEP(F1, c, d, a, b, in[ 2] + 0x242070db, 17);
-	MD5STEP(F1, b, c, d, a, in[ 3] + 0xc1bdceee, 22);
-	MD5STEP(F1, a, b, c, d, in[ 4] + 0xf57c0faf,  7);
-	MD5STEP(F1, d, a, b, c, in[ 5] + 0x4787c62a, 12);
-	MD5STEP(F1, c, d, a, b, in[ 6] + 0xa8304613, 17);
-	MD5STEP(F1, b, c, d, a, in[ 7] + 0xfd469501, 22);
-	MD5STEP(F1, a, b, c, d, in[ 8] + 0x698098d8,  7);
-	MD5STEP(F1, d, a, b, c, in[ 9] + 0x8b44f7af, 12);
-	MD5STEP(F1, c, d, a, b, in[10] + 0xffff5bb1, 17);
-	MD5STEP(F1, b, c, d, a, in[11] + 0x895cd7be, 22);
-	MD5STEP(F1, a, b, c, d, in[12] + 0x6b901122,  7);
-	MD5STEP(F1, d, a, b, c, in[13] + 0xfd987193, 12);
-	MD5STEP(F1, c, d, a, b, in[14] + 0xa679438e, 17);
-	MD5STEP(F1, b, c, d, a, in[15] + 0x49b40821, 22);
+  MD5STEP(F1, a, b, c, d, in[ 0] + 0xd76aa478,  7);
+  MD5STEP(F1, d, a, b, c, in[ 1] + 0xe8c7b756, 12);
+  MD5STEP(F1, c, d, a, b, in[ 2] + 0x242070db, 17);
+  MD5STEP(F1, b, c, d, a, in[ 3] + 0xc1bdceee, 22);
+  MD5STEP(F1, a, b, c, d, in[ 4] + 0xf57c0faf,  7);
+  MD5STEP(F1, d, a, b, c, in[ 5] + 0x4787c62a, 12);
+  MD5STEP(F1, c, d, a, b, in[ 6] + 0xa8304613, 17);
+  MD5STEP(F1, b, c, d, a, in[ 7] + 0xfd469501, 22);
+  MD5STEP(F1, a, b, c, d, in[ 8] + 0x698098d8,  7);
+  MD5STEP(F1, d, a, b, c, in[ 9] + 0x8b44f7af, 12);
+  MD5STEP(F1, c, d, a, b, in[10] + 0xffff5bb1, 17);
+  MD5STEP(F1, b, c, d, a, in[11] + 0x895cd7be, 22);
+  MD5STEP(F1, a, b, c, d, in[12] + 0x6b901122,  7);
+  MD5STEP(F1, d, a, b, c, in[13] + 0xfd987193, 12);
+  MD5STEP(F1, c, d, a, b, in[14] + 0xa679438e, 17);
+  MD5STEP(F1, b, c, d, a, in[15] + 0x49b40821, 22);
 
-	MD5STEP(F2, a, b, c, d, in[ 1] + 0xf61e2562,  5);
-	MD5STEP(F2, d, a, b, c, in[ 6] + 0xc040b340,  9);
-	MD5STEP(F2, c, d, a, b, in[11] + 0x265e5a51, 14);
-	MD5STEP(F2, b, c, d, a, in[ 0] + 0xe9b6c7aa, 20);
-	MD5STEP(F2, a, b, c, d, in[ 5] + 0xd62f105d,  5);
-	MD5STEP(F2, d, a, b, c, in[10] + 0x02441453,  9);
-	MD5STEP(F2, c, d, a, b, in[15] + 0xd8a1e681, 14);
-	MD5STEP(F2, b, c, d, a, in[ 4] + 0xe7d3fbc8, 20);
-	MD5STEP(F2, a, b, c, d, in[ 9] + 0x21e1cde6,  5);
-	MD5STEP(F2, d, a, b, c, in[14] + 0xc33707d6,  9);
-	MD5STEP(F2, c, d, a, b, in[ 3] + 0xf4d50d87, 14);
-	MD5STEP(F2, b, c, d, a, in[ 8] + 0x455a14ed, 20);
-	MD5STEP(F2, a, b, c, d, in[13] + 0xa9e3e905,  5);
-	MD5STEP(F2, d, a, b, c, in[ 2] + 0xfcefa3f8,  9);
-	MD5STEP(F2, c, d, a, b, in[ 7] + 0x676f02d9, 14);
-	MD5STEP(F2, b, c, d, a, in[12] + 0x8d2a4c8a, 20);
+  MD5STEP(F2, a, b, c, d, in[ 1] + 0xf61e2562,  5);
+  MD5STEP(F2, d, a, b, c, in[ 6] + 0xc040b340,  9);
+  MD5STEP(F2, c, d, a, b, in[11] + 0x265e5a51, 14);
+  MD5STEP(F2, b, c, d, a, in[ 0] + 0xe9b6c7aa, 20);
+  MD5STEP(F2, a, b, c, d, in[ 5] + 0xd62f105d,  5);
+  MD5STEP(F2, d, a, b, c, in[10] + 0x02441453,  9);
+  MD5STEP(F2, c, d, a, b, in[15] + 0xd8a1e681, 14);
+  MD5STEP(F2, b, c, d, a, in[ 4] + 0xe7d3fbc8, 20);
+  MD5STEP(F2, a, b, c, d, in[ 9] + 0x21e1cde6,  5);
+  MD5STEP(F2, d, a, b, c, in[14] + 0xc33707d6,  9);
+  MD5STEP(F2, c, d, a, b, in[ 3] + 0xf4d50d87, 14);
+  MD5STEP(F2, b, c, d, a, in[ 8] + 0x455a14ed, 20);
+  MD5STEP(F2, a, b, c, d, in[13] + 0xa9e3e905,  5);
+  MD5STEP(F2, d, a, b, c, in[ 2] + 0xfcefa3f8,  9);
+  MD5STEP(F2, c, d, a, b, in[ 7] + 0x676f02d9, 14);
+  MD5STEP(F2, b, c, d, a, in[12] + 0x8d2a4c8a, 20);
 
-	MD5STEP(F3, a, b, c, d, in[ 5] + 0xfffa3942,  4);
-	MD5STEP(F3, d, a, b, c, in[ 8] + 0x8771f681, 11);
-	MD5STEP(F3, c, d, a, b, in[11] + 0x6d9d6122, 16);
-	MD5STEP(F3, b, c, d, a, in[14] + 0xfde5380c, 23);
-	MD5STEP(F3, a, b, c, d, in[ 1] + 0xa4beea44,  4);
-	MD5STEP(F3, d, a, b, c, in[ 4] + 0x4bdecfa9, 11);
-	MD5STEP(F3, c, d, a, b, in[ 7] + 0xf6bb4b60, 16);
-	MD5STEP(F3, b, c, d, a, in[10] + 0xbebfbc70, 23);
-	MD5STEP(F3, a, b, c, d, in[13] + 0x289b7ec6,  4);
-	MD5STEP(F3, d, a, b, c, in[ 0] + 0xeaa127fa, 11);
-	MD5STEP(F3, c, d, a, b, in[ 3] + 0xd4ef3085, 16);
-	MD5STEP(F3, b, c, d, a, in[ 6] + 0x04881d05, 23);
-	MD5STEP(F3, a, b, c, d, in[ 9] + 0xd9d4d039,  4);
-	MD5STEP(F3, d, a, b, c, in[12] + 0xe6db99e5, 11);
-	MD5STEP(F3, c, d, a, b, in[15] + 0x1fa27cf8, 16);
-	MD5STEP(F3, b, c, d, a, in[2 ] + 0xc4ac5665, 23);
+  MD5STEP(F3, a, b, c, d, in[ 5] + 0xfffa3942,  4);
+  MD5STEP(F3, d, a, b, c, in[ 8] + 0x8771f681, 11);
+  MD5STEP(F3, c, d, a, b, in[11] + 0x6d9d6122, 16);
+  MD5STEP(F3, b, c, d, a, in[14] + 0xfde5380c, 23);
+  MD5STEP(F3, a, b, c, d, in[ 1] + 0xa4beea44,  4);
+  MD5STEP(F3, d, a, b, c, in[ 4] + 0x4bdecfa9, 11);
+  MD5STEP(F3, c, d, a, b, in[ 7] + 0xf6bb4b60, 16);
+  MD5STEP(F3, b, c, d, a, in[10] + 0xbebfbc70, 23);
+  MD5STEP(F3, a, b, c, d, in[13] + 0x289b7ec6,  4);
+  MD5STEP(F3, d, a, b, c, in[ 0] + 0xeaa127fa, 11);
+  MD5STEP(F3, c, d, a, b, in[ 3] + 0xd4ef3085, 16);
+  MD5STEP(F3, b, c, d, a, in[ 6] + 0x04881d05, 23);
+  MD5STEP(F3, a, b, c, d, in[ 9] + 0xd9d4d039,  4);
+  MD5STEP(F3, d, a, b, c, in[12] + 0xe6db99e5, 11);
+  MD5STEP(F3, c, d, a, b, in[15] + 0x1fa27cf8, 16);
+  MD5STEP(F3, b, c, d, a, in[2 ] + 0xc4ac5665, 23);
 
-	MD5STEP(F4, a, b, c, d, in[ 0] + 0xf4292244,  6);
-	MD5STEP(F4, d, a, b, c, in[7 ] + 0x432aff97, 10);
-	MD5STEP(F4, c, d, a, b, in[14] + 0xab9423a7, 15);
-	MD5STEP(F4, b, c, d, a, in[5 ] + 0xfc93a039, 21);
-	MD5STEP(F4, a, b, c, d, in[12] + 0x655b59c3,  6);
-	MD5STEP(F4, d, a, b, c, in[3 ] + 0x8f0ccc92, 10);
-	MD5STEP(F4, c, d, a, b, in[10] + 0xffeff47d, 15);
-	MD5STEP(F4, b, c, d, a, in[1 ] + 0x85845dd1, 21);
-	MD5STEP(F4, a, b, c, d, in[8 ] + 0x6fa87e4f,  6);
-	MD5STEP(F4, d, a, b, c, in[15] + 0xfe2ce6e0, 10);
-	MD5STEP(F4, c, d, a, b, in[6 ] + 0xa3014314, 15);
-	MD5STEP(F4, b, c, d, a, in[13] + 0x4e0811a1, 21);
-	MD5STEP(F4, a, b, c, d, in[4 ] + 0xf7537e82,  6);
-	MD5STEP(F4, d, a, b, c, in[11] + 0xbd3af235, 10);
-	MD5STEP(F4, c, d, a, b, in[2 ] + 0x2ad7d2bb, 15);
-	MD5STEP(F4, b, c, d, a, in[9 ] + 0xeb86d391, 21);
+  MD5STEP(F4, a, b, c, d, in[ 0] + 0xf4292244,  6);
+  MD5STEP(F4, d, a, b, c, in[7 ] + 0x432aff97, 10);
+  MD5STEP(F4, c, d, a, b, in[14] + 0xab9423a7, 15);
+  MD5STEP(F4, b, c, d, a, in[5 ] + 0xfc93a039, 21);
+  MD5STEP(F4, a, b, c, d, in[12] + 0x655b59c3,  6);
+  MD5STEP(F4, d, a, b, c, in[3 ] + 0x8f0ccc92, 10);
+  MD5STEP(F4, c, d, a, b, in[10] + 0xffeff47d, 15);
+  MD5STEP(F4, b, c, d, a, in[1 ] + 0x85845dd1, 21);
+  MD5STEP(F4, a, b, c, d, in[8 ] + 0x6fa87e4f,  6);
+  MD5STEP(F4, d, a, b, c, in[15] + 0xfe2ce6e0, 10);
+  MD5STEP(F4, c, d, a, b, in[6 ] + 0xa3014314, 15);
+  MD5STEP(F4, b, c, d, a, in[13] + 0x4e0811a1, 21);
+  MD5STEP(F4, a, b, c, d, in[4 ] + 0xf7537e82,  6);
+  MD5STEP(F4, d, a, b, c, in[11] + 0xbd3af235, 10);
+  MD5STEP(F4, c, d, a, b, in[2 ] + 0x2ad7d2bb, 15);
+  MD5STEP(F4, b, c, d, a, in[9 ] + 0xeb86d391, 21);
 
-	state[0] += a;
-	state[1] += b;
-	state[2] += c;
-	state[3] += d;
+  state[0] += a;
+  state[1] += b;
+  state[2] += c;
+  state[3] += d;
 }
 
 static void MD5Update(MD5_CTX *ctx, const unsigned char *input, size_t len) {
-	size_t have, need;
+  size_t have, need;
 
-	/* Check how many bytes we already have and how many more we need. */
-	have = (size_t)((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
-	need = MD5_BLOCK_LENGTH - have;
+  /* Check how many bytes we already have and how many more we need. */
+  have = (size_t)((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
+  need = MD5_BLOCK_LENGTH - have;
 
-	/* Update bitcount */
-	ctx->count += (uint64_t)len << 3;
+  /* Update bitcount */
+  ctx->count += (uint64_t)len << 3;
 
-	if (len >= need) {
-		if (have != 0) {
-			memcpy(ctx->buffer + have, input, need);
-			MD5Transform(ctx->state, ctx->buffer);
-			input += need;
-			len -= need;
-			have = 0;
-		}
+  if (len >= need) {
+    if (have != 0) {
+      memcpy(ctx->buffer + have, input, need);
+      MD5Transform(ctx->state, ctx->buffer);
+      input += need;
+      len -= need;
+      have = 0;
+    }
 
-		/* Process data in MD5_BLOCK_LENGTH-byte chunks. */
-		while (len >= MD5_BLOCK_LENGTH) {
-			MD5Transform(ctx->state, input);
-			input += MD5_BLOCK_LENGTH;
-			len -= MD5_BLOCK_LENGTH;
-		}
-	}
+    /* Process data in MD5_BLOCK_LENGTH-byte chunks. */
+    while (len >= MD5_BLOCK_LENGTH) {
+      MD5Transform(ctx->state, input);
+      input += MD5_BLOCK_LENGTH;
+      len -= MD5_BLOCK_LENGTH;
+    }
+  }
 
-	/* Handle any remaining bytes of data. */
-	if (len != 0)
-		memcpy(ctx->buffer + have, input, len);
+  /* Handle any remaining bytes of data. */
+  if (len != 0)
+    memcpy(ctx->buffer + have, input, len);
 }
 
 static void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
-	uint8_t count[8];
-	size_t padlen;
-	int i;
+  uint8_t count[8];
+  size_t padlen;
+  int i;
 
-	/* Convert count to 8 bytes in little endian order. */
-	PUT_64BIT_LE(count, ctx->count);
+  /* Convert count to 8 bytes in little endian order. */
+  PUT_64BIT_LE(count, ctx->count);
 
-	/* Pad out to 56 mod 64. */
-	padlen = MD5_BLOCK_LENGTH -
+  /* Pad out to 56 mod 64. */
+  padlen = MD5_BLOCK_LENGTH -
   ((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
-	if (padlen < 1 + 8)
-		padlen += MD5_BLOCK_LENGTH;
-	MD5Update(ctx, PADDING, padlen - 8);		/* padlen - 8 <= 64 */
-	MD5Update(ctx, count, 8);
+  if (padlen < 1 + 8)
+    padlen += MD5_BLOCK_LENGTH;
+  MD5Update(ctx, PADDING, padlen - 8);		/* padlen - 8 <= 64 */
+  MD5Update(ctx, count, 8);
 
-	if (digest != NULL) {
-		for (i = 0; i < 4; i++)
-			PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
-	}
-	memset(ctx, 0, sizeof(*ctx));	/* in case it's sensitive */
+  if (digest != NULL) {
+    for (i = 0; i < 4; i++)
+      PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
+  }
+  memset(ctx, 0, sizeof(*ctx));	/* in case it's sensitive */
 }
-/////////////////////////////////// END OF MD5 THIRD PARTY CODE
+/********************************** END OF MD5 THIRD PARTY CODE */
 
-/////////////////////////////////// START OF SHA-1 THIRD PARTY CODE
-// SHA-1 in C
-// By Steve Reid <sreid@sea-to-sky.net>
-// 100% Public Domain
+/********************************** START OF SHA-1 THIRD PARTY CODE */
+/*
+ * SHA-1 in C
+ * By Steve Reid <sreid@sea-to-sky.net>
+ * 100% Public Domain
+ */
 
 #define SHA1HANDSOFF
 #if defined(__sun)
@@ -1531,7 +1533,7 @@ static int is_big_endian(void) {
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
 static uint32_t blk0(union char64long16 *block, int i) {
-  // Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN
+  /* Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN */
   if (!is_big_endian()) {
     block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) |
     (rol(block->l[i], 8) & 0x00FF00FF);
@@ -1588,8 +1590,10 @@ static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
   state[2] += c;
   state[3] += d;
   state[4] += e;
-  // Erase working structures. The order of operations is important,
-  // used to ensure that compiler doesn't optimize those out.
+  /*
+   * Erase working structures. The order of operations is important,
+   * used to ensure that compiler doesn't optimize those out.
+   */
   memset(block, 0, sizeof(block));
   a = b = c = d = e = 0;
   (void) a; (void) b; (void) c; (void) d; (void) e;
@@ -1647,7 +1651,7 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
   memset(context, '\0', sizeof(*context));
   memset(&finalcount, '\0', sizeof(finalcount));
 }
-/////////////////////////////////// START OF SHA-1 THIRD PARTY CODE
+/********************************** START OF SHA-1 THIRD PARTY CODE */
 
 
 static struct v7_val s_crypto = MKOBJ(&s_prototypes[V7_CLASS_OBJECT]);
@@ -1725,7 +1729,7 @@ V7_PRIVATE void init_crypto(void) {
 
   SET_RO_PROP_V(s_global, "Crypto", s_crypto);
 }
-#endif  // V7_DISABLE_CRYPTO
+#endif  /* V7_DISABLE_CRYPTO */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -1757,8 +1761,8 @@ V7_PRIVATE enum v7_err Arr_push(struct v7_c_func_arg *cfa) {
 }
 
 V7_PRIVATE int cmp_prop(const void *pa, const void *pb) {
-  const struct v7_prop *p1 = *(struct v7_prop **)pa;
-  const struct v7_prop *p2 = *(struct v7_prop **)pb;
+  const struct v7_prop *p1 = *(struct v7_prop **) pa;
+  const struct v7_prop *p2 = *(struct v7_prop **) pb;
   return cmp(p2->val, p1->val);
 }
 
@@ -1767,11 +1771,11 @@ V7_PRIVATE enum v7_err Arr_sort(struct v7_c_func_arg *cfa) {
   struct v7_val *v = cfa->this_obj;
   struct v7_prop *p, **arr;
 
-  // TODO(lsm): do proper error checking
+  /* TODO(lsm): do proper error checking */
   for (p = v->v.array; p != NULL; p = p->next) {
     length++;
   }
-  arr = (struct v7_prop **)malloc(length * sizeof(p));
+  arr = (struct v7_prop **) malloc(length * sizeof(p));
   for (i = 0, p = v->v.array; p != NULL; p = p->next) {
     arr[i++] = p;
   }
@@ -1817,7 +1821,8 @@ V7_PRIVATE void init_boolean(void) {
 
 
 V7_PRIVATE enum v7_err Date_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
+  struct v7_val *obj = cfa->called_as_constructor ? cfa->this_obj :
+                       v7_push_new_object(cfa->v7);
   v7_set_class(obj, V7_CLASS_DATE);
   return V7_OK;
 }
@@ -2048,42 +2053,42 @@ struct re_env {
 };
 
 enum RE_CODE {
-  I_END = 10, /* Terminate: match found */
+  I_END = 10,  /* Terminate: match found */
   I_ANY,
-  P_ANY = I_ANY, /* Any character except newline, . */
-  I_ANYNL,       /* Any character including newline, . */
+  P_ANY = I_ANY,  /* Any character except newline, . */
+  I_ANYNL,        /* Any character including newline, . */
   I_BOL,
-  P_BOL = I_BOL, /* Beginning of line, ^ */
+  P_BOL = I_BOL,  /* Beginning of line, ^ */
   I_CH,
   P_CH = I_CH,
   I_EOL,
-  P_EOL = I_EOL, /* End of line, $ */
+  P_EOL = I_EOL,  /* End of line, $ */
   I_EOS,
-  P_EOS = I_EOS, /* End of string, \0 */
+  P_EOS = I_EOS,  /* End of string, \0 */
   I_JUMP,
   I_LA,
   P_LA = I_LA,
   I_LA_N,
   P_LA_N = I_LA_N,
   I_LBRA,
-  P_BRA = I_LBRA, /* Left bracket, ( */
+  P_BRA = I_LBRA,  /* Left bracket, ( */
   I_REF,
   P_REF = I_REF,
   I_REP,
   P_REP = I_REP,
   I_REP_INI,
-  I_RBRA, /* Right bracket, ) */
+  I_RBRA,  /* Right bracket, ) */
   I_SET,
-  P_SET = I_SET, /* Character set, [] */
+  P_SET = I_SET,  /* Character set, [] */
   I_SET_N,
-  P_SET_N = I_SET_N, /* Negated character set, [] */
+  P_SET_N = I_SET_N,  /* Negated character set, [] */
   I_SPLIT,
   I_WORD,
   P_WORD = I_WORD,
   I_WORD_N,
   P_WORD_N = I_WORD_N,
-  P_ALT, /* Alternation, | */
-  P_CAT, /* Concatentation, implicit operator */
+  P_ALT,  /* Alternation, | */
+  P_CAT,  /* Concatentation, implicit operator */
   L_CH = 256,
   L_COUNT,  /* {M,N} */
   L_EOS,    /* End of string, \0 */
@@ -2498,7 +2503,8 @@ static int re_lexer(struct re_env *e) {
     return L_CH;
   }
 
-  if (e->flags.re) switch (e->curr_rune) {
+  if (e->flags.re) {
+    switch (e->curr_rune) {
       case 0:
       case '$':
       case ')':
@@ -2527,8 +2533,9 @@ static int re_lexer(struct re_env *e) {
           }
         return '(';
     }
-  else if (e->curr_rune == 0)
+  } else if (e->curr_rune == 0) {
     return 0;
+  }
 
   return L_CH;
 }
@@ -2961,7 +2968,8 @@ static void node_print(struct Renode *nd) {
       printf("}");
       break;
     case P_CH:
-      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" : "'\\u%04X'", nd->par.c);
+      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" :
+             "'\\u%04X'", nd->par.c);
       break;
     case P_EOL:
       printf("$");
@@ -2984,7 +2992,8 @@ static void node_print(struct Renode *nd) {
       break;
     case P_REP:
       node_print(nd->par.xy.x);
-      printf(nd->par.xy.y.rp.ng ? "{%d,%d}?" : "{%d,%d}", nd->par.xy.y.rp.min, nd->par.xy.y.rp.max);
+      printf(nd->par.xy.y.rp.ng ? "{%d,%d}?" : "{%d,%d}", nd->par.xy.y.rp.min,
+             nd->par.xy.y.rp.max);
       break;
     case P_SET:
       printf("[");
@@ -3021,7 +3030,8 @@ static void program_print(struct Reprog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n", inst->par.c);
+        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" :
+               "'\\u%04X'\n", inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -3033,10 +3043,12 @@ static void program_print(struct Reprog *prog) {
         printf("-->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
+        printf("la %d %d\n", inst->par.xy.x - prog->start,
+               inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %d %d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
+        printf("la_n %d %d\n", inst->par.xy.x - prog->start,
+               inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
         printf("( %d\n", inst->par.n);
@@ -3045,7 +3057,8 @@ static void program_print(struct Reprog *prog) {
         printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start, inst->par.xy.y.y - prog->start);
+        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start,
+               inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
         printf("\\%d\n", inst->par.n);
@@ -3054,7 +3067,8 @@ static void program_print(struct Reprog *prog) {
         printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
-        printf("init_rep %d %d\n", inst->par.xy.y.rp.min, inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
+        printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
+               inst->par.xy.y.rp.min + inst->par.xy.y.rp.max);
         break;
       case I_SET:
         printf("[");
@@ -3090,7 +3104,7 @@ struct Reprog *re_compiler(const char *pattern, struct v7_val_flags flags,
     if (p_err_msg) *p_err_msg = e.err_msg;
     reg_free(e.pstart);
     reg_free(e.prog);
-    return (struct Reprog *)-1;
+    return (struct Reprog *) -1;
   }
 
   e.src = pattern;
@@ -3738,7 +3752,9 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
       if (cfa->this_obj->fl.fl.re_g)
         cfa->this_obj->v.str.lastIndex = utfnlen(begin, sub.sub->end - begin);
       return V7_OK;
-    } else cfa->this_obj->v.str.lastIndex = 0;
+    } else {
+      cfa->this_obj->v.str.lastIndex = 0;
+    }
   }
   TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
@@ -5616,7 +5632,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
           out_sub_num++;
         }
       }
-      p = (char *)loot.sub->end;
+      p = (char *) loot.sub->end;
     } while (re->fl.fl.re_g && p < str_end);
     if (p < str_end) {
       ptok->start = p;
@@ -5628,7 +5644,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
     out_str = malloc(out_len + 1);
     CHECK(out_str, V7_OUT_OF_MEMORY);
     ptok = out_sub;
-    p = (char *)out_str;
+    p = (char *) out_str;
     do {
       size_t ln = ptok->end - ptok->start;
       memcpy(p, ptok->start, ln);
@@ -5957,7 +5973,7 @@ V7_PRIVATE void init_string(void) {
 
 V7_PRIVATE enum v7_err Json_stringify(struct v7_c_func_arg *cfa) {
   v7_push_string(cfa->v7, "implement me", 12, 0);
-  // TODO(lsm): implement JSON.stringify
+  /* TODO(lsm): implement JSON.stringify */
   return V7_OK;
 }
 
@@ -5992,7 +6008,7 @@ V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
   int i;
   struct v7_val *obj = v7_push_new_object(cfa->v7);
 
-  // Push new object as a context for the loading new module
+  /* Push new object as a context for the loading new module */
   obj->next = cfa->v7->ctx;
   cfa->v7->ctx = obj;
 
@@ -6001,7 +6017,7 @@ V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
     if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
   }
 
-  // Pop context, and return it
+  /* Pop context, and return it */
   cfa->v7->ctx = obj->next;
   v7_push_val(cfa->v7, obj);
 
@@ -6040,26 +6056,26 @@ V7_PRIVATE void base64_encode(const unsigned char *src, int src_len,
   dst[j++] = '\0';
 }
 
-// Convert one byte of encoded base64 input stream to 6-bit chunk
+/* Convert one byte of encoded base64 input stream to 6-bit chunk */
 V7_PRIVATE unsigned char from_b64(unsigned char ch) {
-  // Inverse lookup map
+  /* Inverse lookup map */
   V7_PRIVATE const unsigned char tab[128] = {
-      255, 255, 255, 255, 255, 255, 255, 255,  //  0
-      255, 255, 255, 255, 255, 255, 255, 255,  //  8
-      255, 255, 255, 255, 255, 255, 255, 255,  //  16
-      255, 255, 255, 255, 255, 255, 255, 255,  //  24
-      255, 255, 255, 255, 255, 255, 255, 255,  //  32
-      255, 255, 255, 62,  255, 255, 255, 63,   //  40
-      52,  53,  54,  55,  56,  57,  58,  59,   //  48
-      60,  61,  255, 255, 255, 200, 255, 255,  //  56   '=' is 200, on index 61
-      255, 0,   1,   2,   3,   4,   5,   6,    //  64
-      7,   8,   9,   10,  11,  12,  13,  14,   //  72
-      15,  16,  17,  18,  19,  20,  21,  22,   //  80
-      23,  24,  25,  255, 255, 255, 255, 255,  //  88
-      255, 26,  27,  28,  29,  30,  31,  32,   //  96
-      33,  34,  35,  36,  37,  38,  39,  40,   //  104
-      41,  42,  43,  44,  45,  46,  47,  48,   //  112
-      49,  50,  51,  255, 255, 255, 255, 255,  //  120
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 0 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 8 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 16 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 24 */
+    255, 255, 255, 255, 255, 255, 255, 255,  /* 32 */
+    255, 255, 255, 62,  255, 255, 255, 63,   /* 40 */
+    52,  53,  54,  55,  56,  57,  58,  59,   /* 48 */
+    60,  61,  255, 255, 255, 200, 255, 255,  /* 56 '=' is 200, on index 61 */
+    255, 0,   1,   2,   3,   4,   5,   6,    /* 64 */
+    7,   8,   9,   10,  11,  12,  13,  14,   /* 72 */
+    15,  16,  17,  18,  19,  20,  21,  22,   /* 80 */
+    23,  24,  25,  255, 255, 255, 255, 255,  /* 88 */
+    255, 26,  27,  28,  29,  30,  31,  32,   /* 96 */
+    33,  34,  35,  36,  37,  38,  39,  40,   /* 104 */
+    41,  42,  43,  44,  45,  46,  47,  48,   /* 112 */
+    49,  50,  51,  255, 255, 255, 255, 255,  /* 120 */
   };
   return tab[ch & 127];
 }
@@ -6069,7 +6085,7 @@ V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
          (b = from_b64(s[1])) != 255 && (c = from_b64(s[2])) != 255 &&
          (d = from_b64(s[3])) != 255) {
-    if (a == 200 || b == 200) break;  // '=' can't be there
+    if (a == 200 || b == 200) break;  /* '=' can't be there */
     *dst++ = a << 2 | b >> 4;
     if (c == 200) break;
     *dst++ = b << 4 | c >> 2;
@@ -6087,8 +6103,8 @@ V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
   result = v7_push_string(cfa->v7, NULL, 0, 0);
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     result->v.str.len = v->v.str.len * 3 / 4 + 1;
-    result->v.str.buf = (char *)malloc(result->v.str.len + 1);
-    base64_decode((const unsigned char *)v->v.str.buf, (int)v->v.str.len,
+    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
+    base64_decode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   result->v.str.buf);
   }
   return V7_OK;
@@ -6100,8 +6116,8 @@ V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
   result = v7_push_string(cfa->v7, NULL, 0, 0);
   if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
     result->v.str.len = v->v.str.len * 3 / 2 + 1;
-    result->v.str.buf = (char *)malloc(result->v.str.len + 1);
-    base64_encode((const unsigned char *)v->v.str.buf, (int)v->v.str.len,
+    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
+    base64_encode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   result->v.str.buf);
   }
   return V7_OK;
@@ -6166,7 +6182,7 @@ V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
     result = v7_push_new_object(cfa->v7);
     result->proto = &s_file;
     v7_setv(cfa->v7, result, V7_TYPE_STR, V7_TYPE_NUM, "fp", 2, 0,
-            (double)(unsigned long) fp);  // after v7_set_class !
+            (double)(unsigned long) fp);  /* after v7_set_class ! */
   } else {
     v7_make_and_push(cfa->v7, V7_TYPE_NULL);
   }
@@ -6233,7 +6249,7 @@ static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
     TRY(check_str_re_conv(v7, &a, 0));
     TRY(check_str_re_conv(v7, &b, 0));
 
-    str = (char *)malloc(a->v.str.len + b->v.str.len + 1);
+    str = (char *) malloc(a->v.str.len + b->v.str.len + 1);
     CHECK(str != NULL, V7_OUT_OF_MEMORY);
     v7_init_str(res, str, a->v.str.len + b->v.str.len, 0);
     memcpy(str, a->v.str.buf, a->v.str.len);
@@ -6288,8 +6304,10 @@ static enum v7_err arith_op(struct v7 *v7, enum v7_tok tok, int sp1, int sp2) {
   sp = v7->sp;
   TRY(arith(v7, v1, v2, v7_top_val(v7), tok));
 
-  /* arith() might push another value on stack if type conversion was made. */
-  /* if that happens, re-push the result again */
+  /*
+   * arith() might push another value on stack if type conversion was made.
+   * If that happens, re-push the result again
+   */
   if (v7->sp > sp) {
     TRY(v7_push(v7, v7->stack[sp - 1]));
   }
@@ -6332,9 +6350,11 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     next_tok(v7);
   }
 
-  /* 1. SCANNING: do nothing, just pass through the function code */
-  /* 2. EXECUTING && v == 0: don't execute but create a closure */
-  /* 3. EXECUTING && v != 0: execute the closure */
+  /*
+   * 1. SCANNING: do nothing, just pass through the function code
+   * 2. EXECUTING && v == 0: don't execute but create a closure
+   * 3. EXECUTING && v != 0: execute the closure
+   */
 
   if (EXECUTING(v7->flags) && v == NULL) {
     TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
@@ -6342,7 +6362,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     v7_set_class(f, V7_CLASS_FUNCTION);
     f->fl.fl.js_func = 1;
 
-    f->v.func.source_code = (char *)src;
+    f->v.func.source_code = (char *) src;
     f->v.func.line_no = line_no;
     /* printf("PFD [%.*s]\n", 45, f->v.func.source_code); */
 
@@ -6396,8 +6416,10 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
     /* Cleanup execution context */
     v7->ctx = ctx->next;
     ctx->next = NULL;
-    /* assert(f->v.func.var_obj == NULL); */
-    /* f->v.func.var_obj = ctx; */
+#if 0
+    assert(f->v.func.var_obj == NULL);
+    f->v.func.var_obj = ctx;
+#endif
     v7_freeval(v7, ctx);
 
     v7->cf = f->next;
@@ -6425,14 +6447,16 @@ V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *this_obj,
   CHECK(f != NULL, V7_TYPE_ERROR);
   CHECK(v7_is_class(f, V7_CLASS_FUNCTION), V7_CALLED_NON_FUNCTION);
 
-  /* Stack looks as follows: */
-  /*  v   --->  <called_function>     v[0] */
-  /*            <argument_0>        ---+ */
-  /*            <argument_1>           | */
-  /*            <argument_2>           |  <-- num_args */
-  /*            ...                    | */
-  /*            <argument_N>        ---+ */
-  /* top  --->  <return_value> */
+  /*
+   * Stack looks as follows:
+   *  v   --->  <called_function>     v[0]
+   *            <argument_0>        ---+
+   *            <argument_1>           |
+   *            <argument_2>           |  <-- num_args
+   *            ...                    |
+   *            <argument_N>        ---+
+   * top  --->  <return_value>
+   */
   if (f->fl.fl.js_func) {
     struct v7_pstate old_pstate = v7->pstate;
     enum v7_tok tok = v7->cur_tok;
@@ -6745,9 +6769,11 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
 
       ns = get2(ns, expr_val);
 
-      /* If we're doing an assignment, */
-      /* then parse_assign() looks at v7->key, v7->key_len for the key. */
-      /* Initialize key properly for cases like "a.b['c'] = d;" */
+      /*
+       * If we're doing an assignment,
+       * then parse_assign() looks at v7->key, v7->key_len for the key.
+       * Initialize key properly for cases like "a.b['c'] = d;"
+       */
       TRY(check_str_re_conv(v7, &expr_val, 0));
       v7->key = expr_val->v.str.buf;
       v7->key_len = expr_val->v.str.len;
@@ -6768,9 +6794,11 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
   return V7_OK;
 }
 
-/* Member Access            left-to-right    x . x */
-/* Computed Member Access   left-to-right    x [ x ] */
-/* new (with argument list) n/a              new x ( x ) */
+/*
+ * Member Access            left-to-right    x . x
+ * Computed Member Access   left-to-right    x [ x ]
+ * new (with argument list) n/a              new x ( x )
+ */
 static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   struct v7_val *old_this = v7->this_obj;
 
@@ -6791,10 +6819,12 @@ static enum v7_err parse_precedence_1(struct v7 *v7, int has_new) {
   return V7_OK;
 }
 
-/* x . y () . z () () */
-
-/* Function Call                 left-to-right     x ( x ) */
-/* new (without argument list)   right-to-left     new x */
+/*
+ * x . y () . z () ()
+ *
+ * Function Call                 left-to-right     x ( x )
+ * new (without argument list)   right-to-left     new x
+ */
 static enum v7_err parse_precedence_2(struct v7 *v7) {
   int has_new = 0;
   struct v7_val *old_this_obj = v7->this_obj, *cur_this = v7->this_obj;
@@ -6824,8 +6854,10 @@ static enum v7_err parse_precedence_2(struct v7 *v7) {
   return V7_OK;
 }
 
-/* Postfix Increment    n/a      x ++ */
-/* Postfix Decrement    n/a      x -- */
+/*
+ * Postfix Increment    n/a      x ++
+ * Postfix Decrement    n/a      x --
+ */
 static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
   TRY(parse_precedence_2(v7));
   if (v7->cur_tok == TOK_PLUS_PLUS || v7->cur_tok == TOK_MINUS_MINUS) {
@@ -6856,15 +6888,17 @@ static enum v7_err parse_postfix_inc_dec(struct v7 *v7) {
   return V7_OK;
 }
 
-/* Logical NOT        right-to-left    ! x */
-/* Bitwise NOT        right-to-left    ~ x */
-/* Unary Plus         right-to-left    + x */
-/* Unary Negation     right-to-left    - x */
-/* Prefix Increment   right-to-left    ++ x */
-/* Prefix Decrement   right-to-left    -- x */
-/* typeof             right-to-left    typeof x */
-/* void               right-to-left    void x */
-/* delete             right-to-left    delete x */
+/*
+ * Logical NOT        right-to-left    ! x
+ * Bitwise NOT        right-to-left    ~ x
+ * Unary Plus         right-to-left    + x
+ * Unary Negation     right-to-left    - x
+ * Prefix Increment   right-to-left    ++ x
+ * Prefix Decrement   right-to-left    -- x
+ * typeof             right-to-left    typeof x
+ * void               right-to-left    void x
+ * delete             right-to-left    delete x
+ */
 static enum v7_err parse_unary(struct v7 *v7) {
   static const char *type_names[] = {"undefined", "object", "boolean",
                                      "string",    "number", "object"};
@@ -6968,11 +7002,11 @@ static enum v7_err logical_op(struct v7 *v7, enum v7_tok op, int sp1, int sp2) {
       case TOK_LE:
         res = n1 <= n2;
         break;
-      case TOK_EQ: /* FALLTHROUGH */
+      case TOK_EQ:  /* FALLTHROUGH */
       case TOK_EQ_EQ:
         res = cmp(v1, v2) == 0;
         break;
-      case TOK_NE: /* FALLTHROUGH */
+      case TOK_NE:  /* FALLTHROUGH */
       case TOK_NE_NE:
         res = cmp(v1, v2) != 0;
         break;
@@ -7131,7 +7165,7 @@ V7_PRIVATE enum v7_err parse_ternary(struct v7 *v7) {
     if (EXECUTING(v7->flags)) {
       CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
       condition_true = v7_is_true(v7_top(v7)[-1]);
-      TRY(inc_stack(v7, -1)); /* Remove condition result */
+      TRY(inc_stack(v7, -1));  /* Remove condition result */
     }
 
     EXPECT(v7, TOK_QUESTION);
@@ -7152,19 +7186,20 @@ static enum v7_err do_assign(struct v7 *v7, struct v7_val *obj, const char *key,
   if (EXECUTING(v7->flags)) {
     struct v7_val **top = v7_top(v7), *a = top[-2], *b = top[-1];
 
-    /* Stack layout at this point (assuming stack grows down): */
-    /* */
-    /*          | object's value (rvalue)    |    top[-2] */
-    /*          +----------------------------+ */
-    /*          | expression value (lvalue)  |    top[-1] */
-    /*          +----------------------------+ */
-    /* top -->  |       nothing yet          | */
-
+    /*
+     * Stack layout at this point (assuming stack grows down):
+     *
+     *          | object's value (rvalue)    |    top[-2]
+     *          +----------------------------+
+     *          | expression value (lvalue)  |    top[-1]
+     *          +----------------------------+
+     * top -->  |       nothing yet          |
+     */
     switch (tok) {
       case TOK_ASSIGN:
         CHECK(v7->sp > 0, V7_INTERNAL_ERROR);
         TRY(v7_setv(v7, obj, V7_TYPE_STR, V7_TYPE_OBJ, key, key_len, 1,
-                    b));  // TODO(vrz) ERROR
+                    b));  /* TODO(vrz) ERROR */
         return V7_OK;
       case TOK_PLUS_ASSIGN:
         TRY(arith(v7, a, b, a, TOK_PLUS));
@@ -7201,7 +7236,7 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
   /* TODO(lsm): parse_yield() should be here, do we want to implement it? */
   TRY(parse_ternary(v7));
 
-  /* Parse assignment. */
+  /* Parse assignment */
   if (v7->cur_tok >= TOK_ASSIGN && v7->cur_tok <= TOK_LOGICAL_OR_ASSING) {
     /* Remember current reference */
     const char *key = v7->key;
@@ -7279,7 +7314,7 @@ static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
     TRY(parse_compound_statement(v7, has_return));
   }
 
-  v7->flags = old_flags; /* Restore old execution flags */
+  v7->flags = old_flags;  /* Restore old execution flags */
   return V7_OK;
 }
 
@@ -7345,11 +7380,11 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   /* Pass through the loop, don't execute it, just remember locations */
   v7->flags |= V7_NO_EXEC;
   get_v7_state(v7, &s2);
-  TRY(parse_expression(v7)); /* expr2 (condition) */
+  TRY(parse_expression(v7));  /* expr2 (condition) */
   EXPECT(v7, TOK_SEMICOLON);
 
   get_v7_state(v7, &s3);
-  TRY(parse_expression(v7)); /* expr3  (post-iteration) */
+  TRY(parse_expression(v7));  /* expr3  (post-iteration) */
   EXPECT(v7, TOK_CLOSE_PAREN);
 
   get_v7_state(v7, &s_block);
@@ -7364,14 +7399,14 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
     for (;;) {
       set_v7_state(v7, &s2);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_expression(v7)); /* Evaluate condition */
+      TRY(parse_expression(v7));  /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top(v7)[-1]);
       if (is_true) break;
 
       set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_compound_statement(v7, has_return)); /* Loop body */
+      TRY(parse_compound_statement(v7, has_return));  /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
 
       set_v7_state(v7, &s3);
@@ -7410,17 +7445,17 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
     for (;;) {
       set_v7_state(v7, &s_cond);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_expression(v7)); /* Evaluate condition */
+      TRY(parse_expression(v7));  /* Evaluate condition */
       assert(v7->sp > old_sp);
       is_true = !v7_is_true(v7_top_val(v7));
       if (is_true) break;
 
       set_v7_state(v7, &s_block);
       assert(!EXECUTING(v7->flags) == 0);
-      TRY(parse_compound_statement(v7, has_return)); /* Loop body */
+      TRY(parse_compound_statement(v7, has_return));  /* Loop body */
       assert(!EXECUTING(v7->flags) == 0);
 
-      TRY(inc_stack(v7, old_sp - v7->sp)); /* Clean up stack */
+      TRY(inc_stack(v7, old_sp - v7->sp));  /* Clean up stack */
     }
   }
 
@@ -7531,8 +7566,10 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
       break;
   }
 
-  /* Skip optional colons and semicolons. */
-  /* TODO(lsm): follow automatic semicolon insertion rules */
+  /*
+   * Skip optional colons and semicolons.
+   * TODO(lsm): follow automatic semicolon insertion rules
+   */
   while (v7->cur_tok == TOK_COMMA || v7->cur_tok == TOK_SEMICOLON) {
     next_tok(v7);
   }
@@ -7545,7 +7582,7 @@ V7_PRIVATE enum v7_err parse_statement(struct v7 *v7, int *has_return) {
  */
 
 
-// NOTE(lsm): Must be in the same order as enum for keywords
+/* NOTE(lsm): Must be in the same order as enum for keywords */
 struct {
   const char *p;
   int len;
@@ -7580,15 +7617,17 @@ struct {
                   {"while", 5},
                   {"with", 4}};
 
-// Move ptr to the next token, skipping comments and whitespaces.
-// Return number of new line characters detected.
+/*
+ * Move ptr to the next token, skipping comments and whitespaces.
+ * Return number of new line characters detected.
+ */
 V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
-  while (s != p && *s != '\0' && (isspace((unsigned char)*s) || *s == '/')) {
+  while (s != p && *s != '\0' && (isspace((unsigned char) *s) || *s == '/')) {
     p = s;
-    while (*s != '\0' && isspace((unsigned char)*s)) {
+    while (*s != '\0' && isspace((unsigned char) *s)) {
       if (*s == '\n') num_lines++;
       s++;
     }
@@ -7609,13 +7648,13 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   return num_lines;
 }
 
-// TODO(lsm): use lookup table to speed it up
+/* TODO(lsm): use lookup table to speed it up */
 static int is_ident_char(int ch) {
   return ch == '$' || ch == '_' || isalnum(ch);
 }
 
 static void ident(const char **s) {
-  while (is_ident_char((unsigned char)s[0][0])) (*s)++;
+  while (is_ident_char((unsigned char) s[0][0])) (*s)++;
 }
 
 static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
@@ -7666,14 +7705,14 @@ static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
 }
 
 static void parse_number(const char *s, const char **end, double *num) {
-  *num = strtod(s, (char **)end);
+  *num = strtod(s, (char **) end);
 }
 
 static enum v7_tok parse_str_literal(const char **p) {
   const char *s = *p;
   int quote = *s++;
 
-  // Scan string literal into the buffer, handle escape sequences
+  /* Scan string literal into the buffer, handle escape sequences */
   while (*s != quote && *s != '\0') {
     switch (*s) {
       case '\\':
@@ -7712,7 +7751,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
   const char *p = *s;
 
   switch (*p) {
-    // Letters
+    /* Letters */
     case 'a':
       ident(s);
       return TOK_IDENTIFIER;
@@ -7807,7 +7846,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       ident(s);
       return TOK_IDENTIFIER;
 
-    // Numbers
+    /* Numbers */
     case '0':
     case '1':
     case '2':
@@ -7821,12 +7860,12 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       parse_number(p, s, n);
       return TOK_NUMBER;
 
-    // String literals
+    /* String literals */
     case '\'':
     case '"':
       return parse_str_literal(s);
 
-    // Punctuators
+    /* Punctuators */
     case '=':
       return punct2(s, '=', TOK_EQ, '=', TOK_EQ_EQ, TOK_ASSIGN);
     case '!':
@@ -7884,7 +7923,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       return TOK_CLOSE_BRACKET;
     case '.':
       switch (*(*s+1)) {
-        // Numbers
+        /* Numbers */
         case '0':
         case '1':
         case '2':
@@ -7980,10 +8019,10 @@ struct v7 *v7_create(void) {
 
   if (prototypes_initialized == 0) {
     prototypes_initialized++;
-    init_stdlib();  // One-time initialization
+    init_stdlib();  /* One-time initialization */
   }
 
-  if ((v7 = (struct v7 *)calloc(1, sizeof(*v7))) != NULL) {
+  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
     v7_set_class(&v7->root_scope, V7_CLASS_OBJECT);
     v7->root_scope.proto = &s_global;
     v7->root_scope.ref_count = 1;
@@ -8058,9 +8097,9 @@ int v7_is_true(const struct v7_val *v) {
 enum v7_err v7_append(struct v7 *v7, struct v7_val *arr, struct v7_val *val) {
   struct v7_prop **head, *prop;
   CHECK(v7_is_class(arr, V7_CLASS_ARRAY), V7_INTERNAL_ERROR);
-  // Append to the end of the list, to make indexing work
-  for (head = &arr->v.array; *head != NULL; head = &head[0]->next)
-    ;
+  /* Append to the end of the list, to make indexing work */
+  for (head = &arr->v.array; *head != NULL; head = &head[0]->next) {
+  }
   prop = mkprop(v7);
   CHECK(prop != NULL, V7_OUT_OF_MEMORY);
   prop->next = *head;
@@ -8080,7 +8119,7 @@ void v7_copy(struct v7 *v7, struct v7_val *orig, struct v7_val *v) {
         v7_set2(v7, v, p->key, p->val);
       }
       break;
-    // TODO(lsm): add the rest of types
+      /* TODO(lsm): add the rest of types */
     default:
       abort();
       break;
@@ -8140,7 +8179,7 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
   } else if (is_bool(v)) {
     snprintf(buf, bsiz, "%s", v->v.num ? "true" : "false");
   } else if (is_num(v)) {
-    // TODO: check this on 32-bit arch
+    /* TODO: check this on 32-bit arch */
     if (INFINITY == v->v.num)
       snprintf(buf, bsiz, "Infinity");
     else if (-INFINITY == v->v.num)
@@ -8191,18 +8230,18 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   if ((fp = fopen(path, "r")) == NULL) {
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
-  } else if ((p = (char *)calloc(1, (size_t)file_size + 1)) == NULL) {
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     fclose(fp);
   } else {
     rewind(fp);
-    fread(p, 1, (size_t)file_size, fp);
+    fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
     status = do_exec(v7, path, p, v7->sp);
     free(p);
   }
 
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
-  // return status;
+  /* return status; */
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -8213,9 +8252,9 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
 #ifdef V7_EXE
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
-  int i;//, error_code;
+  int i; /*, error_code; */
 
-  // Execute inline code
+  /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (!v7_exec(v7, argv[i + 1])) {
@@ -8226,7 +8265,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // Execute files
+  /* Execute files */
   for (; i < argc; i++) {
     if (!v7_exec_file(v7, argv[i])) {
       fprintf(stderr, "%s\n", v7_get_error_string(v7));

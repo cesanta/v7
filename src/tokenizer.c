@@ -5,7 +5,7 @@
 
 #include "internal.h"
 
-// NOTE(lsm): Must be in the same order as enum for keywords
+/* NOTE(lsm): Must be in the same order as enum for keywords */
 struct {
   const char *p;
   int len;
@@ -40,15 +40,17 @@ struct {
                   {"while", 5},
                   {"with", 4}};
 
-// Move ptr to the next token, skipping comments and whitespaces.
-// Return number of new line characters detected.
+/*
+ * Move ptr to the next token, skipping comments and whitespaces.
+ * Return number of new line characters detected.
+ */
 V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
-  while (s != p && *s != '\0' && (isspace((unsigned char)*s) || *s == '/')) {
+  while (s != p && *s != '\0' && (isspace((unsigned char) *s) || *s == '/')) {
     p = s;
-    while (*s != '\0' && isspace((unsigned char)*s)) {
+    while (*s != '\0' && isspace((unsigned char) *s)) {
       if (*s == '\n') num_lines++;
       s++;
     }
@@ -69,13 +71,13 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   return num_lines;
 }
 
-// TODO(lsm): use lookup table to speed it up
+/* TODO(lsm): use lookup table to speed it up */
 static int is_ident_char(int ch) {
   return ch == '$' || ch == '_' || isalnum(ch);
 }
 
 static void ident(const char **s) {
-  while (is_ident_char((unsigned char)s[0][0])) (*s)++;
+  while (is_ident_char((unsigned char) s[0][0])) (*s)++;
 }
 
 static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
@@ -126,14 +128,14 @@ static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
 }
 
 static void parse_number(const char *s, const char **end, double *num) {
-  *num = strtod(s, (char **)end);
+  *num = strtod(s, (char **) end);
 }
 
 static enum v7_tok parse_str_literal(const char **p) {
   const char *s = *p;
   int quote = *s++;
 
-  // Scan string literal into the buffer, handle escape sequences
+  /* Scan string literal into the buffer, handle escape sequences */
   while (*s != quote && *s != '\0') {
     switch (*s) {
       case '\\':
@@ -172,7 +174,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
   const char *p = *s;
 
   switch (*p) {
-    // Letters
+    /* Letters */
     case 'a':
       ident(s);
       return TOK_IDENTIFIER;
@@ -267,7 +269,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       ident(s);
       return TOK_IDENTIFIER;
 
-    // Numbers
+    /* Numbers */
     case '0':
     case '1':
     case '2':
@@ -281,12 +283,12 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       parse_number(p, s, n);
       return TOK_NUMBER;
 
-    // String literals
+    /* String literals */
     case '\'':
     case '"':
       return parse_str_literal(s);
 
-    // Punctuators
+    /* Punctuators */
     case '=':
       return punct2(s, '=', TOK_EQ, '=', TOK_EQ_EQ, TOK_ASSIGN);
     case '!':
@@ -344,7 +346,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       return TOK_CLOSE_BRACKET;
     case '.':
       switch (*(*s+1)) {
-        // Numbers
+        /* Numbers */
         case '0':
         case '1':
         case '2':
