@@ -5721,8 +5721,8 @@ V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
 
 V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7);
-  struct Resub sub, sub1;
+  struct v7_val *arg = cfa->args[0], *arr = v7_push_new_object(v7), *v;
+  struct Resub sub;
   int limit = 1000000, elem = 0, i, len;
   unsigned long shift = 0;
 
@@ -5733,21 +5733,34 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
       limit = cfa->args[1]->v.num;
     if (V7_TYPE_UNDEF != arg->type && V7_TYPE_NULL != arg->type) {
       TRY(check_str_re_conv(v7, &arg, 1));
-      if (arg->v.str.len > 0) {
-        TRY(regex_check_prog(arg));
-        for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
-          if (re_exec(arg->v.str.prog, arg->fl.fl,
-                      cfa->this_obj->v.str.buf + shift, &sub))
-            break;
+      TRY(regex_check_prog(arg));
+      for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
+        if (re_exec(arg->v.str.prog, arg->fl.fl,
+                    cfa->this_obj->v.str.buf + shift, &sub))
+          break;
+
+        if (sub.sub[0].end - sub.sub[0].start == 0) {
+          v7_append(
+              v7, arr,
+              v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
+                     1, 1));
+          shift++;
+          } else {
           v7_append(
               v7, arr,
               v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
                      sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
-          for (i = 1; i < sub.subexpr_num; i++)
-            v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
-                                      sub.sub[i].end - sub.sub[i].start, 1));
           shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
-          sub1 = sub;
+        }
+
+        for (i = 1; i < sub.subexpr_num; i++) {
+          if (sub.sub[i].start != NULL) {
+            v = v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
+                       sub.sub[i].end - sub.sub[i].start, 1);
+          } else {
+            v = make_value(v7, V7_TYPE_UNDEF);
+          }
+          v7_append(v7, arr, v);
         }
       }
     }
