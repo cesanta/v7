@@ -1,0 +1,3 @@
+test:
+  pre:
+    - make run
