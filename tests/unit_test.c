@@ -432,10 +432,18 @@ static const char *test_stdlib(void) {
 #endif
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(); m.length")) != NULL);
   ASSERT(check_num(v7, v, 1.0));
-#ifdef TODO  /* doesn't split at every char */
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(''); m.length")) != NULL);
   ASSERT(check_num(v7, v, 8.0));
-#endif
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(RegExp('')); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 8.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(/x*/); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 8.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(/(x)*/); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 16.0));
+  ASSERT((v = v7_exec(v7, "m[0]")) != NULL);
+  ASSERT(check_str(v7, v, "a"));
+  ASSERT((v = v7_exec(v7, "m[1]")) != NULL);
+  ASSERT(v7_type(v) == V7_TYPE_UNDEF);
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(' '); m.length")) != NULL);
   ASSERT(check_num(v7, v, 3.0));
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(' ', 2); m.length")) != NULL);
@@ -446,10 +454,8 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v7, v, 2.0));
   ASSERT((v = v7_exec(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]")) != NULL);
   ASSERT(check_str(v7, v, "b"));
-#ifdef TODO  /* doesn't split at every char */
   ASSERT((v = v7_exec(v7, "{z: '123456'}.z.substr(0, 3).split('').length")) != NULL);
   ASSERT(check_num(v7, v, 3.0));
-#endif
   ASSERT((v = v7_exec(v7, "String('hi')")) != NULL);
   ASSERT(check_str(v7, v, "hi"));
 #ifdef TODO /* New operator: Assertion failed: (v7->root_scope.proto == &s_global), function do_exec, file src/util.c, line 557. */
