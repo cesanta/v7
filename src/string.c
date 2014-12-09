@@ -216,17 +216,20 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
     do {
       if (!re_exec(arg->v.str.prog, arg->fl.fl,
                    cfa->this_obj->v.str.buf + shift, &sub)) {
+        struct re_tok *ptok = sub.sub;
+        int i;
         if (NULL == arr) {
           arr = v7_push_new_object(v7);
           v7_set_class(arr, V7_CLASS_ARRAY);
         }
-        shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
-        v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, sub.sub[0].start,
-                                  sub.sub[0].end - sub.sub[0].start, 1));
+        shift = ptok->end - cfa->this_obj->v.str.buf;
+        for (i = 0; i < sub.subexpr_num; i++, ptok++)
+          v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start,
+                                  ptok->end - ptok->start, 1));
       }
     } while (arg->fl.fl.re_g && shift < cfa->this_obj->v.str.len);
   }
-  if (0 == shift) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
+  if (arr == NULL) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
 #undef v7
 }
