@@ -62,3 +62,6 @@ difftest:
 
 cpplint:
 	cpplint.py --verbose=0 --extensions=c,h src/*.[ch] v7.h 2>&1 >/dev/null| grep -v "Done processing" | grep -v "file excluded by"
+
+docker:
+	docker run --rm -v $(CURDIR)/..:/cesanta cesanta/v7_test
