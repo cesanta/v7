@@ -1,19 +1,20 @@
-// Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
-// Copyright (c) 2013-2014 Cesanta Software Limited
-// All rights reserved
-//
-// This library is dual-licensed: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License version 2 as
-// published by the Free Software Foundation. For the terms of this
-// license, see <http://www.gnu.org/licenses/>.
-//
-// You are free to use this library under the terms of the GNU General
-// Public License, but WITHOUT ANY WARRANTY; without even the implied
-// warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-// See the GNU General Public License for more details.
-//
-// Alternatively, you can license this library under a commercial
-// license, as set out in <http://cesanta.com/products.html>.
+/* Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
+ * Copyright (c) 2013-2014 Cesanta Software Limited
+ * All rights reserved
+ *
+ * This library is dual-licensed: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation. For the terms of this
+ * license, see <http://www.gnu.org/licenses/>.
+ *
+ * You are free to use this library under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * Alternatively, you can license this library under a commercial
+ * license, as set out in <http://cesanta.com/products.html>.
+ */
 
 #include <limits.h>
 #include <math.h>
@@ -23,11 +24,12 @@
 #include <string.h>
 
 #include "v7.h"
+#include "internal.h"
 
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
 #define NAN         atof("NAN")
-//#define INFINITY    BLAH
+/* #define INFINITY    BLAH */
 #endif
 
 #define FAIL(str, line) do {                    \
@@ -50,7 +52,7 @@
 
 
 static int static_num_tests = 0;
-int STOP = 0;  // For xcode breakpoints conditions
+int STOP = 0;  /* For xcode breakpoints conditions */
 
 static enum v7_err adder(struct v7_c_func_arg *cfa) {
   double sum = 0;
@@ -76,8 +78,9 @@ static int check_str(struct v7 *v7, struct v7_val *v, const char *val) {
 }
 
 static int check_num(struct v7 *v7, struct v7_val *v, double an) {
+  double bn;
   _prop_func_2_value(v7, &v);
-  double bn = v7_number(v);
+  bn = v7_number(v);
   return v7_type(v) == V7_TYPE_NUM &&
   ((an == bn) || (isinf(an) && isinf(bn)) || (isnan(an) && isnan(bn)));
 }
@@ -117,7 +120,7 @@ static const char *test_v7_exec(void) {
   ASSERT((v = v7_exec(v7, "NaN")) != NULL);
   ASSERT(check_num(v7, v, NAN));
 
-  // TODO: fix infinity handling under MSVC6
+  /* TODO: fix infinity handling under MSVC6 */
 #ifndef _WIN32
   ASSERT((v = v7_exec(v7, "Infinity")) != NULL);
   ASSERT(check_num(v7, v, INFINITY));
@@ -174,13 +177,13 @@ static const char *test_v7_exec(void) {
   ASSERT((v = v7_exec(v7, "var blah = 'kuku'; blah")) != NULL);
   ASSERT(check_str(v7, v, "kuku"));
 
-  // Test that k.y does exist
+  /* Test that k.y does exist */
   ASSERT((v = v7_exec(v7, "k = { y: 17 };")) != NULL);
   ASSERT((v = v7_exec(v7, "k.y")) != NULL);
   ASSERT(check_num(v7, v, 17.0));
   v7_exec(v7, "print(this);");
 
-  // Delete k.y and make sure it's gone
+  /* Delete k.y and make sure it's gone */
   ASSERT((v = v7_exec(v7, "delete k.y;")) != NULL);
   ASSERT((v = v7_exec(v7, "k.y;")) != NULL);
   ASSERT(v7_type(v) == V7_TYPE_UNDEF);
@@ -210,7 +213,7 @@ static const char *test_v7_exec(void) {
   ASSERT(check_str(v7, v, "function"));
 
   ASSERT((v = v7_exec(v7, "var f1 = function(x, y) { return x * y }")) != NULL);
-  //ASSERT(v7_is_class(v7_top(v7)[-1], V7_CLASS_FUNCTION));
+  /* ASSERT(v7_is_class(v7_top(v7)[-1], V7_CLASS_FUNCTION)); */
   ASSERT((v = v7_exec(v7, "f1(2, 3)")) != NULL);
   ASSERT(check_num(v7, v, 6.0));
   ASSERT((v = v7_exec(v7, "f1(12, 4) + 1;")) != NULL);
@@ -220,7 +223,7 @@ static const char *test_v7_exec(void) {
 
   ASSERT((v = v7_exec(v7, "f = function(x,y,z) {print(this);};")) != NULL);
   ASSERT(v7_type(v) == V7_TYPE_OBJ);
-  //ASSERT(v7_is_class(v7->stack[0], V7_CLASS_FUNCTION));
+  /* ASSERT(v7_is_class(v7->stack[0], V7_CLASS_FUNCTION)); */
   ASSERT((v = v7_exec(v7, "f();")) != NULL);
   ASSERT((v = v7_exec(v7, "f({});")) != NULL);
   ASSERT((v = v7_exec(v7, "f(1, 2);")) != NULL);
@@ -371,7 +374,7 @@ static const char *test_stdlib(void) {
   struct v7_val *v;
   struct v7 *v7 = v7_create();
 
-  // Number
+  /* Number */
 #ifndef _WIN32
   ASSERT((v = v7_exec(v7, "Math.PI")) != NULL);
   ASSERT(check_num(v7, v, M_PI));
@@ -390,7 +393,7 @@ static const char *test_stdlib(void) {
   ASSERT((v = v7_exec(v7, "new Number(21.23)")) != NULL);
 #endif
 
-  // String
+  /* String */
   ASSERT((v = v7_exec(v7, "'hello'.charCodeAt(1)")) != NULL);
   ASSERT(check_num(v7, v, 'e'));
   ASSERT((v = v7_exec(v7, "'hello'.charCodeAt(4)")) != NULL);
@@ -456,11 +459,11 @@ static const char *test_stdlib(void) {
   ASSERT((v = v7_exec(v7, "new String('blah')")) != NULL);
 #endif
 
-  // Math
+  /* Math */
   ASSERT((v = v7_exec(v7, "Math.sqrt(144)")) != NULL);
   ASSERT(check_num(v7, v, 12.0));
 
-  // Regexp
+  /* Regexp */
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/; re")) != NULL);
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/;")) != NULL);
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/ ")) != NULL);
