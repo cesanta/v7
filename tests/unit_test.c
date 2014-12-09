@@ -459,9 +459,7 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v7, v, 3.0));
   ASSERT((v = v7_exec(v7, "String('hi')")) != NULL);
   ASSERT(check_str(v7, v, "hi"));
-#ifdef TODO /* Bug #6: (New operator) Assertion failed: (v7->root_scope.proto == &s_global), function do_exec, file src/util.c, line 557. */
   ASSERT((v = v7_exec(v7, "new String('blah')")) != NULL);
-#endif
 
   /* Math */
   ASSERT((v = v7_exec(v7, "Math.sqrt(144)")) != NULL);
