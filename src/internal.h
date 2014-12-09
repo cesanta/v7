@@ -306,6 +306,7 @@ struct v7_val {
     uint16_t flags; /* Flags - defined below */
     struct v7_val_flags {
       /* TODO(??) avoid using bitfields which are a GCC extension */
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
       uint16_t val_alloc : 1; /* Whole "struct v7_val" must be free()-ed */
       uint16_t str_alloc : 1; /* v.str.buf must be free()-ed */
