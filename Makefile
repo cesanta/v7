@@ -1,6 +1,6 @@
 WARNS = -Wno-comment -Wno-variadic-macros
 V7_FLAGS = -I./src -I.
-CFLAGS = -W -Wall -pedantic $(WARNS) -g -O0 $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
+CFLAGS = -W -Wall -pedantic $(WARNS) -g -O0 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
 SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
           src/object.c src/regex.c src/rune.c src/runetype.c src/string.c \
@@ -62,3 +62,6 @@ difftest:
 
 cpplint:
 	cpplint.py --verbose=0 --extensions=c,h src/*.[ch] v7.h 2>&1 >/dev/null| grep -v "Done processing" | grep -v "file excluded by"
+
+docker:
+	docker run --rm -v $(CURDIR)/..:/cesanta cesanta/v7_test

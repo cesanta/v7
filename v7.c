@@ -393,6 +393,8 @@ struct v7_val {
   union {
     uint16_t flags; /* Flags - defined below */
     struct v7_val_flags {
+      /* TODO(??) avoid using bitfields which are a GCC extension */
+#pragma GCC diagnostic ignored "-Wpedantic"
       uint16_t val_alloc : 1; /* Whole "struct v7_val" must be free()-ed */
       uint16_t str_alloc : 1; /* v.str.buf must be free()-ed */
       uint16_t js_func : 1;   /* Function object is a JavsScript code */
@@ -405,6 +407,7 @@ struct v7_val {
       uint16_t re_i : 1; /* compiler & execution RegExp flag i */
       uint16_t re_m : 1; /* execution RegExp flag m */
       uint16_t re : 1;   /* parser RegExp flag re */
+#pragma GCC diagnostic pop
     } fl;
   } fl;
 };
