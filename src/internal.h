@@ -82,10 +82,14 @@ enum v7_tok {
   TOK_DOT,
   TOK_COLON,
   TOK_SEMICOLON,
+
+  /* Equality ops, in this order */
   TOK_EQ,
   TOK_EQ_EQ,
   TOK_NE,
-  TOK_NE_NE, /* Equality ops, in this order */
+  TOK_NE_NE,
+
+  /* Assigns */
   TOK_ASSIGN,
   TOK_REM_ASSIGN,
   TOK_MUL_ASSIGN,
@@ -96,7 +100,7 @@ enum v7_tok {
   TOK_LOGICAL_OR_ASSING,
   TOK_LOGICAL_AND_ASSING,
   TOK_LSHIFT_ASSIGN,
-  TOK_RSHIFT_ASSIGN, /* Assigns */
+  TOK_RSHIFT_ASSIGN,
   TOK_AND,
   TOK_LOGICAL_OR,
   TOK_PLUS_PLUS,
@@ -111,10 +115,12 @@ enum v7_tok {
   TOK_MUL,
   TOK_DIV,
   TOK_XOR,
+
+  /* Relational ops, must go in this order */
   TOK_LE,
   TOK_LT,
   TOK_GE,
-  TOK_GT, /* Relational ops, must go in this order */
+  TOK_GT,
   TOK_LSHIFT,
   TOK_RSHIFT,
   TOK_NOT,
@@ -168,7 +174,6 @@ enum v7_tok {
   TOK_PROTECTED,
   TOK_STATIC,
   TOK_YIELD,
-
   NUM_TOKENS
 };
 
@@ -265,6 +270,8 @@ struct v7_vec {
   const char *p;
   int len;
 };
+#define V7_VEC(str) \
+  { (str), sizeof(str) - 1 }
 
 struct v7_string {
   char *buf;           /* Pointer to buffer with string/regexp data */
@@ -308,8 +315,8 @@ struct v7_val {
       uint16_t val_alloc : 1; /* Whole "struct v7_val" must be free()-ed */
       uint16_t str_alloc : 1; /* v.str.buf must be free()-ed */
       uint16_t js_func : 1;   /* Function object is a JavsScript code */
-      uint16_t
-          prop_func : 1; /* Function object is a native property function */
+      uint16_t prop_func
+          : 1; /* Function object is a native property function */
 #define V7_PROP_FUNC 8
       uint16_t val_dealloc : 1; /* Value has been deallocated */
 
@@ -395,8 +402,7 @@ extern int __lev;
   do {                      \
     enum v7_err _e = call;  \
     CHECK(_e == V7_OK, _e); \
-  \
-} while (0)
+  } while (0)
 
 /* Print current function name and stringified object */
 #define TRACE_OBJ(O)                                         \
@@ -495,13 +501,12 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *fl, size_t fl_len);
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
 
+/* Tokenizer */
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
-V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+/* Parser */
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
-V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s);
-V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s);
 
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
