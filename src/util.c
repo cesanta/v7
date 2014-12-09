@@ -162,7 +162,7 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
       free(v->v.func.source_code);
       v7_freeval(v7, v->v.func.var_obj);
     }
-  } else if (v7_is_class(v, V7_CLASS_OBJECT)) {
+  } else if (v7_is_class(v, V7_TYPE_NULL)) {
     if (v->fl.fl.prop_func && v->v.prop_func.o)
       v7_freeval(v7, v->v.prop_func.o);
   }
