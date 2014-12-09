@@ -424,7 +424,6 @@ static const char *test_stdlib(void) {
   ASSERT(v7_type(v) == V7_TYPE_NULL);
   ASSERT((v = v7_exec(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)")) != NULL);
   ASSERT((v = v7_exec(v7, "m.length")) != NULL);
-#ifdef TODO /* got: [foo 1234] i.e. 1 length array with input string !! */
   ASSERT(check_num(v7, v, 2.0));
   ASSERT((v = v7_exec(v7, "m[0]")) != NULL);
   ASSERT(check_str(v7, v, "foo 1234"));
@@ -432,7 +431,6 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "1234"));
   ASSERT((v = v7_exec(v7, "m[2]")) != NULL);
   ASSERT(v7_type(v) == V7_TYPE_UNDEF);
-#endif
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(); m.length")) != NULL);
   ASSERT(check_num(v7, v, 1.0));
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(''); m.length")) != NULL);
@@ -461,7 +459,7 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v7, v, 3.0));
   ASSERT((v = v7_exec(v7, "String('hi')")) != NULL);
   ASSERT(check_str(v7, v, "hi"));
-#ifdef TODO /* New operator: Assertion failed: (v7->root_scope.proto == &s_global), function do_exec, file src/util.c, line 557. */
+#ifdef TODO /* Bug #6: (New operator) Assertion failed: (v7->root_scope.proto == &s_global), function do_exec, file src/util.c, line 557. */
   ASSERT((v = v7_exec(v7, "new String('blah')")) != NULL);
 #endif
 
