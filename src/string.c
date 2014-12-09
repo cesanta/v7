@@ -10,7 +10,6 @@ V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
   const char *str = NULL;
   size_t len = 0;
   int own = 0;
-  struct v7_val *obj = cfa->this_obj;
 
   if (cfa->num_args > 0) {
     struct v7_val *arg = cfa->args[0];
@@ -20,6 +19,7 @@ V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
     own = 1;
   }
   if (cfa->called_as_constructor) {
+    struct v7_val *obj = v7_push_new_object(v7);
     v7_init_str(obj, str, len, own);
     v7_set_class(obj, V7_CLASS_STRING);
   } else
