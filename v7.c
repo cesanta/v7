@@ -95,7 +95,7 @@ char* utfutf(char *s1, char *s2);
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
-#include "../v7.h"
+#include "v7.h"
 
 #include <sys/stat.h>
 #include <assert.h>

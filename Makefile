@@ -11,7 +11,7 @@ SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
 all: v7 unit_test
 
 v7.c: src/v7_license.h src/utf.h src/internal.h $(SOURCES) v7.h Makefile
-	cat src/v7_license.h src/utf.h src/internal.h $(SOURCES) | sed -E '/#include .(v7_license|utf|internal).h./d' > $@
+	cat src/v7_license.h src/utf.h src/internal.h $(SOURCES) | sed -E '/#include .(v7_license|utf|internal).h./d' | sed -E 's:#include "..\/v7.h":#include "v7.h":' > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes \

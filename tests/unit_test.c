@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "v7.h"
-#include "internal.h"
+#include "../v7.h"
+#include "../src/internal.h"
 
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
