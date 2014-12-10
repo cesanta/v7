@@ -268,6 +268,7 @@ struct v7_pstate {
   const char *source_code;
   const char *pc; /* Current parsing position */
   int line_no;    /* Line number */
+  int prev_line_no; /* Line number of previous token */
 };
 
 struct v7 {
@@ -282,6 +283,7 @@ struct v7 {
   enum v7_tok cur_tok;     /* Current token */
   const char *tok;         /* Parsed terminal token (ident, number, string) */
   unsigned long tok_len;   /* Length of the parsed terminal token */
+  int after_newline;       /* True if the cur_tok starts a new line */
   double cur_tok_dbl;
 
   const char *key;       /* Key for the assignment operation */
@@ -301,6 +303,9 @@ struct v7 {
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
+
+#define V7_STATIC_ASSERT(COND, MSG) \
+      typedef char static_assertion_##MSG[2*(!!(COND)) - 1]
 
 #define THROW(err_code)                                                        \
   do {                                                                         \
@@ -432,7 +437,16 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
 
 /* Parser */
+
+/* TODO(mkm): move to .c file one we get rid of the old parser */
+#define EXPECT(t)                                     \
+  do {                                                \
+    if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; \
+    next_tok(v7);                                     \
+  } while (0)
+
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
 
 V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
 V7_PRIVATE enum v7_err parse_expression(struct v7 *);
@@ -509,5 +523,8 @@ V7_PRIVATE void init_number(void);
 V7_PRIVATE void init_object(void);
 V7_PRIVATE void init_string(void);
 V7_PRIVATE void init_regex(void);
+
+#include "ast.h"
+#include "aparser.h"
 
 #endif /* V7_INTERNAL_H_INCLUDED */

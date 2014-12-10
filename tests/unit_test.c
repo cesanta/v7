@@ -25,6 +25,7 @@
 
 #include "../v7.h"
 #include "../src/internal.h"
+#include "ecmac.c"
 
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
@@ -45,8 +46,11 @@
   if (!(expr)) FAIL(#expr, __LINE__);           \
 } while (0)
 
-#define RUN_TEST(test) do { const char *msg = test(); \
-  if (msg) return msg; } while (0)
+#define RUN_TEST(test) do {                 \
+  const char *msg = NULL;                   \
+  if (strstr(# test, filter)) msg = test(); \
+  if (msg) return msg;                      \
+} while (0)
 
 #ifdef _WIN32
 #define isnan(x) _isnan(x)
@@ -539,7 +543,7 @@ static const char *test_closure(void) {
 static const char *test_tokenizer(void) {
   static const char *str =
     "1.23e-15 'foo\\x25' $_12foo{}(),[].:;== === != !== "
-    "= %= *= /= ^= += -= |= &= <<= >>= >>>= & || ++ + -- - "
+    "= %= *= /= ^= += -= |= &= <<= >>= >>>= & || + - ++ -- "
     "&&|?~%*/^ <= < >= > << >> >>> !";
   enum v7_tok tok;
   double num;
@@ -553,11 +557,295 @@ static const char *test_tokenizer(void) {
     i++;
   }
   ASSERT(i == TOK_BREAK);
+  return NULL;
+}
+
+static const char *test_aparser(void) {
+  int i;
+  struct ast a;
+  const char *cases[] = {
+    "1",
+    "true",
+    "false",
+    "null",
+    "undefined",
+    "1+2",
+    "1-2",
+    "1*2",
+    "1/2",
+    "1%2",
+    "1/-2",
+    "(1 + 2) * x + 3",
+    "1 + (2, 3) * 4, 5",
+    "(a=1 + 2) + 3",
+    "1 ? 2 : 3",
+    "1 || 2 + 2",
+    "1 && 2 || 3 && 4 + 5",
+    "1|2 && 3|3",
+    "1^2|3^4",
+    "1&2^2&4|5&6",
+    "1==2&3",
+    "1<2",
+    "1<=2",
+    "1>=2",
+    "1>2",
+    "1==1<2",
+    "a instanceof b",
+    "1 in b",
+    "1!=2&3",
+    "1!==2&3",
+    "1===2",
+    "1<<2",
+    "1>>2",
+    "1>>>2",
+    "1<<2<3",
+    "1 + + 1",
+    "1- -2",
+    "!1",
+    "~0",
+    "void x()",
+    "delete x",
+    "typeof x",
+    "++x",
+    "--i",
+    "x++",
+    "i--",
+    "a.b",
+    "a.b.c",
+    "a[0]",
+    "a[0].b",
+    "a[0][1]",
+    "a[b[0].c]",
+    "a()",
+    "a(0)",
+    "a(0, 1)",
+    "a(0, (1, 2))",
+    "1 + a(0, (1, 2)) + 2",
+    "new x",
+    "new x(0, 1)",
+    "new x.y(0, 1)",
+    "new x.y",
+    "1;",
+    "1;2;",
+    "1;2",
+    "1\nx",
+    "p()\np()\np();p()",
+    ";1",
+    "if (1) 2",
+    "if (1) 2; else 3",
+    "if (1) {2;3}",
+    "if (1) {2;3}; 4",
+    "if (1) {2;3} else {4;5}",
+    "while (1);",
+    "while(1) {}",
+    "while (1) 2;",
+    "while (1) {2;3}",
+    "for (i = 0; i < 3; i++) i++",
+    "for (i=0; i<3;) i++",
+    "for (i=0;;) i++",
+    "for (;i<3;) i++",
+    "for (;;) i++",
+    "debugger",
+    "break",
+    "break loop",
+    "continue",
+    "continue loop",
+    "return",
+    "return 1+2",
+    "if (1) {return;}",
+    "if (1) {return 2}",
+    "throw 1+2",
+    "try { 1 }",
+    "try { 1 } catch (e) { 2 }",
+    "try {1} finally {3}",
+    "try {1} catch (e) {2} finally {3}",
+    "var x",
+    "var x, y",
+    "var x=1, y",
+    "var y, x=y=1",
+    "function x(a) {return a}",
+    "function x() {return 1}",
+    "[1,2,3]",
+    "[1+2,3+4,5+6]",
+    "[1,[2,[[3]]]]",
+    "({a: 1})",
+    "({a: 1, b: 2})",
+    "({})",
+    "(function(a) { return a + 1 })",
+    "(function f(a) { return a + 1 })",
+    "return; 1;",
+    "while (1) {return;2}",
+    "switch(a) {case 1: break;}",
+    "switch(a) {case 1: p(); break;}",
+    "switch(a) {case 1: a; case 2: b; c;}",
+    "switch(a) {case 1: a; b; default: c;}",
+    "switch(a) {case 1: p(); break; break; }",
+    "switch(a) {case 1: break; case 2: 1; case 3:}",
+    "switch(a) {case 1: break; case 2: 1; case 3: default: break}",
+    "switch(a) {case 1: break; case 3: default: break; case 2: 1}",
+    "for (var i = 0; i < 3; i++) i++",
+    "for (var i=0, j=i; i < 3; i++, j++) i++",
+    "a%=1",
+    "a*=1",
+    "a/=1",
+    "a+=1",
+    "a-=1",
+    "a|=1",
+    "a&=1",
+    "a<<=1",
+    "a>>2",
+    "a>>=1",
+    "a>>>=1",
+    "\"foo\"",
+    "var undefined = 1",
+    "undefined",
+    "{var x=1;2;}",
+    "({get a() { return 1 }})",
+    "({set a(b) { this.x = b }})",
+    "({get a() { return 1 }, set b(c) { this.x = c }, d: 0})",
+    "({get: function() {return 42;}})",
+    "Object.defineProperty(o, \"foo\", {get: function() {return 42;}});",
+    "({a: 0, \"b\": 1})",
+    "({a: 0, 42: 1})",
+    "({a: 0, 42.99: 1})",
+    "({a: 0, })",
+    "({true: 0, null: 1, undefined: 2, this: 3})",
+    "[]",
+    "[,2]",
+    "[,]",
+    "[,2]",
+    "[,,,1,2]",
+    "delete z",
+    "delete (1+2)",
+    "delete (delete z)",
+    "delete delete z",
+    "+ + + 2",
+    "throw 'ex'",
+    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {}; break}",
+    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break}",
+    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break; default: 1; break;}",
+    "try {1} catch(e){}\n1",
+    "try {1} catch(e){} 1",
+    "switch(v) {case 0: break;} 1",
+    "switch(a) {case 1: break; case 3: default: break; case 2: 1; default: 2}",
+    "do { i-- } while (i > 0)",
+    "if (false) 1; 1;",
+    "while(true) 1; 1;",
+    "while(true) {} 1;",
+    "do {} while(false) 1;",
+    "with (a) 1; 2;",
+    "with (a) {1} 2;"
+  };
+  const char *invalid[] = {
+    "function(a) { return 1 }",
+    "i\n++",
+    "{a: 1, b: 2}",
+    "({, a: 0})",
+  };
+  FILE *fp;
+  const char *want_ast_db = "tests/want_ast.db";
+  char got_ast[102400];
+  char want_ast[102400];
+  char *next_want_ast = want_ast - 1;
+  size_t want_ast_len;
+  ast_init(&a, 0);
+
+#if 0
+#define SAVE_AST
+#endif
+
+#ifndef SAVE_AST
+
+  ASSERT((fp = fopen(want_ast_db, "r")) != NULL);
+  memset(want_ast, 0, sizeof(want_ast));
+  fread(want_ast, sizeof(want_ast), 1, fp);
+  ASSERT(feof(fp));
+  fclose(fp);
+
+  for (i = 0; i < (int) ARRAY_SIZE(cases); i++ ) {
+    char *current_want_ast = next_want_ast + 1;
+    ASSERT((next_want_ast = strchr(current_want_ast, '\0')) != NULL);
+    want_ast_len = (size_t) (next_want_ast - current_want_ast);
+    ASSERT((fp = fopen("/tmp/got_ast", "w")) != NULL);
+    ast_free(&a);
+    printf("-- Parsing \"%s\"\n", cases[i]);
+    ASSERT(aparse(&a, cases[i], 1) == V7_OK);
+
+#ifdef VERBOSE_AST
+    ast_dump(stdout, &a, 0);
+#endif
+    if (want_ast_len == 0) {
+      printf("Test case not found in %s:\n", want_ast_db);
+      ast_dump(stdout, &a, 0);
+      abort();
+    }
+    ast_dump(fp, &a, 0);
+    fclose(fp);
+
+    ASSERT((fp = fopen("/tmp/got_ast", "r")) != NULL);
+    memset(got_ast, 0, sizeof(got_ast));
+    fread(got_ast, sizeof(got_ast), 1, fp);
+    ASSERT(feof(fp));
+    fclose(fp);
+#if !defined(_WIN32)
+    if (strncmp(got_ast, current_want_ast, sizeof(got_ast)) != 0) {
+      fp = fopen("/tmp/want_ast", "w");
+      fwrite(current_want_ast, want_ast_len, 1, fp);
+      fclose(fp);
+      system("diff -u /tmp/want_ast /tmp/got_ast");
+    }
+#endif
+    ASSERT(strncmp(got_ast, current_want_ast, sizeof(got_ast)) == 0);
+  }
+
+#else /* SAVE_AST */
+
+  (void) got_ast;
+  (void) next_want_ast;
+  (void) want_ast_len;
+  ASSERT((fp = fopen(want_ast_db, "w")) != NULL);
+  for (i = 0; i < (int) ARRAY_SIZE(cases); i++ ) {
+    ast_free(&a);
+    ASSERT(aparse(&a, cases[i], 1) == V7_OK);
+    ast_dump(fp, &a, 0);
+    fwrite("\0", 1, 1, fp);
+  }
+  fclose(fp);
+
+#endif /* SAVE_AST */
+
+  for (i = 0; i < (int) ARRAY_SIZE(invalid); i++ ) {
+    ast_free(&a);
+    ASSERT(aparse(&a, invalid[i], 0) == V7_ERROR);
+  }
 
   return NULL;
 }
 
-static const char *run_all_tests(void) {
+static const char *test_ecmac(void) {
+  struct ast a;
+  int i;
+
+  ast_init(&a, 0);
+
+  for (i = 0; i < (int) ARRAY_SIZE(ecmac_cases); i++ ) {
+    ast_free(&a);
+#if 0
+    printf("-- Parsing %d: \"%s\"\n", i, ecmac_cases[i]);
+#endif
+    ASSERT(aparse(&a, ecmac_cases[i], 1) == V7_OK);
+
+#if 0
+    ast_dump(stdout, &a, 0);
+#endif
+    if (i == 0) {
+      break;
+    }
+  }
+  return NULL;
+}
+
+static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_tokenizer);
   RUN_TEST(test_v7_destroy);
   RUN_TEST(test_is_true);
@@ -565,11 +853,14 @@ static const char *run_all_tests(void) {
   RUN_TEST(test_closure);
   RUN_TEST(test_native_functions);
   RUN_TEST(test_stdlib);
+  RUN_TEST(test_aparser);
+  RUN_TEST(test_ecmac);
   return NULL;
 }
 
-int main(void) {
-  const char *fail_msg = run_all_tests();
+int main(int argc, char *argv[]) {
+  const char *filter = argc > 1 ? argv[1] : "";
+  const char *fail_msg = run_all_tests(filter);
   printf("%s, tests run: %d\n", fail_msg ? "FAIL" : "PASS", static_num_tests);
   return fail_msg == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
 }
