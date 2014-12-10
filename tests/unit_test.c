@@ -28,7 +28,9 @@
 
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
+#ifndef NAN
 #define NAN         atof("NAN")
+#endif
 /* #define INFINITY    BLAH */
 #endif
 
@@ -140,7 +142,7 @@ static const char *test_v7_exec(void) {
   ASSERT((v = v7_exec(v7, "1;2 7")) != NULL);
   ASSERT(check_num(v7, v, 7.0));
 
-  v = v7_exec(v7, "a=undefined; a + 5");
+  v = v7_exec(v7, "a=undefined; a + 5;");
   ASSERT(check_num(v7, v, NAN));
 
   /* ReferenceErrors are not thrown yet, treat as undefined */

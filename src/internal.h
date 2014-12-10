@@ -46,8 +46,12 @@ typedef unsigned char uint8_t;
 #define M_PI 3.14159265358979323846264338327950288
 #define M_SQRT2 1.41421356237309504880168872420969808
 #define M_SQRT1_2 0.707106781186547524400844362104849039
+#ifndef NAN
 #define NAN atof("NAN")
+#endif
+#ifndef INFINITY
 #define INFINITY atof("INFINITY") /* TODO: fix this */
+#endif
 #endif
 
 /* Different classes of V7_TYPE_OBJ type */
