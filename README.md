@@ -1,6 +1,10 @@
 V7: Embedded JavaScript engine
 ==============================
 
+[![Circle CI](https://circleci.com/gh/cesanta/v7.svg?style=shield)](https://circleci.com/gh/cesanta/v7)
+[![Appveyor CI (Windows)](https://img.shields.io/appveyor/ci/mmikulicic/v7/branch/master.svg)](https://ci.appveyor.com/project/mmikulicic/v7/branch/master)
+[![License](https://img.shields.io/badge/license-GPL_2-green.svg)](https://github.com/cesanta/v7/blob/master/LICENSE)
+
 V7 is a C/C++ library that implements Javascript engine. It is intended
 to be embedded into other programs to allow scripting and configuration,
 but also it could be used as stand-alone JS interpreter in automation scripts.
