@@ -431,6 +431,11 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "1234"));
   ASSERT((v = v7_exec(v7, "m[2]")) != NULL);
   ASSERT(v7_type(v) == V7_TYPE_UNDEF);
+  ASSERT((v = v7_exec(v7, "m = 'should match empty string at index 0'.match(/x*/)")) != NULL);
+  ASSERT((v = v7_exec(v7, "m.length")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec(v7, "m[0]")) != NULL);
+  ASSERT(check_str(v7, v, ""));
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(); m.length")) != NULL);
   ASSERT(check_num(v7, v, 1.0));
   ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(''); m.length")) != NULL);
