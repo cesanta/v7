@@ -6,39 +6,17 @@
 #include "internal.h"
 
 /* NOTE(lsm): Must be in the same order as enum for keywords */
-struct {
-  const char *p;
-  int len;
-} s_keywords[] = {{"break", 5},
-                  {"case", 4},
-                  {"catch", 5},
-                  {"continue", 8},
-                  {"debugger", 8},
-                  {"default", 7},
-                  {"delete", 6},
-                  {"do", 2},
-                  {"else", 4},
-                  {"false", 5},
-                  {"finally", 7},
-                  {"for", 3},
-                  {"function", 8},
-                  {"if", 2},
-                  {"in", 2},
-                  {"instanceof", 10},
-                  {"new", 3},
-                  {"null", 4},
-                  {"return", 6},
-                  {"switch", 6},
-                  {"this", 4},
-                  {"throw", 5},
-                  {"true", 4},
-                  {"try", 3},
-                  {"typeof", 6},
-                  {"undefined", 9},
-                  {"var", 3},
-                  {"void", 4},
-                  {"while", 5},
-                  {"with", 4}};
+static struct v7_vec s_keywords[] = {
+    V7_VEC("break"),      V7_VEC("case"),      V7_VEC("catch"),
+    V7_VEC("continue"),   V7_VEC("debugger"),  V7_VEC("default"),
+    V7_VEC("delete"),     V7_VEC("do"),        V7_VEC("else"),
+    V7_VEC("false"),      V7_VEC("finally"),   V7_VEC("for"),
+    V7_VEC("function"),   V7_VEC("if"),        V7_VEC("in"),
+    V7_VEC("instanceof"), V7_VEC("new"),       V7_VEC("null"),
+    V7_VEC("return"),     V7_VEC("switch"),    V7_VEC("this"),
+    V7_VEC("throw"),      V7_VEC("true"),      V7_VEC("try"),
+    V7_VEC("typeof"),     V7_VEC("undefined"), V7_VEC("var"),
+    V7_VEC("void"),       V7_VEC("while"),     V7_VEC("with")};
 
 /*
  * Move ptr to the next token, skipping comments and whitespaces.
@@ -345,7 +323,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       (*s)++;
       return TOK_CLOSE_BRACKET;
     case '.':
-      switch (*(*s+1)) {
+      switch (*(*s + 1)) {
         /* Numbers */
         case '0':
         case '1':
@@ -357,8 +335,8 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
         case '7':
         case '8':
         case '9':
-        parse_number(p, s, n);
-        return TOK_NUMBER;
+          parse_number(p, s, n);
+          return TOK_NUMBER;
       }
       (*s)++;
       return TOK_DOT;
@@ -381,33 +359,6 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
     default:
       return TOK_END_OF_INPUT;
   }
-}
-
-V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7) {
-  const char *s = v7->pstate.pc;
-  double d;
-  return get_tok(&s, &d);
-}
-
-V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
-  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
-  v7->tok = v7->pstate.pc;
-  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl);
-  v7->tok_len = v7->pstate.pc - v7->tok;
-  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
-  TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
-             v7->pstate.line_no);
-  return v7->cur_tok;
-}
-
-V7_PRIVATE void get_v7_state(struct v7 *v7, struct v7_pstate *s) {
-  *s = v7->pstate;
-  s->pc = v7->tok;
-}
-
-V7_PRIVATE void set_v7_state(struct v7 *v7, struct v7_pstate *s) {
-  v7->pstate = *s;
-  next_tok(v7);
 }
 
 #ifdef TEST_RUN

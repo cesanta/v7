@@ -11,6 +11,33 @@
     next_tok(v7);                                     \
   } while (0)
 
+static enum v7_tok lookahead(const struct v7 *v7) {
+  const char *s = v7->pstate.pc;
+  double d;
+  return get_tok(&s, &d);
+}
+
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  v7->tok = v7->pstate.pc;
+  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl);
+  v7->tok_len = v7->pstate.pc - v7->tok;
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
+             v7->pstate.line_no);
+  return v7->cur_tok;
+}
+
+static void get_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  *s = v7->pstate;
+  s->pc = v7->tok;
+}
+
+static void set_v7_state(struct v7 *v7, struct v7_pstate *s) {
+  v7->pstate = *s;
+  next_tok(v7);
+}
+
 static enum v7_err arith(struct v7 *v7, struct v7_val *a, struct v7_val *b,
                          struct v7_val *res, enum v7_tok op) {
   char *str;
