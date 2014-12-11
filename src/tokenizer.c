@@ -5,7 +5,10 @@
 
 #include "internal.h"
 
-/* NOTE(lsm): Must be in the same order as enum for keywords */
+/*
+ * NOTE(lsm): Must be in the same order as enum for keywords. See comment
+ * for function get_tok() for rationale for that.
+ */
 static struct v7_vec s_keywords[] = {
     V7_VEC("break"),      V7_VEC("case"),      V7_VEC("catch"),
     V7_VEC("continue"),   V7_VEC("debugger"),  V7_VEC("default"),
@@ -148,6 +151,20 @@ static enum v7_tok parse_str_literal(const char **p) {
   }
 }
 
+
+/*
+ * This function is the heart of the tokenizer.
+ * Organized as a giant switch statement.
+ * Switch statement is by the first character of the input stream. If first
+ * character begins with a letter, it could be either keyword or identifier.
+ * get_tok() calls ident() which shifts `s` pointer to the end of the word.
+ * Now, tokenizer knows that the word begins at `p` and ends at `s`.
+ * It calls function kw() to scan over the keywords that start with `p[0]`
+ * letter. Therefore, keyword tokens and keyword strings must be in the
+ * same order, to let kw() function work properly.
+ * If kw() finds a keyword match, it returns keyword token.
+ * Otherwise, it returns TOK_IDENTIFIER.
+ */
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
   const char *p = *s;
 
