@@ -303,10 +303,9 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
     case '-':
       return punct3(s, '-', TOK_MINUS_MINUS, '=', TOK_MINUS_ASSIGN, TOK_MINUS);
     case '&':
-      return punct3(s, '&', TOK_LOGICAL_AND, '=', TOK_LOGICAL_AND_ASSING,
-                    TOK_AND);
+      return punct3(s, '&', TOK_LOGICAL_AND, '=', TOK_AND_ASSIGN, TOK_AND);
     case '|':
-      return punct3(s, '|', TOK_LOGICAL_OR, '=', TOK_LOGICAL_OR_ASSING, TOK_OR);
+      return punct3(s, '|', TOK_LOGICAL_OR, '=', TOK_OR_ASSIGN, TOK_OR);
 
     case '<':
       if (s[0][1] == '=') {
@@ -319,7 +318,15 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
         (*s) += 2;
         return TOK_GE;
       }
-      return punct2(s, '<', TOK_RSHIFT, '=', TOK_RSHIFT_ASSIGN, TOK_GT);
+      if (s[0][1] == '>' && s[0][2] == '>' && s[0][3] == '=') {
+        (*s) += 4;
+        return TOK_URSHIFT_ASSIGN;
+      }
+      if (s[0][1] == '>' && s[0][2] == '>') {
+        (*s) += 3;
+        return TOK_URSHIFT;
+      }
+      return punct2(s, '>', TOK_RSHIFT, '=', TOK_RSHIFT_ASSIGN, TOK_GT);
 
     case '{':
       (*s)++;

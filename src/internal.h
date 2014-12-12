@@ -101,10 +101,11 @@ enum v7_tok {
   TOK_XOR_ASSIGN,
   TOK_PLUS_ASSIGN,
   TOK_MINUS_ASSIGN,
-  TOK_LOGICAL_OR_ASSING,
-  TOK_LOGICAL_AND_ASSING,
+  TOK_OR_ASSIGN,
+  TOK_AND_ASSIGN,
   TOK_LSHIFT_ASSIGN,
   TOK_RSHIFT_ASSIGN,
+  TOK_URSHIFT_ASSIGN,
   TOK_AND,
   TOK_LOGICAL_OR,
   TOK_PLUS_PLUS,
@@ -127,6 +128,7 @@ enum v7_tok {
   TOK_GT,
   TOK_LSHIFT,
   TOK_RSHIFT,
+  TOK_URSHIFT,
   TOK_NOT,
 
   /* Keywords. must be in the same order as tokenizer.c::s_keywords array */
