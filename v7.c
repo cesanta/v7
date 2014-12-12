@@ -189,10 +189,11 @@ enum v7_tok {
   TOK_XOR_ASSIGN,
   TOK_PLUS_ASSIGN,
   TOK_MINUS_ASSIGN,
-  TOK_LOGICAL_OR_ASSING,
-  TOK_LOGICAL_AND_ASSING,
+  TOK_OR_ASSIGN,
+  TOK_AND_ASSIGN,
   TOK_LSHIFT_ASSIGN,
   TOK_RSHIFT_ASSIGN,
+  TOK_URSHIFT_ASSIGN,
   TOK_AND,
   TOK_LOGICAL_OR,
   TOK_PLUS_PLUS,
@@ -215,6 +216,7 @@ enum v7_tok {
   TOK_GT,
   TOK_LSHIFT,
   TOK_RSHIFT,
+  TOK_URSHIFT,
   TOK_NOT,
 
   /* Keywords. must be in the same order as tokenizer.c::s_keywords array */
@@ -7293,7 +7295,7 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
   TRY(parse_ternary(v7));
 
   /* Parse assignment */
-  if (v7->cur_tok >= TOK_ASSIGN && v7->cur_tok <= TOK_LOGICAL_OR_ASSING) {
+  if (v7->cur_tok >= TOK_ASSIGN && v7->cur_tok <= TOK_OR_ASSIGN) {
     /* Remember current reference */
     const char *key = v7->key;
     unsigned long key_len = v7->key_len;
@@ -7936,10 +7938,9 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
     case '-':
       return punct3(s, '-', TOK_MINUS_MINUS, '=', TOK_MINUS_ASSIGN, TOK_MINUS);
     case '&':
-      return punct3(s, '&', TOK_LOGICAL_AND, '=', TOK_LOGICAL_AND_ASSING,
-                    TOK_AND);
+      return punct3(s, '&', TOK_LOGICAL_AND, '=', TOK_AND_ASSIGN, TOK_AND);
     case '|':
-      return punct3(s, '|', TOK_LOGICAL_OR, '=', TOK_LOGICAL_OR_ASSING, TOK_OR);
+      return punct3(s, '|', TOK_LOGICAL_OR, '=', TOK_OR_ASSIGN, TOK_OR);
 
     case '<':
       if (s[0][1] == '=') {
@@ -7952,7 +7953,15 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
         (*s) += 2;
         return TOK_GE;
       }
-      return punct2(s, '<', TOK_RSHIFT, '=', TOK_RSHIFT_ASSIGN, TOK_GT);
+      if (s[0][1] == '>' && s[0][2] == '>' && s[0][3] == '=') {
+        (*s) += 4;
+        return TOK_URSHIFT_ASSIGN;
+      }
+      if (s[0][1] == '>' && s[0][2] == '>') {
+        (*s) += 3;
+        return TOK_URSHIFT;
+      }
+      return punct2(s, '>', TOK_RSHIFT, '=', TOK_RSHIFT_ASSIGN, TOK_GT);
 
     case '{':
       (*s)++;

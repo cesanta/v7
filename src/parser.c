@@ -1037,7 +1037,7 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
   TRY(parse_ternary(v7));
 
   /* Parse assignment */
-  if (v7->cur_tok >= TOK_ASSIGN && v7->cur_tok <= TOK_LOGICAL_OR_ASSING) {
+  if (v7->cur_tok >= TOK_ASSIGN && v7->cur_tok <= TOK_OR_ASSIGN) {
     /* Remember current reference */
     const char *key = v7->key;
     unsigned long key_len = v7->key_len;
