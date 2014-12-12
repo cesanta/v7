@@ -7792,7 +7792,7 @@ static enum v7_tok parse_str_literal(const char **p) {
  * character begins with a letter, it could be either keyword or identifier.
  * get_tok() calls ident() which shifts `s` pointer to the end of the word.
  * Now, tokenizer knows that the word begins at `p` and ends at `s`.
- * It calls function kw() to scan over the keywords that start with a given
+ * It calls function kw() to scan over the keywords that start with `p[0]`
  * letter. Therefore, keyword tokens and keyword strings must be in the
  * same order, to let kw() function work properly.
  * If kw() finds a keyword match, it returns keyword token.
@@ -7811,7 +7811,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       return kw(p, *s - p, 1, TOK_BREAK);
     case 'c':
       ident(s);
-      return kw(p, *s - p, 2, TOK_CASE);
+      return kw(p, *s - p, 3, TOK_CASE);
     case 'd':
       ident(s);
       return kw(p, *s - p, 4, TOK_DEBUGGER);

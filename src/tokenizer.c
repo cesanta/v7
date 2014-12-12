@@ -178,7 +178,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       return kw(p, *s - p, 1, TOK_BREAK);
     case 'c':
       ident(s);
-      return kw(p, *s - p, 2, TOK_CASE);
+      return kw(p, *s - p, 3, TOK_CASE);
     case 'd':
       ident(s);
       return kw(p, *s - p, 4, TOK_DEBUGGER);
