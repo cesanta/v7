@@ -536,7 +536,29 @@ static const char *test_closure(void) {
   return NULL;
 }
 
+static const char *test_tokenizer(void) {
+  static const char *str =
+    "1.23e-15 'foo\\x25' $_12foo{}(),[].:;== === != !== "
+    "= %= *= /= ^= += -= |= &= <<= >>= >>>= & || ++ + -- - "
+    "&&|?~%*/^ <= < >= > << >> >>> !";
+  enum v7_tok tok;
+  double num;
+  const char *p = str;
+  int i = 1;
+
+  skip_to_next_tok(&p);
+  while ((tok = get_tok(&p, &num)) != TOK_END_OF_INPUT) {
+    skip_to_next_tok(&p);
+    ASSERT(tok == i);
+    i++;
+  }
+  ASSERT(i == TOK_BREAK);
+
+  return NULL;
+}
+
 static const char *run_all_tests(void) {
+  RUN_TEST(test_tokenizer);
   RUN_TEST(test_v7_destroy);
   RUN_TEST(test_is_true);
   RUN_TEST(test_v7_exec);

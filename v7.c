@@ -92,71 +92,6 @@ char* utfutf(char *s1, char *s2);
  * All rights reserved
  */
 
-#ifndef V7_INTERNAL_H_INCLUDED
-#define V7_INTERNAL_H_INCLUDED
-
-#include "v7.h"
-
-#include <sys/stat.h>
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <float.h>
-#include <limits.h>
-#include <math.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <setjmp.h>
-
-#ifdef _WIN32
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
-#define isnan(x) _isnan(x)
-#define isinf(x) (!_finite(x))
-#define __unused
-typedef unsigned __int64 uint64_t;
-typedef unsigned int uint32_t;
-typedef unsigned char uint8_t;
-#else
-#include <stdint.h>
-#endif
-
-/* MSVC6 doesn't have standard C math constants defined */
-#ifndef M_PI
-#define M_E 2.71828182845904523536028747135266250
-#define M_LOG2E 1.44269504088896340735992468100189214
-#define M_LOG10E 0.434294481903251827651128918916605082
-#define M_LN2 0.693147180559945309417232121458176568
-#define M_LN10 2.30258509299404568401799145468436421
-#define M_PI 3.14159265358979323846264338327950288
-#define M_SQRT2 1.41421356237309504880168872420969808
-#define M_SQRT1_2 0.707106781186547524400844362104849039
-#ifndef NAN
-#define NAN atof("NAN")
-#endif
-#ifndef INFINITY
-#define INFINITY atof("INFINITY") /* TODO: fix this */
-#endif
-#endif
-
-/* Different classes of V7_TYPE_OBJ type */
-enum v7_class {
-  V7_CLASS_NONE,
-  V7_CLASS_ARRAY,
-  V7_CLASS_BOOLEAN,
-  V7_CLASS_DATE,
-  V7_CLASS_ERROR,
-  V7_CLASS_FUNCTION,
-  V7_CLASS_NUMBER,
-  V7_CLASS_OBJECT,
-  V7_CLASS_REGEXP,
-  V7_CLASS_STRING,
-  V7_NUM_CLASSES
-};
-
 enum v7_tok {
   TOK_END_OF_INPUT,
   TOK_NUMBER,
@@ -269,6 +204,80 @@ enum v7_tok {
   TOK_STATIC,
   TOK_YIELD,
   NUM_TOKENS
+};
+
+V7_PRIVATE int skip_to_next_tok(const char **ptr);
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
+V7_PRIVATE const char *tok_name(enum v7_tok);
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_INTERNAL_H_INCLUDED
+#define V7_INTERNAL_H_INCLUDED
+
+#include "v7.h"
+#include "tokenizer.h"
+
+#include <sys/stat.h>
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#define snprintf _snprintf
+#define isnan(x) _isnan(x)
+#define isinf(x) (!_finite(x))
+#define __unused
+typedef unsigned __int64 uint64_t;
+typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
+#else
+#include <stdint.h>
+#endif
+
+/* MSVC6 doesn't have standard C math constants defined */
+#ifndef M_PI
+#define M_E 2.71828182845904523536028747135266250
+#define M_LOG2E 1.44269504088896340735992468100189214
+#define M_LOG10E 0.434294481903251827651128918916605082
+#define M_LN2 0.693147180559945309417232121458176568
+#define M_LN10 2.30258509299404568401799145468436421
+#define M_PI 3.14159265358979323846264338327950288
+#define M_SQRT2 1.41421356237309504880168872420969808
+#define M_SQRT1_2 0.707106781186547524400844362104849039
+#ifndef NAN
+#define NAN atof("NAN")
+#endif
+#ifndef INFINITY
+#define INFINITY atof("INFINITY") /* TODO: fix this */
+#endif
+#endif
+
+/* Different classes of V7_TYPE_OBJ type */
+enum v7_class {
+  V7_CLASS_NONE,
+  V7_CLASS_ARRAY,
+  V7_CLASS_BOOLEAN,
+  V7_CLASS_DATE,
+  V7_CLASS_ERROR,
+  V7_CLASS_FUNCTION,
+  V7_CLASS_NUMBER,
+  V7_CLASS_OBJECT,
+  V7_CLASS_REGEXP,
+  V7_CLASS_STRING,
+  V7_NUM_CLASSES
 };
 
 /* Sub expression matches */
@@ -598,10 +607,6 @@ V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *re, size_t re_len,
                                    const char *fl, size_t fl_len);
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
-
-/* Tokenizer */
-V7_PRIVATE int skip_to_next_tok(const char **ptr);
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
 
 /* Parser */
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);

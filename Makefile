@@ -4,14 +4,16 @@ CFLAGS = -W -Wall -pedantic $(WARNS) -g -O0 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXT
 SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
           src/object.c src/regex.c src/rune.c src/runetype.c src/string.c \
-		  src/json.c src/stdlib.c src/parser.c src/tokenizer.c src/api.c src/main.c
+          src/json.c src/stdlib.c src/parser.c src/tokenizer.c src/api.c \
+          src/main.c
+HEADERS = src/v7_license.h src/utf.h src/tokenizer.h src/internal.h
 
 .PHONY: cpplint
 
 all: v7 unit_test
 
-v7.c: src/v7_license.h src/utf.h src/internal.h $(SOURCES) v7.h Makefile
-	cat src/v7_license.h src/utf.h src/internal.h $(SOURCES) | sed -E '/#include .(v7_license|utf|internal).h./d' | sed -E 's:#include "..\/v7.h":#include "v7.h":' > $@
+v7.c: $(HEADERS) $(SOURCES) v7.h Makefile
+	cat $(HEADERS) $(SOURCES) | sed -E '/#include .(v7_license|utf|internal).h./d' | sed -E 's:#include "..\/v7.h":#include "v7.h":' > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes \
