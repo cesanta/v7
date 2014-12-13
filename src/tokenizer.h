@@ -91,7 +91,6 @@ enum v7_tok {
   TOK_TRUE,
   TOK_TRY,
   TOK_TYPEOF,
-  TOK_UNDEFINED,
   TOK_VAR,
   TOK_VOID,
   TOK_WHILE,
