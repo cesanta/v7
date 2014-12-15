@@ -510,9 +510,6 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
     case TOK_NULL:
       if (ex) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
       break;
-    case TOK_UNDEFINED:
-      if (ex) TRY(v7_make_and_push(v7, V7_TYPE_UNDEF));
-      break;
     case TOK_TRUE:
       if (ex) TRY(push_bool(v7, 1));
       break;

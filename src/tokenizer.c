@@ -18,8 +18,8 @@ static struct v7_vec s_keywords[] = {
     V7_VEC("instanceof"), V7_VEC("new"),       V7_VEC("null"),
     V7_VEC("return"),     V7_VEC("switch"),    V7_VEC("this"),
     V7_VEC("throw"),      V7_VEC("true"),      V7_VEC("try"),
-    V7_VEC("typeof"),     V7_VEC("undefined"), V7_VEC("var"),
-    V7_VEC("void"),       V7_VEC("while"),     V7_VEC("with")};
+    V7_VEC("typeof"),     V7_VEC("var"),       V7_VEC("void"),
+    V7_VEC("while"),      V7_VEC("with")};
 
 /*
  * Move ptr to the next token, skipping comments and whitespaces.
@@ -220,7 +220,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
       return kw(p, *s - p, 5, TOK_THIS);
     case 'u':
       ident(s);
-      return kw(p, *s - p, 1, TOK_UNDEFINED);
+      return TOK_IDENTIFIER;
     case 'v':
       ident(s);
       return kw(p, *s - p, 2, TOK_VAR);
