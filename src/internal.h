@@ -37,6 +37,39 @@ typedef unsigned char uint8_t;
 #include <stdint.h>
 #endif
 
+/*
+ * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
+ * the structure, but append it to the list of free structures.
+ * Subsequent allocations try to grab a structure from the free list,
+ * which speeds up allocation.
+ * #define V7_CACHE_OBJS
+ */
+
+/* Maximum length of the string literal */
+#define MAX_STRING_LITERAL_LENGTH 2000
+
+#define RE_MAX_SUB 32
+#define RE_MAX_RANGES 32
+#define RE_MAX_SETS 16
+#define RE_MAX_REP 0xFFFF
+#define RE_MAX_THREADS 1000
+#define V7_RE_MAX_REPL_SUB 255
+
+typedef unsigned short uint16_t;
+typedef signed char sint8_t;
+
+#define reg_malloc malloc
+#define reg_free free
+
+#ifndef V7_EX_TRY_CATCH
+#define V7_EX_TRY_CATCH(catch_point) setjmp(catch_point)
+#define V7_EX_THROW(c, m, message) \
+  do {                             \
+    m = message;                   \
+    longjmp(c, 1);                 \
+  } while (0)
+#endif
+
 /* MSVC6 doesn't have standard C math constants defined */
 #ifndef M_PI
 #define M_E 2.71828182845904523536028747135266250
