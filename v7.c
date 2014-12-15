@@ -218,7 +218,6 @@ V7_PRIVATE const char *tok_name(enum v7_tok);
 #define V7_INTERNAL_H_INCLUDED
 
 #include "v7.h"
-#include "tokenizer.h"
 
 #include <sys/stat.h>
 #include <assert.h>
