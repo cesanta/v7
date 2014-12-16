@@ -10,7 +10,7 @@ HEADERS = src/v7_license.h src/utf.h src/tokenizer.h src/internal.h src/ast.h sr
 
 .PHONY: cpplint
 
-all: v7 unit_test
+all: v7 amalgamated_v7 unit_test
 
 v7.c: $(HEADERS) $(SOURCES) v7.h Makefile
 	cat $(HEADERS) $(SOURCES) | sed -E '/#include .(v7_license|utf|tokenizer|ast|aparser|internal).h./d' | sed -E 's:#include "..\/v7.h":#include "v7.h":' > $@
@@ -39,6 +39,9 @@ v7: src/v7_license.h src/utf.h src/internal.h $(SOURCES) v7.h
 	$(CC) $(SOURCES) -o $@ -DV7_EXE -DV7_PRIVATE="" $(CFLAGS) -lm
 #	$(CC) $(SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
 
+amalgamated_v7: v7.h v7.c
+	$(CC) v7.c -o $@ -DV7_EXE -DV7_PRIVATE="" $(CFLAGS) -lm
+
 js: v7
 	@./v7 tests/v7_basic_test.js
 	@rhino -version 130 tests/v7_basic_test.js
@@ -51,7 +54,7 @@ w: v7.c
 	wine unit_test.exe
 
 clean:
-	rm -rf *.gc* *.dSYM *.exe *.obj *.pdb a.out u unit_test v7 t
+	rm -rf *.gc* *.dSYM *.exe *.obj *.pdb a.out u unit_test v7 amalgamated_v7 t
 
 setup-hooks:
 	for i in .hooks/*; do ln -s ../../.hooks/$$(basename $$i) .git/hooks; done
