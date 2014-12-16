@@ -5,15 +5,15 @@ SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
           src/object.c src/regex.c src/rune.c src/runetype.c src/string.c \
           src/json.c src/stdlib.c src/parser.c src/tokenizer.c src/api.c \
-          src/main.c
-HEADERS = src/v7_license.h src/utf.h src/tokenizer.h src/internal.h
+          src/ast.c src/aparser.c src/main.c
+HEADERS = src/v7_license.h src/utf.h src/tokenizer.h src/internal.h src/ast.h src/aparser.h
 
 .PHONY: cpplint
 
 all: v7 unit_test
 
 v7.c: $(HEADERS) $(SOURCES) v7.h Makefile
-	cat $(HEADERS) $(SOURCES) | sed -E '/#include .(v7_license|utf|tokenizer|internal).h./d' | sed -E 's:#include "..\/v7.h":#include "v7.h":' > $@
+	cat $(HEADERS) $(SOURCES) | sed -E '/#include .(v7_license|utf|tokenizer|ast|aparser|internal).h./d' | sed -E 's:#include "..\/v7.h":#include "v7.h":' > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes \
@@ -29,7 +29,7 @@ xrun: unit_test
 	./t
 
 run: unit_test
-	./unit_test
+	./unit_test $(TEST_FILTER)
 
 all_warnings: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)

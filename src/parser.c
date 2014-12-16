@@ -5,20 +5,17 @@
 
 #include "internal.h"
 
-#define EXPECT(v7, t)                                 \
-  do {                                                \
-    if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; \
-    next_tok(v7);                                     \
-  } while (0)
-
-static enum v7_tok lookahead(const struct v7 *v7) {
+V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
   double d;
   return get_tok(&s, &d);
 }
 
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
+  int prev_line_no = v7->pstate.prev_line_no;
+  v7->pstate.prev_line_no = v7->pstate.line_no;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  v7->after_newline = prev_line_no != v7->pstate.line_no;
   v7->tok = v7->pstate.pc;
   v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl);
   v7->tok_len = v7->pstate.pc - v7->tok;
@@ -124,7 +121,7 @@ static enum v7_err parse_compound_statement(struct v7 *v7, int *has_return) {
       TRY(parse_statement(v7, has_return));
       if (*has_return && EXECUTING(v7->flags)) return V7_OK;
     }
-    EXPECT(v7, TOK_CLOSE_CURLY);
+    EXPECT(TOK_CLOSE_CURLY);
   } else {
     TRY(parse_statement(v7, has_return));
   }
@@ -139,7 +136,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   const char *src = v7->pstate.pc, *func_name = NULL;
   struct v7_val *ctx = NULL, *f = NULL;
 
-  EXPECT(v7, TOK_FUNCTION);
+  EXPECT(TOK_FUNCTION);
   if (v7->cur_tok == TOK_IDENTIFIER) {
     /* function name is given, e.g. function foo() {} */
     CHECK(v == NULL, V7_SYNTAX_ERROR);
@@ -186,11 +183,11 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
   }
 
   /* Add function arguments to the variable object */
-  EXPECT(v7, TOK_OPEN_PAREN);
+  EXPECT(TOK_OPEN_PAREN);
   while (v7->cur_tok != TOK_CLOSE_PAREN) {
     const char *key = v7->tok;
     unsigned long key_len = v7->tok_len;
-    EXPECT(v7, TOK_IDENTIFIER);
+    EXPECT(TOK_IDENTIFIER);
     if (EXECUTING(v7->flags)) {
       struct v7_val *val =
           i < num_params ? v[i + 1] : make_value(v7, V7_TYPE_UNDEF);
@@ -201,7 +198,7 @@ static enum v7_err parse_function_definition(struct v7 *v7, struct v7_val **v,
       next_tok(v7);
     }
   }
-  EXPECT(v7, TOK_CLOSE_PAREN);
+  EXPECT(TOK_CLOSE_PAREN);
 
   /* Execute (or pass) function body */
   TRY(parse_compound_statement(v7, &has_ret));
@@ -298,7 +295,7 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
         V7_CALLED_NON_FUNCTION);
 
   /* Push arguments on stack */
-  EXPECT(v7, TOK_OPEN_PAREN);
+  EXPECT(TOK_OPEN_PAREN);
   while (v7->cur_tok != TOK_CLOSE_PAREN) {
     TRY(parse_expression(v7));
     if (EXECUTING(v7->flags)) {
@@ -314,7 +311,7 @@ static enum v7_err parse_function_call(struct v7 *v7, struct v7_val *this_obj,
     }
     num_args++;
   }
-  EXPECT(v7, TOK_CLOSE_PAREN);
+  EXPECT(TOK_CLOSE_PAREN);
 
   TRY(v7_call2(v7, this_obj, num_args, called_as_ctor));
 
@@ -390,7 +387,7 @@ static enum v7_err parse_array_literal(struct v7 *v7) {
 static enum v7_err parse_object_literal(struct v7 *v7) {
   /* Push empty object on stack */
   TRY(v7_make_and_push(v7, V7_TYPE_OBJ));
-  EXPECT(v7, TOK_OPEN_CURLY);
+  EXPECT(TOK_OPEN_CURLY);
 
   /* Assign key/values to the object, until closing "}" is found */
   while (v7->cur_tok != TOK_CLOSE_CURLY) {
@@ -407,7 +404,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
 
     /* Push value on stack */
     next_tok(v7);
-    EXPECT(v7, TOK_COLON);
+    EXPECT(TOK_COLON);
     TRY(parse_expression(v7));
 
     /* Stack should now have object, key, value. Assign, and remove key/value */
@@ -426,7 +423,7 @@ static enum v7_err parse_object_literal(struct v7 *v7) {
 }
 
 static enum v7_err parse_delete_statement(struct v7 *v7) {
-  EXPECT(v7, TOK_DELETE);
+  EXPECT(TOK_DELETE);
   TRY(parse_expression(v7));
   TRY(v7_del2(v7, v7->cur_obj, v7->key, v7->key_len));
   return V7_OK;
@@ -560,7 +557,7 @@ static enum v7_err parse_prop_accessor(struct v7 *v7, enum v7_tok op) {
     next_tok(v7);
   } else {
     TRY(parse_expression(v7));
-    EXPECT(v7, TOK_CLOSE_BRACKET);
+    EXPECT(TOK_CLOSE_BRACKET);
     if (EXECUTING(v7->flags)) {
       struct v7_val *expr_val = v7_top_val(v7);
 
@@ -965,10 +962,10 @@ V7_PRIVATE enum v7_err parse_ternary(struct v7 *v7) {
       TRY(inc_stack(v7, -1));  /* Remove condition result */
     }
 
-    EXPECT(v7, TOK_QUESTION);
+    EXPECT(TOK_QUESTION);
     if (!condition_true || !EXECUTING(old_flags)) v7->flags |= V7_NO_EXEC;
     TRY(parse_expression(v7));
-    EXPECT(v7, TOK_COLON);
+    EXPECT(TOK_COLON);
     v7->flags = old_flags;
     if (condition_true || !EXECUTING(old_flags)) v7->flags |= V7_NO_EXEC;
     TRY(parse_expression(v7));
@@ -1068,13 +1065,13 @@ V7_PRIVATE enum v7_err parse_expression(struct v7 *v7) {
 static enum v7_err parse_declaration(struct v7 *v7) { /* <#parse_decl#> */
   int old_sp = v7_sp(v7);
 
-  EXPECT(v7, TOK_VAR);
+  EXPECT(TOK_VAR);
   do {
     const char *key = v7->tok;
     unsigned long key_len = v7->tok_len;
 
     inc_stack(v7, old_sp - v7_sp(v7));
-    EXPECT(v7, TOK_IDENTIFIER);
+    EXPECT(TOK_IDENTIFIER);
     if (v7->cur_tok == TOK_ASSIGN) {
       next_tok(v7);
       TRY(parse_expression(v7));
@@ -1090,10 +1087,10 @@ static enum v7_err parse_declaration(struct v7 *v7) { /* <#parse_decl#> */
 static enum v7_err parse_if_statement(struct v7 *v7, int *has_return) {
   int old_flags = v7->flags, condition_true;
 
-  EXPECT(v7, TOK_IF);
-  EXPECT(v7, TOK_OPEN_PAREN);
+  EXPECT(TOK_IF);
+  EXPECT(TOK_OPEN_PAREN);
   TRY(parse_expression(v7)); /* Evaluate condition, pushed on stack */
-  EXPECT(v7, TOK_CLOSE_PAREN);
+  EXPECT(TOK_CLOSE_PAREN);
 
   if (EXECUTING(old_flags)) {
     /* If condition is false, do not execute "if" body */
@@ -1121,10 +1118,10 @@ static enum v7_err parse_for_in_statement(struct v7 *v7, int has_var,
   unsigned long tok_len = v7->tok_len;
   struct v7_pstate s_block;
 
-  EXPECT(v7, TOK_IDENTIFIER);
-  EXPECT(v7, TOK_IN);
+  EXPECT(TOK_IDENTIFIER);
+  EXPECT(TOK_IN);
   TRY(parse_expression(v7));
-  EXPECT(v7, TOK_CLOSE_PAREN);
+  EXPECT(TOK_CLOSE_PAREN);
   s_block = v7->pstate;
 
   /* Execute loop body */
@@ -1153,8 +1150,8 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
   int is_true, old_flags = v7->flags, has_var = 0;
   struct v7_pstate s2, s3, s_block, s_end;
 
-  EXPECT(v7, TOK_FOR);
-  EXPECT(v7, TOK_OPEN_PAREN);
+  EXPECT(TOK_FOR);
+  EXPECT(TOK_OPEN_PAREN);
 
   if (v7->cur_tok == TOK_VAR) {
     has_var++;
@@ -1172,17 +1169,17 @@ static enum v7_err parse_for_statement(struct v7 *v7, int *has_return) {
     TRY(parse_expression(v7));
   }
 
-  EXPECT(v7, TOK_SEMICOLON);
+  EXPECT(TOK_SEMICOLON);
 
   /* Pass through the loop, don't execute it, just remember locations */
   v7->flags |= V7_NO_EXEC;
   get_v7_state(v7, &s2);
   TRY(parse_expression(v7));  /* expr2 (condition) */
-  EXPECT(v7, TOK_SEMICOLON);
+  EXPECT(TOK_SEMICOLON);
 
   get_v7_state(v7, &s3);
   TRY(parse_expression(v7));  /* expr3  (post-iteration) */
-  EXPECT(v7, TOK_CLOSE_PAREN);
+  EXPECT(TOK_CLOSE_PAREN);
 
   get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
@@ -1223,12 +1220,12 @@ static enum v7_err parse_while_statement(struct v7 *v7, int *has_return) {
   int is_true, old_flags = v7->flags;
   struct v7_pstate s_cond, s_block, s_end;
 
-  EXPECT(v7, TOK_WHILE);
-  EXPECT(v7, TOK_OPEN_PAREN);
+  EXPECT(TOK_WHILE);
+  EXPECT(TOK_OPEN_PAREN);
   get_v7_state(v7, &s_cond);
   v7->flags |= V7_NO_EXEC;
   TRY(parse_expression(v7));
-  EXPECT(v7, TOK_CLOSE_PAREN);
+  EXPECT(TOK_CLOSE_PAREN);
 
   get_v7_state(v7, &s_block);
   TRY(parse_compound_statement(v7, has_return));
@@ -1266,7 +1263,7 @@ static enum v7_err parse_return_statement(struct v7 *v7, int *has_return) {
   if (EXECUTING(v7->flags)) {
     *has_return = 1;
   }
-  EXPECT(v7, TOK_RETURN);
+  EXPECT(TOK_RETURN);
   if (v7->cur_tok != TOK_SEMICOLON && v7->cur_tok != TOK_CLOSE_CURLY) {
     TRY(parse_expression(v7));
   }
@@ -1278,7 +1275,7 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
   const char *old_pc = v7->pstate.pc;
   int old_flags = v7->flags, old_line_no = v7->pstate.line_no;
 
-  EXPECT(v7, TOK_TRY);
+  EXPECT(TOK_TRY);
   CHECK(v7->cur_tok == TOK_OPEN_CURLY, V7_SYNTAX_ERROR);
   err_code = parse_compound_statement(v7, has_return);
 
@@ -1302,12 +1299,12 @@ static enum v7_err parse_try_statement(struct v7 *v7, int *has_return) {
     const char *key;
     unsigned long key_len;
 
-    EXPECT(v7, TOK_CATCH);
-    EXPECT(v7, TOK_OPEN_PAREN);
+    EXPECT(TOK_CATCH);
+    EXPECT(TOK_OPEN_PAREN);
     key = v7->tok;
     key_len = v7->tok_len;
-    EXPECT(v7, TOK_IDENTIFIER);
-    EXPECT(v7, TOK_CLOSE_PAREN);
+    EXPECT(TOK_IDENTIFIER);
+    EXPECT(TOK_CLOSE_PAREN);
 
     /* Insert error variable into the namespace */
     if (err_code != V7_OK) {
