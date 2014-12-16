@@ -9440,11 +9440,9 @@ enum v7_err aparse_prefix(struct v7 *v7, struct ast *a) {
 static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
                                  int level, size_t pos) {
   struct {
-    int len;
-    int left_to_right;
+    int len, left_to_right;
     struct {
-      enum v7_tok start_tok;
-      enum v7_tok end_tok;
+      enum v7_tok start_tok, end_tok;
       enum ast_tag start_ast;
     } parts[2];
   } levels[] = {
