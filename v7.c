@@ -9102,10 +9102,12 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
       fprintf(fp, " %lf\n", dv);
       break;
     case AST_IDENT:
-      fprintf(fp, " %.*s\n", * (int *) (a->buf + *pos), * (char **) (a->buf + *pos + sizeof(uint32_t)));
+      fprintf(fp, " %.*s\n", * (int *) (a->buf + *pos),
+              * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;
     case AST_STRING:
-      fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos), * (char **) (a->buf + *pos + sizeof(uint32_t)));
+      fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos),
+              * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;
     default:
       fprintf(fp, "\n");
@@ -9165,7 +9167,7 @@ static enum v7_err aparse_funcdecl(struct v7 *, struct ast *, int);
 
 static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER) {
-    ast_add_ident(a, v7->tok, v7->tok_len);  /* TODO(mkm): symbol table */
+    ast_add_ident(a, v7->tok, v7->tok_len);
     next_tok(v7);
     return V7_OK;
   }
@@ -9436,38 +9438,38 @@ enum v7_err aparse_prefix(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
-                                 int level) {
+                                 int level, size_t pos) {
   struct {
     int len;
+    int left_to_right;
     struct {
       enum v7_tok start_tok;
       enum v7_tok end_tok;
       enum ast_tag start_ast;
     } parts[2];
   } levels[] = {
-    {1, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, {0, 0, 0}}},
-    {1, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, {0, 0, 0}}},
-    {1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, {0, 0, 0}}},
-    {1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, {0, 0, 0}}},
-    {1, {{TOK_OR, TOK_OR, AST_OR}, {0, 0, 0}}},
-    {1, {{TOK_XOR, TOK_XOR, AST_XOR}, {0, 0, 0}}},
-    {1, {{TOK_AND, TOK_AND, AST_AND}, {0, 0, 0}}},
-    {1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, {0, 0, 0}}},
-    {2, {{TOK_LE, TOK_GT, AST_LE}, {TOK_IN, TOK_INSTANCEOF, AST_IN}}},
-    {1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, {0, 0, 0}}},
-    {1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, {0, 0, 0}}},
-    {1, {{TOK_REM, TOK_DIV, AST_REM}, {0, 0, 0}}}
+    {1, 0, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, {0, 0, 0}}},
+    {1, 0, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, {0, 0, 0}}},
+    {1, 1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, {0, 0, 0}}},
+    {1, 1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, {0, 0, 0}}},
+    {1, 1, {{TOK_OR, TOK_OR, AST_OR}, {0, 0, 0}}},
+    {1, 1, {{TOK_XOR, TOK_XOR, AST_XOR}, {0, 0, 0}}},
+    {1, 1, {{TOK_AND, TOK_AND, AST_AND}, {0, 0, 0}}},
+    {1, 1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, {0, 0, 0}}},
+    {2, 1, {{TOK_LE, TOK_GT, AST_LE}, {TOK_IN, TOK_INSTANCEOF, AST_IN}}},
+    {1, 1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, {0, 0, 0}}},
+    {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, {0, 0, 0}}},
+    {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, {0, 0, 0}}}
   };
 
   int i;
   enum v7_tok tok;
   enum ast_tag ast;
-  size_t pos = a->len;
 
   if (level == (int) ARRAY_SIZE(levels) - 1) {
     PARSE(prefix);
   } else {
-    PARSE_ARG(binary, level + 1);
+    TRY(aparse_binary(v7, a, level + 1, a->len));
   }
 
   for (i = 0; i < levels[level].len; i++) {
@@ -9487,8 +9489,13 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
         ast_insert_node(a, pos, AST_COND);
         return V7_OK;
       } else if (ACCEPT(tok)) {
-        PARSE_ARG(binary, level);
-        ast_insert_node(a, pos, ast);
+        if (levels[level].left_to_right) {
+          ast_insert_node(a, pos, ast);
+          TRY(aparse_binary(v7, a, level, pos));
+        } else {
+          TRY(aparse_binary(v7, a, level, a->len));
+          ast_insert_node(a, pos, ast);
+        }
       }
     } while(ast++, tok++ < levels[level].parts[i].end_tok);
   }
@@ -9497,7 +9504,7 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
 }
 
 static enum v7_err aparse_assign(struct v7 *v7, struct ast *a) {
-  return aparse_binary(v7, a, 0);
+  return aparse_binary(v7, a, 0, a->len);
 }
 
 static enum v7_err aparse_expression(struct v7 *v7, struct ast *a) {
@@ -9776,7 +9783,7 @@ static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
     if (require_named) {
       return V7_ERROR;
     }
-    ast_add_ident(a, "?", 1);  /* TODO(mkm): symboltable API */
+    ast_add_ident(a, "?", 1);
   }
   EXPECT(TOK_OPEN_PAREN);
   PARSE(arglist);
