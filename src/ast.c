@@ -592,10 +592,12 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
       fprintf(fp, " %lf\n", dv);
       break;
     case AST_IDENT:
-      fprintf(fp, " %.*s\n", * (int *) (a->buf + *pos), * (char **) (a->buf + *pos + sizeof(uint32_t)));
+      fprintf(fp, " %.*s\n", * (int *) (a->buf + *pos),
+              * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;
     case AST_STRING:
-      fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos), * (char **) (a->buf + *pos + sizeof(uint32_t)));
+      fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos),
+              * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;
     default:
       fprintf(fp, "\n");
