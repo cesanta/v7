@@ -6,9 +6,13 @@
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
+/* Public API. Implemented in api.c */
 #include "../v7.h"
+
+/* Private API */
 #include "utf.h"
 #include "tokenizer.h"
+#include "vm.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -271,7 +275,23 @@ struct v7_pstate {
   int prev_line_no; /* Line number of previous token */
 };
 
+/* TODO(lsm): move VM definitions to vm.h */
 struct v7 {
+  struct v7_object global_object;
+
+  /*
+   * Stack of execution contexts.
+   * Each execution context object in the call stack has hidden properties:
+   *  *  "_p": Parent context (for closures)
+   *  *  "_e": Exception environment
+   *
+   * Hidden properties have V7_PROPERTY_HIDDEN flag set.
+   * Execution contexts should be allocated on heap, because they might not be
+   * on a call stack but still referenced (closures).
+   */
+  struct v7_value *call_stack;
+
+  /* TODO(lsm): after refactoring is made, kill everything below this line */
   struct v7_val root_scope; /* "global" object (root-level execution context) */
   struct v7_val *stack[200]; /* TODO: make it non-fixed, auto-grow */
   int sp;                    /* Stack pointer */

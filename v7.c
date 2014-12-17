@@ -5,6 +5,140 @@
  * This software is dual-licensed: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation. For the terms of this
+ * license, see <http: *www.gnu.org/licenses/>.
+ *
+ * You are free to use this software under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * Alternatively, you can license this software under a commercial
+ * license, as set out in <http://cesanta.com/products.html>.
+ */
+
+#ifndef V7_HEADER_INCLUDED
+#define V7_HEADER_INCLUDED
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+#define V7_VERSION "1.0"
+
+struct v7;     /* Opaque structure. V7 engine handler. */
+struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
+
+/*
+ * JavaScript value is either a primitive, or an object.
+ * There are 5 primitive types: Undefined, Null, Boolean, Number, String.
+ * Non-primitive type is an Object type. There are several classes of Objects,
+ * see description of `struct v7_object` below for more details.
+ * This enumeration combines types and object classes in one enumeration.
+ * NOTE(lsm): compile with `-fshort-enums` to reduce sizeof(enum v7_type) to 1.
+ */
+enum v7_type {
+  /* TODO(lsm): kill after refactoring */
+  V7_TYPE_UNDEF,
+  V7_TYPE_NULL,
+  V7_TYPE_BOOL,
+  V7_TYPE_STR,
+  V7_TYPE_NUM,
+  V7_TYPE_OBJ,
+  /* End of TODO */
+
+  /* Primitive types */
+  V7_TYPE_UNDEFINED,
+  /* V7_TYPE_NULL, */
+  V7_TYPE_BOOLEAN,
+  V7_TYPE_NUMBER,
+  V7_TYPE_STRING,
+
+  /* Different classes of Object type */
+  V7_TYPE_GENERIC_OBJECT,
+  V7_TYPE_BOOLEAN_OBJECT,
+  V7_TYPE_STRING_OBJECT,
+  V7_TYPE_NUMBER_OBJECT,
+  V7_TYPE_FUNCION_OBJECT,
+  V7_TYPE_C_FUNCION_OBJECT,
+  V7_TYPE_REGEXP_OBJECT,
+  V7_TYPE_ARRAY_OBJECT,
+  V7_TYPE_DATE_OBJECT,
+  V7_TYPE_ERROR_OBJECT,
+
+  V7_NUM_TYPES
+};
+
+enum v7_err {
+  V7_OK,
+  V7_ERROR,
+  V7_EVAL_ERROR,
+  V7_RANGE_ERROR,
+  V7_REFERENCE_ERROR,
+  V7_SYNTAX_ERROR,
+  V7_TYPE_ERROR,
+  V7_URI_ERROR,
+  V7_OUT_OF_MEMORY,
+  V7_INTERNAL_ERROR,
+  V7_STACK_OVERFLOW,
+  V7_STACK_UNDERFLOW,
+  V7_CALLED_NON_FUNCTION,
+  V7_NOT_IMPLEMENTED,
+  V7_STR_TOO_LONG,
+  V7_REGEXP_ERROR,
+  V7_NUM_ERRORS
+};
+
+/* This structure is passed as an argument to the C/JS glue function */
+struct v7_c_func_arg {
+  struct v7 *v7;
+  struct v7_val *this_obj;
+  struct v7_val **args;
+  int num_args;
+  int called_as_constructor;
+};
+typedef enum v7_err (*v7_func_t)(struct v7_c_func_arg *arg);
+
+struct v7 *v7_create(void);    /* Creates and initializes V7 engine */
+void v7_destroy(struct v7 **); /* Cleanes up and deallocates V7 engine */
+
+struct v7_val *v7_exec(struct v7 *, const char *str); /* Executes string */
+struct v7_val *v7_exec_file(struct v7 *, const char *path); /* Executes file */
+
+struct v7_val *v7_global(struct v7 *); /* Returns global obj (root namespace) */
+char *v7_stringify(const struct v7_val *v, char *buf, int bsiz);
+const char *v7_get_error_string(const struct v7 *); /* Returns error string */
+int v7_is_true(const struct v7_val *);
+void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
+
+enum v7_err v7_set(struct v7 *, struct v7_val *, const char *, struct v7_val *);
+enum v7_err v7_del(struct v7 *, struct v7_val *obj, const char *key);
+struct v7_val *v7_get(struct v7_val *obj, const char *key);
+
+struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
+
+struct v7_val *v7_push_number(struct v7 *, double num);
+struct v7_val *v7_push_bool(struct v7 *, int is_true);
+struct v7_val *v7_push_string(struct v7 *, const char *str, unsigned long, int);
+struct v7_val *v7_push_new_object(struct v7 *);
+struct v7_val *v7_push_val(struct v7 *, struct v7_val *);
+struct v7_val *v7_push_func(struct v7 *, v7_func_t);
+
+enum v7_type v7_type(const struct v7_val *);
+double v7_number(const struct v7_val *);
+const char *v7_string(const struct v7_val *, unsigned long *len);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* V7_HEADER_INCLUDED */
+/*
+ * Copyright (c) 2013-2014 Cesanta Software Limited
+ * All rights reserved
+ *
+ * This software is dual-licensed: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation. For the terms of this
  * license, see <http://www.gnu.org/licenses/>.
  *
  * You are free to use this software under the terms of the GNU General
@@ -213,10 +347,148 @@ V7_PRIVATE const char *tok_name(enum v7_tok);
  * All rights reserved
  */
 
+/* Forward declarations */
+struct v7_ast;    /* V7 Abstract Syntax Tree. */
+struct v7_arg;    /* C/JavaScript function parameters */
+
+typedef double v7_num_t;    /* Override to integer on systems with no MMU */
+typedef unsigned long v7_strlen_t;
+typedef void (*v7_func2_t)(struct v7_arg *arg);
+
+/*
+ * Strings might have embedded zero bytes. They might be interned.
+ * Also, they might be referencing foreign memory blocks, e.g. from C code,
+ * without making a copy.
+ * Therefore, define string as a structure that describes generic memory block.
+ */
+struct v7_str {
+  char *buf;
+  v7_strlen_t len;
+};
+
+union v7_valholder {
+  int boolean;
+  v7_num_t number;
+  struct v7_str string;
+  struct v7_object *object;
+  v7_func2_t c_function;
+};
+
+struct v7_value {
+  union v7_valholder value;
+  enum v7_type type;          /* This is going to waste a lot for alignment */
+};
+
+struct v7_property {
+  struct v7_property *next;   /* Linkage in struct v7_object::properties */
+  char *name;                 /* Property name is a zero-terminated string */
+  struct v7_value value;      /* Property value */
+
+  unsigned int attributes;
+#define V7_PROPERTY_READ_ONLY    1
+#define V7_PROPERTY_DONT_ENUM    2
+#define V7_PROPERTY_DONT_DELETE  4
+#define V7_PROPERTY_HIDDEN       8
+};
+
+/*
+ * An object is an unordered collection of properties.
+ * A function stored in a property of an object is called a method.
+ * A property has a name, a value, and set of attributes.
+ * Attributes are: ReadOnly, DontEnum, DontDelete, Internal.
+ *
+ * A constructor is a function that creates and initializes objects.
+ * Each constructor has an associated prototype object that is used for
+ * inheritance and shared properties. When a constructor creates an object,
+ * the new object references the constructor’s prototype.
+ *
+ * Objects could be a "generic objects" which is a collection of properties,
+ * or a "typed object" which also hold an internal value like String or Number.
+ * Those values are implicit, unnamed properties of the respective types,
+ * and can be coerced into primitive types by calling a respective constructor
+ * as a function:
+ *    var a = new Number(123);
+ *    typeof(a) == 'object';
+ *    typeof(Number(a)) == 'number';
+ */
+struct v7_object {
+  /* First HIDDEN property in a chain is an internal object value */
+  struct v7_property *properties;
+  struct v7_object *prototype;
+};
+
+/* Argument to all C/JavaScript glue functions */
+struct v7_arg {
+  struct v7 *v7;
+  struct v7_val *this_obj;
+  struct v7_val **args;
+  int num_args;
+  int called_as_constructor;
+};
+
+/*
+ * Variables are function-scoped and are hoisted.
+ * Lexical scoping & closures: each function has a chain of scopes, defined
+ * by the lexicographic order of function definitions.
+ * Scope is different from the execution context.
+ * Execution context carries "variable object" which is variable/value
+ * mapping for all variables defined in a function, and `this` object.
+ * If function is not called as a method, then `this` is a global object.
+ * Otherwise, `this` is an object that contains called method.
+ * New execution context is created each time a function call is performed.
+ * Passing arguments through recursion is done using execution context, e.g.
+ *
+ *    var factorial = function(num) {
+ *      return num < 2 ? 1 : num * factorial(num - 1);
+ *    };
+ *
+ * Here, recursion calls the same function `factorial` several times. Execution
+ * contexts for each call form a stack. Each context has different variable
+ * object, `vars`, with different values of `num`.
+ */
+
+struct v7_function {
+  int starting_line_number;   /* Starting line in the source code */
+  struct ast *ast;            /* AST, used as a byte code for execution */
+  struct v7_object vars;      /* Declared variables & functions */
+};
+
+/*
+ * Create a value with the given type.
+ * Last arguments to a function depend on `type`:
+ * - For `V7_TYPE_UNDEFINED` and `V7_TYPE_NULL` - no argument
+ * - For `V7_TYPE_NUMBER`, `v7_num_t` argument
+ * - For `V7_TYPE_BOOLEAN`, `int` argument
+ * - For `V7_TYPE_STRING`, `char *` followed by `v7_strlen_t` argument
+ * - For everything else, `v7_value *` argument. Value is not copied.
+ * Return NULL on failure.
+ */
+struct v7_value *v7_create_value(struct v7 *, enum v7_type type, ...);
+
+/*
+ * Set a property for an object.
+ * `obj` must be a object value. Last arguments depend on `type` (see above).
+ * Return 0 on success, -1 on error.
+ */
+int v7_set_property(struct v7 *, struct v7_value *obj,
+                    const char *name, v7_strlen_t len,
+                    unsigned int attributes, enum v7_type, ...);
+
+/* If `len` is 0, then `name` must be 0-terminated */
+V7_PRIVATE struct v7_property *v7_get_property(struct v7_value *obj,
+                                               const char *name, v7_strlen_t);
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
-#include "v7.h"
+/* Public API. Implemented in api.c */
+#include "../v7.h"
+
+/* Private API */
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -479,7 +751,23 @@ struct v7_pstate {
   int prev_line_no; /* Line number of previous token */
 };
 
+/* TODO(lsm): move VM definitions to vm.h */
 struct v7 {
+  struct v7_object global_object;
+
+  /*
+   * Stack of execution contexts.
+   * Each execution context object in the call stack has hidden properties:
+   *  *  "_p": Parent context (for closures)
+   *  *  "_e": Exception environment
+   *
+   * Hidden properties have V7_PROPERTY_HIDDEN flag set.
+   * Execution contexts should be allocated on heap, because they might not be
+   * on a call stack but still referenced (closures).
+   */
+  struct v7_value *call_stack;
+
+  /* TODO(lsm): after refactoring is made, kill everything below this line */
   struct v7_val root_scope; /* "global" object (root-level execution context) */
   struct v7_val *stack[200]; /* TODO: make it non-fixed, auto-grow */
   int sp;                    /* Stack pointer */
@@ -9144,6 +9432,69 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
 /* Dumps an AST to stdout. */
 V7_PRIVATE void ast_dump(FILE *fp, struct ast *a, ast_off_t pos) {
   ast_dump_tree(fp, a, &pos, 0);
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+struct v7_value *v7_create_value(struct v7 *v7, enum v7_type type, ...) {
+  struct v7_value *v;
+
+  /* TODO(lsm): take object from a free object cache */
+  (void) v7;
+
+  if ((v = (struct v7_value *) calloc(1, sizeof(*v))) != NULL) {
+    /* Initialize value based on type */
+    (void) type;
+  }
+
+  return v;
+}
+
+static struct v7_property *v7_create_property(struct v7 *v7) {
+  /* TODO(lsm): take property from a cache */
+  (void) v7;
+  return (struct v7_property *) calloc(1, sizeof(struct v7_property));
+}
+
+struct v7_property *v7_get_property(struct v7_value *obj, const char *name,
+                                    v7_strlen_t len) {
+  struct v7_property *prop;
+
+  if (obj == NULL || obj->type < V7_TYPE_GENERIC_OBJECT) {
+    return NULL;
+  }
+
+  for (prop = obj->value.object->properties; prop != NULL; prop = prop->next) {
+    if (strncmp(prop->name, name, len) == 0) {
+      return prop;
+    }
+  }
+
+  return NULL;
+}
+
+int v7_set_property(struct v7 *v7, struct v7_value *obj, const char *name,
+                    v7_strlen_t len, unsigned int attributes,
+                    enum v7_type type, ...) {
+  struct v7_property *prop;
+
+  if ((prop = v7_create_property(v7)) != NULL) {
+    prop->attributes = attributes;
+    prop->name = malloc(len + 1);
+    strncpy(prop->name, name, len);
+
+    /* Initialize value based on type */
+    (void) type;
+
+    /* TODO(lsm): make sure the property is unique */
+    prop->next = obj->value.object->properties;
+    obj->value.object->properties = prop;
+  }
+
+  return 0;
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited

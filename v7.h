@@ -28,13 +28,43 @@ extern "C" {
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
+/*
+ * JavaScript value is either a primitive, or an object.
+ * There are 5 primitive types: Undefined, Null, Boolean, Number, String.
+ * Non-primitive type is an Object type. There are several classes of Objects,
+ * see description of `struct v7_object` below for more details.
+ * This enumeration combines types and object classes in one enumeration.
+ * NOTE(lsm): compile with `-fshort-enums` to reduce sizeof(enum v7_type) to 1.
+ */
 enum v7_type {
+  /* TODO(lsm): kill after refactoring */
   V7_TYPE_UNDEF,
   V7_TYPE_NULL,
   V7_TYPE_BOOL,
   V7_TYPE_STR,
   V7_TYPE_NUM,
   V7_TYPE_OBJ,
+  /* End of TODO */
+
+  /* Primitive types */
+  V7_TYPE_UNDEFINED,
+  /* V7_TYPE_NULL, */
+  V7_TYPE_BOOLEAN,
+  V7_TYPE_NUMBER,
+  V7_TYPE_STRING,
+
+  /* Different classes of Object type */
+  V7_TYPE_GENERIC_OBJECT,
+  V7_TYPE_BOOLEAN_OBJECT,
+  V7_TYPE_STRING_OBJECT,
+  V7_TYPE_NUMBER_OBJECT,
+  V7_TYPE_FUNCION_OBJECT,
+  V7_TYPE_C_FUNCION_OBJECT,
+  V7_TYPE_REGEXP_OBJECT,
+  V7_TYPE_ARRAY_OBJECT,
+  V7_TYPE_DATE_OBJECT,
+  V7_TYPE_ERROR_OBJECT,
+
   V7_NUM_TYPES
 };
 
