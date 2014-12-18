@@ -116,30 +116,24 @@ static enum v7_tok parse_str_literal(const char **p) {
   const char *s = *p;
   int quote = *s++;
 
-  /* Scan string literal into the buffer, handle escape sequences */
-  while (*s != quote && *s != '\0') {
-    switch (*s) {
-      case '\\':
-        s++;
-        switch (*s) {
-          case 'b':
-          case 'f':
-          case 'n':
-          case 'r':
-          case 't':
-          case 'v':
-          case '\\':
-            s++;
-            break;
-          default:
-            if (*s == quote) s++;
-            break;
-        }
-        break;
-      default:
-        break;
+  /* Scan string literal, handle escape sequences */
+  for (; *s != quote && *s != '\0'; s++) {
+    if (*s == '\\') {
+      switch (s[1]) {
+        case 'b':
+        case 'f':
+        case 'n':
+        case 'r':
+        case 't':
+        case 'v':
+        case '\\':
+          s++;
+          break;
+        default:
+          if (s[1] == quote) s++;
+          break;
+      }
     }
-    s++;
   }
 
   if (*s == quote) {
