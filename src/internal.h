@@ -273,6 +273,7 @@ struct v7_pstate {
   const char *pc; /* Current parsing position */
   int line_no;    /* Line number */
   int prev_line_no; /* Line number of previous token */
+  int inhibit_in;   /* True while `in` expressions are inhibited */
 };
 
 /* TODO(lsm): move VM definitions to vm.h */

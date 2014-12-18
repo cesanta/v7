@@ -42,6 +42,7 @@ enum ast_tag {
   AST_WHILE,
   AST_DOWHILE,
   AST_FOR,
+  AST_FOR_IN,
   AST_COND,
 
   AST_DEBUGGER,

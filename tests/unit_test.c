@@ -756,7 +756,9 @@ static const char *test_aparser(void) {
     "while(true) {} 1;",
     "do {} while(false) 1;",
     "with (a) 1; 2;",
-    "with (a) {1} 2;"
+    "with (a) {1} 2;",
+    "for(var i in a) {1}",
+    "for(i in a) {1}",
   };
   const char *invalid[] = {
     "function(a) { return 1 }",
