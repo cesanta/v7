@@ -627,6 +627,14 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
       next_tok(v7);
       aparse_var(v7, a);
       break;
+    case TOK_IDENTIFIER:
+      if (lookahead(v7) == TOK_COLON) {
+        ast_add_label(a, v7->tok, v7->tok_len);
+        next_tok(v7);
+        EXPECT(TOK_COLON);
+        return V7_OK;
+      }
+      /* fall through */
     default:
       PARSE(expression);
       break;
