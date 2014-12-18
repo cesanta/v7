@@ -18,6 +18,7 @@ static enum v7_err aparse_terminal(struct v7 *, struct ast *);
 static enum v7_err aparse_assign(struct v7 *, struct ast *);
 static enum v7_err aparse_memberexpr(struct v7 *, struct ast *);
 static enum v7_err aparse_funcdecl(struct v7 *, struct ast *, int);
+static enum v7_err aparse_body(struct v7 *, struct ast *, enum v7_tok);
 
 static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER) {
@@ -645,7 +646,7 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
       break;
   }
 
-  /* TODO(mkm): labels, function statements */
+  /* TODO(mkm): labels */
 
   TRY(end_of_statement(v7));
   ACCEPT(TOK_SEMICOLON);  /* swallow optional semicolon */
@@ -665,7 +666,9 @@ static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
   PARSE(arglist);
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
-  PARSE_ARG(statements, 1);
+  EXPECT(TOK_OPEN_CURLY);
+  PARSE_ARG(body, TOK_CLOSE_CURLY);
+  EXPECT(TOK_CLOSE_CURLY);
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
 }
@@ -702,7 +705,8 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
     printf("WARNING parse input not consumed\n");
   }
   if (verbose && err != V7_OK) {
-      printf("Parse error at at line %d\n", v7->pstate.line_no);
+    printf("Parse error at at line %d col %lu\n", v7->pstate.line_no,
+           v7->tok - v7->pstate.source_code);
   }
   return err;
 }
