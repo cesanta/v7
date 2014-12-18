@@ -111,7 +111,7 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
   {"LSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
   {"RSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
   {"URSHIFT_ASSIGN", 0, 0, 2}, /* struct { child left, right; } */
-  {"IDENT", 4 + sizeof(char *), 0, 0},  /* struct { char var; } */
+  {"IDENT", 4 + sizeof(char *), 0, 0},  /* struct { uint32_t len, char *s; } */
   {"NUM", 8, 0, 0},                     /* struct { double n; } */
   {"STRING", 4 + sizeof(char *), 0, 0}, /* struct { uint32_t len, char *s; } */
   {"REGEX", 4 + sizeof(char *), 0, 0},  /* struct { uint32_t len, char *s; } */
@@ -168,7 +168,8 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
   {"FOR_IN", 0, 1, 2},
   {"COND", 0, 0, 3},     /* struct { child cond, iftrue, iffalse; } */
   {"DEBUGGER", 0, 0, 0}, /* struct {} */
-  {"BREAK", 0, 0, 0},    /* struct {} */
+  {"LABEL", 4 + sizeof(char *), 0, 0}, /* struct { uint32_t len, char *s; } */
+  {"BREAK", 0, 0, 0},                  /* struct {} */
   /*
    * struct {
    *   child label; // TODO(mkm): inline
@@ -576,6 +577,12 @@ V7_PRIVATE void ast_add_regex(struct ast *a, const char *name, size_t len) {
   ast_set_string(a->buf + start, name, len);
 }
 
+/* Helper to add a LABEL node. */
+V7_PRIVATE void ast_add_label(struct ast *a, const char *name, size_t len) {
+  size_t start = ast_add_node(a, AST_LABEL);
+  ast_set_string(a->buf + start, name, len);
+}
+
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
   int i;
   char buf[265];
@@ -614,6 +621,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
       break;
     case AST_STRING:
     case AST_REGEX:
+    case AST_LABEL:
       fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos),
               * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;

@@ -46,6 +46,7 @@ enum ast_tag {
   AST_COND,
 
   AST_DEBUGGER,
+  AST_LABEL,
   AST_BREAK,
   AST_LABELED_BREAK,
   AST_CONTINUE,
@@ -162,6 +163,7 @@ V7_PRIVATE void ast_add_num(struct ast *, double);
 V7_PRIVATE void ast_add_ident(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
+V7_PRIVATE void ast_add_label(struct ast *, const char *, size_t);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 

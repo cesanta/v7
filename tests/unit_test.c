@@ -767,6 +767,7 @@ static const char *test_aparser(void) {
     "{} {}",
     "if(1){function d(){}var x}",
     "if(1){} else {function d(){}var x}",
+    "lab: x=1"
   };
   const char *invalid[] = {
     "function(a) { return 1 }",
@@ -782,7 +783,7 @@ static const char *test_aparser(void) {
   size_t want_ast_len;
   ast_init(&a, 0);
 
-#if 0
+#if 1
 #define SAVE_AST
 #endif
 
