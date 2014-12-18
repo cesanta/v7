@@ -10283,11 +10283,12 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
 /*
  * $ ./v7 --show-ast -e 'var foo = 1;' jquery.js
  */
-static const char *static_show_ast_flag = "--show-ast";
+static const char *static_text_ast_flag = "--dump-text-ast";
+static const char *static_bin_ast_flag = "--dump-binary-ast";
 
 static void show_usage(char *argv[]) {
-  fprintf(stderr, "Usage: %s [%s] [-e <expression>] <js_file_1> ...\n",
-          argv[0], static_show_ast_flag);
+  fprintf(stderr, "Usage: %s [%s] [%s] [-e expression ...] js_file ...\n",
+          argv[0], static_text_ast_flag, static_bin_ast_flag);
   exit(EXIT_FAILURE);
 }
 
@@ -10307,33 +10308,39 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void dump_ast(const char *code) {
+static void dump_ast(const char *code, int binary) {
   struct ast ast;
 
   ast_init(&ast, 0);
-  aparse(&ast, code, 1);
-  ast_dump(stdout, &ast, 0);
+  if (aparse(&ast, code, 1) != V7_OK) {
+    fprintf(stderr, "%s\n", "parse error");
+  } else if (binary) {
+    fwrite(ast.buf, ast.len, 1, stdout);
+  } else {
+    ast_dump(stdout, &ast, 0);
+  }
   ast_free(&ast);
 }
 
 int main(int argc, char *argv[]) {
-  struct v7 *v7;
-  int i, show_ast = 0;
-
-  v7 = v7_create();
+  struct v7 *v7 = v7_create();
+  int i, show_ast = 0, binary_ast = 0;
 
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
-        dump_ast(argv[i + 1]);
+        dump_ast(argv[i + 1], binary_ast);
       } else if (!v7_exec(v7, argv[i + 1])) {
         fprintf(stderr, "Error executing [%s]: %s\n", argv[i + 1],
                 v7_get_error_string(v7));
       }
       i++;
-    } else if (strcmp(argv[i], static_show_ast_flag) == 0) {
+    } else if (strcmp(argv[i], static_text_ast_flag) == 0) {
       show_ast = 1;
+    } else if (strcmp(argv[i], static_bin_ast_flag) == 0) {
+      show_ast = 1;
+      binary_ast = 1;
     } else if (strcmp(argv[i], "-h") == 0) {
       show_usage(argv);
     }
@@ -10347,7 +10354,7 @@ int main(int argc, char *argv[]) {
       if ((source_code = read_file(argv[i], &size)) == NULL) {
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
-        dump_ast(source_code);
+        dump_ast(source_code, binary_ast);
         free(source_code);
       }
     } else if (!v7_exec_file(v7, argv[i])) {
