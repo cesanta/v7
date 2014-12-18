@@ -542,7 +542,7 @@ static const char *test_closure(void) {
 
 static const char *test_tokenizer(void) {
   static const char *str =
-    "1.23e-15 'foo\\x25' /\\s+/ $_12foo{}(),[].:;== === != !== "
+    "1.23e-15 'fo\\'\\'o\\x25\n\\'' /\\s+/ $_12foo{}(),[].:;== === != !== "
     "= %= *= /= ^= += -= |= &= <<= >>= >>>= & || + - ++ -- "
     "&&|?~%*/^ <= < >= > << >> >>> !";
   enum v7_tok tok = TOK_END_OF_INPUT;
