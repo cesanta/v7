@@ -37,6 +37,7 @@ enum ast_tag {
   AST_IDENT,
   AST_NUM,
   AST_STRING,
+  AST_REGEX,
   AST_SEQ,
   AST_WHILE,
   AST_DOWHILE,
@@ -159,6 +160,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_add_num(struct ast *, double);
 V7_PRIVATE void ast_add_ident(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
+V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 

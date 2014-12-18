@@ -8,7 +8,7 @@
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
   double d;
-  return get_tok(&s, &d);
+  return get_tok(&s, &d, v7->cur_tok);
 }
 
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
@@ -17,7 +17,7 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
   v7->after_newline = prev_line_no != v7->pstate.line_no;
   v7->tok = v7->pstate.pc;
-  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl);
+  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl, v7->cur_tok);
   v7->tok_len = v7->pstate.pc - v7->tok;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
   TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
@@ -495,7 +495,7 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
     case TOK_OPEN_CURLY:
       TRY(parse_object_literal(v7));
       break;
-    case TOK_DIV:
+    case TOK_REGEX_LITERAL:
       TRY(parse_regex(v7));
       break;
     case TOK_STRING_LITERAL:

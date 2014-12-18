@@ -7,6 +7,7 @@ enum v7_tok {
   TOK_END_OF_INPUT,
   TOK_NUMBER,
   TOK_STRING_LITERAL,
+  TOK_REGEX_LITERAL,
   TOK_IDENTIFIER,
 
   /* Punctuators */
@@ -113,9 +114,10 @@ enum v7_tok {
   TOK_PROTECTED,
   TOK_STATIC,
   TOK_YIELD,
+
   NUM_TOKENS
 };
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
 V7_PRIVATE const char *tok_name(enum v7_tok);

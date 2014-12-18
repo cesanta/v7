@@ -114,6 +114,7 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
   {"IDENT", 4 + sizeof(char *), 0, 0},  /* struct { char var; } */
   {"NUM", 8, 0, 0},                     /* struct { double n; } */
   {"STRING", 4 + sizeof(char *), 0, 0}, /* struct { uint32_t len, char *s; } */
+  {"REGEX", 4 + sizeof(char *), 0, 0},  /* struct { uint32_t len, char *s; } */
   /*
    * struct {
    *   ast_skip_t end;
@@ -559,6 +560,12 @@ V7_PRIVATE void ast_add_string(struct ast *a, const char *name, size_t len) {
   ast_set_string(a->buf + start, name, len);
 }
 
+/* Helper to add a REGEX node. */
+V7_PRIVATE void ast_add_regex(struct ast *a, const char *name, size_t len) {
+  size_t start = ast_add_node(a, AST_REGEX);
+  ast_set_string(a->buf + start, name, len);
+}
+
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
   int i;
   char buf[265];
@@ -596,6 +603,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
               * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;
     case AST_STRING:
+    case AST_REGEX:
       fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos),
               * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;

@@ -230,6 +230,7 @@ enum v7_tok {
   TOK_END_OF_INPUT,
   TOK_NUMBER,
   TOK_STRING_LITERAL,
+  TOK_REGEX_LITERAL,
   TOK_IDENTIFIER,
 
   /* Punctuators */
@@ -336,11 +337,12 @@ enum v7_tok {
   TOK_PROTECTED,
   TOK_STATIC,
   TOK_YIELD,
+
   NUM_TOKENS
 };
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n);
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
 V7_PRIVATE const char *tok_name(enum v7_tok);
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1059,6 +1061,7 @@ enum ast_tag {
   AST_IDENT,
   AST_NUM,
   AST_STRING,
+  AST_REGEX,
   AST_SEQ,
   AST_WHILE,
   AST_DOWHILE,
@@ -1181,6 +1184,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_add_num(struct ast *, double);
 V7_PRIVATE void ast_add_ident(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
+V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
@@ -6792,7 +6796,7 @@ V7_PRIVATE void init_stdlib(void) {
 V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
   double d;
-  return get_tok(&s, &d);
+  return get_tok(&s, &d, v7->cur_tok);
 }
 
 V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
@@ -6801,7 +6805,7 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
   v7->after_newline = prev_line_no != v7->pstate.line_no;
   v7->tok = v7->pstate.pc;
-  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl);
+  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl, v7->cur_tok);
   v7->tok_len = v7->pstate.pc - v7->tok;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
   TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
@@ -7279,7 +7283,7 @@ static enum v7_err parse_precedence_0(struct v7 *v7) {
     case TOK_OPEN_CURLY:
       TRY(parse_object_literal(v7));
       break;
-    case TOK_DIV:
+    case TOK_REGEX_LITERAL:
       TRY(parse_regex(v7));
       break;
     case TOK_STRING_LITERAL:
@@ -8310,6 +8314,7 @@ static enum v7_tok parse_str_literal(const char **p) {
 /*
  * This function is the heart of the tokenizer.
  * Organized as a giant switch statement.
+ *
  * Switch statement is by the first character of the input stream. If first
  * character begins with a letter, it could be either keyword or identifier.
  * get_tok() calls ident() which shifts `s` pointer to the end of the word.
@@ -8319,8 +8324,11 @@ static enum v7_tok parse_str_literal(const char **p) {
  * same order, to let kw() function work properly.
  * If kw() finds a keyword match, it returns keyword token.
  * Otherwise, it returns TOK_IDENTIFIER.
+ * NOTE(lsm): `prev_tok` is a previously parsed token. It is needed for
+ * correctly parsing regex literals.
  */
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
+                               enum v7_tok prev_tok) {
   const char *p = *s;
 
   switch (*p) {
@@ -8449,6 +8457,41 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
     case '*':
       return punct1(s, '=', TOK_MUL_ASSIGN, TOK_MUL);
     case '/':
+      /*
+       * TOK_DIV, TOK_DIV_ASSIGN, and TOK_REGEX_LITERAL start with `/` char.
+       * Division can happen after an expression.
+       * In expressions like this:
+       *            a /= b; c /= d;
+       * things between slashes is NOT a regex literal.
+       * The switch below catches all cases where division happens.
+       */
+      switch (prev_tok) {
+        case TOK_CLOSE_CURLY:
+        case TOK_CLOSE_PAREN:
+        case TOK_CLOSE_BRACKET:
+        case TOK_IDENTIFIER:
+        case TOK_NUMBER:
+          return punct1(s, '=', TOK_DIV_ASSIGN, TOK_DIV);
+          break;
+        default:
+          /* Not a division - this is a regex. Scan until closing slash */
+          for (p++; *p != '\0' && *p != '\n'; p++) {
+            if (*p == '\\') {
+              /* Skip escape sequence */
+              p++;
+            } else  if (*p == '/')  {
+              /* This is a closing slash */
+              p++;
+              /* Skip regex flags */
+              while (*p == 'g' || *p == 'i' || *p == 'm') {
+                p++;
+              }
+              *s = p;
+              return TOK_REGEX_LITERAL;
+            }
+          }
+          break;
+      }
       return punct1(s, '=', TOK_DIV_ASSIGN, TOK_DIV);
     case '^':
       return punct1(s, '=', TOK_XOR_ASSIGN, TOK_XOR);
@@ -8911,6 +8954,7 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
   {"IDENT", 4 + sizeof(char *), 0, 0},  /* struct { char var; } */
   {"NUM", 8, 0, 0},                     /* struct { double n; } */
   {"STRING", 4 + sizeof(char *), 0, 0}, /* struct { uint32_t len, char *s; } */
+  {"REGEX", 4 + sizeof(char *), 0, 0},  /* struct { uint32_t len, char *s; } */
   /*
    * struct {
    *   ast_skip_t end;
@@ -9356,6 +9400,12 @@ V7_PRIVATE void ast_add_string(struct ast *a, const char *name, size_t len) {
   ast_set_string(a->buf + start, name, len);
 }
 
+/* Helper to add a REGEX node. */
+V7_PRIVATE void ast_add_regex(struct ast *a, const char *name, size_t len) {
+  size_t start = ast_add_node(a, AST_REGEX);
+  ast_set_string(a->buf + start, name, len);
+}
+
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
   int i;
   char buf[265];
@@ -9393,6 +9443,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
               * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;
     case AST_STRING:
+    case AST_REGEX:
       fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos),
               * (char **) (a->buf + *pos + sizeof(uint32_t)));
       break;
@@ -9620,6 +9671,10 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
       break;
     case TOK_STRING_LITERAL:
       ast_add_string(a, v7->tok + 1, v7->tok_len - 2);
+      next_tok(v7);
+      break;
+    case TOK_REGEX_LITERAL:
+      ast_add_regex(a, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_IDENTIFIER:

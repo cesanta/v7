@@ -542,21 +542,37 @@ static const char *test_closure(void) {
 
 static const char *test_tokenizer(void) {
   static const char *str =
-    "1.23e-15 'foo\\x25' $_12foo{}(),[].:;== === != !== "
+    "1.23e-15 'foo\\x25' /\\s+/ $_12foo{}(),[].:;== === != !== "
     "= %= *= /= ^= += -= |= &= <<= >>= >>>= & || + - ++ -- "
     "&&|?~%*/^ <= < >= > << >> >>> !";
-  enum v7_tok tok;
+  enum v7_tok tok = TOK_END_OF_INPUT;
   double num;
   const char *p = str;
   int i = 1;
 
   skip_to_next_tok(&p);
-  while ((tok = get_tok(&p, &num)) != TOK_END_OF_INPUT) {
+
+  /* Make sure divisions are parsed correctly - set previous token */
+  while ((tok = get_tok(&p, &num, i > TOK_REGEX_LITERAL ? TOK_NUMBER: tok))
+         != TOK_END_OF_INPUT) {
     skip_to_next_tok(&p);
     ASSERT(tok == i);
     i++;
   }
   ASSERT(i == TOK_BREAK);
+
+  p = "/foo/";
+  ASSERT(get_tok(&p, &num, TOK_NUMBER) == TOK_DIV);
+
+  p = "/foo/";
+  ASSERT(get_tok(&p, &num, TOK_COMMA) == TOK_REGEX_LITERAL);
+
+  p = "/foo";
+  ASSERT(get_tok(&p, &num, TOK_COMMA) == TOK_DIV);
+
+  p = "/fo\\/o";
+  ASSERT(get_tok(&p, &num, TOK_COMMA) == TOK_DIV);
+
   return NULL;
 }
 

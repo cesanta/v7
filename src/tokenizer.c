@@ -155,6 +155,7 @@ static enum v7_tok parse_str_literal(const char **p) {
 /*
  * This function is the heart of the tokenizer.
  * Organized as a giant switch statement.
+ *
  * Switch statement is by the first character of the input stream. If first
  * character begins with a letter, it could be either keyword or identifier.
  * get_tok() calls ident() which shifts `s` pointer to the end of the word.
@@ -164,8 +165,11 @@ static enum v7_tok parse_str_literal(const char **p) {
  * same order, to let kw() function work properly.
  * If kw() finds a keyword match, it returns keyword token.
  * Otherwise, it returns TOK_IDENTIFIER.
+ * NOTE(lsm): `prev_tok` is a previously parsed token. It is needed for
+ * correctly parsing regex literals.
  */
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
+V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
+                               enum v7_tok prev_tok) {
   const char *p = *s;
 
   switch (*p) {
@@ -294,6 +298,41 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n) {
     case '*':
       return punct1(s, '=', TOK_MUL_ASSIGN, TOK_MUL);
     case '/':
+      /*
+       * TOK_DIV, TOK_DIV_ASSIGN, and TOK_REGEX_LITERAL start with `/` char.
+       * Division can happen after an expression.
+       * In expressions like this:
+       *            a /= b; c /= d;
+       * things between slashes is NOT a regex literal.
+       * The switch below catches all cases where division happens.
+       */
+      switch (prev_tok) {
+        case TOK_CLOSE_CURLY:
+        case TOK_CLOSE_PAREN:
+        case TOK_CLOSE_BRACKET:
+        case TOK_IDENTIFIER:
+        case TOK_NUMBER:
+          return punct1(s, '=', TOK_DIV_ASSIGN, TOK_DIV);
+          break;
+        default:
+          /* Not a division - this is a regex. Scan until closing slash */
+          for (p++; *p != '\0' && *p != '\n'; p++) {
+            if (*p == '\\') {
+              /* Skip escape sequence */
+              p++;
+            } else  if (*p == '/')  {
+              /* This is a closing slash */
+              p++;
+              /* Skip regex flags */
+              while (*p == 'g' || *p == 'i' || *p == 'm') {
+                p++;
+              }
+              *s = p;
+              return TOK_REGEX_LITERAL;
+            }
+          }
+          break;
+      }
       return punct1(s, '=', TOK_DIV_ASSIGN, TOK_DIV);
     case '^':
       return punct1(s, '=', TOK_XOR_ASSIGN, TOK_XOR);

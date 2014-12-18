@@ -126,6 +126,10 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
       ast_add_string(a, v7->tok + 1, v7->tok_len - 2);
       next_tok(v7);
       break;
+    case TOK_REGEX_LITERAL:
+      ast_add_regex(a, v7->tok, v7->tok_len);
+      next_tok(v7);
+      break;
     case TOK_IDENTIFIER:
       if (strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
         ast_add_node(a, AST_UNDEFINED);
