@@ -750,6 +750,7 @@ struct v7_pstate {
   const char *pc; /* Current parsing position */
   int line_no;    /* Line number */
   int prev_line_no; /* Line number of previous token */
+  int inhibit_in;   /* True while `in` expressions are inhibited */
 };
 
 /* TODO(lsm): move VM definitions to vm.h */
@@ -1066,6 +1067,7 @@ enum ast_tag {
   AST_WHILE,
   AST_DOWHILE,
   AST_FOR,
+  AST_FOR_IN,
   AST_COND,
 
   AST_DEBUGGER,
@@ -8996,6 +8998,16 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
    * }
    */
   {"FOR", 0, 2, 3},
+  /*
+   * struct {
+   *   ast_skip_t end;
+   *   child var;
+   *   child expr;
+   *   child body[];
+   * end:
+   * }
+   */
+  {"FOR_IN", 0, 1, 2},
   {"COND", 0, 0, 3},     /* struct { child cond, iftrue, iffalse; } */
   {"DEBUGGER", 0, 0, 0}, /* struct {} */
   {"BREAK", 0, 0, 0},    /* struct {} */
@@ -9879,6 +9891,10 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
     tok = levels[level].parts[i].start_tok;
     ast = levels[level].parts[i].start_ast;
     do {
+      if (v7->pstate.inhibit_in && tok == TOK_IN) {
+        continue;
+      }
+
       /*
        * Ternary operator sits in the middle of the binary operator
        * precedence chain. Deal with it as an exception and don't break
@@ -10007,17 +10023,33 @@ static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
-  /* TODO(mkm): for in, for of, for each in */
-  size_t start = ast_add_node(a, AST_FOR);
+  /* TODO(mkm): for of, for each in */
+  size_t start = a->len;
   EXPECT(TOK_OPEN_PAREN);
 
   if(aparse_optional(v7, a, TOK_SEMICOLON)) {
+    /*
+     * TODO(mkm): make this reentrant otherwise this pearl won't parse:
+     * for((function(){return 1 in o.a ? o : x})().a in [1,2,3])
+     */
+    v7->pstate.inhibit_in = 1;
     if (ACCEPT(TOK_VAR)) {
       aparse_var(v7, a);
     } else {
       PARSE(expression);
     }
+    v7->pstate.inhibit_in = 0;
+
+    if (ACCEPT(TOK_IN)) {
+      PARSE(expression);
+      EXPECT(TOK_CLOSE_PAREN);
+      PARSE_ARG(statements, 0);
+      ast_insert_node(a, start, AST_FOR_IN);
+      return V7_OK;
+    }
   }
+  start = ast_insert_node(a, start, AST_FOR);
+
   EXPECT(TOK_SEMICOLON);
   if (aparse_optional(v7, a, TOK_SEMICOLON)) {
     PARSE(expression);

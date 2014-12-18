@@ -332,6 +332,10 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
     tok = levels[level].parts[i].start_tok;
     ast = levels[level].parts[i].start_ast;
     do {
+      if (v7->pstate.inhibit_in && tok == TOK_IN) {
+        continue;
+      }
+
       /*
        * Ternary operator sits in the middle of the binary operator
        * precedence chain. Deal with it as an exception and don't break
@@ -460,17 +464,33 @@ static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
-  /* TODO(mkm): for in, for of, for each in */
-  size_t start = ast_add_node(a, AST_FOR);
+  /* TODO(mkm): for of, for each in */
+  size_t start = a->len;
   EXPECT(TOK_OPEN_PAREN);
 
   if(aparse_optional(v7, a, TOK_SEMICOLON)) {
+    /*
+     * TODO(mkm): make this reentrant otherwise this pearl won't parse:
+     * for((function(){return 1 in o.a ? o : x})().a in [1,2,3])
+     */
+    v7->pstate.inhibit_in = 1;
     if (ACCEPT(TOK_VAR)) {
       aparse_var(v7, a);
     } else {
       PARSE(expression);
     }
+    v7->pstate.inhibit_in = 0;
+
+    if (ACCEPT(TOK_IN)) {
+      PARSE(expression);
+      EXPECT(TOK_CLOSE_PAREN);
+      PARSE_ARG(statements, 0);
+      ast_insert_node(a, start, AST_FOR_IN);
+      return V7_OK;
+    }
   }
+  start = ast_insert_node(a, start, AST_FOR);
+
   EXPECT(TOK_SEMICOLON);
   if (aparse_optional(v7, a, TOK_SEMICOLON)) {
     PARSE(expression);

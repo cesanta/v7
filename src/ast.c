@@ -156,6 +156,16 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
    * }
    */
   {"FOR", 0, 2, 3},
+  /*
+   * struct {
+   *   ast_skip_t end;
+   *   child var;
+   *   child expr;
+   *   child body[];
+   * end:
+   * }
+   */
+  {"FOR_IN", 0, 1, 2},
   {"COND", 0, 0, 3},     /* struct { child cond, iftrue, iffalse; } */
   {"DEBUGGER", 0, 0, 0}, /* struct {} */
   {"BREAK", 0, 0, 0},    /* struct {} */
