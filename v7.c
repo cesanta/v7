@@ -10358,9 +10358,14 @@ static void dump_ast(const char *code, int binary) {
   struct ast ast;
 
   ast_init(&ast, 0);
+<<<<<<< HEAD
   if (aparse(&ast, code, 1) != V7_OK) {
     fprintf(stderr, "%s\n", "parse error");
   } else if (binary) {
+=======
+  aparse(&ast, code, 1);
+  if (binary) {
+>>>>>>> Added --dump-binary-ast cmd option
     fwrite(ast.buf, ast.len, 1, stdout);
   } else {
     ast_dump(stdout, &ast, 0);
