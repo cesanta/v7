@@ -13,11 +13,11 @@
 
 static enum v7_err aparse_expression(struct v7 *, struct ast *);
 static enum v7_err aparse_statement(struct v7 *, struct ast *);
-static enum v7_err aparse_statements(struct v7 *, struct ast *, int);
 static enum v7_err aparse_terminal(struct v7 *, struct ast *);
 static enum v7_err aparse_assign(struct v7 *, struct ast *);
 static enum v7_err aparse_memberexpr(struct v7 *, struct ast *);
 static enum v7_err aparse_funcdecl(struct v7 *, struct ast *, int);
+static enum v7_err aparse_block(struct v7 *, struct ast *);
 static enum v7_err aparse_body(struct v7 *, struct ast *, enum v7_tok);
 
 static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
@@ -39,7 +39,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
     PARSE(ident);
     EXPECT(TOK_OPEN_PAREN);
     EXPECT(TOK_CLOSE_PAREN);
-    aparse_statements(v7, a, 1);
+    PARSE(block);
     ast_set_skip(a, start, AST_END_SKIP);
   } else if (v7->cur_tok == TOK_IDENTIFIER &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
@@ -50,7 +50,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
     EXPECT(TOK_OPEN_PAREN);
     PARSE(ident);
     EXPECT(TOK_CLOSE_PAREN);
-    aparse_statements(v7, a, 1);
+    PARSE(block);
     ast_set_skip(a, start, AST_END_SKIP);
   } else {
     ast_add_node(a, AST_PROP);
@@ -390,20 +390,6 @@ static enum v7_err end_of_statement(struct v7 *v7) {
   return V7_ERROR;
 }
 
-static enum v7_err aparse_statements(struct v7 *v7, struct ast *a,
-                                     int require_block) {
-  if (ACCEPT(TOK_OPEN_CURLY)) {
-    while (!ACCEPT(TOK_CLOSE_CURLY)) {
-      PARSE(statement);
-    }
-    return V7_OK;
-  } else if (!require_block) {
-    PARSE(statement);
-    return V7_OK;
-  }
-  return V7_ERROR;
-}
-
 static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
   size_t start = ast_add_node(a, AST_VAR);
   do {
@@ -433,10 +419,10 @@ static enum v7_err aparse_if(struct v7 *v7, struct ast *a) {
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
-  PARSE_ARG(statements, 0);
+  PARSE(statement);
   ast_set_skip(a, start, AST_END_IF_TRUE_SKIP);
   if (ACCEPT(TOK_ELSE)) {
-    PARSE_ARG(statements, 0);
+    PARSE(statement);
   }
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
@@ -447,14 +433,14 @@ static enum v7_err aparse_while(struct v7 *v7, struct ast *a) {
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
-  PARSE_ARG(statements, 0);
+  PARSE(statement);
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
 }
 
 static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
   size_t start = ast_add_node(a, AST_DOWHILE);
-  PARSE_ARG(statements, 0);
+  PARSE(statement);
   ast_set_skip(a, start, AST_DO_WHILE_COND_SKIP);
   EXPECT(TOK_WHILE);
   EXPECT(TOK_OPEN_PAREN);
@@ -485,7 +471,7 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
     if (ACCEPT(TOK_IN)) {
       PARSE(expression);
       EXPECT(TOK_CLOSE_PAREN);
-      PARSE_ARG(statements, 0);
+      PARSE(statement);
       ast_insert_node(a, start, AST_FOR_IN);
       return V7_OK;
     }
@@ -502,7 +488,7 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
   }
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FOR_BODY_SKIP);
-  PARSE_ARG(statements, 0);
+  PARSE(statement);
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
 }
@@ -551,17 +537,17 @@ static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_try(struct v7 *v7, struct ast *a) {
   size_t start = ast_add_node(a, AST_TRY);
-  PARSE_ARG(statements, 1);
+  PARSE(block);
   ast_set_skip(a, start, AST_TRY_CATCH_SKIP);
   if (ACCEPT(TOK_CATCH)) {
     EXPECT(TOK_OPEN_PAREN);
     PARSE(ident);
     EXPECT(TOK_CLOSE_PAREN);
-    PARSE_ARG(statements, 1);
+    PARSE(block);
   }
   ast_set_skip(a, start, AST_TRY_FINALLY_SKIP);
   if (ACCEPT(TOK_FINALLY)) {
-    PARSE_ARG(statements, 1);
+    PARSE(block);
   }
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
@@ -572,7 +558,7 @@ static enum v7_err aparse_with(struct v7 *v7, struct ast *a) {
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
-  PARSE_ARG(statements, 0);
+  PARSE(statement);
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
 }
@@ -593,11 +579,11 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
       next_tok(v7);
       return V7_OK;  /* empty statement */
     case TOK_OPEN_CURLY:  /* block */
-      aparse_statements(v7, a, 1);
-      break;
+      PARSE(block);
+      return V7_OK;  /* returning because no semicolon required */
     case TOK_IF:
       next_tok(v7);
-      return aparse_if(v7, a); /* returning because no semicolon required */
+      return aparse_if(v7, a);
     case TOK_WHILE:
       next_tok(v7);
       return aparse_while(v7, a);
@@ -666,10 +652,15 @@ static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
   PARSE(arglist);
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
+  PARSE(block);
+  ast_set_skip(a, start, AST_END_SKIP);
+  return V7_OK;
+}
+
+static enum v7_err aparse_block(struct v7 *v7, struct ast *a) {
   EXPECT(TOK_OPEN_CURLY);
   PARSE_ARG(body, TOK_CLOSE_CURLY);
   EXPECT(TOK_CLOSE_CURLY);
-  ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
 }
 
