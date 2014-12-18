@@ -760,6 +760,13 @@ static const char *test_aparser(void) {
     "for(var i in a) {1}",
     "for(i in a) {1}",
     "!function(){function d(){}var x}();",
+    "({get a() { function d(){} return 1 }})",
+    "({set a(v) { function d(a){} d(v) }})",
+    "{function d(){}var x}",
+    "try{function d(){}var x}catch(e){function d(){}var x}finally{function d(){}var x}",
+    "{} {}",
+    "if(1){function d(){}var x}",
+    "if(1){} else {function d(){}var x}",
   };
   const char *invalid[] = {
     "function(a) { return 1 }",
