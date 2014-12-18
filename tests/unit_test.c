@@ -759,6 +759,7 @@ static const char *test_aparser(void) {
     "with (a) {1} 2;",
     "for(var i in a) {1}",
     "for(i in a) {1}",
+    "!function(){function d(){}var x}();",
   };
   const char *invalid[] = {
     "function(a) { return 1 }",
