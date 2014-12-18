@@ -14,7 +14,7 @@ HEADERS = src/v7_license.h src/utf.h src/tokenizer.h src/vm.h src/internal.h \
 all: v7 amalgamated_v7 unit_test
 
 v7.c: $(HEADERS) $(SOURCES) v7.h Makefile
-	cat v7.h $(HEADERS) $(SOURCES) | sed -E '/#include .(v7_license|utf|tokenizer|vm|ast|aparser|internal).h./d' > $@
+	cat v7.h $(HEADERS) $(SOURCES) | sed -E '/#include .*(v7|utf|tokenizer|vm|ast|aparser|internal).h"/d' > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes \
