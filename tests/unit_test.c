@@ -783,7 +783,7 @@ static const char *test_aparser(void) {
   size_t want_ast_len;
   ast_init(&a, 0);
 
-#if 0
+#if 1
 #define SAVE_AST
 #endif
 
@@ -878,8 +878,32 @@ static const char *test_ecmac(void) {
   return NULL;
 }
 
+static const char *test_string_encoding(void) {
+  unsigned char buf[10] = ":-)";
+  int llen;
+
+  ASSERT(encode_string_len(3, buf) == 1);
+  ASSERT(decode_string_len(buf, &llen) == 3);
+  ASSERT(buf[0] == 3);
+  ASSERT(llen == 1);
+
+  ASSERT(encode_string_len(127, buf) == 1);
+  ASSERT(decode_string_len(buf, &llen) == 127);
+  ASSERT(buf[0] == 127);
+  ASSERT(llen == 1);
+
+  ASSERT(encode_string_len(128, buf) == 2);
+  ASSERT(decode_string_len(buf, &llen) == 128);
+  ASSERT(buf[0] == 128);
+  ASSERT(buf[1] == 1);
+  ASSERT(llen == 2);
+
+  return NULL;
+}
+
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_tokenizer);
+  RUN_TEST(test_string_encoding);
   RUN_TEST(test_v7_destroy);
   RUN_TEST(test_is_true);
   RUN_TEST(test_v7_exec);

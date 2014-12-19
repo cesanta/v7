@@ -34,10 +34,12 @@ enum ast_tag {
   AST_RSHIFT_ASSIGN,
   AST_URSHIFT_ASSIGN,
 
-  AST_IDENT,
   AST_NUM,
+  AST_IDENT,
   AST_STRING,
   AST_REGEX,
+  AST_LABEL,
+
   AST_SEQ,
   AST_WHILE,
   AST_DOWHILE,
@@ -46,7 +48,6 @@ enum ast_tag {
   AST_COND,
 
   AST_DEBUGGER,
-  AST_LABEL,
   AST_BREAK,
   AST_LABELED_BREAK,
   AST_CONTINUE,
@@ -164,6 +165,9 @@ V7_PRIVATE void ast_add_ident(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_label(struct ast *, const char *, size_t);
+
+V7_PRIVATE int encode_string_len(v7_strlen_t len, unsigned char *p);
+V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
