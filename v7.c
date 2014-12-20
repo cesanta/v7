@@ -354,7 +354,7 @@ struct v7_ast;    /* V7 Abstract Syntax Tree. */
 struct v7_arg;    /* C/JavaScript function parameters */
 
 typedef double v7_num_t;    /* Override to integer on systems with no MMU */
-typedef unsigned long v7_strlen_t;
+typedef unsigned int v7_strlen_t;
 typedef void (*v7_func2_t)(struct v7_arg *arg);
 
 /*
@@ -1059,10 +1059,12 @@ enum ast_tag {
   AST_RSHIFT_ASSIGN,
   AST_URSHIFT_ASSIGN,
 
-  AST_IDENT,
   AST_NUM,
+  AST_IDENT,
   AST_STRING,
   AST_REGEX,
+  AST_LABEL,
+
   AST_SEQ,
   AST_WHILE,
   AST_DOWHILE,
@@ -1071,7 +1073,6 @@ enum ast_tag {
   AST_COND,
 
   AST_DEBUGGER,
-  AST_LABEL,
   AST_BREAK,
   AST_LABELED_BREAK,
   AST_CONTINUE,
@@ -1189,6 +1190,9 @@ V7_PRIVATE void ast_add_ident(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_label(struct ast *, const char *, size_t);
+
+V7_PRIVATE int encode_string_len(v7_strlen_t len, unsigned char *p);
+V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
@@ -8846,10 +8850,10 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
 typedef unsigned short ast_skip_t;
 
 struct ast_node_def {
-  const char *name;  /* tag name, for debugging and serialization */
-  size_t fixed_len;  /* bytes */
-  int num_skips;     /* number of skips */
-  int num_subtrees;  /* number of fixed subtrees */
+  const char *name;   /* tag name, for debugging and serialization */
+  uint8_t fixed_len;      /* bytes */
+  uint8_t num_skips;      /* number of skips */
+  uint8_t num_subtrees;   /* number of fixed subtrees */
 };
 
 /*
@@ -8888,7 +8892,7 @@ struct ast_node_def {
  * and label` is part of our domain model (i.e. JS has a label AST node type).
  *
  */
-V7_PRIVATE struct ast_node_def ast_node_defs[] = {
+V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"NOP", 0, 0, 0}, /* struct {} */
   /*
    * struct {
@@ -8949,10 +8953,11 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
   {"LSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
   {"RSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
   {"URSHIFT_ASSIGN", 0, 0, 2}, /* struct { child left, right; } */
-  {"IDENT", 4 + sizeof(char *), 0, 0},  /* struct { uint32_t len, char *s; } */
-  {"NUM", 8, 0, 0},                     /* struct { double n; } */
-  {"STRING", 4 + sizeof(char *), 0, 0}, /* struct { uint32_t len, char *s; } */
-  {"REGEX", 4 + sizeof(char *), 0, 0},  /* struct { uint32_t len, char *s; } */
+  {"NUM", 8, 0, 0},            /* struct { double n; } */
+  {"IDENT", 0, 0, 0},          /* struct { len_t len, char s[]; } */
+  {"STRING", 0, 0, 0},         /* struct { len_t len, char s[]; } */
+  {"REGEX", 0, 0, 0},          /* struct { len_t len, char s[]; } */
+  {"LABEL", 0, 0, 0},          /* struct { len_t len, char s[]; } */
   /*
    * struct {
    *   ast_skip_t end;
@@ -9006,7 +9011,6 @@ V7_PRIVATE struct ast_node_def ast_node_defs[] = {
   {"FOR_IN", 0, 1, 2},
   {"COND", 0, 0, 3},     /* struct { child cond, iftrue, iffalse; } */
   {"DEBUGGER", 0, 0, 0}, /* struct {} */
-  {"LABEL", 4 + sizeof(char *), 0, 0}, /* struct { uint32_t len, char *s; } */
   {"BREAK", 0, 0, 0},                  /* struct {} */
   /*
    * struct {
@@ -9199,6 +9203,50 @@ V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
  * TODO(mkm): optimize to our specific use case or fully reuse fossa.
  */
 
+/*
+ * Strings in AST are encoded as tuples (length, string).
+ * Length is variable-length: if high bit is set in a byte, next byte is used.
+ * Maximum string length with such encoding is 2 ^ (7 * 4) == 256 MiB,
+ * assuming that sizeof(v7_strlen_t) == 4.
+ * Small string length (less then 128 bytes) is encoded in 1 byte.
+ */
+V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen) {
+  v7_strlen_t i, len = 0;
+
+  *llen = 0;
+  for (i = 0; i < sizeof(v7_strlen_t); i++) {
+    len |= (p[i] & 0x7f) << (7 * i);
+    (*llen)++;
+    if ((p[i] & 0x80) == 0) break;
+  }
+
+  return len;
+}
+
+/* Return number of bytes to store length */
+static int calc_llen(v7_strlen_t len) {
+  int n = 0;
+
+  do {
+    n++;
+  } while (len >>= 7);
+
+  assert(n <= (int) sizeof(len));
+
+  return n;
+}
+
+V7_PRIVATE int encode_string_len(v7_strlen_t len, unsigned char *p) {
+  int i, llen = calc_llen(len);
+
+  for (i = 0; i < llen; i++) {
+    p[i] = (len & 0x7f) | (i < llen - 1 ? 0x80 : 0);
+    len >>= 7;
+  }
+
+  return llen;
+}
+
 /* Initializes an AST buffer. */
 V7_PRIVATE void ast_init(struct ast *ast, size_t initial_size) {
   ast->len = ast->size = 0;
@@ -9299,7 +9347,7 @@ V7_PRIVATE size_t ast_insert(struct ast *a, size_t off, const char *buf,
 V7_PRIVATE size_t ast_add_node(struct ast *a, enum ast_tag tag) {
   size_t start = a->len;
   uint8_t t = (uint8_t) tag;
-  struct ast_node_def *d = &ast_node_defs[tag];
+  const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
 
@@ -9311,7 +9359,7 @@ V7_PRIVATE size_t ast_add_node(struct ast *a, enum ast_tag tag) {
 V7_PRIVATE size_t ast_insert_node(struct ast *a, size_t start,
                                   enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
-  struct ast_node_def *d = &ast_node_defs[tag];
+  const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
 
@@ -9343,15 +9391,14 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  *
  * Every tree reader can assume this and safely skip unknown nodes.
  */
-V7_PRIVATE size_t ast_set_skip(struct ast *a, size_t start,
+V7_PRIVATE size_t ast_set_skip(struct ast *a, ast_off_t start,
                                enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = a->len - start;
-  enum ast_tag tag;
+  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->buf + start - 1);
+  const struct ast_node_def *def = &ast_node_defs[tag];
 
   /* assertion, to be optimizable out */
-  tag = (enum ast_tag) (uint8_t) * (a->buf + start - 1);
-  struct ast_node_def *def = &ast_node_defs[tag];
   assert((int) skip < def->num_skips);
 
   p[0] = delta >> 8;
@@ -9375,9 +9422,8 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
  * TODO(mkm): add doc, find better name.
  */
 V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
-  enum ast_tag tag;
-  tag = (enum ast_tag) (uint8_t) * (a->buf + *pos - 1);
-  struct ast_node_def *def = &ast_node_defs[tag];
+  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->buf + *pos - 1);
+  const struct ast_node_def *def = &ast_node_defs[tag];
   *pos += def->fixed_len + def->num_skips * sizeof(ast_skip_t);
 }
 
@@ -9387,38 +9433,39 @@ V7_PRIVATE void ast_add_num(struct ast *a, double num) {
   memcpy(a->buf + start, &num, sizeof(num));
 }
 
-static void ast_set_string(char *buf, const char *name, size_t len) {
-  uint32_t slen = (uint32_t) len;
-  /* 4GB ought to be enough for anybody */
-  if (sizeof(size_t) == 8) {
-    assert((len & 0xFFFFFFFF00000000) == 0);
-  }
-  memcpy(buf, &slen, sizeof(slen));
-  memcpy(buf + sizeof(slen), &name, sizeof(char *));
+static void ast_set_string(struct ast *a, size_t off, const char *name,
+                           size_t len) {
+  /* Encode string length first */
+  int n = calc_llen(len);   /* Calculate how many bytes length occupies */
+  ast_insert(a, off, "    ", n);  /* Allocate  buffer for length in the AST */
+  encode_string_len(len, (unsigned char *) a->buf + off);   /* Write length */
+
+  /* Now copy the string itself */
+  ast_insert(a, off + n, name, len);
 }
 
 /* Helper to add an IDENT node. */
 V7_PRIVATE void ast_add_ident(struct ast *a, const char *name, size_t len) {
   size_t start = ast_add_node(a, AST_IDENT);
-  ast_set_string(a->buf + start, name, len);
+  ast_set_string(a, start, name, len);
 }
 
 /* Helper to add a STRING node. */
 V7_PRIVATE void ast_add_string(struct ast *a, const char *name, size_t len) {
   size_t start = ast_add_node(a, AST_STRING);
-  ast_set_string(a->buf + start, name, len);
+  ast_set_string(a, start, name, len);
 }
 
 /* Helper to add a REGEX node. */
 V7_PRIVATE void ast_add_regex(struct ast *a, const char *name, size_t len) {
   size_t start = ast_add_node(a, AST_REGEX);
-  ast_set_string(a->buf + start, name, len);
+  ast_set_string(a, start, name, len);
 }
 
 /* Helper to add a LABEL node. */
 V7_PRIVATE void ast_add_label(struct ast *a, const char *name, size_t len) {
   size_t start = ast_add_node(a, AST_LABEL);
-  ast_set_string(a->buf + start, name, len);
+  ast_set_string(a, start, name, len);
 }
 
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
@@ -9437,9 +9484,10 @@ static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
 
 static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
-  struct ast_node_def *def = &ast_node_defs[tag];
+  const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
-  int i;
+  v7_strlen_t slen;
+  int i, llen;
   double dv;
 
   for (i = 0; i < depth; i++) {
@@ -9454,14 +9502,12 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
       fprintf(fp, " %lf\n", dv);
       break;
     case AST_IDENT:
-      fprintf(fp, " %.*s\n", * (int *) (a->buf + *pos),
-              * (char **) (a->buf + *pos + sizeof(uint32_t)));
-      break;
     case AST_STRING:
     case AST_REGEX:
     case AST_LABEL:
-      fprintf(fp, " \"%.*s\"\n", * (int *) (a->buf + *pos),
-              * (char **) (a->buf + *pos + sizeof(uint32_t)));
+      slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
+      fprintf(fp, " \"%.*s\"\n", (int) slen, a->buf + *pos + llen);
+      *pos += llen + slen;
       break;
     default:
       fprintf(fp, "\n");
