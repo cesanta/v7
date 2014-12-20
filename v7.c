@@ -1185,7 +1185,7 @@ V7_PRIVATE size_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
-V7_PRIVATE void ast_add_num(struct ast *, double);
+V7_PRIVATE void ast_add_num(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_ident(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
@@ -8985,7 +8985,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"LSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
   {"RSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
   {"URSHIFT_ASSIGN", 0, 0, 2}, /* struct { child left, right; } */
-  {"NUM", 8, 0, 0},            /* struct { double n; } */
+  {"NUM", 0, 0, 0},            /* struct { len_t len, char s[]; } */
   {"IDENT", 0, 0, 0},          /* struct { len_t len, char s[]; } */
   {"STRING", 0, 0, 0},         /* struct { len_t len, char s[]; } */
   {"REGEX", 0, 0, 0},          /* struct { len_t len, char s[]; } */
@@ -9465,12 +9465,6 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   *pos += def->fixed_len + def->num_skips * sizeof(ast_skip_t);
 }
 
-/* Helper to add a NUM node. */
-V7_PRIVATE void ast_add_num(struct ast *a, double num) {
-  size_t start = ast_add_node(a, AST_NUM);
-  memcpy(a->buf + start, &num, sizeof(num));
-}
-
 static void ast_set_string(struct ast *a, size_t off, const char *name,
                            size_t len) {
   /* Encode string length first */
@@ -9480,6 +9474,12 @@ static void ast_set_string(struct ast *a, size_t off, const char *name,
 
   /* Now copy the string itself */
   ast_insert(a, off + n, name, len);
+}
+
+/* Helper to add a NUM node. */
+V7_PRIVATE void ast_add_num(struct ast *a, const char *name, size_t len) {
+  size_t start = ast_add_node(a, AST_NUM);
+  ast_set_string(a, start, name, len);
 }
 
 /* Helper to add an IDENT node. */
@@ -9526,7 +9526,6 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   ast_off_t skips = *pos;
   v7_strlen_t slen;
   int i, llen;
-  double dv;
 
   for (i = 0; i < depth; i++) {
     fprintf(fp, "  ");
@@ -9535,14 +9534,11 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   fprintf(fp, "%s", def->name);
 
   switch (tag) {
-    case AST_NUM:
-      memcpy(&dv, a->buf + *pos, sizeof(dv));
-      fprintf(fp, " %lf\n", dv);
-      break;
     case AST_IDENT:
     case AST_STRING:
     case AST_REGEX:
     case AST_LABEL:
+    case AST_NUM:
       slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
       fprintf(fp, " \"%.*s\"\n", (int) slen, a->buf + *pos + llen);
       *pos += llen + slen;
@@ -9780,7 +9776,7 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
       ast_add_node(a, AST_NULL);
       break;
     case TOK_NUMBER:
-      ast_add_num(a, v7->cur_tok_dbl);
+      ast_add_num(a, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_STRING_LITERAL:
