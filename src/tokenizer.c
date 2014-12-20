@@ -21,6 +21,10 @@ static struct v7_vec s_keywords[] = {
     V7_VEC("typeof"),     V7_VEC("var"),       V7_VEC("void"),
     V7_VEC("while"),      V7_VEC("with")};
 
+V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
+  return tok >= TOK_BREAK && tok <= TOK_WITH;
+}
+
 /*
  * Move ptr to the next token, skipping comments and whitespaces.
  * Return number of new line characters detected.
@@ -52,13 +56,29 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   return num_lines;
 }
 
-/* TODO(lsm): use lookup table to speed it up */
-static int is_ident_char(int ch) {
-  return ch == '$' || ch == '_' || isalnum(ch);
-}
-
+/* Advance `s` pointer to the end of identifier  */
 static void ident(const char **s) {
-  while (is_ident_char((unsigned char) s[0][0])) (*s)++;
+  const unsigned char *p = (unsigned char *) *s;
+  int n;
+  Rune r;
+
+  while (p[0] != '\0') {
+    if (p[0] == '$' || p[0] == '_' || isalnum(p[0])) {
+      /* $, _, or any alphanumeric are valid identifier characters */
+      p++;
+    } else if (p[0] == '\\' && p[1] == 'u' && isxdigit(p[2]) &&
+               isxdigit(p[3]) && isxdigit(p[4]) && isxdigit(p[5])) {
+      /* Unicode escape, \uXXXX . Could be used like "var \u0078 = 1;" */
+      p += 6;
+    } else if ((n = chartorune(&r, (char *) p)) > 1 && isalpharune(r)) {
+      /* Unicode alphanumeric character */
+      p += n;
+    } else {
+      break;
+    }
+  }
+
+  *s = (char *) p;
 }
 
 static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
@@ -259,6 +279,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
     case 'X':
     case 'Y':
     case 'Z':
+    case '\\':    /* Identifier may start with unicode escape sequence */
       ident(s);
       return TOK_IDENTIFIER;
 
@@ -414,6 +435,17 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
       return TOK_COMMA;
 
     default:
+      /* Handle unicode variables */
+      {
+        Rune r;
+        int n;
+
+        if ((n = chartorune(&r, *s)) > 1 && isalpharune(r)) {
+          ident(s);
+          return TOK_IDENTIFIER;
+        }
+      }
+
       return TOK_END_OF_INPUT;
   }
 }

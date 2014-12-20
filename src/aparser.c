@@ -29,6 +29,18 @@ static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   return V7_ERROR;
 }
 
+static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
+                                                     struct ast *a) {
+  /* Allow reserved words as property names. */
+  if (is_reserved_word_token(v7->cur_tok)) {
+    ast_add_ident(a, v7->tok, v7->tok_len);
+    next_tok(v7);
+  } else {
+    PARSE(ident);
+  }
+  return V7_OK;
+}
+
 static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
   size_t start;
   if (v7->cur_tok == TOK_IDENTIFIER &&
@@ -36,7 +48,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
       lookahead(v7) != TOK_COLON) {
     start = ast_add_node(a, AST_GETTER);
     next_tok(v7);
-    PARSE(ident);
+    PARSE(ident_allow_reserved_words);
     EXPECT(TOK_OPEN_PAREN);
     EXPECT(TOK_CLOSE_PAREN);
     PARSE(block);
@@ -46,7 +58,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
              lookahead(v7) != TOK_COLON) {
     start = ast_add_node(a, AST_SETTER);
     next_tok(v7);
-    PARSE(ident);
+    PARSE(ident_allow_reserved_words);
     EXPECT(TOK_OPEN_PAREN);
     PARSE(ident);
     EXPECT(TOK_CLOSE_PAREN);
@@ -54,7 +66,13 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
     ast_set_skip(a, start, AST_END_SKIP);
   } else {
     ast_add_node(a, AST_PROP);
-    PARSE(terminal);
+    /* Allow reserved words as property names. */
+    if (is_reserved_word_token(v7->cur_tok)) {
+      ast_add_ident(a, v7->tok, v7->tok_len);
+      next_tok(v7);
+    } else {
+      PARSE(terminal);
+    }
     EXPECT(TOK_COLON);
     PARSE(assign);
   }
@@ -72,19 +90,14 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
     case TOK_OPEN_BRACKET:
       next_tok(v7);
       start = ast_add_node(a, AST_ARRAY);
-      if (v7->cur_tok != TOK_CLOSE_BRACKET) {
-        /* TODO(mkm): simplify please */
-        do {
-          if (v7->cur_tok == TOK_COMMA) {
-            ast_add_node(a, AST_NOP);
-            if (lookahead(v7) == TOK_CLOSE_BRACKET) {
-              next_tok(v7);
-              break;
-            }
-          } else {
-            PARSE(assign);
-          }
-        } while(ACCEPT(TOK_COMMA));
+      while (v7->cur_tok != TOK_CLOSE_BRACKET) {
+        if (v7->cur_tok == TOK_COMMA) {
+          /* Array literals allow missing elements, e.g. [,,1,] */
+          ast_add_node(a, AST_NOP);
+        } else {
+          PARSE(assign);
+        }
+        ACCEPT(TOK_COMMA);
       }
       EXPECT(TOK_CLOSE_BRACKET);
       ast_set_skip(a, start, AST_END_SKIP);
@@ -185,7 +198,7 @@ static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
     switch (v7->cur_tok) {
       case TOK_DOT:
         next_tok(v7);
-        PARSE(ident);
+        PARSE(ident_allow_reserved_words);
         ast_insert_node(a, pos, AST_MEMBER);
         break;
       case TOK_OPEN_BRACKET:
@@ -208,7 +221,7 @@ static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
     switch (v7->cur_tok) {
       case TOK_DOT:
         next_tok(v7);
-        PARSE(ident);
+        PARSE(ident_allow_reserved_words);
         ast_insert_node(a, pos, AST_MEMBER);
         break;
       case TOK_OPEN_BRACKET:
@@ -691,6 +704,14 @@ static enum v7_err aparse_script(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
+static unsigned long get_column(const char *code, const char *pos) {
+  const char *p = pos;
+  while (p > code && *p != '\n') {
+    p--;
+  }
+  return p == code ? pos - p : pos - (p + 1);
+}
+
 V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
   enum v7_err err;
   struct v7 *v7 = v7_create();
@@ -704,8 +725,9 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
     printf("WARNING parse input not consumed\n");
   }
   if (verbose && err != V7_OK) {
-    printf("Parse error at at line %d col %lu\n", v7->pstate.line_no,
-           v7->tok - v7->pstate.source_code);
+    unsigned long col = get_column(v7->pstate.source_code, v7->tok);
+    printf("Parse error at at line %d col %lu: [%.*s]\n", v7->pstate.line_no,
+           col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
 }
