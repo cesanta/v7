@@ -783,7 +783,7 @@ static const char *test_aparser(void) {
   size_t want_ast_len;
   ast_init(&a, 0);
 
-#if 1
+#if 0
 #define SAVE_AST
 #endif
 
