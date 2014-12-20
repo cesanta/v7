@@ -12,7 +12,7 @@ def black_content(s):
     return ' in ' in s or 'LABEL' in s
 
 def render_suite(suite):
-    j = json.load(file("ecma262/ch%s.json" % suite))
+    j = json.load(file("tests/ecma262_suites/ch%s.json" % suite))
     bl = blacklists.get(suite, [])
     return ['"%s"' % base64.decodestring(i['code']).replace(chr(92), r'\\').replace("??", r"?\?").replace('\r\n', '\n').replace('\n', '\\n').replace('"', r'\"').strip("'")
             for n, i in enumerate(j['testsCollection']['tests'])
