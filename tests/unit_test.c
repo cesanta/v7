@@ -767,6 +767,9 @@ static const char *test_aparser(void) {
     "{} {}",
     "if(1){function d(){}var x}",
     "if(1){} else {function d(){}var x}",
+    "var \\u0076, _\\u0077, a\\u0078b, жабоскрипт;",
+    "a.in + b.for",
+    "var x = { null: 5, else: 4 }",
     "lab: x=1"
   };
   const char *invalid[] = {
@@ -783,7 +786,7 @@ static const char *test_aparser(void) {
   size_t want_ast_len;
   ast_init(&a, 0);
 
-#if 1
+#if 0
 #define SAVE_AST
 #endif
 
@@ -867,13 +870,9 @@ static const char *test_ecmac(void) {
     printf("-- Parsing %d: \"%s\"\n", i, ecmac_cases[i]);
 #endif
     ASSERT(aparse(&a, ecmac_cases[i], 1) == V7_OK);
-
 #if 0
     ast_dump(stdout, &a, 0);
 #endif
-    if (i == 0) {
-      break;
-    }
   }
   return NULL;
 }

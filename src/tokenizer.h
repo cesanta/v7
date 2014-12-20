@@ -120,4 +120,4 @@ enum v7_tok {
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
-V7_PRIVATE const char *tok_name(enum v7_tok);
+V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);

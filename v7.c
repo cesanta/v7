@@ -343,7 +343,7 @@ enum v7_tok {
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
-V7_PRIVATE const char *tok_name(enum v7_tok);
+V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -8188,6 +8188,10 @@ static struct v7_vec s_keywords[] = {
     V7_VEC("typeof"),     V7_VEC("var"),       V7_VEC("void"),
     V7_VEC("while"),      V7_VEC("with")};
 
+V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
+  return tok >= TOK_BREAK && tok <= TOK_WITH;
+}
+
 /*
  * Move ptr to the next token, skipping comments and whitespaces.
  * Return number of new line characters detected.
@@ -8219,13 +8223,29 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   return num_lines;
 }
 
-/* TODO(lsm): use lookup table to speed it up */
-static int is_ident_char(int ch) {
-  return ch == '$' || ch == '_' || isalnum(ch);
-}
-
+/* Advance `s` pointer to the end of identifier  */
 static void ident(const char **s) {
-  while (is_ident_char((unsigned char) s[0][0])) (*s)++;
+  const unsigned char *p = (unsigned char *) *s;
+  int n;
+  Rune r;
+
+  while (p[0] != '\0') {
+    if (p[0] == '$' || p[0] == '_' || isalnum(p[0])) {
+      /* $, _, or any alphanumeric are valid identifier characters */
+      p++;
+    } else if (p[0] == '\\' && p[1] == 'u' && isxdigit(p[2]) &&
+               isxdigit(p[3]) && isxdigit(p[4]) && isxdigit(p[5])) {
+      /* Unicode escape, \uXXXX . Could be used like "var \u0078 = 1;" */
+      p += 6;
+    } else if ((n = chartorune(&r, (char *) p)) > 1 && isalpharune(r)) {
+      /* Unicode alphanumeric character */
+      p += n;
+    } else {
+      break;
+    }
+  }
+
+  *s = (char *) p;
 }
 
 static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
@@ -8426,6 +8446,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
     case 'X':
     case 'Y':
     case 'Z':
+    case '\\':    /* Identifier may start with unicode escape sequence */
       ident(s);
       return TOK_IDENTIFIER;
 
@@ -8581,6 +8602,17 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
       return TOK_COMMA;
 
     default:
+      /* Handle unicode variables */
+      {
+        Rune r;
+        int n;
+
+        if ((n = chartorune(&r, *s)) > 1 && isalpharune(r)) {
+          ident(s);
+          return TOK_IDENTIFIER;
+        }
+      }
+
       return TOK_END_OF_INPUT;
   }
 }
@@ -9638,14 +9670,27 @@ static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   return V7_ERROR;
 }
 
+static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
+                                                     struct ast *a) {
+  /* Allow reserved words as property names. */
+  if (is_reserved_word_token(v7->cur_tok)) {
+    ast_add_ident(a, v7->tok, v7->tok_len);
+    next_tok(v7);
+  } else {
+    PARSE(ident);
+  }
+  return V7_OK;
+}
+
 static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
   size_t start;
+
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
       lookahead(v7) != TOK_COLON) {
     start = ast_add_node(a, AST_GETTER);
     next_tok(v7);
-    PARSE(ident);
+    PARSE(ident_allow_reserved_words);
     EXPECT(TOK_OPEN_PAREN);
     EXPECT(TOK_CLOSE_PAREN);
     PARSE(block);
@@ -9655,7 +9700,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
              lookahead(v7) != TOK_COLON) {
     start = ast_add_node(a, AST_SETTER);
     next_tok(v7);
-    PARSE(ident);
+    PARSE(ident_allow_reserved_words);
     EXPECT(TOK_OPEN_PAREN);
     PARSE(ident);
     EXPECT(TOK_CLOSE_PAREN);
@@ -9663,7 +9708,13 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
     ast_set_skip(a, start, AST_END_SKIP);
   } else {
     ast_add_node(a, AST_PROP);
-    PARSE(terminal);
+    /* Allow reserved words as property names. */
+    if (is_reserved_word_token(v7->cur_tok)) {
+      ast_add_ident(a, v7->tok, v7->tok_len);
+      next_tok(v7);
+    } else {
+      PARSE(terminal);
+    }
     EXPECT(TOK_COLON);
     PARSE(assign);
   }
@@ -9681,19 +9732,14 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
     case TOK_OPEN_BRACKET:
       next_tok(v7);
       start = ast_add_node(a, AST_ARRAY);
-      if (v7->cur_tok != TOK_CLOSE_BRACKET) {
-        /* TODO(mkm): simplify please */
-        do {
-          if (v7->cur_tok == TOK_COMMA) {
-            ast_add_node(a, AST_NOP);
-            if (lookahead(v7) == TOK_CLOSE_BRACKET) {
-              next_tok(v7);
-              break;
-            }
-          } else {
-            PARSE(assign);
-          }
-        } while(ACCEPT(TOK_COMMA));
+      while (v7->cur_tok != TOK_CLOSE_BRACKET) {
+        if (v7->cur_tok == TOK_COMMA) {
+          /* Array literals allow missing elements, e.g. [,,1,] */
+          ast_add_node(a, AST_NOP);
+        } else {
+          PARSE(assign);
+        }
+        ACCEPT(TOK_COMMA);
       }
       EXPECT(TOK_CLOSE_BRACKET);
       ast_set_skip(a, start, AST_END_SKIP);
@@ -9794,7 +9840,7 @@ static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
     switch (v7->cur_tok) {
       case TOK_DOT:
         next_tok(v7);
-        PARSE(ident);
+        PARSE(ident_allow_reserved_words);
         ast_insert_node(a, pos, AST_MEMBER);
         break;
       case TOK_OPEN_BRACKET:
@@ -9817,7 +9863,7 @@ static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
     switch (v7->cur_tok) {
       case TOK_DOT:
         next_tok(v7);
-        PARSE(ident);
+        PARSE(ident_allow_reserved_words);
         ast_insert_node(a, pos, AST_MEMBER);
         break;
       case TOK_OPEN_BRACKET:
@@ -10300,6 +10346,14 @@ static enum v7_err aparse_script(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
+static unsigned long get_column(const char *code, const char *pos) {
+  const char *p = pos;
+  while (p > code && *p != '\n') {
+    p--;
+  }
+  return p == code ? pos - p : pos - (p + 1);
+}
+
 V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
   enum v7_err err;
   struct v7 *v7 = v7_create();
@@ -10313,8 +10367,9 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
     printf("WARNING parse input not consumed\n");
   }
   if (verbose && err != V7_OK) {
-    printf("Parse error at at line %d col %lu\n", v7->pstate.line_no,
-           v7->tok - v7->pstate.source_code);
+    unsigned long col = get_column(v7->pstate.source_code, v7->tok);
+    printf("Parse error at at line %d col %lu: [%.*s]\n", v7->pstate.line_no,
+           col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
 }
