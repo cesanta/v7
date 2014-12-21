@@ -13,7 +13,7 @@ trap "rm -rf $TMP_DOT $TMP_PNG $TMP_AST" EXIT
 
 test -z "$1" && echo "Usage: $0 <js_file|-e expr>" && exit 1;
 
-$V7 --dump-text-ast "$@" | sed '/\/\*/d' > $TMP_AST
+$V7 -t "$@" | sed '/\/\*/d' > $TMP_AST
 echo "graph G {" > $TMP_DOT
 echo "node [shape=box];" >> $TMP_DOT
 cat $TMP_AST | perl -nle '
