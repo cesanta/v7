@@ -1042,7 +1042,7 @@ enum ast_tag {
   AST_NOP,
   AST_SCRIPT,
   AST_VAR,
-  AST_VAR_ITEM,
+  AST_VAR_DECL,
   AST_IF,
   AST_FUNC,
 
@@ -8941,11 +8941,12 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"VAR", 0, 0, 1, 0},
   /*
    * struct {
-   *   child name; // TODO(mkm): inline
+   *   varint len;
+   *   char name[len];
    *   child expr;
    * }
    */
-  {"VAR_DECL", 0, 0, 0, 2},
+  {"VAR_DECL", 1, 1, 0, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -8982,11 +8983,11 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"LSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
   {"RSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
   {"URSHIFT_ASSIGN", 0, 0, 0, 2}, /* struct { child left, right; } */
-  {"NUM", 1, 1, 0, 0},            /* struct { len_t len, char s[]; } */
-  {"IDENT", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
-  {"STRING", 1, 1, 0, 0},         /* struct { len_t len, char s[]; } */
-  {"REGEX", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
-  {"LABEL", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
+  {"NUM", 1, 1, 0, 0},            /* struct { varint len, char s[len]; } */
+  {"IDENT", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
+  {"STRING", 1, 1, 0, 0},         /* struct { varint len, char s[len]; } */
+  {"REGEX", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
+  {"LABEL", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
   /*
    * struct {
    *   ast_skip_t end;
@@ -9523,6 +9524,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     case AST_REGEX:
     case AST_LABEL:
     case AST_NUM:
+    case AST_VAR_DECL:
       slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
       fprintf(fp, " \"%.*s\"\n", (int) slen, a->buf + *pos + llen);
       break;
@@ -10032,8 +10034,8 @@ static enum v7_err end_of_statement(struct v7 *v7) {
 static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
   size_t start = ast_add_node(a, AST_VAR);
   do {
-    ast_add_node(a, AST_VAR_ITEM);
-    PARSE(ident);
+    ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
+    EXPECT(TOK_IDENTIFIER);
     if (ACCEPT(TOK_ASSIGN)) {
       PARSE(assign);
     } else {
