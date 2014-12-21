@@ -817,20 +817,7 @@ struct v7 {
     if (!(cond)) THROW(code); \
   } while (0)
 
-#ifdef _WIN32
-#define TRACE_CALL(fmt, ...) /* printf(fmt, ...) */
-#else
-#define TRACE_CALL(fmt, ...)
-#endif
-
 extern int __lev;
-/* #define TRY(call) do { \
-  enum v7_err _e; \
-  TRACE_CALL("> %s %d\n", #call, __LINE__);  \
-  _e = call;      \
-  CHECK(_e == V7_OK, _e);     \
-  TRACE_CALL("< %s %d\n", #call, __LINE__); \
-} while (0) */
 #define TRY(call)           \
   do {                      \
     enum v7_err _e = call;  \
@@ -6816,8 +6803,6 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl, v7->cur_tok);
   v7->tok_len = v7->pstate.pc - v7->tok;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
-  TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
-             v7->pstate.line_no);
   return v7->cur_tok;
 }
 

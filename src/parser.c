@@ -20,8 +20,6 @@ V7_PRIVATE enum v7_tok next_tok(struct v7 *v7) {
   v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl, v7->cur_tok);
   v7->tok_len = v7->pstate.pc - v7->tok;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
-  TRACE_CALL("==tok=> %d [%.*s] %d\n", v7->cur_tok, (int)v7->tok_len, v7->tok,
-             v7->pstate.line_no);
   return v7->cur_tok;
 }
 
