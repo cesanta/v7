@@ -786,10 +786,7 @@ static const char *test_aparser(void) {
   size_t want_ast_len;
   ast_init(&a, 0);
 
-#if 0
-#define SAVE_AST
-#endif
-
+  /* Save with `make save_want_ast` */
 #ifndef SAVE_AST
 
   ASSERT((fp = fopen(want_ast_db, "r")) != NULL);
