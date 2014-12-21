@@ -22,7 +22,7 @@ static enum v7_err aparse_body(struct v7 *, struct ast *, enum v7_tok);
 
 static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER) {
-    ast_add_ident(a, v7->tok, v7->tok_len);
+    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
     return V7_OK;
   }
@@ -33,7 +33,7 @@ static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
                                                      struct ast *a) {
   /* Allow reserved words as property names. */
   if (is_reserved_word_token(v7->cur_tok)) {
-    ast_add_ident(a, v7->tok, v7->tok_len);
+    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
   } else {
     PARSE(ident);
@@ -68,7 +68,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
     ast_add_node(a, AST_PROP);
     /* Allow reserved words as property names. */
     if (is_reserved_word_token(v7->cur_tok)) {
-      ast_add_ident(a, v7->tok, v7->tok_len);
+      ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
       next_tok(v7);
     } else {
       PARSE(terminal);
@@ -133,15 +133,15 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
       ast_add_node(a, AST_NULL);
       break;
     case TOK_NUMBER:
-      ast_add_num(a, v7->tok, v7->tok_len);
+      ast_add_inlined_node(a, AST_NUM, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_STRING_LITERAL:
-      ast_add_string(a, v7->tok + 1, v7->tok_len - 2);
+      ast_add_inlined_node(a, AST_STRING, v7->tok + 1, v7->tok_len - 2);
       next_tok(v7);
       break;
     case TOK_REGEX_LITERAL:
-      ast_add_regex(a, v7->tok, v7->tok_len);
+      ast_add_inlined_node(a, AST_REGEX, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_IDENTIFIER:
@@ -642,7 +642,7 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
       break;
     case TOK_IDENTIFIER:
       if (lookahead(v7) == TOK_COLON) {
-        ast_add_label(a, v7->tok, v7->tok_len);
+        ast_add_inlined_node(a, AST_LABEL, v7->tok, v7->tok_len);
         next_tok(v7);
         EXPECT(TOK_COLON);
         return V7_OK;
@@ -667,7 +667,7 @@ static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
     if (require_named) {
       return V7_ERROR;
     }
-    ast_add_ident(a, "?", 1);
+    ast_add_inlined_node(a, AST_IDENT, "?", 1);
   }
   EXPECT(TOK_OPEN_PAREN);
   PARSE(arglist);
