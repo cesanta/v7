@@ -133,7 +133,7 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
       ast_add_node(a, AST_NULL);
       break;
     case TOK_NUMBER:
-      ast_add_num(a, v7->cur_tok_dbl);
+      ast_add_num(a, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_STRING_LITERAL:
