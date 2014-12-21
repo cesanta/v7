@@ -369,16 +369,22 @@ V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
  * Small string length (less then 128 bytes) is encoded in 1 byte.
  */
 V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen) {
-  v7_strlen_t i, len = 0;
+  v7_strlen_t i = 0, string_len = 0;
 
-  *llen = 0;
-  for (i = 0; i < sizeof(v7_strlen_t); i++) {
-    len |= (p[i] & 0x7f) << (7 * i);
-    (*llen)++;
-    if ((p[i] & 0x80) == 0) break;
-  }
+  do {
+    /*
+     * Each byte of varint contains 7 bits, in little endian order.
+     * MSB is a continuation bit: it tells whether next byte is used.
+     */
+    string_len |= (p[i] & 0x7f) << (7 * i);
+    /*
+     * First we increment i, then check whether it is within boundary and
+     * whether decoded byte had continuation bit set.
+     */
+  } while (++i < sizeof(v7_strlen_t) && (p[i - 1] & 0x80));
+  *llen = i;
 
-  return len;
+  return string_len;
 }
 
 /* Return number of bytes to store length */
@@ -394,7 +400,7 @@ static int calc_llen(v7_strlen_t len) {
   return n;
 }
 
-V7_PRIVATE int encode_string_len(v7_strlen_t len, unsigned char *p) {
+V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p) {
   int i, llen = calc_llen(len);
 
   for (i = 0; i < llen; i++) {
@@ -596,7 +602,7 @@ static void ast_set_string(struct ast *a, size_t off, const char *name,
   /* Encode string length first */
   int n = calc_llen(len);   /* Calculate how many bytes length occupies */
   ast_insert(a, off, "    ", n);  /* Allocate  buffer for length in the AST */
-  encode_string_len(len, (unsigned char *) a->buf + off);   /* Write length */
+  encode_varint(len, (unsigned char *) a->buf + off);   /* Write length */
 
   /* Now copy the string itself */
   ast_insert(a, off + n, name, len);

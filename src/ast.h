@@ -166,7 +166,7 @@ V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
 V7_PRIVATE void ast_add_label(struct ast *, const char *, size_t);
 
-V7_PRIVATE int encode_string_len(v7_strlen_t len, unsigned char *p);
+V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
 V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
