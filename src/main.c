@@ -7,15 +7,14 @@
 
 #ifdef V7_EXE
 
-/*
- * $ ./v7 --show-ast -e 'var foo = 1;' jquery.js
- */
-static const char *static_text_ast_flag = "--dump-text-ast";
-static const char *static_bin_ast_flag = "--dump-binary-ast";
-
 static void show_usage(char *argv[]) {
-  fprintf(stderr, "Usage: %s [%s] [%s] [-e expression ...] js_file ...\n",
-          argv[0], static_text_ast_flag, static_bin_ast_flag);
+  fprintf(stderr, "V7 version %s (c) Cesanta Software, built on %s\n",
+          V7_VERSION, __DATE__);
+  fprintf(stderr, "Usage: %s [OPTIONS] js_file ...\n", argv[0]);
+  fprintf(stderr, "%s\n", "OPTIONS:");
+  fprintf(stderr, "%s\n", "  -e <expr>  execute expression");
+  fprintf(stderr, "%s\n", "  -t         dump generated text AST");
+  fprintf(stderr, "%s\n", "  -b         dump generated binary AST");
   exit(EXIT_FAILURE);
 }
 
@@ -63,14 +62,18 @@ int main(int argc, char *argv[]) {
                 v7_get_error_string(v7));
       }
       i++;
-    } else if (strcmp(argv[i], static_text_ast_flag) == 0) {
+    } else if (strcmp(argv[i], "-t") == 0) {
       show_ast = 1;
-    } else if (strcmp(argv[i], static_bin_ast_flag) == 0) {
+    } else if (strcmp(argv[i], "-b") == 0) {
       show_ast = 1;
       binary_ast = 1;
     } else if (strcmp(argv[i], "-h") == 0) {
       show_usage(argv);
     }
+  }
+
+  if (argc == 1) {
+    show_usage(argv);
   }
 
   /* Execute files */
