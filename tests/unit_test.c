@@ -881,21 +881,28 @@ static const char *test_string_encoding(void) {
   unsigned char buf[10] = ":-)";
   int llen;
 
-  ASSERT(encode_string_len(3, buf) == 1);
+  ASSERT(encode_varint(3, buf) == 1);
   ASSERT(decode_string_len(buf, &llen) == 3);
   ASSERT(buf[0] == 3);
   ASSERT(llen == 1);
 
-  ASSERT(encode_string_len(127, buf) == 1);
+  ASSERT(encode_varint(127, buf) == 1);
   ASSERT(decode_string_len(buf, &llen) == 127);
   ASSERT(buf[0] == 127);
   ASSERT(llen == 1);
 
-  ASSERT(encode_string_len(128, buf) == 2);
+  ASSERT(encode_varint(128, buf) == 2);
   ASSERT(decode_string_len(buf, &llen) == 128);
   ASSERT(buf[0] == 128);
   ASSERT(buf[1] == 1);
   ASSERT(llen == 2);
+
+  ASSERT(encode_varint(0x4000, buf) == 3);
+  ASSERT(decode_string_len(buf, &llen) == 0x4000);
+  ASSERT(buf[0] == 128);
+  ASSERT(buf[1] == 128);
+  ASSERT(buf[2] == 1);
+  ASSERT(llen == 3);
 
   return NULL;
 }
