@@ -32,6 +32,11 @@ xrun: unit_test
 run: unit_test
 	./unit_test $(TEST_FILTER)
 
+save_want_ast:
+	@rm -f unit_test
+	$(MAKE) run TEST_FILTER=aparser CFLAGS_EXTRA=-DSAVE_AST
+	@rm -f unit_test
+
 all_warnings: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
 	./$@
