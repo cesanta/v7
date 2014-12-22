@@ -17,7 +17,7 @@ enum ast_tag {
   AST_NOP,
   AST_SCRIPT,
   AST_VAR,
-  AST_VAR_ITEM,
+  AST_VAR_DECL,
   AST_IF,
   AST_FUNC,
 

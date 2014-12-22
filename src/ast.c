@@ -71,11 +71,12 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"VAR", 0, 0, 1, 0},
   /*
    * struct {
-   *   child name; // TODO(mkm): inline
+   *   varint len;
+   *   char name[len];
    *   child expr;
    * }
    */
-  {"VAR_DECL", 0, 0, 0, 2},
+  {"VAR_DECL", 1, 1, 0, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -112,11 +113,11 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"LSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
   {"RSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
   {"URSHIFT_ASSIGN", 0, 0, 0, 2}, /* struct { child left, right; } */
-  {"NUM", 1, 1, 0, 0},            /* struct { len_t len, char s[]; } */
-  {"IDENT", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
-  {"STRING", 1, 1, 0, 0},         /* struct { len_t len, char s[]; } */
-  {"REGEX", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
-  {"LABEL", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
+  {"NUM", 1, 1, 0, 0},            /* struct { varint len, char s[len]; } */
+  {"IDENT", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
+  {"STRING", 1, 1, 0, 0},         /* struct { varint len, char s[len]; } */
+  {"REGEX", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
+  {"LABEL", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
   /*
    * struct {
    *   ast_skip_t end;
@@ -653,6 +654,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     case AST_REGEX:
     case AST_LABEL:
     case AST_NUM:
+    case AST_VAR_DECL:
       slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
       fprintf(fp, " \"%.*s\"\n", (int) slen, a->buf + *pos + llen);
       break;

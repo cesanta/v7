@@ -406,8 +406,8 @@ static enum v7_err end_of_statement(struct v7 *v7) {
 static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
   size_t start = ast_add_node(a, AST_VAR);
   do {
-    ast_add_node(a, AST_VAR_ITEM);
-    PARSE(ident);
+    ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
+    EXPECT(TOK_IDENTIFIER);
     if (ACCEPT(TOK_ASSIGN)) {
       PARSE(assign);
     } else {
