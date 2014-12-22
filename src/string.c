@@ -214,9 +214,9 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
     do {
-      if (!re_exec(arg->v.str.prog, arg->fl.fl,
+      if (!re_exec(arg->v.str.prog, arg->fl.fl.re_flags,
                    cfa->this_obj->v.str.buf + shift, &sub)) {
-        struct re_tok *ptok = sub.sub;
+        struct slre_tok *ptok = sub.sub;
         int i;
         if (NULL == arr) {
           arr = v7_push_new_object(v7);
@@ -227,7 +227,8 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
           v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start,
                                   ptok->end - ptok->start, 1));
       }
-    } while (arg->fl.fl.re_g && shift < cfa->this_obj->v.str.len);
+    } while ((arg->fl.fl.re_flags & RE_FLAG_G) &&
+             shift < cfa->this_obj->v.str.len);
   }
   if (arr == NULL) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
   return V7_OK;
@@ -251,7 +252,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
     char *p = cfa->this_obj->v.str.buf;
     uint32_t out_sub_num = 0;
     struct v7_val *re = cfa->args[0], *str_func = cfa->args[1], *arr = NULL;
-    struct re_tok out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
+    struct slre_tok out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
     struct Resub loot;
     TRY(check_str_re_conv(v7, &re, 1));
     TRY(regex_check_prog(re));
@@ -265,7 +266,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
     out_len = 0;
     do {
       int i;
-      if (re_exec(re->v.str.prog, re->fl.fl, p, &loot)) break;
+      if (re_exec(re->v.str.prog, re->fl.fl.re_flags, p, &loot)) break;
       if (p != loot.sub->start) {
         ptok->start = p;
         ptok->end = loot.sub->start;
@@ -305,7 +306,7 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         }
       }
       p = (char *) loot.sub->end;
-    } while (re->fl.fl.re_g && p < str_end);
+    } while ((re->fl.fl.re_flags & RE_FLAG_G) && p < str_end);
     if (p < str_end) {
       ptok->start = p;
       ptok->end = str_end;
@@ -343,7 +344,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
     TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
     TRY(check_str_re_conv(v7, &arg, 1));
     TRY(regex_check_prog(arg));
-    if (!re_exec(arg->v.str.prog, arg->fl.fl, cfa->this_obj->v.str.buf, &sub))
+    if (!re_exec(arg->v.str.prog, arg->fl.fl.re_flags, cfa->this_obj->v.str.buf, &sub))
       shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
   } else
     utf_shift = 0;
@@ -404,7 +405,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
       TRY(check_str_re_conv(v7, &arg, 1));
       TRY(regex_check_prog(arg));
       for (; elem < limit && shift < cfa->this_obj->v.str.len; elem++) {
-        if (re_exec(arg->v.str.prog, arg->fl.fl,
+        if (re_exec(arg->v.str.prog, arg->fl.fl.re_flags,
                     cfa->this_obj->v.str.buf + shift, &sub))
           break;
 

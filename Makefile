@@ -5,16 +5,16 @@ SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
           src/object.c src/regex.c src/rune.c src/runetype.c src/string.c \
           src/json.c src/stdlib.c src/parser.c src/tokenizer.c src/api.c \
-          src/ast.c src/vm.c src/aparser.c src/main.c
+          src/ast.c src/vm.c src/aparser.c src/slre.c src/main.c
 HEADERS = src/v7_license.h src/utf.h src/tokenizer.h src/vm.h src/internal.h \
-					src/ast.h src/aparser.h
+					src/slre.h src/ast.h src/aparser.h
 
 .PHONY: cpplint
 
 all: v7 amalgamated_v7 unit_test
 
 v7.c: $(HEADERS) $(SOURCES) v7.h Makefile
-	cat v7.h $(HEADERS) $(SOURCES) | sed -E '/#include .*(v7|utf|tokenizer|vm|ast|aparser|internal).h"/d' > $@
+	cat v7.h $(HEADERS) $(SOURCES) | sed -E "/#include .*(v7.h|`echo $(HEADERS) | sed -e 's,src/,,g' -e 's, ,|,g'`)/d" > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes \
@@ -22,7 +22,7 @@ v: unit_test
 #	valgrind -q --leak-check=full ./v7 tests/run_tests.js
 #	gcov -a unit_test.c
 
-unit_test: $(SOURCES) v7.h tests/unit_test.c src/v7_license.h src/utf.h src/internal.h
+unit_test: $(SOURCES) $(HEADERS) Makefile
 	$(CC) $(SOURCES) tests/unit_test.c -o $@ -DV7_PRIVATE="" $(CFLAGS)
 
 xrun: unit_test
