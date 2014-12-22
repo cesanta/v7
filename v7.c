@@ -646,18 +646,17 @@ struct v7_val {
   union {
     uint16_t flags;
     struct v7_val_flags {
-      unsigned char re_flags;
       /* TODO(??) avoid using bitfields which are a GCC extension */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
       uint16_t val_alloc : 1; /* Whole "struct v7_val" must be free()-ed */
       uint16_t str_alloc : 1; /* v.str.buf must be free()-ed */
       uint16_t js_func : 1;   /* Function object is a JavsScript code */
-      uint16_t prop_func
-          : 1; /* Function object is a native property function */
+      uint16_t prop_func : 1; /* Function object is a native property func */
 #define V7_PROP_FUNC 8
       uint16_t val_dealloc : 1; /* Value has been deallocated */
       uint16_t re : 1;          /* This is a regex */
+      unsigned char re_flags;
 #pragma GCC diagnostic pop
     } fl;
   } fl;
@@ -8872,6 +8871,7 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
   size_t start = ast_add_node(a, AST_SWITCH);
+  ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
