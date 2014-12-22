@@ -1185,11 +1185,7 @@ V7_PRIVATE size_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
-V7_PRIVATE void ast_add_num(struct ast *, const char *, size_t);
-V7_PRIVATE void ast_add_ident(struct ast *, const char *, size_t);
-V7_PRIVATE void ast_add_string(struct ast *, const char *, size_t);
-V7_PRIVATE void ast_add_regex(struct ast *, const char *, size_t);
-V7_PRIVATE void ast_add_label(struct ast *, const char *, size_t);
+V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *, size_t);
 
 V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
 V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
@@ -8883,7 +8879,8 @@ typedef unsigned short ast_skip_t;
 
 struct ast_node_def {
   const char *name;   /* tag name, for debugging and serialization */
-  uint8_t fixed_len;      /* bytes */
+  uint8_t has_varint;     /* has a varint body */
+  uint8_t has_inlined;    /* inlined data whose size is in the varint field */
   uint8_t num_skips;      /* number of skips */
   uint8_t num_subtrees;   /* number of fixed subtrees */
 };
@@ -8925,7 +8922,7 @@ struct ast_node_def {
  *
  */
 V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
-  {"NOP", 0, 0, 0}, /* struct {} */
+  {"NOP", 0, 0, 0, 0},  /* struct {} */
   /*
    * struct {
    *   ast_skip_t end;
@@ -8933,7 +8930,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"SCRIPT", 0, 1, 0},
+  {"SCRIPT", 0, 0, 1, 0},
   /*
    * struct {
    *   ast_skip_t end;
@@ -8941,14 +8938,14 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"VAR", 0, 1, 0},
+  {"VAR", 0, 0, 1, 0},
   /*
    * struct {
    *   child name; // TODO(mkm): inline
    *   child expr;
    * }
    */
-  {"VAR_DECL", 0, 0, 2},
+  {"VAR_DECL", 0, 0, 0, 2},
   /*
    * struct {
    *   ast_skip_t end;
@@ -8960,7 +8957,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"IF", 0, 2, 1},
+  {"IF", 0, 0, 2, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -8972,24 +8969,24 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"FUNC", 0, 2, 1},
-  {"ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
-  {"REM_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
-  {"MUL_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
-  {"DIV_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
-  {"XOR_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
-  {"PLUS_ASSIGN", 0, 0, 2}, /* struct { child left, right; } */
-  {"MINUS_ASSIGN", 0, 0, 2},   /* struct { child left, right; } */
-  {"OR_ASSIGN", 0, 0, 2},      /* struct { child left, right; } */
-  {"AND_ASSIGN", 0, 0, 2},     /* struct { child left, right; } */
-  {"LSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
-  {"RSHIFT_ASSIGN", 0, 0, 2},  /* struct { child left, right; } */
-  {"URSHIFT_ASSIGN", 0, 0, 2}, /* struct { child left, right; } */
-  {"NUM", 0, 0, 0},            /* struct { len_t len, char s[]; } */
-  {"IDENT", 0, 0, 0},          /* struct { len_t len, char s[]; } */
-  {"STRING", 0, 0, 0},         /* struct { len_t len, char s[]; } */
-  {"REGEX", 0, 0, 0},          /* struct { len_t len, char s[]; } */
-  {"LABEL", 0, 0, 0},          /* struct { len_t len, char s[]; } */
+  {"FUNC", 0, 0, 2, 1},
+  {"ASSIGN", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"REM_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+  {"MUL_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+  {"DIV_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+  {"XOR_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+  {"PLUS_ASSIGN", 0, 0, 0, 2},    /* struct { child left, right; } */
+  {"MINUS_ASSIGN", 0, 0, 0, 2},   /* struct { child left, right; } */
+  {"OR_ASSIGN", 0, 0, 0, 2},      /* struct { child left, right; } */
+  {"AND_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+  {"LSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
+  {"RSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
+  {"URSHIFT_ASSIGN", 0, 0, 0, 2}, /* struct { child left, right; } */
+  {"NUM", 1, 1, 0, 0},            /* struct { len_t len, char s[]; } */
+  {"IDENT", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
+  {"STRING", 1, 1, 0, 0},         /* struct { len_t len, char s[]; } */
+  {"REGEX", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
+  {"LABEL", 1, 1, 0, 0},          /* struct { len_t len, char s[]; } */
   /*
    * struct {
    *   ast_skip_t end;
@@ -8997,7 +8994,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"SEQ", 0, 1, 0},
+  {"SEQ", 0, 0, 1, 0},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9006,7 +9003,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"WHILE", 0, 1, 1},
+  {"WHILE", 0, 0, 1, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9017,7 +9014,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"DOWHILE", 0, 2, 0},
+  {"DOWHILE", 0, 0, 2, 0},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9030,7 +9027,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"FOR", 0, 2, 3},
+  {"FOR", 0, 0, 2, 3},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9040,26 +9037,26 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"FOR_IN", 0, 1, 2},
-  {"COND", 0, 0, 3},     /* struct { child cond, iftrue, iffalse; } */
-  {"DEBUGGER", 0, 0, 0}, /* struct {} */
-  {"BREAK", 0, 0, 0},                  /* struct {} */
+  {"FOR_IN", 0, 0, 1, 2},
+  {"COND", 0, 0, 0, 3},  /* struct { child cond, iftrue, iffalse; } */
+  {"DEBUGGER", 0, 0, 0, 0},  /* struct {} */
+  {"BREAK", 0, 0, 0, 0},     /* struct {} */
   /*
    * struct {
    *   child label; // TODO(mkm): inline
    * }
    */
-  {"LAB_BREAK", 0, 0, 1},
-  {"CONTINUE", 0, 0, 0},  /* struct {} */
+  {"LAB_BREAK", 0, 0, 0, 1},
+  {"CONTINUE", 0, 0, 0, 0},  /* struct {} */
   /*
    * struct {
    *   child label; // TODO(mkm): inline
    * }
    */
-  {"LAB_CONTINUE", 0, 0, 1},
-  {"RETURN", 0, 0, 0},     /* struct {} */
-  {"VAL_RETURN", 0, 0, 1}, /* struct { child expr; } */
-  {"THROW", 0, 0, 1},      /* struct { child expr; } */
+  {"LAB_CONTINUE", 0, 0, 0, 1},
+  {"RETURN", 0, 0, 0, 0},     /* struct {} */
+  {"VAL_RETURN", 0, 0, 0, 1}, /* struct { child expr; } */
+  {"THROW", 0, 0, 0, 1},      /* struct { child expr; } */
   /*
    * struct {
    *   ast_skip_t end;
@@ -9074,7 +9071,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"TRY", 0, 3, 1},
+  {"TRY", 0, 0, 3, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9086,7 +9083,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"SWITCH", 0, 2, 1},
+  {"SWITCH", 0, 0, 2, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9095,7 +9092,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"CASE", 0, 1, 1},
+  {"CASE", 0, 0, 1, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9103,7 +9100,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"DEFAULT", 0, 1, 0},
+  {"DEFAULT", 0, 0, 1, 0},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9112,55 +9109,55 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"WITH", 0, 1, 1},
-  {"LOG_OR", 0, 0, 2},  /* struct { child left, right; } */
-  {"LOG_AND", 0, 0, 2}, /* struct { child left, right; } */
-  {"OR", 0, 0, 2},      /* struct { child left, right; } */
-  {"XOR", 0, 0, 2},     /* struct { child left, right; } */
-  {"AND", 0, 0, 2},     /* struct { child left, right; } */
-  {"EQ", 0, 0, 2},      /* struct { child left, right; } */
-  {"EQ_EQ", 0, 0, 2},   /* struct { child left, right; } */
-  {"NE", 0, 0, 2},      /* struct { child left, right; } */
-  {"NE_NE", 0, 0, 2},   /* struct { child left, right; } */
-  {"LE", 0, 0, 2},      /* struct { child left, right; } */
-  {"LT", 0, 0, 2},      /* struct { child left, right; } */
-  {"GE", 0, 0, 2},      /* struct { child left, right; } */
-  {"GT", 0, 0, 2},      /* struct { child left, right; } */
-  {"IN", 0, 0, 2},      /* struct { child left, right; } */
-  {"INSTANCEOF", 0, 0, 2},  /* struct { child left, right; } */
-  {"LSHIFT", 0, 0, 2},      /* struct { child left, right; } */
-  {"RSHIFT", 0, 0, 2},      /* struct { child left, right; } */
-  {"URSHIFT", 0, 0, 2},     /* struct { child left, right; } */
-  {"ADD", 0, 0, 2},         /* struct { child left, right; } */
-  {"SUB", 0, 0, 2},         /* struct { child left, right; } */
-  {"REM", 0, 0, 2},         /* struct { child left, right; } */
-  {"MUL", 0, 0, 2},         /* struct { child left, right; } */
-  {"DIV", 0, 0, 2},         /* struct { child left, right; } */
-  {"POS", 0, 0, 1},         /* struct { child expr; } */
-  {"NEG", 0, 0, 1},         /* struct { child expr; } */
-  {"NOT", 0, 0, 1},         /* struct { child expr; } */
-  {"LOGICAL_NOT", 0, 0, 1}, /* struct { child expr; } */
-  {"VOID", 0, 0, 1},        /* struct { child expr; } */
-  {"DELETE", 0, 0, 1},      /* struct { child expr; } */
-  {"TYPEOF", 0, 0, 1},      /* struct { child expr; } */
-  {"PREINC", 0, 0, 1},      /* struct { child expr; } */
-  {"PREDEC", 0, 0, 1},      /* struct { child expr; } */
-  {"POSTINC", 0, 0, 1},     /* struct { child expr; } */
-  {"POSTDEC", 0, 0, 1},     /* struct { child expr; } */
+  {"WITH", 0, 0, 1, 1},
+  {"LOG_OR", 0, 0, 0, 2},      /* struct { child left, right; } */
+  {"LOG_AND", 0, 0, 0, 2},     /* struct { child left, right; } */
+  {"OR", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"XOR", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"AND", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"EQ", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"EQ_EQ", 0, 0, 0, 2},       /* struct { child left, right; } */
+  {"NE", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"NE_NE", 0, 0, 0, 2},       /* struct { child left, right; } */
+  {"LE", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"LT", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"GE", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"GT", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"IN", 0, 0, 0, 2},          /* struct { child left, right; } */
+  {"INSTANCEOF", 0, 0, 0, 2},  /* struct { child left, right; } */
+  {"LSHIFT", 0, 0, 0, 2},      /* struct { child left, right; } */
+  {"RSHIFT", 0, 0, 0, 2},      /* struct { child left, right; } */
+  {"URSHIFT", 0, 0, 0, 2},     /* struct { child left, right; } */
+  {"ADD", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"SUB", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"REM", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"MUL", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"DIV", 0, 0, 0, 2},         /* struct { child left, right; } */
+  {"POS", 0, 0, 0, 1},         /* struct { child expr; } */
+  {"NEG", 0, 0, 0, 1},         /* struct { child expr; } */
+  {"NOT", 0, 0, 0, 1},         /* struct { child expr; } */
+  {"LOGICAL_NOT", 0, 0, 0, 1}, /* struct { child expr; } */
+  {"VOID", 0, 0, 0, 1},        /* struct { child expr; } */
+  {"DELETE", 0, 0, 0, 1},      /* struct { child expr; } */
+  {"TYPEOF", 0, 0, 0, 1},      /* struct { child expr; } */
+  {"PREINC", 0, 0, 0, 1},      /* struct { child expr; } */
+  {"PREDEC", 0, 0, 0, 1},      /* struct { child expr; } */
+  {"POSTINC", 0, 0, 0, 1},     /* struct { child expr; } */
+  {"POSTDEC", 0, 0, 0, 1},     /* struct { child expr; } */
   /*
    * struct {
    *   child expr;
    *   child ident; // TODO(mkm): inline
    * }
    */
-  {"MEMBER", 0, 0, 2},
+  {"MEMBER", 0, 0, 0, 2},
   /*
    * struct {
    *   child expr;
    *   child index;
    * }
    */
-  {"INDEX", 0, 0, 2},
+  {"INDEX", 0, 0, 0, 2},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9169,7 +9166,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"CALL", 0, 1, 1},
+  {"CALL", 0, 0, 1, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9178,7 +9175,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"NEW", 0, 1, 1},
+  {"NEW", 0, 0, 1, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9186,7 +9183,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"ARRAY", 0, 1, 0},
+  {"ARRAY", 0, 0, 1, 0},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9194,14 +9191,14 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"OBJECT", 0, 1, 0},
+  {"OBJECT", 0, 0, 1, 0},
   /*
    * struct {
    *   child name; // TODO(mkm): inline
    *   child expr;
    * }
    */
-  {"PROP", 0, 0, 2},
+  {"PROP", 0, 0, 0, 2},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9210,7 +9207,7 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"GETTER", 0, 1, 1},
+  {"GETTER", 0, 0, 1, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -9220,12 +9217,12 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"SETTER", 0, 1, 2},
-  {"THIS", 0, 0, 0},  /* struct {} */
-  {"TRUE", 0, 0, 0},  /* struct {} */
-  {"FALSE", 0, 0, 0}, /* struct {} */
-  {"NULL", 0, 0, 0},  /* struct {} */
-  {"UNDEF", 0, 0, 0}, /* struct {} */
+  {"SETTER", 0, 0, 1, 2},
+  {"THIS", 0, 0, 0, 0},  /* struct {} */
+  {"TRUE", 0, 0, 0, 0},  /* struct {} */
+  {"FALSE", 0, 0, 0, 0}, /* struct {} */
+  {"NULL", 0, 0, 0, 0},  /* struct {} */
+  {"UNDEF", 0, 0, 0, 0}, /* struct {} */
 };
 
 V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
@@ -9390,7 +9387,7 @@ V7_PRIVATE size_t ast_add_node(struct ast *a, enum ast_tag tag) {
   assert(tag < AST_MAX_TAG);
 
   ast_append(a, (char *)&t, sizeof(t));
-  ast_append(a, NULL, d->fixed_len + sizeof(ast_skip_t) * d->num_skips);
+  ast_append(a, NULL, sizeof(ast_skip_t) * d->num_skips);
   return start + 1;
 }
 
@@ -9401,7 +9398,7 @@ V7_PRIVATE size_t ast_insert_node(struct ast *a, size_t start,
 
   assert(tag < AST_MAX_TAG);
 
-  ast_insert(a, start, NULL, d->fixed_len + sizeof(ast_skip_t) * d->num_skips);
+  ast_insert(a, start, NULL, sizeof(ast_skip_t) * d->num_skips);
   ast_insert(a, start, (char *)&t, sizeof(t));
 
   if (d->num_skips) {
@@ -9462,7 +9459,17 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
 V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
-  *pos += def->fixed_len + def->num_skips * sizeof(ast_skip_t);
+  if (def->has_varint) {
+    v7_strlen_t slen;
+    int llen;
+    slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
+    *pos += llen;
+    if (def->has_inlined) {
+      *pos += slen;
+    }
+  }
+
+  *pos += def->num_skips * sizeof(ast_skip_t);
 }
 
 static void ast_set_string(struct ast *a, size_t off, const char *name,
@@ -9476,34 +9483,11 @@ static void ast_set_string(struct ast *a, size_t off, const char *name,
   ast_insert(a, off + n, name, len);
 }
 
-/* Helper to add a NUM node. */
-V7_PRIVATE void ast_add_num(struct ast *a, const char *name, size_t len) {
-  size_t start = ast_add_node(a, AST_NUM);
-  ast_set_string(a, start, name, len);
-}
-
-/* Helper to add an IDENT node. */
-V7_PRIVATE void ast_add_ident(struct ast *a, const char *name, size_t len) {
-  size_t start = ast_add_node(a, AST_IDENT);
-  ast_set_string(a, start, name, len);
-}
-
-/* Helper to add a STRING node. */
-V7_PRIVATE void ast_add_string(struct ast *a, const char *name, size_t len) {
-  size_t start = ast_add_node(a, AST_STRING);
-  ast_set_string(a, start, name, len);
-}
-
-/* Helper to add a REGEX node. */
-V7_PRIVATE void ast_add_regex(struct ast *a, const char *name, size_t len) {
-  size_t start = ast_add_node(a, AST_REGEX);
-  ast_set_string(a, start, name, len);
-}
-
-/* Helper to add a LABEL node. */
-V7_PRIVATE void ast_add_label(struct ast *a, const char *name, size_t len) {
-  size_t start = ast_add_node(a, AST_LABEL);
-  ast_set_string(a, start, name, len);
+/* Helper to add a node with inlined data. */
+V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
+                                     const char *name, size_t len) {
+  assert(ast_node_defs[tag].has_inlined);
+  ast_set_string(a, ast_add_node(a, tag), name, len);
 }
 
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
@@ -9541,13 +9525,12 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     case AST_NUM:
       slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
       fprintf(fp, " \"%.*s\"\n", (int) slen, a->buf + *pos + llen);
-      *pos += llen + slen;
       break;
     default:
       fprintf(fp, "\n");
   }
-  *pos += def->fixed_len;
-  *pos += sizeof(ast_skip_t) * def->num_skips;
+
+  ast_move_to_children(a, pos);
 
   for (i = 0; i < def->num_subtrees; i++) {
     ast_dump_tree(fp, a, pos, depth + 1);
@@ -9665,7 +9648,7 @@ static enum v7_err aparse_body(struct v7 *, struct ast *, enum v7_tok);
 
 static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER) {
-    ast_add_ident(a, v7->tok, v7->tok_len);
+    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
     return V7_OK;
   }
@@ -9676,7 +9659,7 @@ static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
                                                      struct ast *a) {
   /* Allow reserved words as property names. */
   if (is_reserved_word_token(v7->cur_tok)) {
-    ast_add_ident(a, v7->tok, v7->tok_len);
+    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
   } else {
     PARSE(ident);
@@ -9711,7 +9694,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
     ast_add_node(a, AST_PROP);
     /* Allow reserved words as property names. */
     if (is_reserved_word_token(v7->cur_tok)) {
-      ast_add_ident(a, v7->tok, v7->tok_len);
+      ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
       next_tok(v7);
     } else {
       PARSE(terminal);
@@ -9776,15 +9759,15 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
       ast_add_node(a, AST_NULL);
       break;
     case TOK_NUMBER:
-      ast_add_num(a, v7->tok, v7->tok_len);
+      ast_add_inlined_node(a, AST_NUM, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_STRING_LITERAL:
-      ast_add_string(a, v7->tok + 1, v7->tok_len - 2);
+      ast_add_inlined_node(a, AST_STRING, v7->tok + 1, v7->tok_len - 2);
       next_tok(v7);
       break;
     case TOK_REGEX_LITERAL:
-      ast_add_regex(a, v7->tok, v7->tok_len);
+      ast_add_inlined_node(a, AST_REGEX, v7->tok, v7->tok_len);
       next_tok(v7);
       break;
     case TOK_IDENTIFIER:
@@ -10285,7 +10268,7 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
       break;
     case TOK_IDENTIFIER:
       if (lookahead(v7) == TOK_COLON) {
-        ast_add_label(a, v7->tok, v7->tok_len);
+        ast_add_inlined_node(a, AST_LABEL, v7->tok, v7->tok_len);
         next_tok(v7);
         EXPECT(TOK_COLON);
         return V7_OK;
@@ -10310,7 +10293,7 @@ static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
     if (require_named) {
       return V7_ERROR;
     }
-    ast_add_ident(a, "?", 1);
+    ast_add_inlined_node(a, AST_IDENT, "?", 1);
   }
   EXPECT(TOK_OPEN_PAREN);
   PARSE(arglist);
