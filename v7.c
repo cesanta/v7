@@ -1174,6 +1174,15 @@ struct ast {
 
 typedef unsigned long ast_off_t;
 
+struct ast_node_def {
+  const char *name;      /* tag name, for debugging and serialization */
+  uint8_t has_varint;    /* has a varint body */
+  uint8_t has_inlined;   /* inlined data whose size is in the varint field */
+  uint8_t num_skips;     /* number of skips */
+  uint8_t num_subtrees;  /* number of fixed subtrees */
+};
+extern const struct ast_node_def ast_node_defs[];
+
 V7_PRIVATE void ast_init(struct ast *, size_t);
 V7_PRIVATE void ast_free(struct ast *);
 V7_PRIVATE void ast_resize(struct ast *, size_t);
@@ -1192,20 +1201,23 @@ enum ast_which_skip {
   AST_SWITCH_DEFAULT_SKIP = 1
 };
 
-V7_PRIVATE size_t ast_add_node(struct ast *, enum ast_tag);
-V7_PRIVATE size_t ast_insert_node(struct ast *, size_t, enum ast_tag);
-V7_PRIVATE size_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
-V7_PRIVATE size_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
+V7_PRIVATE ast_off_t ast_add_node(struct ast *, enum ast_tag);
+V7_PRIVATE ast_off_t ast_insert_node(struct ast *, ast_off_t, enum ast_tag);
+V7_PRIVATE ast_off_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
+V7_PRIVATE ast_off_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
 V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *,
                                      size_t);
-V7_PRIVATE void ast_insert_inlined_node(struct ast *, size_t, enum ast_tag,
+V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
                                         const char *, size_t);
 
 V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
 V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
+
+V7_PRIVATE size_t ast_get_inlined_data(struct ast *, ast_off_t, char *, size_t);
+V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
@@ -1234,6 +1246,26 @@ V7_PRIVATE enum v7_err aparse(struct ast *, const char*, int);
 #endif  /* __cplusplus */
 
 #endif  /* V7_APARSER_H_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_INTERPRETER_H_INCLUDED
+#define V7_INTERPRETER_H_INCLUDED
+
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
+V7_PRIVATE struct v7_val *v7_exec_2(struct v7 *, const char*);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
+
+#endif  /* V7_INTERPRETER_H_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -7501,14 +7533,6 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
 
 typedef unsigned short ast_skip_t;
 
-struct ast_node_def {
-  const char *name;   /* tag name, for debugging and serialization */
-  uint8_t has_varint;     /* has a varint body */
-  uint8_t has_inlined;    /* inlined data whose size is in the varint field */
-  uint8_t num_skips;      /* number of skips */
-  uint8_t num_subtrees;   /* number of fixed subtrees */
-};
-
 /*
  * The structure of AST nodes cannot be described in portable ANSI C,
  * since they are variable length and packed (unaligned).
@@ -8006,8 +8030,8 @@ V7_PRIVATE size_t ast_insert(struct ast *a, size_t off, const char *buf,
  * Returns the offset of the node payload (one byte after the tag).
  * This offset can be passed to `ast_set_skip`.
  */
-V7_PRIVATE size_t ast_add_node(struct ast *a, enum ast_tag tag) {
-  size_t start = a->len;
+V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
+  ast_off_t start = a->len;
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
@@ -8018,8 +8042,8 @@ V7_PRIVATE size_t ast_add_node(struct ast *a, enum ast_tag tag) {
   return start + 1;
 }
 
-V7_PRIVATE size_t ast_insert_node(struct ast *a, size_t start,
-                                  enum ast_tag tag) {
+V7_PRIVATE ast_off_t ast_insert_node(struct ast *a, ast_off_t start,
+                                     enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
@@ -8053,8 +8077,8 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  *
  * Every tree reader can assume this and safely skip unknown nodes.
  */
-V7_PRIVATE size_t ast_set_skip(struct ast *a, ast_off_t start,
-                               enum ast_which_skip skip) {
+V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
+                                  enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = a->len - start;
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->buf + start - 1);
@@ -8068,8 +8092,8 @@ V7_PRIVATE size_t ast_set_skip(struct ast *a, ast_off_t start,
   return a->len;
 }
 
-V7_PRIVATE size_t ast_get_skip(struct ast *a, ast_off_t pos,
-                               enum ast_which_skip skip) {
+V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
+                                  enum ast_which_skip skip) {
   uint8_t * p = (uint8_t *) a->buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
@@ -8099,7 +8123,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   *pos += def->num_skips * sizeof(ast_skip_t);
 }
 
-static void ast_set_string(struct ast *a, size_t off, const char *name,
+static void ast_set_string(struct ast *a, ast_off_t off, const char *name,
                            size_t len) {
   /* Encode string length first */
   int n = calc_llen(len);   /* Calculate how many bytes length occupies */
@@ -8118,11 +8142,30 @@ V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
 }
 
 /* Helper to add a node with inlined data. */
-V7_PRIVATE void ast_insert_inlined_node(struct ast *a, size_t start,
+V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                         enum ast_tag tag, const char *name,
                                         size_t len) {
   assert(ast_node_defs[tag].has_inlined);
   ast_set_string(a, ast_insert_node(a, start, tag), name, len);
+}
+
+V7_PRIVATE ast_off_t ast_get_inlined_data(struct ast *a, ast_off_t pos,
+                                          char *buf, size_t buf_len) {
+  v7_strlen_t slen;
+  int llen;
+  slen = decode_string_len((unsigned char *) a->buf + pos, &llen);
+  if (slen >= buf_len) {
+    slen = buf_len - 1;
+  }
+  memcpy(buf, a->buf + pos + llen, slen);
+  buf[slen] = 0;
+  return slen;
+}
+
+V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
+  char buf[512];
+  ast_get_inlined_data(a, pos, buf, sizeof(buf));
+  *val = strtod(buf, NULL);
 }
 
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
@@ -8171,7 +8214,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
      * so unless we care how the subtree sequences are grouped together
      * (and we currently don't) we can just read until the end of that skip.
      */
-    size_t end = ast_get_skip(a, skips, AST_END_SKIP);
+    ast_off_t end = ast_get_skip(a, skips, AST_END_SKIP);
 
     comment_at_depth(fp, "...", depth + 1);
     while (*pos < end) {
@@ -8391,7 +8434,7 @@ static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
-  size_t start;
+  ast_off_t start;
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
       lookahead(v7) != TOK_COLON) {
@@ -8432,7 +8475,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
-  size_t start;
+  ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_OPEN_PAREN:
       next_tok(v7);
@@ -8519,7 +8562,7 @@ static enum v7_err aparse_arglist(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_newexpr(struct v7 *v7, struct ast *a) {
-  size_t start;
+  ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_NEW:
       next_tok(v7);
@@ -8542,7 +8585,7 @@ static enum v7_err aparse_newexpr(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_member(struct v7 *v7, struct ast *a, size_t pos) {
+static enum v7_err aparse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
   switch (v7->cur_tok) {
     case TOK_DOT:
       next_tok(v7);
@@ -8568,7 +8611,7 @@ static enum v7_err aparse_member(struct v7 *v7, struct ast *a, size_t pos) {
 }
 
 static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   PARSE(newexpr);
 
   for (;;) {
@@ -8584,7 +8627,7 @@ static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   PARSE(newexpr);
 
   for (;;) {
@@ -8606,7 +8649,7 @@ static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_postfix(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   PARSE(callexpr);
 
   if (v7->after_newline) {
@@ -8673,7 +8716,7 @@ enum v7_err aparse_prefix(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
-                                 int level, size_t pos) {
+                                 int level, ast_off_t pos) {
   struct {
     int len, left_to_right;
     struct {
@@ -8745,7 +8788,7 @@ static enum v7_err aparse_assign(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_expression(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   int group = 0;
   do {
     PARSE(assign);
@@ -8767,7 +8810,7 @@ static enum v7_err end_of_statement(struct v7 *v7) {
 }
 
 static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_VAR);
+  ast_off_t start = ast_add_node(a, AST_VAR);
   do {
     ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
     EXPECT(TOK_IDENTIFIER);
@@ -8791,7 +8834,7 @@ static int aparse_optional(struct v7 *v7, struct ast *a,
 }
 
 static enum v7_err aparse_if(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_IF);
+  ast_off_t start = ast_add_node(a, AST_IF);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -8805,7 +8848,7 @@ static enum v7_err aparse_if(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_while(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_WHILE);
+  ast_off_t start = ast_add_node(a, AST_WHILE);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -8815,7 +8858,7 @@ static enum v7_err aparse_while(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_DOWHILE);
+  ast_off_t start = ast_add_node(a, AST_DOWHILE);
   PARSE(statement);
   ast_set_skip(a, start, AST_DO_WHILE_COND_SKIP);
   EXPECT(TOK_WHILE);
@@ -8828,7 +8871,7 @@ static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
-  size_t start = a->len;
+  ast_off_t start = a->len;
   EXPECT(TOK_OPEN_PAREN);
 
   if(aparse_optional(v7, a, TOK_SEMICOLON)) {
@@ -8870,14 +8913,14 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_SWITCH);
+  ast_off_t start = ast_add_node(a, AST_SWITCH);
   ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
   EXPECT(TOK_OPEN_CURLY);
   while (v7->cur_tok != TOK_CLOSE_CURLY) {
-    size_t case_start;
+    ast_off_t case_start;
     switch (v7->cur_tok) {
       case TOK_CASE:
         next_tok(v7);
@@ -8913,7 +8956,7 @@ static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_try(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_TRY);
+  ast_off_t start = ast_add_node(a, AST_TRY);
   PARSE(block);
   ast_set_skip(a, start, AST_TRY_CATCH_SKIP);
   if (ACCEPT(TOK_CATCH)) {
@@ -8931,7 +8974,7 @@ static enum v7_err aparse_try(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_with(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_WITH);
+  ast_off_t start = ast_add_node(a, AST_WITH);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -9026,7 +9069,7 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
                                    int require_named) {
-  size_t start = ast_add_node(a, AST_FUNC);
+  ast_off_t start = ast_add_node(a, AST_FUNC);
   if (aparse_ident(v7, a) == V7_ERROR) {
     if (require_named) {
       return V7_ERROR;
@@ -9062,7 +9105,7 @@ static enum v7_err aparse_body(struct v7 *v7, struct ast *a,
 }
 
 static enum v7_err aparse_script(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_SCRIPT);
+  ast_off_t start = ast_add_node(a, AST_SCRIPT);
   PARSE_ARG(body, TOK_END_OF_INPUT);
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
@@ -9094,6 +9137,320 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
            col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+static struct v7_val *i_new_array(struct v7 *v7) {
+  struct v7_val * v = v7_push_new_object(v7);
+  v7_set_class(v, V7_CLASS_ARRAY);
+  return v;
+}
+
+static double i_as_num(struct v7_val *v) {
+  if (!is_num(v) && !is_bool(v)) {
+    if (is_string(v)) {
+      return strtod(v->v.str.buf, NULL);
+    } else {
+      return NAN;
+    }
+  } else {
+    return v7_number(v);
+  }
+}
+
+static int i_is_true(struct v7_val *v) {
+  /* TODO(mkm): real stuff */
+  return v7_type(v) == V7_TYPE_NUM && v7_number(v) == 1.0;
+}
+
+static double i_num_unary_op(enum ast_tag tag, double a) {
+  switch (tag) {
+    case AST_POSITIVE:
+      return a;
+    case AST_NEGATIVE:
+      return -a;
+    default:
+      printf("NOT IMPLEMENTED");
+      abort();
+  }
+}
+
+static double i_num_bin_op(enum ast_tag tag, double a, double b) {
+  switch (tag) {
+    case AST_ADD:  /* simple fixed width nodes with no payload */
+      return a + b;
+    case AST_SUB:
+      return a - b;
+    case AST_REM:
+      return (int) a % (int) b;
+    case AST_MUL:
+      return a * b;
+    case AST_DIV:
+      return a / b;
+    case AST_EQ:
+      return a == b;
+    case AST_NE:
+      return a != b;
+    case AST_LT:
+      return a < b;
+    case AST_LE:
+      return a <= b;
+    case AST_GT:
+      return a > b;
+    case AST_GE:
+      return a >= b;
+    default:
+      printf("NOT IMPLEMENTED");
+      abort();
+  }
+}
+
+static struct v7_val *i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                  struct v7_val *scope) {
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+  const struct ast_node_def *def = &ast_node_defs[tag];
+  ast_off_t end;
+  struct v7_val *res, *v1, *v2;
+  double dv;
+
+  /*
+   * TODO(mkm): put this temporary somewhere in the evaluation context
+   * or use alloca.
+   */
+  char buf[512];
+
+  switch (tag) {
+    case AST_NEGATIVE:
+    case AST_POSITIVE:
+      return v7_push_number(v7, i_num_unary_op(
+          tag, i_as_num(i_eval_expr(v7, a, pos, scope))));
+    case AST_ADD:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      if (!is_num(v1) || !is_num(v2)) {
+        v7_stringify(v1, buf, sizeof(buf));
+        v7_stringify(v2, buf + strlen(buf), sizeof(buf) - strlen(buf));
+        return v7_push_string(v7, buf, strlen(buf), 1);
+      }
+      return v7_push_number(v7, i_num_bin_op(tag, i_as_num(v1), i_as_num(v2)));
+    case AST_SUB:
+    case AST_REM:
+    case AST_MUL:
+    case AST_DIV:
+    case AST_EQ:
+    case AST_NE:
+    case AST_LT:
+    case AST_LE:
+    case AST_GT:
+    case AST_GE:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return v7_push_number(v7, i_num_bin_op(tag, i_as_num(v1), i_as_num(v2)));
+    case AST_ASSIGN:
+      /* for now only simple assignment */
+      assert((tag = ast_fetch_tag(a, pos)) == AST_IDENT);
+      ast_get_inlined_data(a, *pos, buf, sizeof(buf));
+      ast_move_to_children(a, pos);
+      res = i_eval_expr(v7, a, pos, scope);
+      v7_set(v7, scope, buf, res);
+      return res;
+    case AST_INDEX:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return get2(v1, v2);
+    case AST_MEMBER:
+      ast_get_inlined_data(a, *pos, buf, sizeof(buf));
+      ast_move_to_children(a, pos);
+      v1 = i_eval_expr(v7, a, pos, scope);
+      return v7_get(v1, buf);
+    case AST_SEQ:
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      while (*pos < end) {
+        res = i_eval_expr(v7, a, pos, scope);
+      }
+      return res;
+    case AST_ARRAY:
+      res = i_new_array(v7);
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      while (*pos < end) {
+        v7_append(v7, res, i_eval_expr(v7, a, pos, scope));
+      }
+      return res;
+    case AST_OBJECT:
+      res = v7_push_new_object(v7);
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      while (*pos < end) {
+        assert((tag = ast_fetch_tag(a, pos)) == AST_PROP);
+        ast_get_inlined_data(a, *pos, buf, sizeof(buf));
+        ast_move_to_children(a, pos);
+        v1 = i_eval_expr(v7, a, pos, scope);
+        v7_set(v7, res, buf, v1);
+      }
+      return res;
+    case AST_TRUE:
+      return v7_push_number(v7, 1.0);  /* TODO(mkm): bool */
+    case AST_FALSE:
+      return v7_push_number(v7, 0.0);  /* TODO(mkm): bool */
+    case AST_NUM:
+      ast_get_num(a, *pos, &dv);
+      ast_move_to_children(a, pos);
+      return v7_push_number(v7, dv);
+    case AST_STRING:
+      ast_get_inlined_data(a, *pos, buf, sizeof(buf));
+      ast_move_to_children(a, pos);
+      res = v7_push_string(v7, buf, strlen(buf), 1);
+      return res;
+    case AST_IDENT:
+      ast_get_inlined_data(a, *pos, buf, sizeof(buf));
+      ast_move_to_children(a, pos);
+      res = v7_get(scope, buf);
+      if (res == NULL) {
+        fprintf(stderr, "ReferenceError: %s is not defined\n", buf);
+        abort();
+      }
+      return res;
+    default:
+      printf("NOT IMPLEMENTED: %s\n", def->name);
+      abort();
+  }
+}
+
+static struct v7_val *i_eval_stmt(struct v7 *, struct ast *, ast_off_t *,
+                                  struct v7_val *);
+
+static struct v7_val *i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                   ast_off_t end, struct v7_val *scope) {
+  struct v7_val *res;
+  while (*pos < end) {
+    res = i_eval_stmt(v7, a, pos, scope);
+  }
+  return res;
+}
+
+static struct v7_val *i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                  struct v7_val *scope) {
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+  struct v7_val *res;
+  ast_off_t end, cond, iter_end, loop, iter, finally, catch;
+
+  switch (tag) {
+    case AST_SCRIPT: /* TODO(mkm): push up */
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      while (*pos < end) {
+        res = i_eval_stmt(v7, a, pos, scope);
+      }
+      return res;
+    case AST_IF:
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      if (i_is_true(i_eval_expr(v7, a, pos, scope))) {
+        i_eval_stmts(v7, a, pos, end, scope);
+      }
+      *pos = end;
+      break;
+    case AST_WHILE:
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      cond = *pos;
+      for (;;) {
+        if (i_is_true(i_eval_expr(v7, a, pos, scope))) {
+          i_eval_stmts(v7, a, pos, end, scope);
+        } else {
+          *pos = end;
+          break;
+        }
+        *pos = cond;
+      }
+      break;
+    case AST_DOWHILE:
+      end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
+      ast_move_to_children(a, pos);
+      loop = *pos;
+      for (;;) {
+        i_eval_stmts(v7, a, pos, end, scope);
+        if (!i_is_true(i_eval_expr(v7, a, pos, scope))) {
+          break;
+        }
+        *pos = loop;
+      }
+      break;
+    case AST_FOR:
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      iter_end = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
+      ast_move_to_children(a, pos);
+      /* initializer */
+      i_eval_expr(v7, a, pos, scope);
+      for (;;) {
+        loop = *pos;
+        if (!i_is_true(i_eval_expr(v7, a, &loop, scope))) {
+          *pos = end;
+          return make_value(v7, V7_TYPE_UNDEF);
+        }
+        iter = loop;
+        loop = iter_end;
+        i_eval_stmts(v7, a, &loop, end, scope);
+        i_eval_expr(v7, a, &iter, scope);
+      }
+    case AST_TRY:
+      /* Dummy no catch impl */
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+      finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
+      ast_move_to_children(a, pos);
+      i_eval_stmts(v7, a, pos, catch, scope);
+      if (finally) {
+        i_eval_stmts(v7, a, &finally, end, scope);
+      }
+      *pos = end;
+      break;
+    case AST_WITH:
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      /*
+       * TODO(mkm) make an actual scope chain. Possibly by mutating
+       * the with expression and adding the 'outer environment
+       * reference' hidden property.
+       */
+      i_eval_stmts(v7, a, pos, end, i_eval_expr(v7, a, pos, scope));
+      break;
+    default:
+      (*pos)--;
+      return i_eval_expr(v7, a, pos, scope);
+  }
+  return make_value(v7, V7_TYPE_UNDEF);
+}
+
+V7_PRIVATE struct v7_val *v7_exec_2(struct v7 *v7, const char* src) {
+  struct ast a;
+  struct v7_val *res;
+  ast_off_t pos = 0;
+  char debug[1024];
+
+  ast_init(&a, 0);
+  if (aparse(&a, src, 1) != V7_OK) {
+    printf("Error parsing\n");
+    return NULL;
+  }
+  ast_trim(&a);
+
+#if 0
+  ast_dump(stdout, &a, 0);
+#endif
+
+  res = i_eval_stmt(v7, &a, &pos, v7_global(v7));
+  v7_stringify(res, debug, sizeof(debug));
+#if 0
+  fprintf(stderr, "Eval res: %s .\n", debug);
+#endif
+  return res;
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited

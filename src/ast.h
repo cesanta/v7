@@ -135,6 +135,15 @@ struct ast {
 
 typedef unsigned long ast_off_t;
 
+struct ast_node_def {
+  const char *name;      /* tag name, for debugging and serialization */
+  uint8_t has_varint;    /* has a varint body */
+  uint8_t has_inlined;   /* inlined data whose size is in the varint field */
+  uint8_t num_skips;     /* number of skips */
+  uint8_t num_subtrees;  /* number of fixed subtrees */
+};
+extern const struct ast_node_def ast_node_defs[];
+
 V7_PRIVATE void ast_init(struct ast *, size_t);
 V7_PRIVATE void ast_free(struct ast *);
 V7_PRIVATE void ast_resize(struct ast *, size_t);
@@ -153,20 +162,23 @@ enum ast_which_skip {
   AST_SWITCH_DEFAULT_SKIP = 1
 };
 
-V7_PRIVATE size_t ast_add_node(struct ast *, enum ast_tag);
-V7_PRIVATE size_t ast_insert_node(struct ast *, size_t, enum ast_tag);
-V7_PRIVATE size_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
-V7_PRIVATE size_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
+V7_PRIVATE ast_off_t ast_add_node(struct ast *, enum ast_tag);
+V7_PRIVATE ast_off_t ast_insert_node(struct ast *, ast_off_t, enum ast_tag);
+V7_PRIVATE ast_off_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
+V7_PRIVATE ast_off_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
 V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *,
                                      size_t);
-V7_PRIVATE void ast_insert_inlined_node(struct ast *, size_t, enum ast_tag,
+V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
                                         const char *, size_t);
 
 V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
 V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
+
+V7_PRIVATE size_t ast_get_inlined_data(struct ast *, ast_off_t, char *, size_t);
+V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 

@@ -5,9 +5,9 @@ SOURCES = src/global_vars.c src/util.c src/crypto.c src/array.c src/boolean.c \
           src/date.c src/error.c src/function.c src/math.c src/number.c \
           src/object.c src/regex.c src/rune.c src/runetype.c src/string.c \
           src/json.c src/stdlib.c src/parser.c src/tokenizer.c src/api.c \
-          src/ast.c src/vm.c src/aparser.c src/slre.c src/main.c
+          src/ast.c src/vm.c src/aparser.c src/interpreter.c src/slre.c src/main.c
 HEADERS = src/v7_license.h src/utf.h src/tokenizer.h src/vm.h src/internal.h \
-					src/slre.h src/ast.h src/aparser.h
+					src/slre.h src/ast.h src/aparser.h src/interpreter.h
 
 .PHONY: cpplint
 
