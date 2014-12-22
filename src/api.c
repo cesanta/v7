@@ -194,9 +194,9 @@ char *v7_stringify(const struct v7_val *v, char *buf, int bsiz) {
     }
   } else if (v7_is_class(v, V7_CLASS_REGEXP)) {
     int sz = snprintf(buf, bsiz, "/%s/", v->v.str.buf);
-    if (v->fl.fl.re_g) sz += snprintf(buf + sz, bsiz, "g");
-    if (v->fl.fl.re_i) sz += snprintf(buf + sz, bsiz, "i");
-    if (v->fl.fl.re_m) snprintf(buf + sz, bsiz, "m");
+    if (v->fl.fl.re_flags & RE_FLAG_G) sz += snprintf(buf + sz, bsiz, "g");
+    if (v->fl.fl.re_flags & RE_FLAG_I) sz += snprintf(buf + sz, bsiz, "i");
+    if (v->fl.fl.re_flags & RE_FLAG_M) snprintf(buf + sz, bsiz, "m");
   } else if (v->type == V7_TYPE_OBJ) {
     obj_to_string(v, buf, bsiz);
   } else {

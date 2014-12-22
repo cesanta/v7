@@ -6,13 +6,6 @@
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
-/* Public API. Implemented in api.c */
-#include "../v7.h"
-
-/* Private API */
-#include "utf.h"
-#include "tokenizer.h"
-
 #include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
@@ -27,6 +20,13 @@
 #include <string.h>
 #include <setjmp.h>
 
+/* Public API. Implemented in api.c */
+#include "../v7.h"
+
+/* Private API */
+#include "utf.h"
+#include "tokenizer.h"
+#include "slre.h"
 #include "vm.h"
 
 #ifdef _WIN32
@@ -52,28 +52,6 @@ typedef unsigned char uint8_t;
 
 /* Maximum length of the string literal */
 #define MAX_STRING_LITERAL_LENGTH 2000
-
-#define RE_MAX_SUB 32
-#define RE_MAX_RANGES 32
-#define RE_MAX_SETS 16
-#define RE_MAX_REP 0xFFFF
-#define RE_MAX_THREADS 1000
-#define V7_RE_MAX_REPL_SUB 255
-
-typedef unsigned short uint16_t;
-typedef signed char sint8_t;
-
-#define reg_malloc malloc
-#define reg_free free
-
-#ifndef V7_EX_TRY_CATCH
-#define V7_EX_TRY_CATCH(catch_point) setjmp(catch_point)
-#define V7_EX_THROW(c, m, message) \
-  do {                             \
-    m = message;                   \
-    longjmp(c, 1);                 \
-  } while (0)
-#endif
 
 /* MSVC6 doesn't have standard C math constants defined */
 #ifndef M_PI
@@ -106,80 +84,6 @@ enum v7_class {
   V7_CLASS_REGEXP,
   V7_CLASS_STRING,
   V7_NUM_CLASSES
-};
-
-/* Sub expression matches */
-struct Resub {
-  int subexpr_num;
-  struct re_tok {
-    const char *start; /* points to the beginning of the token */
-    const char *end;   /* points to the end of the token */
-  } sub[RE_MAX_SUB];
-};
-
-struct Rerange {
-  Rune s;
-  Rune e;
-};
-/* character class, each pair of rune's defines a range */
-struct Reclass {
-  struct Rerange *end;
-  struct Rerange spans[RE_MAX_RANGES];
-};
-
-/* Parser Information */
-struct Renode {
-  uint8_t type;
-  union {
-    Rune c;             /* character */
-    struct Reclass *cp; /* class pointer */
-    struct {
-      struct Renode *x;
-      union {
-        struct Renode *y;
-        uint8_t n;
-        struct {
-          uint8_t ng; /* not greedy flag */
-          uint16_t min;
-          uint16_t max;
-        } rp;
-      } y;
-    } xy;
-  } par;
-};
-
-/* Machine instructions */
-struct Reinst {
-  uint8_t opcode;
-  union {
-    uint8_t n;
-    Rune c;             /* character */
-    struct Reclass *cp; /* class pointer */
-    struct {
-      struct Reinst *x;
-      union {
-        struct {
-          uint16_t min;
-          uint16_t max;
-        } rp;
-        struct Reinst *y;
-      } y;
-    } xy;
-  } par;
-};
-
-/* struct Reprogram definition */
-struct Reprog {
-  struct Reinst *start, *end;
-  unsigned int subexpr_num;
-  struct Reclass charset[RE_MAX_SETS];
-};
-
-/* struct Rethread definition */
-struct Rethread {
-  struct Reinst *pc;
-  const char *start;
-  struct Resub sub;
 };
 
 typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *arg,
@@ -241,7 +145,7 @@ struct v7_val {
   short ref_count;       /* Reference counter */
 
   union {
-    uint16_t flags; /* Flags - defined below */
+    uint16_t flags;
     struct v7_val_flags {
       /* TODO(??) avoid using bitfields which are a GCC extension */
 #pragma GCC diagnostic push
@@ -249,15 +153,11 @@ struct v7_val {
       uint16_t val_alloc : 1; /* Whole "struct v7_val" must be free()-ed */
       uint16_t str_alloc : 1; /* v.str.buf must be free()-ed */
       uint16_t js_func : 1;   /* Function object is a JavsScript code */
-      uint16_t prop_func
-          : 1; /* Function object is a native property function */
+      uint16_t prop_func : 1; /* Function object is a native property func */
 #define V7_PROP_FUNC 8
       uint16_t val_dealloc : 1; /* Value has been deallocated */
-
-      uint16_t re_g : 1; /* execution RegExp flag g */
-      uint16_t re_i : 1; /* compiler & execution RegExp flag i */
-      uint16_t re_m : 1; /* execution RegExp flag m */
-      uint16_t re : 1;   /* parser RegExp flag re */
+      uint16_t re : 1;          /* This is a regex */
+      unsigned char re_flags;
 #pragma GCC diagnostic pop
     } fl;
   } fl;
@@ -430,15 +330,10 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
-V7_PRIVATE sint8_t nextesc(Rune *r, const char **src);
+V7_PRIVATE signed char nextesc(Rune *r, const char **src);
 V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
-                                      struct v7_val_flags flags,
+                                      unsigned short flags,
                                       const char **errorp);
-V7_PRIVATE uint8_t re_exec(struct Reprog *prog, struct v7_val_flags flags,
-                           const char *string, struct Resub *loot);
-V7_PRIVATE void re_free(struct Reprog *prog);
-V7_PRIVATE int re_rplc(struct Resub *loot, const char *src, const char *rstr,
-                       struct Resub *dstsub);
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *re, size_t re_len,

@@ -153,8 +153,7 @@ V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v) {
   } else if (v->type == V7_TYPE_STR || v7_is_class(v, V7_CLASS_STRING) ||
              v7_is_class(v, V7_CLASS_REGEXP)) {
     if (v->v.str.prog) {
-      if (v->v.str.prog->start) reg_free(v->v.str.prog->start);
-      reg_free(v->v.str.prog);
+      re_free(v->v.str.prog);
     }
     if (v->v.str.buf && v->fl.fl.str_alloc) free(v->v.str.buf);
   } else if (v7_is_class(v, V7_CLASS_FUNCTION)) {

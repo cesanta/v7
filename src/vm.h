@@ -6,7 +6,8 @@
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
-#include "internal.h"
+#include <stdarg.h>
+#include <stddef.h>
 
 #if defined(__cplusplus)
 extern "C" {
