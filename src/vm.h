@@ -3,9 +3,19 @@
  * All rights reserved
  */
 
+#ifndef VM_H_INCLUDED
+#define VM_H_INCLUDED
+
+#include "internal.h"
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
 /* Forward declarations */
 struct v7_ast;    /* V7 Abstract Syntax Tree. */
 struct v7_arg;    /* C/JavaScript function parameters */
+struct v7_object;
 
 typedef double v7_num_t;    /* Override to integer on systems with no MMU */
 typedef unsigned int v7_strlen_t;
@@ -119,7 +129,11 @@ struct v7_function {
  * - For everything else, `v7_value *` argument. Value is not copied.
  * Return NULL on failure.
  */
-struct v7_value *v7_create_value(struct v7 *, enum v7_type type, ...);
+struct v7_value *v7_create_value(struct v7 *, enum v7_type, ...);
+struct v7_value *v7_va_create_value(struct v7 *, enum v7_type, va_list);
+
+
+void v7_stringify_value(struct v7_value *, char *, size_t);
 
 /*
  * Set a property for an object.
@@ -130,6 +144,14 @@ int v7_set_property(struct v7 *, struct v7_value *obj,
                     const char *name, v7_strlen_t len,
                     unsigned int attributes, enum v7_type, ...);
 
-/* If `len` is 0, then `name` must be 0-terminated */
+/* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(struct v7_value *obj,
                                                const char *name, v7_strlen_t);
+
+/*
+ * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
+ * Return 0 on success, -1 on error.
+ */
+V7_PRIVATE int v7_del_property(struct v7_value *, const char *, v7_strlen_t);
+
+#endif  /* VM_H_INCLUDED */

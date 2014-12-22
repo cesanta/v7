@@ -12,7 +12,6 @@
 /* Private API */
 #include "utf.h"
 #include "tokenizer.h"
-#include "vm.h"
 
 #include <sys/stat.h>
 #include <assert.h>
@@ -27,6 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+
+#include "vm.h"
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf

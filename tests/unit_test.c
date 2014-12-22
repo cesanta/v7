@@ -576,6 +576,90 @@ static const char *test_tokenizer(void) {
   return NULL;
 }
 
+int check_value(struct v7_value *v, const char *str) {
+  char buf[2048];
+  v7_stringify_value(v, buf, sizeof(buf));
+  return strncmp(buf, str, sizeof(buf)) == 0;
+}
+
+void print_value(struct v7_value *v) {
+  char buf[2048];
+  v7_stringify_value(v, buf, sizeof(buf));
+  printf("%s\n", buf);
+}
+
+static const char *test_runtime(void) {
+  struct v7 *v7 = v7_create();
+  struct v7_value *v;
+  struct v7_property *p;
+
+  v = v7_create_value(v7, V7_TYPE_NULL);
+  ASSERT(v->type == V7_TYPE_NULL);
+
+  v = v7_create_value(v7, V7_TYPE_UNDEFINED);
+  ASSERT(v->type == V7_TYPE_UNDEFINED);
+
+  v = v7_create_value(v7, V7_TYPE_NUMBER, 1.0);
+  ASSERT(v->type == V7_TYPE_NUMBER);
+  ASSERT(v->value.number == 1.0);
+  ASSERT(check_value(v, "1"));
+
+  v = v7_create_value(v7, V7_TYPE_NUMBER, 1.5);
+  ASSERT(v->value.number == 1.5);
+  ASSERT(check_value(v, "1.5"));
+
+  v = v7_create_value(v7, V7_TYPE_BOOLEAN, 1);
+  ASSERT(v->type == V7_TYPE_BOOLEAN);
+  ASSERT(v->value.boolean == 1);
+  ASSERT(check_value(v, "true"));
+
+  v = v7_create_value(v7, V7_TYPE_BOOLEAN, 0);
+  ASSERT(check_value(v, "false"));
+
+  v = v7_create_value(v7, V7_TYPE_STRING, "foo", 3);
+  ASSERT(v->type == V7_TYPE_STRING);
+  ASSERT(v->value.string.buf == "foo");
+  ASSERT(v->value.string.len == 3);
+
+  v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  ASSERT(v->type == V7_TYPE_GENERIC_OBJECT);
+  ASSERT(v->value.object != NULL);
+
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_NULL) == 0);
+  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT(p->attributes == 0);
+  ASSERT(p->value.type == V7_TYPE_NULL);
+  ASSERT(check_value(&p->value, "null"));
+
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_UNDEFINED) == 0);
+  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT(check_value(&p->value, "undefined"));
+
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "bar", 3) == 0);
+  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT(check_value(&p->value, "\"bar\""));
+
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "zar", 3) == 0);
+  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT(check_value(&p->value, "\"zar\""));
+
+  ASSERT(v7_del_property(v, "foo", ~0) == 0);
+  ASSERT(v->value.object->properties == NULL);
+  ASSERT(v7_del_property(v, "foo", -1) == -1);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "bar", 3) == 0);
+  ASSERT(v7_set_property(v7, v, "bar", -1, 0, V7_TYPE_STRING, "foo", 3) == 0);
+  ASSERT(v7_set_property(v7, v, "aba", -1, 0, V7_TYPE_STRING, "bab", 3) == 0);
+  ASSERT(v7_del_property(v, "foo", -1) == 0);
+  ASSERT((p = v7_get_property(v, "foo", -1)) == NULL);
+  ASSERT(v7_del_property(v, "aba", -1) == 0);
+  ASSERT((p = v7_get_property(v, "aba", -1)) == NULL);
+  ASSERT(v7_del_property(v, "bar", -1) == 0);
+  ASSERT((p = v7_get_property(v, "bar", -1)) == NULL);
+
+  v7_destroy(&v7);
+  return NULL;
+}
+
 static const char *test_aparser(void) {
   int i;
   struct ast a;
@@ -913,6 +997,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_closure);
   RUN_TEST(test_native_functions);
   RUN_TEST(test_stdlib);
+  RUN_TEST(test_runtime);
   RUN_TEST(test_aparser);
   RUN_TEST(test_ecmac);
   return NULL;
