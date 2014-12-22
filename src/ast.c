@@ -277,11 +277,12 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"POSTDEC", 0, 0, 0, 1},     /* struct { child expr; } */
   /*
    * struct {
+   *   varint len;
+   *   char ident[len];
    *   child expr;
-   *   child ident; // TODO(mkm): inline
    * }
    */
-  {"MEMBER", 0, 0, 0, 2},
+  {"MEMBER", 1, 1, 0, 1},
   /*
    * struct {
    *   child expr;
@@ -325,11 +326,12 @@ V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
   {"OBJECT", 0, 0, 1, 0},
   /*
    * struct {
-   *   child name; // TODO(mkm): inline
+   *   varint len;
+   *   char name[len];
    *   child expr;
    * }
    */
-  {"PROP", 0, 0, 0, 2},
+  {"PROP", 1, 1, 0, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -621,6 +623,14 @@ V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
   ast_set_string(a, ast_add_node(a, tag), name, len);
 }
 
+/* Helper to add a node with inlined data. */
+V7_PRIVATE void ast_insert_inlined_node(struct ast *a, size_t start,
+                                        enum ast_tag tag, const char *name,
+                                        size_t len) {
+  assert(ast_node_defs[tag].has_inlined);
+  ast_set_string(a, ast_insert_node(a, start, tag), name, len);
+}
+
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
   int i;
   char buf[265];
@@ -648,18 +658,11 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
 
   fprintf(fp, "%s", def->name);
 
-  switch (tag) {
-    case AST_IDENT:
-    case AST_STRING:
-    case AST_REGEX:
-    case AST_LABEL:
-    case AST_NUM:
-    case AST_VAR_DECL:
-      slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
-      fprintf(fp, " \"%.*s\"\n", (int) slen, a->buf + *pos + llen);
-      break;
-    default:
-      fprintf(fp, "\n");
+  if (def->has_inlined) {
+    slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
+    fprintf(fp, " %.*s\n", (int) slen, a->buf + *pos + llen);
+  } else {
+    fprintf(fp, "\n");
   }
 
   ast_move_to_children(a, pos);
