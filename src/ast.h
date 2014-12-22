@@ -160,7 +160,10 @@ V7_PRIVATE size_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
-V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *, size_t);
+V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *,
+                                     size_t);
+V7_PRIVATE void ast_insert_inlined_node(struct ast *, size_t, enum ast_tag,
+                                        const char *, size_t);
 
 V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
 V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
