@@ -53,6 +53,9 @@ typedef unsigned char uint8_t;
 /* Maximum length of the string literal */
 #define MAX_STRING_LITERAL_LENGTH 2000
 
+/* Max captures for String.replace() */
+#define V7_RE_MAX_REPL_SUB 255
+
 /* MSVC6 doesn't have standard C math constants defined */
 #ifndef M_PI
 #define M_E 2.71828182845904523536028747135266250
@@ -112,7 +115,7 @@ struct v7_string {
   char *buf;           /* Pointer to buffer with string/regexp data */
   unsigned long len;   /* String/regexp length */
   char loc[16];        /* Small strings/regexp are stored here */
-  struct Reprog *prog; /* Pointer to compiled regexp */
+  struct slre_prog *prog; /* Pointer to compiled regexp */
   long lastIndex;
 };
 
@@ -330,10 +333,7 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
-V7_PRIVATE signed char nextesc(Rune *r, const char **src);
-V7_PRIVATE struct Reprog *re_compiler(const char *pattern,
-                                      unsigned short flags,
-                                      const char **errorp);
+V7_PRIVATE unsigned char nextesc(Rune *r, const char **src);
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *re, size_t re_len,
