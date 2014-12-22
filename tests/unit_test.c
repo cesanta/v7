@@ -25,7 +25,6 @@
 
 #include "../v7.h"
 #include "../src/internal.h"
-#include "ecmac.c"
 
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
@@ -855,22 +854,47 @@ static const char *test_aparser(void) {
   return NULL;
 }
 
+static char *read_file(const char *path, size_t *size) {
+  FILE *fp;
+  struct stat st;
+  char *data = NULL;
+  if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
+    *size = st.st_size;
+    data = (char *) malloc(*size + 1);
+    if (data != NULL) {
+      fread(data, 1, *size, fp);
+      data[*size] = '\0';
+    }
+    fclose(fp);
+  }
+  return data;
+}
+
 static const char *test_ecmac(void) {
   struct ast a;
   int i;
+  size_t db_len;
+  char *db = read_file("tests/ecmac.db", &db_len);
+  char *next_case = db - 1;
 
   ast_init(&a, 0);
 
-  for (i = 0; i < (int) ARRAY_SIZE(ecmac_cases); i++ ) {
+  for (i = 0; next_case < db + db_len; i++ ) {
+    char *current_case = next_case + 1;
+    ASSERT((next_case = strchr(current_case, '\0')) != NULL);
+
     ast_free(&a);
 #if 0
-    printf("-- Parsing %d: \"%s\"\n", i, ecmac_cases[i]);
+    printf("-- Parsing %d: \"%s\"\n", i, current_case);
 #endif
-    ASSERT(aparse(&a, ecmac_cases[i], 1) == V7_OK);
+    ASSERT(aparse(&a, current_case, 1) == V7_OK);
 #if 0
     ast_dump(stdout, &a, 0);
 #endif
   }
+  printf("Passed %d ecma262 parsing test\n", i);
+
+  free(db);
   return NULL;
 }
 
