@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ *
+ * This software is dual-licensed: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation. For the terms of this
+ * license, see <http://www.gnu.org/licenses/>.
+ *
+ * You are free to use this software under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * Alternatively, you can license this software under a commercial
+ * license, as set out in <http://cesanta.com/>.
+ */
+
 #ifndef SLRE_HEADER_INCLUDED
 #define SLRE_HEADER_INCLUDED
 
@@ -5,103 +23,56 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-#include "utf.h"
-
-/* Limitations */
-#define RE_MAX_SUB 32
-#define RE_MAX_RANGES 32
-#define RE_MAX_SETS 16
-#define RE_MAX_REP 0xFFFF
-#define RE_MAX_THREADS 1000
-#define V7_RE_MAX_REPL_SUB 255
-
 /* Regex compilation flags */
-#define RE_FLAG_G 1     /* Global - match in the whole string */
-#define RE_FLAG_I 2     /* Ignore case */
-#define RE_FLAG_M 4     /* Multiline */
-/*#define RE_FLAG_RE 8*/
+#define SLRE_FLAG_G 1     /* Global - match in the whole string */
+#define SLRE_FLAG_I 2     /* Ignore case */
+#define SLRE_FLAG_M 4     /* Multiline */
 
 /* Describes single capture */
-struct slre_tok {
-  const char *start; /* points to the beginning of the token */
-  const char *end;   /* points to the end of the token */
+struct slre_cap {
+  const char *start; /* points to the beginning of the capture group */
+  const char *end;   /* points to the end of the capture group */
 };
 
-/* Sub expression matches */
-struct Resub {
-  int subexpr_num;
-  struct slre_tok sub[RE_MAX_SUB];
+/* Describes all captures */
+#define SLRE_MAX_CAPS 32
+struct slre_loot {
+  int num_captures;
+  struct slre_cap sub[SLRE_MAX_CAPS];
 };
 
-struct Rerange {
-  Rune s;
-  Rune e;
+/* Opaque structure that holds compiled regular expression */
+struct slre_prog;
+
+/* Return codes for slre_compile() */
+enum slre_error {
+  SLRE_OK,
+  SLRE_INVALID_DEC_DIGIT,
+  SLRE_INVALID_HEX_DIGIT,
+  SLRE_INVALID_ESC_CHAR,
+  SLRE_UNTERM_ESC_SEQ,
+  SLRE_SYNTAX_ERROR,
+  SLRE_UNMATCH_LBR,
+  SLRE_UNMATCH_RBR,
+  SLRE_NUM_OVERFLOW,
+  SLRE_INF_LOOP_M_EMP_STR,
+  SLRE_TOO_MANY_CHARSETS,
+  SLRE_INV_CHARSET_RANGE,
+  SLRE_CHARSET_TOO_LARGE,
+  SLRE_MALFORMED_CHARSET,
+  SLRE_INVALID_BACK_REFERENCE,
+  SLRE_TOO_MANY_CAPTURES,
+  SLRE_INVALID_QUANTIFIER,
+  SLRE_BAD_CHAR_AFTER_USD
 };
 
-/* character class, each pair of rune's defines a range */
-struct Reclass {
-  struct Rerange *end;
-  struct Rerange spans[RE_MAX_RANGES];
-};
+int slre_compile(const char *regexp, unsigned char flags, struct slre_prog **);
+int slre_exec(struct slre_prog *prog, unsigned char flags, const char *string,
+              struct slre_loot *loot);
+void slre_free(struct slre_prog *prog);
 
-/* Parser Information */
-struct Renode {
-  unsigned char type;
-  union {
-    Rune c;             /* character */
-    struct Reclass *cp; /* class pointer */
-    struct {
-      struct Renode *x;
-      union {
-        struct Renode *y;
-        unsigned char n;
-        struct {
-          unsigned char ng; /* not greedy flag */
-          unsigned short min;
-          unsigned short max;
-        } rp;
-      } y;
-    } xy;
-  } par;
-};
-
-/* Machine instructions */
-struct Reinst {
-  unsigned char opcode;
-  union {
-    unsigned char n;
-    Rune c;             /* character */
-    struct Reclass *cp; /* class pointer */
-    struct {
-      struct Reinst *x;
-      union {
-        struct {
-          unsigned short min;
-          unsigned short max;
-        } rp;
-        struct Reinst *y;
-      } y;
-    } xy;
-  } par;
-};
-
-struct Reprog {
-  struct Reinst *start, *end;
-  unsigned int subexpr_num;
-  struct Reclass charset[RE_MAX_SETS];
-};
-
-struct Rethread {
-  struct Reinst *pc;
-  const char *start;
-  struct Resub sub;
-};
-
-int re_exec(struct Reprog *prog, unsigned char flags, const char *string,
-            struct Resub *loot);
-void re_free(struct Reprog *prog);
-int re_rplc(struct Resub *loot, const char *src, const char *rstr,
-            struct Resub *dst);
+int slre_replace(struct slre_loot *loot, const char *src, const char *replace,
+                 struct slre_loot *dst);
 
 #ifdef __cplusplus
 }
