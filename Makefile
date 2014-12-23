@@ -22,7 +22,7 @@ v: unit_test
 #	valgrind -q --leak-check=full ./v7 tests/run_tests.js
 #	gcov -a unit_test.c
 
-unit_test: $(SOURCES) $(HEADERS) Makefile
+unit_test: $(SOURCES) $(HEADERS) tests/unit_test.c v7.h Makefile
 	$(CC) $(SOURCES) tests/unit_test.c -o $@ -DV7_EXPOSE_PRIVATE $(CFLAGS)
 
 xrun: unit_test
