@@ -430,5 +430,6 @@ V7_PRIVATE void init_regex(void);
 
 #include "ast.h"
 #include "aparser.h"
+#include "interpreter.h"
 
 #endif /* V7_INTERNAL_H_INCLUDED */

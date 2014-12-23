@@ -42,7 +42,7 @@ static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
-  size_t start;
+  ast_off_t start;
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
       lookahead(v7) != TOK_COLON) {
@@ -83,7 +83,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
-  size_t start;
+  ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_OPEN_PAREN:
       next_tok(v7);
@@ -170,7 +170,7 @@ static enum v7_err aparse_arglist(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_newexpr(struct v7 *v7, struct ast *a) {
-  size_t start;
+  ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_NEW:
       next_tok(v7);
@@ -193,7 +193,7 @@ static enum v7_err aparse_newexpr(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_member(struct v7 *v7, struct ast *a, size_t pos) {
+static enum v7_err aparse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
   switch (v7->cur_tok) {
     case TOK_DOT:
       next_tok(v7);
@@ -219,7 +219,7 @@ static enum v7_err aparse_member(struct v7 *v7, struct ast *a, size_t pos) {
 }
 
 static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   PARSE(newexpr);
 
   for (;;) {
@@ -235,7 +235,7 @@ static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   PARSE(newexpr);
 
   for (;;) {
@@ -257,7 +257,7 @@ static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_postfix(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   PARSE(callexpr);
 
   if (v7->after_newline) {
@@ -324,7 +324,7 @@ enum v7_err aparse_prefix(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
-                                 int level, size_t pos) {
+                                 int level, ast_off_t pos) {
   struct {
     int len, left_to_right;
     struct {
@@ -396,7 +396,7 @@ static enum v7_err aparse_assign(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_expression(struct v7 *v7, struct ast *a) {
-  size_t pos = a->len;
+  ast_off_t pos = a->len;
   int group = 0;
   do {
     PARSE(assign);
@@ -418,7 +418,7 @@ static enum v7_err end_of_statement(struct v7 *v7) {
 }
 
 static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_VAR);
+  ast_off_t start = ast_add_node(a, AST_VAR);
   do {
     ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
     EXPECT(TOK_IDENTIFIER);
@@ -442,7 +442,7 @@ static int aparse_optional(struct v7 *v7, struct ast *a,
 }
 
 static enum v7_err aparse_if(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_IF);
+  ast_off_t start = ast_add_node(a, AST_IF);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -456,7 +456,7 @@ static enum v7_err aparse_if(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_while(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_WHILE);
+  ast_off_t start = ast_add_node(a, AST_WHILE);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -466,7 +466,7 @@ static enum v7_err aparse_while(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_DOWHILE);
+  ast_off_t start = ast_add_node(a, AST_DOWHILE);
   PARSE(statement);
   ast_set_skip(a, start, AST_DO_WHILE_COND_SKIP);
   EXPECT(TOK_WHILE);
@@ -479,7 +479,7 @@ static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
-  size_t start = a->len;
+  ast_off_t start = a->len;
   EXPECT(TOK_OPEN_PAREN);
 
   if(aparse_optional(v7, a, TOK_SEMICOLON)) {
@@ -521,14 +521,14 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_SWITCH);
+  ast_off_t start = ast_add_node(a, AST_SWITCH);
   ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
   EXPECT(TOK_OPEN_CURLY);
   while (v7->cur_tok != TOK_CLOSE_CURLY) {
-    size_t case_start;
+    ast_off_t case_start;
     switch (v7->cur_tok) {
       case TOK_CASE:
         next_tok(v7);
@@ -564,7 +564,7 @@ static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_try(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_TRY);
+  ast_off_t start = ast_add_node(a, AST_TRY);
   PARSE(block);
   ast_set_skip(a, start, AST_TRY_CATCH_SKIP);
   if (ACCEPT(TOK_CATCH)) {
@@ -582,7 +582,7 @@ static enum v7_err aparse_try(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_with(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_WITH);
+  ast_off_t start = ast_add_node(a, AST_WITH);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -677,7 +677,7 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
                                    int require_named) {
-  size_t start = ast_add_node(a, AST_FUNC);
+  ast_off_t start = ast_add_node(a, AST_FUNC);
   if (aparse_ident(v7, a) == V7_ERROR) {
     if (require_named) {
       return V7_ERROR;
@@ -713,7 +713,7 @@ static enum v7_err aparse_body(struct v7 *v7, struct ast *a,
 }
 
 static enum v7_err aparse_script(struct v7 *v7, struct ast *a) {
-  size_t start = ast_add_node(a, AST_SCRIPT);
+  ast_off_t start = ast_add_node(a, AST_SCRIPT);
   PARSE_ARG(body, TOK_END_OF_INPUT);
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;

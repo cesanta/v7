@@ -1012,6 +1012,118 @@ static const char *test_string_encoding(void) {
   return NULL;
 }
 
+void Arr_length(struct v7_val *this_obj, struct v7_val *arg,
+                struct v7_val *result);
+
+static const char *test_interpreter(void) {
+  struct v7 *v7 = v7_create();
+  struct v7_val *v = v7_push_number(v7, 42);
+  struct v7_val *v2;
+  v7_set(v7, v7_global(v7), "x", v);
+
+  ASSERT((v = v7_exec_2(v7, "1%2/2")) != NULL);
+  ASSERT(check_num(v7, v, 0.5));
+
+  ASSERT((v = v7_exec_2(v7, "1+x")) != NULL);
+  ASSERT(check_num(v7, v, 43.0));
+  ASSERT((v = v7_exec_2(v7, "2-'1'")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec_2(v7, "1+2")) != NULL);
+  ASSERT(check_num(v7, v, 3.0));
+  ASSERT((v = v7_exec_2(v7, "'1'+'2'")) != NULL);
+  ASSERT(check_str(v7, v, "12"));
+  ASSERT((v = v7_exec_2(v7, "'1'+2")) != NULL);
+  ASSERT(check_str(v7, v, "12"));
+
+  ASSERT((v = v7_exec_2(v7, "false+1")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec_2(v7, "true+1")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+
+  ASSERT((v = v7_exec_2(v7, "'1'<2")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));  /* TODO(mkm): bool */
+  ASSERT((v = v7_exec_2(v7, "'1'>2")) != NULL);
+  ASSERT(check_num(v7, v, 0.0));  /* TODO(mkm): bool */
+
+  ASSERT((v = v7_exec_2(v7, "1==1")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));  /* TODO(mkm): bool */
+  ASSERT((v = v7_exec_2(v7, "1==2")) != NULL);
+  ASSERT(check_num(v7, v, 0.0));  /* TODO(mkm): bool */
+  ASSERT((v = v7_exec_2(v7, "'1'==1")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));  /* TODO(mkm): bool */
+  ASSERT((v = v7_exec_2(v7, "'1'!=0")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));  /* TODO(mkm): bool */
+  ASSERT((v = v7_exec_2(v7, "'-1'==-1")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));  /* TODO(mkm): bool */
+
+  ASSERT((v = v7_exec_2(v7, "+'1'")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec_2(v7, "-'-1'")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+
+  ASSERT((v = v7_exec_2(v7, "[10+1,20*2,30/3]")) != NULL);
+  ASSERT(v->type == V7_TYPE_OBJ);
+  ASSERT(v->cls == V7_CLASS_ARRAY);
+  v2 = v7_push_number(v7, 0);
+  Arr_length(v, NULL, v2);
+  ASSERT(check_num(v7, v2, 3.0));
+
+  ASSERT((v2 = get2(v, v7_push_number(v7, 0))) != NULL);
+  ASSERT(check_num(v7, v2, 11.0));
+  ASSERT((v2 = get2(v, v7_push_number(v7, 1))) != NULL);
+  ASSERT(check_num(v7, v2, 40.0));
+  ASSERT((v2 = get2(v, v7_push_number(v7, 2))) != NULL);
+  ASSERT(check_num(v7, v2, 10.0));
+
+  ASSERT((v = v7_exec_2(v7, "3,2,1")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+
+  ASSERT((v = v7_exec_2(v7, "x=1")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+
+  ASSERT((v = v7_exec_2(v7, "1+2; 1")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec_2(v7, "x=42; x")) != NULL);
+  ASSERT(check_num(v7, v, 42.0));
+  ASSERT((v = v7_exec_2(v7, "x=y=42; x+y")) != NULL);
+  ASSERT(check_num(v7, v, 84.0));
+
+  ASSERT((v = v7_exec_2(v7, "a=[1,2,3]")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "a[0]")) != NULL);
+  ASSERT(check_num(v7, v, 1));
+
+  ASSERT((v = v7_exec_2(v7, "o={a: 1, b: 2}")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "o['a'] + o['b']")) != NULL);
+  ASSERT(check_num(v7, v, 3.0));
+  ASSERT((v = v7_exec_2(v7, "o.a + o.b")) != NULL);
+  ASSERT(check_num(v7, v, 3.0));
+
+  ASSERT((v = v7_exec_2(v7, "x=1;if(x>0){x=2};x")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+  ASSERT((v = v7_exec_2(v7, "x=1;if(x<0){x=2};x")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec_2(v7, "y=1;x=5;while(x > 0){y=y*x;x=x-1};y")) != NULL);
+  ASSERT(check_num(v7, v, 120.0));
+  ASSERT((v = v7_exec_2(v7, "y=1;x=5;do{y=y*x;x=x-1}while(x>0);y")) != NULL);
+  ASSERT(check_num(v7, v, 120.0));
+  ASSERT((v = v7_exec_2(v7, "for(y=1,i=1;i<=5;i=i+1)y=y*i;y")) != NULL);
+  ASSERT(check_num(v7, v, 120.0));
+
+  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1};x")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1}finally{x=x+1};x")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+
+#if 0
+  ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+#endif
+
+  return NULL;
+}
+
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_tokenizer);
   RUN_TEST(test_string_encoding);
@@ -1024,6 +1136,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_runtime);
   RUN_TEST(test_aparser);
   RUN_TEST(test_ecmac);
+  RUN_TEST(test_interpreter);
   return NULL;
 }
 

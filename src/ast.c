@@ -7,14 +7,6 @@
 
 typedef unsigned short ast_skip_t;
 
-struct ast_node_def {
-  const char *name;   /* tag name, for debugging and serialization */
-  uint8_t has_varint;     /* has a varint body */
-  uint8_t has_inlined;    /* inlined data whose size is in the varint field */
-  uint8_t num_skips;      /* number of skips */
-  uint8_t num_subtrees;   /* number of fixed subtrees */
-};
-
 /*
  * The structure of AST nodes cannot be described in portable ANSI C,
  * since they are variable length and packed (unaligned).
@@ -512,8 +504,8 @@ V7_PRIVATE size_t ast_insert(struct ast *a, size_t off, const char *buf,
  * Returns the offset of the node payload (one byte after the tag).
  * This offset can be passed to `ast_set_skip`.
  */
-V7_PRIVATE size_t ast_add_node(struct ast *a, enum ast_tag tag) {
-  size_t start = a->len;
+V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
+  ast_off_t start = a->len;
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
@@ -524,8 +516,8 @@ V7_PRIVATE size_t ast_add_node(struct ast *a, enum ast_tag tag) {
   return start + 1;
 }
 
-V7_PRIVATE size_t ast_insert_node(struct ast *a, size_t start,
-                                  enum ast_tag tag) {
+V7_PRIVATE ast_off_t ast_insert_node(struct ast *a, ast_off_t start,
+                                     enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
@@ -559,8 +551,8 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  *
  * Every tree reader can assume this and safely skip unknown nodes.
  */
-V7_PRIVATE size_t ast_set_skip(struct ast *a, ast_off_t start,
-                               enum ast_which_skip skip) {
+V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
+                                  enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = a->len - start;
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->buf + start - 1);
@@ -574,8 +566,8 @@ V7_PRIVATE size_t ast_set_skip(struct ast *a, ast_off_t start,
   return a->len;
 }
 
-V7_PRIVATE size_t ast_get_skip(struct ast *a, ast_off_t pos,
-                               enum ast_which_skip skip) {
+V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
+                                  enum ast_which_skip skip) {
   uint8_t * p = (uint8_t *) a->buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
@@ -605,7 +597,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   *pos += def->num_skips * sizeof(ast_skip_t);
 }
 
-static void ast_set_string(struct ast *a, size_t off, const char *name,
+static void ast_set_string(struct ast *a, ast_off_t off, const char *name,
                            size_t len) {
   /* Encode string length first */
   int n = calc_llen(len);   /* Calculate how many bytes length occupies */
@@ -624,11 +616,30 @@ V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
 }
 
 /* Helper to add a node with inlined data. */
-V7_PRIVATE void ast_insert_inlined_node(struct ast *a, size_t start,
+V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                         enum ast_tag tag, const char *name,
                                         size_t len) {
   assert(ast_node_defs[tag].has_inlined);
   ast_set_string(a, ast_insert_node(a, start, tag), name, len);
+}
+
+V7_PRIVATE ast_off_t ast_get_inlined_data(struct ast *a, ast_off_t pos,
+                                          char *buf, size_t buf_len) {
+  v7_strlen_t slen;
+  int llen;
+  slen = decode_string_len((unsigned char *) a->buf + pos, &llen);
+  if (slen >= buf_len) {
+    slen = buf_len - 1;
+  }
+  memcpy(buf, a->buf + pos + llen, slen);
+  buf[slen] = 0;
+  return slen;
+}
+
+V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
+  char buf[512];
+  ast_get_inlined_data(a, pos, buf, sizeof(buf));
+  *val = strtod(buf, NULL);
 }
 
 static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
@@ -677,7 +688,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
      * so unless we care how the subtree sequences are grouped together
      * (and we currently don't) we can just read until the end of that skip.
      */
-    size_t end = ast_get_skip(a, skips, AST_END_SKIP);
+    ast_off_t end = ast_get_skip(a, skips, AST_END_SKIP);
 
     comment_at_depth(fp, "...", depth + 1);
     while (*pos < end) {
