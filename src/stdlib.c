@@ -18,26 +18,6 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
-  int i;
-  struct v7_val *obj = v7_push_new_object(cfa->v7);
-
-  /* Push new object as a context for the loading new module */
-  obj->next = cfa->v7->ctx;
-  cfa->v7->ctx = obj;
-
-  for (i = 0; i < cfa->num_args; i++) {
-    if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
-  }
-
-  /* Pop context, and return it */
-  cfa->v7->ctx = obj->next;
-  v7_push_val(cfa->v7, obj);
-
-  return V7_OK;
-}
-
 V7_PRIVATE enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
   int exit_code = cfa->num_args > 0 ? (int)cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
@@ -145,6 +125,27 @@ V7_PRIVATE enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
+#ifndef V7_NO_FS
+V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
+  int i;
+  struct v7_val *obj = v7_push_new_object(cfa->v7);
+
+  /* Push new object as a context for the loading new module */
+  obj->next = cfa->v7->ctx;
+  cfa->v7->ctx = obj;
+
+  for (i = 0; i < cfa->num_args; i++) {
+    if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
+    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
+  }
+
+  /* Pop context, and return it */
+  cfa->v7->ctx = obj->next;
+  v7_push_val(cfa->v7, obj);
+
+  return V7_OK;
+}
+
 V7_PRIVATE enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   char buf[2048];
@@ -202,6 +203,7 @@ V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   }
   return V7_OK;
 }
+#endif
 
 V7_PRIVATE void init_stdlib(void) {
   init_object();
@@ -221,14 +223,16 @@ V7_PRIVATE void init_stdlib(void) {
 
   SET_METHOD(s_global, "print", Std_print);
   SET_METHOD(s_global, "exit", Std_exit);
-  SET_METHOD(s_global, "load", Std_load);
   SET_METHOD(s_global, "base64_encode", Std_base64_encode);
   SET_METHOD(s_global, "base64_decode", Std_base64_decode);
   SET_METHOD(s_global, "eval", Std_eval);
-  SET_METHOD(s_global, "open", Std_open);
 
   SET_RO_PROP(s_global, "Infinity", V7_TYPE_NUM, num, INFINITY);
   SET_RO_PROP(s_global, "NaN", V7_TYPE_NUM, num, NAN);
+
+#ifndef V7_NO_FS
+  SET_METHOD(s_global, "open", Std_open);
+  SET_METHOD(s_global, "load", Std_load);
 
   SET_METHOD(s_file, "read", Std_read);
   SET_METHOD(s_file, "write", Std_write);
@@ -236,6 +240,7 @@ V7_PRIVATE void init_stdlib(void) {
 
   v7_set_class(&s_file, V7_CLASS_OBJECT);
   s_file.ref_count = 1;
+#endif
 
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;

@@ -43,7 +43,7 @@ typedef unsigned short ast_skip_t;
  * and label` is part of our domain model (i.e. JS has a label AST node type).
  *
  */
-V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
+const struct ast_node_def ast_node_defs[] = {
   {"NOP", 0, 0, 0, 0},  /* struct {} */
   /*
    * struct {

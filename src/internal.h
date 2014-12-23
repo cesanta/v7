@@ -6,6 +6,13 @@
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
+#include "license.h"
+
+/* Check whether we're compiling in an environment with no filesystem */
+#if defined(ARDUINO) && (ARDUINO == 106)
+#define V7_NO_FS
+#endif
+
 #include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
@@ -57,21 +64,52 @@ typedef unsigned char uint8_t;
 #define V7_RE_MAX_REPL_SUB 255
 
 /* MSVC6 doesn't have standard C math constants defined */
-#ifndef M_PI
+#ifndef M_E
 #define M_E 2.71828182845904523536028747135266250
+#endif
+
+#ifndef M_LOG2E
 #define M_LOG2E 1.44269504088896340735992468100189214
+#endif
+
+#ifndef M_LOG10E
 #define M_LOG10E 0.434294481903251827651128918916605082
+#endif
+
+#ifndef M_LN2
 #define M_LN2 0.693147180559945309417232121458176568
+#endif
+
+#ifndef M_LN10
 #define M_LN10 2.30258509299404568401799145468436421
+#endif
+
+#ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
+#endif
+
+#ifndef M_SQRT2
 #define M_SQRT2 1.41421356237309504880168872420969808
+#endif
+
+#ifndef M_SQRT1_2
 #define M_SQRT1_2 0.707106781186547524400844362104849039
+#endif
+
 #ifndef NAN
 #define NAN atof("NAN")
 #endif
+
 #ifndef INFINITY
 #define INFINITY atof("INFINITY") /* TODO: fix this */
 #endif
+
+#ifndef EXIT_SUCCESS
+#define EXIT_SUCCESS 0
+#endif
+
+#ifndef EXIT_FAILURE
+#define EXIT_FAILURE 1
 #endif
 
 /* Different classes of V7_TYPE_OBJ type */
@@ -171,6 +209,9 @@ struct v7_val {
     0, (_p), 0, 0, {(_v)}, (_t), (_c), 0, { 0 } \
   }
 
+/* TODO(lsm): move to the top when all headers are split */
+#include "global_vars.h"
+
 struct v7_pstate {
   const char *file_name;
   const char *source_code;
@@ -265,17 +306,6 @@ extern int __lev;
 /* True if current code is executing. TODO(lsm): use bit fields, per vrz@ */
 #define EXECUTING(_fl) (!((_fl) & (V7_NO_EXEC | V7_SCANNING)))
 
-#ifndef V7_PRIVATE
-#define V7_PRIVATE static
-#else
-extern struct v7_val s_constructors[];
-extern struct v7_val s_prototypes[];
-extern struct v7_val s_global;
-extern struct v7_val s_math;
-extern struct v7_val s_json;
-extern struct v7_val s_file;
-#endif
-
 /* Adds a read-only attribute "val" by key "name" to the object "obj" */
 #define SET_RO_PROP_V(obj, name, val)                                 \
   do {                                                                \
@@ -333,7 +363,7 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
-V7_PRIVATE unsigned char nextesc(Rune *r, const char **src);
+V7_PRIVATE signed char nextesc(Rune *r, const char **src);
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *re, size_t re_len,

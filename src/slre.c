@@ -28,7 +28,7 @@
 #define SLRE_MAX_RANGES 32
 #define SLRE_MAX_SETS 16
 #define SLRE_MAX_REP 0xFFFF
-#define SLRE_MAX_THREADS 1000
+#define SLRE_MAX_THREADS 100
 
 #define SLRE_MALLOC malloc
 #define SLRE_FREE free
@@ -185,8 +185,8 @@ static signed char hex(int c) {
   return SLRE_INVALID_HEX_DIGIT;
 }
 
-unsigned char nextesc(Rune *r, const char **src) {
-  unsigned char hd;
+signed char nextesc(Rune *r, const char **src) {
+  signed char hd;
   *src += chartorune(r, *src);
   switch (*r) {
     case 0:
