@@ -16,7 +16,10 @@
  * license, as set out in <http://cesanta.com/products.html>.
  */
 
-#ifndef V7_HEAD_H_INCLUDED
-#define V7_HEAD_H_INCLUDED
-
-#endif  /* V7_HEAD_H_INCLUDED */
+#ifdef V7_EXPOSE_PRIVATE
+#define V7_PRIVATE
+#define V7_EXTERN extern
+#else
+#define V7_PRIVATE static
+#define V7_EXTERN static
+#endif

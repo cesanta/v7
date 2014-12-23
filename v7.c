@@ -150,10 +150,13 @@ const char *v7_string(const struct v7_val *, unsigned long *len);
  * license, as set out in <http://cesanta.com/products.html>.
  */
 
-#ifndef V7_HEAD_H_INCLUDED
-#define V7_HEAD_H_INCLUDED
-
-#endif  /* V7_HEAD_H_INCLUDED */
+#ifdef V7_EXPOSE_PRIVATE
+#define V7_PRIVATE
+#define V7_EXTERN extern
+#else
+#define V7_PRIVATE static
+#define V7_EXTERN static
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -510,6 +513,12 @@ V7_PRIVATE int v7_del_property(struct v7_value *, const char *, v7_strlen_t);
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
+
+/* Check whether we're compiling in an environment with no filesystem */
+#if defined(ARDUINO) && (ARDUINO == 106)
+#define V7_NO_FS
+#endif
+
 #include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
@@ -556,21 +565,52 @@ typedef unsigned char uint8_t;
 #define V7_RE_MAX_REPL_SUB 255
 
 /* MSVC6 doesn't have standard C math constants defined */
-#ifndef M_PI
+#ifndef M_E
 #define M_E 2.71828182845904523536028747135266250
+#endif
+
+#ifndef M_LOG2E
 #define M_LOG2E 1.44269504088896340735992468100189214
+#endif
+
+#ifndef M_LOG10E
 #define M_LOG10E 0.434294481903251827651128918916605082
+#endif
+
+#ifndef M_LN2
 #define M_LN2 0.693147180559945309417232121458176568
+#endif
+
+#ifndef M_LN10
 #define M_LN10 2.30258509299404568401799145468436421
+#endif
+
+#ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
+#endif
+
+#ifndef M_SQRT2
 #define M_SQRT2 1.41421356237309504880168872420969808
+#endif
+
+#ifndef M_SQRT1_2
 #define M_SQRT1_2 0.707106781186547524400844362104849039
+#endif
+
 #ifndef NAN
 #define NAN atof("NAN")
 #endif
+
 #ifndef INFINITY
 #define INFINITY atof("INFINITY") /* TODO: fix this */
 #endif
+
+#ifndef EXIT_SUCCESS
+#define EXIT_SUCCESS 0
+#endif
+
+#ifndef EXIT_FAILURE
+#define EXIT_FAILURE 1
 #endif
 
 /* Different classes of V7_TYPE_OBJ type */
@@ -670,6 +710,8 @@ struct v7_val {
     0, (_p), 0, 0, {(_v)}, (_t), (_c), 0, { 0 } \
   }
 
+/* TODO(lsm): move to the top when all headers are split */
+
 struct v7_pstate {
   const char *file_name;
   const char *source_code;
@@ -764,17 +806,6 @@ extern int __lev;
 /* True if current code is executing. TODO(lsm): use bit fields, per vrz@ */
 #define EXECUTING(_fl) (!((_fl) & (V7_NO_EXEC | V7_SCANNING)))
 
-#ifndef V7_PRIVATE
-#define V7_PRIVATE static
-#else
-extern struct v7_val s_constructors[];
-extern struct v7_val s_prototypes[];
-extern struct v7_val s_global;
-extern struct v7_val s_math;
-extern struct v7_val s_json;
-extern struct v7_val s_file;
-#endif
-
 /* Adds a read-only attribute "val" by key "name" to the object "obj" */
 #define SET_RO_PROP_V(obj, name, val)                                 \
   do {                                                                \
@@ -832,7 +863,7 @@ extern struct v7_val s_file;
 
 /* Forward declarations */
 
-V7_PRIVATE unsigned char nextesc(Rune *r, const char **src);
+V7_PRIVATE signed char nextesc(Rune *r, const char **src);
 
 V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
                                    const char *re, size_t re_len,
@@ -929,6 +960,20 @@ V7_PRIVATE void init_regex(void);
 
 
 #endif /* V7_INTERNAL_H_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+V7_EXTERN struct v7_val s_constructors[];
+V7_EXTERN struct v7_val s_prototypes[];
+V7_EXTERN struct v7_val s_global;
+V7_EXTERN struct v7_val s_math;
+V7_EXTERN struct v7_val s_json;
+
+#ifndef V7_NO_FS
+V7_EXTERN struct v7_val s_file;
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -1188,7 +1233,8 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
 V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
 V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
 
-V7_PRIVATE size_t ast_get_inlined_data(struct ast *, ast_off_t, char *, size_t);
+V7_PRIVATE ast_off_t ast_get_inlined_data(struct ast *, ast_off_t, char *,
+                                          size_t);
 V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
 
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
@@ -4988,26 +5034,6 @@ V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
-  int i;
-  struct v7_val *obj = v7_push_new_object(cfa->v7);
-
-  /* Push new object as a context for the loading new module */
-  obj->next = cfa->v7->ctx;
-  cfa->v7->ctx = obj;
-
-  for (i = 0; i < cfa->num_args; i++) {
-    if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
-  }
-
-  /* Pop context, and return it */
-  cfa->v7->ctx = obj->next;
-  v7_push_val(cfa->v7, obj);
-
-  return V7_OK;
-}
-
 V7_PRIVATE enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
   int exit_code = cfa->num_args > 0 ? (int)cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
@@ -5115,6 +5141,27 @@ V7_PRIVATE enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
+#ifndef V7_NO_FS
+V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
+  int i;
+  struct v7_val *obj = v7_push_new_object(cfa->v7);
+
+  /* Push new object as a context for the loading new module */
+  obj->next = cfa->v7->ctx;
+  cfa->v7->ctx = obj;
+
+  for (i = 0; i < cfa->num_args; i++) {
+    if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
+    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
+  }
+
+  /* Pop context, and return it */
+  cfa->v7->ctx = obj->next;
+  v7_push_val(cfa->v7, obj);
+
+  return V7_OK;
+}
+
 V7_PRIVATE enum v7_err Std_read(struct v7_c_func_arg *cfa) {
   struct v7_val *v;
   char buf[2048];
@@ -5172,6 +5219,7 @@ V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   }
   return V7_OK;
 }
+#endif
 
 V7_PRIVATE void init_stdlib(void) {
   init_object();
@@ -5191,14 +5239,16 @@ V7_PRIVATE void init_stdlib(void) {
 
   SET_METHOD(s_global, "print", Std_print);
   SET_METHOD(s_global, "exit", Std_exit);
-  SET_METHOD(s_global, "load", Std_load);
   SET_METHOD(s_global, "base64_encode", Std_base64_encode);
   SET_METHOD(s_global, "base64_decode", Std_base64_decode);
   SET_METHOD(s_global, "eval", Std_eval);
-  SET_METHOD(s_global, "open", Std_open);
 
   SET_RO_PROP(s_global, "Infinity", V7_TYPE_NUM, num, INFINITY);
   SET_RO_PROP(s_global, "NaN", V7_TYPE_NUM, num, NAN);
+
+#ifndef V7_NO_FS
+  SET_METHOD(s_global, "open", Std_open);
+  SET_METHOD(s_global, "load", Std_load);
 
   SET_METHOD(s_file, "read", Std_read);
   SET_METHOD(s_file, "write", Std_write);
@@ -5206,6 +5256,7 @@ V7_PRIVATE void init_stdlib(void) {
 
   v7_set_class(&s_file, V7_CLASS_OBJECT);
   s_file.ref_count = 1;
+#endif
 
   v7_set_class(&s_global, V7_CLASS_OBJECT);
   s_global.ref_count = 1;
@@ -7330,7 +7381,7 @@ typedef unsigned short ast_skip_t;
  * and label` is part of our domain model (i.e. JS has a label AST node type).
  *
  */
-V7_PRIVATE const struct ast_node_def ast_node_defs[] = {
+const struct ast_node_def ast_node_defs[] = {
   {"NOP", 0, 0, 0, 0},  /* struct {} */
   /*
    * struct {
@@ -8902,19 +8953,6 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
- *
- * This software is dual-licensed: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. For the terms of this
- * license, see <http://www.gnu.org/licenses/>.
- *
- * You are free to use this software under the terms of the GNU General
- * Public License, but WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * Alternatively, you can license this software under a commercial
- * license, as set out in <http://cesanta.com/>.
  */
 
 
@@ -9229,6 +9267,19 @@ V7_PRIVATE struct v7_val *v7_exec_2(struct v7 *v7, const char* src) {
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
+ *
+ * This software is dual-licensed: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation. For the terms of this
+ * license, see <http://www.gnu.org/licenses/>.
+ *
+ * You are free to use this software under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * Alternatively, you can license this software under a commercial
+ * license, as set out in <http://cesanta.com/>.
  */
 
 #include <setjmp.h>
@@ -9241,7 +9292,7 @@ V7_PRIVATE struct v7_val *v7_exec_2(struct v7 *v7, const char* src) {
 #define SLRE_MAX_RANGES 32
 #define SLRE_MAX_SETS 16
 #define SLRE_MAX_REP 0xFFFF
-#define SLRE_MAX_THREADS 1000
+#define SLRE_MAX_THREADS 100
 
 #define SLRE_MALLOC malloc
 #define SLRE_FREE free
@@ -9398,8 +9449,8 @@ static signed char hex(int c) {
   return SLRE_INVALID_HEX_DIGIT;
 }
 
-unsigned char nextesc(Rune *r, const char **src) {
-  unsigned char hd;
+signed char nextesc(Rune *r, const char **src) {
+  signed char hd;
   *src += chartorune(r, *src);
   switch (*r) {
     case 0:
