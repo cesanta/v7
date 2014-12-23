@@ -862,7 +862,7 @@ static const char *test_aparser(void) {
     "({, a: 0})",
   };
   FILE *fp;
-  const char *want_ast_db = "tests/want_ast.db";
+  const char *want_ast_db = "want_ast.db";
   char got_ast[102400];
   char want_ast[102400];
   char *next_want_ast = want_ast - 1;
@@ -958,7 +958,7 @@ static const char *test_ecmac(void) {
   struct ast a;
   int i;
   size_t db_len;
-  char *db = read_file("tests/ecmac.db", &db_len);
+  char *db = read_file("ecmac.db", &db_len);
   char *next_case = db - 1;
 
   ast_init(&a, 0);

@@ -1,0 +1,14 @@
+unit_test_cxx
+unit_test_ansi
+unit_test_c99
+unit_test_c11
+unit_test_gcov
+unit_test_valgrind
+unit_test_asan
+*.gcov
+*.gcno
+*.gcda
+*.gcov
+*.dSYM
+lcov.info
+lcov
