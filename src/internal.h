@@ -34,7 +34,6 @@
 #include "utf.h"
 #include "tokenizer.h"
 #include "slre.h"
-#include "vm.h"
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
@@ -48,6 +47,13 @@ typedef unsigned char uint8_t;
 #else
 #include <stdint.h>
 #endif
+
+typedef unsigned int v7_strlen_t;
+
+#include "vm.h"
+#include "ast.h"
+#include "aparser.h"
+#include "interpreter.h"
 
 /*
  * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
@@ -223,7 +229,7 @@ struct v7_pstate {
 
 /* TODO(lsm): move VM definitions to vm.h */
 struct v7 {
-  struct v7_object global_object;
+  struct v7_value *global_object;
 
   /*
    * Stack of execution contexts.
@@ -457,9 +463,5 @@ V7_PRIVATE void init_number(void);
 V7_PRIVATE void init_object(void);
 V7_PRIVATE void init_string(void);
 V7_PRIVATE void init_regex(void);
-
-#include "ast.h"
-#include "aparser.h"
-#include "interpreter.h"
 
 #endif /* V7_INTERNAL_H_INCLUDED */

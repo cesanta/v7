@@ -6,8 +6,7 @@
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
-#include <stdarg.h>
-#include <stddef.h>
+#include "internal.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -19,7 +18,6 @@ struct v7_arg;    /* C/JavaScript function parameters */
 struct v7_object;
 
 typedef double v7_num_t;    /* Override to integer on systems with no MMU */
-typedef unsigned int v7_strlen_t;
 typedef void (*v7_func2_t)(struct v7_arg *arg);
 
 /*
@@ -133,8 +131,13 @@ struct v7_function {
 struct v7_value *v7_create_value(struct v7 *, enum v7_type, ...);
 struct v7_value *v7_va_create_value(struct v7 *, enum v7_type, va_list);
 
+int v7_stringify_value(struct v7 *, struct v7_value *, char *, size_t);
+int v7_to_json(struct v7 *, struct v7_value *, char *, size_t);
 
-void v7_stringify_value(struct v7_value *, char *, size_t);
+int v7_set_property_value(struct v7 *, struct v7_value *obj,
+                          const char *name, v7_strlen_t len,
+                          unsigned int attributes,
+                          struct v7_value *val);
 
 /*
  * Set a property for an object.
@@ -149,10 +152,20 @@ int v7_set_property(struct v7 *, struct v7_value *obj,
 V7_PRIVATE struct v7_property *v7_get_property(struct v7_value *obj,
                                                const char *name, v7_strlen_t);
 
+/* Return address of property value or NULL if the passed property is NULL */
+V7_PRIVATE struct v7_value *v7_property_value(struct v7_property *);
+
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
  */
 V7_PRIVATE int v7_del_property(struct v7_value *, const char *, v7_strlen_t);
+
+V7_PRIVATE int v7_is_object(struct v7_value *);
+
+/*
+ * Returns the array length as JS number, or `undefined` if the object is not an array
+ */
+V7_PRIVATE struct v7_value *v7_array_length(struct v7 *v7, struct v7_value *);
 
 #endif  /* VM_H_INCLUDED */
