@@ -216,7 +216,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
     do {
       if (!slre_exec(arg->v.str.prog, arg->fl.fl.re_flags,
           cfa->this_obj->v.str.buf + shift, &sub)) {
-        struct slre_cap *ptok = sub.sub;
+        struct slre_cap *ptok = sub.caps;
         int i;
         if (NULL == arr) {
           arr = v7_push_new_object(v7);
@@ -267,11 +267,11 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
     do {
       int i;
       if (slre_exec(re->v.str.prog, re->fl.fl.re_flags, p, &loot)) break;
-      if (p != loot.sub->start) {
+      if (p != loot.caps->start) {
         ptok->start = p;
-        ptok->end = loot.sub->start;
+        ptok->end = loot.caps->start;
         ptok++;
-        out_len += loot.sub->start - p;
+        out_len += loot.caps->start - p;
         out_sub_num++;
       }
 
@@ -279,9 +279,9 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         int old_sp = v7->sp;
         struct v7_val *rez_str;
         for (i = 0; i < loot.num_captures; i++)
-          TRY(push_string(v7, loot.sub[i].start,
-                          loot.sub[i].end - loot.sub[i].start, 1));
-        TRY(push_number(v7, utfnlen(p, loot.sub[0].start - p)));
+          TRY(push_string(v7, loot.caps[i].start,
+                          loot.caps[i].end - loot.caps[i].start, 1));
+        TRY(push_number(v7, utfnlen(p, loot.caps[0].start - p)));
         TRY(v7_push(v7, cfa->this_obj));
         rez_str = v7_call(v7, cfa->this_obj, loot.num_captures + 2);
         TRY(check_str_re_conv(v7, &rez_str, 0));
@@ -299,14 +299,14 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         slre_replace(&loot, cfa->this_obj->v.str.buf, str_func->v.str.buf,
                      &newsub);
         for (i = 0; i < newsub.num_captures; i++) {
-          ptok->start = newsub.sub[i].start;
-          ptok->end = newsub.sub[i].end;
+          ptok->start = newsub.caps[i].start;
+          ptok->end = newsub.caps[i].end;
           ptok++;
-          out_len += newsub.sub[i].end - newsub.sub[i].start;
+          out_len += newsub.caps[i].end - newsub.caps[i].start;
           out_sub_num++;
         }
       }
-      p = (char *) loot.sub->end;
+      p = (char *) loot.caps->end;
     } while ((re->fl.fl.re_flags & SLRE_FLAG_G) && p < str_end);
     if (p < str_end) {
       ptok->start = p;
@@ -347,7 +347,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
     TRY(regex_check_prog(arg));
     if (!slre_exec(arg->v.str.prog, arg->fl.fl.re_flags,
         cfa->this_obj->v.str.buf, &sub)) {
-      shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
+      shift = sub.caps[0].start - cfa->this_obj->v.str.buf;
     }
   } else
     utf_shift = 0;
@@ -412,7 +412,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
             cfa->this_obj->v.str.buf + shift, &sub))
           break;
 
-        if (sub.sub[0].end - sub.sub[0].start == 0) {
+        if (sub.caps[0].end - sub.caps[0].start == 0) {
           v7_append(
               v7, arr,
               v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
@@ -422,14 +422,14 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
           v7_append(
               v7, arr,
               v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
-                     sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
-          shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+                     sub.caps[0].start - cfa->this_obj->v.str.buf - shift, 1));
+          shift = sub.caps[0].end - cfa->this_obj->v.str.buf;
         }
 
         for (i = 1; i < sub.num_captures; i++) {
-          if (sub.sub[i].start != NULL) {
-            v = v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
-                       sub.sub[i].end - sub.sub[i].start, 1);
+          if (sub.caps[i].start != NULL) {
+            v = v7_mkv(v7, V7_TYPE_STR, sub.caps[i].start,
+                       sub.caps[i].end - sub.caps[i].start, 1);
           } else {
             v = make_value(v7, V7_TYPE_UNDEF);
           }

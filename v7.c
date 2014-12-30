@@ -353,6 +353,461 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
  * All rights reserved
  */
 
+#ifndef V7_INTERNAL_H_INCLUDED
+#define V7_INTERNAL_H_INCLUDED
+
+
+/* Check whether we're compiling in an environment with no filesystem */
+#if defined(ARDUINO) && (ARDUINO == 106)
+#define V7_NO_FS
+#endif
+
+#include <sys/stat.h>
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+
+/* Public API. Implemented in api.c */
+
+/* Private API */
+
+#ifdef _WIN32
+#define vsnprintf _vsnprintf
+#define snprintf _snprintf
+#define isnan(x) _isnan(x)
+#define isinf(x) (!_finite(x))
+#define __unused
+typedef unsigned __int64 uint64_t;
+typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
+#else
+#include <stdint.h>
+#endif
+
+
+/*
+ * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
+ * the structure, but append it to the list of free structures.
+ * Subsequent allocations try to grab a structure from the free list,
+ * which speeds up allocation.
+ * #define V7_CACHE_OBJS
+ */
+
+/* Maximum length of the string literal */
+#define MAX_STRING_LITERAL_LENGTH 2000
+
+/* Max captures for String.replace() */
+#define V7_RE_MAX_REPL_SUB 255
+
+/* MSVC6 doesn't have standard C math constants defined */
+#ifndef M_E
+#define M_E 2.71828182845904523536028747135266250
+#endif
+
+#ifndef M_LOG2E
+#define M_LOG2E 1.44269504088896340735992468100189214
+#endif
+
+#ifndef M_LOG10E
+#define M_LOG10E 0.434294481903251827651128918916605082
+#endif
+
+#ifndef M_LN2
+#define M_LN2 0.693147180559945309417232121458176568
+#endif
+
+#ifndef M_LN10
+#define M_LN10 2.30258509299404568401799145468436421
+#endif
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327950288
+#endif
+
+#ifndef M_SQRT2
+#define M_SQRT2 1.41421356237309504880168872420969808
+#endif
+
+#ifndef M_SQRT1_2
+#define M_SQRT1_2 0.707106781186547524400844362104849039
+#endif
+
+#ifndef NAN
+#define NAN atof("NAN")
+#endif
+
+#ifndef INFINITY
+#define INFINITY atof("INFINITY") /* TODO: fix this */
+#endif
+
+#ifndef EXIT_SUCCESS
+#define EXIT_SUCCESS 0
+#endif
+
+#ifndef EXIT_FAILURE
+#define EXIT_FAILURE 1
+#endif
+
+/* Different classes of V7_TYPE_OBJ type */
+enum v7_class {
+  V7_CLASS_NONE,
+  V7_CLASS_ARRAY,
+  V7_CLASS_BOOLEAN,
+  V7_CLASS_DATE,
+  V7_CLASS_ERROR,
+  V7_CLASS_FUNCTION,
+  V7_CLASS_NUMBER,
+  V7_CLASS_OBJECT,
+  V7_CLASS_REGEXP,
+  V7_CLASS_STRING,
+  V7_NUM_CLASSES
+};
+
+typedef void (*v7_prop_func_t)(struct v7_val *this_obj, struct v7_val *arg,
+                               struct v7_val *result);
+
+struct v7_prop {
+  struct v7_prop *next;
+  struct v7_val *key;
+  struct v7_val *val;
+  unsigned short flags;
+#define V7_PROP_NOT_WRITABLE 1   /* property is not changeable */
+#define V7_PROP_NOT_ENUMERABLE 2 /* not enumerable in for..in loop */
+#define V7_PROP_NOT_DELETABLE 4  /* delete-ing this property must fail */
+#define V7_PROP_ALLOCATED 8      /* v7_prop must be free()-ed */
+};
+
+/* Vector, describes some memory location pointed by 'p' with length 'len' */
+struct v7_vec {
+  const char *p;
+  int len;
+};
+#define V7_VEC(str) \
+  { (str), sizeof(str) - 1 }
+
+struct v7_string {
+  char *buf;           /* Pointer to buffer with string/regexp data */
+  unsigned long len;   /* String/regexp length */
+  char loc[16];        /* Small strings/regexp are stored here */
+  struct slre_prog *prog; /* Pointer to compiled regexp */
+  long lastIndex;
+};
+
+struct v7_func {
+  char *source_code;      /* \0-terminated function source code */
+  int line_no;            /* Line number where function begins */
+  struct v7_val *var_obj; /* Function var object: var decls and func defs */
+};
+
+union v7_scalar {
+  double num;            /* Holds "Number" or "Boolean" value */
+  struct v7_string str;  /* Holds "String" value */
+  struct v7_func func;   /* \0-terminated function code */
+  struct v7_prop *array; /* List of array elements */
+  v7_func_t c_func;      /* Pointer to the C function */
+  struct {
+    v7_prop_func_t f; /* Object's property function, e.g. String.length */
+    struct v7_val *o; /* Current "this" object for property function */
+  } prop_func;
+};
+
+struct v7_val {
+  struct v7_val *next;
+  struct v7_val *proto;  /* Prototype */
+  struct v7_val *ctor;   /* Constructor object */
+  struct v7_prop *props; /* Object's key/value list */
+  union v7_scalar v;     /* The value itself */
+  enum v7_type type;     /* Value type */
+  enum v7_class cls;     /* Object's internal [[Class]] property */
+  short ref_count;       /* Reference counter */
+
+  union {
+    uint16_t flags;
+    struct v7_val_flags {
+      /* TODO(??) avoid using bitfields which are a GCC extension */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+      uint16_t val_alloc : 1; /* Whole "struct v7_val" must be free()-ed */
+      uint16_t str_alloc : 1; /* v.str.buf must be free()-ed */
+      uint16_t js_func : 1;   /* Function object is a JavsScript code */
+      uint16_t prop_func : 1; /* Function object is a native property func */
+#define V7_PROP_FUNC 8
+      uint16_t val_dealloc : 1; /* Value has been deallocated */
+      uint16_t re : 1;          /* This is a regex */
+      unsigned char re_flags;
+#pragma GCC diagnostic pop
+    } fl;
+  } fl;
+};
+
+#define V7_MKVAL(_p, _t, _c, _v)                \
+  {                                             \
+    0, (_p), 0, 0, {(_v)}, (_t), (_c), 0, { 0 } \
+  }
+
+/* TODO(lsm): move to the top when all headers are split */
+
+struct v7_pstate {
+  const char *file_name;
+  const char *source_code;
+  const char *pc; /* Current parsing position */
+  int line_no;    /* Line number */
+  int prev_line_no; /* Line number of previous token */
+  int inhibit_in;   /* True while `in` expressions are inhibited */
+};
+
+/* TODO(lsm): move VM definitions to vm.h */
+struct v7 {
+  struct v7_value *global_object;
+
+  /*
+   * Stack of execution contexts.
+   * Each execution context object in the call stack has hidden properties:
+   *  *  "_p": Parent context (for closures)
+   *  *  "_e": Exception environment
+   *
+   * Hidden properties have V7_PROPERTY_HIDDEN flag set.
+   * Execution contexts should be allocated on heap, because they might not be
+   * on a call stack but still referenced (closures).
+   */
+  struct v7_value *call_stack;
+
+  /* TODO(lsm): after refactoring is made, kill everything below this line */
+  struct v7_val root_scope; /* "global" object (root-level execution context) */
+  struct v7_val *stack[200]; /* TODO: make it non-fixed, auto-grow */
+  int sp;                    /* Stack pointer */
+  int flags;
+#define V7_SCANNING 1 /* Pre-scan to initialize lexical scopes, no exec */
+#define V7_NO_EXEC 2  /* Non-executing code block: if (false) { block } */
+
+  struct v7_pstate pstate; /* Parsing state */
+  enum v7_tok cur_tok;     /* Current token */
+  const char *tok;         /* Parsed terminal token (ident, number, string) */
+  unsigned long tok_len;   /* Length of the parsed terminal token */
+  int after_newline;       /* True if the cur_tok starts a new line */
+  double cur_tok_dbl;
+
+  const char *key;       /* Key for the assignment operation */
+  unsigned long key_len; /* Key length for the assignment operation */
+
+  char error_message[100]; /* Placeholder for the error message */
+
+  struct v7_val *cur_obj;   /* Current namespace object ('x=1; x.y=1;', etc) */
+  struct v7_val *this_obj;  /* Current "this" object */
+  struct v7_val *ctx;       /* Current execution context */
+  struct v7_val *cf;        /* Currently executing function */
+  struct v7_val *functions; /* List of declared function */
+  struct v7_val *free_values; /* List of free (deallocated) values */
+  struct v7_prop *free_props; /* List of free (deallocated) props */
+};
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
+
+#define V7_STATIC_ASSERT(COND, MSG) \
+      typedef char static_assertion_##MSG[2*(!!(COND)) - 1]
+
+#define THROW(err_code)                                                        \
+  do {                                                                         \
+    snprintf(v7->error_message, sizeof(v7->error_message), "%s line %d: %s",   \
+             v7->pstate.file_name, v7->pstate.line_no, v7_strerror(err_code)); \
+    return (err_code);                                                         \
+  } while (0)
+
+#define CHECK(cond, code)     \
+  do {                        \
+    if (!(cond)) THROW(code); \
+  } while (0)
+
+extern int __lev;
+#define TRY(call)           \
+  do {                      \
+    enum v7_err _e = call;  \
+    CHECK(_e == V7_OK, _e); \
+  } while (0)
+
+/* Print current function name and stringified object */
+#define TRACE_OBJ(O)                                         \
+  do {                                                       \
+    char x[4000];                                            \
+    printf("==> %s [%s]\n", __func__,                        \
+           O == NULL ? "@" : v7_stringify(O, x, sizeof(x))); \
+  } while (0)
+
+/* Initializer for "struct v7_val", object type */
+#define MKOBJ(_proto) V7_MKVAL(_proto, V7_TYPE_OBJ, V7_CLASS_OBJECT, 0)
+
+/* True if current code is executing. TODO(lsm): use bit fields, per vrz@ */
+#define EXECUTING(_fl) (!((_fl) & (V7_NO_EXEC | V7_SCANNING)))
+
+/* Adds a read-only attribute "val" by key "name" to the object "obj" */
+#define SET_RO_PROP_V(obj, name, val)                                 \
+  do {                                                                \
+    static struct v7_val key = MKOBJ(&s_prototypes[V7_CLASS_STRING]); \
+    static struct v7_prop prop = {NULL, &key, &val, 0};               \
+    v7_init_str(&key, (char *)(name), strlen(name), 0);               \
+    prop.next = obj.props;                                            \
+    obj.props = &prop;                                                \
+  } while (0)
+
+/* Adds read-only attribute with given initializers to the object "_o" */
+#define SET_RO_PROP2(_o, _name, _t, _proto, _attr, _initializer, _fl) \
+  do {                                                                \
+    static struct v7_val _val = MKOBJ(_proto);                        \
+    _val.v._attr = (_initializer);                                    \
+    _val.type = (_t);                                                 \
+    _val.fl.flags = (_fl);                                            \
+    SET_RO_PROP_V(_o, _name, _val);                                   \
+  } while (0)
+
+#define SET_RO_PROP(obj, name, _t, attr, _v) \
+  SET_RO_PROP2(obj, name, _t, &s_prototypes[V7_CLASS_OBJECT], attr, _v, 0)
+
+/* Adds property function "_func" with key "_name" to the object "_obj" */
+#define SET_PROP_FUNC(_obj, _name, _func) \
+  SET_RO_PROP2(_obj, _name, V7_TYPE_NULL, 0, prop_func.f, _func, V7_PROP_FUNC)
+
+/* Adds method "_func" with key "_name" to the object "_obj" */
+#define SET_METHOD(_obj, _name, _func)                                 \
+  do {                                                                 \
+    static struct v7_val _val = MKOBJ(&s_prototypes[V7_CLASS_STRING]); \
+    v7_set_class(&_val, V7_CLASS_FUNCTION);                            \
+    _val.v.c_func = (_func);                                           \
+    SET_RO_PROP_V(_obj, _name, _val);                                  \
+  } while (0)
+
+#define OBJ_SANITY_CHECK(obj)          \
+  do {                                 \
+    assert((obj) != NULL);             \
+    assert((obj)->ref_count >= 0);     \
+    assert(!(obj)->fl.fl.val_dealloc); \
+  } while (0)
+
+#define INC_REF_COUNT(v) \
+  do {                   \
+    OBJ_SANITY_CHECK(v); \
+    (v)->ref_count++;    \
+  } while (0)
+
+#define DEC_REF_COUNT(v) \
+  do {                   \
+    OBJ_SANITY_CHECK(v); \
+    (v)->ref_count--;    \
+  } while (0)
+
+/* Forward declarations */
+
+V7_PRIVATE signed char nextesc(Rune *r, const char **src);
+
+V7_PRIVATE enum v7_err regex_xctor(struct v7 *v7, struct v7_val *obj,
+                                   const char *re, size_t re_len,
+                                   const char *fl, size_t fl_len);
+V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj);
+
+/* Parser */
+
+/* TODO(mkm): move to .c file one we get rid of the old parser */
+#define EXPECT(t)                                     \
+  do {                                                \
+    if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; \
+    next_tok(v7);                                     \
+  } while (0)
+
+V7_PRIVATE enum v7_tok next_tok(struct v7 *v7);
+V7_PRIVATE enum v7_tok lookahead(const struct v7 *v7);
+
+V7_PRIVATE int instanceof(const struct v7_val *obj, const struct v7_val *ctor);
+V7_PRIVATE enum v7_err parse_expression(struct v7 *);
+V7_PRIVATE enum v7_err parse_statement(struct v7 *, int *is_return);
+V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b);
+V7_PRIVATE enum v7_err do_exec(struct v7 *v7, const char *, const char *, int);
+V7_PRIVATE void init_stdlib(void);
+V7_PRIVATE void skip_whitespaces_and_comments(struct v7 *v7);
+V7_PRIVATE int is_num(const struct v7_val *v);
+V7_PRIVATE int is_bool(const struct v7_val *v);
+V7_PRIVATE int is_string(const struct v7_val *v);
+V7_PRIVATE enum v7_err toString(struct v7 *v7, struct v7_val *obj);
+V7_PRIVATE enum v7_err check_str_re_conv(struct v7 *v7, struct v7_val **arg,
+                                         int re_fl);
+
+V7_PRIVATE double _conv_to_num(struct v7 *v7, struct v7_val *arg);
+V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg);
+
+V7_PRIVATE void init_standard_constructor(enum v7_class cls, v7_func_t ctor);
+V7_PRIVATE enum v7_err inc_stack(struct v7 *v7, int incr);
+V7_PRIVATE enum v7_err _prop_func_2_value(struct v7 *v7, struct v7_val **f);
+V7_PRIVATE struct v7_val *make_value(struct v7 *v7, enum v7_type type);
+V7_PRIVATE enum v7_err v7_set2(struct v7 *v7, struct v7_val *obj,
+                               struct v7_val *k, struct v7_val *v);
+V7_PRIVATE char *v7_strdup(const char *ptr, unsigned long len);
+V7_PRIVATE struct v7_prop *mkprop(struct v7 *v7);
+V7_PRIVATE void free_prop(struct v7 *v7, struct v7_prop *p);
+V7_PRIVATE struct v7_val str_to_val(const char *buf, size_t len);
+V7_PRIVATE struct v7_val *find(struct v7 *v7, const struct v7_val *key);
+V7_PRIVATE struct v7_val *get2(struct v7_val *obj, const struct v7_val *key);
+V7_PRIVATE enum v7_err v7_call2(struct v7 *v7, struct v7_val *, int, int);
+
+V7_PRIVATE enum v7_err v7_make_and_push(struct v7 *v7, enum v7_type type);
+V7_PRIVATE enum v7_err v7_append(struct v7 *, struct v7_val *, struct v7_val *);
+V7_PRIVATE struct v7_val *v7_mkv(struct v7 *v7, enum v7_type t, ...);
+V7_PRIVATE void v7_freeval(struct v7 *v7, struct v7_val *v);
+V7_PRIVATE int v7_sp(struct v7 *v7);
+V7_PRIVATE struct v7_val **v7_top(struct v7 *);
+V7_PRIVATE struct v7_val *v7_top_val(struct v7 *);
+V7_PRIVATE const char *v7_strerror(enum v7_err);
+V7_PRIVATE int v7_is_class(const struct v7_val *obj, enum v7_class cls);
+V7_PRIVATE void v7_set_class(struct v7_val *obj, enum v7_class cls);
+V7_PRIVATE void v7_init_func(struct v7_val *v, v7_func_t func);
+V7_PRIVATE void v7_init_str(struct v7_val *, const char *, unsigned long, int);
+V7_PRIVATE void v7_init_num(struct v7_val *, double);
+V7_PRIVATE void v7_init_bool(struct v7_val *, int);
+V7_PRIVATE enum v7_err v7_push(struct v7 *, struct v7_val *);
+V7_PRIVATE enum v7_err push_bool(struct v7 *, int is_true);
+V7_PRIVATE enum v7_err push_string(struct v7 *, const char *, unsigned long,
+                                   int);
+V7_PRIVATE enum v7_err push_func(struct v7 *v7, v7_func_t func);
+V7_PRIVATE enum v7_err push_new_object(struct v7 *v7);
+V7_PRIVATE enum v7_err push_number(struct v7 *v7, double num);
+V7_PRIVATE void free_props(struct v7 *v7);
+V7_PRIVATE void free_values(struct v7 *v7);
+V7_PRIVATE struct v7_val v7_str_to_val(const char *buf);
+V7_PRIVATE enum v7_err v7_del2(struct v7 *v7, struct v7_val *, const char *,
+                               unsigned long);
+
+/* Generic function to set an attribute in an object. */
+V7_PRIVATE enum v7_err v7_setv(struct v7 *v7, struct v7_val *obj,
+                               enum v7_type key_type, enum v7_type val_type,
+                               ...);
+
+V7_PRIVATE void init_array(void);
+V7_PRIVATE void init_boolean(void);
+V7_PRIVATE void init_crypto(void);
+V7_PRIVATE void init_date(void);
+V7_PRIVATE void init_error(void);
+V7_PRIVATE void init_function(void);
+V7_PRIVATE void init_json(void);
+V7_PRIVATE void init_math(void);
+V7_PRIVATE void init_number(void);
+V7_PRIVATE void init_object(void);
+V7_PRIVATE void init_string(void);
+V7_PRIVATE void init_regex(void);
+
+#endif /* V7_INTERNAL_H_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
@@ -366,6 +821,7 @@ struct v7_ast;    /* V7 Abstract Syntax Tree. */
 struct v7_arg;    /* C/JavaScript function parameters */
 struct v7_object;
 
+typedef unsigned int v7_strlen_t;
 typedef double v7_num_t;    /* Override to integer on systems with no MMU */
 typedef void (*v7_func2_t)(struct v7_arg *arg);
 
@@ -562,8 +1018,6 @@ typedef unsigned char uint8_t;
 #else
 #include <stdint.h>
 #endif
-
-typedef unsigned int v7_strlen_t;
 
 
 /*
@@ -1029,7 +1483,7 @@ struct slre_cap {
 #define SLRE_MAX_CAPS 32
 struct slre_loot {
   int num_captures;
-  struct slre_cap sub[SLRE_MAX_CAPS];
+  struct slre_cap caps[SLRE_MAX_CAPS];
 };
 
 /* Opaque structure that holds compiled regular expression */
@@ -1057,7 +1511,7 @@ enum slre_error {
   SLRE_BAD_CHAR_AFTER_USD
 };
 
-int slre_compile(const char *regexp, unsigned char flags, struct slre_prog **);
+int slre_compile(const char *regexp, struct slre_prog **);
 int slre_exec(struct slre_prog *prog, unsigned char flags, const char *string,
               struct slre_loot *loot);
 void slre_free(struct slre_prog *prog);
@@ -2742,8 +3196,7 @@ V7_PRIVATE void Regex_lastIndex(struct v7_val *this_obj, struct v7_val *arg,
 
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj) {
   if (re_obj->v.str.prog == NULL) {
-    int res = slre_compile(re_obj->v.str.buf, re_obj->fl.fl.re_flags,
-                           &re_obj->v.str.prog);
+    int res = slre_compile(re_obj->v.str.buf, &re_obj->v.str.prog);
     if (res != SLRE_OK) {
       return V7_REGEXP_ERROR;
     } else if (re_obj->v.str.prog == NULL) {
@@ -2757,7 +3210,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0], *arr = NULL, *t = cfa->this_obj;
   struct slre_loot sub;
-  struct slre_cap *ptok = sub.sub;
+  struct slre_cap *ptok = sub.caps;
 
   if (cfa->num_args > 0) {
     char *begin;
@@ -2776,7 +3229,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start,
                                   ptok->end - ptok->start, 1));
       if (t->fl.fl.re_flags & SLRE_FLAG_G)
-        t->v.str.lastIndex = utfnlen(begin, sub.sub->end - begin);
+        t->v.str.lastIndex = utfnlen(begin, sub.caps->end - begin);
       return V7_OK;
     } else {
       t->v.str.lastIndex = 0;
@@ -4572,7 +5025,7 @@ V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
     do {
       if (!slre_exec(arg->v.str.prog, arg->fl.fl.re_flags,
           cfa->this_obj->v.str.buf + shift, &sub)) {
-        struct slre_cap *ptok = sub.sub;
+        struct slre_cap *ptok = sub.caps;
         int i;
         if (NULL == arr) {
           arr = v7_push_new_object(v7);
@@ -4623,11 +5076,11 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
     do {
       int i;
       if (slre_exec(re->v.str.prog, re->fl.fl.re_flags, p, &loot)) break;
-      if (p != loot.sub->start) {
+      if (p != loot.caps->start) {
         ptok->start = p;
-        ptok->end = loot.sub->start;
+        ptok->end = loot.caps->start;
         ptok++;
-        out_len += loot.sub->start - p;
+        out_len += loot.caps->start - p;
         out_sub_num++;
       }
 
@@ -4635,9 +5088,9 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         int old_sp = v7->sp;
         struct v7_val *rez_str;
         for (i = 0; i < loot.num_captures; i++)
-          TRY(push_string(v7, loot.sub[i].start,
-                          loot.sub[i].end - loot.sub[i].start, 1));
-        TRY(push_number(v7, utfnlen(p, loot.sub[0].start - p)));
+          TRY(push_string(v7, loot.caps[i].start,
+                          loot.caps[i].end - loot.caps[i].start, 1));
+        TRY(push_number(v7, utfnlen(p, loot.caps[0].start - p)));
         TRY(v7_push(v7, cfa->this_obj));
         rez_str = v7_call(v7, cfa->this_obj, loot.num_captures + 2);
         TRY(check_str_re_conv(v7, &rez_str, 0));
@@ -4655,14 +5108,14 @@ V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
         slre_replace(&loot, cfa->this_obj->v.str.buf, str_func->v.str.buf,
                      &newsub);
         for (i = 0; i < newsub.num_captures; i++) {
-          ptok->start = newsub.sub[i].start;
-          ptok->end = newsub.sub[i].end;
+          ptok->start = newsub.caps[i].start;
+          ptok->end = newsub.caps[i].end;
           ptok++;
-          out_len += newsub.sub[i].end - newsub.sub[i].start;
+          out_len += newsub.caps[i].end - newsub.caps[i].start;
           out_sub_num++;
         }
       }
-      p = (char *) loot.sub->end;
+      p = (char *) loot.caps->end;
     } while ((re->fl.fl.re_flags & SLRE_FLAG_G) && p < str_end);
     if (p < str_end) {
       ptok->start = p;
@@ -4703,7 +5156,7 @@ V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
     TRY(regex_check_prog(arg));
     if (!slre_exec(arg->v.str.prog, arg->fl.fl.re_flags,
         cfa->this_obj->v.str.buf, &sub)) {
-      shift = sub.sub[0].start - cfa->this_obj->v.str.buf;
+      shift = sub.caps[0].start - cfa->this_obj->v.str.buf;
     }
   } else
     utf_shift = 0;
@@ -4768,7 +5221,7 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
             cfa->this_obj->v.str.buf + shift, &sub))
           break;
 
-        if (sub.sub[0].end - sub.sub[0].start == 0) {
+        if (sub.caps[0].end - sub.caps[0].start == 0) {
           v7_append(
               v7, arr,
               v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
@@ -4778,14 +5231,14 @@ V7_PRIVATE enum v7_err Str_split(struct v7_c_func_arg *cfa) {
           v7_append(
               v7, arr,
               v7_mkv(v7, V7_TYPE_STR, cfa->this_obj->v.str.buf + shift,
-                     sub.sub[0].start - cfa->this_obj->v.str.buf - shift, 1));
-          shift = sub.sub[0].end - cfa->this_obj->v.str.buf;
+                     sub.caps[0].start - cfa->this_obj->v.str.buf - shift, 1));
+          shift = sub.caps[0].end - cfa->this_obj->v.str.buf;
         }
 
         for (i = 1; i < sub.num_captures; i++) {
-          if (sub.sub[i].start != NULL) {
-            v = v7_mkv(v7, V7_TYPE_STR, sub.sub[i].start,
-                       sub.sub[i].end - sub.sub[i].start, 1);
+          if (sub.caps[i].start != NULL) {
+            v = v7_mkv(v7, V7_TYPE_STR, sub.caps[i].start,
+                       sub.caps[i].end - sub.caps[i].start, 1);
           } else {
             v = make_value(v7, V7_TYPE_UNDEF);
           }
@@ -9535,14 +9988,13 @@ struct slre_prog {
 };
 
 struct slre_env {
-  unsigned char flags;
   const char *src;
   Rune curr_rune;
 
   struct slre_prog *prog;
   struct slre_node *pstart, *pend;
 
-  struct slre_node *sub[SLRE_MAX_CAPS];
+  struct slre_node *caps[SLRE_MAX_CAPS];
   unsigned int num_captures;
   unsigned int sets_num;
 
@@ -9556,7 +10008,7 @@ struct slre_env {
 struct slre_thread {
   struct slre_instruction *pc;
   const char *start;
-  struct slre_loot sub;
+  struct slre_loot loot;
 };
 
 enum slre_opcode {
@@ -10079,11 +10531,11 @@ static struct slre_node *re_parse_la(struct slre_env *e) {
     case L_REF:
       nd = re_nnode(e, P_REF);
       if (!e->curr_rune || e->curr_rune > e->num_captures ||
-          !e->sub[e->curr_rune]) {
+          !e->caps[e->curr_rune]) {
         SLRE_THROW(e, SLRE_INVALID_BACK_REFERENCE);
       }
       nd->par.xy.y.n = e->curr_rune;
-      nd->par.xy.x = e->sub[e->curr_rune];
+      nd->par.xy.x = e->caps[e->curr_rune];
       RE_NEXT(e);
       break;
     case '.':
@@ -10098,7 +10550,7 @@ static struct slre_node *re_parse_la(struct slre_env *e) {
       }
       nd->par.xy.y.n = e->num_captures++;
       nd->par.xy.x = re_parser(e);
-      e->sub[nd->par.xy.y.n] = nd;
+      e->caps[nd->par.xy.y.n] = nd;
       if (!RE_ACCEPT(e, ')')) {
         SLRE_THROW(e, SLRE_UNMATCH_LBR);
       }
@@ -10264,9 +10716,6 @@ static void re_compile(struct slre_env *e, struct slre_node *nd) {
     case P_CH:
       inst = re_newinst(e->prog, I_CH);
       inst->par.c = nd->par.c;
-      if (e->flags & SLRE_FLAG_I) {
-        inst->par.c = tolowerrune(nd->par.c);
-      }
       break;
 
     case P_EOL:
@@ -10552,7 +11001,7 @@ static void program_print(struct slre_prog *prog) {
 }
 #endif
 
-int slre_compile(const char *pat, unsigned char flags, struct slre_prog **pr) {
+int slre_compile(const char *pat, struct slre_prog **pr) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
@@ -10570,8 +11019,8 @@ int slre_compile(const char *pat, unsigned char flags, struct slre_prog **pr) {
   e.src = pat;
   e.sets_num = 0;
   e.num_captures = 1;
-  e.flags = flags;
-  memset(e.sub, 0, sizeof(e.sub));
+  /*e.flags = flags;*/
+  memset(e.caps, 0, sizeof(e.caps));
 
   RE_NEXT(&e);
   nd = re_parser(&e);
@@ -10622,10 +11071,10 @@ void slre_free(struct slre_prog *prog) {
 }
 
 static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
-                         const char *start, struct slre_loot *sub) {
+                         const char *start, struct slre_loot *loot) {
   t->pc = pc;
   t->start = start;
-  t->sub = *sub;
+  t->loot = *loot;
 }
 
 #define RE_NO_MATCH() \
@@ -10649,11 +11098,11 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   do {
     pc = threads[--thr_num].pc;
     start = threads[thr_num].start;
-    sub = threads[thr_num].sub;
+    sub = threads[thr_num].loot;
     for (thr = 1; thr;) {
       switch (pc->opcode) {
         case I_END:
-          memcpy(loot->sub, sub.sub, sizeof loot->sub);
+          memcpy(loot->caps, sub.caps, sizeof loot->caps);
           return 1;
         case I_ANY:
         case I_ANYNL:
@@ -10667,8 +11116,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           RE_NO_MATCH();
         case I_CH:
           start += chartorune(&c, start);
-          if (c &&
-              (flags & SLRE_FLAG_I ? tolowerrune(c) : c) == pc->par.c) break;
+          if (c && (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
+              tolowerrune(c) == tolowerrune(pc->par.c)))) break;
           RE_NO_MATCH();
         case I_EOL:
           if (!*start) break;
@@ -10697,14 +11146,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           RE_NO_MATCH();
 
         case I_LBRA:
-          sub.sub[pc->par.n].start = start;
+          sub.caps[pc->par.n].start = start;
           break;
 
         case I_REF:
-          i = sub.sub[pc->par.n].end - sub.sub[pc->par.n].start;
+          i = sub.caps[pc->par.n].end - sub.caps[pc->par.n].start;
           if (flags & SLRE_FLAG_I) {
             int num = i;
-            const char *s = start, *p = sub.sub[pc->par.n].start;
+            const char *s = start, *p = sub.caps[pc->par.n].start;
             Rune rr;
             for (; num && *s && *p; num--) {
               s += chartorune(&r, s);
@@ -10712,7 +11161,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
               if (tolowerrune(r) != tolowerrune(rr)) break;
             }
             if (num) RE_NO_MATCH();
-          } else if (strncmp(start, sub.sub[pc->par.n].start, i))
+          } else if (strncmp(start, sub.caps[pc->par.n].start, i))
             RE_NO_MATCH();
           if (i > 0) start += i;
           break;
@@ -10733,7 +11182,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           break;
 
         case I_RBRA:
-          sub.sub[pc->par.n].end = start;
+          sub.caps[pc->par.n].end = start;
           break;
 
         case I_SET:
@@ -10795,10 +11244,10 @@ int slre_exec(struct slre_prog *prog, unsigned char flags, const char *start,
   }
   while (re_match(prog->start, st, start, flags, &tmpsub)) {
     unsigned int i;
-    st = tmpsub.sub[0].end;
+    st = tmpsub.caps[0].end;
     for (i = 0; i < prog->num_captures; i++) {
-      struct slre_cap *l = &loot->sub[loot->num_captures + i];
-      struct slre_cap *s = &tmpsub.sub[i];
+      struct slre_cap *l = &loot->caps[loot->num_captures + i];
+      struct slre_cap *s = &tmpsub.caps[i];
       l->start = s->start;
       l->end = s->end;
     }
@@ -10821,9 +11270,9 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
       if (n < 0) return n;
       switch (curr_rune) {
         case '&':
-          sz = loot->sub[0].end - loot->sub[0].start;
+          sz = loot->caps[0].end - loot->caps[0].start;
           size += sz;
-          dstsub->sub[dstsub->num_captures++] = loot->sub[0];
+          dstsub->caps[dstsub->num_captures++] = loot->caps[0];
           break;
         case '0':
         case '1':
@@ -10843,27 +11292,27 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
             sbn = sbn * 10 + sz;
           }
           if (sbn >= loot->num_captures) break;
-          sz = loot->sub[sbn].end - loot->sub[sbn].start;
+          sz = loot->caps[sbn].end - loot->caps[sbn].start;
           size += sz;
-          dstsub->sub[dstsub->num_captures++] = loot->sub[sbn];
+          dstsub->caps[dstsub->num_captures++] = loot->caps[sbn];
           break;
         }
         case '`':
-          sz = loot->sub[0].start - src;
+          sz = loot->caps[0].start - src;
           size += sz;
-          dstsub->sub[dstsub->num_captures].start = src;
-          dstsub->sub[dstsub->num_captures++].end = loot->sub[0].start;
+          dstsub->caps[dstsub->num_captures].start = src;
+          dstsub->caps[dstsub->num_captures++].end = loot->caps[0].start;
           break;
         case '\'':
-          sz = strlen(loot->sub[0].end);
+          sz = strlen(loot->caps[0].end);
           size += sz;
-          dstsub->sub[dstsub->num_captures].start = loot->sub[0].end;
-          dstsub->sub[dstsub->num_captures++].end = loot->sub[0].end + sz;
+          dstsub->caps[dstsub->num_captures].start = loot->caps[0].end;
+          dstsub->caps[dstsub->num_captures++].end = loot->caps[0].end + sz;
           break;
         case '$':
           size++;
-          dstsub->sub[dstsub->num_captures].start = rstr - 1;
-          dstsub->sub[dstsub->num_captures++].end = rstr;
+          dstsub->caps[dstsub->num_captures].start = rstr - 1;
+          dstsub->caps[dstsub->num_captures++].end = rstr;
           break;
         default:
           return SLRE_BAD_CHAR_AFTER_USD;
@@ -10872,11 +11321,11 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
       char tmps[300], *d = tmps;
       size += (sz = runetochar(d, &curr_rune));
       if (!dstsub->num_captures ||
-          dstsub->sub[dstsub->num_captures - 1].end != rstr - sz) {
-        dstsub->sub[dstsub->num_captures].start = rstr - sz;
-        dstsub->sub[dstsub->num_captures++].end = rstr;
+          dstsub->caps[dstsub->num_captures - 1].end != rstr - sz) {
+        dstsub->caps[dstsub->num_captures].start = rstr - sz;
+        dstsub->caps[dstsub->num_captures++].end = rstr;
       } else
-        dstsub->sub[dstsub->num_captures - 1].end = rstr;
+        dstsub->caps[dstsub->num_captures - 1].end = rstr;
     }
   }
   return size;
@@ -10887,7 +11336,7 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
 static int re_replace(struct slre_loot *loot, const char *src, const char *rstr,
                       char **dst) {
   struct slre_loot newsub;
-  struct slre_cap *t = newsub.sub;
+  struct slre_cap *t = newsub.caps;
   char *d;
   int osz = slre_replace(loot, src, rstr, &newsub);
   int i = newsub.num_captures;
@@ -11034,11 +11483,11 @@ int main(int argc, char **argv) {
             if (src) {
               if (!slre_exec(pr, flags, src, &sub)) {
                 for (i = 0; i < sub.num_captures; ++i) {
-                  int n = sub.sub[i].end - sub.sub[i].start;
+                  int n = sub.caps[i].end - sub.caps[i].start;
                   if (n > 0)
                     printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n",
-                           i, (int)(sub.sub[i].start - src),
-                           (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
+                           i, (int)(sub.caps[i].start - src),
+                           (int)(sub.caps[i].end - src), n, n, sub.caps[i].start);
                   else
                     printf("match: %-3d ''\n", i);
                 }
@@ -11070,11 +11519,11 @@ int main(int argc, char **argv) {
       src = argv[3];
       if (!slre_exec(pr, flags, src, &sub)) {
         for (i = 0; i < sub.num_captures; ++i) {
-          int n = sub.sub[i].end - sub.sub[i].start;
+          int n = sub.caps[i].end - sub.caps[i].start;
           if (n > 0)
             printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i,
-                   (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src),
-                   n, n, sub.sub[i].start);
+                   (int)(sub.caps[i].start - src), (int)(sub.caps[i].end - src),
+                   n, n, sub.caps[i].start);
           else
             printf("match: %-3d ''\n", i);
         }
