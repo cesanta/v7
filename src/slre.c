@@ -91,14 +91,13 @@ struct slre_prog {
 };
 
 struct slre_env {
-  unsigned char flags;
   const char *src;
   Rune curr_rune;
 
   struct slre_prog *prog;
   struct slre_node *pstart, *pend;
 
-  struct slre_node *sub[SLRE_MAX_CAPS];
+  struct slre_node *caps[SLRE_MAX_CAPS];
   unsigned int num_captures;
   unsigned int sets_num;
 
@@ -112,7 +111,7 @@ struct slre_env {
 struct slre_thread {
   struct slre_instruction *pc;
   const char *start;
-  struct slre_loot sub;
+  struct slre_loot loot;
 };
 
 enum slre_opcode {
@@ -635,11 +634,11 @@ static struct slre_node *re_parse_la(struct slre_env *e) {
     case L_REF:
       nd = re_nnode(e, P_REF);
       if (!e->curr_rune || e->curr_rune > e->num_captures ||
-          !e->sub[e->curr_rune]) {
+          !e->caps[e->curr_rune]) {
         SLRE_THROW(e, SLRE_INVALID_BACK_REFERENCE);
       }
       nd->par.xy.y.n = e->curr_rune;
-      nd->par.xy.x = e->sub[e->curr_rune];
+      nd->par.xy.x = e->caps[e->curr_rune];
       RE_NEXT(e);
       break;
     case '.':
@@ -654,7 +653,7 @@ static struct slre_node *re_parse_la(struct slre_env *e) {
       }
       nd->par.xy.y.n = e->num_captures++;
       nd->par.xy.x = re_parser(e);
-      e->sub[nd->par.xy.y.n] = nd;
+      e->caps[nd->par.xy.y.n] = nd;
       if (!RE_ACCEPT(e, ')')) {
         SLRE_THROW(e, SLRE_UNMATCH_LBR);
       }
@@ -820,9 +819,6 @@ static void re_compile(struct slre_env *e, struct slre_node *nd) {
     case P_CH:
       inst = re_newinst(e->prog, I_CH);
       inst->par.c = nd->par.c;
-      if (e->flags & SLRE_FLAG_I) {
-        inst->par.c = tolowerrune(nd->par.c);
-      }
       break;
 
     case P_EOL:
@@ -1108,7 +1104,7 @@ static void program_print(struct slre_prog *prog) {
 }
 #endif
 
-int slre_compile(const char *pat, unsigned char flags, struct slre_prog **pr) {
+int slre_compile(const char *pat, struct slre_prog **pr) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
@@ -1126,8 +1122,8 @@ int slre_compile(const char *pat, unsigned char flags, struct slre_prog **pr) {
   e.src = pat;
   e.sets_num = 0;
   e.num_captures = 1;
-  e.flags = flags;
-  memset(e.sub, 0, sizeof(e.sub));
+  /*e.flags = flags;*/
+  memset(e.caps, 0, sizeof(e.caps));
 
   RE_NEXT(&e);
   nd = re_parser(&e);
@@ -1178,10 +1174,10 @@ void slre_free(struct slre_prog *prog) {
 }
 
 static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
-                         const char *start, struct slre_loot *sub) {
+                         const char *start, struct slre_loot *loot) {
   t->pc = pc;
   t->start = start;
-  t->sub = *sub;
+  t->loot = *loot;
 }
 
 #define RE_NO_MATCH() \
@@ -1205,11 +1201,11 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   do {
     pc = threads[--thr_num].pc;
     start = threads[thr_num].start;
-    sub = threads[thr_num].sub;
+    sub = threads[thr_num].loot;
     for (thr = 1; thr;) {
       switch (pc->opcode) {
         case I_END:
-          memcpy(loot->sub, sub.sub, sizeof loot->sub);
+          memcpy(loot->caps, sub.caps, sizeof loot->caps);
           return 1;
         case I_ANY:
         case I_ANYNL:
@@ -1223,8 +1219,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           RE_NO_MATCH();
         case I_CH:
           start += chartorune(&c, start);
-          if (c &&
-              (flags & SLRE_FLAG_I ? tolowerrune(c) : c) == pc->par.c) break;
+          if (c && (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
+              tolowerrune(c) == tolowerrune(pc->par.c)))) break;
           RE_NO_MATCH();
         case I_EOL:
           if (!*start) break;
@@ -1253,14 +1249,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           RE_NO_MATCH();
 
         case I_LBRA:
-          sub.sub[pc->par.n].start = start;
+          sub.caps[pc->par.n].start = start;
           break;
 
         case I_REF:
-          i = sub.sub[pc->par.n].end - sub.sub[pc->par.n].start;
+          i = sub.caps[pc->par.n].end - sub.caps[pc->par.n].start;
           if (flags & SLRE_FLAG_I) {
             int num = i;
-            const char *s = start, *p = sub.sub[pc->par.n].start;
+            const char *s = start, *p = sub.caps[pc->par.n].start;
             Rune rr;
             for (; num && *s && *p; num--) {
               s += chartorune(&r, s);
@@ -1268,7 +1264,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
               if (tolowerrune(r) != tolowerrune(rr)) break;
             }
             if (num) RE_NO_MATCH();
-          } else if (strncmp(start, sub.sub[pc->par.n].start, i))
+          } else if (strncmp(start, sub.caps[pc->par.n].start, i))
             RE_NO_MATCH();
           if (i > 0) start += i;
           break;
@@ -1289,7 +1285,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           break;
 
         case I_RBRA:
-          sub.sub[pc->par.n].end = start;
+          sub.caps[pc->par.n].end = start;
           break;
 
         case I_SET:
@@ -1351,10 +1347,10 @@ int slre_exec(struct slre_prog *prog, unsigned char flags, const char *start,
   }
   while (re_match(prog->start, st, start, flags, &tmpsub)) {
     unsigned int i;
-    st = tmpsub.sub[0].end;
+    st = tmpsub.caps[0].end;
     for (i = 0; i < prog->num_captures; i++) {
-      struct slre_cap *l = &loot->sub[loot->num_captures + i];
-      struct slre_cap *s = &tmpsub.sub[i];
+      struct slre_cap *l = &loot->caps[loot->num_captures + i];
+      struct slre_cap *s = &tmpsub.caps[i];
       l->start = s->start;
       l->end = s->end;
     }
@@ -1377,9 +1373,9 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
       if (n < 0) return n;
       switch (curr_rune) {
         case '&':
-          sz = loot->sub[0].end - loot->sub[0].start;
+          sz = loot->caps[0].end - loot->caps[0].start;
           size += sz;
-          dstsub->sub[dstsub->num_captures++] = loot->sub[0];
+          dstsub->caps[dstsub->num_captures++] = loot->caps[0];
           break;
         case '0':
         case '1':
@@ -1399,27 +1395,27 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
             sbn = sbn * 10 + sz;
           }
           if (sbn >= loot->num_captures) break;
-          sz = loot->sub[sbn].end - loot->sub[sbn].start;
+          sz = loot->caps[sbn].end - loot->caps[sbn].start;
           size += sz;
-          dstsub->sub[dstsub->num_captures++] = loot->sub[sbn];
+          dstsub->caps[dstsub->num_captures++] = loot->caps[sbn];
           break;
         }
         case '`':
-          sz = loot->sub[0].start - src;
+          sz = loot->caps[0].start - src;
           size += sz;
-          dstsub->sub[dstsub->num_captures].start = src;
-          dstsub->sub[dstsub->num_captures++].end = loot->sub[0].start;
+          dstsub->caps[dstsub->num_captures].start = src;
+          dstsub->caps[dstsub->num_captures++].end = loot->caps[0].start;
           break;
         case '\'':
-          sz = strlen(loot->sub[0].end);
+          sz = strlen(loot->caps[0].end);
           size += sz;
-          dstsub->sub[dstsub->num_captures].start = loot->sub[0].end;
-          dstsub->sub[dstsub->num_captures++].end = loot->sub[0].end + sz;
+          dstsub->caps[dstsub->num_captures].start = loot->caps[0].end;
+          dstsub->caps[dstsub->num_captures++].end = loot->caps[0].end + sz;
           break;
         case '$':
           size++;
-          dstsub->sub[dstsub->num_captures].start = rstr - 1;
-          dstsub->sub[dstsub->num_captures++].end = rstr;
+          dstsub->caps[dstsub->num_captures].start = rstr - 1;
+          dstsub->caps[dstsub->num_captures++].end = rstr;
           break;
         default:
           return SLRE_BAD_CHAR_AFTER_USD;
@@ -1428,11 +1424,11 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
       char tmps[300], *d = tmps;
       size += (sz = runetochar(d, &curr_rune));
       if (!dstsub->num_captures ||
-          dstsub->sub[dstsub->num_captures - 1].end != rstr - sz) {
-        dstsub->sub[dstsub->num_captures].start = rstr - sz;
-        dstsub->sub[dstsub->num_captures++].end = rstr;
+          dstsub->caps[dstsub->num_captures - 1].end != rstr - sz) {
+        dstsub->caps[dstsub->num_captures].start = rstr - sz;
+        dstsub->caps[dstsub->num_captures++].end = rstr;
       } else
-        dstsub->sub[dstsub->num_captures - 1].end = rstr;
+        dstsub->caps[dstsub->num_captures - 1].end = rstr;
     }
   }
   return size;
@@ -1443,7 +1439,7 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
 static int re_replace(struct slre_loot *loot, const char *src, const char *rstr,
                       char **dst) {
   struct slre_loot newsub;
-  struct slre_cap *t = newsub.sub;
+  struct slre_cap *t = newsub.caps;
   char *d;
   int osz = slre_replace(loot, src, rstr, &newsub);
   int i = newsub.num_captures;
@@ -1590,11 +1586,11 @@ int main(int argc, char **argv) {
             if (src) {
               if (!slre_exec(pr, flags, src, &sub)) {
                 for (i = 0; i < sub.num_captures; ++i) {
-                  int n = sub.sub[i].end - sub.sub[i].start;
+                  int n = sub.caps[i].end - sub.caps[i].start;
                   if (n > 0)
                     printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n",
-                           i, (int)(sub.sub[i].start - src),
-                           (int)(sub.sub[i].end - src), n, n, sub.sub[i].start);
+                           i, (int)(sub.caps[i].start - src),
+                           (int)(sub.caps[i].end - src), n, n, sub.caps[i].start);
                   else
                     printf("match: %-3d ''\n", i);
                 }
@@ -1626,11 +1622,11 @@ int main(int argc, char **argv) {
       src = argv[3];
       if (!slre_exec(pr, flags, src, &sub)) {
         for (i = 0; i < sub.num_captures; ++i) {
-          int n = sub.sub[i].end - sub.sub[i].start;
+          int n = sub.caps[i].end - sub.caps[i].start;
           if (n > 0)
             printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i,
-                   (int)(sub.sub[i].start - src), (int)(sub.sub[i].end - src),
-                   n, n, sub.sub[i].start);
+                   (int)(sub.caps[i].start - src), (int)(sub.caps[i].end - src),
+                   n, n, sub.caps[i].start);
           else
             printf("match: %-3d ''\n", i);
         }

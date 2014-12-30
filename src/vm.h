@@ -17,6 +17,7 @@ struct v7_ast;    /* V7 Abstract Syntax Tree. */
 struct v7_arg;    /* C/JavaScript function parameters */
 struct v7_object;
 
+typedef unsigned int v7_strlen_t;
 typedef double v7_num_t;    /* Override to integer on systems with no MMU */
 typedef void (*v7_func2_t)(struct v7_arg *arg);
 

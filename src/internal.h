@@ -48,8 +48,6 @@ typedef unsigned char uint8_t;
 #include <stdint.h>
 #endif
 
-typedef unsigned int v7_strlen_t;
-
 #include "vm.h"
 #include "ast.h"
 #include "aparser.h"

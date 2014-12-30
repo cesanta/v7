@@ -85,8 +85,7 @@ V7_PRIVATE void Regex_lastIndex(struct v7_val *this_obj, struct v7_val *arg,
 
 V7_PRIVATE enum v7_err regex_check_prog(struct v7_val *re_obj) {
   if (re_obj->v.str.prog == NULL) {
-    int res = slre_compile(re_obj->v.str.buf, re_obj->fl.fl.re_flags,
-                           &re_obj->v.str.prog);
+    int res = slre_compile(re_obj->v.str.buf, &re_obj->v.str.prog);
     if (res != SLRE_OK) {
       return V7_REGEXP_ERROR;
     } else if (re_obj->v.str.prog == NULL) {
@@ -100,7 +99,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   struct v7_val *arg = cfa->args[0], *arr = NULL, *t = cfa->this_obj;
   struct slre_loot sub;
-  struct slre_cap *ptok = sub.sub;
+  struct slre_cap *ptok = sub.caps;
 
   if (cfa->num_args > 0) {
     char *begin;
@@ -119,7 +118,7 @@ V7_PRIVATE enum v7_err Regex_exec(struct v7_c_func_arg *cfa) {
         v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start,
                                   ptok->end - ptok->start, 1));
       if (t->fl.fl.re_flags & SLRE_FLAG_G)
-        t->v.str.lastIndex = utfnlen(begin, sub.sub->end - begin);
+        t->v.str.lastIndex = utfnlen(begin, sub.caps->end - begin);
       return V7_OK;
     } else {
       t->v.str.lastIndex = 0;

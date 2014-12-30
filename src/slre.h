@@ -38,7 +38,7 @@ struct slre_cap {
 #define SLRE_MAX_CAPS 32
 struct slre_loot {
   int num_captures;
-  struct slre_cap sub[SLRE_MAX_CAPS];
+  struct slre_cap caps[SLRE_MAX_CAPS];
 };
 
 /* Opaque structure that holds compiled regular expression */
@@ -66,7 +66,7 @@ enum slre_error {
   SLRE_BAD_CHAR_AFTER_USD
 };
 
-int slre_compile(const char *regexp, unsigned char flags, struct slre_prog **);
+int slre_compile(const char *regexp, struct slre_prog **);
 int slre_exec(struct slre_prog *prog, unsigned char flags, const char *string,
               struct slre_loot *loot);
 void slre_free(struct slre_prog *prog);
