@@ -63,8 +63,8 @@ difftest:
 	rm $$TMP
 
 cpplint:
-	@(MAKE) -C tests cpplint
+	@$(MAKE) -C tests cpplint
 	cpplint.py --verbose=0 --extensions=c,h src/*.[ch] v7.h 2>&1 >/dev/null| grep -v "Done processing" | grep -v "file excluded by"
 
 docker:
-	@(MAKE) -C tests docker
+	@$(MAKE) -C tests docker

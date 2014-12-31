@@ -362,6 +362,8 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 #define V7_NO_FS
 #endif
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
@@ -389,6 +391,7 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 typedef unsigned __int64 uint64_t;
 typedef unsigned int uint32_t;
 typedef unsigned char uint8_t;
+char *stpncpy(char *, const char *, size_t);
 #else
 #include <stdint.h>
 #endif
@@ -988,6 +991,8 @@ V7_PRIVATE struct v7_value *v7_array_length(struct v7 *v7, struct v7_value *);
 #define V7_NO_FS
 #endif
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
@@ -1015,6 +1020,7 @@ V7_PRIVATE struct v7_value *v7_array_length(struct v7 *v7, struct v7_value *);
 typedef unsigned __int64 uint64_t;
 typedef unsigned int uint32_t;
 typedef unsigned char uint8_t;
+char *stpncpy(char *, const char *, size_t);
 #else
 #include <stdint.h>
 #endif
@@ -2371,6 +2377,13 @@ V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
   if (isnan(tmp) || isinf(tmp)) return 0;
   return tmp;
 }
+
+#ifdef _WIN32
+char *stpncpy(char *dst, const char *src, size_t n) {
+  strncpy(dst, src, n);
+  return dst + strnlen(src, n);
+}
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved

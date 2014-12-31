@@ -13,6 +13,8 @@
 #define V7_NO_FS
 #endif
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
@@ -44,6 +46,7 @@
 typedef unsigned __int64 uint64_t;
 typedef unsigned int uint32_t;
 typedef unsigned char uint8_t;
+char *stpncpy(char *, const char *, size_t);
 #else
 #include <stdint.h>
 #endif
