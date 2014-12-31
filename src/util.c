@@ -604,3 +604,10 @@ V7_PRIVATE long _conv_to_int(struct v7 *v7, struct v7_val *arg) {
   if (isnan(tmp) || isinf(tmp)) return 0;
   return tmp;
 }
+
+#ifdef _WIN32
+char *stpncpy(char *dst, const char *src, size_t n) {
+  strncpy(dst, src, n);
+  return dst + strnlen(src, n);
+}
+#endif
