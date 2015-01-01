@@ -51,6 +51,7 @@ w: v7.c
 	wine unit_test.exe
 
 clean:
+	@$(MAKE) -C tests clean
 	rm -rf *.gc* *.dSYM *.exe *.obj *.pdb a.out u unit_test v7 amalgamated_v7 t
 
 setup-hooks:
