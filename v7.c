@@ -814,6 +814,12 @@ V7_PRIVATE void init_regex(void);
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
+/*
+ * Declaring this here allows flycheck to
+ * process this file correctly.
+ */
+typedef unsigned int v7_strlen_t;
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -824,7 +830,6 @@ struct v7_ast;    /* V7 Abstract Syntax Tree. */
 struct v7_arg;    /* C/JavaScript function parameters */
 struct v7_object;
 
-typedef unsigned int v7_strlen_t;
 typedef double v7_num_t;    /* Override to integer on systems with no MMU */
 typedef void (*v7_func2_t)(struct v7_arg *arg);
 
