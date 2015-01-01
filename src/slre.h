@@ -23,7 +23,7 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-/* Regex compilation flags */
+/* Regex execution flags */
 #define SLRE_FLAG_G 1     /* Global - match in the whole string */
 #define SLRE_FLAG_I 2     /* Ignore case */
 #define SLRE_FLAG_M 4     /* Multiline */
@@ -67,10 +67,10 @@ enum slre_error {
 };
 
 int slre_compile(const char *regexp, struct slre_prog **);
-int slre_exec(struct slre_prog *prog, unsigned char flags, const char *string,
-              struct slre_loot *loot);
+int slre_exec(struct slre_prog *, unsigned, const char *, struct slre_loot *);
 void slre_free(struct slre_prog *prog);
 
+int slre_match(const char *re, unsigned int, const char *, struct slre_loot *);
 int slre_replace(struct slre_loot *loot, const char *src, const char *replace,
                  struct slre_loot *dst);
 
