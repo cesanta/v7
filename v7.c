@@ -1589,7 +1589,6 @@ V7_PRIVATE struct v7_val v7_str_to_val(const char *buf) {
 }
 
 V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
-  int res;
   double an, bn;
   const struct v7_string *as, *bs;
 
