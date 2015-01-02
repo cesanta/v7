@@ -1021,7 +1021,7 @@ V7_EXTERN struct v7_val s_file;
 extern "C" {
 #endif  /* __cplusplus */
 
-/* Regex compilation flags */
+/* Regex execution flags */
 #define SLRE_FLAG_G 1     /* Global - match in the whole string */
 #define SLRE_FLAG_I 2     /* Ignore case */
 #define SLRE_FLAG_M 4     /* Multiline */
@@ -1065,10 +1065,10 @@ enum slre_error {
 };
 
 int slre_compile(const char *regexp, struct slre_prog **);
-int slre_exec(struct slre_prog *prog, unsigned char flags, const char *string,
-              struct slre_loot *loot);
+int slre_exec(struct slre_prog *, unsigned, const char *, struct slre_loot *);
 void slre_free(struct slre_prog *prog);
 
+int slre_match(const char *re, unsigned int, const char *, struct slre_loot *);
 int slre_replace(struct slre_loot *loot, const char *src, const char *replace,
                  struct slre_loot *dst);
 
@@ -10641,7 +10641,7 @@ static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
   if (!(thr = 0)) continue
 
 static unsigned char re_match(struct slre_instruction *pc, const char *start,
-                              const char *bol, unsigned char flags,
+                              const char *bol, unsigned int flags,
                               struct slre_loot *loot) {
   struct slre_thread threads[SLRE_MAX_THREADS];
   struct slre_loot sub, tmpsub;
@@ -10791,7 +10791,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   return 0;
 }
 
-int slre_exec(struct slre_prog *prog, unsigned char flags, const char *start,
+int slre_exec(struct slre_prog *prog, unsigned int flags, const char *start,
               struct slre_loot *loot) {
   struct slre_loot tmpsub;
   const char *st = start;
@@ -10891,37 +10891,57 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
   return size;
 }
 
+int slre_match(const char *re, unsigned int flags, const char *str,
+               struct slre_loot *loot) {
+  struct slre_prog *prog = NULL;
+  int res;
+
+  if ((res = slre_compile(re, &prog)) == SLRE_OK) {
+    res = slre_exec(prog, flags, str, loot);
+    slre_free(prog);
+  }
+
+  return res;
+}
+
+
 #ifdef SLRE_TEST
 
-static int re_replace(struct slre_loot *loot, const char *src, const char *rstr,
-                      char **dst) {
-  struct slre_loot newsub;
-  struct slre_cap *t = newsub.caps;
-  char *d;
-  int osz = slre_replace(loot, src, rstr, &newsub);
-  int i = newsub.num_captures;
-  if (osz < 0) {
-    printf("slre_replace return: '%s'\n", SLRE_osz);
-    return 0;
-  }
-  *dst = NULL;
-  if (osz) *dst = SLRE_MALLOC(osz + 1);
-  if (!*dst) return 0;
-  d = *dst;
-  do {
-    size_t len = t->end - t->start;
-    memcpy(d, t->start, len);
-    d += len;
-    t++;
-  } while (--i);
-  *d = '\0';
-  return osz;
+#include <errno.h>
+
+static const char *err_code_to_str(int err_code) {
+  static const char *ar[] = {
+    "no error",
+    "invalid decimal digit",
+    "invalid hex digit",
+    "invalid escape character",
+    "invalid unterminated escape sequence",
+    "syntax error",
+    "unmatched left parenthesis",
+    "unmatched right parenthesis",
+    "numeric overflow",
+    "infinite loop empty string",
+    "too many charsets",
+    "invalid charset range",
+    "charset is too large",
+    "malformed charset",
+    "invalid back reference",
+    "too many captures",
+    "invalid quantifier",
+    "bad character after $"
+  };
+
+  typedef char static_assertion_err_codes_out_of_sync[2 *
+    !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -1];
+
+  return err_code >= 0 && err_code < (int) (sizeof(ar) / sizeof(ar[0])) ?
+    ar[err_code] : "invalid error code";
 }
 
 #define RE_TEST_STR_SIZE 2000
 
-static unsigned char get_flags(const char *ch) {
-  unsigned char flags = 0;
+static unsigned get_flags(const char *ch) {
+  unsigned int flags = 0;
 
   while (*ch != '\0') {
     switch (*ch) {
@@ -10935,173 +10955,113 @@ static unsigned char get_flags(const char *ch) {
   return flags;
 }
 
-static void usage(void) {
-  printf(
-      "usage: regex_test.exe \"pattern\" [\"flags: gimr\"[ \"source\"[ "
-      "\"replaceStr\"]]]\n   or: regex_test.exe -f file_path [>out.txt]\n");
+static void show_usage_and_exit(char *argv[]) {
+  fprintf(stderr, "Usage: %s [OPTIONS]\n", argv[0]);
+  fprintf(stderr, "%s\n", "OPTIONS:");
+  fprintf(stderr, "%s\n", "  -p <regex_pattern>     Regex pattern");
+  fprintf(stderr, "%s\n", "  -o <regex_flags>       Combination of g,i,m");
+  fprintf(stderr, "%s\n", "  -s <string>            String to match");
+  fprintf(stderr, "%s\n", "  -f <file_name>         Match lines from file");
+  fprintf(stderr, "%s\n", "  -n <cap_no>            Show given capture");
+  fprintf(stderr, "%s\n", "  -r <replace_str>       Replace given capture");
+  fprintf(stderr, "%s\n", "  -v                     Show verbose stats");
+  exit(1);
+}
+
+static int process_line(struct slre_prog *pr, const char *flags,
+                        const char *line, const char *cap_no,
+                        const char *replace, const char *verbose) {
+  struct slre_loot loot;
+  unsigned int fl = flags == NULL ? 0 : get_flags(flags);
+  int i, n = cap_no == NULL ? -1 : atoi(cap_no), err_code = 0;
+  struct slre_cap *cap = &loot.caps[n];
+
+  err_code = slre_exec(pr, fl, line, &loot);
+  if (err_code == SLRE_OK) {
+    if (n >= 0 && n < loot.num_captures && replace != NULL) {
+      struct slre_cap *cap = &loot.caps[n];
+      printf("%.*s", (int) (cap->start - line), line);
+      printf("%s", replace);
+      printf("%.*s", (int) ((line + strlen(line)) - cap->end), cap->end);
+    } else if (n >= 0 && n < loot.num_captures) {
+      printf("%.*s\n", (int) (cap->end - cap->start), cap->start);
+    }
+
+    if (verbose != NULL) {
+      fprintf(stderr, "%s\n", "Captures:");
+      for (i = 0; i < loot.num_captures; i++) {
+        fprintf(stderr, "%d [%.*s]\n", i,
+                (int) (loot.caps[i].end - loot.caps[i].start),
+                loot.caps[i].start);
+      }
+    }
+  }
+
+  return err_code;
 }
 
 int main(int argc, char **argv) {
-  const char *src;
-  char *dst, flags;
-  const char *rstr;
-  const char *error;
-  struct slre_prog *pr;
-  struct slre_loot sub;
-  unsigned int i, k = 0;
+  const char *str = NULL, *pattern = NULL, *replace = NULL;
+  const char *flags = NULL, *file_name = NULL, *cap_no = NULL, *verbose = NULL;
+  struct slre_prog *pr = NULL;
+  int i, err_code = 0;
 
-  if (argc > 1) {
-    if (strcmp(argv[1], "-f") == 0) {
-      FILE *fp;
-      char str[RE_TEST_STR_SIZE];
-      long file_size;
-      if (argc < 3) {
-        usage();
-        return 0;
+  /* Execute inline code */
+  for (i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) {
+      pattern = argv[++i];
+    } else if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) {
+      flags = argv[++i];
+    } else if (strcmp(argv[i], "-s") == 0 && i + 1 < argc) {
+      str = argv[++i];
+    } else if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
+      file_name = argv[++i];
+    } else if (strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
+      cap_no = argv[++i];
+    } else if (strcmp(argv[i], "-r") == 0 && i + 1 < argc) {
+      replace = argv[++i];
+    } else if (strcmp(argv[i], "-v") == 0) {
+      verbose = "";
+    } else if (strcmp(argv[i], "-h") == 0) {
+      show_usage_and_exit(argv);
+    } else {
+      show_usage_and_exit(argv);
+    }
+  }
+
+  if (pattern == NULL) {
+    fprintf(stderr, "%s\n", "-p option is mandatory");
+    exit(1);
+  } else if ((err_code = slre_compile(pattern, &pr)) != SLRE_OK) {
+    fprintf(stderr, "slre_compile(%s): %s\n",
+            argv[0], err_code_to_str(err_code));
+    exit(1);
+  } else if (str != NULL) {
+    err_code = process_line(pr, flags, str, cap_no, replace, verbose);
+  } else if (file_name != NULL) {
+    FILE *fp = strcmp(file_name, "-") == 0 ? stdin : fopen(file_name, "rb");
+    char line[20 * 1024];
+    if (fp == NULL) {
+      fprintf(stderr, "Cannot open %s: %s\n", file_name, strerror(errno));
+      exit(1);
+    } else {
+      /* Return success if at least one line matches */
+      err_code = 1;
+      while (fgets(line, sizeof(line), fp) != NULL) {
+        if (process_line(pr, flags, line, cap_no, replace,
+            verbose) == SLRE_OK) {
+          err_code = 0;
+        }
       }
-      if ((fp = fopen(argv[2], "r")) == NULL) {
-        printf("file: \"%s\" not found", argv[2]);
-      } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
-        fclose(fp);
-      } else {
-        rewind(fp);
-        while (fgets(str, RE_TEST_STR_SIZE, fp)) {
-          char *patt = NULL, *fl_str = NULL, *curr = str, *beg = NULL;
-          src = rstr = NULL;
-          k++;
-          if ((curr = strchr(curr, '"')) == NULL) continue;
-          beg = ++curr;
-          while (*curr) {
-            if ((curr = strchr(curr, '"')) == NULL) break;
-            if (*(curr + 1) == ' ' || *(curr + 1) == '\r' ||
-                *(curr + 1) == '\n' || *(curr + 1) == '\0')
-              break;
-            curr++;
-          }
-          if (curr == NULL || *curr == '\0') return 1;
-          *curr = '\0';
-          patt = beg;
-
-          if ((curr = strchr(++curr, '"'))) {
-            beg = ++curr;
-            while (*curr) {
-              if ((curr = strchr(curr, '"')) == NULL) break;
-              if (*(curr + 1) == ' ' || *(curr + 1) == '\r' ||
-                  *(curr + 1) == '\n' || *(curr + 1) == '\0')
-                break;
-              curr++;
-            }
-            if (curr != NULL && *curr != '\0') {
-              *curr = '\0';
-              fl_str = beg;
-              if ((curr = strchr(++curr, '"'))) {
-                beg = ++curr;
-                while (*curr) {
-                  if ((curr = strchr(curr, '"')) == NULL) break;
-                  if (*(curr + 1) == ' ' || *(curr + 1) == '\r' ||
-                      *(curr + 1) == '\n' || *(curr + 1) == '\0')
-                    break;
-                  curr++;
-                }
-                if (curr != NULL && *curr != '\0') {
-                  *curr = '\0';
-                  src = beg;
-                  if ((curr = strchr(++curr, '"'))) {
-                    beg = ++curr;
-                    while (*curr) {
-                      if ((curr = strchr(curr, '"')) == NULL) break;
-                      if (*(curr + 1) == ' ' || *(curr + 1) == '\r' ||
-                          *(curr + 1) == '\n' || *(curr + 1) == '\0')
-                        break;
-                      curr++;
-                    }
-                    if (curr != NULL && *curr != '\0') {
-                      *curr = '\0';
-                      rstr = beg;
-                    }
-                  }
-                }
-              }
-            }
-          }
-          if (patt) {
-            if (k > 1) puts("");
-            printf("%03d: \"%s\"", k, patt);
-            if (fl_str) {
-              printf(" \"%s\"", fl_str);
-              flags = get_flags(fl_str);
-            }
-            if (src) printf(" \"%s\"", src);
-            if (rstr) printf(" \"%s\"", rstr);
-            printf("\n");
-            pr = re_compiler(patt, flags, &error);
-            if (!pr) {
-              printf("re_compiler: %s\n", error);
-              return 1;
-            }
-            printf("number of subexpressions = %d\n", pr->num_captures);
-            if (src) {
-              if (!slre_exec(pr, flags, src, &sub)) {
-                for (i = 0; i < sub.num_captures; ++i) {
-                  int n = sub.caps[i].end - sub.caps[i].start;
-                  if (n > 0)
-                    printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n",
-                           i, (int)(sub.caps[i].start - src),
-                           (int)(sub.caps[i].end - src), n, n, sub.caps[i].start);
-                  else
-                    printf("match: %-3d ''\n", i);
-                }
-
-                if (rstr) {
-                  if (re_replace(&sub, src, rstr, &dst)) {
-                    printf("output: \"%s\"\n", dst);
-                  }
-                }
-              } else
-                printf("no match\n");
-            }
-            slre_free(pr);
-          }
-        }
-        fclose(fp);
-      }
-      return 0;
+      fclose(fp);   /* If fp == stdin, it is safe to close, too */
     }
+  } else {
+    fprintf(stderr, "%s\n", "Please specify one of -s or -f options");
+    exit(1);
+  }
+  slre_free(pr);
 
-    if (argc > 2) flags = get_flags(argv[2]);
-    pr = re_compiler(argv[1], flags, &error);
-    if (!pr) {
-      fprintf(stderr, "re_compiler: %s\n", error);
-      return 1;
-    }
-    printf("number of subexpressions = %d\n", pr->num_captures);
-    if (argc > 3) {
-      src = argv[3];
-      if (!slre_exec(pr, flags, src, &sub)) {
-        for (i = 0; i < sub.num_captures; ++i) {
-          int n = sub.caps[i].end - sub.caps[i].start;
-          if (n > 0)
-            printf("match: %-3d start:%-3d end:%-3d size:%-3d '%.*s'\n", i,
-                   (int)(sub.caps[i].start - src), (int)(sub.caps[i].end - src),
-                   n, n, sub.caps[i].start);
-          else
-            printf("match: %-3d ''\n", i);
-        }
-
-        if (argc > 4) {
-          rstr = argv[4];
-          if (re_replace(&sub, src, rstr, &dst)) {
-            printf("output: \"%s\"\n\n", dst);
-          }
-        }
-      } else
-        printf("no match\n");
-      slre_free(pr);
-    }
-  } else
-    usage();
-
-  return 0;
+  return err_code;
 }
 #endif  /* SLRE_TEST */
 /*
