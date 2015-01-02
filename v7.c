@@ -1592,28 +1592,13 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
   int res;
   double an, bn;
   const struct v7_string *as, *bs;
-  struct v7_val ta = MKOBJ(0), tb = MKOBJ(0);
 
   if (a == NULL || b == NULL) return 1;
+  if (a->type != b->type) return 1;
+
   if ((a->type == V7_TYPE_UNDEF || a->type == V7_TYPE_NULL) &&
       (b->type == V7_TYPE_UNDEF || b->type == V7_TYPE_NULL))
     return 0;
-
-  if (is_num(a) && is_num(b)) {
-    v7_init_num(&ta, a->v.num);
-    v7_init_num(&tb, b->v.num);
-    a = &ta;
-    b = &tb;
-  }
-
-  if (is_string(a) && is_string(b)) {
-    v7_init_str(&ta, a->v.str.buf, a->v.str.len, 0);
-    v7_init_str(&tb, b->v.str.buf, b->v.str.len, 0);
-    a = &ta;
-    b = &tb;
-  }
-
-  if (a->type != b->type) return 1;
 
   an = a->v.num, bn = b->v.num;
   as = &a->v.str, bs = &b->v.str;
@@ -1624,9 +1609,7 @@ V7_PRIVATE int cmp(const struct v7_val *a, const struct v7_val *b) {
     case V7_TYPE_BOOL:
       return an != bn;
     case V7_TYPE_STR:
-      res = memcmp(as->buf, bs->buf, as->len < bs->len ? as->len : bs->len);
-      return res != 0 ? res : (int) as->len - (int) bs->len;
-      return as->len != bs->len || memcmp(as->buf, bs->buf, as->len) != 0;
+      return (as->len != bs->len) || (memcmp(as->buf, bs->buf, as->len) != 0);
     default:
       return (int) (a - b);
   }
