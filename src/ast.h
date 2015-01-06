@@ -125,12 +125,8 @@ enum ast_tag {
   AST_MAX_TAG
 };
 
-#define AST_SIZE_MULTIPLIER (1.5)
-
 struct ast {
-  char *buf;
-  size_t len;
-  size_t size;
+  struct mbuf mbuf;
 };
 
 typedef unsigned long ast_off_t;
@@ -144,13 +140,6 @@ struct ast_node_def {
 };
 extern const struct ast_node_def ast_node_defs[];
 
-V7_PRIVATE void ast_init(struct ast *, size_t);
-V7_PRIVATE void ast_free(struct ast *);
-V7_PRIVATE void ast_resize(struct ast *, size_t);
-V7_PRIVATE void ast_trim(struct ast *);
-V7_PRIVATE size_t ast_insert(struct ast *, size_t, const char *, size_t);
-V7_PRIVATE size_t ast_append(struct ast *, const char *, size_t);
-
 enum ast_which_skip {
   AST_END_SKIP = 0,
   AST_FOR_BODY_SKIP = 1,
@@ -162,6 +151,9 @@ enum ast_which_skip {
   AST_SWITCH_DEFAULT_SKIP = 1
 };
 
+V7_PRIVATE void ast_init(struct ast *, size_t);
+V7_PRIVATE void ast_optimize(struct ast *);
+V7_PRIVATE void ast_free(struct ast *);
 V7_PRIVATE ast_off_t ast_add_node(struct ast *, enum ast_tag);
 V7_PRIVATE ast_off_t ast_insert_node(struct ast *, ast_off_t, enum ast_tag);
 V7_PRIVATE ast_off_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);

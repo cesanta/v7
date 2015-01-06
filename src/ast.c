@@ -407,92 +407,6 @@ V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p) {
   return llen;
 }
 
-/* Initializes an AST buffer. */
-V7_PRIVATE void ast_init(struct ast *ast, size_t initial_size) {
-  ast->len = ast->size = 0;
-  ast->buf = NULL;
-  ast_resize(ast, initial_size);
-}
-
-/* Frees the space allocated for the iobuffer and resets the iobuf structure. */
-V7_PRIVATE void ast_free(struct ast *ast) {
-  if (ast->buf != NULL) {
-    free(ast->buf);
-    ast_init(ast, 0);
-  }
-}
-
-/*
- * Resize an AST buffer.
- *
- * If `new_size` is smaller than buffer's `len`, the
- * resize is not performed.
- */
-V7_PRIVATE void ast_resize(struct ast *a, size_t new_size) {
-  char *p;
-  if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
-      (p = (char *) realloc(a->buf, new_size)) != NULL) {
-    a->size = new_size;
-    a->buf = p;
-  }
-}
-
-/* Shrinks the ast size to just fit it's length. */
-V7_PRIVATE void ast_trim(struct ast *ast) {
-  ast_resize(ast, ast->len);
-}
-
-/*
- * Appends data to the AST.
- *
- * It returns the amount of bytes appended.
- */
-V7_PRIVATE size_t ast_append(struct ast *a, const char *buf, size_t len) {
-  return ast_insert(a, a->len, buf, len);
-}
-
-/*
- * Inserts data at a specified offset in the AST.
- *
- * Existing data will be shifted forwards and the buffer will
- * be grown if necessary.
- * It returns the amount of bytes inserted.
- */
-V7_PRIVATE size_t ast_insert(struct ast *a, size_t off, const char *buf,
-                             size_t len) {
-  char *p = NULL;
-
-  assert(a != NULL);
-  assert(a->len <= a->size);
-  assert(off <= a->len);
-
-  /* check overflow */
-  if (~(size_t)0 - (size_t)a->buf < len)
-    return 0;
-
-  if (a->len + len <= a->size) {
-    memmove(a->buf + off + len, a->buf + off, a->len - off);
-    if (buf != NULL) {
-      memcpy(a->buf + off, buf, len);
-    }
-    a->len += len;
-  } else if ((p = (char *)
-              realloc(a->buf,
-                      (a->len + len) * AST_SIZE_MULTIPLIER)) != NULL) {
-    a->buf = p;
-    memmove(a->buf + off + len, a->buf + off, a->len - off);
-    if (buf != NULL) {
-      memcpy(a->buf + off, buf, len);
-    }
-    a->len += len;
-    a->size = a->len * AST_SIZE_MULTIPLIER;
-  } else {
-    len = 0;
-  }
-
-  return len;
-}
-
 /*
  * Begins an AST node by appending a tag to the AST.
  *
@@ -505,14 +419,14 @@ V7_PRIVATE size_t ast_insert(struct ast *a, size_t off, const char *buf,
  * This offset can be passed to `ast_set_skip`.
  */
 V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
-  ast_off_t start = a->len;
+  ast_off_t start = a->mbuf.len;
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
 
-  ast_append(a, (char *)&t, sizeof(t));
-  ast_append(a, NULL, sizeof(ast_skip_t) * d->num_skips);
+  mbuf_append(&a->mbuf, (char *)&t, sizeof(t));
+  mbuf_append(&a->mbuf, NULL, sizeof(ast_skip_t) * d->num_skips);
   return start + 1;
 }
 
@@ -523,8 +437,8 @@ V7_PRIVATE ast_off_t ast_insert_node(struct ast *a, ast_off_t start,
 
   assert(tag < AST_MAX_TAG);
 
-  ast_insert(a, start, NULL, sizeof(ast_skip_t) * d->num_skips);
-  ast_insert(a, start, (char *)&t, sizeof(t));
+  mbuf_insert(&a->mbuf, start, NULL, sizeof(ast_skip_t) * d->num_skips);
+  mbuf_insert(&a->mbuf, start, (char *)&t, sizeof(t));
 
   if (d->num_skips) {
     ast_set_skip(a, start + 1, AST_END_SKIP);
@@ -553,9 +467,9 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  */
 V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
                                   enum ast_which_skip skip) {
-  uint8_t *p = (uint8_t *) a->buf + start + skip * sizeof(ast_skip_t);
-  uint16_t delta = a->len - start;
-  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->buf + start - 1);
+  uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
+  uint16_t delta = a->mbuf.len - start;
+  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
   /* assertion, to be optimizable out */
@@ -563,17 +477,17 @@ V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
 
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
-  return a->len;
+  return a->mbuf.len;
 }
 
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
                                   enum ast_which_skip skip) {
-  uint8_t * p = (uint8_t *) a->buf + pos + skip * sizeof(ast_skip_t);
+  uint8_t * p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
-  return (enum ast_tag) (uint8_t) * (a->buf + (*pos)++);
+  return (enum ast_tag) (uint8_t) * (a->mbuf.buf + (*pos)++);
 }
 
 /*
@@ -582,12 +496,12 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
  * TODO(mkm): add doc, find better name.
  */
 V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
-  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->buf + *pos - 1);
+  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
   if (def->has_varint) {
     v7_strlen_t slen;
     int llen;
-    slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
+    slen = decode_string_len((unsigned char *) a->mbuf.buf + *pos, &llen);
     *pos += llen;
     if (def->has_inlined) {
       *pos += slen;
@@ -601,11 +515,11 @@ static void ast_set_string(struct ast *a, ast_off_t off, const char *name,
                            size_t len) {
   /* Encode string length first */
   int n = calc_llen(len);   /* Calculate how many bytes length occupies */
-  ast_insert(a, off, "    ", n);  /* Allocate  buffer for length in the AST */
-  encode_varint(len, (unsigned char *) a->buf + off);   /* Write length */
+  mbuf_insert(&a->mbuf, off, "    ", n);  /* Allocate  buffer for length in the AST */
+  encode_varint(len, (unsigned char *) a->mbuf.buf + off);   /* Write length */
 
   /* Now copy the string itself */
-  ast_insert(a, off + n, name, len);
+  mbuf_insert(&a->mbuf, off + n, name, len);
 }
 
 /* Helper to add a node with inlined data. */
@@ -627,11 +541,11 @@ V7_PRIVATE ast_off_t ast_get_inlined_data(struct ast *a, ast_off_t pos,
                                           char *buf, size_t buf_len) {
   v7_strlen_t slen;
   int llen;
-  slen = decode_string_len((unsigned char *) a->buf + pos, &llen);
+  slen = decode_string_len((unsigned char *) a->mbuf.buf + pos, &llen);
   if (slen >= buf_len) {
     slen = buf_len - 1;
   }
-  memcpy(buf, a->buf + pos + llen, slen);
+  memcpy(buf, a->mbuf.buf + pos + llen, slen);
   buf[slen] = 0;
   return slen;
 }
@@ -670,8 +584,8 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   fprintf(fp, "%s", def->name);
 
   if (def->has_inlined) {
-    slen = decode_string_len((unsigned char *) a->buf + *pos, &llen);
-    fprintf(fp, " %.*s\n", (int) slen, a->buf + *pos + llen);
+    slen = decode_string_len((unsigned char *) a->mbuf.buf + *pos, &llen);
+    fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + *pos + llen);
   } else {
     fprintf(fp, "\n");
   }
@@ -702,6 +616,18 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
       ast_dump_tree(fp, a, pos, depth + 1);
     }
   }
+}
+
+V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
+  mbuf_init(&ast->mbuf, len);
+}
+
+V7_PRIVATE void ast_optimize(struct ast *ast) {
+  mbuf_trim(&ast->mbuf);
+}
+
+V7_PRIVATE void ast_free(struct ast *ast) {
+  mbuf_free(&ast->mbuf);
 }
 
 /* Dumps an AST to stdout. */

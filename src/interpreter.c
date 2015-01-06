@@ -347,7 +347,7 @@ V7_PRIVATE struct v7_value *v7_exec_2(struct v7 *v7, const char* src) {
     printf("Error parsing\n");
     return NULL;
   }
-  ast_trim(&a);
+  ast_optimize(&a);
 
 #if 0
   ast_dump(stdout, &a, 0);

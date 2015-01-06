@@ -131,12 +131,13 @@ int v7_to_json(struct v7 *v7, struct v7_value *v, char *buf, size_t size) {
 
 int v7_stringify_value(struct v7 *v7, struct v7_value *v, char *buf,
                        size_t size) {
+  char *b;
   if (v->type == V7_TYPE_STRING) {
     v7_strlen_t len = v->value.string.len;
     if (len > size - 1) {
       len = size - 1;
     }
-    char *b = stpncpy(buf, v->value.string.buf, len);
+    b = stpncpy(buf, v->value.string.buf, len);
     buf[v->value.string.len] = '\0';
     return b - buf;
   } else {

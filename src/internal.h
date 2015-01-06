@@ -34,6 +34,7 @@
 
 /* Private API */
 #include "utf.h"
+#include "mbuf.h"
 #include "tokenizer.h"
 #include "slre.h"
 
