@@ -1119,6 +1119,21 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec_2(v7, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
 
+  ASSERT((v = v7_exec_2(v7, "(function(a) {return a})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(a)]"));
+  ASSERT((v = v7_exec_2(v7, "(function() {var x=1,y=2; return x})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(){var x,y}]"));
+  ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1,y=2; return x})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(a){var x,y}]"));
+  ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1,y=2; return x; var z})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
+  ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1; for(var y in x){}; var z})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
+  ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1; for(var y=0;y<x;y++){}; var z})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
+  ASSERT((v = v7_exec_2(v7, "function square(x){return x*x;}")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function square(x)]"));
+
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));

@@ -263,6 +263,7 @@ struct v7 {
   enum v7_tok cur_tok;     /* Current token */
   const char *tok;         /* Parsed terminal token (ident, number, string) */
   unsigned long tok_len;   /* Length of the parsed terminal token */
+  size_t last_var_node;    /* Offset of last var node or function/script node */
   int after_newline;       /* True if the cur_tok starts a new line */
   double cur_tok_dbl;
 

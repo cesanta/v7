@@ -142,12 +142,15 @@ extern const struct ast_node_def ast_node_defs[];
 
 enum ast_which_skip {
   AST_END_SKIP = 0,
+  AST_VAR_NEXT_SKIP = 1,
+  AST_SCRIPT_FIRST_VAR_SKIP = AST_VAR_NEXT_SKIP,
   AST_FOR_BODY_SKIP = 1,
   AST_DO_WHILE_COND_SKIP = 1,
   AST_END_IF_TRUE_SKIP = 1,
   AST_TRY_CATCH_SKIP = 1,
   AST_TRY_FINALLY_SKIP = 2,
-  AST_FUNC_BODY_SKIP = 1,
+  AST_FUNC_FIRST_VAR_SKIP = AST_VAR_NEXT_SKIP,
+  AST_FUNC_BODY_SKIP = 2,
   AST_SWITCH_DEFAULT_SKIP = 1
 };
 
@@ -158,6 +161,8 @@ V7_PRIVATE ast_off_t ast_add_node(struct ast *, enum ast_tag);
 V7_PRIVATE ast_off_t ast_insert_node(struct ast *, ast_off_t, enum ast_tag);
 V7_PRIVATE ast_off_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
+V7_PRIVATE ast_off_t ast_modify_skip(struct ast *, ast_off_t, ast_off_t,
+                                     enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
@@ -173,6 +178,7 @@ V7_PRIVATE ast_off_t ast_get_inlined_data(struct ast *, ast_off_t, char *,
                                           size_t);
 V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
 
+V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
 #if defined(__cplusplus)
