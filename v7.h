@@ -52,6 +52,7 @@ enum v7_type {
   V7_TYPE_BOOLEAN,
   V7_TYPE_NUMBER,
   V7_TYPE_STRING,
+  V7_TYPE_FOREIGN,
 
   /* Different classes of Object type */
   V7_TYPE_GENERIC_OBJECT,
