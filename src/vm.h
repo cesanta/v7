@@ -19,7 +19,6 @@ extern "C" {
 #endif  /* __cplusplus */
 
 /* Forward declarations */
-struct v7_ast;    /* V7 Abstract Syntax Tree. */
 struct v7_arg;    /* C/JavaScript function parameters */
 struct v7_object;
 

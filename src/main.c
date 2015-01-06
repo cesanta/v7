@@ -41,7 +41,7 @@ static void dump_ast(const char *code, int binary) {
   if (aparse(&ast, code, 1) != V7_OK) {
     fprintf(stderr, "%s\n", "parse error");
   } else if (binary) {
-    fwrite(ast.buf, ast.len, 1, stdout);
+    fwrite(ast.mbuf.buf, ast.mbuf.len, 1, stdout);
   } else {
     ast_dump(stdout, &ast, 0);
   }

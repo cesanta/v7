@@ -219,7 +219,7 @@ static enum v7_err aparse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
 }
 
 static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->len;
+  ast_off_t pos = a->mbuf.len;
   PARSE(newexpr);
 
   for (;;) {
@@ -235,7 +235,7 @@ static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->len;
+  ast_off_t pos = a->mbuf.len;
   PARSE(newexpr);
 
   for (;;) {
@@ -257,7 +257,7 @@ static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err aparse_postfix(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->len;
+  ast_off_t pos = a->mbuf.len;
   PARSE(callexpr);
 
   if (v7->after_newline) {
@@ -353,7 +353,7 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
   if (level == (int) ARRAY_SIZE(levels) - 1) {
     PARSE(prefix);
   } else {
-    TRY(aparse_binary(v7, a, level + 1, a->len));
+    TRY(aparse_binary(v7, a, level + 1, a->mbuf.len));
   }
 
   for (i = 0; i < levels[level].len; i++) {
@@ -381,7 +381,7 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
           ast_insert_node(a, pos, ast);
           TRY(aparse_binary(v7, a, level, pos));
         } else {
-          TRY(aparse_binary(v7, a, level, a->len));
+          TRY(aparse_binary(v7, a, level, a->mbuf.len));
           ast_insert_node(a, pos, ast);
         }
       }
@@ -392,11 +392,11 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
 }
 
 static enum v7_err aparse_assign(struct v7 *v7, struct ast *a) {
-  return aparse_binary(v7, a, 0, a->len);
+  return aparse_binary(v7, a, 0, a->mbuf.len);
 }
 
 static enum v7_err aparse_expression(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->len;
+  ast_off_t pos = a->mbuf.len;
   int group = 0;
   do {
     PARSE(assign);
@@ -479,7 +479,7 @@ static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
-  ast_off_t start = a->len;
+  ast_off_t start = a->mbuf.len;
   EXPECT(TOK_OPEN_PAREN);
 
   if(aparse_optional(v7, a, TOK_SEMICOLON)) {
