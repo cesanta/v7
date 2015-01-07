@@ -232,10 +232,10 @@ struct v7_pstate {
 /* TODO(lsm): move VM definitions to vm.h */
 #ifndef VM_H_INCLUDED
 #define V7_VALUE_DEFINED
-typedef uint64_t v7_value_t;
+typedef uint64_t val_t;
 #endif
 struct v7 {
-  v7_value_t global_object;
+  val_t global_object;
   struct v7_object *object_prototype;
   struct v7_object *array_prototype;
 
@@ -249,7 +249,7 @@ struct v7 {
    * Execution contexts should be allocated on heap, because they might not be
    * on a call stack but still referenced (closures).
    */
-  v7_value_t call_stack;
+  val_t call_stack;
 
   /* TODO(lsm): after refactoring is made, kill everything below this line */
   struct v7_val root_scope; /* "global" object (root-level execution context) */

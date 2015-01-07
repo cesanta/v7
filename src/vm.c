@@ -5,7 +5,7 @@
 
 #include "internal.h"
 
-enum v7_type v7_value_type(struct v7 *v7, v7_value_t v) {
+enum v7_type val_type(struct v7 *v7, val_t v) {
   if (v7_is_double(v)) {
     return V7_TYPE_NUMBER;
   }
@@ -18,7 +18,7 @@ enum v7_type v7_value_type(struct v7 *v7, v7_value_t v) {
     case V7_TAG_UNDEFINED:
       return V7_TYPE_UNDEFINED;
     case V7_TAG_OBJECT:
-      if (v7_value_to_object(v)->prototype == v7->array_prototype) {
+      if (val_to_object(v)->prototype == v7->array_prototype) {
         return V7_TYPE_ARRAY_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
@@ -33,77 +33,77 @@ enum v7_type v7_value_type(struct v7 *v7, v7_value_t v) {
   }
 }
 
-int v7_is_double(v7_value_t v) {
-  v7_value_t nan;
+int v7_is_double(val_t v) {
+  val_t nan;
   V7_SET_NAN(nan);
-  return !(isnan(v7_value_to_double(v)) && v != nan);
+  return !(isnan(val_to_double(v)) && v != nan);
 }
 
-int v7_is_object(v7_value_t v) {
+int v7_is_object(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_OBJECT;
 }
 
-int v7_is_string(v7_value_t v) {
+int v7_is_string(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_STRING;
 }
 
-int v7_is_boolean(v7_value_t v) {
+int v7_is_boolean(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN;
 }
 
-int v7_is_null(v7_value_t v) {
+int v7_is_null(val_t v) {
   return v == V7_NULL;
 }
 
-int v7_is_undefined(v7_value_t v) {
+int v7_is_undefined(val_t v) {
   return v == V7_UNDEFINED;
 }
 
-V7_PRIVATE v7_value_t v7_pointer_to_value(void *p) {
+V7_PRIVATE val_t v7_pointer_to_value(void *p) {
   return ((uint64_t) p & ((1L << 48) -1));
 }
 
-V7_PRIVATE void *v7_value_to_pointer(v7_value_t v) {
+V7_PRIVATE void *val_to_pointer(val_t v) {
   struct {
     uint64_t s:48;
   } h;
   return (void *) (uintptr_t) (h.s = v);
 }
 
-v7_value_t v7_object_to_value(struct v7_object *o) {
+val_t v7_object_to_value(struct v7_object *o) {
   return v7_pointer_to_value(o) | V7_TAG_OBJECT;
 }
 
-struct v7_object *v7_value_to_object(v7_value_t v) {
-  return (struct v7_object *) v7_value_to_pointer(v);
+struct v7_object *val_to_object(val_t v) {
+  return (struct v7_object *) val_to_pointer(v);
 }
 
-v7_value_t v7_string_to_value(struct v7_str *s) {
+val_t v7_string_to_value(struct v7_str *s) {
   return v7_pointer_to_value(s) | V7_TAG_STRING;
 }
 
-struct v7_str *v7_value_to_string(v7_value_t v) {
-  return (struct v7_str *) v7_value_to_pointer(v);
+struct v7_str *val_to_string(val_t v) {
+  return (struct v7_str *) val_to_pointer(v);
 }
 
-v7_value_t v7_foreign_to_value(void *p) {
+val_t v7_foreign_to_value(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
-void *v7_value_to_foreign(v7_value_t v) {
-  return v7_value_to_pointer(v);
+void *val_to_foreign(val_t v) {
+  return val_to_pointer(v);
 }
 
-v7_value_t v7_boolean_to_value(int v) {
+val_t v7_boolean_to_value(int v) {
   return (!!v) | V7_TAG_BOOLEAN;
 }
 
-int v7_value_to_boolean(v7_value_t v) {
+int val_to_boolean(val_t v) {
   return v & 1;
 }
 
-v7_value_t v7_double_to_value(double v) {
-  v7_value_t res;
+val_t v7_double_to_value(double v) {
+  val_t res;
   /* not every NaN is a JS NaN */
   if (isnan(v)) {
     V7_SET_NAN(res);
@@ -113,11 +113,11 @@ v7_value_t v7_double_to_value(double v) {
   return res;
 }
 
-double v7_value_to_double(v7_value_t v) {
+double val_to_double(val_t v) {
   return * (double *) &v;
 }
 
-static v7_value_t v7_create_object(struct v7 *v7, struct v7_object *proto) {
+static val_t v7_create_object(struct v7 *v7, struct v7_object *proto) {
   /* TODO(mkm): use GC heap */
   struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
   if (o == NULL) {
@@ -129,15 +129,15 @@ static v7_value_t v7_create_object(struct v7 *v7, struct v7_object *proto) {
   return v7_object_to_value(o);
 }
 
-v7_value_t v7_create_value(struct v7 *v7, enum v7_type type, ...) {
+val_t v7_create_value(struct v7 *v7, enum v7_type type, ...) {
   va_list ap;
   va_start(ap, type);
   return v7_va_create_value(v7, type, ap);
 }
 
-v7_value_t v7_va_create_value(struct v7 *v7, enum v7_type type,
+val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
                             va_list ap) {
-  v7_value_t v;
+  val_t v;
   const char *str;
 
   /* Initialize value based on type */
@@ -183,21 +183,21 @@ v7_value_t v7_va_create_value(struct v7 *v7, enum v7_type type,
   return v;
 }
 
-int v7_to_json(struct v7 *v7, v7_value_t v, char *buf, size_t size) {
+int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   /* TODO(mkm): call the toString method instead of custom C code. */
-  switch (v7_value_type(v7, v)) {
+  switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
       return stpncpy(buf, "null", size) - buf;
     case V7_TYPE_UNDEFINED:
       return stpncpy(buf, "undefined", size) - buf;
     case V7_TYPE_BOOLEAN:
       return stpncpy(buf,
-                     v7_value_to_boolean(v) ? "true" : "false", size) - buf;
+                     val_to_boolean(v) ? "true" : "false", size) - buf;
     case V7_TYPE_NUMBER:
-      return snprintf(buf, size, "%lg", v7_value_to_double(v));
+      return snprintf(buf, size, "%lg", val_to_double(v));
     case V7_TYPE_STRING:
       {
-        struct v7_str *str = v7_value_to_string(v);
+        struct v7_str *str = val_to_string(v);
         return snprintf(buf, size, "\"%.*s\"", (int) str->len, str->buf);
       }
     case V7_TYPE_GENERIC_OBJECT:
@@ -213,7 +213,7 @@ int v7_to_json(struct v7 *v7, v7_value_t v, char *buf, size_t size) {
         char *b = buf;
         struct v7_property *p;
         b += snprintf(b, size - (b - buf), "{");
-        for (p = v7_value_to_object(v)->properties;
+        for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
           b += snprintf(b, size - (b - buf), "\"%s\":", p->name);
           b += v7_to_json(v7, p->value, b, size - (b - buf));
@@ -230,11 +230,11 @@ int v7_to_json(struct v7 *v7, v7_value_t v, char *buf, size_t size) {
         char *b = buf;
         char key[512];
         size_t i, len;
-        v7_value_t lenv = v7_array_length(v7, v);
+        val_t lenv = v7_array_length(v7, v);
         if (lenv == V7_UNDEFINED) {
           return 0;
         }
-        len = (size_t) v7_value_to_double(lenv);
+        len = (size_t) val_to_double(lenv);
         b += snprintf(b, size - (b - buf), "[");
         for (i = 0; i < len; i++) {
           /* TODO */
@@ -255,11 +255,11 @@ int v7_to_json(struct v7 *v7, v7_value_t v, char *buf, size_t size) {
   }
 }
 
-int v7_stringify_value(struct v7 *v7, v7_value_t v, char *buf,
+int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
                        size_t size) {
   if (v7_is_string(v)) {
     char *b;
-    struct v7_str *str = v7_value_to_string(v);
+    struct v7_str *str = val_to_string(v);
     v7_strlen_t len = str->len;
     if (len > size - 1) {
       len = size - 1;
@@ -278,7 +278,7 @@ static struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-struct v7_property *v7_get_property(v7_value_t obj,
+struct v7_property *v7_get_property(val_t obj,
                                     const char *name,
                                     v7_strlen_t len) {
   struct v7_property *prop;
@@ -289,7 +289,7 @@ struct v7_property *v7_get_property(v7_value_t obj,
   if (len == (v7_strlen_t) -1) {
     len = strlen(name);
   }
-  for (prop = v7_value_to_object(obj)->properties; prop != NULL;
+  for (prop = val_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
     if (strncmp(prop->name, name, len) == 0) {
       return prop;
@@ -304,10 +304,10 @@ static void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
-int v7_set_property_value(struct v7 *v7, v7_value_t obj,
+int v7_set_property_value(struct v7 *v7, val_t obj,
                           const char *name, v7_strlen_t len,
                           unsigned int attributes,
-                          v7_value_t val) {
+                          val_t val) {
   struct v7_property *prop;
 
   if (!v7_is_object(obj)) {
@@ -319,8 +319,8 @@ int v7_set_property_value(struct v7 *v7, v7_value_t obj,
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;
     }
-    prop->next = v7_value_to_object(obj)->properties;
-    v7_value_to_object(obj)->properties = prop;
+    prop->next = val_to_object(obj)->properties;
+    val_to_object(obj)->properties = prop;
   }
 
   prop->attributes = attributes;
@@ -335,10 +335,10 @@ int v7_set_property_value(struct v7 *v7, v7_value_t obj,
   return 0;
 }
 
-int v7_set_property(struct v7 *v7, v7_value_t obj, const char *name,
+int v7_set_property(struct v7 *v7, val_t obj, const char *name,
                     v7_strlen_t len, unsigned int attributes,
                     enum v7_type type, ...) {
-  v7_value_t val;
+  val_t val;
   va_list ap;
   int res;
 
@@ -348,7 +348,7 @@ int v7_set_property(struct v7 *v7, v7_value_t obj, const char *name,
   return res;
 }
 
-int v7_del_property(v7_value_t obj, const char *name, v7_strlen_t len) {
+int v7_del_property(val_t obj, const char *name, v7_strlen_t len) {
   struct v7_property *prop, *prev;
 
   if (!v7_is_object(obj)) {
@@ -357,13 +357,13 @@ int v7_del_property(v7_value_t obj, const char *name, v7_strlen_t len) {
   if (len == (v7_strlen_t) ~0) {
     len = strlen(name);
   }
-  for (prev = NULL, prop = v7_value_to_object(obj)->properties; prop != NULL;
+  for (prev = NULL, prop = val_to_object(obj)->properties; prop != NULL;
        prev = prop, prop = prop->next) {
     if (strncmp(prop->name, name, len) == 0) {
       if (prev) {
         prev->next = prop->next;
       } else {
-        v7_value_to_object(obj)->properties = prop->next;
+        val_to_object(obj)->properties = prop->next;
       }
       v7_destroy_property(&prop);
       return 0;
@@ -372,23 +372,23 @@ int v7_del_property(v7_value_t obj, const char *name, v7_strlen_t len) {
   return -1;
 }
 
-V7_PRIVATE v7_value_t v7_property_value(struct v7_property *p) {
+V7_PRIVATE val_t v7_property_value(struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
   }
   return p->value;
 }
 
-V7_PRIVATE v7_value_t v7_array_length(struct v7 *v7, v7_value_t v) {
+V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *prop;
   long max = -1, k;
   char *end;
 
   /* TODO(mkm) new values don't have yet an array object type */
-  if (v7_value_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
+  if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
     return v7_create_value(v7, V7_TYPE_UNDEFINED);
   }
-  for (prop = v7_value_to_object(v)->properties; prop != NULL;
+  for (prop = val_to_object(v)->properties; prop != NULL;
        prop = prop->next) {
     k = strtol(prop->name, &end, 10);
     if (end != prop->name && k > max) {
