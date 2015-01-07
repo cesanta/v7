@@ -365,61 +365,6 @@ const struct ast_node_def ast_node_defs[] = {
 V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
 
 /*
- * Code and API based on Fossa IO buffers.
- * TODO(mkm): optimize to our specific use case or fully reuse fossa.
- */
-
-/*
- * Strings in AST are encoded as tuples (length, string).
- * Length is variable-length: if high bit is set in a byte, next byte is used.
- * Maximum string length with such encoding is 2 ^ (7 * 4) == 256 MiB,
- * assuming that sizeof(v7_strlen_t) == 4.
- * Small string length (less then 128 bytes) is encoded in 1 byte.
- */
-V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen) {
-  v7_strlen_t i = 0, string_len = 0;
-
-  do {
-    /*
-     * Each byte of varint contains 7 bits, in little endian order.
-     * MSB is a continuation bit: it tells whether next byte is used.
-     */
-    string_len |= (p[i] & 0x7f) << (7 * i);
-    /*
-     * First we increment i, then check whether it is within boundary and
-     * whether decoded byte had continuation bit set.
-     */
-  } while (++i < sizeof(v7_strlen_t) && (p[i - 1] & 0x80));
-  *llen = i;
-
-  return string_len;
-}
-
-/* Return number of bytes to store length */
-static int calc_llen(v7_strlen_t len) {
-  int n = 0;
-
-  do {
-    n++;
-  } while (len >>= 7);
-
-  assert(n <= (int) sizeof(len));
-
-  return n;
-}
-
-V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p) {
-  int i, llen = calc_llen(len);
-
-  for (i = 0; i < llen; i++) {
-    p[i] = (len & 0x7f) | (i < llen - 1 ? 0x80 : 0);
-    len >>= 7;
-  }
-
-  return llen;
-}
-
-/*
  * Begins an AST node by appending a tag to the AST.
  *
  * It also allocates space for the fixed_size payload and the space for
@@ -521,9 +466,8 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
   if (def->has_varint) {
-    v7_strlen_t slen;
     int llen;
-    slen = decode_string_len((unsigned char *) a->mbuf.buf + *pos, &llen);
+    size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
     *pos += llen;
     if (def->has_inlined) {
       *pos += slen;
@@ -533,23 +477,11 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   *pos += def->num_skips * sizeof(ast_skip_t);
 }
 
-static void ast_set_string(struct ast *a, ast_off_t off, const char *name,
-                           size_t len) {
-  /* Encode string length first */
-  int n = calc_llen(len);  /* Calculate how many bytes length occupies */
-  mbuf_insert(&a->mbuf, off,
-              NULL, n);  /* Allocate  buffer for length in the AST */
-  encode_varint(len, (unsigned char *) a->mbuf.buf + off);  /* Write length */
-
-  /* Now copy the string itself */
-  mbuf_insert(&a->mbuf, off + n, name, len);
-}
-
 /* Helper to add a node with inlined data. */
 V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
                                      const char *name, size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  ast_set_string(a, ast_add_node(a, tag), name, len);
+  embed_string(&a->mbuf, ast_add_node(a, tag), name, len);
 }
 
 /* Helper to add a node with inlined data. */
@@ -557,20 +489,19 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                         enum ast_tag tag, const char *name,
                                         size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  ast_set_string(a, ast_insert_node(a, start, tag), name, len);
+  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len);
 }
 
-V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
-                                      v7_strlen_t *slen) {
+V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
-  *slen = decode_string_len((unsigned char *) a->mbuf.buf + pos, &llen);
+  *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
 V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
   char buf[512];
   char *str;
-  v7_strlen_t str_len;
+  size_t str_len;
   str = ast_get_inlined_data(a, pos, &str_len);
   if (str_len >= sizeof(buf)) {
     str_len = sizeof(buf) - 1;
@@ -618,7 +549,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
-  v7_strlen_t slen;
+  size_t slen;
   int i, llen;
 
   for (i = 0; i < depth; i++) {
@@ -628,7 +559,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   fprintf(fp, "%s", def->name);
 
   if (def->has_inlined) {
-    slen = decode_string_len((unsigned char *) a->mbuf.buf + *pos, &llen);
+    slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
     fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + *pos + llen);
   } else {
     fprintf(fp, "\n");

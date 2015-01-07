@@ -59,6 +59,36 @@
 static int static_num_tests = 0;
 int STOP = 0;  /* For xcode breakpoints conditions */
 
+#if 0
+/* Hexdump a chunk of memory (up to 16 bytes) into a string */
+static void hexdump(char dst[70], const unsigned char *p, int len) {
+  char ascii[17] = "";
+  int i, n = 0;
+
+  for (i = 0; i < len && i < 16; i++) {
+    n += sprintf(dst + n, "%02x ", p[i]);
+    ascii[i] = p[i] < 0x20 || p[i] > 0x7e ? '.' : p[i];
+  }
+
+  while (i++ % 16) {
+    n += sprintf(dst + n, "%s", "   ");
+    ascii[i - 1] = ' ';
+  }
+
+  n += sprintf(dst + n, "  %s", ascii);
+}
+
+static void hexdump_to_file(const unsigned char *data, int data_len, FILE *fp) {
+  char tmp[70];
+  int addr;
+
+  for (addr = 0; addr < data_len; addr += 16) {
+    hexdump(data + addr, len - addr, tmp);
+    fprintf(fp, "%04x  %s\n", addr, tmp);
+  }
+}
+#endif
+
 static enum v7_err adder(struct v7_c_func_arg *cfa) {
   double sum = 0;
   int i;
@@ -152,7 +182,7 @@ static const char *test_v7_exec(void) {
   v = v7_exec(v7, "a + 5");
   ASSERT(check_num(v7, v, NAN));
 
-  ASSERT((v = v7_exec(v7, "print();")) != NULL);
+  ASSERT((v = v7_exec(v7, "print = function() {};")) != NULL);
   ASSERT((v = v7_exec(v7, "print(this);")) != NULL);
 
   ASSERT((v = v7_exec(v7, "a = 7;")) != NULL);
@@ -585,16 +615,11 @@ int check_value(struct v7 *v7, val_t v, const char *str) {
   return 1;
 }
 
-void print_value(struct v7 *v7, val_t v) {
-  char buf[2048];
-  v7_to_json(v7, v, buf, sizeof(buf));
-  printf("%s\n", buf);
-}
-
 static const char *test_runtime(void) {
   struct v7 *v7 = v7_create();
   val_t v;
   struct v7_property *p;
+  size_t n;
 
   v = v7_create_value(v7, V7_TYPE_NULL);
   ASSERT(v == V7_NULL);
@@ -621,7 +646,8 @@ static const char *test_runtime(void) {
 
   v = v7_create_value(v7, V7_TYPE_STRING, "foo", 3);
   ASSERT(val_type(v7, v) == V7_TYPE_STRING);
-  ASSERT(val_to_string(v)->len == 3);
+  val_to_string(v7, &v, &n);
+  ASSERT(n == 3);
   ASSERT(check_value(v7, v, "\"foo\""));
 
   v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
@@ -638,20 +664,25 @@ static const char *test_runtime(void) {
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "undefined"));
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "bar", 3) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING,
+         "bar", (size_t) 3) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "\"bar\""));
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "zar", 3) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING,
+         "zar", (size_t) 3, 1) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "\"zar\""));
 
   ASSERT(v7_del_property(v, "foo", ~0) == 0);
   ASSERT(val_to_object(v)->properties == NULL);
   ASSERT(v7_del_property(v, "foo", -1) == -1);
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "bar", 3) == 0);
-  ASSERT(v7_set_property(v7, v, "bar", -1, 0, V7_TYPE_STRING, "foo", 3) == 0);
-  ASSERT(v7_set_property(v7, v, "aba", -1, 0, V7_TYPE_STRING, "bab", 3) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING,
+         "bar", (size_t) 3, 1) == 0);
+  ASSERT(v7_set_property(v7, v, "bar", -1, 0, V7_TYPE_STRING,
+         "foo", (size_t) 3, 1) == 0);
+  ASSERT(v7_set_property(v7, v, "aba", -1, 0, V7_TYPE_STRING,
+         "bab", (size_t) 3, 1) == 0);
   ASSERT(v7_del_property(v, "foo", -1) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) == NULL);
   ASSERT(v7_del_property(v, "aba", -1) == 0);
@@ -888,7 +919,9 @@ static const char *test_aparser(void) {
     want_ast_len = (size_t) (next_want_ast - current_want_ast);
     ASSERT((fp = fopen("/tmp/got_ast", "w")) != NULL);
     ast_free(&a);
+    #if 0
     printf("-- Parsing \"%s\"\n", cases[i]);
+    #endif
     ASSERT(aparse(&a, cases[i], 1) == V7_OK);
 
 #ifdef VERBOSE_AST
@@ -991,23 +1024,23 @@ static const char *test_string_encoding(void) {
   int llen;
 
   ASSERT(encode_varint(3, buf) == 1);
-  ASSERT(decode_string_len(buf, &llen) == 3);
+  ASSERT(decode_varint(buf, &llen) == 3);
   ASSERT(buf[0] == 3);
   ASSERT(llen == 1);
 
   ASSERT(encode_varint(127, buf) == 1);
-  ASSERT(decode_string_len(buf, &llen) == 127);
+  ASSERT(decode_varint(buf, &llen) == 127);
   ASSERT(buf[0] == 127);
   ASSERT(llen == 1);
 
   ASSERT(encode_varint(128, buf) == 2);
-  ASSERT(decode_string_len(buf, &llen) == 128);
+  ASSERT(decode_varint(buf, &llen) == 128);
   ASSERT(buf[0] == 128);
   ASSERT(buf[1] == 1);
   ASSERT(llen == 2);
 
   ASSERT(encode_varint(0x4000, buf) == 3);
-  ASSERT(decode_string_len(buf, &llen) == 0x4000);
+  ASSERT(decode_varint(buf, &llen) == 0x4000);
   ASSERT(buf[0] == 128);
   ASSERT(buf[1] == 128);
   ASSERT(buf[2] == 1);
@@ -1162,6 +1195,34 @@ static const char *test_interpreter(void) {
   return NULL;
 }
 
+static const char *test_strings(void) {
+  val_t s = 0;
+  struct v7 *v7;
+
+  v7 = v7_create();
+
+  s = v7_string_to_value(v7, "hi", 2, 1);
+  ASSERT(memcmp(&s, "\x02\x68\x69\x00\x00\x00\xfa\xff", sizeof(s)) == 0);
+  ASSERT(v7->owned_strings.len == 0);
+  ASSERT(v7->foreign_strings.len == 0);
+
+  s = v7_string_to_value(v7, "longer one", 10, 1);
+  ASSERT(v7->owned_strings.len == 11);
+  ASSERT(memcmp(v7->owned_strings.buf, "\x0alonger one", 11) == 0);
+  ASSERT(memcmp(&s, "\x00\x00\x00\x00\x00\x00\xf9\xff", sizeof(s)) == 0);
+
+  s = v7_string_to_value(v7, "with embedded \x00 one", 19, 1);
+
+  ASSERT(v7->owned_strings.len == 31);
+  ASSERT(memcmp(&s, "\x0b\x00\x00\x00\x00\x00\xf9\xff", sizeof(s)) == 0);
+  ASSERT(memcmp(v7->owned_strings.buf, "\x0alonger one"
+         "\x13with embedded \x00 one" , 31) == 0);
+
+  v7_destroy(&v7);
+
+  return NULL;
+}
+
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_tokenizer);
   RUN_TEST(test_string_encoding);
@@ -1175,6 +1236,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_aparser);
   RUN_TEST(test_ecmac);
   RUN_TEST(test_interpreter);
+  RUN_TEST(test_strings);
   return NULL;
 }
 

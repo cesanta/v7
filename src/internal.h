@@ -29,15 +29,6 @@
 #include <string.h>
 #include <setjmp.h>
 
-/* Public API. Implemented in api.c */
-#include "../v7.h"
-
-/* Private API */
-#include "utf.h"
-#include "mbuf.h"
-#include "tokenizer.h"
-#include "slre.h"
-
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
@@ -52,6 +43,15 @@ char *stpncpy(char *, const char *, size_t);
 #include <stdint.h>
 #endif
 
+/* Public API. Implemented in api.c */
+#include "../v7.h"
+
+/* Private API */
+#include "utf.h"
+#include "mbuf.h"
+#include "tokenizer.h"
+#include "slre.h"
+#include "varint.h"
 #include "vm.h"
 #include "ast.h"
 #include "aparser.h"
@@ -250,6 +250,9 @@ struct v7 {
    * on a call stack but still referenced (closures).
    */
   val_t call_stack;
+
+  struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
+  struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
   /* TODO(lsm): after refactoring is made, kill everything below this line */
   struct v7_val root_scope; /* "global" object (root-level execution context) */

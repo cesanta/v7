@@ -171,10 +171,7 @@ V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *,
 V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
                                         const char *, size_t);
 
-V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
-V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
-
-V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, v7_strlen_t *);
+V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, size_t *);
 V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
 
 V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
