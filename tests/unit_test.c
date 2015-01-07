@@ -575,7 +575,7 @@ static const char *test_tokenizer(void) {
   return NULL;
 }
 
-int check_value(struct v7 *v7, struct v7_value *v, const char *str) {
+int check_value(struct v7 *v7, v7_value_t v, const char *str) {
   char buf[2048];
   v7_to_json(v7, v, buf, sizeof(buf));
   if (strncmp(buf, str, sizeof(buf)) != 0) {
@@ -585,7 +585,7 @@ int check_value(struct v7 *v7, struct v7_value *v, const char *str) {
   return 1;
 }
 
-void print_value(struct v7 *v7, struct v7_value *v) {
+void print_value(struct v7 *v7, v7_value_t v) {
   char buf[2048];
   v7_to_json(v7, v, buf, sizeof(buf));
   printf("%s\n", buf);
@@ -593,61 +593,61 @@ void print_value(struct v7 *v7, struct v7_value *v) {
 
 static const char *test_runtime(void) {
   struct v7 *v7 = v7_create();
-  struct v7_value *v;
+  v7_value_t v;
   struct v7_property *p;
 
   v = v7_create_value(v7, V7_TYPE_NULL);
-  ASSERT(v->type == V7_TYPE_NULL);
+  ASSERT(v == V7_NULL);
 
   v = v7_create_value(v7, V7_TYPE_UNDEFINED);
-  ASSERT(v->type == V7_TYPE_UNDEFINED);
+  ASSERT(v == V7_UNDEFINED);
 
   v = v7_create_value(v7, V7_TYPE_NUMBER, 1.0);
-  ASSERT(v->type == V7_TYPE_NUMBER);
-  ASSERT(v->value.number == 1.0);
+  ASSERT(v7_value_type(v7, v) == V7_TYPE_NUMBER);
+  ASSERT(v7_value_to_double(v) == 1.0);
   ASSERT(check_value(v7, v, "1"));
 
   v = v7_create_value(v7, V7_TYPE_NUMBER, 1.5);
-  ASSERT(v->value.number == 1.5);
+  ASSERT(v7_value_to_double(v) == 1.5);
   ASSERT(check_value(v7, v, "1.5"));
 
   v = v7_create_value(v7, V7_TYPE_BOOLEAN, 1);
-  ASSERT(v->type == V7_TYPE_BOOLEAN);
-  ASSERT(v->value.boolean == 1);
+  ASSERT(v7_value_type(v7, v) == V7_TYPE_BOOLEAN);
+  ASSERT(v7_value_to_boolean(v) == 1);
   ASSERT(check_value(v7, v, "true"));
 
   v = v7_create_value(v7, V7_TYPE_BOOLEAN, 0);
   ASSERT(check_value(v7, v, "false"));
 
   v = v7_create_value(v7, V7_TYPE_STRING, "foo", 3);
-  ASSERT(v->type == V7_TYPE_STRING);
-  ASSERT(v->value.string.len == 3);
+  ASSERT(v7_value_type(v7, v) == V7_TYPE_STRING);
+  ASSERT(v7_value_to_string(v)->len == 3);
   ASSERT(check_value(v7, v, "\"foo\""));
 
   v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v->type == V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v->value.object != NULL);
+  ASSERT(v7_value_type(v7, v) == V7_TYPE_GENERIC_OBJECT);
+  ASSERT(v7_value_to_object(v) != NULL);
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_NULL) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(p->attributes == 0);
-  ASSERT(p->value.type == V7_TYPE_NULL);
-  ASSERT(check_value(v7, &p->value, "null"));
+  ASSERT(p->value == V7_NULL);
+  ASSERT(check_value(v7, p->value, "null"));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_UNDEFINED) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
-  ASSERT(check_value(v7, &p->value, "undefined"));
+  ASSERT(check_value(v7, p->value, "undefined"));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "bar", 3) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
-  ASSERT(check_value(v7, &p->value, "\"bar\""));
+  ASSERT(check_value(v7, p->value, "\"bar\""));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "zar", 3) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
-  ASSERT(check_value(v7, &p->value, "\"zar\""));
+  ASSERT(check_value(v7, p->value, "\"zar\""));
 
   ASSERT(v7_del_property(v, "foo", ~0) == 0);
-  ASSERT(v->value.object->properties == NULL);
+  ASSERT(v7_value_to_object(v)->properties == NULL);
   ASSERT(v7_del_property(v, "foo", -1) == -1);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "bar", 3) == 0);
   ASSERT(v7_set_property(v7, v, "bar", -1, 0, V7_TYPE_STRING, "foo", 3) == 0);
@@ -1019,109 +1019,108 @@ static const char *test_string_encoding(void) {
 
 static const char *test_interpreter(void) {
   struct v7 *v7 = v7_create();
-  struct v7_value *v;
+  v7_value_t v;
 
   v7_set_property(v7, v7->global_object, "x", -1, 0, V7_TYPE_NUMBER, 42.0);
 
-  ASSERT((v = v7_exec_2(v7, "1%2/2")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "1%2/2")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "0.5"));
 
-  ASSERT((v = v7_exec_2(v7, "1+x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "1+x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "43"));
-  ASSERT((v = v7_exec_2(v7, "2-'1'")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "2-'1'")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT((v = v7_exec_2(v7, "1+2")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "1+2")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "3"));
-  ASSERT((v = v7_exec_2(v7, "'1'+'2'")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "'1'+'2'")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "\"12\""));
-  ASSERT((v = v7_exec_2(v7, "'1'+2")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "'1'+2")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "\"12\""));
 
-  ASSERT((v = v7_exec_2(v7, "false+1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "false+1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT((v = v7_exec_2(v7, "true+1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "true+1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
 
-  ASSERT((v = v7_exec_2(v7, "'1'<2")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "'1'<2")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT((v = v7_exec_2(v7, "'1'>2")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "'1'>2")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "false"));
 
-  ASSERT((v = v7_exec_2(v7, "1==1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "1==1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT((v = v7_exec_2(v7, "1==2")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "1==2")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT((v = v7_exec_2(v7, "'1'==1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "'1'==1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT((v = v7_exec_2(v7, "'1'!=0")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "'1'!=0")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT((v = v7_exec_2(v7, "'-1'==-1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "'-1'==-1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "true"));
 
-  ASSERT((v = v7_exec_2(v7, "+'1'")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "+'1'")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT((v = v7_exec_2(v7, "-'-1'")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "-'-1'")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
-
-  ASSERT((v = v7_exec_2(v7, "v=[10+1,20*2,30/3]")) != NULL);
-  ASSERT(v->type == V7_TYPE_ARRAY_OBJECT);
+  ASSERT((v = v7_exec_2(v7, "v=[10+1,20*2,30/3]")) != V7_UNDEFINED);
+  ASSERT(v7_value_type(v7, v) == V7_TYPE_ARRAY_OBJECT);
   ASSERT(check_value(v7, v7_array_length(v7, v), "3"));
   ASSERT(check_value(v7, v, "[11,40,10]"));
-  ASSERT((v = v7_exec_2(v7, "v[0]")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "v[0]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "11"));
-  ASSERT((v = v7_exec_2(v7, "v[1]")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "v[1]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "40"));
-  ASSERT((v = v7_exec_2(v7, "v[2]")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "v[2]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "10"));
 
-  ASSERT((v = v7_exec_2(v7, "v=[10+1,undefined,30/3]")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "v=[10+1,undefined,30/3]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v7_array_length(v7, v), "3"));
   ASSERT(check_value(v7, v, "[11,undefined,10]"));
 
-  ASSERT((v = v7_exec_2(v7, "v=[10+1,,30/3]")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "v=[10+1,,30/3]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v7_array_length(v7, v), "3"));
   ASSERT(check_value(v7, v, "[11,,10]"));
 
-  ASSERT((v = v7_exec_2(v7, "3,2,1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "3,2,1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
 
-  ASSERT((v = v7_exec_2(v7, "x=1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
 
-  ASSERT((v = v7_exec_2(v7, "1+2; 1")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "1+2; 1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT((v = v7_exec_2(v7, "x=42; x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=42; x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT((v = v7_exec_2(v7, "x=y=42; x+y")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=y=42; x+y")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "84"));
 
-  ASSERT((v = v7_exec_2(v7, "o={a: 1, b: 2}")) != NULL);
-  ASSERT((v = v7_exec_2(v7, "o['a'] + o['b']")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "o={a: 1, b: 2}")) != V7_UNDEFINED);
+  ASSERT((v = v7_exec_2(v7, "o['a'] + o['b']")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "3"));
 
-  ASSERT((v = v7_exec_2(v7, "o.a + o.b")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "o.a + o.b")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "3"));
 
-  ASSERT((v = v7_exec_2(v7, "x=1;if(x>0){x=2};x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=1;if(x>0){x=2};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT((v = v7_exec_2(v7, "x=1;if(x<0){x=2};x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=1;if(x<0){x=2};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT((v = v7_exec_2(v7, "y=1;x=5;while(x > 0){y=y*x;x=x-1};y")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "y=1;x=5;while(x > 0){y=y*x;x=x-1};y")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "120"));
-  ASSERT((v = v7_exec_2(v7, "y=1;x=5;do{y=y*x;x=x-1}while(x>0);y")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "y=1;x=5;do{y=y*x;x=x-1}while(x>0);y")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "120"));
-  ASSERT((v = v7_exec_2(v7, "for(y=1,i=1;i<=5;i=i+1)y=y*i;y")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "for(y=1,i=1;i<=5;i=i+1)y=y*i;y")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "120"));
 
-  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1};x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1}finally{x=x+1};x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1}finally{x=x+1};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
 
 #if 0
-  ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != NULL);
+  ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
 #endif
 

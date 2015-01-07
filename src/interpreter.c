@@ -5,24 +5,13 @@
 
 #include "internal.h"
 
-static int is_num_2(struct v7_value *v) {
-  return v->type == V7_TYPE_NUMBER;
-}
-
-static int is_bool_2(struct v7_value *v) {
-  return v->type == V7_TYPE_BOOLEAN;
-}
-
-static int is_string_2(struct v7_value *v) {
-  return v->type == V7_TYPE_STRING;
-}
-
-static double i_as_num(struct v7_value *v) {
+static double i_as_num(v7_value_t v) {
   char *tmp;
   double dbl;
-  if (!is_num_2(v) && !is_bool_2(v)) {
-    if (is_string_2(v)) {
-      tmp = strndup(v->value.string.buf, v->value.string.len);
+  if (!v7_is_double(v) && !v7_is_boolean(v)) {
+    if (v7_is_string(v)) {
+      struct v7_str *str = v7_value_to_string(v);
+      tmp = strndup(str->buf, str->len);
       dbl = strtod(tmp, NULL);
       free(tmp);
       return dbl;
@@ -30,17 +19,17 @@ static double i_as_num(struct v7_value *v) {
       return NAN;
     }
   } else {
-    if(is_bool_2(v)) {
-      return (double) v->value.boolean;
+    if(v7_is_boolean(v)) {
+      return (double) v7_value_to_boolean(v);
     }
-    return v->value.number;
+    return v7_value_to_double(v);
   }
 }
 
-static int i_is_true(struct v7_value *v) {
+static int i_is_true(v7_value_t v) {
   /* TODO(mkm): real stuff */
-  return (is_num_2(v) && v->value.number > 0.0) ||
-      (is_bool_2(v) && v->value.boolean);
+  return (v7_is_double(v) && v7_value_to_double(v) > 0.0) ||
+      (v7_is_boolean(v) && v7_value_to_boolean(v));
 }
 
 static double i_num_unary_op(enum ast_tag tag, double a) {
@@ -93,12 +82,12 @@ static int i_bool_bin_op(enum ast_tag tag, double a, double b) {
   }
 }
 
-static struct v7_value *i_eval_expr(struct v7 *v7, struct ast *a,
-                                    ast_off_t *pos, struct v7_value *scope) {
+static v7_value_t i_eval_expr(struct v7 *v7, struct ast *a,
+                                    ast_off_t *pos, v7_value_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
-  struct v7_value *res, *v1, *v2;
+  v7_value_t res, v1, v2;
   double dv;
   int i;
 
@@ -116,8 +105,8 @@ static struct v7_value *i_eval_expr(struct v7 *v7, struct ast *a,
     case AST_ADD:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      if (!(is_num_2(v1) || is_bool_2(v1)) ||
-          !(is_num_2(v2) || is_bool_2(v2))) {
+      if (!(v7_is_double(v1) || v7_is_boolean(v1)) ||
+          !(v7_is_double(v2) || v7_is_boolean(v2))) {
         v7_stringify_value(v7, v1, buf, sizeof(buf));
         v7_stringify_value(v7, v2, buf + strlen(buf),
                            sizeof(buf) - strlen(buf));
@@ -218,7 +207,7 @@ static struct v7_value *i_eval_expr(struct v7 *v7, struct ast *a,
       ast_get_inlined_data(a, *pos, buf, sizeof(buf));
       ast_move_to_children(a, pos);
       res = v7_property_value(v7_get_property(scope, buf, -1));
-      if (res == NULL) {
+      if (res == V7_UNDEFINED) {
         fprintf(stderr, "ReferenceError: %s is not defined\n", buf);
         abort();
       }
@@ -229,23 +218,23 @@ static struct v7_value *i_eval_expr(struct v7 *v7, struct ast *a,
   }
 }
 
-static struct v7_value *i_eval_stmt(struct v7 *, struct ast *, ast_off_t *,
-                                  struct v7_value *);
+static v7_value_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *,
+                            v7_value_t);
 
-static struct v7_value *i_eval_stmts(struct v7 *v7, struct ast *a,
+static v7_value_t i_eval_stmts(struct v7 *v7, struct ast *a,
                                      ast_off_t *pos, ast_off_t end,
-                                     struct v7_value *scope) {
-  struct v7_value *res;
+                                     v7_value_t scope) {
+  v7_value_t res;
   while (*pos < end) {
     res = i_eval_stmt(v7, a, pos, scope);
   }
   return res;
 }
 
-static struct v7_value *i_eval_stmt(struct v7 *v7, struct ast *a,
-                                    ast_off_t *pos, struct v7_value *scope) {
+static v7_value_t i_eval_stmt(struct v7 *v7, struct ast *a,
+                                    ast_off_t *pos, v7_value_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
-  struct v7_value *res;
+  v7_value_t res;
   ast_off_t end, cond, iter_end, loop, iter, finally, catch;
 
   switch (tag) {
@@ -336,16 +325,16 @@ static struct v7_value *i_eval_stmt(struct v7 *v7, struct ast *a,
   return v7_create_value(v7, V7_TYPE_UNDEFINED);
 }
 
-V7_PRIVATE struct v7_value *v7_exec_2(struct v7 *v7, const char* src) {
+V7_PRIVATE v7_value_t v7_exec_2(struct v7 *v7, const char* src) {
   struct ast a;
-  struct v7_value *res;
+  v7_value_t res;
   ast_off_t pos = 0;
   char debug[1024];
 
   ast_init(&a, 0);
   if (aparse(&a, src, 1) != V7_OK) {
     printf("Error parsing\n");
-    return NULL;
+    return V7_UNDEFINED;
   }
   ast_optimize(&a);
 

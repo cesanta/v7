@@ -514,9 +514,10 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
 static void ast_set_string(struct ast *a, ast_off_t off, const char *name,
                            size_t len) {
   /* Encode string length first */
-  int n = calc_llen(len);   /* Calculate how many bytes length occupies */
-  mbuf_insert(&a->mbuf, off, "    ", n);  /* Allocate  buffer for length in the AST */
-  encode_varint(len, (unsigned char *) a->mbuf.buf + off);   /* Write length */
+  int n = calc_llen(len);  /* Calculate how many bytes length occupies */
+  mbuf_insert(&a->mbuf, off,
+              NULL, n);  /* Allocate  buffer for length in the AST */
+  encode_varint(len, (unsigned char *) a->mbuf.buf + off);  /* Write length */
 
   /* Now copy the string itself */
   mbuf_insert(&a->mbuf, off + n, name, len);

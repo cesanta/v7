@@ -19,6 +19,15 @@ struct v7 *v7_create(void) {
     v7->root_scope.proto = &s_global;
     v7->root_scope.ref_count = 1;
     v7->ctx = &v7->root_scope;
+    /*
+     * Ensure the first call to v7_create_value will use a null proto:
+     * {}.__proto__.__proto__ == null
+     */
+    v7->object_prototype = NULL;
+    v7->object_prototype = v7_value_to_object(
+        v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
+    v7->array_prototype = v7_value_to_object(
+        v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
   }
 
@@ -37,7 +46,6 @@ void v7_destroy(struct v7 **v7) {
   v7_freeval(v7[0], &v7[0]->root_scope);
   free_values(v7[0]);
   free_props(v7[0]);
-  free(v7[0]->global_object);
   free(v7[0]);
   v7[0] = NULL;
 }
