@@ -38,7 +38,7 @@ struct v7_str {
 
 /* TODO(mkm): remove ifdef once v7 has been moved here */
 #ifndef V7_VALUE_DEFINED
-typedef uint64_t v7_value_t;
+typedef uint64_t val_t;
 #endif
 
 #define V7_TAG_OBJECT    ((uint64_t) 0xFFFF << 48)
@@ -60,7 +60,7 @@ typedef uint64_t v7_value_t;
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
   char *name;               /* Property name is a zero-terminated string */
-  v7_value_t value;           /* Property value */
+  val_t value;           /* Property value */
 
   unsigned int attributes;
 #define V7_PROPERTY_READ_ONLY    1
@@ -132,27 +132,27 @@ struct v7_function {
 };
 
 /* TODO(mkm): possibly replace those with macros for inlining */
-enum v7_type v7_value_type(struct v7 *v7, v7_value_t);
-int v7_is_object(v7_value_t);
-int v7_is_string(v7_value_t);
-int v7_is_boolean(v7_value_t);
-int v7_is_double(v7_value_t);
-int v7_is_null(v7_value_t);
-int v7_is_undefined(v7_value_t);
-V7_PRIVATE v7_value_t v7_pointer_to_value(void *);
-V7_PRIVATE void *v7_value_to_pointer(v7_value_t);
+enum v7_type val_type(struct v7 *v7, val_t);
+int v7_is_object(val_t);
+int v7_is_string(val_t);
+int v7_is_boolean(val_t);
+int v7_is_double(val_t);
+int v7_is_null(val_t);
+int v7_is_undefined(val_t);
+V7_PRIVATE val_t v7_pointer_to_value(void *);
+V7_PRIVATE void *val_to_pointer(val_t);
 
-v7_value_t v7_object_to_value(struct v7_object *);
-v7_value_t v7_string_to_value(struct v7_str *);
-v7_value_t v7_foreign_to_value(void *);
-v7_value_t v7_boolean_to_value(int);
-v7_value_t v7_double_to_value(double);
+val_t v7_object_to_value(struct v7_object *);
+val_t v7_string_to_value(struct v7_str *);
+val_t v7_foreign_to_value(void *);
+val_t v7_boolean_to_value(int);
+val_t v7_double_to_value(double);
 
-struct v7_object *v7_value_to_object(v7_value_t);
-struct v7_str *v7_value_to_string(v7_value_t);
-void *v7_value_to_foreign(v7_value_t);
-int v7_value_to_boolean(v7_value_t);
-double v7_value_to_double(v7_value_t);
+struct v7_object *val_to_object(val_t);
+struct v7_str *val_to_string(val_t);
+void *val_to_foreign(val_t);
+int val_to_boolean(val_t);
+double val_to_double(val_t);
 
 /*
  * Create a value with the given type.
@@ -161,47 +161,47 @@ double v7_value_to_double(v7_value_t);
  * - For `V7_TYPE_NUMBER`, `v7_num_t` argument
  * - For `V7_TYPE_BOOLEAN`, `int` argument
  * - For `V7_TYPE_STRING`, `char *` followed by `v7_strlen_t` argument
- * - For everything else, `v7_value_t` argument. Value is not copied.
+ * - For everything else, `val_t` argument. Value is not copied.
  * Return NULL on failure.
  */
-v7_value_t v7_create_value(struct v7 *, enum v7_type, ...);
-v7_value_t v7_va_create_value(struct v7 *, enum v7_type, va_list);
+val_t v7_create_value(struct v7 *, enum v7_type, ...);
+val_t v7_va_create_value(struct v7 *, enum v7_type, va_list);
 
-int v7_stringify_value(struct v7 *, v7_value_t, char *, size_t);
-int v7_to_json(struct v7 *, v7_value_t, char *, size_t);
+int v7_stringify_value(struct v7 *, val_t, char *, size_t);
+int v7_to_json(struct v7 *, val_t, char *, size_t);
 
-int v7_set_property_value(struct v7 *, v7_value_t obj,
+int v7_set_property_value(struct v7 *, val_t obj,
                           const char *name, v7_strlen_t len,
                           unsigned int attributes,
-                          v7_value_t val);
+                          val_t val);
 
 /*
  * Set a property for an object.
  * `obj` must be a object value. Last arguments depend on `type` (see above).
  * Return 0 on success, -1 on error.
  */
-int v7_set_property(struct v7 *, v7_value_t obj,
+int v7_set_property(struct v7 *, val_t obj,
                     const char *name, v7_strlen_t len,
                     unsigned int attributes, enum v7_type, ...);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
-V7_PRIVATE struct v7_property *v7_get_property(v7_value_t obj,
+V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
                                                const char *name, v7_strlen_t);
 
 /* Return address of property value or NULL if the passed property is NULL */
-V7_PRIVATE v7_value_t v7_property_value(struct v7_property *);
+V7_PRIVATE val_t v7_property_value(struct v7_property *);
 
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
  */
-V7_PRIVATE int v7_del_property(v7_value_t, const char *, v7_strlen_t);
+V7_PRIVATE int v7_del_property(val_t, const char *, v7_strlen_t);
 
-V7_PRIVATE int v7_is_object(v7_value_t);
+V7_PRIVATE int v7_is_object(val_t);
 
 /*
  * Returns the array length as JS number, or `undefined` if the object is not an array
  */
-V7_PRIVATE v7_value_t v7_array_length(struct v7 *v7, v7_value_t);
+V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t);
 
 #endif  /* VM_H_INCLUDED */

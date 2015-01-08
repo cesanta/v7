@@ -5,12 +5,12 @@
 
 #include "internal.h"
 
-static double i_as_num(v7_value_t v) {
+static double i_as_num(val_t v) {
   char *tmp;
   double dbl;
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
-      struct v7_str *str = v7_value_to_string(v);
+      struct v7_str *str = val_to_string(v);
       tmp = strndup(str->buf, str->len);
       dbl = strtod(tmp, NULL);
       free(tmp);
@@ -20,16 +20,16 @@ static double i_as_num(v7_value_t v) {
     }
   } else {
     if(v7_is_boolean(v)) {
-      return (double) v7_value_to_boolean(v);
+      return (double) val_to_boolean(v);
     }
-    return v7_value_to_double(v);
+    return val_to_double(v);
   }
 }
 
-static int i_is_true(v7_value_t v) {
+static int i_is_true(val_t v) {
   /* TODO(mkm): real stuff */
-  return (v7_is_double(v) && v7_value_to_double(v) > 0.0) ||
-      (v7_is_boolean(v) && v7_value_to_boolean(v));
+  return (v7_is_double(v) && val_to_double(v) > 0.0) ||
+      (v7_is_boolean(v) && val_to_boolean(v));
 }
 
 static double i_num_unary_op(enum ast_tag tag, double a) {
@@ -82,12 +82,12 @@ static int i_bool_bin_op(enum ast_tag tag, double a, double b) {
   }
 }
 
-static v7_value_t i_eval_expr(struct v7 *v7, struct ast *a,
-                                    ast_off_t *pos, v7_value_t scope) {
+static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
-  v7_value_t res, v1, v2;
+  val_t res, v1, v2;
   double dv;
   int i;
 
@@ -218,23 +218,21 @@ static v7_value_t i_eval_expr(struct v7 *v7, struct ast *a,
   }
 }
 
-static v7_value_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *,
-                            v7_value_t);
+static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t);
 
-static v7_value_t i_eval_stmts(struct v7 *v7, struct ast *a,
-                                     ast_off_t *pos, ast_off_t end,
-                                     v7_value_t scope) {
-  v7_value_t res;
+static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                          ast_off_t end, val_t scope) {
+  val_t res;
   while (*pos < end) {
     res = i_eval_stmt(v7, a, pos, scope);
   }
   return res;
 }
 
-static v7_value_t i_eval_stmt(struct v7 *v7, struct ast *a,
-                                    ast_off_t *pos, v7_value_t scope) {
+static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
-  v7_value_t res;
+  val_t res;
   ast_off_t end, cond, iter_end, loop, iter, finally, catch;
 
   switch (tag) {
@@ -325,9 +323,9 @@ static v7_value_t i_eval_stmt(struct v7 *v7, struct ast *a,
   return v7_create_value(v7, V7_TYPE_UNDEFINED);
 }
 
-V7_PRIVATE v7_value_t v7_exec_2(struct v7 *v7, const char* src) {
+V7_PRIVATE val_t v7_exec_2(struct v7 *v7, const char* src) {
   struct ast a;
-  v7_value_t res;
+  val_t res;
   ast_off_t pos = 0;
   char debug[1024];
 

@@ -12,7 +12,7 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-V7_PRIVATE v7_value_t v7_exec_2(struct v7 *, const char*);
+V7_PRIVATE val_t v7_exec_2(struct v7 *, const char*);
 
 #if defined(__cplusplus)
 }

@@ -575,7 +575,7 @@ static const char *test_tokenizer(void) {
   return NULL;
 }
 
-int check_value(struct v7 *v7, v7_value_t v, const char *str) {
+int check_value(struct v7 *v7, val_t v, const char *str) {
   char buf[2048];
   v7_to_json(v7, v, buf, sizeof(buf));
   if (strncmp(buf, str, sizeof(buf)) != 0) {
@@ -585,7 +585,7 @@ int check_value(struct v7 *v7, v7_value_t v, const char *str) {
   return 1;
 }
 
-void print_value(struct v7 *v7, v7_value_t v) {
+void print_value(struct v7 *v7, val_t v) {
   char buf[2048];
   v7_to_json(v7, v, buf, sizeof(buf));
   printf("%s\n", buf);
@@ -593,7 +593,7 @@ void print_value(struct v7 *v7, v7_value_t v) {
 
 static const char *test_runtime(void) {
   struct v7 *v7 = v7_create();
-  v7_value_t v;
+  val_t v;
   struct v7_property *p;
 
   v = v7_create_value(v7, V7_TYPE_NULL);
@@ -603,30 +603,30 @@ static const char *test_runtime(void) {
   ASSERT(v == V7_UNDEFINED);
 
   v = v7_create_value(v7, V7_TYPE_NUMBER, 1.0);
-  ASSERT(v7_value_type(v7, v) == V7_TYPE_NUMBER);
-  ASSERT(v7_value_to_double(v) == 1.0);
+  ASSERT(val_type(v7, v) == V7_TYPE_NUMBER);
+  ASSERT(val_to_double(v) == 1.0);
   ASSERT(check_value(v7, v, "1"));
 
   v = v7_create_value(v7, V7_TYPE_NUMBER, 1.5);
-  ASSERT(v7_value_to_double(v) == 1.5);
+  ASSERT(val_to_double(v) == 1.5);
   ASSERT(check_value(v7, v, "1.5"));
 
   v = v7_create_value(v7, V7_TYPE_BOOLEAN, 1);
-  ASSERT(v7_value_type(v7, v) == V7_TYPE_BOOLEAN);
-  ASSERT(v7_value_to_boolean(v) == 1);
+  ASSERT(val_type(v7, v) == V7_TYPE_BOOLEAN);
+  ASSERT(val_to_boolean(v) == 1);
   ASSERT(check_value(v7, v, "true"));
 
   v = v7_create_value(v7, V7_TYPE_BOOLEAN, 0);
   ASSERT(check_value(v7, v, "false"));
 
   v = v7_create_value(v7, V7_TYPE_STRING, "foo", 3);
-  ASSERT(v7_value_type(v7, v) == V7_TYPE_STRING);
-  ASSERT(v7_value_to_string(v)->len == 3);
+  ASSERT(val_type(v7, v) == V7_TYPE_STRING);
+  ASSERT(val_to_string(v)->len == 3);
   ASSERT(check_value(v7, v, "\"foo\""));
 
   v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v7_value_type(v7, v) == V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v7_value_to_object(v) != NULL);
+  ASSERT(val_type(v7, v) == V7_TYPE_GENERIC_OBJECT);
+  ASSERT(val_to_object(v) != NULL);
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_NULL) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
@@ -647,7 +647,7 @@ static const char *test_runtime(void) {
   ASSERT(check_value(v7, p->value, "\"zar\""));
 
   ASSERT(v7_del_property(v, "foo", ~0) == 0);
-  ASSERT(v7_value_to_object(v)->properties == NULL);
+  ASSERT(val_to_object(v)->properties == NULL);
   ASSERT(v7_del_property(v, "foo", -1) == -1);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING, "bar", 3) == 0);
   ASSERT(v7_set_property(v7, v, "bar", -1, 0, V7_TYPE_STRING, "foo", 3) == 0);
@@ -1019,7 +1019,7 @@ static const char *test_string_encoding(void) {
 
 static const char *test_interpreter(void) {
   struct v7 *v7 = v7_create();
-  v7_value_t v;
+  val_t v;
 
   v7_set_property(v7, v7->global_object, "x", -1, 0, V7_TYPE_NUMBER, 42.0);
 
@@ -1063,7 +1063,7 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec_2(v7, "-'-1'")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
   ASSERT((v = v7_exec_2(v7, "v=[10+1,20*2,30/3]")) != V7_UNDEFINED);
-  ASSERT(v7_value_type(v7, v) == V7_TYPE_ARRAY_OBJECT);
+  ASSERT(val_type(v7, v) == V7_TYPE_ARRAY_OBJECT);
   ASSERT(check_value(v7, v7_array_length(v7, v), "3"));
   ASSERT(check_value(v7, v, "[11,40,10]"));
   ASSERT((v = v7_exec_2(v7, "v[0]")) != V7_UNDEFINED);

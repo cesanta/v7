@@ -24,9 +24,9 @@ struct v7 *v7_create(void) {
      * {}.__proto__.__proto__ == null
      */
     v7->object_prototype = NULL;
-    v7->object_prototype = v7_value_to_object(
+    v7->object_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
-    v7->array_prototype = v7_value_to_object(
+    v7->array_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
   }
