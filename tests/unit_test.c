@@ -659,7 +659,6 @@ static const char *test_runtime(void) {
   ASSERT(v7_del_property(v, "bar", -1) == 0);
   ASSERT((p = v7_get_property(v, "bar", -1)) == NULL);
 
-
   v7_destroy(&v7);
   return NULL;
 }
@@ -1125,14 +1124,35 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "[function(){var x,y}]"));
   ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1,y=2; return x})")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[function(a){var x,y}]"));
-  ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1,y=2; return x; var z})")) != V7_UNDEFINED);
-  ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
+  ASSERT((v = v7_exec_2(v7, "(function(a,b) {var x=1,y=2; return x; var z})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(a,b){var x,y,z}]"));
   ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1; for(var y in x){}; var z})")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
   ASSERT((v = v7_exec_2(v7, "(function(a) {var x=1; for(var y=0;y<x;y++){}; var z})")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
+  ASSERT((v = v7_exec_2(v7, "(function() {var x=(function y(){for(var z;;){}})})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(){var x}]"));
   ASSERT((v = v7_exec_2(v7, "function square(x){return x*x;}")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[function square(x)]"));
+  ASSERT((v = v7_exec_2(v7, "0;f=(function(x){return x*x;})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[function(x)]"));
+
+  ASSERT((v = v7_exec_2(v7, "f=(function(x){return x*x;}); f(2)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "4"));
+  ASSERT((v = v7_exec_2(v7, "(function(x){x*x;})(2)")) == V7_UNDEFINED);
+  ASSERT((v = v7_exec_2(v7, "f=(function(x){return x*x;x});v=f(2);v*2")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "8"));
+  ASSERT((v = v7_exec_2(v7, "(function(x,y){return x+y;})(40,2)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec_2(v7, "(function(x,y){if(x==40)return x+y})(40,2)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec_2(v7, "(function(x,y){return x+y})(40)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "NaN"));
+  ASSERT((v = v7_exec_2(v7, "(function(x){return x+y; var y})(40)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "NaN"));
+
+  /* TODO(mkm): check for reference error being thrown */
+  /* ASSERT((v = v7_exec_2(v7, "(function(x,y){return x+y})(40,2,(function(){return fail})())")) != V7_UNDEFINED); */
 
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);

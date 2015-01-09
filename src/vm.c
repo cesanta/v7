@@ -36,14 +36,16 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
 }
 
 int v7_is_double(val_t v) {
-  val_t nan;
-  V7_SET_NAN(nan);
-  return !(isnan(val_to_double(v)) && v != nan);
+  return v == V7_TAG_NAN || !isnan(val_to_double(v));
 }
 
 int v7_is_object(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_OBJECT ||
       (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
+}
+
+int v7_is_function(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
 int v7_is_string(val_t v) {
@@ -117,7 +119,7 @@ val_t v7_double_to_value(double v) {
   val_t res;
   /* not every NaN is a JS NaN */
   if (isnan(v)) {
-    V7_SET_NAN(res);
+    res = V7_TAG_NAN;
   } else {
     * (double *) &res = v;
   }
@@ -197,7 +199,7 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
     case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT:
     default:
-      printf("NOT IMPLEMENTED YET\n");
+      printf("NOT IMPLEMENTED YET create %d\n", type); /* LCOV_EXCL_LINE */
       abort();
   }
 
@@ -215,6 +217,9 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       return stpncpy(buf,
                      val_to_boolean(v) ? "true" : "false", size) - buf;
     case V7_TYPE_NUMBER:
+      if (v == V7_TAG_NAN) {
+        return snprintf(buf, size, "NaN");
+      }
       return snprintf(buf, size, "%lg", val_to_double(v));
     case V7_TYPE_STRING:
       {
@@ -271,7 +276,8 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       }
     case V7_TYPE_FUNCTION_OBJECT:
       {
-        char name[256];
+        char *name;
+        v7_strlen_t name_len;
         char *b = buf;
         struct v7_function *func = val_to_function(v);
         ast_off_t end, body, var, var_end, start, pos = func->ast_off;
@@ -288,16 +294,16 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 
         ast_move_to_children(a, &pos);
         if (ast_fetch_tag(a, &pos) == AST_IDENT) {
-          ast_get_inlined_data(a, pos, name, sizeof(name));
+          name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
-          b += snprintf(b, size - (b - buf), " %s", name);
+          b += snprintf(b, size - (b - buf), " %.*s", name_len, name);
         }
         b += snprintf(b, size - (b - buf), "(");
         while (pos < body) {
           assert(ast_fetch_tag(a, &pos) == AST_IDENT);
-          ast_get_inlined_data(a, pos, name, sizeof(name));
+          name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
-          b += snprintf(b, size - (b - buf), "%s", name);
+          b += snprintf(b, size - (b - buf), "%.*s", name_len, name);
           if (pos < body) {
             b += snprintf(b, size - (b - buf), ",");
           }
@@ -319,11 +325,11 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             ast_move_to_children(a, &var);
             while (var < var_end) {
               assert(ast_fetch_tag(a, &var) == AST_VAR_DECL);
-              ast_get_inlined_data(a, var, name, sizeof(name));
+              name = ast_get_inlined_data(a, var, &name_len);
               ast_move_to_children(a, &var);
               ast_skip_tree(a, &var);
 
-              b += snprintf(b, size - (b - buf), "%s", name);
+              b += snprintf(b, size - (b - buf), "%.*s", name_len, name);
               if (var < var_end || next) {
                 b += snprintf(b, size - (b - buf), ",");
               }
@@ -336,10 +342,21 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         return b - buf;
       }
     default:
-      printf("NOT IMPLEMENTED YET\n");
+      printf("NOT IMPLEMENTED YET\n");  /* LCOV_EXCL_LINE */
       abort();
   }
 }
+
+char *debug_json(struct v7 *v7, val_t v) {
+  char buf[1024];
+  char *res;
+  v7_to_json(v7, v, buf, sizeof(buf) - 1);
+  res = (char *) malloc(strlen(buf) + 1);
+  memset(res, 0, strlen(buf) + 1);
+  memcpy(res, buf, strlen(buf));
+  return res;
+}
+
 
 int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
                        size_t size) {
@@ -470,7 +487,6 @@ V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t v) {
   long max = -1, k;
   char *end;
 
-  /* TODO(mkm) new values don't have yet an array object type */
   if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
     return v7_create_value(v7, V7_TYPE_UNDEFINED);
   }
