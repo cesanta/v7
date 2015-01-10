@@ -48,19 +48,21 @@ const struct ast_node_def ast_node_defs[] = {
   /*
    * struct {
    *   ast_skip_t end;
+   *   ast_skip_t first_var;
    *   child body[];
    * end:
    * }
    */
-  {"SCRIPT", 0, 0, 1, 0},
+  {"SCRIPT", 0, 0, 2, 0},
   /*
    * struct {
    *   ast_skip_t end;
+   *   ast_skip_t next;
    *   child decls[];
    * end:
    * }
    */
-  {"VAR", 0, 0, 1, 0},
+  {"VAR", 0, 0, 2, 0},
   /*
    * struct {
    *   varint len;
@@ -82,8 +84,16 @@ const struct ast_node_def ast_node_defs[] = {
    */
   {"IF", 0, 0, 2, 1},
   /*
+   * TODO(mkm) distinguish function expressions
+   * from function statements.
+   * Function statements behave like vars and need a
+   * next field for hoisting.
+   * We can also ignore the name for function expressions
+   * if it's only needed for debugging.
+   *
    * struct {
    *   ast_skip_t end;
+   *   ast_skip_t first_var;
    *   ast_skip_t body;
    *   child name;
    *   child params[];
@@ -92,7 +102,7 @@ const struct ast_node_def ast_node_defs[] = {
    * end:
    * }
    */
-  {"FUNC", 0, 0, 2, 1},
+  {"FUNC", 0, 0, 3, 1},
   {"ASSIGN", 0, 0, 0, 2},         /* struct { child left, right; } */
   {"REM_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
   {"MUL_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
@@ -154,13 +164,15 @@ const struct ast_node_def ast_node_defs[] = {
   /*
    * struct {
    *   ast_skip_t end;
+   *   ast_skip_t dummy; // allows to quickly promote a for to a for in
    *   child var;
    *   child expr;
+   *   child dummy;
    *   child body[];
    * end:
    * }
    */
-  {"FOR_IN", 0, 0, 1, 2},
+  {"FOR_IN", 0, 0, 2, 3},
   {"COND", 0, 0, 0, 3},  /* struct { child cond, iftrue, iffalse; } */
   {"DEBUGGER", 0, 0, 0, 0},  /* struct {} */
   {"BREAK", 0, 0, 0, 0},     /* struct {} */
@@ -467,8 +479,18 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  */
 V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
                                   enum ast_which_skip skip) {
+  return ast_modify_skip(a, start, a->mbuf.len, skip);
+}
+
+/*
+ * Patches a given skip slot for an already emitted node with the value
+ * (stored as delta relative to the `start` node) of the `where` argument.
+ */
+V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
+                                     ast_off_t where,
+                                     enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
-  uint16_t delta = a->mbuf.len - start;
+  uint16_t delta = where - start;
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
@@ -477,7 +499,7 @@ V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
 
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
-  return a->mbuf.len;
+  return where;
 }
 
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
@@ -569,6 +591,26 @@ static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
     fprintf(fp, "  ");
   }
   fprintf(fp, "/* [%s] */\n", buf);
+}
+
+V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
+  enum ast_tag tag = ast_fetch_tag(a, pos);
+  const struct ast_node_def *def = &ast_node_defs[tag];
+  ast_off_t skips = *pos;
+  int i;
+  ast_move_to_children(a, pos);
+
+  for (i = 0; i < def->num_subtrees; i++) {
+    ast_skip_tree(a, pos);
+  }
+
+  if (ast_node_defs[tag].num_skips) {
+    ast_off_t end = ast_get_skip(a, skips, AST_END_SKIP);
+
+    while (*pos < end) {
+      ast_skip_tree(a, pos);
+    }
+  }
 }
 
 static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {

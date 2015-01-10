@@ -212,6 +212,15 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         abort();
       }
       return res;
+    case AST_FUNC:
+      {
+        val_t func = v7_create_value(v7, V7_TYPE_FUNCTION_OBJECT);
+        struct v7_function *funcp = val_to_function(func);
+        funcp->ast = a;
+        funcp->ast_off = *pos - 1;
+        *pos = ast_get_skip(a, *pos, AST_END_SKIP);
+        return func;
+      }
     default:
       printf("NOT IMPLEMENTED: %s\n", def->name);
       abort();
@@ -324,23 +333,24 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
 }
 
 V7_PRIVATE val_t v7_exec_2(struct v7 *v7, const char* src) {
-  struct ast a;
+  /* TODO(mkm): use GC pool */
+  struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t res;
   ast_off_t pos = 0;
   char debug[1024];
 
-  ast_init(&a, 0);
-  if (aparse(&a, src, 1) != V7_OK) {
+  ast_init(a, 0);
+  if (aparse(a, src, 1) != V7_OK) {
     printf("Error parsing\n");
     return V7_UNDEFINED;
   }
-  ast_optimize(&a);
+  ast_optimize(a);
 
 #if 0
-  ast_dump(stdout, &a, 0);
+  ast_dump(stdout, a, 0);
 #endif
 
-  res = i_eval_stmt(v7, &a, &pos, v7->global_object);
+  res = i_eval_stmt(v7, a, &pos, v7->global_object);
   v7_to_json(v7, res, debug, sizeof(debug));
 #if 0
   fprintf(stderr, "Eval res: %s .\n", debug);

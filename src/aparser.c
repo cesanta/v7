@@ -419,6 +419,10 @@ static enum v7_err end_of_statement(struct v7 *v7) {
 
 static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_VAR);
+  ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
+  /* zero out var node pointer */
+  ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
+  v7->last_var_node = start;
   do {
     ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
     EXPECT(TOK_IDENTIFIER);
@@ -479,7 +483,8 @@ static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
 
 static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
-  ast_off_t start = a->mbuf.len;
+  ast_off_t start = ast_add_node(a, AST_FOR);
+
   EXPECT(TOK_OPEN_PAREN);
 
   if(aparse_optional(v7, a, TOK_SEMICOLON)) {
@@ -497,13 +502,16 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
 
     if (ACCEPT(TOK_IN)) {
       PARSE(expression);
-      EXPECT(TOK_CLOSE_PAREN);
-      PARSE(statement);
-      ast_insert_node(a, start, AST_FOR_IN);
-      return V7_OK;
+      ast_add_node(a, AST_NOP);
+      /*
+       * Assumes that for and for in have the same AST format which is
+       * suboptimal but avoids the need of fixing up the var offset chain.
+       * TODO(mkm) improve this
+       */
+      a->mbuf.buf[start - 1] = AST_FOR_IN;
+      goto body;
     }
   }
-  start = ast_insert_node(a, start, AST_FOR);
 
   EXPECT(TOK_SEMICOLON);
   if (aparse_optional(v7, a, TOK_SEMICOLON)) {
@@ -513,6 +521,8 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
   if (aparse_optional(v7, a, TOK_CLOSE_PAREN)) {
     PARSE(expression);
   }
+
+body:
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FOR_BODY_SKIP);
   PARSE(statement);
@@ -678,6 +688,9 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
 static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
                                    int require_named) {
   ast_off_t start = ast_add_node(a, AST_FUNC);
+  ast_off_t outer_last_var_node = v7->last_var_node;
+  v7->last_var_node = start;
+  ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
   if (aparse_ident(v7, a) == V7_ERROR) {
     if (require_named) {
       return V7_ERROR;
@@ -690,6 +703,7 @@ static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
   ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
   PARSE(block);
   ast_set_skip(a, start, AST_END_SKIP);
+  v7->last_var_node = outer_last_var_node;
   return V7_OK;
 }
 
@@ -714,8 +728,12 @@ static enum v7_err aparse_body(struct v7 *v7, struct ast *a,
 
 static enum v7_err aparse_script(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SCRIPT);
+  ast_off_t outer_last_var_node = v7->last_var_node;
+  v7->last_var_node = start;
+  ast_modify_skip(a, start, 1, AST_FUNC_FIRST_VAR_SKIP);
   PARSE_ARG(body, TOK_END_OF_INPUT);
   ast_set_skip(a, start, AST_END_SKIP);
+  v7->last_var_node = outer_last_var_node;
   return V7_OK;
 }
 

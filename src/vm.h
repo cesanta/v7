@@ -47,6 +47,7 @@ typedef uint64_t val_t;
 #define V7_TAG_BOOLEAN   ((uint64_t) 0xFFFC << 48)
 #define V7_TAG_STRING    ((uint64_t) 0xFFF9 << 48)
 #define V7_TAG_NAN       ((uint64_t) 0xFFF8 << 48)
+#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF6 << 48)
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -126,9 +127,13 @@ struct v7_arg {
  */
 
 struct v7_function {
-  int starting_line_number;   /* Starting line in the source code */
+  /*
+   * Functions are objects. This has to be the first field so that function
+   * objects can be managed by the GC.
+   */
+  struct v7_property *properties;
   struct ast *ast;            /* AST, used as a byte code for execution */
-  struct v7_object vars;      /* Declared variables & functions */
+  unsigned int ast_off;       /* Position of the function node in the AST */
 };
 
 /* TODO(mkm): possibly replace those with macros for inlining */
@@ -143,12 +148,14 @@ V7_PRIVATE val_t v7_pointer_to_value(void *);
 V7_PRIVATE void *val_to_pointer(val_t);
 
 val_t v7_object_to_value(struct v7_object *);
+val_t v7_function_to_value(struct v7_function *);
 val_t v7_string_to_value(struct v7_str *);
 val_t v7_foreign_to_value(void *);
 val_t v7_boolean_to_value(int);
 val_t v7_double_to_value(double);
 
 struct v7_object *val_to_object(val_t);
+struct v7_function *val_to_function(val_t);
 struct v7_str *val_to_string(val_t);
 void *val_to_foreign(val_t);
 int val_to_boolean(val_t);
