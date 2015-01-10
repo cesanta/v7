@@ -560,22 +560,23 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
   ast_set_string(a, ast_insert_node(a, start, tag), name, len);
 }
 
-V7_PRIVATE ast_off_t ast_get_inlined_data(struct ast *a, ast_off_t pos,
-                                          char *buf, size_t buf_len) {
-  v7_strlen_t slen;
+V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
+                                      v7_strlen_t *slen) {
   int llen;
-  slen = decode_string_len((unsigned char *) a->mbuf.buf + pos, &llen);
-  if (slen >= buf_len) {
-    slen = buf_len - 1;
-  }
-  memcpy(buf, a->mbuf.buf + pos + llen, slen);
-  buf[slen] = 0;
-  return slen;
+  *slen = decode_string_len((unsigned char *) a->mbuf.buf + pos, &llen);
+  return a->mbuf.buf + pos + llen;
 }
 
 V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
   char buf[512];
-  ast_get_inlined_data(a, pos, buf, sizeof(buf));
+  char *str;
+  v7_strlen_t str_len;
+  str = ast_get_inlined_data(a, pos, &str_len);
+  if (str_len >= sizeof(buf)) {
+    str_len = sizeof(buf) - 1;
+  }
+  memcpy(buf, str, str_len);
+  buf[str_len] = '\0';
   *val = strtod(buf, NULL);
 }
 

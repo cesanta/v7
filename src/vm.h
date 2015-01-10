@@ -52,11 +52,6 @@ typedef uint64_t val_t;
 
 #define V7_NULL V7_TAG_FOREIGN
 #define V7_UNDEFINED V7_TAG_UNDEFINED
-#define V7_SET_NAN(v)                           \
-  do {                                          \
-    * (uint64_t *) &v = V7_TAG_NAN;             \
-  } while(0)                                    \
-
 
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
@@ -139,6 +134,7 @@ struct v7_function {
 /* TODO(mkm): possibly replace those with macros for inlining */
 enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_object(val_t);
+int v7_is_function(val_t);
 int v7_is_string(val_t);
 int v7_is_boolean(val_t);
 int v7_is_double(val_t);
@@ -176,6 +172,7 @@ val_t v7_va_create_value(struct v7 *, enum v7_type, va_list);
 
 int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 int v7_to_json(struct v7 *, val_t, char *, size_t);
+V7_PRIVATE char* debug_json(struct v7 *, val_t);
 
 int v7_set_property_value(struct v7 *, val_t obj,
                           const char *name, v7_strlen_t len,
@@ -203,8 +200,6 @@ V7_PRIVATE val_t v7_property_value(struct v7_property *);
  * Return 0 on success, -1 on error.
  */
 V7_PRIVATE int v7_del_property(val_t, const char *, v7_strlen_t);
-
-V7_PRIVATE int v7_is_object(val_t);
 
 /*
  * Returns the array length as JS number, or `undefined` if the object is not an array
