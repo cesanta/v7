@@ -993,9 +993,10 @@ static char *read_file(const char *path, size_t *size) {
 
 static const char *test_ecmac(void) {
   struct ast a;
-  int i;
-  size_t db_len;
+  int i, passed = 0;
+  size_t db_len, driver_len;
   char *db = read_file("ecmac.db", &db_len);
+  char *driver = read_file("ecma_driver.js", &driver_len);
   char *next_case = db - 1;
 
   ast_init(&a, 0);
@@ -1004,16 +1005,32 @@ static const char *test_ecmac(void) {
     char *current_case = next_case + 1;
     ASSERT((next_case = strchr(current_case, '\0')) != NULL);
 
-    ast_free(&a);
 #if 0
     printf("-- Parsing %d: \"%s\"\n", i, current_case);
 #endif
     ASSERT(aparse(&a, current_case, 1) == V7_OK);
+    ast_free(&a);
+    {
+      struct v7 *v7 = v7_create();
+      if (v7_exec_2(v7, driver) == V7_UNDEFINED) {
+        fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
+      } else {
+        if (v7_exec_2(v7, current_case) == V7_UNDEFINED) {
+          #if 0
+          printf("FAILED ECMA TEST: [%s] -> [%s]\n", current_case, v7->error_msg);
+          #endif
+        } else {
+          passed++;
+        }
+      }
+      v7_destroy(&v7);
+    }
+
 #if 0
     ast_dump(stdout, &a, 0);
 #endif
   }
-  printf("Passed %d ecma262 parsing test\n", i);
+  printf("ECMA tests coverage: %.2lf%%\n", (double) passed / i * 100.0);
 
   free(db);
   return NULL;
@@ -1096,7 +1113,7 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "1"));
   ASSERT((v = v7_exec_2(v7, "v=[10+1,20*2,30/3]")) != V7_UNDEFINED);
   ASSERT(val_type(v7, v) == V7_TYPE_ARRAY_OBJECT);
-  ASSERT(check_value(v7, v7_array_length(v7, v), "3"));
+  ASSERT(v7_array_length(v7, v) == 3);
   ASSERT(check_value(v7, v, "[11,40,10]"));
   ASSERT((v = v7_exec_2(v7, "v[0]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "11"));
@@ -1106,11 +1123,11 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "10"));
 
   ASSERT((v = v7_exec_2(v7, "v=[10+1,undefined,30/3]")) != V7_UNDEFINED);
-  ASSERT(check_value(v7, v7_array_length(v7, v), "3"));
+  ASSERT(v7_array_length(v7, v) == 3);
   ASSERT(check_value(v7, v, "[11,undefined,10]"));
 
   ASSERT((v = v7_exec_2(v7, "v=[10+1,,30/3]")) != V7_UNDEFINED);
-  ASSERT(check_value(v7, v7_array_length(v7, v), "3"));
+  ASSERT(v7_array_length(v7, v) == 3);
   ASSERT(check_value(v7, v, "[11,,10]"));
 
   ASSERT((v = v7_exec_2(v7, "3,2,1")) != V7_UNDEFINED);

@@ -254,6 +254,9 @@ struct v7 {
   struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
+  jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
+  char error_msg[60];           /* Exception message */
+
   /* TODO(lsm): after refactoring is made, kill everything below this line */
   struct v7_val root_scope; /* "global" object (root-level execution context) */
   struct v7_val *stack[200]; /* TODO: make it non-fixed, auto-grow */
@@ -290,6 +293,12 @@ struct v7 {
 
 #define V7_STATIC_ASSERT(COND, MSG) \
       typedef char static_assertion_##MSG[2*(!!(COND)) - 1]
+
+#define V7_CHECK(v7, COND)                                                \
+    do { if (!(COND))                                                     \
+      throw_exception(v7, "Internal error: %s line %d: %s",               \
+                      __func__, __LINE__, #COND);                         \
+    } while (0)
 
 #define THROW(err_code)                                                        \
   do {                                                                         \
