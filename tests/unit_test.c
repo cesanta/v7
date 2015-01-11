@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "../v7.h"
 #include "../src/internal.h"
@@ -690,6 +691,11 @@ static const char *test_runtime(void) {
   ASSERT(v7_del_property(v, "bar", -1) == 0);
   ASSERT((p = v7_get_property(v, "bar", -1)) == NULL);
 
+  v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_NUMBER, 1.0) == 0);
+  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT((p = v7_get_property(v, "f", -1)) == NULL);
+
   v7_destroy(&v7);
   return NULL;
 }
@@ -998,6 +1004,9 @@ static const char *test_ecmac(void) {
   char *db = read_file("ecmac.db", &db_len);
   char *driver = read_file("ecma_driver.js", &driver_len);
   char *next_case = db - 1;
+#ifdef ECMA_FORK
+  pid_t child;
+#endif
 
   ast_init(&a, 0);
 
@@ -1010,7 +1019,9 @@ static const char *test_ecmac(void) {
 #endif
     ASSERT(aparse(&a, current_case, 1) == V7_OK);
     ast_free(&a);
-    {
+#ifdef ECMA_FORK
+    if ((child = fork()) == 0) {
+#endif
       struct v7 *v7 = v7_create();
       if (v7_exec_2(v7, driver) == V7_UNDEFINED) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
@@ -1019,12 +1030,26 @@ static const char *test_ecmac(void) {
           #if 0
           printf("FAILED ECMA TEST: [%s] -> [%s]\n", current_case, v7->error_msg);
           #endif
+#ifdef ECMA_FORK
+          exit(1);
+#endif
         } else {
           passed++;
+#ifdef ECMA_FORK
+          exit(0);
+#endif
         }
       }
       v7_destroy(&v7);
+#ifdef ECMA_FORK
+    } else {
+      int status;
+      waitpid(child, &status, WNOHANG);
+      if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        passed++;
+      }
     }
+#endif
 
 #if 0
     ast_dump(stdout, &a, 0);
@@ -1200,9 +1225,31 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "NaN"));
   ASSERT((v = v7_exec_2(v7, "(function(x){return x+y; var y})(40)")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "NaN"));
+  ASSERT((v = v7_exec_2(v7, "x=1;(function(a){return a})(40,(function(){x=x+1})())+x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
 
   /* TODO(mkm): check for reference error being thrown */
   /* ASSERT((v = v7_exec_2(v7, "(function(x,y){return x+y})(40,2,(function(){return fail})())")) != V7_UNDEFINED); */
+
+  ASSERT((v = v7_exec_2(v7, "x=42; (function(){return x})()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec_2(v7, "x=2; (function(x){return x})(40)+x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec_2(v7, "x=1; (function(y){x=x+1; return y})(40)+x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec_2(v7, "x=0;f=function(){x=42; return function() {return x}; var x};f()()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
+
+  ASSERT((v = v7_exec_2(v7, "o={};o.x=24")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "24"));
+  ASSERT((v = v7_exec_2(v7, "o.a={};o.a.b={c:66};o.a.b.c")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "66"));
+  ASSERT((v = v7_exec_2(v7, "o['a']['b'].c")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "66"));
+  ASSERT((v = v7_exec_2(v7, "a={f:function(){return {b:55}}};a.f().b")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "55"));
+  ASSERT((v = v7_exec_2(v7, "(function(){fox=1})();fox")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
 
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);

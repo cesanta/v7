@@ -149,14 +149,45 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(v7, tag,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_ASSIGN:
-      /* for now only simple assignment */
-      tag = ast_fetch_tag(a, pos);
-      V7_CHECK(v7, tag == AST_IDENT);
-      name = ast_get_inlined_data(a, *pos, &name_len);
-      ast_move_to_children(a, pos);
-      res = i_eval_expr(v7, a, pos, scope);
-      v7_set_property_value(v7, scope, name, name_len, 0, res);
-      return res;
+      {
+        struct v7_property *prop;
+        val_t lval, root = v7->global_object;
+        switch ((tag = ast_fetch_tag(a, pos))) {
+          case AST_IDENT:
+            lval = scope;
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            break;
+          case AST_MEMBER:
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            break;
+          case AST_INDEX:
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            v1 = i_eval_expr(v7, a, pos, scope);
+            name_len = v7_stringify_value(v7, v1, buf, sizeof(buf));
+            name = buf;
+          default:
+            throw_exception(v7, "Invalid left-hand side in assignment");
+            return V7_UNDEFINED;  /* unreachable */
+        }
+
+        res = i_eval_expr(v7, a, pos, scope);
+        /*
+         * TODO(mkm): this will incorrectly mutate an existing property in
+         * Object.prototype instead of creating a new variable in `global`.
+         * `get_property` should also return a pointer to the object where
+         * the property is found.
+         */
+        prop = v7_get_property(lval, name, name_len);
+        if (prop == NULL) {
+          v7_set_property_value(v7, root, name, name_len, 0, res);
+        } else {
+          prop->value = res;
+        }
+        return res;
+      }
     case AST_INDEX:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -234,6 +265,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         val_t func = v7_create_value(v7, V7_TYPE_FUNCTION_OBJECT);
         struct v7_function *funcp = val_to_function(func);
+        funcp->scope = val_to_object(scope);
         funcp->ast = a;
         funcp->ast_off = *pos - 1;
         ast_move_to_children(a, pos);
@@ -308,6 +340,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   fargs = fpos;
 
   frame = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  val_to_object(frame)->prototype = func->scope;
   /* populate the call frame with a property for each local variable */
   if (fvar != fstart) {
     ast_off_t next;
