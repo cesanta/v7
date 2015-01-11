@@ -46,6 +46,8 @@ void v7_destroy(struct v7 **v7) {
   v7_freeval(v7[0], &v7[0]->root_scope);
   free_values(v7[0]);
   free_props(v7[0]);
+  mbuf_free(&v7[0]->owned_strings);
+  mbuf_free(&v7[0]->foreign_strings);
   free(v7[0]);
   v7[0] = NULL;
 }

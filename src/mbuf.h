@@ -10,7 +10,7 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-#include "internal.h"
+#include <stdlib.h>
 
 #ifndef MBUF_SIZE_MULTIPLIER
 #define MBUF_SIZE_MULTIPLIER 1.5

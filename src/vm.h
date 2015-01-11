@@ -6,35 +6,11 @@
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
-/*
- * Declaring this here allows flycheck to
- * process this file correctly.
- */
-typedef unsigned int v7_strlen_t;
-
 #include "internal.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif  /* __cplusplus */
-
-/* Forward declarations */
-struct v7_arg;    /* C/JavaScript function parameters */
-struct v7_object;
-
-typedef double v7_num_t;    /* Override to integer on systems with no MMU */
-typedef void (*v7_func2_t)(struct v7_arg *arg);
-
-/*
- * Strings might have embedded zero bytes. They might be interned.
- * Also, they might be referencing foreign memory blocks, e.g. from C code,
- * without making a copy.
- * Therefore, define string as a structure that describes generic memory block.
- */
-struct v7_str {
-  char *buf;
-  v7_strlen_t len;
-};
 
 /* TODO(mkm): remove ifdef once v7 has been moved here */
 #ifndef V7_VALUE_DEFINED
@@ -45,9 +21,11 @@ typedef uint64_t val_t;
 #define V7_TAG_FOREIGN   ((uint64_t) 0xFFFE << 48)
 #define V7_TAG_UNDEFINED ((uint64_t) 0xFFFD << 48)
 #define V7_TAG_BOOLEAN   ((uint64_t) 0xFFFC << 48)
-#define V7_TAG_STRING    ((uint64_t) 0xFFF9 << 48)
-#define V7_TAG_NAN       ((uint64_t) 0xFFF8 << 48)
-#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF6 << 48)
+#define V7_TAG_NAN       ((uint64_t) 0xFFFB << 48)
+#define V7_TAG_STRING_I  ((uint64_t) 0xFFFA << 48)  /* Inlined string */
+#define V7_TAG_STRING_O  ((uint64_t) 0xFFF9 << 48)  /* Owned string */
+#define V7_TAG_STRING_F  ((uint64_t) 0xFFF8 << 48)  /* Foreign string */
+#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -144,18 +122,21 @@ V7_PRIVATE val_t v7_pointer_to_value(void *);
 V7_PRIVATE void *val_to_pointer(val_t);
 
 val_t v7_object_to_value(struct v7_object *);
+val_t v7_string_to_value(struct v7 *, const char *c, size_t len, int own);
 val_t v7_function_to_value(struct v7_function *);
-val_t v7_string_to_value(struct v7_str *);
 val_t v7_foreign_to_value(void *);
 val_t v7_boolean_to_value(int);
 val_t v7_double_to_value(double);
 
 struct v7_object *val_to_object(val_t);
 struct v7_function *val_to_function(val_t);
-struct v7_str *val_to_string(val_t);
 void *val_to_foreign(val_t);
 int val_to_boolean(val_t);
 double val_to_double(val_t);
+const char *val_to_string(struct v7 *, val_t *, size_t *);
+
+/* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
+#define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
 /*
  * Create a value with the given type.
@@ -175,9 +156,8 @@ int v7_to_json(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE char* debug_json(struct v7 *, val_t);
 
 int v7_set_property_value(struct v7 *, val_t obj,
-                          const char *name, v7_strlen_t len,
-                          unsigned int attributes,
-                          val_t val);
+                          const char *name, size_t len,
+                          unsigned int attributes, val_t val);
 
 /*
  * Set a property for an object.
@@ -185,12 +165,12 @@ int v7_set_property_value(struct v7 *, val_t obj,
  * Return 0 on success, -1 on error.
  */
 int v7_set_property(struct v7 *, val_t obj,
-                    const char *name, v7_strlen_t len,
+                    const char *name, size_t len,
                     unsigned int attributes, enum v7_type, ...);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
-                                               const char *name, v7_strlen_t);
+                                               const char *name, size_t);
 
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7_property *);
@@ -199,11 +179,17 @@ V7_PRIVATE val_t v7_property_value(struct v7_property *);
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
  */
-V7_PRIVATE int v7_del_property(val_t, const char *, v7_strlen_t);
+V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
 
 /*
  * Returns the array length as JS number, or `undefined` if the object is not an array
  */
 V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t);
+
+/* String API */
+V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
+V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+V7_PRIVATE val_t s_substr(struct v7 *, val_t, size_t, size_t);
+V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 #endif  /* VM_H_INCLUDED */

@@ -9,16 +9,14 @@ static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, int *);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
 
-static double i_as_num(val_t v) {
-  char *tmp;
-  double dbl;
+static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
-      struct v7_str *str = val_to_string(v);
-      tmp = strndup(str->buf, str->len);
-      dbl = strtod(tmp, NULL);
-      free(tmp);
-      return dbl;
+      size_t n;
+      char buf[20], *s = (char *) val_to_string(v7, &v, &n);
+      snprintf(buf, sizeof(buf), "%.*s", (int) n, s);
+      buf[sizeof(buf) - 1] = '\0';
+      return strtod(buf, NULL);
     } else {
       return NAN;
     }
@@ -101,13 +99,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
    */
   char buf[512];
   char *name;
-  v7_strlen_t name_len;
+  size_t name_len;
 
   switch (tag) {
     case AST_NEGATIVE:
     case AST_POSITIVE:
       return v7_create_value(v7, V7_TYPE_NUMBER, i_num_unary_op(
-          tag, i_as_num(i_eval_expr(v7, a, pos, scope))));
+          tag, i_as_num(v7, i_eval_expr(v7, a, pos, scope))));
     case AST_ADD:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -116,19 +114,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         v7_stringify_value(v7, v1, buf, sizeof(buf));
         v7_stringify_value(v7, v2, buf + strlen(buf),
                            sizeof(buf) - strlen(buf));
-        return v7_create_value(v7, V7_TYPE_STRING, buf,
-                               (v7_strlen_t) strlen(buf));
+        return v7_create_value(v7, V7_TYPE_STRING, buf, strlen(buf));
       }
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag, i_as_num(v1),
-                                                              i_as_num(v2)));
+      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_SUB:
     case AST_REM:
     case AST_MUL:
     case AST_DIV:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag, i_as_num(v1),
-                                                              i_as_num(v2)));
+      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_EQ:
     case AST_NE:
     case AST_LT:
@@ -137,8 +134,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_GE:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_BOOLEAN,
-                             i_bool_bin_op(tag, i_as_num(v1), i_as_num(v2)));
+      return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_ASSIGN:
       /* for now only simple assignment */
       assert((tag = ast_fetch_tag(a, pos)) == AST_IDENT);
@@ -206,8 +203,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_STRING:
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
-      res = v7_create_value(v7, V7_TYPE_STRING, name,
-                            name_len, 1);
+      res = v7_create_value(v7, V7_TYPE_STRING, name, name_len, 1);
       return res;
     case AST_IDENT:
       {
@@ -243,7 +239,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   val_t frame, res, v1;
   struct v7_function *func;
   char *name;
-  v7_strlen_t name_len;
+  size_t name_len;
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);

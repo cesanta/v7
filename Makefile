@@ -10,7 +10,8 @@ include src/sources.mk
 
 .PHONY: cpplint
 
-all: v7 amalgamated_v7 unit_test
+all: v7 amalgamated_v7
+	@$(MAKE) -C tests
 
 v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
 	cat v7.h $(TOP_HEADERS) $(TOP_SOURCES) | sed -E "/#include .*(v7.h|`echo $(TOP_HEADERS) | sed -e 's,src/,,g' -e 's, ,|,g'`)/d" > $@

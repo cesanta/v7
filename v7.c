@@ -350,6 +350,50 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
 V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 /*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef MBUF_H_INCLUDED
+#define MBUF_H_INCLUDED
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
+#include <stdlib.h>
+
+#ifndef MBUF_SIZE_MULTIPLIER
+#define MBUF_SIZE_MULTIPLIER 1.5
+#endif
+
+struct mbuf {
+  char *buf;
+  size_t len;
+  size_t size;
+};
+
+#ifdef V7_EXPOSE_PRIVATE
+#define V7_PRIVATE
+#define V7_EXTERN extern
+#else
+#define V7_PRIVATE static
+#define V7_EXTERN static
+#endif
+
+V7_PRIVATE void mbuf_init(struct mbuf *, size_t);
+V7_PRIVATE void mbuf_free(struct mbuf *);
+V7_PRIVATE void mbuf_resize(struct mbuf *, size_t);
+V7_PRIVATE void mbuf_trim(struct mbuf *);
+V7_PRIVATE size_t mbuf_insert(struct mbuf *, size_t, const char *, size_t);
+V7_PRIVATE size_t mbuf_append(struct mbuf *, const char *, size_t);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
+
+#endif  /* MBUF_H_INCLUDED */
+/*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
@@ -379,10 +423,6 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 #include <string.h>
 #include <setjmp.h>
 
-/* Public API. Implemented in api.c */
-
-/* Private API */
-
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
@@ -397,6 +437,9 @@ char *stpncpy(char *, const char *, size_t);
 #include <stdint.h>
 #endif
 
+/* Public API. Implemented in api.c */
+
+/* Private API */
 
 /*
  * If V7_CACHE_OBJS is defined, then v7_freeval() will not actually free
@@ -590,6 +633,9 @@ struct v7 {
    * on a call stack but still referenced (closures).
    */
   val_t call_stack;
+
+  struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
+  struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
   /* TODO(lsm): after refactoring is made, kill everything below this line */
   struct v7_val root_scope; /* "global" object (root-level execution context) */
@@ -815,49 +861,6 @@ V7_PRIVATE void init_regex(void);
 
 #endif /* V7_INTERNAL_H_INCLUDED */
 /*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef MBUF_H_INCLUDED
-#define MBUF_H_INCLUDED
-
-#if defined(__cplusplus)
-extern "C" {
-#endif  /* __cplusplus */
-
-
-#ifndef MBUF_SIZE_MULTIPLIER
-#define MBUF_SIZE_MULTIPLIER 1.5
-#endif
-
-struct mbuf {
-  char *buf;
-  size_t len;
-  size_t size;
-};
-
-#ifdef V7_EXPOSE_PRIVATE
-#define V7_PRIVATE
-#define V7_EXTERN extern
-#else
-#define V7_PRIVATE static
-#define V7_EXTERN static
-#endif
-
-V7_PRIVATE void mbuf_init(struct mbuf *, size_t);
-V7_PRIVATE void mbuf_free(struct mbuf *);
-V7_PRIVATE void mbuf_resize(struct mbuf *, size_t);
-V7_PRIVATE void mbuf_trim(struct mbuf *);
-V7_PRIVATE size_t mbuf_insert(struct mbuf *, size_t, const char *, size_t);
-V7_PRIVATE size_t mbuf_append(struct mbuf *, const char *, size_t);
-
-#if defined(__cplusplus)
-}
-#endif  /* __cplusplus */
-
-#endif  /* MBUF_H_INCLUDED */
-/*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
@@ -865,34 +868,10 @@ V7_PRIVATE size_t mbuf_append(struct mbuf *, const char *, size_t);
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
-/*
- * Declaring this here allows flycheck to
- * process this file correctly.
- */
-typedef unsigned int v7_strlen_t;
-
 
 #if defined(__cplusplus)
 extern "C" {
 #endif  /* __cplusplus */
-
-/* Forward declarations */
-struct v7_arg;    /* C/JavaScript function parameters */
-struct v7_object;
-
-typedef double v7_num_t;    /* Override to integer on systems with no MMU */
-typedef void (*v7_func2_t)(struct v7_arg *arg);
-
-/*
- * Strings might have embedded zero bytes. They might be interned.
- * Also, they might be referencing foreign memory blocks, e.g. from C code,
- * without making a copy.
- * Therefore, define string as a structure that describes generic memory block.
- */
-struct v7_str {
-  char *buf;
-  v7_strlen_t len;
-};
 
 /* TODO(mkm): remove ifdef once v7 has been moved here */
 #ifndef V7_VALUE_DEFINED
@@ -903,9 +882,11 @@ typedef uint64_t val_t;
 #define V7_TAG_FOREIGN   ((uint64_t) 0xFFFE << 48)
 #define V7_TAG_UNDEFINED ((uint64_t) 0xFFFD << 48)
 #define V7_TAG_BOOLEAN   ((uint64_t) 0xFFFC << 48)
-#define V7_TAG_STRING    ((uint64_t) 0xFFF9 << 48)
-#define V7_TAG_NAN       ((uint64_t) 0xFFF8 << 48)
-#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF6 << 48)
+#define V7_TAG_NAN       ((uint64_t) 0xFFFB << 48)
+#define V7_TAG_STRING_I  ((uint64_t) 0xFFFA << 48)  /* Inlined string */
+#define V7_TAG_STRING_O  ((uint64_t) 0xFFF9 << 48)  /* Owned string */
+#define V7_TAG_STRING_F  ((uint64_t) 0xFFF8 << 48)  /* Foreign string */
+#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -1002,18 +983,21 @@ V7_PRIVATE val_t v7_pointer_to_value(void *);
 V7_PRIVATE void *val_to_pointer(val_t);
 
 val_t v7_object_to_value(struct v7_object *);
+val_t v7_string_to_value(struct v7 *, const char *c, size_t len, int own);
 val_t v7_function_to_value(struct v7_function *);
-val_t v7_string_to_value(struct v7_str *);
 val_t v7_foreign_to_value(void *);
 val_t v7_boolean_to_value(int);
 val_t v7_double_to_value(double);
 
 struct v7_object *val_to_object(val_t);
 struct v7_function *val_to_function(val_t);
-struct v7_str *val_to_string(val_t);
 void *val_to_foreign(val_t);
 int val_to_boolean(val_t);
 double val_to_double(val_t);
+const char *val_to_string(struct v7 *, val_t *, size_t *);
+
+/* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
+#define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
 /*
  * Create a value with the given type.
@@ -1033,9 +1017,8 @@ int v7_to_json(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE char* debug_json(struct v7 *, val_t);
 
 int v7_set_property_value(struct v7 *, val_t obj,
-                          const char *name, v7_strlen_t len,
-                          unsigned int attributes,
-                          val_t val);
+                          const char *name, size_t len,
+                          unsigned int attributes, val_t val);
 
 /*
  * Set a property for an object.
@@ -1043,12 +1026,12 @@ int v7_set_property_value(struct v7 *, val_t obj,
  * Return 0 on success, -1 on error.
  */
 int v7_set_property(struct v7 *, val_t obj,
-                    const char *name, v7_strlen_t len,
+                    const char *name, size_t len,
                     unsigned int attributes, enum v7_type, ...);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
-                                               const char *name, v7_strlen_t);
+                                               const char *name, size_t);
 
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7_property *);
@@ -1057,12 +1040,18 @@ V7_PRIVATE val_t v7_property_value(struct v7_property *);
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
  */
-V7_PRIVATE int v7_del_property(val_t, const char *, v7_strlen_t);
+V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
 
 /*
  * Returns the array length as JS number, or `undefined` if the object is not an array
  */
 V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t);
+
+/* String API */
+V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
+V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+V7_PRIVATE val_t s_substr(struct v7 *, val_t, size_t, size_t);
+V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 #endif  /* VM_H_INCLUDED */
 /*
@@ -1160,6 +1149,14 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *replace,
 #endif  /* __cplusplus */
 
 #endif  /* SLRE_HEADER_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+V7_PRIVATE int encode_varint(size_t len, unsigned char *p);
+V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen);
+V7_PRIVATE int calc_llen(size_t len);
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -1332,10 +1329,7 @@ V7_PRIVATE void ast_add_inlined_node(struct ast *, enum ast_tag, const char *,
 V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
                                         const char *, size_t);
 
-V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p);
-V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen);
-
-V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, v7_strlen_t *);
+V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, size_t *);
 V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
 
 V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
@@ -4527,6 +4521,61 @@ isspacerune(Rune c)
  */
 
 
+/*
+ * Strings in AST are encoded as tuples (length, string).
+ * Length is variable-length: if high bit is set in a byte, next byte is used.
+ * Maximum string length with such encoding is 2 ^ (7 * 4) == 256 MiB,
+ * assuming that sizeof(size_t) == 4.
+ * Small string length (less then 128 bytes) is encoded in 1 byte.
+ */
+V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen) {
+  size_t i = 0, string_len = 0;
+
+  do {
+    /*
+     * Each byte of varint contains 7 bits, in little endian order.
+     * MSB is a continuation bit: it tells whether next byte is used.
+     */
+    string_len |= (p[i] & 0x7f) << (7 * i);
+    /*
+     * First we increment i, then check whether it is within boundary and
+     * whether decoded byte had continuation bit set.
+     */
+  } while (++i < sizeof(size_t) && (p[i - 1] & 0x80));
+  *llen = i;
+
+  return string_len;
+}
+
+/* Return number of bytes to store length */
+V7_PRIVATE int calc_llen(size_t len) {
+  int n = 0;
+
+  do {
+    n++;
+  } while (len >>= 7);
+
+  assert(n <= (int) sizeof(len));
+
+  return n;
+}
+
+V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
+  int i, llen = calc_llen(len);
+
+  for (i = 0; i < llen; i++) {
+    p[i] = (len & 0x7f) | (i < llen - 1 ? 0x80 : 0);
+    len >>= 7;
+  }
+
+  return llen;
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
 V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   const char *str = NULL;
@@ -7329,6 +7378,8 @@ void v7_destroy(struct v7 **v7) {
   v7_freeval(v7[0], &v7[0]->root_scope);
   free_values(v7[0]);
   free_props(v7[0]);
+  mbuf_free(&v7[0]->owned_strings);
+  mbuf_free(&v7[0]->foreign_strings);
   free(v7[0]);
   v7[0] = NULL;
 }
@@ -7894,61 +7945,6 @@ const struct ast_node_def ast_node_defs[] = {
 V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
 
 /*
- * Code and API based on Fossa IO buffers.
- * TODO(mkm): optimize to our specific use case or fully reuse fossa.
- */
-
-/*
- * Strings in AST are encoded as tuples (length, string).
- * Length is variable-length: if high bit is set in a byte, next byte is used.
- * Maximum string length with such encoding is 2 ^ (7 * 4) == 256 MiB,
- * assuming that sizeof(v7_strlen_t) == 4.
- * Small string length (less then 128 bytes) is encoded in 1 byte.
- */
-V7_PRIVATE v7_strlen_t decode_string_len(const unsigned char *p, int *llen) {
-  v7_strlen_t i = 0, string_len = 0;
-
-  do {
-    /*
-     * Each byte of varint contains 7 bits, in little endian order.
-     * MSB is a continuation bit: it tells whether next byte is used.
-     */
-    string_len |= (p[i] & 0x7f) << (7 * i);
-    /*
-     * First we increment i, then check whether it is within boundary and
-     * whether decoded byte had continuation bit set.
-     */
-  } while (++i < sizeof(v7_strlen_t) && (p[i - 1] & 0x80));
-  *llen = i;
-
-  return string_len;
-}
-
-/* Return number of bytes to store length */
-static int calc_llen(v7_strlen_t len) {
-  int n = 0;
-
-  do {
-    n++;
-  } while (len >>= 7);
-
-  assert(n <= (int) sizeof(len));
-
-  return n;
-}
-
-V7_PRIVATE int encode_varint(v7_strlen_t len, unsigned char *p) {
-  int i, llen = calc_llen(len);
-
-  for (i = 0; i < llen; i++) {
-    p[i] = (len & 0x7f) | (i < llen - 1 ? 0x80 : 0);
-    len >>= 7;
-  }
-
-  return llen;
-}
-
-/*
  * Begins an AST node by appending a tag to the AST.
  *
  * It also allocates space for the fixed_size payload and the space for
@@ -8050,9 +8046,8 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
   if (def->has_varint) {
-    v7_strlen_t slen;
     int llen;
-    slen = decode_string_len((unsigned char *) a->mbuf.buf + *pos, &llen);
+    size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
     *pos += llen;
     if (def->has_inlined) {
       *pos += slen;
@@ -8062,23 +8057,11 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   *pos += def->num_skips * sizeof(ast_skip_t);
 }
 
-static void ast_set_string(struct ast *a, ast_off_t off, const char *name,
-                           size_t len) {
-  /* Encode string length first */
-  int n = calc_llen(len);  /* Calculate how many bytes length occupies */
-  mbuf_insert(&a->mbuf, off,
-              NULL, n);  /* Allocate  buffer for length in the AST */
-  encode_varint(len, (unsigned char *) a->mbuf.buf + off);  /* Write length */
-
-  /* Now copy the string itself */
-  mbuf_insert(&a->mbuf, off + n, name, len);
-}
-
 /* Helper to add a node with inlined data. */
 V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
                                      const char *name, size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  ast_set_string(a, ast_add_node(a, tag), name, len);
+  embed_string(&a->mbuf, ast_add_node(a, tag), name, len);
 }
 
 /* Helper to add a node with inlined data. */
@@ -8086,20 +8069,19 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                         enum ast_tag tag, const char *name,
                                         size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  ast_set_string(a, ast_insert_node(a, start, tag), name, len);
+  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len);
 }
 
-V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
-                                      v7_strlen_t *slen) {
+V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
-  *slen = decode_string_len((unsigned char *) a->mbuf.buf + pos, &llen);
+  *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
 V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
   char buf[512];
   char *str;
-  v7_strlen_t str_len;
+  size_t str_len;
   str = ast_get_inlined_data(a, pos, &str_len);
   if (str_len >= sizeof(buf)) {
     str_len = sizeof(buf) - 1;
@@ -8147,7 +8129,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
-  v7_strlen_t slen;
+  size_t slen;
   int i, llen;
 
   for (i = 0; i < depth; i++) {
@@ -8157,7 +8139,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   fprintf(fp, "%s", def->name);
 
   if (def->has_inlined) {
-    slen = decode_string_len((unsigned char *) a->mbuf.buf + *pos, &llen);
+    slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
     fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + *pos + llen);
   } else {
     fprintf(fp, "\n");
@@ -8231,7 +8213,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
-    case V7_TAG_STRING:
+    case V7_TAG_STRING_I:
+    case V7_TAG_STRING_O:
+    case V7_TAG_STRING_F:
       return V7_TYPE_STRING;
     case V7_TAG_BOOLEAN:
       return V7_TYPE_BOOLEAN;
@@ -8257,7 +8241,8 @@ int v7_is_function(val_t v) {
 }
 
 int v7_is_string(val_t v) {
-  return (v & V7_TAG_MASK) == V7_TAG_STRING;
+  uint64_t t = v & V7_TAG_MASK;
+  return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O;
 }
 
 int v7_is_boolean(val_t v) {
@@ -8297,14 +8282,6 @@ val_t v7_function_to_value(struct v7_function *o) {
 
 struct v7_function *val_to_function(val_t v) {
   return (struct v7_function *) val_to_pointer(v);
-}
-
-val_t v7_string_to_value(struct v7_str *s) {
-  return v7_pointer_to_value(s) | V7_TAG_STRING;
-}
-
-struct v7_str *val_to_string(val_t v) {
-  return (struct v7_str *) val_to_pointer(v);
 }
 
 val_t v7_foreign_to_value(void *p) {
@@ -8359,7 +8336,6 @@ val_t v7_create_value(struct v7 *v7, enum v7_type type, ...) {
 val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
                             va_list ap) {
   val_t v;
-  const char *str;
 
   /* Initialize value based on type */
   switch (type) {
@@ -8372,17 +8348,11 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
     case V7_TYPE_BOOLEAN:
       return v7_boolean_to_value(va_arg(ap, int));
     case V7_TYPE_STRING:
-      /* TODO(mkm) this will be way different */
       {
-        struct v7_str *s = (struct v7_str *) malloc(sizeof(struct v7_str));
-        if (s == NULL) {
-          return V7_NULL;
-        }
-        str = va_arg(ap, char *);
-        s->len = va_arg(ap, size_t);
-        s->buf = malloc(s->len);
-        strncpy(s->buf, str, s->len);
-        return v7_string_to_value(s);
+        char *p = va_arg(ap, char *);
+        size_t len = va_arg(ap, size_t);
+        int own = va_arg(ap, int);
+        return v7_string_to_value(v7, p, len, own);
       }
     case V7_TYPE_GENERIC_OBJECT:
       return v7_create_object(v7, v7->object_prototype);
@@ -8431,8 +8401,9 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       return snprintf(buf, size, "%lg", val_to_double(v));
     case V7_TYPE_STRING:
       {
-        struct v7_str *str = val_to_string(v);
-        return snprintf(buf, size, "\"%.*s\"", (int) str->len, str->buf);
+        size_t n;
+        const char *str = val_to_string(v7, &v, &n);
+        return snprintf(buf, size, "\"%.*s\"", (int) n, str);
       }
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
@@ -8485,7 +8456,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
     case V7_TYPE_FUNCTION_OBJECT:
       {
         char *name;
-        v7_strlen_t name_len;
+        size_t name_len;
         char *b = buf;
         struct v7_function *func = val_to_function(v);
         ast_off_t end, body, var, var_end, start, pos = func->ast_off;
@@ -8504,14 +8475,14 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         if (ast_fetch_tag(a, &pos) == AST_IDENT) {
           name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
-          b += snprintf(b, size - (b - buf), " %.*s", name_len, name);
+          b += snprintf(b, size - (b - buf), " %.*s", (int) name_len, name);
         }
         b += snprintf(b, size - (b - buf), "(");
         while (pos < body) {
           assert(ast_fetch_tag(a, &pos) == AST_IDENT);
           name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
-          b += snprintf(b, size - (b - buf), "%.*s", name_len, name);
+          b += snprintf(b, size - (b - buf), "%.*s", (int) name_len, name);
           if (pos < body) {
             b += snprintf(b, size - (b - buf), ",");
           }
@@ -8537,7 +8508,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
               ast_move_to_children(a, &var);
               ast_skip_tree(a, &var);
 
-              b += snprintf(b, size - (b - buf), "%.*s", name_len, name);
+              b += snprintf(b, size - (b - buf), "%.*s", (int) name_len, name);
               if (var < var_end || next) {
                 b += snprintf(b, size - (b - buf), ",");
               }
@@ -8569,15 +8540,14 @@ char *debug_json(struct v7 *v7, val_t v) {
 int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
                        size_t size) {
   if (v7_is_string(v)) {
-    char *b;
-    struct v7_str *str = val_to_string(v);
-    v7_strlen_t len = str->len;
-    if (len > size - 1) {
-      len = size - 1;
+    size_t n;
+    const char *str = val_to_string(v7, &v, &n);
+    if (n >= size) {
+      n = size - 1;
     }
-    b = stpncpy(buf, str->buf, len);
-    buf[str->len] = '\0';
-    return b - buf;
+    stpncpy(buf, str, n);
+    buf[n] = '\0';
+    return n;
   } else {
     return v7_to_json(v7, v, buf, size);
   }
@@ -8589,15 +8559,13 @@ static struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-struct v7_property *v7_get_property(val_t obj,
-                                    const char *name,
-                                    v7_strlen_t len) {
+struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
   struct v7_property *prop;
 
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  if (len == (v7_strlen_t) -1) {
+  if (len == (size_t) -1) {
     len = strlen(name);
   }
   for (prop = val_to_object(obj)->properties; prop != NULL;
@@ -8616,9 +8584,8 @@ static void v7_destroy_property(struct v7_property **p) {
 }
 
 int v7_set_property_value(struct v7 *v7, val_t obj,
-                          const char *name, v7_strlen_t len,
-                          unsigned int attributes,
-                          val_t val) {
+                          const char *name, size_t len,
+                          unsigned int attributes, val_t val) {
   struct v7_property *prop;
 
   if (!v7_is_object(obj)) {
@@ -8635,7 +8602,7 @@ int v7_set_property_value(struct v7 *v7, val_t obj,
   }
 
   prop->attributes = attributes;
-  if (len == (v7_strlen_t) ~0) {
+  if (len == (size_t) ~0) {
     len = strlen(name);
   }
   prop->name = malloc(len + 1);
@@ -8647,7 +8614,7 @@ int v7_set_property_value(struct v7 *v7, val_t obj,
 }
 
 int v7_set_property(struct v7 *v7, val_t obj, const char *name,
-                    v7_strlen_t len, unsigned int attributes,
+                    size_t len, unsigned int attributes,
                     enum v7_type type, ...) {
   val_t val;
   va_list ap;
@@ -8659,13 +8626,13 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name,
   return res;
 }
 
-int v7_del_property(val_t obj, const char *name, v7_strlen_t len) {
+int v7_del_property(val_t obj, const char *name, size_t len) {
   struct v7_property *prop, *prev;
 
   if (!v7_is_object(obj)) {
     return -1;
   }
-  if (len == (v7_strlen_t) ~0) {
+  if (len == (size_t) ~0) {
     len = strlen(name);
   }
   for (prev = NULL, prop = val_to_object(obj)->properties; prop != NULL;
@@ -8706,6 +8673,102 @@ V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t v) {
     }
   }
   return v7_create_value(v7, V7_TYPE_NUMBER, (double) (max + 1));
+}
+
+/* Insert a string into mbuf at specified offset */
+V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
+                             size_t n) {
+  int k = calc_llen(n);           /* Calculate how many bytes length takes */
+  mbuf_insert(m, offset, NULL, k);   /* Allocate  buffer for length */
+  encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
+  mbuf_insert(m, offset + k, p, n);  /* Copy the string itself */
+}
+
+/* Create a string */
+val_t v7_string_to_value(struct v7 *v7, const char *p, size_t len, int own) {
+  struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
+  val_t offset = m->len, tag = V7_TAG_STRING_F;
+
+  if (len <= 5) {
+    char *s = GET_VAL_NAN_PAYLOAD(offset) + 1;
+    offset = 0;
+    memcpy(s, p, len);
+    s[-1] = len;
+    tag = V7_TAG_STRING_I;
+  } else if (own) {
+    embed_string(m, m->len, p, len);
+    tag = V7_TAG_STRING_O;
+  } else {
+    embed_string(m, m->len, (char *) &p, sizeof(p));
+  }
+
+  return v7_pointer_to_value((void *) offset) | tag;
+}
+
+/* Get a pointer to string and string length */
+const char *val_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
+  uint64_t tag = v[0] & V7_TAG_MASK;
+  char *p;
+  int llen;
+
+  if (tag == V7_TAG_STRING_I) {
+    p = GET_VAL_NAN_PAYLOAD(*v) + 1;
+    *sizep = p[-1];
+  } else {
+    struct mbuf *m = (tag == V7_TAG_STRING_O) ?
+      &v7->owned_strings : &v7->foreign_strings;
+    size_t offset = (size_t) val_to_pointer(*v);
+    char *s = m->buf + offset;
+
+    *sizep = decode_varint((uint8_t *) s, &llen);
+    p = (tag == V7_TAG_STRING_O) ? s + llen : * (char **) (s + llen);
+  }
+
+  return p;
+}
+
+V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
+  size_t a_len, b_len;
+  const char *a_ptr, *b_ptr;
+
+  a_ptr = val_to_string(v7, &a, &a_len);
+  b_ptr = val_to_string(v7, &b, &b_len);
+
+  /* TODO(lsm): fix this */
+  return memcmp(a_ptr, b_ptr, a_len < b_len ? a_len : b_len);
+}
+
+V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
+  size_t a_len, b_len, offset = v7->owned_strings.len;
+  const char *a_ptr, *b_ptr;
+  char *s = v7->owned_strings.buf + offset;
+  uint64_t tag = V7_TAG_STRING_F;
+
+  a_ptr = val_to_string(v7, &a, &a_len);
+  b_ptr = val_to_string(v7, &b, &b_len);
+
+  /* Create a new string which is a concatenation a + b */
+  if (a_len + b_len <= 5) {
+    offset = 0;
+    s = ((char *) &offset) + 3;
+    tag = V7_TAG_STRING_I;
+  } else {
+    mbuf_append(&v7->owned_strings, NULL, a_len + b_len);
+    tag = V7_TAG_STRING_O;
+  }
+  memcpy(s, a_ptr, a_len);
+  memcpy(s + a_len, b_ptr, b_len);
+
+  return v7_pointer_to_value((void *) offset) | tag;
+}
+
+V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, size_t start, size_t len) {
+  size_t n;
+  const char *p = val_to_string(v7, &s, &n);
+  if (len > n) len = n;   /* boundary check */
+  if (start > n) start = n;
+  /* TODO(lsm): if the substring len <= 5 bytes, inline into val_t */
+  return v7_string_to_value(v7, p + start, len, 1);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -9482,16 +9545,14 @@ static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, int *);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
 
-static double i_as_num(val_t v) {
-  char *tmp;
-  double dbl;
+static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
-      struct v7_str *str = val_to_string(v);
-      tmp = strndup(str->buf, str->len);
-      dbl = strtod(tmp, NULL);
-      free(tmp);
-      return dbl;
+      size_t n;
+      char buf[20], *s = (char *) val_to_string(v7, &v, &n);
+      snprintf(buf, sizeof(buf), "%.*s", (int) n, s);
+      buf[sizeof(buf) - 1] = '\0';
+      return strtod(buf, NULL);
     } else {
       return NAN;
     }
@@ -9574,13 +9635,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
    */
   char buf[512];
   char *name;
-  v7_strlen_t name_len;
+  size_t name_len;
 
   switch (tag) {
     case AST_NEGATIVE:
     case AST_POSITIVE:
       return v7_create_value(v7, V7_TYPE_NUMBER, i_num_unary_op(
-          tag, i_as_num(i_eval_expr(v7, a, pos, scope))));
+          tag, i_as_num(v7, i_eval_expr(v7, a, pos, scope))));
     case AST_ADD:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -9589,19 +9650,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         v7_stringify_value(v7, v1, buf, sizeof(buf));
         v7_stringify_value(v7, v2, buf + strlen(buf),
                            sizeof(buf) - strlen(buf));
-        return v7_create_value(v7, V7_TYPE_STRING, buf,
-                               (v7_strlen_t) strlen(buf));
+        return v7_create_value(v7, V7_TYPE_STRING, buf, strlen(buf));
       }
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag, i_as_num(v1),
-                                                              i_as_num(v2)));
+      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_SUB:
     case AST_REM:
     case AST_MUL:
     case AST_DIV:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag, i_as_num(v1),
-                                                              i_as_num(v2)));
+      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_EQ:
     case AST_NE:
     case AST_LT:
@@ -9610,8 +9670,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_GE:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_BOOLEAN,
-                             i_bool_bin_op(tag, i_as_num(v1), i_as_num(v2)));
+      return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_ASSIGN:
       /* for now only simple assignment */
       assert((tag = ast_fetch_tag(a, pos)) == AST_IDENT);
@@ -9679,8 +9739,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_STRING:
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
-      res = v7_create_value(v7, V7_TYPE_STRING, name,
-                            name_len, 1);
+      res = v7_create_value(v7, V7_TYPE_STRING, name, name_len, 1);
       return res;
     case AST_IDENT:
       {
@@ -9716,7 +9775,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   val_t frame, res, v1;
   struct v7_function *func;
   char *name;
-  v7_strlen_t name_len;
+  size_t name_len;
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
