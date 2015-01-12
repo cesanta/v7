@@ -1241,6 +1241,10 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "42"));
   ASSERT((v = v7_exec_2(v7, "x=0;f=function(){x=42; return function() {return x}; var x};f()()")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec_2(v7, "x=42;o={x:66,f:function(){return this}};o.f().x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "66"));
+  ASSERT((v = v7_exec_2(v7, "x=42;o={x:66,f:function(){return this}};(1,o.f)().x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
 
   ASSERT((v = v7_exec_2(v7, "o={};o.x=24")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "24"));
