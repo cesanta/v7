@@ -1033,6 +1033,7 @@ val_t v7_va_create_value(struct v7 *, enum v7_type, va_list);
 int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 int v7_to_json(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE char* debug_json(struct v7 *, val_t);
+V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
 int v7_set_property_value(struct v7 *, val_t obj,
                           const char *name, size_t len,
@@ -8559,7 +8560,6 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             if (next == var) {
               next = 0;
             }
-            assert(next < 1000);
 
             var_end = ast_get_skip(a, var, AST_END_SKIP);
             ast_move_to_children(a, &var);
@@ -8614,7 +8614,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
   }
 }
 
-static struct v7_property *v7_create_property(struct v7 *v7) {
+V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   /* TODO(mkm): allocate from GC pool */
   (void) v7;
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
@@ -9631,7 +9631,7 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
 
 
 static enum ast_tag assign_op_map[] = {
-  AST_NOP, AST_REM, AST_MUL, AST_DIV, AST_XOR, AST_ADD, AST_SUB, AST_OR,
+  AST_REM, AST_MUL, AST_DIV, AST_XOR, AST_ADD, AST_SUB, AST_OR,
   AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT
 };
 
@@ -9829,6 +9829,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_LSHIFT_ASSIGN:
     case AST_RSHIFT_ASSIGN:
     case AST_URSHIFT_ASSIGN:
+    case AST_PREINC:
+    case AST_PREDEC:
+    case AST_POSTINC:
+    case AST_POSTDEC:
       {
         struct v7_property *prop;
         enum ast_tag op = tag;
@@ -9854,23 +9858,48 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             return V7_UNDEFINED;  /* unreachable */
         }
 
-        res = i_eval_expr(v7, a, pos, scope);
         /*
          * TODO(mkm): this will incorrectly mutate an existing property in
          * Object.prototype instead of creating a new variable in `global`.
          * `get_property` should also return a pointer to the object where
          * the property is found.
          */
+        v1 = V7_UNDEFINED;
         prop = v7_get_property(lval, name, name_len);
-        if (prop == NULL) {
-          v7_set_property_value(v7, root, name, name_len, 0, res);
+        if (prop != NULL) {
+          v1 = prop->value;
+        }
+
+        switch (op) {
+          case AST_PREINC:
+            v1 = res = v7_double_to_value(i_as_num(v7, v1) + 1.0);
+            break;
+          case AST_PREDEC:
+            v1 = res = v7_double_to_value(i_as_num(v7, v1) - 1.0);
+            break;
+          case AST_POSTINC:
+            res = v1;
+            v1 = v7_double_to_value(i_as_num(v7, v1) + 1.0);
+            break;
+          case AST_POSTDEC:
+            res = v1;
+            v1 = v7_double_to_value(i_as_num(v7, v1) - 1.0);
+            break;
+          case AST_ASSIGN:
+            v1 = res = i_eval_expr(v7, a, pos, scope);
+            break;
+          default:
+            op = assign_op_map[op - AST_ASSIGN - 1];
+            res = i_eval_expr(v7, a, pos, scope);
+            res = v1 = v7_double_to_value(i_num_bin_op(
+                v7, op, i_as_num(v7, v1), i_as_num(v7, res)));
+        }
+
+        /* variables are modified where they are found in the scope chain */
+        if (prop != NULL && tag == AST_IDENT) {
+          prop->value = v1;
         } else {
-          op = assign_op_map[op - AST_ASSIGN];
-          if (op != AST_NOP) {
-            res = v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(v7, op,
-                                  i_as_num(v7, prop->value), i_as_num(v7, res)));
-          }
-          prop->value = res;
+          v7_set_property_value(v7, root, name, name_len, 0, v1);
         }
         return res;
       }

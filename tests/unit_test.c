@@ -1027,7 +1027,7 @@ static const char *test_ecmac(void) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
         if (v7_exec_2(v7, current_case) == V7_UNDEFINED) {
-          #if 1
+          #if 0
           printf("FAILED ECMA TEST: [%s] -> [%s]\n", current_case, v7->error_msg);
           #endif
 #ifdef ECMA_FORK
@@ -1260,6 +1260,18 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "8"));
   ASSERT((v = v7_exec_2(v7, "x=1;x<<=4;x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "16"));
+  ASSERT((v = v7_exec_2(v7, "x=1;x++")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec_2(v7, "x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
+  ASSERT((v = v7_exec_2(v7, "x=1;++x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
+  ASSERT((v = v7_exec_2(v7, "x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
+  ASSERT((v = v7_exec_2(v7, "o={x:1};o.x++")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec_2(v7, "o.x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
 
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
