@@ -1306,6 +1306,21 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec_2(v7, "20 in [10,20]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "false"));
 
+  ASSERT((v = v7_exec_2(v7, "x=1; delete x; typeof x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"undefined\""));
+  ASSERT((v = v7_exec_2(v7, "x=1; (function(){x=2;delete x; return typeof x})()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"undefined\""));
+  ASSERT((v = v7_exec_2(v7, "x=1; (function(){x=2;delete x})(); typeof x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"undefined\""));
+  ASSERT((v = v7_exec_2(v7, "x=1; (function(){var x=2;delete x})(); x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec_2(v7, "o={a:1};delete o.a;o")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "{}"));
+  ASSERT((v = v7_exec_2(v7, "o={a:1};delete o['a'];o")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "{}"));
+  ASSERT((v = v7_exec_2(v7, "x=0;if(delete 1 == true)x=42;x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
+
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
