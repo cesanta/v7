@@ -17,6 +17,14 @@ static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   longjmp(v7->jmp_buf, 1);
 }
 
+static void abort_exec(struct v7 *v7, const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  longjmp(v7->abort_jmp_buf, 1);
+}
+
 static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
@@ -49,7 +57,7 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
     case AST_NEGATIVE:
       return -a;
     default:
-      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
   }
 }
@@ -67,7 +75,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) 
     case AST_DIV:
       return a / b;
     default:
-      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
   }
 }
@@ -89,7 +97,7 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
     case AST_GE:
       return a >= b;
     default:
-      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
   }
 }
@@ -149,14 +157,45 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(v7, tag,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_ASSIGN:
-      /* for now only simple assignment */
-      tag = ast_fetch_tag(a, pos);
-      V7_CHECK(v7, tag == AST_IDENT);
-      name = ast_get_inlined_data(a, *pos, &name_len);
-      ast_move_to_children(a, pos);
-      res = i_eval_expr(v7, a, pos, scope);
-      v7_set_property_value(v7, scope, name, name_len, 0, res);
-      return res;
+      {
+        struct v7_property *prop;
+        val_t lval, root = v7->global_object;
+        switch ((tag = ast_fetch_tag(a, pos))) {
+          case AST_IDENT:
+            lval = scope;
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            break;
+          case AST_MEMBER:
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            break;
+          case AST_INDEX:
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            v1 = i_eval_expr(v7, a, pos, scope);
+            name_len = v7_stringify_value(v7, v1, buf, sizeof(buf));
+            name = buf;
+          default:
+            abort_exec(v7, "Invalid left-hand side in assignment");
+            return V7_UNDEFINED;  /* unreachable */
+        }
+
+        res = i_eval_expr(v7, a, pos, scope);
+        /*
+         * TODO(mkm): this will incorrectly mutate an existing property in
+         * Object.prototype instead of creating a new variable in `global`.
+         * `get_property` should also return a pointer to the object where
+         * the property is found.
+         */
+        prop = v7_get_property(lval, name, name_len);
+        if (prop == NULL) {
+          v7_set_property_value(v7, root, name, name_len, 0, res);
+        } else {
+          prop->value = res;
+        }
+        return res;
+      }
     case AST_INDEX:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -234,6 +273,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         val_t func = v7_create_value(v7, V7_TYPE_FUNCTION_OBJECT);
         struct v7_function *funcp = val_to_function(func);
+        funcp->scope = val_to_object(scope);
         funcp->ast = a;
         funcp->ast_off = *pos - 1;
         ast_move_to_children(a, pos);
@@ -263,7 +303,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       /* TODO(lsm): fix this */
       return v7->global_object;
     default:
-      throw_exception(v7, "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
       return V7_UNDEFINED;
   }
 }
@@ -292,7 +332,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
     }
     return val_to_cfunction(v1)(v7, args);
   } if (!v7_is_function(v1)) {
-    throw_exception(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
+    abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
 
   func = val_to_function(v1);
@@ -308,6 +348,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   fargs = fpos;
 
   frame = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  val_to_object(frame)->prototype = func->scope;
   /* populate the call frame with a property for each local variable */
   if (fvar != fstart) {
     ast_off_t next;
@@ -455,21 +496,37 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         i_eval_expr(v7, a, &iter, scope);
       }
     case AST_TRY:
-      /* Dummy no catch impl */
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
-      finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
-      ast_move_to_children(a, pos);
-      res = i_eval_stmts(v7, a, pos, catch, scope, brk);
-      if (finally) {
-        int brk = 0;
-        val_t res = i_eval_stmts(v7, a, &finally, end, scope, &brk);
-        if (brk) {
-          return res;
+      {
+        int percolate = 0;
+        jmp_buf old_jmp;
+        memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
+
+        end = ast_get_skip(a, *pos, AST_END_SKIP);
+        catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+        finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
+        ast_move_to_children(a, pos);
+        if (setjmp(v7->jmp_buf) == 0) {
+          res = i_eval_stmts(v7, a, pos, catch, scope, brk);
+        } else if (catch != finally) {
+          tag = ast_fetch_tag(a, &catch);
+          V7_CHECK(v7, tag == AST_IDENT);
+          ast_move_to_children(a, &catch);
+          memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+          res = i_eval_stmts(v7, a, &catch, finally, scope, brk);
+        } else {
+          percolate = 1;
         }
+
+        memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+        if (finally) {
+          res = i_eval_stmts(v7, a, &finally, end, scope, brk);
+          if (!*brk && percolate) {
+            longjmp(v7->jmp_buf, 1);
+          }
+        }
+        *pos = end;
+        return res;
       }
-      *pos = end;
-      return res;
     case AST_WITH:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -501,6 +558,12 @@ V7_PRIVATE val_t v7_exec_2(struct v7 *v7, const char* src) {
   char debug[1024];
 
   ast_init(a, 0);
+  if (setjmp(v7->abort_jmp_buf) != 0) {
+    #if 0
+    fprintf(stderr, "Exec abort: %s\n", v7->error_msg);
+    #endif
+    return V7_UNDEFINED;
+  }
   if (setjmp(v7->jmp_buf) != 0) {
     #if 0
     fprintf(stderr, "Exec error: %s\n", v7->error_msg);

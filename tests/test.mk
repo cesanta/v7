@@ -70,7 +70,7 @@ SOURCES_gcov=$(addprefix $(SRC_DIR)/, $(SOURCES))
 SOURCES_asan=$(addprefix $(SRC_DIR)/, $(SOURCES))
 
 CC_asan=$(CLANG)
-CFLAGS_asan=-fsanitize=address -fcolor-diagnostics -std=c99 -DNO_DNS_TEST -UNS_ENABLE_SSL
+CFLAGS_asan=-fsanitize=address -fcolor-diagnostics -std=c99
 CMD_asan=ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=allocator_may_return_null=1,symbolize=1 $(CMD)
 
 CMD_valgrind=valgrind

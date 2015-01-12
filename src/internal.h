@@ -255,6 +255,8 @@ struct v7 {
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
   jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
+  /* Handle implementation errors that shouldn't be caught from JS */
+  jmp_buf abort_jmp_buf;
   char error_msg[60];           /* Exception message */
 
   /* TODO(lsm): after refactoring is made, kill everything below this line */

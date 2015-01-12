@@ -88,6 +88,9 @@ V7_PRIVATE void *val_to_pointer(val_t v) {
 }
 
 val_t v7_object_to_value(struct v7_object *o) {
+  if (o == NULL) {
+    return V7_NULL;
+  }
   return v7_pointer_to_value(o) | V7_TAG_OBJECT;
 }
 
@@ -144,6 +147,10 @@ double val_to_double(val_t v) {
   return * (double *) &v;
 }
 
+V7_PRIVATE val_t v_get_prototype(val_t obj) {
+  return v7_object_to_value(val_to_object(obj)->prototype);
+}
+
 static val_t v7_create_object(struct v7 *v7, struct v7_object *proto) {
   /* TODO(mkm): use GC heap */
   struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
@@ -196,6 +203,7 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
           return V7_NULL;
         }
         f->properties = NULL;
+        f->scope = NULL;
         return v7_function_to_value(f);
       }
     case V7_TYPE_CFUNCTION_OBJECT:
@@ -385,18 +393,28 @@ static struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
+struct v7_property *v_find_property(val_t obj, const char *name, size_t len) {
   struct v7_property *prop;
-
-  if (!v7_is_object(obj)) {
-    return NULL;
-  }
-  if (len == (size_t) -1) {
+  if (len == (size_t) ~0) {
     len = strlen(name);
   }
   for (prop = val_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
-    if (strncmp(prop->name, name, len) == 0) {
+    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
+      return prop;
+    }
+  }
+  return NULL;
+}
+
+struct v7_property *v7_get_property(val_t obj, const char *name,
+                                    size_t len) {
+  if (!v7_is_object(obj)) {
+    return NULL;
+  }
+  for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
+    struct v7_property *prop;
+    if ((prop = v_find_property(obj, name, len)) != NULL) {
       return prop;
     }
   }
@@ -418,7 +436,7 @@ int v7_set_property_value(struct v7 *v7, val_t obj,
     return -1;
   }
 
-  prop = v7_get_property(obj, name, len);
+  prop = v_find_property(obj, name, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;
@@ -463,7 +481,7 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
   }
   for (prev = NULL, prop = val_to_object(obj)->properties; prop != NULL;
        prev = prop, prop = prop->next) {
-    if (strncmp(prop->name, name, len) == 0) {
+    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
       if (prev) {
         prev->next = prop->next;
       } else {

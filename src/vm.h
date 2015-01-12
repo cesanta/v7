@@ -97,6 +97,7 @@ struct v7_function {
    * objects can be managed by the GC.
    */
   struct v7_property *properties;
+  struct v7_object *scope;    /* lexical scope of the closure */
   struct ast *ast;            /* AST, used as a byte code for execution */
   unsigned int ast_off;       /* Position of the function node in the AST */
 };
@@ -130,6 +131,8 @@ int val_to_boolean(val_t);
 double val_to_double(val_t);
 v7_cfunction_t val_to_cfunction(val_t);
 const char *val_to_string(struct v7 *, val_t *, size_t *);
+
+V7_PRIVATE val_t v_get_prototype(val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))

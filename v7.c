@@ -646,6 +646,8 @@ struct v7 {
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
   jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
+  /* Handle implementation errors that shouldn't be caught from JS */
+  jmp_buf abort_jmp_buf;
   char error_msg[60];           /* Exception message */
 
   /* TODO(lsm): after refactoring is made, kill everything below this line */
@@ -975,6 +977,7 @@ struct v7_function {
    * objects can be managed by the GC.
    */
   struct v7_property *properties;
+  struct v7_object *scope;    /* lexical scope of the closure */
   struct ast *ast;            /* AST, used as a byte code for execution */
   unsigned int ast_off;       /* Position of the function node in the AST */
 };
@@ -1008,6 +1011,8 @@ int val_to_boolean(val_t);
 double val_to_double(val_t);
 v7_cfunction_t val_to_cfunction(val_t);
 const char *val_to_string(struct v7 *, val_t *, size_t *);
+
+V7_PRIVATE val_t v_get_prototype(val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
@@ -8310,6 +8315,9 @@ V7_PRIVATE void *val_to_pointer(val_t v) {
 }
 
 val_t v7_object_to_value(struct v7_object *o) {
+  if (o == NULL) {
+    return V7_NULL;
+  }
   return v7_pointer_to_value(o) | V7_TAG_OBJECT;
 }
 
@@ -8366,6 +8374,10 @@ double val_to_double(val_t v) {
   return * (double *) &v;
 }
 
+V7_PRIVATE val_t v_get_prototype(val_t obj) {
+  return v7_object_to_value(val_to_object(obj)->prototype);
+}
+
 static val_t v7_create_object(struct v7 *v7, struct v7_object *proto) {
   /* TODO(mkm): use GC heap */
   struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
@@ -8418,6 +8430,7 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
           return V7_NULL;
         }
         f->properties = NULL;
+        f->scope = NULL;
         return v7_function_to_value(f);
       }
     case V7_TYPE_CFUNCTION_OBJECT:
@@ -8607,18 +8620,28 @@ static struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
+struct v7_property *v_find_property(val_t obj, const char *name, size_t len) {
   struct v7_property *prop;
-
-  if (!v7_is_object(obj)) {
-    return NULL;
-  }
-  if (len == (size_t) -1) {
+  if (len == (size_t) ~0) {
     len = strlen(name);
   }
   for (prop = val_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
-    if (strncmp(prop->name, name, len) == 0) {
+    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
+      return prop;
+    }
+  }
+  return NULL;
+}
+
+struct v7_property *v7_get_property(val_t obj, const char *name,
+                                    size_t len) {
+  if (!v7_is_object(obj)) {
+    return NULL;
+  }
+  for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
+    struct v7_property *prop;
+    if ((prop = v_find_property(obj, name, len)) != NULL) {
       return prop;
     }
   }
@@ -8640,7 +8663,7 @@ int v7_set_property_value(struct v7 *v7, val_t obj,
     return -1;
   }
 
-  prop = v7_get_property(obj, name, len);
+  prop = v_find_property(obj, name, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;
@@ -8685,7 +8708,7 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
   }
   for (prev = NULL, prop = val_to_object(obj)->properties; prop != NULL;
        prev = prop, prop = prop->next) {
-    if (strncmp(prop->name, name, len) == 0) {
+    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
       if (prev) {
         prev->next = prop->next;
       } else {
@@ -9619,6 +9642,14 @@ static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   longjmp(v7->jmp_buf, 1);
 }
 
+static void abort_exec(struct v7 *v7, const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  longjmp(v7->abort_jmp_buf, 1);
+}
+
 static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
@@ -9651,7 +9682,7 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
     case AST_NEGATIVE:
       return -a;
     default:
-      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
   }
 }
@@ -9669,7 +9700,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) 
     case AST_DIV:
       return a / b;
     default:
-      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
   }
 }
@@ -9691,7 +9722,7 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
     case AST_GE:
       return a >= b;
     default:
-      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
   }
 }
@@ -9751,14 +9782,45 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(v7, tag,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_ASSIGN:
-      /* for now only simple assignment */
-      tag = ast_fetch_tag(a, pos);
-      V7_CHECK(v7, tag == AST_IDENT);
-      name = ast_get_inlined_data(a, *pos, &name_len);
-      ast_move_to_children(a, pos);
-      res = i_eval_expr(v7, a, pos, scope);
-      v7_set_property_value(v7, scope, name, name_len, 0, res);
-      return res;
+      {
+        struct v7_property *prop;
+        val_t lval, root = v7->global_object;
+        switch ((tag = ast_fetch_tag(a, pos))) {
+          case AST_IDENT:
+            lval = scope;
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            break;
+          case AST_MEMBER:
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            break;
+          case AST_INDEX:
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            v1 = i_eval_expr(v7, a, pos, scope);
+            name_len = v7_stringify_value(v7, v1, buf, sizeof(buf));
+            name = buf;
+          default:
+            abort_exec(v7, "Invalid left-hand side in assignment");
+            return V7_UNDEFINED;  /* unreachable */
+        }
+
+        res = i_eval_expr(v7, a, pos, scope);
+        /*
+         * TODO(mkm): this will incorrectly mutate an existing property in
+         * Object.prototype instead of creating a new variable in `global`.
+         * `get_property` should also return a pointer to the object where
+         * the property is found.
+         */
+        prop = v7_get_property(lval, name, name_len);
+        if (prop == NULL) {
+          v7_set_property_value(v7, root, name, name_len, 0, res);
+        } else {
+          prop->value = res;
+        }
+        return res;
+      }
     case AST_INDEX:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -9836,6 +9898,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         val_t func = v7_create_value(v7, V7_TYPE_FUNCTION_OBJECT);
         struct v7_function *funcp = val_to_function(func);
+        funcp->scope = val_to_object(scope);
         funcp->ast = a;
         funcp->ast_off = *pos - 1;
         ast_move_to_children(a, pos);
@@ -9865,7 +9928,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       /* TODO(lsm): fix this */
       return v7->global_object;
     default:
-      throw_exception(v7, "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
+      abort_exec(v7, "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
       return V7_UNDEFINED;
   }
 }
@@ -9894,7 +9957,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
     }
     return val_to_cfunction(v1)(v7, args);
   } if (!v7_is_function(v1)) {
-    throw_exception(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
+    abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
 
   func = val_to_function(v1);
@@ -9910,6 +9973,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   fargs = fpos;
 
   frame = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  val_to_object(frame)->prototype = func->scope;
   /* populate the call frame with a property for each local variable */
   if (fvar != fstart) {
     ast_off_t next;
@@ -10057,21 +10121,37 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         i_eval_expr(v7, a, &iter, scope);
       }
     case AST_TRY:
-      /* Dummy no catch impl */
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
-      finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
-      ast_move_to_children(a, pos);
-      res = i_eval_stmts(v7, a, pos, catch, scope, brk);
-      if (finally) {
-        int brk = 0;
-        val_t res = i_eval_stmts(v7, a, &finally, end, scope, &brk);
-        if (brk) {
-          return res;
+      {
+        int percolate = 0;
+        jmp_buf old_jmp;
+        memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
+
+        end = ast_get_skip(a, *pos, AST_END_SKIP);
+        catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+        finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
+        ast_move_to_children(a, pos);
+        if (setjmp(v7->jmp_buf) == 0) {
+          res = i_eval_stmts(v7, a, pos, catch, scope, brk);
+        } else if (catch != finally) {
+          tag = ast_fetch_tag(a, &catch);
+          V7_CHECK(v7, tag == AST_IDENT);
+          ast_move_to_children(a, &catch);
+          memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+          res = i_eval_stmts(v7, a, &catch, finally, scope, brk);
+        } else {
+          percolate = 1;
         }
+
+        memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+        if (finally) {
+          res = i_eval_stmts(v7, a, &finally, end, scope, brk);
+          if (!*brk && percolate) {
+            longjmp(v7->jmp_buf, 1);
+          }
+        }
+        *pos = end;
+        return res;
       }
-      *pos = end;
-      return res;
     case AST_WITH:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -10103,6 +10183,12 @@ V7_PRIVATE val_t v7_exec_2(struct v7 *v7, const char* src) {
   char debug[1024];
 
   ast_init(a, 0);
+  if (setjmp(v7->abort_jmp_buf) != 0) {
+    #if 0
+    fprintf(stderr, "Exec abort: %s\n", v7->error_msg);
+    #endif
+    return V7_UNDEFINED;
+  }
   if (setjmp(v7->jmp_buf) != 0) {
     #if 0
     fprintf(stderr, "Exec error: %s\n", v7->error_msg);
