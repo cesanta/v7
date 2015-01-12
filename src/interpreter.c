@@ -384,6 +384,35 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_THIS:
       /* TODO(lsm): fix this */
       return v7->global_object;
+    case AST_TYPEOF:
+      {
+        ast_off_t peek = *pos;
+        if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
+          name = ast_get_inlined_data(a, peek, &name_len);
+          if (v7_get_property(scope, name, name_len) == NULL) {
+            ast_move_to_children(a, &peek);
+            *pos = peek;
+            /* TODO(mkm): use interned strings*/
+            return v7_string_to_value(v7, "undefined", 9, 1);
+          }
+        }
+        res = i_eval_expr(v7, a, pos, scope);
+        switch(val_type(v7, res)) {
+          case V7_TYPE_NUMBER:
+            return v7_string_to_value(v7, "number", 6, 1);
+          case V7_TYPE_STRING:
+            return v7_string_to_value(v7, "string", 6, 1);
+          case V7_TYPE_BOOLEAN:
+            return v7_string_to_value(v7, "boolean", 7, 1);
+          case V7_TYPE_FUNCTION_OBJECT:
+            return v7_string_to_value(v7, "function", 8, 1);
+          default:
+            return v7_string_to_value(v7, "object", 6, 1);
+        }
+      }
+    case AST_VOID:
+      i_eval_expr(v7, a, pos, scope);
+      return V7_UNDEFINED;
     default:
       abort_exec(v7, "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
       return V7_UNDEFINED;

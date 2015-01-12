@@ -1273,6 +1273,23 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec_2(v7, "o.x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
 
+  ASSERT((v = v7_exec_2(v7, "typeof dummyx")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"undefined\""));
+  ASSERT((v = v7_exec_2(v7, "typeof null")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"object\""));
+  ASSERT((v = v7_exec_2(v7, "typeof 1")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"number\""));
+  ASSERT((v = v7_exec_2(v7, "typeof (1+2)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"number\""));
+  ASSERT((v = v7_exec_2(v7, "typeof 'test'")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"string\""));
+  ASSERT((v = v7_exec_2(v7, "typeof [1,2]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"object\""));
+  ASSERT((v = v7_exec_2(v7, "typeof function(){}")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"function\""));
+
+  ASSERT((v = v7_exec_2(v7, "void(1+2)")) == V7_UNDEFINED);
+
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
