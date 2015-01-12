@@ -1227,6 +1227,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "NaN"));
   ASSERT((v = v7_exec_2(v7, "x=1;(function(a){return a})(40,(function(){x=x+1})())+x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec_2(v7, "(function(){x=42;return;x=0})();x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
 
   /* TODO(mkm): check for reference error being thrown */
   /* ASSERT((v = v7_exec_2(v7, "(function(x,y){return x+y})(40,2,(function(){return fail})())")) != V7_UNDEFINED); */
@@ -1255,6 +1257,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "1"));
   ASSERT((v = v7_exec_2(v7, "ca=0;fin=0;(function(){try{(function(){try{xxxx}finally{fin=1}})()}catch(e){ca=1}})();fin+ca")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
+  ASSERT((v = v7_exec_2(v7, "x=0;try{throw 1}catch(e){x=42};x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
 
   ASSERT((v = v7_exec_2(v7, "x=1;x=x<<3;x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "8"));
@@ -1289,6 +1293,18 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "\"function\""));
 
   ASSERT((v = v7_exec_2(v7, "void(1+2)")) == V7_UNDEFINED);
+  ASSERT((v = v7_exec_2(v7, "true?1:2")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec_2(v7, "false?1:2")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
+  ASSERT((v = v7_exec_2(v7, "'a' in {a:1}")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec_2(v7, "'b' in {a:1}")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec_2(v7, "1 in [10,20]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec_2(v7, "20 in [10,20]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
 
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);

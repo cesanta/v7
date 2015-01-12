@@ -369,6 +369,20 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
     case AST_CALL:
       return i_eval_call(v7, a, pos, scope);
+    case AST_COND:
+      if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+        res = i_eval_expr(v7, a, pos, scope);
+        ast_skip_tree(a, pos); /* TODO(mkm): change AST to include skips ? */
+      } else {
+        ast_skip_tree(a, pos);
+        res = i_eval_expr(v7, a, pos, scope);
+      }
+      return res;
+    case AST_IN:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v7_stringify_value(v7, v1, buf, sizeof(buf));
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return v7_boolean_to_value(v7_get_property(v2, buf, -1) != NULL);
     case AST_VAR:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -653,6 +667,13 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       res = i_eval_expr(v7, a, pos, scope);
       *brk = 1;
       return res;
+    case AST_RETURN:
+      *brk = 1;
+      return V7_UNDEFINED;
+    case AST_THROW:
+      /* TODO(mkm): store exception value */
+      i_eval_expr(v7, a, pos, scope);
+      longjmp(v7->jmp_buf, 1);
     default:
       (*pos)--;
       return i_eval_expr(v7, a, pos, scope);
