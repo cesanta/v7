@@ -424,6 +424,43 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             return v7_string_to_value(v7, "object", 6, 1);
         }
       }
+    case AST_DELETE:
+      {
+        struct v7_property *prop;
+        val_t lval = V7_NULL, root = v7->global_object;
+        ast_off_t start = *pos;
+        switch ((tag = ast_fetch_tag(a, pos))) {
+          case AST_IDENT:
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            if (v7_get_property(scope, name, name_len) ==
+                v7_get_property(root, name, name_len)) {
+              lval = root;
+            }
+            break;
+          case AST_MEMBER:
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            break;
+          case AST_INDEX:
+            lval = root = i_eval_expr(v7, a, pos, scope);
+            res = i_eval_expr(v7, a, pos, scope);
+            name_len = v7_stringify_value(v7, res, buf, sizeof(buf));
+            name = buf;
+            break;
+          default:
+            *pos = start;
+            i_eval_expr(v7, a, pos, scope);
+            return v7_boolean_to_value(1);
+        }
+
+        prop = v7_get_property(lval, name, name_len);
+        if (prop != NULL) {
+          v7_del_property(lval, name, name_len);
+        }
+        return v7_boolean_to_value(1);
+      }
     case AST_VOID:
       i_eval_expr(v7, a, pos, scope);
       return V7_UNDEFINED;
@@ -674,6 +711,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       /* TODO(mkm): store exception value */
       i_eval_expr(v7, a, pos, scope);
       longjmp(v7->jmp_buf, 1);
+      break; /* unreachable */
     default:
       (*pos)--;
       return i_eval_expr(v7, a, pos, scope);
