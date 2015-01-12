@@ -60,7 +60,7 @@ enum v7_type {
   V7_TYPE_STRING_OBJECT,
   V7_TYPE_NUMBER_OBJECT,
   V7_TYPE_FUNCTION_OBJECT,
-  V7_TYPE_C_FUNCTION_OBJECT,
+  V7_TYPE_CFUNCTION_OBJECT,
   V7_TYPE_REGEXP_OBJECT,
   V7_TYPE_ARRAY_OBJECT,
   V7_TYPE_DATE_OBJECT,
@@ -89,6 +89,14 @@ enum v7_err {
   V7_REGEXP_ERROR,
   V7_NUM_ERRORS
 };
+
+/* TODO(lsm): fix this. */
+#include <inttypes.h>
+typedef uint64_t v7_val_t;
+
+typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t args);
+void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
+v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
 
 /* This structure is passed as an argument to the C/JS glue function */
 struct v7_c_func_arg {

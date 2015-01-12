@@ -67,6 +67,15 @@ int v7_is_undefined(val_t v) {
   return v == V7_UNDEFINED;
 }
 
+int v7_is_cfunction(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
+}
+
+/* A convenience function to check exec result. TODO(lsm): implement it. */
+int v7_is_error(val_t v) {
+  return v7_is_object(v) && 0;
+}
+
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
   return ((uint64_t) p & ((1L << 48) -1));
 }
@@ -92,6 +101,16 @@ val_t v7_function_to_value(struct v7_function *o) {
 
 struct v7_function *val_to_function(val_t v) {
   return (struct v7_function *) val_to_pointer(v);
+}
+
+v7_cfunction_t val_to_cfunction(val_t v) {
+  return (v7_cfunction_t) val_to_pointer(v);
+}
+
+val_t v7_cfunction_to_value(v7_cfunction_t f) {
+  union { void *p; v7_cfunction_t f; } u;
+  u.f = f;
+  return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
 
 val_t v7_foreign_to_value(void *p) {
@@ -179,10 +198,11 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
         f->properties = NULL;
         return v7_function_to_value(f);
       }
+    case V7_TYPE_CFUNCTION_OBJECT:
+      return v7_cfunction_to_value(va_arg(ap, v7_cfunction_t));
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
     case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_C_FUNCTION_OBJECT:
     case V7_TYPE_REGEXP_OBJECT:
     case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT:
@@ -215,11 +235,12 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         const char *str = val_to_string(v7, &v, &n);
         return snprintf(buf, size, "\"%.*s\"", (int) n, str);
       }
+    case V7_TYPE_CFUNCTION_OBJECT:
+      return snprintf(buf, size, "cfunc_%p", val_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
     case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_C_FUNCTION_OBJECT:
     case V7_TYPE_REGEXP_OBJECT:
     case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT:
@@ -243,12 +264,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         struct v7_property *p;
         char *b = buf;
         char key[512];
-        size_t i, len;
-        val_t lenv = v7_array_length(v7, v);
-        if (lenv == V7_UNDEFINED) {
-          return 0;
-        }
-        len = (size_t) val_to_double(lenv);
+        size_t i, len = v7_array_length(v7, v);
         b += snprintf(b, size - (b - buf), "[");
         for (i = 0; i < len; i++) {
           /* TODO */
@@ -467,22 +483,40 @@ V7_PRIVATE val_t v7_property_value(struct v7_property *p) {
   return p->value;
 }
 
-V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t v) {
-  struct v7_property *prop;
+V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
+  struct v7_property *p;
   long max = -1, k;
   char *end;
 
   if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
-    return v7_create_value(v7, V7_TYPE_UNDEFINED);
+    return -1;
   }
-  for (prop = val_to_object(v)->properties; prop != NULL;
-       prop = prop->next) {
-    k = strtol(prop->name, &end, 10);
-    if (end != prop->name && k > max) {
+  for (p = val_to_object(v)->properties; p != NULL; p = p->next) {
+    k = strtol(p->name, &end, 10);
+    if (end != p->name && k > max) {
       max = k;
     }
   }
-  return v7_create_value(v7, V7_TYPE_NUMBER, (double) (max + 1));
+  return max + 1;
+}
+
+void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
+  if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
+    char buf[20];
+    int n = snprintf(buf, sizeof(buf), "%ld", v7_array_length(v7, arr));
+    v7_set_property_value(v7, arr, buf, n, 0, v);
+  }
+}
+
+val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
+  if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
+    char buf[20];
+    int n = snprintf(buf, sizeof(buf), "%ld", index);
+    struct v7_property *prop = v7_get_property(arr, buf, n);
+    return prop == NULL ? V7_UNDEFINED : prop->value;
+  } else {
+    return V7_UNDEFINED;
+  }
 }
 
 /* Insert a string into mbuf at specified offset */

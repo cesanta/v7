@@ -5,6 +5,20 @@
 
 #include "internal.h"
 
+/* TODO(lsm): remove this when init_stdlib() is upgraded */
+V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
+  char *p;
+  int i, num_args = v7_array_length(v7, args);
+  for (i = 0; i < num_args; i++) {
+    p = debug_json(v7, v7_array_at(v7, args, i));
+    printf("%s", p);
+    free(p);
+  }
+  putchar('\n');
+
+  return v7_create_value(v7, V7_TYPE_NULL);
+}
+
 struct v7 *v7_create(void) {
   static int prototypes_initialized = 0;
   struct v7 *v7 = NULL;
@@ -23,12 +37,16 @@ struct v7 *v7_create(void) {
      * Ensure the first call to v7_create_value will use a null proto:
      * {}.__proto__.__proto__ == null
      */
-    v7->object_prototype = NULL;
     v7->object_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->array_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+
+    /* TODO(lsm): remove this when init_stdlib() is upgraded */
+    v7_set_property_value(v7, v7->global_object, "print", 5, 0,
+                          v7_create_value(v7, V7_TYPE_CFUNCTION_OBJECT,
+                                          Std_print_2));
   }
 
   return v7;
@@ -247,3 +265,4 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
   /* return status; */
 }
+

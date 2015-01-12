@@ -60,7 +60,7 @@ enum v7_type {
   V7_TYPE_STRING_OBJECT,
   V7_TYPE_NUMBER_OBJECT,
   V7_TYPE_FUNCTION_OBJECT,
-  V7_TYPE_C_FUNCTION_OBJECT,
+  V7_TYPE_CFUNCTION_OBJECT,
   V7_TYPE_REGEXP_OBJECT,
   V7_TYPE_ARRAY_OBJECT,
   V7_TYPE_DATE_OBJECT,
@@ -89,6 +89,14 @@ enum v7_err {
   V7_REGEXP_ERROR,
   V7_NUM_ERRORS
 };
+
+/* TODO(lsm): fix this. */
+#include <inttypes.h>
+typedef uint64_t v7_val_t;
+
+typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t args);
+void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
+v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
 
 /* This structure is passed as an argument to the C/JS glue function */
 struct v7_c_func_arg {
@@ -637,6 +645,9 @@ struct v7 {
   struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
+  jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
+  char error_msg[60];           /* Exception message */
+
   /* TODO(lsm): after refactoring is made, kill everything below this line */
   struct v7_val root_scope; /* "global" object (root-level execution context) */
   struct v7_val *stack[200]; /* TODO: make it non-fixed, auto-grow */
@@ -673,6 +684,12 @@ struct v7 {
 
 #define V7_STATIC_ASSERT(COND, MSG) \
       typedef char static_assertion_##MSG[2*(!!(COND)) - 1]
+
+#define V7_CHECK(v7, COND)                                                \
+    do { if (!(COND))                                                     \
+      throw_exception(v7, "Internal error: %s line %d: %s",               \
+                      __func__, __LINE__, #COND);                         \
+    } while (0)
 
 #define THROW(err_code)                                                        \
   do {                                                                         \
@@ -886,7 +903,8 @@ typedef uint64_t val_t;
 #define V7_TAG_STRING_I  ((uint64_t) 0xFFFA << 48)  /* Inlined string */
 #define V7_TAG_STRING_O  ((uint64_t) 0xFFF9 << 48)  /* Owned string */
 #define V7_TAG_STRING_F  ((uint64_t) 0xFFF8 << 48)  /* Foreign string */
-#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)
+#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)  /* JavaScript function */
+#define V7_TAG_CFUNCTION ((uint64_t) 0xFFF6 << 48)  /* C function */
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -930,15 +948,6 @@ struct v7_object {
   struct v7_object *prototype;
 };
 
-/* Argument to all C/JavaScript glue functions */
-struct v7_arg {
-  struct v7 *v7;
-  struct v7_val *this_obj;
-  struct v7_val **args;
-  int num_args;
-  int called_as_constructor;
-};
-
 /*
  * Variables are function-scoped and are hoisted.
  * Lexical scoping & closures: each function has a chain of scopes, defined
@@ -974,11 +983,13 @@ struct v7_function {
 enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_object(val_t);
 int v7_is_function(val_t);
+int v7_is_cfunction(val_t);
 int v7_is_string(val_t);
 int v7_is_boolean(val_t);
 int v7_is_double(val_t);
 int v7_is_null(val_t);
 int v7_is_undefined(val_t);
+int v7_is_error(val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 V7_PRIVATE void *val_to_pointer(val_t);
 
@@ -988,12 +999,14 @@ val_t v7_function_to_value(struct v7_function *);
 val_t v7_foreign_to_value(void *);
 val_t v7_boolean_to_value(int);
 val_t v7_double_to_value(double);
+val_t v7_cfunction_to_value(v7_cfunction_t);
 
 struct v7_object *val_to_object(val_t);
 struct v7_function *val_to_function(val_t);
 void *val_to_foreign(val_t);
 int val_to_boolean(val_t);
 double val_to_double(val_t);
+v7_cfunction_t val_to_cfunction(val_t);
 const char *val_to_string(struct v7 *, val_t *, size_t *);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
@@ -1043,9 +1056,9 @@ V7_PRIVATE val_t v7_property_value(struct v7_property *);
 V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
 
 /*
- * Returns the array length as JS number, or `undefined` if the object is not an array
+ * Returns the array length, or `-1` if the object is not an array
  */
-V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t);
+V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
 
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
@@ -7337,6 +7350,20 @@ int main(void) {
  */
 
 
+/* TODO(lsm): remove this when init_stdlib() is upgraded */
+V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
+  char *p;
+  int i, num_args = v7_array_length(v7, args);
+  for (i = 0; i < num_args; i++) {
+    p = debug_json(v7, v7_array_at(v7, args, i));
+    printf("%s", p);
+    free(p);
+  }
+  putchar('\n');
+
+  return v7_create_value(v7, V7_TYPE_NULL);
+}
+
 struct v7 *v7_create(void) {
   static int prototypes_initialized = 0;
   struct v7 *v7 = NULL;
@@ -7355,12 +7382,16 @@ struct v7 *v7_create(void) {
      * Ensure the first call to v7_create_value will use a null proto:
      * {}.__proto__.__proto__ == null
      */
-    v7->object_prototype = NULL;
     v7->object_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->array_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+
+    /* TODO(lsm): remove this when init_stdlib() is upgraded */
+    v7_set_property_value(v7, v7->global_object, "print", 5, 0,
+                          v7_create_value(v7, V7_TYPE_CFUNCTION_OBJECT,
+                                          Std_print_2));
   }
 
   return v7;
@@ -7579,6 +7610,7 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
   /* return status; */
 }
+
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -8257,6 +8289,15 @@ int v7_is_undefined(val_t v) {
   return v == V7_UNDEFINED;
 }
 
+int v7_is_cfunction(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
+}
+
+/* A convenience function to check exec result. TODO(lsm): implement it. */
+int v7_is_error(val_t v) {
+  return v7_is_object(v) && 0;
+}
+
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
   return ((uint64_t) p & ((1L << 48) -1));
 }
@@ -8282,6 +8323,16 @@ val_t v7_function_to_value(struct v7_function *o) {
 
 struct v7_function *val_to_function(val_t v) {
   return (struct v7_function *) val_to_pointer(v);
+}
+
+v7_cfunction_t val_to_cfunction(val_t v) {
+  return (v7_cfunction_t) val_to_pointer(v);
+}
+
+val_t v7_cfunction_to_value(v7_cfunction_t f) {
+  union { void *p; v7_cfunction_t f; } u;
+  u.f = f;
+  return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
 
 val_t v7_foreign_to_value(void *p) {
@@ -8369,10 +8420,11 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
         f->properties = NULL;
         return v7_function_to_value(f);
       }
+    case V7_TYPE_CFUNCTION_OBJECT:
+      return v7_cfunction_to_value(va_arg(ap, v7_cfunction_t));
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
     case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_C_FUNCTION_OBJECT:
     case V7_TYPE_REGEXP_OBJECT:
     case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT:
@@ -8405,11 +8457,12 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         const char *str = val_to_string(v7, &v, &n);
         return snprintf(buf, size, "\"%.*s\"", (int) n, str);
       }
+    case V7_TYPE_CFUNCTION_OBJECT:
+      return snprintf(buf, size, "cfunc_%p", val_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
     case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_C_FUNCTION_OBJECT:
     case V7_TYPE_REGEXP_OBJECT:
     case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT:
@@ -8433,12 +8486,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         struct v7_property *p;
         char *b = buf;
         char key[512];
-        size_t i, len;
-        val_t lenv = v7_array_length(v7, v);
-        if (lenv == V7_UNDEFINED) {
-          return 0;
-        }
-        len = (size_t) val_to_double(lenv);
+        size_t i, len = v7_array_length(v7, v);
         b += snprintf(b, size - (b - buf), "[");
         for (i = 0; i < len; i++) {
           /* TODO */
@@ -8657,22 +8705,40 @@ V7_PRIVATE val_t v7_property_value(struct v7_property *p) {
   return p->value;
 }
 
-V7_PRIVATE val_t v7_array_length(struct v7 *v7, val_t v) {
-  struct v7_property *prop;
+V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
+  struct v7_property *p;
   long max = -1, k;
   char *end;
 
   if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
-    return v7_create_value(v7, V7_TYPE_UNDEFINED);
+    return -1;
   }
-  for (prop = val_to_object(v)->properties; prop != NULL;
-       prop = prop->next) {
-    k = strtol(prop->name, &end, 10);
-    if (end != prop->name && k > max) {
+  for (p = val_to_object(v)->properties; p != NULL; p = p->next) {
+    k = strtol(p->name, &end, 10);
+    if (end != p->name && k > max) {
       max = k;
     }
   }
-  return v7_create_value(v7, V7_TYPE_NUMBER, (double) (max + 1));
+  return max + 1;
+}
+
+void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
+  if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
+    char buf[20];
+    int n = snprintf(buf, sizeof(buf), "%ld", v7_array_length(v7, arr));
+    v7_set_property_value(v7, arr, buf, n, 0, v);
+  }
+}
+
+val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
+  if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
+    char buf[20];
+    int n = snprintf(buf, sizeof(buf), "%ld", index);
+    struct v7_property *prop = v7_get_property(arr, buf, n);
+    return prop == NULL ? V7_UNDEFINED : prop->value;
+  } else {
+    return V7_UNDEFINED;
+  }
 }
 
 /* Insert a string into mbuf at specified offset */
@@ -9545,6 +9611,14 @@ static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, int *);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
 
+static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  longjmp(v7->jmp_buf, 1);
+}
+
 static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
@@ -9570,19 +9644,19 @@ static int i_is_true(val_t v) {
       (v7_is_boolean(v) && val_to_boolean(v));
 }
 
-static double i_num_unary_op(enum ast_tag tag, double a) {
+static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
   switch (tag) {
     case AST_POSITIVE:
       return a;
     case AST_NEGATIVE:
       return -a;
     default:
-      printf("NOT IMPLEMENTED");  /* LCOV_EXCL_LINE */
-      abort();
+      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      return 0;
   }
 }
 
-static double i_num_bin_op(enum ast_tag tag, double a, double b) {
+static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
   switch (tag) {
     case AST_ADD:  /* simple fixed width nodes with no payload */
       return a + b;
@@ -9595,16 +9669,18 @@ static double i_num_bin_op(enum ast_tag tag, double a, double b) {
     case AST_DIV:
       return a / b;
     default:
-      printf("NOT IMPLEMENTED");  /* LCOV_EXCL_LINE */
-      abort();
+      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      return 0;
   }
 }
 
-static int i_bool_bin_op(enum ast_tag tag, double a, double b) {
+static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
   switch (tag) {
     case AST_EQ:
+    case AST_EQ_EQ:   /* TODO(lsm): fix this */
       return a == b;
     case AST_NE:
+    case AST_NE_NE:   /* TODO(lsm): fix this */
       return a != b;
     case AST_LT:
       return a < b;
@@ -9615,8 +9691,8 @@ static int i_bool_bin_op(enum ast_tag tag, double a, double b) {
     case AST_GE:
       return a >= b;
     default:
-      printf("NOT IMPLEMENTED");  /* LCOV_EXCL_LINE */
-      abort();
+      throw_exception(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
+      return 0;
   }
 }
 
@@ -9625,7 +9701,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
-  val_t res, v1, v2;
+  val_t res = V7_UNDEFINED, v1, v2;
   double dv;
   int i;
 
@@ -9641,7 +9717,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_NEGATIVE:
     case AST_POSITIVE:
       return v7_create_value(v7, V7_TYPE_NUMBER, i_num_unary_op(
-          tag, i_as_num(v7, i_eval_expr(v7, a, pos, scope))));
+          v7, tag, i_as_num(v7, i_eval_expr(v7, a, pos, scope))));
     case AST_ADD:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -9652,7 +9728,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                            sizeof(buf) - strlen(buf));
         return v7_create_value(v7, V7_TYPE_STRING, buf, strlen(buf));
       }
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag,
+      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(v7, tag,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_SUB:
     case AST_REM:
@@ -9660,7 +9736,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_DIV:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(tag,
+      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(v7, tag,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_EQ:
     case AST_NE:
@@ -9668,13 +9744,16 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_LE:
     case AST_GT:
     case AST_GE:
+    case AST_NE_NE:
+    case AST_EQ_EQ:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(tag,
+      return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(v7, tag,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_ASSIGN:
       /* for now only simple assignment */
-      assert((tag = ast_fetch_tag(a, pos)) == AST_IDENT);
+      tag = ast_fetch_tag(a, pos);
+      V7_CHECK(v7, tag == AST_IDENT);
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       res = i_eval_expr(v7, a, pos, scope);
@@ -9701,9 +9780,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       res = v7_create_value(v7, V7_TYPE_ARRAY_OBJECT);
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
-      for(i = 0; *pos < end; i++) {
+      for (i = 0; *pos < end; i++) {
         ast_off_t lookahead = *pos;
-        enum ast_tag tag = ast_fetch_tag(a, &lookahead);
+        tag = ast_fetch_tag(a, &lookahead);
         v1 = i_eval_expr(v7, a, pos, scope);
         if (tag != AST_NOP) {
           snprintf(buf, sizeof(buf), "%d", i);
@@ -9716,7 +9795,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       while (*pos < end) {
-        assert((tag = ast_fetch_tag(a, pos)) == AST_PROP);
+        tag = ast_fetch_tag(a, pos);
+        V7_CHECK(v7, tag == AST_PROP);
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
         v1 = i_eval_expr(v7, a, pos, scope);
@@ -9747,8 +9827,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
         if ((p = v7_get_property(scope, name, name_len)) == NULL) {
-          fprintf(stderr, "ReferenceError: %s is not defined\n", buf);
-          abort();
+          throw_exception(v7, "ReferenceError: [%.*s] is not defined",
+                          (int) name_len, name);
         }
         return v7_property_value(p);
       }
@@ -9758,14 +9838,35 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         struct v7_function *funcp = val_to_function(func);
         funcp->ast = a;
         funcp->ast_off = *pos - 1;
-        *pos = ast_get_skip(a, *pos, AST_END_SKIP);
+        ast_move_to_children(a, pos);
+        tag = ast_fetch_tag(a, pos);
+        if (tag == AST_IDENT) {
+          name = ast_get_inlined_data(a, *pos, &name_len);
+          v7_set_property_value(v7, scope, name, name_len, 0, func);
+        }
+        *pos = ast_get_skip(a, funcp->ast_off + 1, AST_END_SKIP);
         return func;
       }
     case AST_CALL:
       return i_eval_call(v7, a, pos, scope);
+    case AST_VAR:
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      while (*pos < end) {
+        tag = ast_fetch_tag(a, pos);
+        V7_CHECK(v7, tag == AST_VAR_DECL);
+        name = ast_get_inlined_data(a, *pos, &name_len);
+        ast_move_to_children(a, pos);
+        res = i_eval_expr(v7, a, pos, scope);
+        v7_set_property_value(v7, scope, name, name_len, 0, res);
+      }
+      return res;
+    case AST_THIS:
+      /* TODO(lsm): fix this */
+      return v7->global_object;
     default:
-      printf("NOT IMPLEMENTED: %s\n", def->name); /* LCOV_EXCL_LINE */
-      abort();
+      throw_exception(v7, "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
+      return V7_UNDEFINED;
   }
 }
 
@@ -9774,21 +9875,33 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   int fbrk = 0;
   val_t frame, res, v1;
   struct v7_function *func;
+  enum ast_tag tag;
   char *name;
   size_t name_len;
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
   v1 = i_eval_expr(v7, a, pos, scope);
-  if (!v7_is_function(v1)) {
-    fprintf(stderr, "value is not a function\n"); /* LCOV_EXCL_LINE */
-    abort();
+
+  if (v7_is_cfunction(v1)) {
+    char buf[20];
+    int n, i;
+    val_t args = v7_create_value(v7, V7_TYPE_ARRAY_OBJECT);
+    for (i = 0; *pos < end; i++) {
+      res = i_eval_expr(v7, a, pos, scope);
+      n = snprintf(buf, sizeof(buf), "%d", i);
+      v7_set_property_value(v7, args, buf, n, 0, res);
+    }
+    return val_to_cfunction(v1)(v7, args);
+  } if (!v7_is_function(v1)) {
+    throw_exception(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
 
   func = val_to_function(v1);
   fpos = func->ast_off;
   fstart = fpos;
-  assert(ast_fetch_tag(func->ast, &fpos) == AST_FUNC);
+  tag = ast_fetch_tag(func->ast, &fpos);
+  V7_CHECK(v7, tag == AST_FUNC);
   fend = ast_get_skip(func->ast, fpos, AST_END_SKIP);
   fbody = ast_get_skip(func->ast, fpos, AST_FUNC_BODY_SKIP);
   fvar = ast_get_skip(func->ast, fpos, AST_FUNC_FIRST_VAR_SKIP) - 1;
@@ -9803,17 +9916,19 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
     fpos = fbody;
 
     do {
-      assert(ast_fetch_tag(a, &fvar) == AST_VAR);
+      tag = ast_fetch_tag(a, &fvar);
+      V7_CHECK(v7, tag == AST_VAR);
       next = ast_get_skip(a, fvar, AST_VAR_NEXT_SKIP);
       if (next == fvar) {
         next = 0;
       }
-      assert(next < 1000);
+      V7_CHECK(v7, next < 1000);
 
       fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
       ast_move_to_children(a, &fvar);
       while (fvar < fvar_end) {
-        assert(ast_fetch_tag(a, &fvar) == AST_VAR_DECL);
+        tag = ast_fetch_tag(a, &fvar);
+        V7_CHECK(v7, tag == AST_VAR_DECL);
         name = ast_get_inlined_data(a, fvar, &name_len);
         ast_move_to_children(a, &fvar);
         ast_skip_tree(a, &fvar);
@@ -9827,7 +9942,8 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   /* scan actual and formal arguments and updates the value in the frame */
   fpos = fargs;
   while (fpos < fbody) {
-    assert(ast_fetch_tag(a, &fpos) == AST_IDENT);
+    tag = ast_fetch_tag(a, &fpos);
+    V7_CHECK(v7, tag == AST_IDENT);
     name = ast_get_inlined_data(a, fpos, &name_len);
     ast_move_to_children(a, &fpos);
 
@@ -9987,8 +10103,16 @@ V7_PRIVATE val_t v7_exec_2(struct v7 *v7, const char* src) {
   char debug[1024];
 
   ast_init(a, 0);
+  if (setjmp(v7->jmp_buf) != 0) {
+    #if 0
+    fprintf(stderr, "Exec error: %s\n", v7->error_msg);
+    #endif
+    return V7_UNDEFINED;
+  }
   if (aparse(a, src, 1) != V7_OK) {
-    printf("Error parsing\n");
+    #if 0
+    fprintf(stderr, "Error parsing\n");
+    #endif
     return V7_UNDEFINED;
   }
   ast_optimize(a);
@@ -11669,9 +11793,8 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
         dump_ast(argv[i + 1], binary_ast);
-      } else if (!v7_exec(v7, argv[i + 1])) {
-        fprintf(stderr, "Error executing [%s]: %s\n", argv[i + 1],
-                v7_get_error_string(v7));
+      } else if (v7_exec_2(v7, argv[i + 1]) == V7_UNDEFINED) {
+        fprintf(stderr, "Exec error [%s]: %s\n", argv[i + 1], v7->error_msg);
       }
       i++;
     } else if (strcmp(argv[i], "-t") == 0) {
@@ -11699,8 +11822,14 @@ int main(int argc, char *argv[]) {
         dump_ast(source_code, binary_ast);
         free(source_code);
       }
-    } else if (!v7_exec_file(v7, argv[i])) {
-      fprintf(stderr, "%s\n", v7_get_error_string(v7));
+    } else {
+      size_t len;
+      char *code = read_file(argv[i], &len);
+      if (code == NULL) {
+        fprintf(stderr, "Cannot open %s: %s\n", argv[i], strerror(errno));
+      } else if (v7_exec_2(v7, code) == V7_UNDEFINED) {
+          fprintf(stderr, "Exec error [%s]: %s\n", argv[i], v7->error_msg);
+      }
     }
   }
 
