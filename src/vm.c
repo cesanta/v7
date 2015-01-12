@@ -199,12 +199,16 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
         /* TODO(mkm): use GC heap */
         struct v7_function *f =
             (struct v7_function *) malloc(sizeof(struct v7_function));
+        val_t fval = v7_function_to_value(f);
         if (f == NULL) {
           return V7_NULL;
         }
         f->properties = NULL;
         f->scope = NULL;
-        return v7_function_to_value(f);
+        /* TODO(mkm): lazily create these properties on first access */
+        v7_set_property_value(v7, fval, "prototype", -1, 0,
+                              v7_create_object(v7, v7->object_prototype));
+        return fval;
       }
     case V7_TYPE_CFUNCTION_OBJECT:
       return v7_cfunction_to_value(va_arg(ap, v7_cfunction_t));

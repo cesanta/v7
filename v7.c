@@ -8428,12 +8428,16 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
         /* TODO(mkm): use GC heap */
         struct v7_function *f =
             (struct v7_function *) malloc(sizeof(struct v7_function));
+        val_t fval = v7_function_to_value(f);
         if (f == NULL) {
           return V7_NULL;
         }
         f->properties = NULL;
         f->scope = NULL;
-        return v7_function_to_value(f);
+        /* TODO(mkm): lazily create these properties on first access */
+        v7_set_property_value(v7, fval, "prototype", -1, 0,
+                              v7_create_object(v7, v7->object_prototype));
+        return fval;
       }
     case V7_TYPE_CFUNCTION_OBJECT:
       return v7_cfunction_to_value(va_arg(ap, v7_cfunction_t));
@@ -9640,6 +9644,7 @@ static enum ast_tag assign_op_map[] = {
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, int *);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
+static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
 static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
@@ -9995,7 +10000,26 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         return func;
       }
     case AST_CALL:
-      return i_eval_call(v7, a, pos, scope);
+      {
+        val_t old_this = v7->this_object;
+        ast_off_t pp = *pos;
+        ast_move_to_children(a, &pp);
+        v7->this_object = i_find_this(v7, a, pp, scope);
+        res = i_eval_call(v7, a, pos, scope);
+        v7->this_object = old_this;
+        return res;
+      }
+    case AST_NEW:
+      {
+        val_t old_this = v7->this_object;
+        v1 = v7->this_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+        res = i_eval_call(v7, a, pos, scope);
+        if (v7_is_undefined(res) || v7_is_null(res)) {
+          res = v1;
+        }
+        v7->this_object = old_this;
+        return res;
+      }
     case AST_COND:
       if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
         res = i_eval_expr(v7, a, pos, scope);
@@ -10112,7 +10136,7 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos, val_t scop
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t scope) {
   ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
   int fbrk = 0;
-  val_t frame, res, v1, old_this = v7->this_object;
+  val_t frame, res, v1;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -10120,7 +10144,6 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
-  v7->this_object = i_find_this(v7, a, *pos, scope);
   v1 = i_eval_expr(v7, a, pos, scope);
 
   if (v7_is_cfunction(v1)) {
@@ -10132,9 +10155,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property_value(v7, args, buf, n, 0, res);
     }
-    res = val_to_cfunction(v1)(v7, args);
-    v7->this_object = old_this;
-    return res;
+    return val_to_cfunction(v1)(v7, args);
   } if (!v7_is_function(v1)) {
     abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
@@ -10204,7 +10225,6 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   }
 
   res = i_eval_stmts(v7, func->ast, &fpos, fend, frame, &fbrk);
-  v7->this_object = old_this;
   if (fbrk != 0) {
     return res;
   }
