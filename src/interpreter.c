@@ -751,7 +751,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_value(v7, V7_TYPE_UNDEFINED);
 }
 
-V7_PRIVATE val_t v7_exec_2(struct v7 *v7, const char* src) {
+V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t res;
@@ -789,5 +789,27 @@ V7_PRIVATE val_t v7_exec_2(struct v7 *v7, const char* src) {
 #if 0
   fprintf(stderr, "Eval res: %s .\n", debug);
 #endif
+  return res;
+}
+
+val_t v7_exec_file(struct v7 *v7, const char *path) {
+  FILE *fp;
+  char *p;
+  long file_size;
+  val_t res = V7_UNDEFINED;
+
+  if ((fp = fopen(path, "r")) == NULL) {
+  } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
+    fclose(fp);
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
+    fclose(fp);
+  } else {
+    rewind(fp);
+    fread(p, 1, (size_t) file_size, fp);
+    fclose(fp);
+    res = v7_exec(v7, path);
+    free(p);
+  }
+
   return res;
 }

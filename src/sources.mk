@@ -1,7 +1,8 @@
-SOURCES = mbuf.c global_vars.c util.c crypto.c array.c boolean.c \
-          date.c error.c function.c math.c number.c \
-          object.c regex.c utf.c varint.c string.c \
-          json.c stdlib.c parser.c tokenizer.c api.c \
+SOURCES = mbuf.c utf.c varint.c tokenizer.c \
           ast.c vm.c aparser.c interpreter.c slre.c main.c
-HEADERS = license.h utf.h tokenizer.h mbuf.h internal.h vm.h \
-					global_vars.h slre.h varint.h ast.h aparser.h interpreter.h
+HEADERS = license.h utf.h tokenizer.h mbuf.h  ast.h aparser.h internal.h vm.h \
+					slre.h varint.h
+
+OLD_SOURCES = global_vars.c util.c crypto.c array.c boolean.c regex.c \
+              date.c error.c function.c math.c number.c object.c \
+              string.c json.c stdlib.c

@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
         dump_ast(argv[i + 1], binary_ast);
-      } else if (v7_exec_2(v7, argv[i + 1]) == V7_UNDEFINED) {
+      } else if (v7_exec(v7, argv[i + 1]) == V7_UNDEFINED) {
         fprintf(stderr, "Exec error [%s]: %s\n", argv[i + 1], v7->error_msg);
       }
       i++;
@@ -91,13 +91,13 @@ int main(int argc, char *argv[]) {
       char *code = read_file(argv[i], &len);
       if (code == NULL) {
         fprintf(stderr, "Cannot open %s: %s\n", argv[i], strerror(errno));
-      } else if (v7_exec_2(v7, code) == V7_UNDEFINED) {
+      } else if (v7_exec(v7, code) == V7_UNDEFINED) {
           fprintf(stderr, "Exec error [%s]: %s\n", argv[i], v7->error_msg);
       }
     }
   }
 
-  v7_destroy(&v7);
+  v7_destroy(v7);
   return EXIT_SUCCESS;
 }
 #endif
