@@ -42,6 +42,7 @@ struct v7 *v7_create(void) {
     v7->array_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+    v7->this_object = v7->global_object;
 
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property_value(v7, v7->global_object, "print", 5, 0,
@@ -265,4 +266,3 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
   /* return status; */
 }
-

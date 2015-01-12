@@ -629,6 +629,7 @@ struct v7 {
   val_t global_object;
   struct v7_object *object_prototype;
   struct v7_object *array_prototype;
+  val_t this_object;
 
   /*
    * Stack of execution contexts.
@@ -7393,6 +7394,7 @@ struct v7 *v7_create(void) {
     v7->array_prototype = val_to_object(
         v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
     v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+    v7->this_object = v7->global_object;
 
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property_value(v7, v7->global_object, "print", 5, 0,
@@ -7616,7 +7618,6 @@ struct v7_val *v7_exec_file(struct v7 *v7, const char *path) {
   return v7->sp > old_sp && status == V7_OK ? v7_top_val(v7) : NULL;
   /* return status; */
 }
-
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -10022,8 +10023,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
       return res;
     case AST_THIS:
-      /* TODO(lsm): fix this */
-      return v7->global_object;
+      return v7->this_object;
     case AST_TYPEOF:
       {
         ast_off_t peek = *pos;
@@ -10096,10 +10096,23 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 }
 
+static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos, val_t scope) {
+  enum ast_tag tag = ast_fetch_tag(a, &pos);
+  switch (tag) {
+    case AST_MEMBER:
+      ast_move_to_children(a, &pos);
+      return i_eval_expr(v7, a, &pos, scope);
+    case AST_INDEX:
+      return i_eval_expr(v7, a, &pos, scope);
+    default:
+      return v7->global_object;
+  }
+}
+
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t scope) {
   ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
   int fbrk = 0;
-  val_t frame, res, v1;
+  val_t frame, res, v1, old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -10107,6 +10120,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
+  v7->this_object = i_find_this(v7, a, *pos, scope);
   v1 = i_eval_expr(v7, a, pos, scope);
 
   if (v7_is_cfunction(v1)) {
@@ -10118,7 +10132,9 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property_value(v7, args, buf, n, 0, res);
     }
-    return val_to_cfunction(v1)(v7, args);
+    res = val_to_cfunction(v1)(v7, args);
+    v7->this_object = old_this;
+    return res;
   } if (!v7_is_function(v1)) {
     abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
@@ -10188,6 +10204,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   }
 
   res = i_eval_stmts(v7, func->ast, &fpos, fend, frame, &fbrk);
+  v7->this_object = old_this;
   if (fbrk != 0) {
     return res;
   }
