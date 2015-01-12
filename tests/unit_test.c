@@ -1004,6 +1004,7 @@ static const char *test_ecmac(void) {
   char *db = read_file("ecmac.db", &db_len);
   char *driver = read_file("ecma_driver.js", &driver_len);
   char *next_case = db - 1;
+  struct v7 *v7;
 #ifdef ECMA_FORK
   pid_t child;
 #endif
@@ -1022,7 +1023,7 @@ static const char *test_ecmac(void) {
 #ifdef ECMA_FORK
     if ((child = fork()) == 0) {
 #endif
-      struct v7 *v7 = v7_create();
+      v7 = v7_create();
       if (v7_exec_2(v7, driver) == V7_UNDEFINED) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
