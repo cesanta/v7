@@ -1251,6 +1251,11 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec_2(v7, "(function(){fox=1})();fox")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
 
+  ASSERT((v = v7_exec_2(v7, "fin=0;(function(){while(1){try{xxxx}finally{fin=1;return 1}}})();fin")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec_2(v7, "ca=0;fin=0;(function(){try{(function(){try{xxxx}finally{fin=1}})()}catch(e){ca=1}})();fin+ca")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
+
 #if 0
   ASSERT((v = v7_exec_2(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
