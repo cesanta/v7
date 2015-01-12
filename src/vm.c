@@ -332,7 +332,6 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             if (next == var) {
               next = 0;
             }
-            assert(next < 1000);
 
             var_end = ast_get_skip(a, var, AST_END_SKIP);
             ast_move_to_children(a, &var);
@@ -387,7 +386,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
   }
 }
 
-static struct v7_property *v7_create_property(struct v7 *v7) {
+V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   /* TODO(mkm): allocate from GC pool */
   (void) v7;
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));

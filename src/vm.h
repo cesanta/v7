@@ -153,6 +153,7 @@ val_t v7_va_create_value(struct v7 *, enum v7_type, va_list);
 int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 int v7_to_json(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE char* debug_json(struct v7 *, val_t);
+V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
 int v7_set_property_value(struct v7 *, val_t obj,
                           const char *name, size_t len,
