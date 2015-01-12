@@ -560,6 +560,7 @@ val_t v7_string_to_value(struct v7 *v7, const char *p, size_t len, int own) {
     embed_string(m, m->len, p, len);
     tag = V7_TAG_STRING_O;
   } else {
+    /* TODO(mkm): this doesn't set correctly the foreign string length */
     embed_string(m, m->len, (char *) &p, sizeof(p));
   }
 
