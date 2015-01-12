@@ -5,6 +5,11 @@
 
 #include "internal.h"
 
+static enum ast_tag assign_op_map[] = {
+  AST_NOP, AST_REM, AST_MUL, AST_DIV, AST_XOR, AST_ADD, AST_SUB, AST_OR,
+  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT
+};
+
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, int *);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
@@ -44,10 +49,11 @@ static double i_as_num(struct v7 *v7, val_t v) {
   }
 }
 
-static int i_is_true(val_t v) {
-  /* TODO(mkm): real stuff */
+static int i_is_true(struct v7 *v7, val_t v) {
+  /* TODO(mkm): real stuff, this is still wrong */
   return (v7_is_double(v) && val_to_double(v) > 0.0) ||
-      (v7_is_boolean(v) && val_to_boolean(v));
+      (v7_is_boolean(v) && val_to_boolean(v)) ||
+      (i_as_num(v7, v) != 0);
 }
 
 static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
@@ -74,6 +80,18 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) 
       return a * b;
     case AST_DIV:
       return a / b;
+    case AST_LSHIFT:
+      return (int) a << (int) b;
+    case AST_RSHIFT:
+      return (int) a >> (int) b;
+    case AST_URSHIFT:
+      return (unsigned int) a >> (int) b;
+    case AST_OR:
+      return (int) a | (int) b;
+    case AST_XOR:
+      return (int) a ^ (int) b;
+    case AST_AND:
+      return (int) a & (int) b;
     default:
       abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
@@ -96,6 +114,10 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
       return a > b;
     case AST_GE:
       return a >= b;
+    case AST_LOGICAL_OR:
+      return a || b;
+    case AST_LOGICAL_AND:
+      return a && b;
     default:
       abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
       return 0;
@@ -140,6 +162,12 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_REM:
     case AST_MUL:
     case AST_DIV:
+    case AST_LSHIFT:
+    case AST_RSHIFT:
+    case AST_URSHIFT:
+    case AST_OR:
+    case AST_XOR:
+    case AST_AND:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(v7, tag,
@@ -152,13 +180,33 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_GE:
     case AST_NE_NE:
     case AST_EQ_EQ:
+    case AST_LOGICAL_OR:
+    case AST_LOGICAL_AND:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(v7, tag,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
+    case AST_LOGICAL_NOT:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      return v7_boolean_to_value(! (int) i_is_true(v7, v1));
+    case AST_NOT:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      return v7_double_to_value(~ (int) i_as_num(v7, v1));
     case AST_ASSIGN:
+    case AST_REM_ASSIGN:
+    case AST_MUL_ASSIGN:
+    case AST_DIV_ASSIGN:
+    case AST_XOR_ASSIGN:
+    case AST_PLUS_ASSIGN:
+    case AST_MINUS_ASSIGN:
+    case AST_OR_ASSIGN:
+    case AST_AND_ASSIGN:
+    case AST_LSHIFT_ASSIGN:
+    case AST_RSHIFT_ASSIGN:
+    case AST_URSHIFT_ASSIGN:
       {
         struct v7_property *prop;
+        enum ast_tag op = tag;
         val_t lval, root = v7->global_object;
         switch ((tag = ast_fetch_tag(a, pos))) {
           case AST_IDENT:
@@ -192,6 +240,11 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if (prop == NULL) {
           v7_set_property_value(v7, root, name, name_len, 0, res);
         } else {
+          op = assign_op_map[op - AST_ASSIGN];
+          if (op != AST_NOP) {
+            res = v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(v7, op,
+                                  i_as_num(v7, prop->value), i_as_num(v7, res)));
+          }
           prop->value = res;
         }
         return res;
@@ -435,7 +488,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
-      if (i_is_true(i_eval_expr(v7, a, pos, scope))) {
+      if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
         res = i_eval_stmts(v7, a, pos, end, scope, brk);
         if (*brk) {
           return res;
@@ -448,7 +501,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       cond = *pos;
       for (;;) {
-        if (i_is_true(i_eval_expr(v7, a, pos, scope))) {
+        if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           res = i_eval_stmts(v7, a, pos, end, scope, brk);
           if (*brk) {
             return res;
@@ -469,7 +522,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if (*brk) {
           return res;
         }
-        if (!i_is_true(i_eval_expr(v7, a, pos, scope))) {
+        if (!i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           break;
         }
         *pos = loop;
@@ -483,7 +536,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       i_eval_expr(v7, a, pos, scope);
       for (;;) {
         loop = *pos;
-        if (!i_is_true(i_eval_expr(v7, a, &loop, scope))) {
+        if (!i_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
           *pos = end;
           return v7_create_value(v7, V7_TYPE_UNDEFINED);
         }
