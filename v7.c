@@ -687,6 +687,7 @@ struct v7 {
   jmp_buf abort_jmp_buf;
   char error_msg[60];           /* Exception message */
 
+  struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
 
   /* Parser state */
   struct v7_pstate pstate; /* Parsing state */
@@ -4006,6 +4007,15 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
 }
 
 int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+  char *vp;
+  for (vp = v7->json_visited_stack.buf;
+       vp < v7->json_visited_stack.buf+ v7->json_visited_stack.len;
+       vp += sizeof(val_t)) {
+    if (* (val_t *) vp == v) {
+      return stpncpy(buf, "[Circular]", size) - buf;
+    }
+  }
+
   /* TODO(mkm): call the toString method instead of custom C code. */
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
@@ -4038,6 +4048,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       {
         char *b = buf;
         struct v7_property *p;
+        mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
         b += snprintf(b, size - (b - buf), "{");
         for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
@@ -4048,6 +4059,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
           }
         }
         b += snprintf(b, size - (b - buf), "}");
+        v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
     case V7_TYPE_ARRAY_OBJECT:
@@ -4056,6 +4068,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char *b = buf;
         char key[512];
         size_t i, len = v7_array_length(v7, v);
+        mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
         b += snprintf(b, size - (b - buf), "[");
         for (i = 0; i < len; i++) {
           /* TODO */
@@ -4068,6 +4081,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
           }
         }
         b += snprintf(b, size - (b - buf), "]");
+        v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
     case V7_TYPE_FUNCTION_OBJECT:
@@ -5346,13 +5360,6 @@ static double i_as_num(struct v7 *v7, val_t v) {
   }
 }
 
-static int i_is_true(struct v7 *v7, val_t v) {
-  /* TODO(mkm): real stuff, this is still wrong */
-  return (v7_is_double(v) && val_to_double(v) > 0.0) ||
-      (v7_is_boolean(v) && val_to_boolean(v)) ||
-      (i_as_num(v7, v) != 0);
-}
-
 static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
   switch (tag) {
     case AST_POSITIVE:
@@ -5485,7 +5492,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_boolean_to_value(! (int) i_is_true(v7, v1));
+      return v7_boolean_to_value(! (int) v7_is_true(v7, v1));
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_double_to_value(~ (int) i_as_num(v7, v1));
@@ -5686,7 +5693,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         return res;
       }
     case AST_COND:
-      if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+      if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
         res = i_eval_expr(v7, a, pos, scope);
         ast_skip_tree(a, pos); /* TODO(mkm): change AST to include skips ? */
       } else {
@@ -5925,7 +5932,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
-      if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+      if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
         res = i_eval_stmts(v7, a, pos, end, scope, brk);
         if (*brk) {
           return res;
@@ -5938,7 +5945,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       cond = *pos;
       for (;;) {
-        if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+        if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           res = i_eval_stmts(v7, a, pos, end, scope, brk);
           if (*brk) {
             return res;
@@ -5959,7 +5966,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if (*brk) {
           return res;
         }
-        if (!i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+        if (!v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           break;
         }
         *pos = loop;
@@ -5973,7 +5980,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       i_eval_expr(v7, a, pos, scope);
       for (;;) {
         loop = *pos;
-        if (!i_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
+        if (!v7_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
           *pos = end;
           return v7_create_value(v7, V7_TYPE_UNDEFINED);
         }

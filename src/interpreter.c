@@ -55,13 +55,6 @@ static double i_as_num(struct v7 *v7, val_t v) {
   }
 }
 
-static int i_is_true(struct v7 *v7, val_t v) {
-  /* TODO(mkm): real stuff, this is still wrong */
-  return (v7_is_double(v) && val_to_double(v) > 0.0) ||
-      (v7_is_boolean(v) && val_to_boolean(v)) ||
-      (i_as_num(v7, v) != 0);
-}
-
 static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
   switch (tag) {
     case AST_POSITIVE:
@@ -194,7 +187,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_boolean_to_value(! (int) i_is_true(v7, v1));
+      return v7_boolean_to_value(! (int) v7_is_true(v7, v1));
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_double_to_value(~ (int) i_as_num(v7, v1));
@@ -395,7 +388,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         return res;
       }
     case AST_COND:
-      if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+      if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
         res = i_eval_expr(v7, a, pos, scope);
         ast_skip_tree(a, pos); /* TODO(mkm): change AST to include skips ? */
       } else {
@@ -634,7 +627,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
-      if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+      if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
         res = i_eval_stmts(v7, a, pos, end, scope, brk);
         if (*brk) {
           return res;
@@ -647,7 +640,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       cond = *pos;
       for (;;) {
-        if (i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+        if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           res = i_eval_stmts(v7, a, pos, end, scope, brk);
           if (*brk) {
             return res;
@@ -668,7 +661,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if (*brk) {
           return res;
         }
-        if (!i_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
+        if (!v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           break;
         }
         *pos = loop;
@@ -682,7 +675,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       i_eval_expr(v7, a, pos, scope);
       for (;;) {
         loop = *pos;
-        if (!i_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
+        if (!v7_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
           *pos = end;
           return v7_create_value(v7, V7_TYPE_UNDEFINED);
         }

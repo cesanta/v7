@@ -174,6 +174,7 @@ struct v7 {
   jmp_buf abort_jmp_buf;
   char error_msg[60];           /* Exception message */
 
+  struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
 
   /* Parser state */
   struct v7_pstate pstate; /* Parsing state */
