@@ -98,7 +98,7 @@ static const char *test_is_true(void) {
   ASSERT(test_if_expr(v7, "-Infinity", 1));
 #endif
   ASSERT(test_if_expr(v7, "[]", 1));
-  ASSERT(test_if_expr(v7, "{}", 1));
+  ASSERT(test_if_expr(v7, "var x = {}", 1));
   ASSERT(test_if_expr(v7, "[[]]", 1));
   ASSERT(test_if_expr(v7, "[0]", 1));
   ASSERT(test_if_expr(v7, "[1]", 1));
@@ -1037,6 +1037,8 @@ static const char *test_interpreter(void) {
 
   ASSERT((v = v7_exec(v7, "o={};a=[o];o.a=a;a")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[{\"a\":[Circular]}]"));
+
+  ASSERT((v = v7_exec(v7, "")) == V7_NULL);
 #if 0
   ASSERT((v = v7_exec(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
