@@ -41,6 +41,7 @@ v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
 v7_val_t v7_get_global_object(struct v7 *);
 v7_val_t v7_exec(struct v7 *, const char *str);       /* Execute string */
 v7_val_t v7_exec_file(struct v7 *, const char *path); /* Execute file */
+char *v7_to_json(struct v7 *, v7_val_t, char *, int);
 int v7_is_true(struct v7 *v7, v7_val_t v);
 
 #ifdef __cplusplus
