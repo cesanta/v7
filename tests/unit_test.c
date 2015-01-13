@@ -1055,7 +1055,23 @@ static const char *test_strings(void) {
   return NULL;
 }
 
+static const char *test_to_json(void) {
+  char buf[10], *p;
+  struct v7 *v7 = v7_create();
+  val_t v;
+
+  v = v7_exec(v7, "123.45");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT(strcmp(p, "123.45") == 0);
+  ASSERT((p = v7_to_json(v7, v, buf, 3)) != buf);
+  ASSERT(strcmp(p, "123.45") == 0);
+  free(p);
+
+  return NULL;
+}
+
 static const char *run_all_tests(const char *filter) {
+  RUN_TEST(test_to_json);
   RUN_TEST(test_tokenizer);
   RUN_TEST(test_string_encoding);
   RUN_TEST(test_is_true);

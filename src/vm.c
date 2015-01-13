@@ -226,7 +226,7 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
   return v;
 }
 
-int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   char *vp;
   for (vp = v7->json_visited_stack.buf;
        vp < v7->json_visited_stack.buf+ v7->json_visited_stack.len;
@@ -273,7 +273,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
           b += snprintf(b, size - (b - buf), "\"%s\":", p->name);
-          b += v7_to_json(v7, p->value, b, size - (b - buf));
+          b += to_json(v7, p->value, b, size - (b - buf));
           if (p->next) {
             b += snprintf(b, size - (b - buf), ",");
           }
@@ -294,7 +294,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
           /* TODO */
           snprintf(key, sizeof(key), "%lu", i);
           if ((p = v7_get_property(v, key, -1)) != NULL) {
-            b += v7_to_json(v7, p->value, b, size - (b - buf));
+            b += to_json(v7, p->value, b, size - (b - buf));
           }
           if (i != len - 1) {
             b += snprintf(b, size - (b - buf), ",");
@@ -376,16 +376,19 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   }
 }
 
-char *debug_json(struct v7 *v7, val_t v) {
-  char buf[1024];
-  char *res;
-  v7_to_json(v7, v, buf, sizeof(buf) - 1);
-  res = (char *) malloc(strlen(buf) + 1);
-  memset(res, 0, strlen(buf) + 1);
-  memcpy(res, buf, strlen(buf));
-  return res;
-}
+char *v7_to_json(struct v7 *v7, val_t v, char *buf, int size) {
+  int len = to_json(v7, v, buf, size);
 
+  if (len > (int) size) {
+    /* Buffer is not large enough. Allocate a bigger one */
+    char *p = malloc(len + 1);
+    to_json(v7, v, p, len + 1);
+    p[len] = '\0';
+    return p;
+  } else {
+    return buf;
+  }
+}
 
 int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
                        size_t size) {
@@ -399,7 +402,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
     buf[n] = '\0';
     return n;
   } else {
-    return v7_to_json(v7, v, buf, size);
+    return to_json(v7, v, buf, size);
   }
 }
 
@@ -652,12 +655,14 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, size_t start, size_t len) {
 
 /* TODO(lsm): remove this when init_stdlib() is upgraded */
 V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
-  char *p;
+  char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
   for (i = 0; i < num_args; i++) {
-    p = debug_json(v7, v7_array_at(v7, args, i));
+    p = v7_to_json(v7, v7_array_at(v7, args, i), buf, sizeof(buf));
     printf("%s", p);
-    free(p);
+    if (p != buf) {
+      free(p);
+    }
   }
   putchar('\n');
 
