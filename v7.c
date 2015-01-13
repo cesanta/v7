@@ -3614,11 +3614,13 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
 
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
                                   enum ast_which_skip skip) {
+  assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
   uint8_t * p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
+  assert(*pos < a->mbuf.len);
   return (enum ast_tag) (uint8_t) * (a->mbuf.buf + (*pos)++);
 }
 
@@ -3630,6 +3632,7 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
 V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
+  assert(*pos - 1 < a->mbuf.len);
   if (def->has_varint) {
     int llen;
     size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
@@ -3659,6 +3662,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
+  assert(pos < a->mbuf.len);
   *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
@@ -5292,6 +5296,11 @@ V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
  */
 
 
+#ifdef _WIN32
+#define siglongjmp longjmp
+#define sigsetjmp(buf, mask) setjmp(buf)
+#endif
+
 static enum ast_tag assign_op_map[] = {
   AST_REM, AST_MUL, AST_DIV, AST_XOR, AST_ADD, AST_SUB, AST_OR,
   AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT
@@ -5307,7 +5316,7 @@ static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  longjmp(v7->jmp_buf, 1);
+  siglongjmp(v7->jmp_buf, 1);
 }  /* LCOV_EXCL_LINE */
 
 static void abort_exec(struct v7 *v7, const char *err_fmt, ...) {
@@ -5315,7 +5324,7 @@ static void abort_exec(struct v7 *v7, const char *err_fmt, ...) {
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  longjmp(v7->abort_jmp_buf, 1);
+  siglongjmp(v7->abort_jmp_buf, 1);
 }  /* LCOV_EXCL_LINE */
 
 static double i_as_num(struct v7 *v7, val_t v) {
@@ -5825,7 +5834,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   fbody = ast_get_skip(func->ast, fpos, AST_FUNC_BODY_SKIP);
   fvar = ast_get_skip(func->ast, fpos, AST_FUNC_FIRST_VAR_SKIP) - 1;
   ast_move_to_children(func->ast, &fpos);
-  ast_skip_tree(a, &fpos);
+  ast_skip_tree(func->ast, &fpos);
   fargs = fpos;
 
   frame = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
@@ -5836,22 +5845,22 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
     fpos = fbody;
 
     do {
-      tag = ast_fetch_tag(a, &fvar);
+      tag = ast_fetch_tag(func->ast, &fvar);
       V7_CHECK(v7, tag == AST_VAR);
-      next = ast_get_skip(a, fvar, AST_VAR_NEXT_SKIP);
+      next = ast_get_skip(func->ast, fvar, AST_VAR_NEXT_SKIP);
       if (next == fvar) {
         next = 0;
       }
       V7_CHECK(v7, next < 1000);
 
-      fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
-      ast_move_to_children(a, &fvar);
+      fvar_end = ast_get_skip(func->ast, fvar, AST_END_SKIP);
+      ast_move_to_children(func->ast, &fvar);
       while (fvar < fvar_end) {
-        tag = ast_fetch_tag(a, &fvar);
+        tag = ast_fetch_tag(func->ast, &fvar);
         V7_CHECK(v7, tag == AST_VAR_DECL);
-        name = ast_get_inlined_data(a, fvar, &name_len);
-        ast_move_to_children(a, &fvar);
-        ast_skip_tree(a, &fvar);
+        name = ast_get_inlined_data(func->ast, fvar, &name_len);
+        ast_move_to_children(func->ast, &fvar);
+        ast_skip_tree(func->ast, &fvar);
 
         v7_set_property_value(v7, frame, name, name_len, 0, V7_UNDEFINED);
       }
@@ -5862,10 +5871,10 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   /* scan actual and formal arguments and updates the value in the frame */
   fpos = fargs;
   while (fpos < fbody) {
-    tag = ast_fetch_tag(a, &fpos);
+    tag = ast_fetch_tag(func->ast, &fpos);
     V7_CHECK(v7, tag == AST_IDENT);
-    name = ast_get_inlined_data(a, fpos, &name_len);
-    ast_move_to_children(a, &fpos);
+    name = ast_get_inlined_data(func->ast, fpos, &name_len);
+    ast_move_to_children(func->ast, &fpos);
 
     if (*pos < end) {
       res = i_eval_expr(v7, a, pos, scope);
@@ -5986,7 +5995,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
         finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
         ast_move_to_children(a, pos);
-        if (setjmp(v7->jmp_buf) == 0) {
+        if (sigsetjmp(v7->jmp_buf, 0) == 0) {
           res = i_eval_stmts(v7, a, pos, catch, scope, brk);
         } else if (catch != finally) {
           tag = ast_fetch_tag(a, &catch);
@@ -6002,7 +6011,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if (finally) {
           res = i_eval_stmts(v7, a, &finally, end, scope, brk);
           if (!*brk && percolate) {
-            longjmp(v7->jmp_buf, 1);
+            siglongjmp(v7->jmp_buf, 1);
           }
         }
         *pos = end;
@@ -6029,7 +6038,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_THROW:
       /* TODO(mkm): store exception value */
       i_eval_expr(v7, a, pos, scope);
-      longjmp(v7->jmp_buf, 1);
+      siglongjmp(v7->jmp_buf, 1);
       break; /* unreachable */
     default:
       (*pos)--;
@@ -6047,13 +6056,13 @@ V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
   char debug[1024];
 
   ast_init(a, 0);
-  if (setjmp(v7->abort_jmp_buf) != 0) {
+  if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
     #if 0
     fprintf(stderr, "Exec abort: %s\n", v7->error_msg);
     #endif
     return V7_UNDEFINED;
   }
-  if (setjmp(v7->jmp_buf) != 0) {
+  if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     #if 0
     fprintf(stderr, "Exec error: %s\n", v7->error_msg);
     #endif

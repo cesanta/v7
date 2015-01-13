@@ -113,14 +113,12 @@ static const char *test_closure(void) {
   struct v7 *v7 = v7_create();
 
   ASSERT((v = v7_exec(v7, "function a(x){return function(y){return x*y}}")) != V7_UNDEFINED);
-  #if 0
   ASSERT((v = v7_exec(v7, "var f1 = a(5);")) != V7_UNDEFINED);
   ASSERT((v = v7_exec(v7, "var f2 = a(7);")) != V7_UNDEFINED);
   ASSERT((v = v7_exec(v7, "f1(3);")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "15"));
   ASSERT((v = v7_exec(v7, "f2(3);")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "21"));
-  #endif
 
   v7_destroy(v7);
   return NULL;
