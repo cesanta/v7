@@ -429,8 +429,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             return v7_string_to_value(v7, "undefined", 9, 1);
           }
         }
-        res = i_eval_expr(v7, a, pos, scope);
-        switch (val_type(v7, res)) {
+        /* for some reason lcov doesn't mark the following lines as executing */
+        res = i_eval_expr(v7, a, pos, scope);  /* LCOV_EXCL_LINE */
+        switch (val_type(v7, res)) {           /* LCOV_EXCL_LINE */
           case V7_TYPE_NUMBER:
             return v7_string_to_value(v7, "number", 6, 1);
           case V7_TYPE_STRING:
