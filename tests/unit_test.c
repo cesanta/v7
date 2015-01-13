@@ -913,6 +913,12 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "42"));
   ASSERT((v = v7_exec(v7, "(function(){x=42;return;x=0})();x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec(v7, "(function(){for(i=0;1;i++)if(i==5)return i})()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "5"));
+  ASSERT((v = v7_exec(v7, "(function(){i=0;while(++i)if(i==5)return i})()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "5"));
+  ASSERT((v = v7_exec(v7, "(function(){i=0;do{if(i==5)return i}while(++i)})()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "5"));
 
   /* TODO(mkm): check for reference error being thrown */
   /* ASSERT((v = v7_exec(v7, "(function(x,y){return x+y})(40,2,(function(){return fail})())")) != V7_UNDEFINED); */
@@ -1016,6 +1022,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "2"));
 #endif
 
+  /* check execution failure caused by bad parsing */
+  ASSERT((v = v7_exec(v7, "function")) == V7_UNDEFINED);
   return NULL;
 }
 

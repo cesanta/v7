@@ -4000,7 +4000,7 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
     case V7_TYPE_ERROR_OBJECT:
     default:
       printf("NOT IMPLEMENTED YET create %d\n", type); /* LCOV_EXCL_LINE */
-      abort();
+      abort();  /* LCOV_EXCL_LINE */
   }
 
   return v;
@@ -4235,7 +4235,7 @@ int v7_set_property_value(struct v7 *v7, val_t obj,
   prop = v_find_property(obj, name, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
-      return -1;
+      return -1;  /* LCOV_EXCL_LINE */
     }
     prop->next = val_to_object(obj)->properties;
     val_to_object(obj)->properties = prop;
@@ -5732,8 +5732,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             return v7_string_to_value(v7, "undefined", 9, 1);
           }
         }
-        res = i_eval_expr(v7, a, pos, scope);
-        switch (val_type(v7, res)) {
+        /* for some reason lcov doesn't mark the following lines as executing */
+        res = i_eval_expr(v7, a, pos, scope);  /* LCOV_EXCL_LINE */
+        switch (val_type(v7, res)) {           /* LCOV_EXCL_LINE */
           case V7_TYPE_NUMBER:
             return v7_string_to_value(v7, "number", 6, 1);
           case V7_TYPE_STRING:
