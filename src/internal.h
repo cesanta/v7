@@ -53,7 +53,7 @@ char *stpncpy(char *, const char *, size_t);
 #include "slre.h"
 #include "varint.h"
 #include "ast.h"
-#include "aparser.h"
+#include "parser.h"
 
 /* Max captures for String.replace() */
 #define V7_RE_MAX_REPL_SUB 255

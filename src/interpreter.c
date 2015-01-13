@@ -813,7 +813,7 @@ V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
     #endif
     return V7_UNDEFINED;
   }
-  if (aparse(a, src, 1) != V7_OK) {
+  if (parse(v7, a, src, 1) != V7_OK) {
     #if 0
     fprintf(stderr, "Error parsing\n");
     #endif

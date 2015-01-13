@@ -497,8 +497,8 @@ V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
  * All rights reserved
  */
 
-#ifndef V7_APARSER_H_INCLUDED
-#define V7_APARSER_H_INCLUDED
+#ifndef V7_PARSER_H_INCLUDED
+#define V7_PARSER_H_INCLUDED
 
 
 #if defined(__cplusplus)
@@ -515,13 +515,13 @@ struct v7_pstate {
 };
 
 enum v7_err { V7_OK, V7_ERROR, V7_SYNTAX_ERROR };
-V7_PRIVATE enum v7_err aparse(struct ast *, const char*, int);
+V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);
 
 #if defined(__cplusplus)
 }
 #endif  /* __cplusplus */
 
-#endif  /* V7_APARSER_H_INCLUDED */
+#endif  /* V7_PARSER_H_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -4510,8 +4510,8 @@ void v7_destroy(struct v7 *v7) {
 #define ACCEPT(t)                                   \
   (((v7)->cur_tok == (t)) ? next_tok((v7)), 1 : 0)
 
-#define PARSE(p) TRY(aparse_ ## p(v7, a))
-#define PARSE_ARG(p, arg) TRY(aparse_ ## p(v7, a, arg))
+#define PARSE(p) TRY(parse_ ## p(v7, a))
+#define PARSE_ARG(p, arg) TRY(parse_ ## p(v7, a, arg))
 
 #define TRY(call)           \
   do {                      \
@@ -4537,14 +4537,14 @@ void v7_destroy(struct v7 *v7) {
     next_tok(v7);                                     \
   } while (0)
 
-static enum v7_err aparse_expression(struct v7 *, struct ast *);
-static enum v7_err aparse_statement(struct v7 *, struct ast *);
-static enum v7_err aparse_terminal(struct v7 *, struct ast *);
-static enum v7_err aparse_assign(struct v7 *, struct ast *);
-static enum v7_err aparse_memberexpr(struct v7 *, struct ast *);
-static enum v7_err aparse_funcdecl(struct v7 *, struct ast *, int);
-static enum v7_err aparse_block(struct v7 *, struct ast *);
-static enum v7_err aparse_body(struct v7 *, struct ast *, enum v7_tok);
+static enum v7_err parse_expression(struct v7 *, struct ast *);
+static enum v7_err parse_statement(struct v7 *, struct ast *);
+static enum v7_err parse_terminal(struct v7 *, struct ast *);
+static enum v7_err parse_assign(struct v7 *, struct ast *);
+static enum v7_err parse_memberexpr(struct v7 *, struct ast *);
+static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int);
+static enum v7_err parse_block(struct v7 *, struct ast *);
+static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
 
 static enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
@@ -4564,7 +4564,7 @@ static enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
-static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER) {
     ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
@@ -4573,7 +4573,7 @@ static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   return V7_ERROR;
 }
 
-static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
+static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
                                                      struct ast *a) {
   /* Allow reserved words as property names. */
   if (is_reserved_word_token(v7->cur_tok)) {
@@ -4585,7 +4585,7 @@ static enum v7_err aparse_ident_allow_reserved_words(struct v7 *v7,
   return V7_OK;
 }
 
-static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
@@ -4626,7 +4626,7 @@ static enum v7_err aparse_prop(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_OPEN_PAREN:
@@ -4704,7 +4704,7 @@ static enum v7_err aparse_terminal(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_arglist(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok != TOK_CLOSE_PAREN) {
     do {
       PARSE(assign);
@@ -4713,7 +4713,7 @@ static enum v7_err aparse_arglist(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_newexpr(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_NEW:
@@ -4737,7 +4737,7 @@ static enum v7_err aparse_newexpr(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
+static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
   switch (v7->cur_tok) {
     case TOK_DOT:
       next_tok(v7);
@@ -4762,7 +4762,7 @@ static enum v7_err aparse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
   return V7_OK;
 }
 
-static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   PARSE(newexpr);
 
@@ -4778,7 +4778,7 @@ static enum v7_err aparse_memberexpr(struct v7 *v7, struct ast *a) {
   }
 }
 
-static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   PARSE(newexpr);
 
@@ -4800,7 +4800,7 @@ static enum v7_err aparse_callexpr(struct v7 *v7, struct ast *a) {
   }
 }
 
-static enum v7_err aparse_postfix(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   PARSE(callexpr);
 
@@ -4822,7 +4822,7 @@ static enum v7_err aparse_postfix(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-enum v7_err aparse_prefix(struct v7 *v7, struct ast *a) {
+enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
   for (;;) {
     switch (v7->cur_tok) {
       case TOK_PLUS:
@@ -4862,12 +4862,12 @@ enum v7_err aparse_prefix(struct v7 *v7, struct ast *a) {
         ast_add_node(a, AST_TYPEOF);
         break;
       default:
-        return aparse_postfix(v7, a);
+        return parse_postfix(v7, a);
     }
   }
 }
 
-static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
+static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
                                  int level, ast_off_t pos) {
   struct {
     int len, left_to_right;
@@ -4897,7 +4897,7 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
   if (level == (int) ARRAY_SIZE(levels) - 1) {
     PARSE(prefix);
   } else {
-    TRY(aparse_binary(v7, a, level + 1, a->mbuf.len));
+    TRY(parse_binary(v7, a, level + 1, a->mbuf.len));
   }
 
   for (i = 0; i < levels[level].len; i++) {
@@ -4923,9 +4923,9 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
       } else if (ACCEPT(tok)) {
         if (levels[level].left_to_right) {
           ast_insert_node(a, pos, ast);
-          TRY(aparse_binary(v7, a, level, pos));
+          TRY(parse_binary(v7, a, level, pos));
         } else {
-          TRY(aparse_binary(v7, a, level, a->mbuf.len));
+          TRY(parse_binary(v7, a, level, a->mbuf.len));
           ast_insert_node(a, pos, ast);
         }
       }
@@ -4935,11 +4935,11 @@ static enum v7_err aparse_binary(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-static enum v7_err aparse_assign(struct v7 *v7, struct ast *a) {
-  return aparse_binary(v7, a, 0, a->mbuf.len);
+static enum v7_err parse_assign(struct v7 *v7, struct ast *a) {
+  return parse_binary(v7, a, 0, a->mbuf.len);
 }
 
-static enum v7_err aparse_expression(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   int group = 0;
   do {
@@ -4961,7 +4961,7 @@ static enum v7_err end_of_statement(struct v7 *v7) {
   return V7_ERROR;
 }
 
-static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_VAR);
   ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
   /* zero out var node pointer */
@@ -4980,7 +4980,7 @@ static enum v7_err aparse_var(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static int aparse_optional(struct v7 *v7, struct ast *a,
+static int parse_optional(struct v7 *v7, struct ast *a,
                     enum v7_tok terminator) {
   if (v7->cur_tok != terminator) {
     return 1;
@@ -4989,7 +4989,7 @@ static int aparse_optional(struct v7 *v7, struct ast *a,
   return 0;
 }
 
-static enum v7_err aparse_if(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_IF);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
@@ -5003,7 +5003,7 @@ static enum v7_err aparse_if(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_while(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_WHILE);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
@@ -5013,7 +5013,7 @@ static enum v7_err aparse_while(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_DOWHILE);
   PARSE(statement);
   ast_set_skip(a, start, AST_DO_WHILE_COND_SKIP);
@@ -5025,20 +5025,20 @@ static enum v7_err aparse_dowhile(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
   ast_off_t start = ast_add_node(a, AST_FOR);
 
   EXPECT(TOK_OPEN_PAREN);
 
-  if(aparse_optional(v7, a, TOK_SEMICOLON)) {
+  if(parse_optional(v7, a, TOK_SEMICOLON)) {
     /*
      * TODO(mkm): make this reentrant otherwise this pearl won't parse:
      * for((function(){return 1 in o.a ? o : x})().a in [1,2,3])
      */
     v7->pstate.inhibit_in = 1;
     if (ACCEPT(TOK_VAR)) {
-      aparse_var(v7, a);
+      parse_var(v7, a);
     } else {
       PARSE(expression);
     }
@@ -5058,11 +5058,11 @@ static enum v7_err aparse_for(struct v7 *v7, struct ast *a) {
   }
 
   EXPECT(TOK_SEMICOLON);
-  if (aparse_optional(v7, a, TOK_SEMICOLON)) {
+  if (parse_optional(v7, a, TOK_SEMICOLON)) {
     PARSE(expression);
   }
   EXPECT(TOK_SEMICOLON);
-  if (aparse_optional(v7, a, TOK_CLOSE_PAREN)) {
+  if (parse_optional(v7, a, TOK_CLOSE_PAREN)) {
     PARSE(expression);
   }
 
@@ -5074,7 +5074,7 @@ body:
   return V7_OK;
 }
 
-static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SWITCH);
   ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
@@ -5117,7 +5117,7 @@ static enum v7_err aparse_switch(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_try(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_TRY);
   PARSE(block);
   ast_set_skip(a, start, AST_TRY_CATCH_SKIP);
@@ -5135,7 +5135,7 @@ static enum v7_err aparse_try(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_with(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_WITH);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
@@ -5155,7 +5155,7 @@ static enum v7_err aparse_with(struct v7 *v7, struct ast *a) {
     }                                                 \
   } while(0)                                          \
 
-static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
   switch (v7->cur_tok) {
     case TOK_SEMICOLON:
       next_tok(v7);
@@ -5165,25 +5165,25 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
       return V7_OK;  /* returning because no semicolon required */
     case TOK_IF:
       next_tok(v7);
-      return aparse_if(v7, a);
+      return parse_if(v7, a);
     case TOK_WHILE:
       next_tok(v7);
-      return aparse_while(v7, a);
+      return parse_while(v7, a);
     case TOK_DO:
       next_tok(v7);
-      return aparse_dowhile(v7, a);
+      return parse_dowhile(v7, a);
     case TOK_FOR:
       next_tok(v7);
-      return aparse_for(v7, a);
+      return parse_for(v7, a);
     case TOK_TRY:
       next_tok(v7);
-      return aparse_try(v7, a);
+      return parse_try(v7, a);
     case TOK_SWITCH:
       next_tok(v7);
-      return aparse_switch(v7, a);
+      return parse_switch(v7, a);
     case TOK_WITH:
       next_tok(v7);
-      return aparse_with(v7, a);
+      return parse_with(v7, a);
     case TOK_BREAK:
       next_tok(v7);
       PARSE_WITH_OPT_ARG(AST_BREAK, AST_LABELED_BREAK, ident);
@@ -5207,7 +5207,7 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
       break;
     case TOK_VAR:
       next_tok(v7);
-      aparse_var(v7, a);
+      parse_var(v7, a);
       break;
     case TOK_IDENTIFIER:
       if (lookahead(v7) == TOK_COLON) {
@@ -5229,13 +5229,13 @@ static enum v7_err aparse_statement(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
+static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
                                    int require_named) {
   ast_off_t start = ast_add_node(a, AST_FUNC);
   ast_off_t outer_last_var_node = v7->last_var_node;
   v7->last_var_node = start;
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-  if (aparse_ident(v7, a) == V7_ERROR) {
+  if (parse_ident(v7, a) == V7_ERROR) {
     if (require_named) {
       return V7_ERROR;
     }
@@ -5251,14 +5251,14 @@ static enum v7_err aparse_funcdecl(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-static enum v7_err aparse_block(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
   EXPECT(TOK_OPEN_CURLY);
   PARSE_ARG(body, TOK_CLOSE_CURLY);
   EXPECT(TOK_CLOSE_CURLY);
   return V7_OK;
 }
 
-static enum v7_err aparse_body(struct v7 *v7, struct ast *a,
+static enum v7_err parse_body(struct v7 *v7, struct ast *a,
                                enum v7_tok end) {
   while (v7->cur_tok != end) {
     if (ACCEPT(TOK_FUNCTION)) {
@@ -5270,7 +5270,7 @@ static enum v7_err aparse_body(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-static enum v7_err aparse_script(struct v7 *v7, struct ast *a) {
+static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SCRIPT);
   ast_off_t outer_last_var_node = v7->last_var_node;
   v7->last_var_node = start;
@@ -5289,15 +5289,15 @@ static unsigned long get_column(const char *code, const char *pos) {
   return p == code ? pos - p : pos - (p + 1);
 }
 
-V7_PRIVATE enum v7_err aparse(struct ast *a, const char *src, int verbose) {
+V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
+                              int verbose) {
   enum v7_err err;
-  struct v7 *v7 = v7_create();
   v7->pstate.source_code = v7->pstate.pc = src;
   v7->pstate.file_name = "<stdin>";
   v7->pstate.line_no = 1;
 
   next_tok(v7);
-  err = aparse_script(v7, a);
+  err = parse_script(v7, a);
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
     printf("WARNING parse input not consumed\n");
   }
@@ -6122,7 +6122,7 @@ V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
     #endif
     return V7_UNDEFINED;
   }
-  if (aparse(a, src, 1) != V7_OK) {
+  if (parse(v7, a, src, 1) != V7_OK) {
     #if 0
     fprintf(stderr, "Error parsing\n");
     #endif
@@ -7807,11 +7807,11 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void dump_ast(const char *code, int binary) {
+static void dump_ast(struct v7 *v7, const char *code, int binary) {
   struct ast ast;
 
   ast_init(&ast, 0);
-  if (aparse(&ast, code, 1) != V7_OK) {
+  if (parse(v7, &ast, code, 1) != V7_OK) {
     fprintf(stderr, "%s\n", "parse error");
   } else if (binary) {
     fwrite(ast.mbuf.buf, ast.mbuf.len, 1, stdout);
@@ -7830,7 +7830,7 @@ int main(int argc, char *argv[]) {
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
-        dump_ast(argv[i + 1], binary_ast);
+        dump_ast(v7, argv[i + 1], binary_ast);
       } else if ((res = v7_exec(v7, argv[i + 1])) == V7_UNDEFINED) {
         fprintf(stderr, "Exec error [%s]: %s\n", argv[i + 1], v7->error_msg);
       }
@@ -7857,7 +7857,7 @@ int main(int argc, char *argv[]) {
       if ((source_code = read_file(argv[i], &size)) == NULL) {
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
-        dump_ast(source_code, binary_ast);
+        dump_ast(v7, source_code, binary_ast);
         free(source_code);
       }
     } else if ((res = v7_exec_file(v7, argv[i])) == V7_UNDEFINED) {

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef V7_APARSER_H_INCLUDED
-#define V7_APARSER_H_INCLUDED
+#ifndef V7_PARSER_H_INCLUDED
+#define V7_PARSER_H_INCLUDED
 
 #include "internal.h"
 
@@ -22,10 +22,10 @@ struct v7_pstate {
 };
 
 enum v7_err { V7_OK, V7_ERROR, V7_SYNTAX_ERROR };
-V7_PRIVATE enum v7_err aparse(struct ast *, const char*, int);
+V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);
 
 #if defined(__cplusplus)
 }
 #endif  /* __cplusplus */
 
-#endif  /* V7_APARSER_H_INCLUDED */
+#endif  /* V7_PARSER_H_INCLUDED */
