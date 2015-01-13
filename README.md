@@ -26,41 +26,53 @@ In order to embed V7, simply copy two files: [v7.h](v7.h)
 and [v7.c](v7.c) into your project, and use V7 embedding API as shown
 in multiple examples.
 
-## Example: exporting existing C/C++ function `foo()` to JavaScript
+Project Status:
 
-    // Javascript code
-    var result = foo(1, 2);   // Invokes `exported_foo()` glue function
+- Tokenizer: completed
+- Parser: completed
+- Abstract Syntax Tree: completed
+- VM: completed
+- Standard library: TODO
+- ECMA tests: correctly parsing, execution TODO
+
+Estimated beta release date: March 2015.
+
+## Example: call C/C++ function `foo()` from JavaScript
+
+    // Javascript code. Invokes C function which calculates sum of two numbers
+    var result = foo(1, 2);
 
 <!-- -->
 
-    // C code. exported_foo() glues C function "foo" to Javascript.
-    static v7_val_t exported_foo(struct v7_arg *a) {
-      if (a->num_args != 2) {
-        return v7_throw(a->v7, "Two arguments expected");
-      } else {
-        // Extract numeric values from JavaScript arguments
-        double arg0 = v7_number(a->args[0]);
-        double arg1 = v7_number(a->args[1]);
-        double result = foo(arg0, arg1);      // Call real foo() function
-        return v7_number(a->v7, result);      // Push result to JavaScript
-      }
+    // C code. foo_glue() is invoked when JavaScript makes foo() call
+    static v7_val_t foo_glue(struct v7 *v7, v7_val_t args) {
+      double arg0 = v7_to_double(v7_array_at(v7, args, 0));
+      double arg1 = v7_to_double(v7_array_at(v7, args, 1));
+      double result = foo(arg0, arg1);        // Call foo()
+      return v7_double_to_value(v7, result);  // Push result to JavaScript
     }
 
-    // Export variable "foo" as C function to the root namespace
+    ...
+    // Create function "foo" in global JavaScript namespace
     struct v7 *v7 = v7_create();
-    v7_set(v7, v7_rootns(v7), "foo", v7_push_func(v7, &exported_foo));
+    v7_set_attribute(v7, v7_get_global_object(v7), "foo", 3, 0,
+                     v7_create_cfunction(v7, &exported_foo));
     v7_exec_file(v7, "my_js_code.js");
 
 ## Example: loading complex JSON configuration
 
     struct v7 *v7 = v7_create();
     v7_exec(v7, "var config = load('config.json');");   // Load JSON config
-    v7_exec(v7, "config.devices[2].name");              // Lookup value
-    printf("Device2 name: [%s]\n", v7_top_val(v7)->v.str.buf);
+    v7_val_t = v7_exec(v7, "config.devices[2].name");   // Lookup value
+    printf("Device2 name: [%s]\n", v7_to_json(v7, v));
+
+Note: JavaScript configuration may contain not only static data, but also
+some dynamic logic in form of JavaScript function calls. That makes it possible
+to write adaptive configuration and offload configuration logic to JavaScript.
 
 ## V7 Architecture
 
-V7 is built in 4 loosely coupled layers:
+V7 has four loosely coupled layers:
 
 1. Tokenizer. Reads input source and returns next token.
 2. Parser. Calls tokenizer to parse the source code, and builds an AST
