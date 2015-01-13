@@ -449,11 +449,13 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
 
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
                                   enum ast_which_skip skip) {
+  assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
   uint8_t * p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
+  assert(*pos < a->mbuf.len);
   return (enum ast_tag) (uint8_t) * (a->mbuf.buf + (*pos)++);
 }
 
@@ -465,6 +467,7 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
 V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
+  assert(*pos - 1 < a->mbuf.len);
   if (def->has_varint) {
     int llen;
     size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
@@ -494,6 +497,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
+  assert(pos < a->mbuf.len);
   *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
