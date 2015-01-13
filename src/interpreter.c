@@ -15,8 +15,15 @@ static enum ast_tag assign_op_map[] = {
   AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT
 };
 
+enum i_break {
+  B_RUN,
+  B_RETURN,
+  B_BREAK,
+  B_CONTINUE
+};
+
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
-                          val_t, int *);
+                          val_t, enum i_break *);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
@@ -503,7 +510,7 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos, val_t scop
 
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t scope) {
   ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
-  int fbrk = 0;
+  enum i_break fbrk = B_RUN;
   val_t frame, res, v1;
   struct v7_function *func;
   enum ast_tag tag;
@@ -554,7 +561,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
       if (next == fvar) {
         next = 0;
       }
-      V7_CHECK(v7, next < 1000);
+      V7_CHECK(v7, next < 65535);
 
       fvar_end = ast_get_skip(func->ast, fvar, AST_END_SKIP);
       ast_move_to_children(func->ast, &fvar);
@@ -593,16 +600,16 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   }
 
   res = i_eval_stmts(v7, func->ast, &fpos, fend, frame, &fbrk);
-  if (fbrk != 0) {
+  if (fbrk == B_RETURN) {
     return res;
   }
   return V7_UNDEFINED;
 }
 
-static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t, int *);
+static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t, enum i_break *);
 
 static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                          ast_off_t end, val_t scope, int *brk) {
+                          ast_off_t end, val_t scope, enum i_break *brk) {
   val_t res;
   while (*pos < end && !*brk) {
     res = i_eval_stmt(v7, a, pos, scope, brk);
@@ -611,7 +618,7 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 }
 
 static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope, int *brk) {
+                         val_t scope, enum i_break *brk) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res;
   ast_off_t end, cond, iter_end, loop, iter, finally, catch;
@@ -643,8 +650,17 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       for (;;) {
         if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           res = i_eval_stmts(v7, a, pos, end, scope, brk);
-          if (*brk) {
-            return res;
+          switch (*brk) {
+            case B_RUN:
+              break;
+            case B_CONTINUE:
+              *brk = B_RUN;
+              break;
+            case B_BREAK:
+              *brk = B_RUN; /* fall through */
+            case B_RETURN:
+              *pos = end;
+              return res;
           }
         } else {
           *pos = end;
@@ -654,13 +670,24 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
       break;
     case AST_DOWHILE:
-      end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      iter_end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
       ast_move_to_children(a, pos);
       loop = *pos;
       for (;;) {
-        res = i_eval_stmts(v7, a, pos, end, scope, brk);
-        if (*brk) {
-          return res;
+        res = i_eval_stmts(v7, a, pos, iter_end, scope, brk);
+        switch (*brk) {
+          case B_RUN:
+            break;
+          case B_CONTINUE:
+            *pos = iter_end;
+            *brk = B_RUN;
+            break;
+          case B_BREAK:
+            *brk = B_RUN; /* fall through */
+          case B_RETURN:
+            *pos = end;
+            return res;
         }
         if (!v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
           break;
@@ -683,8 +710,17 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         iter = loop;
         loop = iter_end;
         res = i_eval_stmts(v7, a, &loop, end, scope, brk);
-        if (*brk) {
-          return res;
+        switch (*brk) {
+          case B_RUN:
+            break;
+          case B_CONTINUE:
+            *brk = B_RUN;
+            break;
+          case B_BREAK:
+            *brk = B_RUN; /* fall through */
+          case B_RETURN:
+            *pos = end;
+            return res;
         }
         i_eval_expr(v7, a, &iter, scope);
       }
@@ -733,10 +769,16 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       break;
     case AST_VALUE_RETURN:
       res = i_eval_expr(v7, a, pos, scope);
-      *brk = 1;
+      *brk = B_RETURN;
       return res;
     case AST_RETURN:
-      *brk = 1;
+      *brk = B_RETURN;
+      return V7_UNDEFINED;
+    case AST_BREAK:
+      *brk = B_BREAK;
+      return V7_UNDEFINED;
+    case AST_CONTINUE:
+      *brk = B_CONTINUE;
       return V7_UNDEFINED;
     case AST_THROW:
       /* TODO(mkm): store exception value */
@@ -754,7 +796,7 @@ V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t res;
-  int brk = 0;
+  enum i_break brk = B_RUN;
   ast_off_t pos = 0;
   char debug[1024];
 

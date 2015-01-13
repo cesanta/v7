@@ -869,6 +869,26 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "120"));
   ASSERT((v = v7_exec(v7, "for(y=1,i=1;i<=5;i=i+1)y=y*i;y")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "120"));
+  ASSERT((v = v7_exec(v7, "for(i=0;1;i++)if(i==5)break;i")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "5"));
+  ASSERT((v = v7_exec(v7, "for(i=0;1;i++)if(i==5)break;i")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "5"));
+  ASSERT((v = v7_exec(v7, "i=0;while(++i)if(i==5)break;i")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "5"));
+  ASSERT((v = v7_exec(v7, "i=0;do{if(i==5)break}while(++i);i")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "5"));
+  ASSERT((v = v7_exec(v7, "(function(){i=0;do{if(i==5)break}while(++i);i+=10})();i")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "15"));
+  ASSERT((v = v7_exec(v7, "(function(){x=i=0;do{if(i==5)break;if(i%2)continue;x++}while(++i);i+=10})();[i,x]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[15,3]"));
+  ASSERT((v = v7_exec(v7, "(function(){i=0;while(++i){if(i==5)break};i+=10})();i")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "15"));
+  ASSERT((v = v7_exec(v7, "(function(){x=i=0;while(++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[15,2]"));
+  ASSERT((v = v7_exec(v7, "(function(){for(i=0;1;++i){if(i==5)break};i+=10})();i")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "15"));
+  ASSERT((v = v7_exec(v7, "(function(){x=0;for(i=0;1;++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[15,3]"));
 
   ASSERT((v = v7_exec(v7, "x=0;try{x=1};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
