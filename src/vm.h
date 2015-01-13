@@ -132,11 +132,16 @@ double val_to_double(val_t);
 v7_cfunction_t val_to_cfunction(val_t);
 const char *val_to_string(struct v7 *, val_t *, size_t *);
 
+V7_PRIVATE void init_object(struct v7 *v7);
+V7_PRIVATE void init_error(struct v7 *v7);
+
 V7_PRIVATE val_t v_get_prototype(val_t);
+V7_PRIVATE int is_prototype_of(val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
+V7_PRIVATE val_t create_object(struct v7 *, val_t);
 V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);

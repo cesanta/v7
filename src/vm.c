@@ -151,7 +151,7 @@ V7_PRIVATE val_t v_get_prototype(val_t obj) {
   return v7_object_to_value(val_to_object(obj)->prototype);
 }
 
-v7_val_t create_object(struct v7 *v7, v7_val_t prototype) {
+V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   /* TODO(mkm): use GC heap */
   struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
   if (o == NULL) {
@@ -638,6 +638,20 @@ V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
   return v7_create_null();
 }
 
+V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
+  struct v7_object *obj, *proto;
+  if (!v7_is_object(o) || !v7_is_object(p)) {
+    return 0;
+  }
+  proto = val_to_object(p);
+  for (obj = val_to_object(o); obj; obj = obj->prototype) {
+    if (obj->prototype == proto) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && val_to_boolean(v)) ||
@@ -672,6 +686,11 @@ struct v7 *v7_create(void) {
                     v7_create_cfunction(Std_print_2));
     v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
                     v7_create_number(INFINITY));
+    v7_set_property(v7, v7->global_object, "global", 6, 0,
+                    v7->global_object);
+
+    init_object(v7);
+    init_error(v7);
   }
 
   return v7;
