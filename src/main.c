@@ -86,14 +86,8 @@ int main(int argc, char *argv[]) {
         dump_ast(source_code, binary_ast);
         free(source_code);
       }
-    } else {
-      size_t len;
-      char *code = read_file(argv[i], &len);
-      if (code == NULL) {
-        fprintf(stderr, "Cannot open %s: %s\n", argv[i], strerror(errno));
-      } else if (v7_exec(v7, code) == V7_UNDEFINED) {
-          fprintf(stderr, "Exec error [%s]: %s\n", argv[i], v7->error_msg);
-      }
+    } else if (v7_exec_file(v7, argv[i]) == V7_UNDEFINED) {
+      fprintf(stderr, "Exec error [%s]: %s\n", argv[i], v7->error_msg);
     }
   }
 
