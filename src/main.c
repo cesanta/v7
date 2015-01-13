@@ -34,11 +34,11 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void dump_ast(const char *code, int binary) {
+static void dump_ast(struct v7 *v7, const char *code, int binary) {
   struct ast ast;
 
   ast_init(&ast, 0);
-  if (aparse(&ast, code, 1) != V7_OK) {
+  if (parse(v7, &ast, code, 1) != V7_OK) {
     fprintf(stderr, "%s\n", "parse error");
   } else if (binary) {
     fwrite(ast.mbuf.buf, ast.mbuf.len, 1, stdout);
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
-        dump_ast(argv[i + 1], binary_ast);
+        dump_ast(v7, argv[i + 1], binary_ast);
       } else if ((res = v7_exec(v7, argv[i + 1])) == V7_UNDEFINED) {
         fprintf(stderr, "Exec error [%s]: %s\n", argv[i + 1], v7->error_msg);
       }
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
       if ((source_code = read_file(argv[i], &size)) == NULL) {
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
-        dump_ast(source_code, binary_ast);
+        dump_ast(v7, source_code, binary_ast);
         free(source_code);
       }
     } else if ((res = v7_exec_file(v7, argv[i])) == V7_UNDEFINED) {

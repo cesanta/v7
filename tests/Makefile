@@ -11,7 +11,7 @@ include $(SRC_DIR)/sources.mk
 
 save_want_ast:
 	@rm -f unit_test
-	$(MAKE) test_c99 TEST_FILTER=aparser CFLAGS_EXTRA=-DSAVE_AST
+	$(MAKE) test_c99 TEST_FILTER=parser CFLAGS_EXTRA=-DSAVE_AST
 	@rm -f unit_test
 
 # Interactive:

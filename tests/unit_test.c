@@ -383,9 +383,10 @@ static const char *test_runtime(void) {
   return NULL;
 }
 
-static const char *test_aparser(void) {
+static const char *test_parser(void) {
   int i;
   struct ast a;
+  struct v7 *v7 = v7_create();
   const char *cases[] = {
     "1",
     "true",
@@ -611,7 +612,7 @@ static const char *test_aparser(void) {
     #if 0
     printf("-- Parsing \"%s\"\n", cases[i]);
     #endif
-    ASSERT(aparse(&a, cases[i], 1) == V7_OK);
+    ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
 
 #ifdef VERBOSE_AST
     ast_dump(stdout, &a, 0);
@@ -648,7 +649,7 @@ static const char *test_aparser(void) {
   ASSERT((fp = fopen(want_ast_db, "w")) != NULL);
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++ ) {
     ast_free(&a);
-    ASSERT(aparse(&a, cases[i], 1) == V7_OK);
+    ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
     ast_dump(fp, &a, 0);
     fwrite("\0", 1, 1, fp);
   }
@@ -658,7 +659,7 @@ static const char *test_aparser(void) {
 
   for (i = 0; i < (int) ARRAY_SIZE(invalid); i++ ) {
     ast_free(&a);
-    ASSERT(aparse(&a, invalid[i], 0) == V7_ERROR);
+    ASSERT(parse(v7, &a, invalid[i], 0) == V7_ERROR);
   }
 
   return NULL;
@@ -701,12 +702,12 @@ static const char *test_ecmac(void) {
 #if 0
     printf("-- Parsing %d: \"%s\"\n", i, current_case);
 #endif
-    ASSERT(aparse(&a, current_case, 1) == V7_OK);
+    v7 = v7_create();
+    ASSERT(parse(v7, &a, current_case, 1) == V7_OK);
     ast_free(&a);
 #ifdef ECMA_FORK
     if ((child = fork()) == 0) {
 #endif
-      v7 = v7_create();
       if (v7_exec(v7, driver) == V7_UNDEFINED) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
@@ -724,7 +725,6 @@ static const char *test_ecmac(void) {
 #endif
         }
       }
-      v7_destroy(v7);
 #ifdef ECMA_FORK
     } else {
       int status;
@@ -734,7 +734,7 @@ static const char *test_ecmac(void) {
       }
     }
 #endif
-
+    v7_destroy(v7);
 #if 0
     ast_dump(stdout, &a, 0);
 #endif
@@ -1101,7 +1101,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_stdlib);
   #endif
   RUN_TEST(test_runtime);
-  RUN_TEST(test_aparser);
+  RUN_TEST(test_parser);
   RUN_TEST(test_ecmac);
   RUN_TEST(test_interpreter);
   RUN_TEST(test_strings);
