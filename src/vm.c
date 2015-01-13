@@ -636,3 +636,71 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, size_t start, size_t len) {
   /* TODO(lsm): if the substring len <= 5 bytes, inline into val_t */
   return v7_string_to_value(v7, p + start, len, 1);
 }
+
+/* TODO(lsm): remove this when init_stdlib() is upgraded */
+V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
+  char *p;
+  int i, num_args = v7_array_length(v7, args);
+  for (i = 0; i < num_args; i++) {
+    p = debug_json(v7, v7_array_at(v7, args, i));
+    printf("%s", p);
+    free(p);
+  }
+  putchar('\n');
+
+  return v7_create_value(v7, V7_TYPE_NULL);
+}
+
+int v7_is_true(struct v7 *v7, val_t v) {
+  size_t len;
+  return ((v7_is_boolean(v) && val_to_boolean(v)) ||
+         (v7_is_double(v) && val_to_double(v) != 0.0) ||
+         (v7_is_string(v) && val_to_string(v7, &v, &len) && len > 0) ||
+         (v7_is_object(v)));
+}
+
+struct v7 *v7_create(void) {
+  static int prototypes_initialized = 0;
+  struct v7 *v7 = NULL;
+
+  if (prototypes_initialized == 0) {
+    prototypes_initialized++;
+    #if 0
+    init_stdlib();  /* One-time initialization */
+    #endif
+  }
+
+  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+    /*
+     * Ensure the first call to v7_create_value will use a null proto:
+     * {}.__proto__.__proto__ == null
+     */
+    v7->object_prototype = val_to_object(
+        v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
+    v7->array_prototype = val_to_object(
+        v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
+    v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+    v7->this_object = v7->global_object;
+
+    /* TODO(lsm): remove this when init_stdlib() is upgraded */
+    v7_set_property_value(v7, v7->global_object, "print", 5, 0,
+                          v7_create_value(v7, V7_TYPE_CFUNCTION_OBJECT,
+                                          Std_print_2));
+    v7_set_property_value(v7, v7->global_object, "Infinity", 8, 0,
+                          v7_create_value(v7, V7_TYPE_NUMBER, INFINITY));
+  }
+
+  return v7;
+}
+
+val_t v7_get_global_object(struct v7 *v7) {
+  return v7->global_object;
+}
+
+void v7_destroy(struct v7 *v7) {
+  if (v7 != NULL) {
+    mbuf_free(&v7->owned_strings);
+    mbuf_free(&v7->foreign_strings);
+    free(v7);
+  }
+}

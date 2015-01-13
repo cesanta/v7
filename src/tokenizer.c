@@ -5,6 +5,13 @@
 
 #include "internal.h"
 
+/* Vector, describes some memory location pointed by 'p' with length 'len' */
+struct v7_vec {
+  const char *p;
+  int len;
+};
+#define V7_VEC(str) { (str), sizeof(str) - 1 }
+
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
  * for function get_tok() for rationale for that.

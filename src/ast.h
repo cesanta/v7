@@ -6,6 +6,7 @@
 #ifndef AST_H_INCLUDED
 #define AST_H_INCLUDED
 
+#include <stdio.h>
 #include "internal.h"
 
 #if defined(__cplusplus)

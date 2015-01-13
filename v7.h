@@ -28,114 +28,20 @@ extern "C" {
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
-/*
- * JavaScript value is either a primitive, or an object.
- * There are 5 primitive types: Undefined, Null, Boolean, Number, String.
- * Non-primitive type is an Object type. There are several classes of Objects,
- * see description of `struct v7_object` below for more details.
- * This enumeration combines types and object classes in one enumeration.
- * NOTE(lsm): compile with `-fshort-enums` to reduce sizeof(enum v7_type) to 1.
- */
-enum v7_type {
-  /* TODO(lsm): kill after refactoring */
-  V7_TYPE_UNDEF,
-  V7_TYPE_NULL,
-  V7_TYPE_BOOL,
-  V7_TYPE_STR,
-  V7_TYPE_NUM,
-  V7_TYPE_OBJ,
-  /* End of TODO */
-
-  /* Primitive types */
-  V7_TYPE_UNDEFINED,
-  /* V7_TYPE_NULL, */
-  V7_TYPE_BOOLEAN,
-  V7_TYPE_NUMBER,
-  V7_TYPE_STRING,
-  V7_TYPE_FOREIGN,
-
-  /* Different classes of Object type */
-  V7_TYPE_GENERIC_OBJECT,
-  V7_TYPE_BOOLEAN_OBJECT,
-  V7_TYPE_STRING_OBJECT,
-  V7_TYPE_NUMBER_OBJECT,
-  V7_TYPE_FUNCTION_OBJECT,
-  V7_TYPE_CFUNCTION_OBJECT,
-  V7_TYPE_REGEXP_OBJECT,
-  V7_TYPE_ARRAY_OBJECT,
-  V7_TYPE_DATE_OBJECT,
-  V7_TYPE_ERROR_OBJECT,
-  V7_TYPE_MAX_OBJECT_TYPE,
-
-  V7_NUM_TYPES
-};
-
-enum v7_err {
-  V7_OK,
-  V7_ERROR,
-  V7_EVAL_ERROR,
-  V7_RANGE_ERROR,
-  V7_REFERENCE_ERROR,
-  V7_SYNTAX_ERROR,
-  V7_TYPE_ERROR,
-  V7_URI_ERROR,
-  V7_OUT_OF_MEMORY,
-  V7_INTERNAL_ERROR,
-  V7_STACK_OVERFLOW,
-  V7_STACK_UNDERFLOW,
-  V7_CALLED_NON_FUNCTION,
-  V7_NOT_IMPLEMENTED,
-  V7_STR_TOO_LONG,
-  V7_REGEXP_ERROR,
-  V7_NUM_ERRORS
-};
 
 /* TODO(lsm): fix this. */
 #include <inttypes.h>
 typedef uint64_t v7_val_t;
 
+struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
+void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
 typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t args);
 void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
 v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
-
-/* This structure is passed as an argument to the C/JS glue function */
-struct v7_c_func_arg {
-  struct v7 *v7;
-  struct v7_val *this_obj;
-  struct v7_val **args;
-  int num_args;
-  int called_as_constructor;
-};
-typedef enum v7_err (*v7_func_t)(struct v7_c_func_arg *arg);
-
-struct v7 *v7_create(void);    /* Creates and initializes V7 engine */
-void v7_destroy(struct v7 **); /* Cleanes up and deallocates V7 engine */
-
-struct v7_val *v7_exec(struct v7 *, const char *str); /* Executes string */
-struct v7_val *v7_exec_file(struct v7 *, const char *path); /* Executes file */
-
-struct v7_val *v7_global(struct v7 *); /* Returns global obj (root namespace) */
-char *v7_stringify(const struct v7_val *v, char *buf, int bsiz);
-const char *v7_get_error_string(const struct v7 *); /* Returns error string */
-int v7_is_true(const struct v7_val *);
-void v7_copy(struct v7 *v7, struct v7_val *from, struct v7_val *to);
-
-enum v7_err v7_set(struct v7 *, struct v7_val *, const char *, struct v7_val *);
-enum v7_err v7_del(struct v7 *, struct v7_val *obj, const char *key);
-struct v7_val *v7_get(struct v7_val *obj, const char *key);
-
-struct v7_val *v7_call(struct v7 *v7, struct v7_val *this_obj, int num_args);
-
-struct v7_val *v7_push_number(struct v7 *, double num);
-struct v7_val *v7_push_bool(struct v7 *, int is_true);
-struct v7_val *v7_push_string(struct v7 *, const char *str, unsigned long, int);
-struct v7_val *v7_push_new_object(struct v7 *);
-struct v7_val *v7_push_val(struct v7 *, struct v7_val *);
-struct v7_val *v7_push_func(struct v7 *, v7_func_t);
-
-enum v7_type v7_type(const struct v7_val *);
-double v7_number(const struct v7_val *);
-const char *v7_string(const struct v7_val *, unsigned long *len);
+v7_val_t v7_get_global_object(struct v7 *);
+v7_val_t v7_exec(struct v7 *, const char *str);       /* Execute string */
+v7_val_t v7_exec_file(struct v7 *, const char *path); /* Execute file */
+int v7_is_true(struct v7 *v7, v7_val_t v);
 
 #ifdef __cplusplus
 }

@@ -11,6 +11,30 @@
 #define PARSE(p) TRY(aparse_ ## p(v7, a))
 #define PARSE_ARG(p, arg) TRY(aparse_ ## p(v7, a, arg))
 
+#define TRY(call)           \
+  do {                      \
+    enum v7_err _e = call;  \
+    CHECK(_e == V7_OK, _e); \
+  } while (0)
+
+#define THROW(err_code)                                                       \
+  do {                                                                        \
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "Parse error: %s line %d", \
+             v7->pstate.file_name, v7->pstate.line_no);                       \
+    return (err_code);                                                        \
+  } while (0)
+
+#define CHECK(cond, code)     \
+  do {                        \
+    if (!(cond)) THROW(code); \
+  } while (0)
+
+#define EXPECT(t)                                     \
+  do {                                                \
+    if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; \
+    next_tok(v7);                                     \
+  } while (0)
+
 static enum v7_err aparse_expression(struct v7 *, struct ast *);
 static enum v7_err aparse_statement(struct v7 *, struct ast *);
 static enum v7_err aparse_terminal(struct v7 *, struct ast *);
@@ -19,6 +43,24 @@ static enum v7_err aparse_memberexpr(struct v7 *, struct ast *);
 static enum v7_err aparse_funcdecl(struct v7 *, struct ast *, int);
 static enum v7_err aparse_block(struct v7 *, struct ast *);
 static enum v7_err aparse_body(struct v7 *, struct ast *, enum v7_tok);
+
+static enum v7_tok lookahead(const struct v7 *v7) {
+  const char *s = v7->pstate.pc;
+  double d;
+  return get_tok(&s, &d, v7->cur_tok);
+}
+
+static enum v7_tok next_tok(struct v7 *v7) {
+  int prev_line_no = v7->pstate.prev_line_no;
+  v7->pstate.prev_line_no = v7->pstate.line_no;
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  v7->after_newline = prev_line_no != v7->pstate.line_no;
+  v7->tok = v7->pstate.pc;
+  v7->cur_tok = get_tok(&v7->pstate.pc, &v7->cur_tok_dbl, v7->cur_tok);
+  v7->tok_len = v7->pstate.pc - v7->tok;
+  v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
+  return v7->cur_tok;
+}
 
 static enum v7_err aparse_ident(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER) {
