@@ -51,13 +51,14 @@ static void dump_ast(const char *code, int binary) {
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
   int i, show_ast = 0, binary_ast = 0;
+  val_t res = V7_UNDEFINED;
 
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
         dump_ast(argv[i + 1], binary_ast);
-      } else if (v7_exec(v7, argv[i + 1]) == V7_UNDEFINED) {
+      } else if ((res = v7_exec(v7, argv[i + 1])) == V7_UNDEFINED) {
         fprintf(stderr, "Exec error [%s]: %s\n", argv[i + 1], v7->error_msg);
       }
       i++;
@@ -86,9 +87,15 @@ int main(int argc, char *argv[]) {
         dump_ast(source_code, binary_ast);
         free(source_code);
       }
-    } else if (v7_exec_file(v7, argv[i]) == V7_UNDEFINED) {
+    } else if ((res = v7_exec_file(v7, argv[i])) == V7_UNDEFINED) {
       fprintf(stderr, "Exec error [%s]: %s\n", argv[i], v7->error_msg);
     }
+  }
+
+  if (!show_ast) {
+    char buf[2000];
+    v7_to_json(v7, res, buf, sizeof(buf));
+    printf("%s\n", buf);
   }
 
   v7_destroy(v7);
