@@ -21,7 +21,7 @@ static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   longjmp(v7->jmp_buf, 1);
-}
+}  /* LCOV_EXCL_LINE */
 
 static void abort_exec(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
@@ -29,7 +29,7 @@ static void abort_exec(struct v7 *v7, const char *err_fmt, ...) {
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   longjmp(v7->abort_jmp_buf, 1);
-}
+}  /* LCOV_EXCL_LINE */
 
 static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
@@ -65,7 +65,7 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
       return -a;
     default:
       abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
-      return 0;
+      return 0;                        /* LCOV_EXCL_LINE */
   }
 }
 
@@ -95,7 +95,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) 
       return (int) a & (int) b;
     default:
       abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
-      return 0;
+      return 0;                        /* LCOV_EXCL_LINE */
   }
 }
 
@@ -121,7 +121,7 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
       return a && b;
     default:
       abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
-      return 0;
+      return 0;                        /* LCOV_EXCL_LINE */
   }
 }
 
@@ -231,7 +231,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             name = buf;
           default:
             abort_exec(v7, "Invalid left-hand side in assignment");
-            return V7_UNDEFINED;  /* unreachable */
+            return V7_UNDEFINED;  /* LCOV_EXCL_LINE */
         }
 
         /*
@@ -430,7 +430,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           }
         }
         res = i_eval_expr(v7, a, pos, scope);
-        switch(val_type(v7, res)) {
+        switch (val_type(v7, res)) {
           case V7_TYPE_NUMBER:
             return v7_string_to_value(v7, "number", 6, 1);
           case V7_TYPE_STRING:
@@ -799,15 +799,17 @@ val_t v7_exec_file(struct v7 *v7, const char *path) {
   val_t res = V7_UNDEFINED;
 
   if ((fp = fopen(path, "r")) == NULL) {
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]", path);
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
   } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes", file_size + 1);
     fclose(fp);
   } else {
     rewind(fp);
     fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
-    res = v7_exec(v7, path);
+    res = v7_exec(v7, p);
     free(p);
   }
 
