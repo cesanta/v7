@@ -227,6 +227,15 @@ val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
 }
 
 int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+  char *vp;
+  for (vp = v7->json_visited_stack.buf;
+       vp < v7->json_visited_stack.buf+ v7->json_visited_stack.len;
+       vp += sizeof(val_t)) {
+    if (* (val_t *) vp == v) {
+      return stpncpy(buf, "[Circular]", size) - buf;
+    }
+  }
+
   /* TODO(mkm): call the toString method instead of custom C code. */
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
@@ -259,6 +268,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       {
         char *b = buf;
         struct v7_property *p;
+        mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
         b += snprintf(b, size - (b - buf), "{");
         for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
@@ -269,6 +279,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
           }
         }
         b += snprintf(b, size - (b - buf), "}");
+        v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
     case V7_TYPE_ARRAY_OBJECT:
@@ -277,6 +288,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char *b = buf;
         char key[512];
         size_t i, len = v7_array_length(v7, v);
+        mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
         b += snprintf(b, size - (b - buf), "[");
         for (i = 0; i < len; i++) {
           /* TODO */
@@ -289,6 +301,7 @@ int v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
           }
         }
         b += snprintf(b, size - (b - buf), "]");
+        v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
     case V7_TYPE_FUNCTION_OBJECT:

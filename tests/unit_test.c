@@ -375,6 +375,10 @@ static const char *test_runtime(void) {
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT((p = v7_get_property(v, "f", -1)) == NULL);
 
+  v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  ASSERT(v7_set_property_value(v7, v, "foo", -1, 0, v) == 0);
+  ASSERT(check_value(v7, v, "{\"foo\":[Circular]}"));
+
   v7_destroy(v7);
   return NULL;
 }
@@ -1005,6 +1009,8 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec(v7, "x=0;if(delete 1 == true)x=42;x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "42"));
 
+  ASSERT((v = v7_exec(v7, "o={};a=[o];o.a=a;a")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[{\"a\":[Circular]}]"));
 #if 0
   ASSERT((v = v7_exec(v7, "x=0;a=1;o={a:2};with(o){x=a};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
