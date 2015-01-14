@@ -550,7 +550,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property(v7, args, buf, n, 0, res);
     }
-    return val_to_cfunction(v1)(v7, args);
+    return val_to_cfunction(v1)(v7, v7->this_object, args);
   } if (!v7_is_function(v1)) {
     abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }

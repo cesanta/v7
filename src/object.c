@@ -5,25 +5,28 @@
 
 #include "internal.h"
 
-V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t args) {
+V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_at(v7, args, 0);
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "Object.getPrototypeOf called on non-object");
   }
   return v7_object_to_value(val_to_object(arg)->prototype);
 }
 
-V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t args) {
+V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t proto = v7_array_at(v7, args, 0);
+  (void) this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
     throw_exception(v7, "Object prototype may only be an Object or null");
   }
   return create_object(v7, proto);
 }
 
-V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t args) {
+V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_at(v7, args, 0);
   val_t proto = v7_array_at(v7, args, 1);
+  (void) this_obj;
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 

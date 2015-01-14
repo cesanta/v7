@@ -20,6 +20,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_OBJECT:
       if (val_to_object(v)->prototype == val_to_object(v7->array_prototype)) {
         return V7_TYPE_ARRAY_OBJECT;
+      } else if (val_to_object(v)->prototype ==
+                 val_to_object(v7->boolean_prototype)) {
+        return V7_TYPE_BOOLEAN_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -255,6 +258,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         b += snprintf(b, size - (b - buf), "{");
         for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
+          if (p->attributes & V7_PROPERTY_HIDDEN) continue;
           b += snprintf(b, size - (b - buf), "\"%s\":", p->name);
           b += to_json(v7, p->value, b, size - (b - buf));
           if (p->next) {
@@ -623,9 +627,11 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, size_t start, size_t len) {
 }
 
 /* TODO(lsm): remove this when init_stdlib() is upgraded */
-V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
+V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t this_obj, val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
+
+  (void) this_obj;
   for (i = 0; i < num_args; i++) {
     p = v7_to_json(v7, v7_array_at(v7, args, i), buf, sizeof(buf));
     printf("%s", p);
@@ -678,6 +684,7 @@ struct v7 *v7_create(void) {
      */
     v7->object_prototype = create_object(v7, V7_NULL);
     v7->array_prototype = v7_create_object(v7);
+    v7->boolean_prototype = v7_create_object(v7);
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
 
@@ -691,6 +698,7 @@ struct v7 *v7_create(void) {
 
     init_object(v7);
     init_error(v7);
+    init_boolean(v7);
   }
 
   return v7;

@@ -124,9 +124,11 @@ static const char *test_closure(void) {
   return NULL;
 }
 
-static val_t adder(struct v7 *v7, val_t args) {
+static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
   double sum = 0;
   int i;
+
+  (void) this_obj;
   for (i = 0; i < v7_array_length(v7, args); i++) {
     sum += val_to_double(v7_array_at(v7, args, i));
   }
@@ -146,11 +148,22 @@ static const char *test_native_functions(void) {
   return NULL;
 }
 
-#if 0
 static const char *test_stdlib(void) {
-  struct v7_val *v;
+  v7_val_t v;
   struct v7 *v7 = v7_create();
 
+  ASSERT((v = v7_exec(v7, "Boolean()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "Boolean(0)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "Boolean(1)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "Boolean([])")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "new Boolean([])")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "{}"));
+
+#if 0
   /* Number */
 #ifndef _WIN32
   ASSERT((v = v7_exec(v7, "Math.PI")) != NULL);
@@ -253,11 +266,11 @@ static const char *test_stdlib(void) {
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/ ")) != NULL);
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/\n")) != NULL);
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/")) != NULL);
+#endif
 
-  v7_destroy(&v7);
+  v7_destroy(v7);
   return NULL;
 }
-#endif
 
 static const char *test_tokenizer(void) {
   static const char *str =
@@ -1152,9 +1165,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_is_true);
   RUN_TEST(test_closure);
   RUN_TEST(test_native_functions);
-  #if 0
   RUN_TEST(test_stdlib);
-  #endif
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);
   RUN_TEST(test_ecmac);
