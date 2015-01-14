@@ -137,8 +137,8 @@ static const char *test_native_functions(void) {
   val_t v;
   struct v7 *v7 = v7_create();
 
-  ASSERT(v7_set_property_value(v7, v7_get_global_object(v7), "adder", 5, 0,
-         v7_create_value(v7, V7_TYPE_CFUNCTION_OBJECT, adder)) == 0);
+  ASSERT(v7_set_property(v7, v7_get_global_object(v7), "adder", 5, 0,
+         v7_create_cfunction(adder)) == 0);
   ASSERT((v = v7_exec(v7, "adder(1, 2, 3 + 4);")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "10"));
   v7_destroy(v7);
@@ -301,68 +301,68 @@ static const char *test_runtime(void) {
   struct v7_property *p;
   size_t n;
 
-  v = v7_create_value(v7, V7_TYPE_NULL);
+  v = v7_create_null();
   ASSERT(v == V7_NULL);
 
-  v = v7_create_value(v7, V7_TYPE_UNDEFINED);
+  v = v7_create_undefined();
   ASSERT(v == V7_UNDEFINED);
 
-  v = v7_create_value(v7, V7_TYPE_NUMBER, 1.0);
+  v = v7_create_number(1.0);
   ASSERT(val_type(v7, v) == V7_TYPE_NUMBER);
   ASSERT(val_to_double(v) == 1.0);
   ASSERT(check_value(v7, v, "1"));
 
-  v = v7_create_value(v7, V7_TYPE_NUMBER, 1.5);
+  v = v7_create_number(1.5);
   ASSERT(val_to_double(v) == 1.5);
   ASSERT(check_value(v7, v, "1.5"));
 
-  v = v7_create_value(v7, V7_TYPE_BOOLEAN, 1);
+  v = v7_create_boolean(1);
   ASSERT(val_type(v7, v) == V7_TYPE_BOOLEAN);
   ASSERT(val_to_boolean(v) == 1);
   ASSERT(check_value(v7, v, "true"));
 
-  v = v7_create_value(v7, V7_TYPE_BOOLEAN, 0);
+  v = v7_create_boolean(0);
   ASSERT(check_value(v7, v, "false"));
 
-  v = v7_create_value(v7, V7_TYPE_STRING, "foo", 3);
+  v = v7_create_string(v7, "foo", 3, 1);
   ASSERT(val_type(v7, v) == V7_TYPE_STRING);
   val_to_string(v7, &v, &n);
   ASSERT(n == 3);
   ASSERT(check_value(v7, v, "\"foo\""));
 
-  v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  v = v7_create_object(v7);
   ASSERT(val_type(v7, v) == V7_TYPE_GENERIC_OBJECT);
   ASSERT(val_to_object(v) != NULL);
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_NULL) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_null()) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(p->attributes == 0);
   ASSERT(p->value == V7_NULL);
   ASSERT(check_value(v7, p->value, "null"));
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_UNDEFINED) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_undefined()) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "undefined"));
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING,
-         "bar", (size_t) 3) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0,
+         v7_create_string(v7, "bar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "\"bar\""));
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING,
-         "zar", (size_t) 3, 1) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0,
+         v7_create_string(v7, "zar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "\"zar\""));
 
   ASSERT(v7_del_property(v, "foo", ~0) == 0);
   ASSERT(val_to_object(v)->properties == NULL);
   ASSERT(v7_del_property(v, "foo", -1) == -1);
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_STRING,
-         "bar", (size_t) 3, 1) == 0);
-  ASSERT(v7_set_property(v7, v, "bar", -1, 0, V7_TYPE_STRING,
-         "foo", (size_t) 3, 1) == 0);
-  ASSERT(v7_set_property(v7, v, "aba", -1, 0, V7_TYPE_STRING,
-         "bab", (size_t) 3, 1) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0,
+         v7_create_string(v7, "bar", 3, 1)) == 0);
+  ASSERT(v7_set_property(v7, v, "bar", -1, 0,
+         v7_create_string(v7, "foo", 3, 1)) == 0);
+  ASSERT(v7_set_property(v7, v, "aba", -1, 0,
+         v7_create_string(v7, "bab", 3, 1)) == 0);
   ASSERT(v7_del_property(v, "foo", -1) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) == NULL);
   ASSERT(v7_del_property(v, "aba", -1) == 0);
@@ -370,13 +370,13 @@ static const char *test_runtime(void) {
   ASSERT(v7_del_property(v, "bar", -1) == 0);
   ASSERT((p = v7_get_property(v, "bar", -1)) == NULL);
 
-  v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0, V7_TYPE_NUMBER, 1.0) == 0);
+  v = v7_create_object(v7);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_number(1.0)) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
   ASSERT((p = v7_get_property(v, "f", -1)) == NULL);
 
-  v = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v7_set_property_value(v7, v, "foo", -1, 0, v) == 0);
+  v = v7_create_object(v7);
+  ASSERT(v7_set_property(v7, v, "foo", -1, 0, v) == 0);
   ASSERT(check_value(v7, v, "{\"foo\":[Circular]}"));
 
   v7_destroy(v7);
@@ -779,7 +779,7 @@ static const char *test_interpreter(void) {
   struct v7 *v7 = v7_create();
   val_t v;
 
-  v7_set_property(v7, v7->global_object, "x", -1, 0, V7_TYPE_NUMBER, 42.0);
+  v7_set_property(v7, v7->global_object, "x", -1, 0, v7_create_number(42.0));
 
   ASSERT((v = v7_exec(v7, "1%2/2")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "0.5"));

@@ -150,8 +150,8 @@ enum v7_type {
 
 struct v7 {
   val_t global_object;
-  struct v7_object *object_prototype;
-  struct v7_object *array_prototype;
+  val_t object_prototype;
+  val_t array_prototype;
   val_t this_object;
 
   /*

@@ -23,6 +23,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include <stddef.h>   /* For size_t */
+
 #define V7_VERSION "1.0"
 
 struct v7;     /* Opaque structure. V7 engine handler. */
@@ -33,16 +35,29 @@ struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 #include <inttypes.h>
 typedef uint64_t v7_val_t;
 
+typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t args);
+
 struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
 void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
-typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t args);
-void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
-v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
-v7_val_t v7_get_global_object(struct v7 *);
 v7_val_t v7_exec(struct v7 *, const char *str);       /* Execute string */
 v7_val_t v7_exec_file(struct v7 *, const char *path); /* Execute file */
-char *v7_to_json(struct v7 *, v7_val_t, char *, int);
+
+v7_val_t v7_create_object(struct v7 *v7);
+v7_val_t v7_create_array(struct v7 *v7);
+v7_val_t v7_create_cfunction(v7_cfunction_t func);
+v7_val_t v7_create_number(double num);
+v7_val_t v7_create_boolean(int is_true);
+v7_val_t v7_create_null(void);
+v7_val_t v7_create_undefined(void);
+v7_val_t v7_create_string(struct v7 *v7, const char *, size_t, int);
+
+v7_val_t v7_get_global_object(struct v7 *);
+int v7_set_property(struct v7 *, v7_val_t obj, const char *name, size_t len,
+                    unsigned int attributes, v7_val_t val);
+char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);
 int v7_is_true(struct v7 *v7, v7_val_t v);
+void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
+v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
 
 #ifdef __cplusplus
 }
@@ -664,8 +679,8 @@ enum v7_type {
 
 struct v7 {
   val_t global_object;
-  struct v7_object *object_prototype;
-  struct v7_object *array_prototype;
+  val_t object_prototype;
+  val_t array_prototype;
   val_t this_object;
 
   /*
@@ -852,34 +867,9 @@ V7_PRIVATE val_t v_get_prototype(val_t);
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
-/*
- * Create a value with the given type.
- * Last arguments to a function depend on `type`:
- * - For `V7_TYPE_UNDEFINED` and `V7_TYPE_NULL` - no argument
- * - For `V7_TYPE_NUMBER`, `v7_num_t` argument
- * - For `V7_TYPE_BOOLEAN`, `int` argument
- * - For `V7_TYPE_STRING`, `char *` followed by `v7_strlen_t` argument
- * - For everything else, `val_t` argument. Value is not copied.
- * Return NULL on failure.
- */
-val_t v7_create_value(struct v7 *, enum v7_type, ...);
-val_t v7_va_create_value(struct v7 *, enum v7_type, va_list);
-
-int v7_stringify_value(struct v7 *, val_t, char *, size_t);
+V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
+V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
-
-int v7_set_property_value(struct v7 *, val_t obj,
-                          const char *name, size_t len,
-                          unsigned int attributes, val_t val);
-
-/*
- * Set a property for an object.
- * `obj` must be a object value. Last arguments depend on `type` (see above).
- * Return 0 on success, -1 on error.
- */
-int v7_set_property(struct v7 *, val_t obj,
-                    const char *name, size_t len,
-                    unsigned int attributes, enum v7_type, ...);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
@@ -3614,8 +3604,9 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
 
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
                                   enum ast_which_skip skip) {
+  uint8_t *p;
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
-  uint8_t * p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
+  p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
@@ -3797,7 +3788,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_UNDEFINED:
       return V7_TYPE_UNDEFINED;
     case V7_TAG_OBJECT:
-      if (val_to_object(v)->prototype == v7->array_prototype) {
+      if (val_to_object(v)->prototype == val_to_object(v7->array_prototype)) {
         return V7_TYPE_ARRAY_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
@@ -3930,7 +3921,7 @@ V7_PRIVATE val_t v_get_prototype(val_t obj) {
   return v7_object_to_value(val_to_object(obj)->prototype);
 }
 
-static val_t v7_create_object(struct v7 *v7, struct v7_object *proto) {
+v7_val_t create_object(struct v7 *v7, v7_val_t prototype) {
   /* TODO(mkm): use GC heap */
   struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
   if (o == NULL) {
@@ -3938,71 +3929,54 @@ static val_t v7_create_object(struct v7 *v7, struct v7_object *proto) {
   }
   (void) v7;
   o->properties = NULL;
-  o->prototype = proto;
+  o->prototype = val_to_object(prototype);
   return v7_object_to_value(o);
 }
 
-val_t v7_create_value(struct v7 *v7, enum v7_type type, ...) {
-  va_list ap;
-  va_start(ap, type);
-  return v7_va_create_value(v7, type, ap);
+v7_val_t v7_create_object(struct v7 *v7) {
+  return create_object(v7, v7->object_prototype);
 }
 
-val_t v7_va_create_value(struct v7 *v7, enum v7_type type,
-                            va_list ap) {
-  val_t v;
+v7_val_t v7_create_null(void) {
+  return V7_NULL;
+}
 
-  /* Initialize value based on type */
-  switch (type) {
-    case V7_TYPE_NULL:
-      return V7_NULL;
-    case V7_TYPE_UNDEFINED:
-      return V7_UNDEFINED;
-    case V7_TYPE_NUMBER:
-      return v7_double_to_value(va_arg(ap, double));
-    case V7_TYPE_BOOLEAN:
-      return v7_boolean_to_value(va_arg(ap, int));
-    case V7_TYPE_STRING:
-      {
-        char *p = va_arg(ap, char *);
-        size_t len = va_arg(ap, size_t);
-        int own = va_arg(ap, int);
-        return v7_string_to_value(v7, p, len, own);
-      }
-    case V7_TYPE_GENERIC_OBJECT:
-      return v7_create_object(v7, v7->object_prototype);
-    case V7_TYPE_ARRAY_OBJECT:
-      return v7_create_object(v7, v7->array_prototype);
-    case V7_TYPE_FUNCTION_OBJECT:
-      {
-        /* TODO(mkm): use GC heap */
-        struct v7_function *f =
-            (struct v7_function *) malloc(sizeof(struct v7_function));
-        val_t fval = v7_function_to_value(f);
-        if (f == NULL) {
-          return V7_NULL;
-        }
-        f->properties = NULL;
-        f->scope = NULL;
-        /* TODO(mkm): lazily create these properties on first access */
-        v7_set_property_value(v7, fval, "prototype", -1, 0,
-                              v7_create_object(v7, v7->object_prototype));
-        return fval;
-      }
-    case V7_TYPE_CFUNCTION_OBJECT:
-      return v7_cfunction_to_value(va_arg(ap, v7_cfunction_t));
-    case V7_TYPE_BOOLEAN_OBJECT:
-    case V7_TYPE_STRING_OBJECT:
-    case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_REGEXP_OBJECT:
-    case V7_TYPE_DATE_OBJECT:
-    case V7_TYPE_ERROR_OBJECT:
-    default:
-      printf("NOT IMPLEMENTED YET create %d\n", type); /* LCOV_EXCL_LINE */
-      abort();  /* LCOV_EXCL_LINE */
+v7_val_t v7_create_undefined(void) {
+  return V7_UNDEFINED;
+}
+
+v7_val_t v7_create_cfunction(v7_cfunction_t f) {
+  return v7_cfunction_to_value(f);
+}
+
+v7_val_t v7_create_number(double num) {
+  return v7_double_to_value(num);
+}
+
+v7_val_t v7_create_boolean(int is_true) {
+  return v7_boolean_to_value(is_true);
+}
+
+v7_val_t v7_create_string(struct v7 *v7, const char *s, size_t len, int own) {
+  return v7_string_to_value(v7, s, len, own);
+}
+
+v7_val_t v7_create_array(struct v7 *v7) {
+  return create_object(v7, v7->array_prototype);
+}
+
+v7_val_t v7_create_function(struct v7 *v7) {
+  /* TODO(mkm): use GC heap */
+  struct v7_function *f = (struct v7_function *) malloc(sizeof(struct v7_function));
+  val_t fval = v7_function_to_value(f);
+  if (f == NULL) {
+    return V7_NULL;
   }
-
-  return v;
+  f->properties = NULL;
+  f->scope = NULL;
+  /* TODO(mkm): lazily create these properties on first access */
+  v7_set_property(v7, fval, "prototype", -1, 0, v7_create_object(v7));
+  return fval;
 }
 
 static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
@@ -4155,7 +4129,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   }
 }
 
-char *v7_to_json(struct v7 *v7, val_t v, char *buf, int size) {
+char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   int len = to_json(v7, v, buf, size);
 
   if (len > (int) size) {
@@ -4225,9 +4199,8 @@ static void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
-int v7_set_property_value(struct v7 *v7, val_t obj,
-                          const char *name, size_t len,
-                          unsigned int attributes, val_t val) {
+int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
+                    unsigned int attributes, v7_val_t val) {
   struct v7_property *prop;
 
   if (!v7_is_object(obj)) {
@@ -4253,19 +4226,6 @@ int v7_set_property_value(struct v7 *v7, val_t obj,
 
   prop->value = val;
   return 0;
-}
-
-int v7_set_property(struct v7 *v7, val_t obj, const char *name,
-                    size_t len, unsigned int attributes,
-                    enum v7_type type, ...) {
-  val_t val;
-  va_list ap;
-  int res;
-
-  va_start(ap, type);
-  val = v7_va_create_value(v7, type, ap);
-  res = v7_set_property_value(v7, obj, name, len, attributes, val);
-  return res;
 }
 
 int v7_del_property(val_t obj, const char *name, size_t len) {
@@ -4320,7 +4280,7 @@ void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
   if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
     char buf[20];
     int n = snprintf(buf, sizeof(buf), "%ld", v7_array_length(v7, arr));
-    v7_set_property_value(v7, arr, buf, n, 0, v);
+    v7_set_property(v7, arr, buf, n, 0, v);
   }
 }
 
@@ -4445,7 +4405,7 @@ V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
   }
   putchar('\n');
 
-  return v7_create_value(v7, V7_TYPE_NULL);
+  return v7_create_null();
 }
 
 int v7_is_true(struct v7 *v7, val_t v) {
@@ -4472,19 +4432,16 @@ struct v7 *v7_create(void) {
      * Ensure the first call to v7_create_value will use a null proto:
      * {}.__proto__.__proto__ == null
      */
-    v7->object_prototype = val_to_object(
-        v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
-    v7->array_prototype = val_to_object(
-        v7_create_value(v7, V7_TYPE_GENERIC_OBJECT));
-    v7->global_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+    v7->object_prototype = create_object(v7, V7_NULL);
+    v7->array_prototype = v7_create_object(v7);
+    v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
 
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
-    v7_set_property_value(v7, v7->global_object, "print", 5, 0,
-                          v7_create_value(v7, V7_TYPE_CFUNCTION_OBJECT,
-                                          Std_print_2));
-    v7_set_property_value(v7, v7->global_object, "Infinity", 8, 0,
-                          v7_create_value(v7, V7_TYPE_NUMBER, INFINITY));
+    v7_set_property(v7, v7->global_object, "print", 5, 0,
+                    v7_create_cfunction(Std_print_2));
+    v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
+                    v7_create_number(INFINITY));
   }
 
   return v7;
@@ -5459,8 +5416,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   switch (tag) {
     case AST_NEGATIVE:
     case AST_POSITIVE:
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_unary_op(
-          v7, tag, i_as_num(v7, i_eval_expr(v7, a, pos, scope))));
+      return v7_create_number(i_num_unary_op(v7, tag, i_as_num(v7,
+                              i_eval_expr(v7, a, pos, scope))));
     case AST_ADD:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -5469,10 +5426,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         v7_stringify_value(v7, v1, buf, sizeof(buf));
         v7_stringify_value(v7, v2, buf + strlen(buf),
                            sizeof(buf) - strlen(buf));
-        return v7_create_value(v7, V7_TYPE_STRING, buf, strlen(buf));
+        return v7_create_string(v7, buf, strlen(buf), 1);
       }
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(v7, tag,
-                             i_as_num(v7, v1), i_as_num(v7, v2)));
+      return v7_create_number(i_num_bin_op(v7, tag, i_as_num(v7, v1),
+                              i_as_num(v7, v2)));
     case AST_SUB:
     case AST_REM:
     case AST_MUL:
@@ -5485,8 +5442,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_AND:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_NUMBER, i_num_bin_op(v7, tag,
-                             i_as_num(v7, v1), i_as_num(v7, v2)));
+      return v7_create_number(i_num_bin_op(v7, tag, i_as_num(v7, v1),
+                              i_as_num(v7, v2)));
     case AST_EQ:
     case AST_NE:
     case AST_LT:
@@ -5499,8 +5456,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_LOGICAL_AND:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_value(v7, V7_TYPE_BOOLEAN, i_bool_bin_op(v7, tag,
-                             i_as_num(v7, v1), i_as_num(v7, v2)));
+      return v7_create_boolean(i_bool_bin_op(v7, tag, i_as_num(v7, v1),
+                               i_as_num(v7, v2)));
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_boolean_to_value(! (int) v7_is_true(v7, v1));
@@ -5589,7 +5546,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if (prop != NULL && tag == AST_IDENT) {
           prop->value = v1;
         } else {
-          v7_set_property_value(v7, root, name, name_len, 0, v1);
+          v7_set_property(v7, root, name, name_len, 0, v1);
         }
         return res;
       }
@@ -5611,7 +5568,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
       return res;
     case AST_ARRAY:
-      res = v7_create_value(v7, V7_TYPE_ARRAY_OBJECT);
+      res = v7_create_array(v7);
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       for (i = 0; *pos < end; i++) {
@@ -5620,12 +5577,12 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         v1 = i_eval_expr(v7, a, pos, scope);
         if (tag != AST_NOP) {
           snprintf(buf, sizeof(buf), "%d", i);
-          v7_set_property_value(v7, res, buf, -1, 0, v1);
+          v7_set_property(v7, res, buf, -1, 0, v1);
         }
       }
       return res;
     case AST_OBJECT:
-      res = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+      res = v7_create_object(v7);
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       while (*pos < end) {
@@ -5634,26 +5591,26 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
         v1 = i_eval_expr(v7, a, pos, scope);
-        v7_set_property_value(v7, res, name, name_len, 0, v1);
+        v7_set_property(v7, res, name, name_len, 0, v1);
       }
       return res;
     case AST_TRUE:
-      return v7_create_value(v7, V7_TYPE_BOOLEAN, 1);
+      return v7_create_boolean(1);
     case AST_FALSE:
-      return v7_create_value(v7, V7_TYPE_BOOLEAN, 0);
+      return v7_create_boolean(0);
     case AST_NULL:
-      return v7_create_value(v7, V7_TYPE_NULL);
+      return V7_NULL;
     case AST_NOP:
     case AST_UNDEFINED:
-      return v7_create_value(v7, V7_TYPE_UNDEFINED);
+      return V7_UNDEFINED;
     case AST_NUM:
       ast_get_num(a, *pos, &dv);
       ast_move_to_children(a, pos);
-      return v7_create_value(v7, V7_TYPE_NUMBER, dv);
+      return v7_create_number(dv);
     case AST_STRING:
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
-      res = v7_create_value(v7, V7_TYPE_STRING, name, name_len, 1);
+      res = v7_create_string(v7, name, name_len, 1);
       return res;
     case AST_IDENT:
       {
@@ -5668,7 +5625,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
     case AST_FUNC:
       {
-        val_t func = v7_create_value(v7, V7_TYPE_FUNCTION_OBJECT);
+        val_t func = v7_create_function(v7);
         struct v7_function *funcp = val_to_function(func);
         funcp->scope = val_to_object(scope);
         funcp->ast = a;
@@ -5677,7 +5634,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         tag = ast_fetch_tag(a, pos);
         if (tag == AST_IDENT) {
           name = ast_get_inlined_data(a, *pos, &name_len);
-          v7_set_property_value(v7, scope, name, name_len, 0, func);
+          v7_set_property(v7, scope, name, name_len, 0, func);
         }
         *pos = ast_get_skip(a, funcp->ast_off + 1, AST_END_SKIP);
         return func;
@@ -5695,7 +5652,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_NEW:
       {
         val_t old_this = v7->this_object;
-        v1 = v7->this_object = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+        v1 = v7->this_object = v7_create_object(v7);
         res = i_eval_call(v7, a, pos, scope);
         if (v7_is_undefined(res) || v7_is_null(res)) {
           res = v1;
@@ -5726,7 +5683,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
         res = i_eval_expr(v7, a, pos, scope);
-        v7_set_property_value(v7, scope, name, name_len, 0, res);
+        v7_set_property(v7, scope, name, name_len, 0, res);
       }
       return res;
     case AST_THIS:
@@ -5833,11 +5790,11 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   if (v7_is_cfunction(v1)) {
     char buf[20];
     int n, i;
-    val_t args = v7_create_value(v7, V7_TYPE_ARRAY_OBJECT);
+    val_t args = v7_create_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       n = snprintf(buf, sizeof(buf), "%d", i);
-      v7_set_property_value(v7, args, buf, n, 0, res);
+      v7_set_property(v7, args, buf, n, 0, res);
     }
     return val_to_cfunction(v1)(v7, args);
   } if (!v7_is_function(v1)) {
@@ -5856,7 +5813,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   ast_skip_tree(func->ast, &fpos);
   fargs = fpos;
 
-  frame = v7_create_value(v7, V7_TYPE_GENERIC_OBJECT);
+  frame = v7_create_object(v7);
   val_to_object(frame)->prototype = func->scope;
   /* populate the call frame with a property for each local variable */
   if (fvar != fstart) {
@@ -5881,7 +5838,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
         ast_move_to_children(func->ast, &fvar);
         ast_skip_tree(func->ast, &fvar);
 
-        v7_set_property_value(v7, frame, name, name_len, 0, V7_UNDEFINED);
+        v7_set_property(v7, frame, name, name_len, 0, V7_UNDEFINED);
       }
       fvar = next - 1; /* TODO(mkm): cleanup */
     } while (next != 0);
@@ -5900,7 +5857,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
     } else {
       res = V7_UNDEFINED;
     }
-    v7_set_property_value(v7, frame, name, name_len, 0, res);
+    v7_set_property(v7, frame, name, name_len, 0, res);
   }
 
   /* evaluate trailing actual arguments for side effects */
@@ -6014,7 +5971,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         loop = *pos;
         if (!v7_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
           *pos = end;
-          return v7_create_value(v7, V7_TYPE_UNDEFINED);
+          return v7_create_undefined();
         }
         iter = loop;
         loop = iter_end;
@@ -6098,7 +6055,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       (*pos)--;
       return i_eval_expr(v7, a, pos, scope);
   }
-  return v7_create_value(v7, V7_TYPE_UNDEFINED);
+  return v7_create_undefined();
 }
 
 V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
