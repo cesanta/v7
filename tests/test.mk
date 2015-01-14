@@ -25,6 +25,7 @@
 # - test_asan: run with AddressSanitizer
 # - test_valgrind: run with valgrind
 
+SRC = $(realpath $(PROG).c)
 CLANG:=clang
 
 # OSX clang doesn't build ASAN. Use brew:
@@ -102,9 +103,9 @@ compile:
 	@make -j8 $(foreach p,$(DIALECTS),$(PROG)-$(p)) CFLAGS_EXTRA=-fsyntax-only LDFLAGS=
 
 # HACK: cannot have two underscores
-$(PROG)-%: Makefile $(PROG).c $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES))
+$(PROG)-%: Makefile $(SRC) $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES))
 	@echo -e "CC\t$(PROG)_$*"
-	$(or $(CC_$*), $(CC)) $(CFLAGS_$*) $(PROG).c $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES)) -o $(PROG)_$* $(CFLAGS) $(LDFLAGS)
+	$(or $(CC_$*), $(CC)) $(CFLAGS_$*) $(SRC) $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES)) -o $(PROG)_$* $(CFLAGS) $(LDFLAGS)
 
 $(ALL_TESTS): test_%: Makefile $(PROG)-%
 	@echo -e "RUN\t$(PROG)_$* $(TEST_FILTER)"
@@ -112,7 +113,7 @@ $(ALL_TESTS): test_%: Makefile $(PROG)-%
 
 coverage: Makefile clean_coverage test_gcov
 	@echo -e "RUN\tGCOV"
-	@gcov -p $(PROG).c $(notdir $(SOURCES)) >/dev/null
+	@gcov -p $(SRC) $(notdir $(SOURCES)) >/dev/null
 
 test_leaks: Makefile
 	$(MAKE) test_valgrind CMD_valgrind="$(CMD_valgrind) --leak-check=full"

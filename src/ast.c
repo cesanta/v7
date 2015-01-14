@@ -449,8 +449,9 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
 
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
                                   enum ast_which_skip skip) {
+  uint8_t *p;
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
-  uint8_t * p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
+  p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
