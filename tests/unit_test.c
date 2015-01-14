@@ -863,6 +863,11 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "2"));
   ASSERT((v = v7_exec(v7, "x=1;if(x<0){x=2};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec(v7, "x=0;if(true)x=2;else x=3;x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
+  ASSERT((v = v7_exec(v7, "x=0;if(false)x=2;else x=3;x")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "3"));
+
   ASSERT((v = v7_exec(v7, "y=1;x=5;while(x > 0){y=y*x;x=x-1};y")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "120"));
   ASSERT((v = v7_exec(v7, "y=1;x=5;do{y=y*x;x=x-1}while(x>0);y")) != V7_UNDEFINED);

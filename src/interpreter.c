@@ -621,7 +621,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, enum i_break *brk) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_NULL;
-  ast_off_t end, cond, iter_end, loop, iter, finally, catch;
+  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch;
 
   switch (tag) {
     case AST_SCRIPT: /* TODO(mkm): push up */
@@ -634,10 +634,16 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return res;
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
+      end_true = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
       ast_move_to_children(a, pos);
       if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
-        res = i_eval_stmts(v7, a, pos, end, scope, brk);
-        if (*brk) {
+        res = i_eval_stmts(v7, a, pos, end_true, scope, brk);
+        if (*brk != B_RUN) {
+          return res;
+        }
+      } else {
+        res = i_eval_stmts(v7, a, &end_true, end, scope, brk);
+          if (*brk != B_RUN) {
           return res;
         }
       }
