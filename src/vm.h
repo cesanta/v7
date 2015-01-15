@@ -147,6 +147,8 @@ V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
+V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
+
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
                                                const char *name, size_t);

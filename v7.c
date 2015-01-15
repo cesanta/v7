@@ -881,6 +881,8 @@ V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
+V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
+
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
                                                const char *name, size_t);
@@ -4206,10 +4208,13 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-struct v7_property *v_find_property(val_t obj, const char *name, size_t len) {
+V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name, size_t len) {
   struct v7_property *prop;
   if (len == (size_t) ~0) {
     len = strlen(name);
+  }
+  if (!v7_is_object(obj)) {
+    return NULL;
   }
   for (prop = val_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
@@ -4227,7 +4232,7 @@ struct v7_property *v7_get_property(val_t obj, const char *name,
   }
   for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
     struct v7_property *prop;
-    if ((prop = v_find_property(obj, name, len)) != NULL) {
+    if ((prop = v7_get_own_property(obj, name, len)) != NULL) {
       return prop;
     }
   }
@@ -4248,7 +4253,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     return -1;
   }
 
-  prop = v_find_property(obj, name, len);
+  prop = v7_get_own_property(obj, name, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */
@@ -7961,6 +7966,14 @@ static val_t _Obj_ownKeys(struct v7 *v7, val_t args, unsigned int ignore_flags) 
   return res;
 }
 
+static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
+                                               val_t name) {
+  char name_buf[512];
+  int name_len;
+  name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
+  return v7_get_own_property(obj, name_buf, name_len);
+}
+
 V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
@@ -7969,6 +7982,72 @@ V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
+}
+
+V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj, val_t args) {
+  struct v7_property *prop;
+  val_t obj = v7_array_at(v7, args, 0);
+  val_t name = v7_array_at(v7, args, 1);
+  val_t desc;
+  (void) this_obj;
+  if ((prop = _Obj_getOwnProperty(v7, obj, name)) == NULL) {
+    return V7_UNDEFINED;
+  }
+  desc = v7_create_object(v7);
+  v7_set_property(v7, desc, "value", 5, 0, prop->value);
+  v7_set_property(v7, desc, "writable", 8, 0, v7_create_boolean(
+      !(prop->attributes & V7_PROPERTY_READ_ONLY)));
+  v7_set_property(v7, desc, "enumerable", 10, 0, v7_create_boolean(
+      !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM))));
+  v7_set_property(v7, desc, "configurable", 12, 0, v7_create_boolean(
+      !(prop->attributes & V7_PROPERTY_DONT_DELETE)));
+
+  return desc;
+}
+
+V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t obj = v7_array_at(v7, args, 0);
+  val_t name = v7_array_at(v7, args, 1);
+  val_t desc = v7_array_at(v7, args, 2);
+  val_t val = V7_UNDEFINED;
+  unsigned int flags = 0;
+  char name_buf[512];
+  int name_len;
+
+  (void) this_obj;
+  val = v7_property_value(v7_get_property(desc, "value", 5));
+  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "enumerable",
+                                                       10)))) {
+    flags |= V7_PROPERTY_DONT_ENUM;
+  }
+  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "writable",
+                                                       8)))) {
+    flags |= V7_PROPERTY_READ_ONLY;
+  }
+  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "configurable",
+                                                       12)))) {
+    flags |= V7_PROPERTY_DONT_DELETE;
+  }
+
+  name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
+  v7_set_property(v7, obj, name_buf, name_len, flags, val);
+  return obj;
+}
+
+V7_PRIVATE val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
+                                          val_t args) {
+  struct v7_property *prop;
+  val_t name = v7_array_at(v7, args, 0);
+  if ((prop = _Obj_getOwnProperty(v7, this_obj, name)) == NULL) {
+    return v7_create_boolean(0);
+  }
+  return v7_create_boolean(!(prop->attributes &
+                             (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
+}
+
+V7_PRIVATE val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t name = v7_array_at(v7, args, 0);
+  return v7_create_boolean(_Obj_getOwnProperty(v7, this_obj, name) != NULL);
 }
 
 #if 0
@@ -8000,14 +8079,23 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);
   v7_set_property(v7, object, "getPrototypeOf", 14, 0,
                   v7_create_cfunction(Obj_getPrototypeOf));
-  v7_set_property(v7, object, "isPrototypeOf", 14, 0,
+  v7_set_property(v7, object, "isPrototypeOf", 13, 0,
                   v7_create_cfunction(Obj_isPrototypeOf));
+  v7_set_property(v7, object, "getOwnPropertyDescriptor", 24, 0,
+                  v7_create_cfunction(Obj_getOwnPropertyDescriptor));
+  v7_set_property(v7, object, "defineProperty", 14, 0,
+                  v7_create_cfunction(Obj_defineProperty));
   v7_set_property(v7, object, "create", 6, 0,
                   v7_create_cfunction(Obj_create));
   v7_set_property(v7, object, "keys", 4, 0,
                   v7_create_cfunction(Obj_keys));
   v7_set_property(v7, object, "getOwnPropertyNames", 26, 0,
                   v7_create_cfunction(Obj_getOwnPropertyNames));
+  v7_set_property(v7, v7->object_prototype, "propertyIsEnumerable", 20, 0,
+                  v7_create_cfunction(Obj_propertyIsEnumerable));
+  v7_set_property(v7, v7->object_prototype, "hasOwnProperty", 14, 0,
+                  v7_create_cfunction(Obj_hasOwnProperty));
+
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
