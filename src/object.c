@@ -5,13 +5,29 @@
 
 #include "internal.h"
 
-V7_PRIVATE enum v7_err Object_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj =
-      cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
-  v7_set_class(obj, V7_CLASS_OBJECT);
-  return V7_OK;
+V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t args) {
+  val_t arg = v7_array_at(v7, args, 0);
+  if (!v7_is_object(arg)) {
+    throw_exception(v7, "Object.getPrototypeOf called on non-object");
+  }
+  return v7_object_to_value(val_to_object(arg)->prototype);
 }
 
+V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t args) {
+  val_t proto = v7_array_at(v7, args, 0);
+  if (!v7_is_null(proto) && !v7_is_object(proto)) {
+    throw_exception(v7, "Object prototype may only be an Object or null");
+  }
+  return create_object(v7, proto);
+}
+
+V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t args) {
+  val_t obj = v7_array_at(v7, args, 0);
+  val_t proto = v7_array_at(v7, args, 1);
+  return v7_create_boolean(is_prototype_of(obj, proto));
+}
+
+#if 0
 V7_PRIVATE enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
   char *p, buf[500];
   p = v7_stringify(cfa->this_obj, buf, sizeof(buf));
@@ -30,9 +46,18 @@ V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-V7_PRIVATE void init_object(void) {
-  init_standard_constructor(V7_CLASS_OBJECT, Object_ctor);
-  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "toString", Obj_toString);
-  SET_METHOD(s_prototypes[V7_CLASS_OBJECT], "keys", Obj_keys);
-  SET_RO_PROP_V(s_global, "Object", s_constructors[V7_CLASS_OBJECT]);
+#endif
+V7_PRIVATE void init_object(struct v7 *v7) {
+  val_t object;
+  /* TODO(mkm): initialize global object without requiring a parser */
+  v7_exec(v7, "function Object() {}");
+
+  object = v7_property_value(v7_get_property(v7->global_object, "Object", 6));
+  v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);
+  v7_set_property(v7, object, "getPrototypeOf", 14, 0,
+                  v7_create_cfunction(Obj_getPrototypeOf));
+  v7_set_property(v7, object, "isPrototypeOf", 14, 0,
+                  v7_create_cfunction(Obj_isPrototypeOf));
+  v7_set_property(v7, object, "create", 6, 0,
+                  v7_create_cfunction(Obj_create));
 }

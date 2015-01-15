@@ -24,10 +24,10 @@ enum i_break {
 
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, enum i_break *);
-static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
+static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
-static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
+V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
@@ -107,10 +107,10 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) 
 static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
   switch (tag) {
     case AST_EQ:
-    case AST_EQ_EQ:   /* TODO(lsm): fix this */
+    case AST_EQ_EQ:
       return a == b;
     case AST_NE:
-    case AST_NE_NE:   /* TODO(lsm): fix this */
+    case AST_NE_NE:
       return a != b;
     case AST_LT:
       return a < b;
@@ -178,20 +178,32 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v2 = i_eval_expr(v7, a, pos, scope);
       return v7_create_number(i_num_bin_op(v7, tag, i_as_num(v7, v1),
                               i_as_num(v7, v2)));
+    case AST_EQ_EQ:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return v7_boolean_to_value(v1 == v2);
+    case AST_NE_NE:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return v7_boolean_to_value(v1 != v2);
     case AST_EQ:
     case AST_NE:
     case AST_LT:
     case AST_LE:
     case AST_GT:
     case AST_GE:
-    case AST_NE_NE:
-    case AST_EQ_EQ:
     case AST_LOGICAL_OR:
     case AST_LOGICAL_AND:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_boolean(i_bool_bin_op(v7, tag, i_as_num(v7, v1),
-                               i_as_num(v7, v2)));
+      if (tag == AST_EQ && v1 == v2) {
+        return v7_boolean_to_value(1);
+      }
+      if (tag == AST_NE && v1 == v2) {
+        return v7_boolean_to_value(0);
+      }
+      return v7_create_boolean(i_bool_bin_op(v7, tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_boolean_to_value(! (int) v7_is_true(v7, v1));
@@ -379,7 +391,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         ast_off_t pp = *pos;
         ast_move_to_children(a, &pp);
         v7->this_object = i_find_this(v7, a, pp, scope);
-        res = i_eval_call(v7, a, pos, scope);
+        res = i_eval_call(v7, a, pos, scope, 0);
         v7->this_object = old_this;
         return res;
       }
@@ -387,7 +399,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         val_t old_this = v7->this_object;
         v1 = v7->this_object = v7_create_object(v7);
-        res = i_eval_call(v7, a, pos, scope);
+        res = i_eval_call(v7, a, pos, scope, 1);
         if (v7_is_undefined(res) || v7_is_null(res)) {
           res = v1;
         }
@@ -486,6 +498,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
         return v7_boolean_to_value(1);
       }
+    case AST_INSTANCEOF:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      if (!v7_is_function(v2)) {
+        throw_exception(v7, "Expecting a function in instanceof check");
+      }
+      return v7_create_boolean(is_prototype_of(v1, v7_property_value(v7_get_property(v2, "prototype", 9))));
     case AST_VOID:
       i_eval_expr(v7, a, pos, scope);
       return V7_UNDEFINED;
@@ -508,7 +527,8 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos, val_t scop
   }
 }
 
-static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t scope) {
+static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope, int is_constructor) {
   ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
   enum i_break fbrk = B_RUN;
   val_t frame, res, v1;
@@ -536,6 +556,14 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   }
 
   func = val_to_function(v1);
+  if (is_constructor) {
+    val_t fun_proto = v7_property_value(v7_get_property(v1, "prototype", 9));
+    if (!v7_is_object(fun_proto)) {
+      /* TODO(mkm): box primitive value */
+      throw_exception(v7, "Cannot set a primitive value as object prototype");
+    }
+    val_to_object(v7->this_object)->prototype = val_to_object(fun_proto);
+  }
   fpos = func->ast_off;
   fstart = fpos;
   tag = ast_fetch_tag(func->ast, &fpos);

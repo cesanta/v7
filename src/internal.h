@@ -199,4 +199,6 @@ struct v7 {
                       __func__, __LINE__, #COND);                         \
     } while (0)
 
+V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...);
+
 #endif /* V7_INTERNAL_H_INCLUDED */

@@ -333,6 +333,8 @@ static const char *test_runtime(void) {
   v = v7_create_object(v7);
   ASSERT(val_type(v7, v) == V7_TYPE_GENERIC_OBJECT);
   ASSERT(val_to_object(v) != NULL);
+  ASSERT(val_to_object(v)->prototype != NULL);
+  ASSERT(val_to_object(v)->prototype->prototype == NULL);
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_null()) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
@@ -815,6 +817,40 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "true"));
   ASSERT((v = v7_exec(v7, "'-1'==-1")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "a={};a===a")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "a={};a!==a")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};a==a")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "a={};a!=a")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};b={};a===b")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};b={};a!==b")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "a={};b={};a==b")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};b={};a!=b")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "1-{}")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "NaN"));
+  ASSERT((v = v7_exec(v7, "a={};a===(1-{})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};a!==(1-{})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "a={};a==(1-{})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};a!=(1-{})")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "a={};a===1")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};a!==1")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "a={};a==1")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "a={};a!=1")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
 
   ASSERT((v = v7_exec(v7, "+'1'")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "1"));
@@ -1042,6 +1078,18 @@ static const char *test_interpreter(void) {
 
   ASSERT((v = v7_exec(v7, "o={};a=[o];o.a=a;a")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[{\"a\":[Circular]}]"));
+
+  ASSERT((v = v7_exec(v7, "new TypeError instanceof Error")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "new TypeError instanceof TypeError")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "new Error instanceof Object")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "new Error instanceof TypeError")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  /* TODO(mkm): fix parser: should not require parenthesis */
+  ASSERT((v = v7_exec(v7, "({}) instanceof Object")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
 
   ASSERT((v = v7_exec(v7, "")) == V7_NULL);
 #if 0

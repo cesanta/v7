@@ -728,6 +728,8 @@ struct v7 {
                       __func__, __LINE__, #COND);                         \
     } while (0)
 
+V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...);
+
 #endif /* V7_INTERNAL_H_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -862,11 +864,16 @@ double val_to_double(val_t);
 v7_cfunction_t val_to_cfunction(val_t);
 const char *val_to_string(struct v7 *, val_t *, size_t *);
 
+V7_PRIVATE void init_object(struct v7 *v7);
+V7_PRIVATE void init_error(struct v7 *v7);
+
 V7_PRIVATE val_t v_get_prototype(val_t);
+V7_PRIVATE int is_prototype_of(val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
+V7_PRIVATE val_t create_object(struct v7 *, val_t);
 V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
@@ -3921,7 +3928,7 @@ V7_PRIVATE val_t v_get_prototype(val_t obj) {
   return v7_object_to_value(val_to_object(obj)->prototype);
 }
 
-v7_val_t create_object(struct v7 *v7, v7_val_t prototype) {
+V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   /* TODO(mkm): use GC heap */
   struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
   if (o == NULL) {
@@ -4408,6 +4415,20 @@ V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
   return v7_create_null();
 }
 
+V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
+  struct v7_object *obj, *proto;
+  if (!v7_is_object(o) || !v7_is_object(p)) {
+    return 0;
+  }
+  proto = val_to_object(p);
+  for (obj = val_to_object(o); obj; obj = obj->prototype) {
+    if (obj->prototype == proto) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && val_to_boolean(v)) ||
@@ -4442,6 +4463,11 @@ struct v7 *v7_create(void) {
                     v7_create_cfunction(Std_print_2));
     v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
                     v7_create_number(INFINITY));
+    v7_set_property(v7, v7->global_object, "global", 6, 0,
+                    v7->global_object);
+
+    init_object(v7);
+    init_error(v7);
   }
 
   return v7;
@@ -5290,10 +5316,10 @@ enum i_break {
 
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, enum i_break *);
-static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t);
+static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
-static void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
+V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
@@ -5373,10 +5399,10 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) 
 static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
   switch (tag) {
     case AST_EQ:
-    case AST_EQ_EQ:   /* TODO(lsm): fix this */
+    case AST_EQ_EQ:
       return a == b;
     case AST_NE:
-    case AST_NE_NE:   /* TODO(lsm): fix this */
+    case AST_NE_NE:
       return a != b;
     case AST_LT:
       return a < b;
@@ -5444,20 +5470,32 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v2 = i_eval_expr(v7, a, pos, scope);
       return v7_create_number(i_num_bin_op(v7, tag, i_as_num(v7, v1),
                               i_as_num(v7, v2)));
+    case AST_EQ_EQ:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return v7_boolean_to_value(v1 == v2);
+    case AST_NE_NE:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return v7_boolean_to_value(v1 != v2);
     case AST_EQ:
     case AST_NE:
     case AST_LT:
     case AST_LE:
     case AST_GT:
     case AST_GE:
-    case AST_NE_NE:
-    case AST_EQ_EQ:
     case AST_LOGICAL_OR:
     case AST_LOGICAL_AND:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_boolean(i_bool_bin_op(v7, tag, i_as_num(v7, v1),
-                               i_as_num(v7, v2)));
+      if (tag == AST_EQ && v1 == v2) {
+        return v7_boolean_to_value(1);
+      }
+      if (tag == AST_NE && v1 == v2) {
+        return v7_boolean_to_value(0);
+      }
+      return v7_create_boolean(i_bool_bin_op(v7, tag,
+                             i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_boolean_to_value(! (int) v7_is_true(v7, v1));
@@ -5645,7 +5683,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         ast_off_t pp = *pos;
         ast_move_to_children(a, &pp);
         v7->this_object = i_find_this(v7, a, pp, scope);
-        res = i_eval_call(v7, a, pos, scope);
+        res = i_eval_call(v7, a, pos, scope, 0);
         v7->this_object = old_this;
         return res;
       }
@@ -5653,7 +5691,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         val_t old_this = v7->this_object;
         v1 = v7->this_object = v7_create_object(v7);
-        res = i_eval_call(v7, a, pos, scope);
+        res = i_eval_call(v7, a, pos, scope, 1);
         if (v7_is_undefined(res) || v7_is_null(res)) {
           res = v1;
         }
@@ -5752,6 +5790,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
         return v7_boolean_to_value(1);
       }
+    case AST_INSTANCEOF:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      if (!v7_is_function(v2)) {
+        throw_exception(v7, "Expecting a function in instanceof check");
+      }
+      return v7_create_boolean(is_prototype_of(v1, v7_property_value(v7_get_property(v2, "prototype", 9))));
     case AST_VOID:
       i_eval_expr(v7, a, pos, scope);
       return V7_UNDEFINED;
@@ -5774,7 +5819,8 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos, val_t scop
   }
 }
 
-static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t scope) {
+static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         val_t scope, int is_constructor) {
   ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
   enum i_break fbrk = B_RUN;
   val_t frame, res, v1;
@@ -5802,6 +5848,14 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos, val_t sco
   }
 
   func = val_to_function(v1);
+  if (is_constructor) {
+    val_t fun_proto = v7_property_value(v7_get_property(v1, "prototype", 9));
+    if (!v7_is_object(fun_proto)) {
+      /* TODO(mkm): box primitive value */
+      throw_exception(v7, "Cannot set a primitive value as object prototype");
+    }
+    val_to_object(v7->this_object)->prototype = val_to_object(fun_proto);
+  }
   fpos = func->ast_off;
   fstart = fpos;
   tag = ast_fetch_tag(func->ast, &fpos);
@@ -7735,6 +7789,80 @@ int main(int argc, char **argv) {
   return err_code;
 }
 #endif  /* SLRE_TEST */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t args) {
+  val_t arg = v7_array_at(v7, args, 0);
+  if (!v7_is_object(arg)) {
+    throw_exception(v7, "Object.getPrototypeOf called on non-object");
+  }
+  return v7_object_to_value(val_to_object(arg)->prototype);
+}
+
+V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t args) {
+  val_t proto = v7_array_at(v7, args, 0);
+  if (!v7_is_null(proto) && !v7_is_object(proto)) {
+    throw_exception(v7, "Object prototype may only be an Object or null");
+  }
+  return create_object(v7, proto);
+}
+
+V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t args) {
+  val_t obj = v7_array_at(v7, args, 0);
+  val_t proto = v7_array_at(v7, args, 1);
+  return v7_create_boolean(is_prototype_of(obj, proto));
+}
+
+#if 0
+V7_PRIVATE enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
+  char *p, buf[500];
+  p = v7_stringify(cfa->this_obj, buf, sizeof(buf));
+  v7_push_string(cfa->v7, p, strlen(p), 1);
+  if (p != buf) free(p);
+  return V7_OK;
+}
+
+V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
+  struct v7_prop *p;
+  struct v7_val *result = v7_push_new_object(cfa->v7);
+  v7_set_class(result, V7_CLASS_ARRAY);
+  for (p = cfa->this_obj->props; p != NULL; p = p->next) {
+    v7_append(cfa->v7, result, p->key);
+  }
+  return V7_OK;
+}
+
+#endif
+V7_PRIVATE void init_object(struct v7 *v7) {
+  val_t object;
+  /* TODO(mkm): initialize global object without requiring a parser */
+  v7_exec(v7, "function Object() {}");
+
+  object = v7_property_value(v7_get_property(v7->global_object, "Object", 6));
+  v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);
+  v7_set_property(v7, object, "getPrototypeOf", 14, 0,
+                  v7_create_cfunction(Obj_getPrototypeOf));
+  v7_set_property(v7, object, "isPrototypeOf", 14, 0,
+                  v7_create_cfunction(Obj_isPrototypeOf));
+  v7_set_property(v7, object, "create", 6, 0,
+                  v7_create_cfunction(Obj_create));
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+
+V7_PRIVATE void init_error(struct v7 *v7) {
+  v7_exec(v7, "function Error(m) {this.message = m}");
+  v7_exec(v7, "function TypeError(m) {this.message = m};"
+            "TypeError.prototype = Object.create(Error.prototype)");
+}
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
