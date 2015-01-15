@@ -5652,6 +5652,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v1 = i_eval_expr(v7, a, pos, scope);
             name_len = v7_stringify_value(v7, v1, buf, sizeof(buf));
             name = buf;
+            break;
           default:
             abort_exec(v7, "Invalid left-hand side in assignment");
             return V7_UNDEFINED;  /* LCOV_EXCL_LINE */

@@ -1024,6 +1024,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "66"));
   ASSERT((v = v7_exec(v7, "o['a']['b'].c")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "66"));
+  ASSERT((v = v7_exec(v7, "o={a:1}; o['a']=2;o.a")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "2"));
   ASSERT((v = v7_exec(v7, "a={f:function(){return {b:55}}};a.f().b")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "55"));
   ASSERT((v = v7_exec(v7, "(function(){fox=1})();fox")) != V7_UNDEFINED);
