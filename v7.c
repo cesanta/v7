@@ -35,7 +35,7 @@ struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 #include <inttypes.h>
 typedef uint64_t v7_val_t;
 
-typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t args);
+typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
 
 struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
 void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
@@ -681,6 +681,7 @@ struct v7 {
   val_t global_object;
   val_t object_prototype;
   val_t array_prototype;
+  val_t boolean_prototype;
   val_t this_object;
 
   /*
@@ -866,6 +867,7 @@ const char *val_to_string(struct v7 *, val_t *, size_t *);
 
 V7_PRIVATE void init_object(struct v7 *v7);
 V7_PRIVATE void init_error(struct v7 *v7);
+V7_PRIVATE void init_boolean(struct v7 *v7);
 
 V7_PRIVATE val_t v_get_prototype(val_t);
 V7_PRIVATE int is_prototype_of(val_t, val_t);
@@ -3167,6 +3169,31 @@ int main(void) {
  */
 
 
+V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t v = v7_create_boolean(0);   /* false by default */
+  if (v7_is_true(v7, v7_array_at(v7, args, 0))) {
+    v = v7_create_boolean(1);
+  }
+  if (this_obj != v7->global_object) {
+    /* called as "new Boolean(...)" */
+    val_t obj = create_object(v7, v7->boolean_prototype);
+    v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v);
+    return obj;
+  } else {
+    return v;
+  }
+}
+
+V7_PRIVATE void init_boolean(struct v7 *v7) {
+  v7_set_property(v7, v7->global_object, "Boolean", 7, 0,
+                  v7_create_cfunction(Boolean_ctor));
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
 typedef unsigned short ast_skip_t;
 
 /*
@@ -3797,6 +3824,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_OBJECT:
       if (val_to_object(v)->prototype == val_to_object(v7->array_prototype)) {
         return V7_TYPE_ARRAY_OBJECT;
+      } else if (val_to_object(v)->prototype ==
+                 val_to_object(v7->boolean_prototype)) {
+        return V7_TYPE_BOOLEAN_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -4032,6 +4062,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         b += snprintf(b, size - (b - buf), "{");
         for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
+          if (p->attributes & V7_PROPERTY_HIDDEN) continue;
           b += snprintf(b, size - (b - buf), "\"%s\":", p->name);
           b += to_json(v7, p->value, b, size - (b - buf));
           if (p->next) {
@@ -4400,9 +4431,11 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, size_t start, size_t len) {
 }
 
 /* TODO(lsm): remove this when init_stdlib() is upgraded */
-V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t args) {
+V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t this_obj, val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
+
+  (void) this_obj;
   for (i = 0; i < num_args; i++) {
     p = v7_to_json(v7, v7_array_at(v7, args, i), buf, sizeof(buf));
     printf("%s", p);
@@ -4455,6 +4488,7 @@ struct v7 *v7_create(void) {
      */
     v7->object_prototype = create_object(v7, V7_NULL);
     v7->array_prototype = v7_create_object(v7);
+    v7->boolean_prototype = v7_create_object(v7);
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
 
@@ -4468,6 +4502,7 @@ struct v7 *v7_create(void) {
 
     init_object(v7);
     init_error(v7);
+    init_boolean(v7);
   }
 
   return v7;
@@ -5842,7 +5877,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property(v7, args, buf, n, 0, res);
     }
-    return val_to_cfunction(v1)(v7, args);
+    return val_to_cfunction(v1)(v7, v7->this_object, args);
   } if (!v7_is_function(v1)) {
     abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
@@ -7795,25 +7830,28 @@ int main(int argc, char **argv) {
  */
 
 
-V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t args) {
+V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_at(v7, args, 0);
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "Object.getPrototypeOf called on non-object");
   }
   return v7_object_to_value(val_to_object(arg)->prototype);
 }
 
-V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t args) {
+V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t proto = v7_array_at(v7, args, 0);
+  (void) this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
     throw_exception(v7, "Object prototype may only be an Object or null");
   }
   return create_object(v7, proto);
 }
 
-V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t args) {
+V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_at(v7, args, 0);
   val_t proto = v7_array_at(v7, args, 1);
+  (void) this_obj;
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 

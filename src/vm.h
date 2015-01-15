@@ -134,6 +134,7 @@ const char *val_to_string(struct v7 *, val_t *, size_t *);
 
 V7_PRIVATE void init_object(struct v7 *v7);
 V7_PRIVATE void init_error(struct v7 *v7);
+V7_PRIVATE void init_boolean(struct v7 *v7);
 
 V7_PRIVATE val_t v_get_prototype(val_t);
 V7_PRIVATE int is_prototype_of(val_t, val_t);

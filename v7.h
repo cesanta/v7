@@ -35,7 +35,7 @@ struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 #include <inttypes.h>
 typedef uint64_t v7_val_t;
 
-typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t args);
+typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
 
 struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
 void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
