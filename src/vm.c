@@ -697,6 +697,7 @@ struct v7 *v7_create(void) {
                     v7->global_object);
 
     init_object(v7);
+    init_array(v7);
     init_error(v7);
     init_boolean(v7);
   }

@@ -133,6 +133,7 @@ v7_cfunction_t val_to_cfunction(val_t);
 const char *val_to_string(struct v7 *, val_t *, size_t *);
 
 V7_PRIVATE void init_object(struct v7 *v7);
+V7_PRIVATE void init_array(struct v7 *v7);
 V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
 

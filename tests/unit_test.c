@@ -908,6 +908,14 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec(v7, "o.a + o.b")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "3"));
 
+  ASSERT((v = v7_exec(v7, "Array(1,2)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[1,2]"));
+  ASSERT((v = v7_exec(v7, "new Array(1,2)")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[1,2]"));
+  ASSERT((v = v7_exec(v7, "Object.isPrototypeOf(Array(1,2), Object.getPrototypeOf([]))")) != V7_UNDEFINED);
+  ASSERT((v = v7_exec(v7, "a=[];r=a.push(1,2,3);[r,a]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[3,[1,2,3]]"));
+
   ASSERT((v = v7_exec(v7, "x=1;if(x>0){x=2};x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "2"));
   ASSERT((v = v7_exec(v7, "x=1;if(x<0){x=2};x")) != V7_UNDEFINED);
