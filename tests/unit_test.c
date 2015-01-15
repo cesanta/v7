@@ -1132,6 +1132,17 @@ static const char *test_interpreter(void) {
   ASSERT((v = v7_exec(v7, "b={c:1};a=Object.create(b); a.d=4;Object.getOwnPropertyNames(a)")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[\"d\"]"));
 
+  ASSERT((v = v7_exec(v7, "r=0;o={a:1,b:2};for(i in o){r+=o[i]};r")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "3"));
+  ASSERT((v = v7_exec(v7, "r=0;o={a:1,b:2};for(var i in o){r+=o[i]};r")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "3"));
+  ASSERT((v = v7_exec(v7, "r=1;for(var i in null){r=0};r")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec(v7, "r=1;for(var i in undefined){r=0};r")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec(v7, "r=1;for(var i in 42){r=0};r")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+
   /* check execution failure caused by bad parsing */
   ASSERT((v = v7_exec(v7, "function")) == V7_UNDEFINED);
   return NULL;

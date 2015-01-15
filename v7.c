@@ -6105,6 +6105,67 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
         i_eval_expr(v7, a, &iter, scope);
       }
+    case AST_FOR_IN:
+      {
+        char *name;
+        size_t name_len;
+        val_t obj, key;
+        ast_off_t loop;
+        struct v7_property *p, *var;
+
+        end = ast_get_skip(a, *pos, AST_END_SKIP);
+        ast_move_to_children(a, pos);
+        tag = ast_fetch_tag(a, pos);
+        /* TODO(mkm) accept any l-value */
+        if (tag == AST_VAR) {
+          ast_move_to_children(a, pos);
+          tag = ast_fetch_tag(a, pos);
+          V7_CHECK(v7, tag == AST_VAR_DECL);
+          name = ast_get_inlined_data(a, *pos, &name_len);
+          ast_move_to_children(a, pos);
+          ast_skip_tree(a, pos);
+        } else {
+          V7_CHECK(v7, tag == AST_IDENT);
+          name = ast_get_inlined_data(a, *pos, &name_len);
+          ast_move_to_children(a, pos);
+        }
+
+        obj = i_eval_expr(v7, a, pos, scope);
+        if (!v7_is_object(obj)) {
+          *pos = end;
+          return V7_UNDEFINED;
+        }
+        ast_skip_tree(a, pos);
+        loop = *pos;
+
+        for (p = val_to_object(obj)->properties; p; p = p->next, *pos = loop) {
+          if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+            continue;
+          }
+          key = v7_string_to_value(v7, p->name, strlen(p->name), 1);
+          if ((var = v7_get_property(scope, name, name_len)) != NULL) {
+            var->value = key;
+          } else {
+            v7_set_property(v7, v7->global_object, name, name_len, 0, key);
+          }
+
+          res = i_eval_stmts(v7, a, pos, end, scope, brk);
+          switch (*brk) {
+            case B_RUN:
+              break;
+            case B_CONTINUE:
+              *brk = B_RUN;
+              break;
+            case B_BREAK:
+              *brk = B_RUN; /* fall through */
+            case B_RETURN:
+              *pos = end;
+              return res;
+          }
+        }
+        *pos = end;
+        return res;
+      }
     case AST_TRY:
       {
         int percolate = 0;
