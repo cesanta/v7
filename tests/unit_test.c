@@ -1017,6 +1017,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "66"));
   ASSERT((v = v7_exec(v7, "x=42;o={x:66,f:function(){return this}};(1,o.f)().x")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "42"));
+  ASSERT((v = v7_exec(v7, "x=66;o={x:42,f:function(){return this.x}};o.f()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "42"));
 
   ASSERT((v = v7_exec(v7, "o={};o.x=24")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "24"));
