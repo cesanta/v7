@@ -5703,6 +5703,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         /* variables are modified where they are found in the scope chain */
         if (prop != NULL && tag == AST_IDENT) {
           prop->value = v1;
+        } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
+          /* nop */
         } else {
           v7_set_property(v7, root, name, name_len, 0, v1);
         }
@@ -5918,6 +5920,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
         prop = v7_get_property(lval, name, name_len);
         if (prop != NULL) {
+          if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
+            return v7_boolean_to_value(0);
+          }
           v7_del_property(lval, name, name_len);
         }
         return v7_boolean_to_value(1);

@@ -1166,6 +1166,10 @@ static const char *test_interpreter(void) {
                       "d=Object.getOwnPropertyDescriptor(o, 'a');"
                       "[d.value,d.writable,d.enumerable,d.configurable]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[1,false,true,false]"));
+  ASSERT((v = v7_exec(v7, "o=Object.defineProperty({},'a',{value:1,enumerable:true});o.a=2;o.a")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT((v = v7_exec(v7, "o=Object.defineProperty({},'a',{value:1,enumerable:true});r=delete o.a;[r,o.a]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[false,1]"));
 
   ASSERT((v = v7_exec(v7, "r=0;o={a:1,b:2};for(i in o){r+=o[i]};r")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "3"));
