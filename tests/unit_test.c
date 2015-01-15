@@ -1110,6 +1110,19 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "2"));
 #endif
 
+  ASSERT((v = v7_exec(v7, "(function(){try {throw new Error}catch(e){c=e}})();c instanceof Error")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "delete e;(function(){try {throw new Error}catch(e){}})();typeof e")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "\"undefined\""));
+  ASSERT((v = v7_exec(v7, "x=(function(){c=1;try {throw 1}catch(e){c=0};return c})()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT((v = v7_exec(v7, "x=(function(){var c=1;try {throw 1}catch(e){c=0};return c})()")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT((v = v7_exec(v7, "c=1;x=(function(){try {throw 1}catch(e){var c=0};return c})();[c,x]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[1,0]"));
+  ASSERT((v = v7_exec(v7, "c=1;x=(function(){try {throw 1}catch(e){c=0};return c})();[c,x]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[0,0]"));
+
   /* check execution failure caused by bad parsing */
   ASSERT((v = v7_exec(v7, "function")) == V7_UNDEFINED);
   return NULL;

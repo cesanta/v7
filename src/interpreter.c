@@ -27,6 +27,11 @@ static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
+V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
+  v7->thrown_error = v;
+  siglongjmp(v7->jmp_buf, 1);
+}  /* LCOV_EXCL_LINE */
+
 V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
@@ -424,12 +429,24 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       while (*pos < end) {
+        struct v7_property *prop;
         tag = ast_fetch_tag(a, pos);
         V7_CHECK(v7, tag == AST_VAR_DECL);
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
         res = i_eval_expr(v7, a, pos, scope);
-        v7_set_property(v7, scope, name, name_len, 0, res);
+        /*
+         * Var decls are hoisted when the function frame is created. Vars
+         * declared inside a `with` or `catch` block belong to the function
+         * lexical scope, and although those clauses create an inner frame
+         * no new variables should be created in it. A var decl thus
+         * behaves as a normal assignment at runtime.
+         */
+        if ((prop = v7_get_property(scope, name, name_len)) != NULL) {
+          prop->value = res;
+        } else {
+          v7_set_property(v7, v7->global_object, name, name_len, 0, res);
+        }
       }
       return res;
     case AST_THIS:
@@ -762,6 +779,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         int percolate = 0;
         jmp_buf old_jmp;
+        char *name;
+        size_t name_len;
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
         end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -771,11 +790,14 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if (sigsetjmp(v7->jmp_buf, 0) == 0) {
           res = i_eval_stmts(v7, a, pos, catch, scope, brk);
         } else if (catch != finally) {
+          val_t catch_scope = create_object(v7, scope);
           tag = ast_fetch_tag(a, &catch);
           V7_CHECK(v7, tag == AST_IDENT);
+          name = ast_get_inlined_data(a, catch, &name_len);
+          v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
           ast_move_to_children(a, &catch);
           memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-          res = i_eval_stmts(v7, a, &catch, finally, scope, brk);
+          res = i_eval_stmts(v7, a, &catch, finally, catch_scope, brk);
         } else {
           percolate = 1;
         }
@@ -816,7 +838,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return V7_UNDEFINED;
     case AST_THROW:
       /* TODO(mkm): store exception value */
-      i_eval_expr(v7, a, pos, scope);
+      v7->thrown_error = i_eval_expr(v7, a, pos, scope);
       siglongjmp(v7->jmp_buf, 1);
       break; /* unreachable */
     default:
