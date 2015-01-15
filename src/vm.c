@@ -258,7 +258,9 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         b += snprintf(b, size - (b - buf), "{");
         for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
-          if (p->attributes & V7_PROPERTY_HIDDEN) continue;
+          if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+            continue;
+          }
           b += snprintf(b, size - (b - buf), "\"%s\":", p->name);
           b += to_json(v7, p->value, b, size - (b - buf));
           if (p->next) {
