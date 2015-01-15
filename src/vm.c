@@ -534,13 +534,34 @@ val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
   }
 }
 
+int nextesc(const char **p);  /* from SLRE */
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
+  const char *end = s + len;
+  size_t n = 0;
+  char tmp[4];
+  Rune r;
+
+  while (s < end) {
+    s += chartorune(&r, s);
+    if (r == '\\' && s < end) {
+      r = nextesc(&s);
+    }
+    n += runetochar(to == NULL ? tmp : to + n, &r);
+  }
+
+  return n;
+
+}
+
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t n) {
+                             size_t len) {
+  size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);           /* Calculate how many bytes length takes */
   mbuf_insert(m, offset, NULL, k);   /* Allocate  buffer for length */
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
-  mbuf_insert(m, offset + k, p, n);  /* Copy the string itself */
+  mbuf_insert(m, offset + k, NULL, n);    /* Reserve space for a string  */
+  unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
 /* Create a string */
@@ -663,6 +684,23 @@ V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
   return 0;
 }
 
+static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
+  val_t res = V7_UNDEFINED, arg = v7_array_at(v7, args, 0);
+  (void) t;
+  if (arg != V7_UNDEFINED) {
+    char buf[100], *p;
+    p = v7_to_json(v7, arg, buf, sizeof(buf));
+    if (p[0] == '"') {
+      p[0] = p[strlen(p) - 1] = ' ';
+    }
+    res = v7_exec(v7, p);
+    if (p != buf) {
+      free(p);
+    }
+  }
+  return res;
+}
+
 int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && val_to_boolean(v)) ||
@@ -696,6 +734,8 @@ struct v7 *v7_create(void) {
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property(v7, v7->global_object, "print", 5, 0,
                     v7_create_cfunction(Std_print_2));
+    v7_set_property(v7, v7->global_object, "eval", 4, 0,
+                    v7_create_cfunction(Std_eval));
     v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
                     v7_create_number(INFINITY));
     v7_set_property(v7, v7->global_object, "global", 6, 0,

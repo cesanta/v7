@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "utf.h"
 #include "slre.h"
@@ -177,82 +178,54 @@ static unsigned char re_dec_digit(struct slre_env *e, int c) {
   return ret;
 }
 
-static signed char hex(int c) {
-  if (isdigitrune(c)) return c - '0';
+static int hex(int c) {
+  if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'a' && c <= 'f') return c - 'a' + 10;
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  return SLRE_INVALID_HEX_DIGIT;
+  return -SLRE_INVALID_HEX_DIGIT;
 }
 
-signed char nextesc(Rune *r, const char **src) {
-  signed char hd;
-  *src += chartorune(r, *src);
-  switch (*r) {
+int nextesc(const char **p) {
+  const unsigned char *s = (unsigned char *) (*p)++;
+  switch (*s) {
     case 0:
-      return SLRE_UNTERM_ESC_SEQ;
+      return -SLRE_UNTERM_ESC_SEQ;
     case 'c':
-      *r = **src & 31;
-      ++*src;
-      return 0;
+      ++*p;
+      return *s & 31;
     case 'f':
-      *r = '\f';
-      return 0;
+      return '\f';
     case 'n':
-      *r = '\n';
-      return 0;
+      return '\n';
     case 'r':
-      *r = '\r';
-      return 0;
+      return '\r';
     case 't':
-      *r = '\t';
-      return 0;
-    case 'u':
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r = hd << 12;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd << 8;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd << 4;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd;
-      if (!*r) {
-        *r = '0';
-        return 1;
-      }
-      return 0;
+      return'\t';
     case 'v':
-      *r = '\v';
-      return 0;
-    case 'x':
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r = hd << 4;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd;
-      if (!*r) {
-        *r = '0';
-        return 1;
+      return '\v';
+    case '\\':
+      return '\\';
+    case 'u':
+      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) && isxdigit(s[4])) {
+        (*p) += 4;
+        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
       }
-      return 0;
+      return -SLRE_INVALID_HEX_DIGIT;
+    case 'x':
+      if (isxdigit(s[1]) && isxdigit(s[2])) {
+        (*p) += 2;
+        return (hex(s[1]) << 4) | hex(s[2]);
+      }
+      return -SLRE_INVALID_HEX_DIGIT;
+    default:
+      return -SLRE_INVALID_ESC_CHAR;
   }
-  return 2;
 }
 
 static unsigned char re_nextc(Rune *r, const char **src, int is_regex) {
   *src += chartorune(r, *src);
   if (is_regex && *r == '\\') {
-    /* signed char ret = */ nextesc(r, src);
+    /* signed char ret = */ *r = nextesc(src);
     /* if(2 != ret) return ret;
     if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
       return INVALID_ESC_CHAR; */

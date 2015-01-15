@@ -203,5 +203,6 @@ struct v7 {
     } while (0)
 
 V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...);
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 #endif /* V7_INTERNAL_H_INCLUDED */
