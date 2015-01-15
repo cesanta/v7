@@ -5430,7 +5430,8 @@ enum i_break {
 
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, enum i_break *);
-static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, int);
+static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
+                         int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
 V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
@@ -5801,23 +5802,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
     case AST_CALL:
       {
-        val_t old_this = v7->this_object;
         ast_off_t pp = *pos;
         ast_move_to_children(a, &pp);
-        v7->this_object = i_find_this(v7, a, pp, scope);
-        res = i_eval_call(v7, a, pos, scope, 0);
-        v7->this_object = old_this;
+        res = i_eval_call(v7, a, pos, scope, i_find_this(v7, a, pp, scope), 0);
         return res;
       }
     case AST_NEW:
       {
-        val_t old_this = v7->this_object;
-        v1 = v7->this_object = v7_create_object(v7);
-        res = i_eval_call(v7, a, pos, scope, 1);
+        v1 = v7_create_object(v7);
+        res = i_eval_call(v7, a, pos, scope, v1, 1);
         if (v7_is_undefined(res) || v7_is_null(res)) {
           res = v1;
         }
-        v7->this_object = old_this;
         return res;
       }
     case AST_COND:
@@ -5957,10 +5953,10 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos, val_t scop
 }
 
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope, int is_constructor) {
+                         val_t scope, val_t this_object, int is_constructor) {
   ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
   enum i_break fbrk = B_RUN;
-  val_t frame, res, v1;
+  val_t frame, res, v1, old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -5979,7 +5975,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property(v7, args, buf, n, 0, res);
     }
-    return val_to_cfunction(v1)(v7, v7->this_object, args);
+    return val_to_cfunction(v1)(v7, this_object, args);
   } if (!v7_is_function(v1)) {
     abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
@@ -5991,7 +5987,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
       /* TODO(mkm): box primitive value */
       throw_exception(v7, "Cannot set a primitive value as object prototype");
     }
-    val_to_object(v7->this_object)->prototype = val_to_object(fun_proto);
+    val_to_object(this_object)->prototype = val_to_object(fun_proto);
   }
   fpos = func->ast_off;
   fstart = fpos;
@@ -6056,11 +6052,13 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     i_eval_expr(v7, a, pos, scope);
   }
 
+  v7->this_object = this_object;
   res = i_eval_stmts(v7, func->ast, &fpos, fend, frame, &fbrk);
-  if (fbrk == B_RETURN) {
-    return res;
+  if (fbrk != B_RETURN) {
+    res = V7_UNDEFINED;
   }
-  return V7_UNDEFINED;
+  v7->this_object = old_this;
+  return res;
 }
 
 static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t, enum i_break *);
