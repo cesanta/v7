@@ -1143,6 +1143,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "[\"d\"]"));
   ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o, \"x\", {value:2});[o.x,o]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[2,{}]"));
+  ASSERT((v = v7_exec(v7, "o={};Object.defineProperties(o,{x:{value:2},y:{value:3,enumerable:true}});[o.x,o.y,o]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[2,3,{\"y\":3}]"));
   ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o, \"x\", {value:2,enumerable:true});[o.x,o]")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[2,{\"x\":2}]"));
   ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o,'a',{value:1});o.propertyIsEnumerable('a')")) != V7_UNDEFINED);

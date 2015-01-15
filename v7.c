@@ -8077,17 +8077,10 @@ V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj, val
   return desc;
 }
 
-V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t obj = v7_array_at(v7, args, 0);
-  val_t name = v7_array_at(v7, args, 1);
-  val_t desc = v7_array_at(v7, args, 2);
-  val_t val = V7_UNDEFINED;
+V7_PRIVATE val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
+                                     int name_len, val_t desc) {
   unsigned int flags = 0;
-  char name_buf[512];
-  int name_len;
-
-  (void) this_obj;
-  val = v7_property_value(v7_get_property(desc, "value", 5));
+  val_t val = v7_property_value(v7_get_property(desc, "value", 5));
   if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "enumerable",
                                                        10)))) {
     flags |= V7_PROPERTY_DONT_ENUM;
@@ -8101,8 +8094,36 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
     flags |= V7_PROPERTY_DONT_DELETE;
   }
 
+  v7_set_property(v7, obj, name, name_len, flags, val);
+  return obj;
+}
+
+V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t obj = v7_array_at(v7, args, 0);
+  val_t name = v7_array_at(v7, args, 1);
+  val_t desc = v7_array_at(v7, args, 2);
+  char name_buf[512];
+  int name_len;
+  (void) this_obj;
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
-  v7_set_property(v7, obj, name_buf, name_len, flags, val);
+  return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
+}
+
+V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
+  struct v7_property *p;
+  val_t obj = v7_array_at(v7, args, 0);
+  val_t descs = v7_array_at(v7, args, 1);
+  (void) this_obj;
+
+  if (!v7_is_object(descs)) {
+    throw_exception(v7, "object expected");
+  }
+  for (p = val_to_object(descs)->properties; p; p = p->next) {
+    if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+      continue;
+    }
+    _Obj_defineProperty(v7, obj, p->name, strlen(p->name), p->value);
+  }
   return obj;
 }
 
@@ -8157,6 +8178,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
                   v7_create_cfunction(Obj_getOwnPropertyDescriptor));
   v7_set_property(v7, object, "defineProperty", 14, 0,
                   v7_create_cfunction(Obj_defineProperty));
+  v7_set_property(v7, object, "defineProperties", 16, 0,
+                  v7_create_cfunction(Obj_defineProperties));
   v7_set_property(v7, object, "create", 6, 0,
                   v7_create_cfunction(Obj_create));
   v7_set_property(v7, object, "keys", 4, 0,
