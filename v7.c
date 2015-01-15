@@ -41,6 +41,7 @@ struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
 void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
 v7_val_t v7_exec(struct v7 *, const char *str);       /* Execute string */
 v7_val_t v7_exec_file(struct v7 *, const char *path); /* Execute file */
+v7_val_t v7_exec_with(struct v7 *, const char *, v7_val_t); /* Execute string */
 
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);
@@ -682,6 +683,7 @@ struct v7 {
   val_t object_prototype;
   val_t array_prototype;
   val_t boolean_prototype;
+  val_t error_prototype;
   val_t this_object;
 
   /*
@@ -846,7 +848,7 @@ int v7_is_boolean(val_t);
 int v7_is_double(val_t);
 int v7_is_null(val_t);
 int v7_is_undefined(val_t);
-int v7_is_error(val_t);
+int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 V7_PRIVATE void *val_to_pointer(val_t);
 
@@ -3951,9 +3953,9 @@ int v7_is_cfunction(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
 }
 
-/* A convenience function to check exec result. TODO(lsm): implement it. */
-int v7_is_error(val_t v) {
-  return v7_is_object(v) && 0;
+/* A convenience function to check exec result */
+int v7_is_error(struct v7 *v7, val_t v) {
+  return is_prototype_of(v, v7->error_prototype);
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
@@ -5396,12 +5398,13 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   next_tok(v7);
   err = parse_script(v7, a);
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
-    printf("WARNING parse input not consumed\n");
+    fprintf(stderr, "WARNING parse input not consumed\n");
   }
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
-    printf("Parse error at at line %d col %lu: [%.*s]\n", v7->pstate.line_no,
-           col, (int) (col + v7->tok_len), v7->tok - col);
+    snprintf(v7->error_msg, sizeof(v7->error_msg),
+             "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
+             col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
 }
@@ -6319,32 +6322,34 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_undefined();
 }
 
-V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
+V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
-  val_t res;
+  val_t res = V7_UNDEFINED, old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
-  char debug[1024];
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
     #if 0
     fprintf(stderr, "Exec abort: %s\n", v7->error_msg);
     #endif
-    return V7_UNDEFINED;
+    goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     #if 0
     fprintf(stderr, "Exec error: %s\n", v7->error_msg);
     #endif
-    return V7_UNDEFINED;
+    goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
     #if 0
     fprintf(stderr, "Error parsing\n");
     #endif
-    return V7_UNDEFINED;
+    res = v7_exec_with(v7, "new SyntaxError(this)",
+                       v7_string_to_value(v7, v7->error_msg,
+                                          strlen(v7->error_msg), 1));
+    goto cleanup;
   }
   ast_optimize(a);
 
@@ -6352,12 +6357,17 @@ V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
   ast_dump(stdout, a, 0);
 #endif
 
+  v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
+
   res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
-  v7_to_json(v7, res, debug, sizeof(debug));
-#if 0
-  fprintf(stderr, "Eval res: %s .\n", debug);
-#endif
+
+cleanup:
+  v7->this_object = old_this;
   return res;
+}
+
+V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
+  return v7_exec_with(v7, src, V7_UNDEFINED);
 }
 
 val_t v7_exec_file(struct v7 *v7, const char *path) {
@@ -8206,6 +8216,12 @@ V7_PRIVATE void init_error(struct v7 *v7) {
   v7_exec(v7, "function Error(m) {this.message = m}");
   v7_exec(v7, "function TypeError(m) {this.message = m};"
             "TypeError.prototype = Object.create(Error.prototype)");
+  v7_exec(v7, "function SyntaxError(m) {this.message = m};"
+            "SyntaxError.prototype = Object.create(Error.prototype)");
+
+  v7->error_prototype = v7_property_value(v7_get_property(
+      v7_property_value(v7_get_property(v7->global_object, "Error", 5)),
+      "prototype", 9));
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -8256,6 +8272,15 @@ static void dump_ast(struct v7 *v7, const char *code, int binary) {
   ast_free(&ast);
 }
 
+static void print_error(struct v7 *v7, const char *f, val_t e) {
+  char buf[512];
+  char *s = v7_to_json(v7, e, buf, sizeof(buf));
+  fprintf(stderr, "Exec error [%s]: %s\n", f, s);
+  if (s != buf) {
+    free(s);
+  }
+}
+
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
   int i, show_ast = 0, binary_ast = 0;
@@ -8266,8 +8291,9 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
         dump_ast(v7, argv[i + 1], binary_ast);
-      } else if ((res = v7_exec(v7, argv[i + 1])) == V7_UNDEFINED) {
-        fprintf(stderr, "Exec error [%s]: %s\n", argv[i + 1], v7->error_msg);
+      } else if (v7_is_error(v7, res = v7_exec(v7, argv[i + 1]))) {
+        print_error(v7, argv[i + 1], res);
+        res = V7_UNDEFINED;
       }
       i++;
     } else if (strcmp(argv[i], "-t") == 0) {
@@ -8295,8 +8321,9 @@ int main(int argc, char *argv[]) {
         dump_ast(v7, source_code, binary_ast);
         free(source_code);
       }
-    } else if ((res = v7_exec_file(v7, argv[i])) == V7_UNDEFINED) {
-      fprintf(stderr, "Exec error [%s]: %s\n", argv[i], v7->error_msg);
+    } else if (v7_is_error(v7, res = v7_exec_file(v7, argv[i]))) {
+      print_error(v7, argv[i + 1], res);
+      res = V7_UNDEFINED;
     }
   }
 

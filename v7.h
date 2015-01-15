@@ -41,6 +41,7 @@ struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
 void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
 v7_val_t v7_exec(struct v7 *, const char *str);       /* Execute string */
 v7_val_t v7_exec_file(struct v7 *, const char *path); /* Execute file */
+v7_val_t v7_exec_with(struct v7 *, const char *, v7_val_t); /* Execute string */
 
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);

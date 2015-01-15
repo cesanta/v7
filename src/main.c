@@ -48,6 +48,15 @@ static void dump_ast(struct v7 *v7, const char *code, int binary) {
   ast_free(&ast);
 }
 
+static void print_error(struct v7 *v7, const char *f, val_t e) {
+  char buf[512];
+  char *s = v7_to_json(v7, e, buf, sizeof(buf));
+  fprintf(stderr, "Exec error [%s]: %s\n", f, s);
+  if (s != buf) {
+    free(s);
+  }
+}
+
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
   int i, show_ast = 0, binary_ast = 0;
@@ -58,8 +67,9 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
         dump_ast(v7, argv[i + 1], binary_ast);
-      } else if ((res = v7_exec(v7, argv[i + 1])) == V7_UNDEFINED) {
-        fprintf(stderr, "Exec error [%s]: %s\n", argv[i + 1], v7->error_msg);
+      } else if (v7_is_error(v7, res = v7_exec(v7, argv[i + 1]))) {
+        print_error(v7, argv[i + 1], res);
+        res = V7_UNDEFINED;
       }
       i++;
     } else if (strcmp(argv[i], "-t") == 0) {
@@ -87,8 +97,9 @@ int main(int argc, char *argv[]) {
         dump_ast(v7, source_code, binary_ast);
         free(source_code);
       }
-    } else if ((res = v7_exec_file(v7, argv[i])) == V7_UNDEFINED) {
-      fprintf(stderr, "Exec error [%s]: %s\n", argv[i], v7->error_msg);
+    } else if (v7_is_error(v7, res = v7_exec_file(v7, argv[i]))) {
+      print_error(v7, argv[i + 1], res);
+      res = V7_UNDEFINED;
     }
   }
 

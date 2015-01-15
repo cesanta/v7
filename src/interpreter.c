@@ -913,32 +913,34 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_undefined();
 }
 
-V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
+V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
-  val_t res;
+  val_t res = V7_UNDEFINED, old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
-  char debug[1024];
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
     #if 0
     fprintf(stderr, "Exec abort: %s\n", v7->error_msg);
     #endif
-    return V7_UNDEFINED;
+    goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     #if 0
     fprintf(stderr, "Exec error: %s\n", v7->error_msg);
     #endif
-    return V7_UNDEFINED;
+    goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
     #if 0
     fprintf(stderr, "Error parsing\n");
     #endif
-    return V7_UNDEFINED;
+    res = v7_exec_with(v7, "new SyntaxError(this)",
+                       v7_string_to_value(v7, v7->error_msg,
+                                          strlen(v7->error_msg), 1));
+    goto cleanup;
   }
   ast_optimize(a);
 
@@ -946,12 +948,17 @@ V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
   ast_dump(stdout, a, 0);
 #endif
 
+  v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
+
   res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
-  v7_to_json(v7, res, debug, sizeof(debug));
-#if 0
-  fprintf(stderr, "Eval res: %s .\n", debug);
-#endif
+
+cleanup:
+  v7->this_object = old_this;
   return res;
+}
+
+V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
+  return v7_exec_with(v7, src, V7_UNDEFINED);
 }
 
 val_t v7_exec_file(struct v7 *v7, const char *path) {

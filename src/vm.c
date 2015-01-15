@@ -74,9 +74,9 @@ int v7_is_cfunction(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
 }
 
-/* A convenience function to check exec result. TODO(lsm): implement it. */
-int v7_is_error(val_t v) {
-  return v7_is_object(v) && 0;
+/* A convenience function to check exec result */
+int v7_is_error(struct v7 *v7, val_t v) {
+  return is_prototype_of(v, v7->error_prototype);
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {

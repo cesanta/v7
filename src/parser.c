@@ -797,12 +797,13 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   next_tok(v7);
   err = parse_script(v7, a);
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
-    printf("WARNING parse input not consumed\n");
+    fprintf(stderr, "WARNING parse input not consumed\n");
   }
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
-    printf("Parse error at at line %d col %lu: [%.*s]\n", v7->pstate.line_no,
-           col, (int) (col + v7->tok_len), v7->tok - col);
+    snprintf(v7->error_msg, sizeof(v7->error_msg),
+             "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
+             col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
 }

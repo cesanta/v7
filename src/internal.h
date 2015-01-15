@@ -153,6 +153,7 @@ struct v7 {
   val_t object_prototype;
   val_t array_prototype;
   val_t boolean_prototype;
+  val_t error_prototype;
   val_t this_object;
 
   /*
