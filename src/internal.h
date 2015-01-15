@@ -173,6 +173,7 @@ struct v7 {
   jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
   /* Handle implementation errors that shouldn't be caught from JS */
   jmp_buf abort_jmp_buf;
+  val_t thrown_error;
   char error_msg[60];           /* Exception message */
 
   struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
