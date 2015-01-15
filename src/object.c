@@ -30,6 +30,36 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 
+static val_t _Obj_ownKeys(struct v7 *v7, val_t args, unsigned int ignore_flags) {
+  struct v7_property *p;
+  char buf[20];
+  int i = 0;
+  val_t obj = v7_array_at(v7, args, 0);
+  val_t res = v7_create_array(v7);
+  if (!v7_is_object(obj)) {
+    throw_exception(v7, "Object.keys called on non-object");
+  }
+  for (p = val_to_object(obj)->properties; p; p = p->next, i++) {
+    if (p->attributes & ignore_flags) {
+      continue;
+    }
+    snprintf(buf, sizeof(buf), "%d", i);
+    v7_set_property(v7, res, buf, -1, 0,
+                    v7_string_to_value(v7, p->name, strlen(p->name), 1));
+  }
+  return res;
+}
+
+V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) this_obj;
+  return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
+}
+
+V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) this_obj;
+  return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
+}
+
 #if 0
 V7_PRIVATE enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
   char *p, buf[500];
@@ -63,4 +93,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
                   v7_create_cfunction(Obj_isPrototypeOf));
   v7_set_property(v7, object, "create", 6, 0,
                   v7_create_cfunction(Obj_create));
+  v7_set_property(v7, object, "keys", 4, 0,
+                  v7_create_cfunction(Obj_keys));
+  v7_set_property(v7, object, "getOwnPropertyNames", 26, 0,
+                  v7_create_cfunction(Obj_getOwnPropertyNames));
 }
