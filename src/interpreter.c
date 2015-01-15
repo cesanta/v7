@@ -919,24 +919,20 @@ V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
   val_t res = V7_UNDEFINED, old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
+  jmp_buf saved_jmp_buf, saved_abort_buf;
+
+  /* Make v7_exec() reentrant: save exception environments */
+  memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
+  memcpy(&saved_abort_buf, &v7->abort_jmp_buf, sizeof(saved_abort_buf));
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
-    #if 0
-    fprintf(stderr, "Exec abort: %s\n", v7->error_msg);
-    #endif
     goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
-    #if 0
-    fprintf(stderr, "Exec error: %s\n", v7->error_msg);
-    #endif
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
-    #if 0
-    fprintf(stderr, "Error parsing\n");
-    #endif
     res = v7_exec_with(v7, "new SyntaxError(this)",
                        v7_string_to_value(v7, v7->error_msg,
                                           strlen(v7->error_msg), 1));
@@ -944,16 +940,14 @@ V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
   }
   ast_optimize(a);
 
-#if 0
-  ast_dump(stdout, a, 0);
-#endif
-
   v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
-
   res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
   v7->this_object = old_this;
+  memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
+  memcpy(&v7->abort_jmp_buf, &saved_abort_buf, sizeof(saved_abort_buf));
+
   return res;
 }
 

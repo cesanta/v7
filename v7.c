@@ -733,6 +733,7 @@ struct v7 {
     } while (0)
 
 V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...);
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 #endif /* V7_INTERNAL_H_INCLUDED */
 /*
@@ -4413,13 +4414,34 @@ val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
   }
 }
 
+int nextesc(const char **p);  /* from SLRE */
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
+  const char *end = s + len;
+  size_t n = 0;
+  char tmp[4];
+  Rune r;
+
+  while (s < end) {
+    s += chartorune(&r, s);
+    if (r == '\\' && s < end) {
+      r = nextesc(&s);
+    }
+    n += runetochar(to == NULL ? tmp : to + n, &r);
+  }
+
+  return n;
+
+}
+
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t n) {
+                             size_t len) {
+  size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);           /* Calculate how many bytes length takes */
   mbuf_insert(m, offset, NULL, k);   /* Allocate  buffer for length */
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
-  mbuf_insert(m, offset + k, p, n);  /* Copy the string itself */
+  mbuf_insert(m, offset + k, NULL, n);    /* Reserve space for a string  */
+  unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
 /* Create a string */
@@ -4542,6 +4564,23 @@ V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
   return 0;
 }
 
+static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
+  val_t res = V7_UNDEFINED, arg = v7_array_at(v7, args, 0);
+  (void) t;
+  if (arg != V7_UNDEFINED) {
+    char buf[100], *p;
+    p = v7_to_json(v7, arg, buf, sizeof(buf));
+    if (p[0] == '"') {
+      p[0] = p[strlen(p) - 1] = ' ';
+    }
+    res = v7_exec(v7, p);
+    if (p != buf) {
+      free(p);
+    }
+  }
+  return res;
+}
+
 int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && val_to_boolean(v)) ||
@@ -4575,6 +4614,8 @@ struct v7 *v7_create(void) {
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property(v7, v7->global_object, "print", 5, 0,
                     v7_create_cfunction(Std_print_2));
+    v7_set_property(v7, v7->global_object, "eval", 4, 0,
+                    v7_create_cfunction(Std_eval));
     v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
                     v7_create_number(INFINITY));
     v7_set_property(v7, v7->global_object, "global", 6, 0,
@@ -6328,24 +6369,20 @@ V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
   val_t res = V7_UNDEFINED, old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
+  jmp_buf saved_jmp_buf, saved_abort_buf;
+
+  /* Make v7_exec() reentrant: save exception environments */
+  memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
+  memcpy(&saved_abort_buf, &v7->abort_jmp_buf, sizeof(saved_abort_buf));
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
-    #if 0
-    fprintf(stderr, "Exec abort: %s\n", v7->error_msg);
-    #endif
     goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
-    #if 0
-    fprintf(stderr, "Exec error: %s\n", v7->error_msg);
-    #endif
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
-    #if 0
-    fprintf(stderr, "Error parsing\n");
-    #endif
     res = v7_exec_with(v7, "new SyntaxError(this)",
                        v7_string_to_value(v7, v7->error_msg,
                                           strlen(v7->error_msg), 1));
@@ -6353,16 +6390,14 @@ V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
   }
   ast_optimize(a);
 
-#if 0
-  ast_dump(stdout, a, 0);
-#endif
-
   v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
-
   res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
   v7->this_object = old_this;
+  memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
+  memcpy(&v7->abort_jmp_buf, &saved_abort_buf, sizeof(saved_abort_buf));
+
   return res;
 }
 
@@ -6415,6 +6450,7 @@ val_t v7_exec_file(struct v7 *v7, const char *path) {
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 
 /* Limitations */
@@ -6570,82 +6606,54 @@ static unsigned char re_dec_digit(struct slre_env *e, int c) {
   return ret;
 }
 
-static signed char hex(int c) {
-  if (isdigitrune(c)) return c - '0';
+static int hex(int c) {
+  if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'a' && c <= 'f') return c - 'a' + 10;
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  return SLRE_INVALID_HEX_DIGIT;
+  return -SLRE_INVALID_HEX_DIGIT;
 }
 
-signed char nextesc(Rune *r, const char **src) {
-  signed char hd;
-  *src += chartorune(r, *src);
-  switch (*r) {
+int nextesc(const char **p) {
+  const unsigned char *s = (unsigned char *) (*p)++;
+  switch (*s) {
     case 0:
-      return SLRE_UNTERM_ESC_SEQ;
+      return -SLRE_UNTERM_ESC_SEQ;
     case 'c':
-      *r = **src & 31;
-      ++*src;
-      return 0;
+      ++*p;
+      return *s & 31;
     case 'f':
-      *r = '\f';
-      return 0;
+      return '\f';
     case 'n':
-      *r = '\n';
-      return 0;
+      return '\n';
     case 'r':
-      *r = '\r';
-      return 0;
+      return '\r';
     case 't':
-      *r = '\t';
-      return 0;
-    case 'u':
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r = hd << 12;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd << 8;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd << 4;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd;
-      if (!*r) {
-        *r = '0';
-        return 1;
-      }
-      return 0;
+      return'\t';
     case 'v':
-      *r = '\v';
-      return 0;
-    case 'x':
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r = hd << 4;
-      hd = hex(**src);
-      ++*src;
-      if (hd < 0) return SLRE_INVALID_HEX_DIGIT;
-      *r += hd;
-      if (!*r) {
-        *r = '0';
-        return 1;
+      return '\v';
+    case '\\':
+      return '\\';
+    case 'u':
+      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) && isxdigit(s[4])) {
+        (*p) += 4;
+        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
       }
-      return 0;
+      return -SLRE_INVALID_HEX_DIGIT;
+    case 'x':
+      if (isxdigit(s[1]) && isxdigit(s[2])) {
+        (*p) += 2;
+        return (hex(s[1]) << 4) | hex(s[2]);
+      }
+      return -SLRE_INVALID_HEX_DIGIT;
+    default:
+      return -SLRE_INVALID_ESC_CHAR;
   }
-  return 2;
 }
 
 static unsigned char re_nextc(Rune *r, const char **src, int is_regex) {
   *src += chartorune(r, *src);
   if (is_regex && *r == '\\') {
-    /* signed char ret = */ nextesc(r, src);
+    /* signed char ret = */ *r = nextesc(src);
     /* if(2 != ret) return ret;
     if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
       return INVALID_ESC_CHAR; */
