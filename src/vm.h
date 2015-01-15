@@ -112,7 +112,7 @@ int v7_is_boolean(val_t);
 int v7_is_double(val_t);
 int v7_is_null(val_t);
 int v7_is_undefined(val_t);
-int v7_is_error(val_t);
+int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 V7_PRIVATE void *val_to_pointer(val_t);
 
