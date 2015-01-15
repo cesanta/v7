@@ -401,10 +401,13 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-struct v7_property *v_find_property(val_t obj, const char *name, size_t len) {
+V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name, size_t len) {
   struct v7_property *prop;
   if (len == (size_t) ~0) {
     len = strlen(name);
+  }
+  if (!v7_is_object(obj)) {
+    return NULL;
   }
   for (prop = val_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
@@ -422,7 +425,7 @@ struct v7_property *v7_get_property(val_t obj, const char *name,
   }
   for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
     struct v7_property *prop;
-    if ((prop = v_find_property(obj, name, len)) != NULL) {
+    if ((prop = v7_get_own_property(obj, name, len)) != NULL) {
       return prop;
     }
   }
@@ -443,7 +446,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     return -1;
   }
 
-  prop = v_find_property(obj, name, len);
+  prop = v7_get_own_property(obj, name, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */

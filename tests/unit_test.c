@@ -1141,6 +1141,29 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "[]"));
   ASSERT((v = v7_exec(v7, "b={c:1};a=Object.create(b); a.d=4;Object.getOwnPropertyNames(a)")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "[\"d\"]"));
+  ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o, \"x\", {value:2});[o.x,o]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[2,{}]"));
+  ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o, \"x\", {value:2,enumerable:true});[o.x,o]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[2,{\"x\":2}]"));
+  ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o,'a',{value:1});o.propertyIsEnumerable('a')")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});o.propertyIsEnumerable('a')")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "o={a:1};o.propertyIsEnumerable('a')")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "b={a:1};o=Object.create(b);o.propertyIsEnumerable('a')")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "b={a:1};o=Object.create(b);o.hasOwnProperty('a')")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT((v = v7_exec(v7, "o={a:1};o.hasOwnProperty('a')")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT((v = v7_exec(v7, "o={a:1};d=Object.getOwnPropertyDescriptor(o, 'a');"
+                      "[d.value,d.writable,d.enumerable,d.configurable]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[1,true,true,true]"));
+  ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});"
+                      "d=Object.getOwnPropertyDescriptor(o, 'a');"
+                      "[d.value,d.writable,d.enumerable,d.configurable]")) != V7_UNDEFINED);
+  ASSERT(check_value(v7, v, "[1,false,true,false]"));
 
   ASSERT((v = v7_exec(v7, "r=0;o={a:1,b:2};for(i in o){r+=o[i]};r")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "3"));
