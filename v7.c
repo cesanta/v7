@@ -6328,16 +6328,22 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         return res;
       }
     case AST_WITH:
-      end = ast_get_skip(a, *pos, AST_END_SKIP);
-      ast_move_to_children(a, pos);
-      /*
-       * TODO(mkm) make an actual scope chain. Possibly by mutating
-       * the with expression and adding the 'outer environment
-       * reference' hidden property.
-       */
-      i_eval_stmts(v7, a, pos, end, i_eval_expr(v7, a, pos, scope),
-                   brk);
-      break;
+      {
+        val_t with_scope;
+        end = ast_get_skip(a, *pos, AST_END_SKIP);
+        ast_move_to_children(a, pos);
+        /*
+         * TODO(mkm) make an actual scope chain. Possibly by mutating
+         * the with expression and adding the 'outer environment
+         * reference' hidden property.
+         */
+        with_scope = i_eval_expr(v7, a, pos, scope);
+        if (!v7_is_object(with_scope)) {
+          throw_exception(v7, "with statement is not really implemented yet");
+        }
+        i_eval_stmts(v7, a, pos, end, with_scope, brk);
+        break;
+      }
     case AST_VALUE_RETURN:
       res = i_eval_expr(v7, a, pos, scope);
       *brk = B_RETURN;
