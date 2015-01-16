@@ -182,25 +182,18 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 
   object = v7_property_value(v7_get_property(v7->global_object, "Object", 6));
   v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);
-  v7_set_property(v7, object, "getPrototypeOf", 14, 0,
-                  v7_create_cfunction(Obj_getPrototypeOf));
-  v7_set_property(v7, object, "isPrototypeOf", 13, 0,
-                  v7_create_cfunction(Obj_isPrototypeOf));
-  v7_set_property(v7, object, "getOwnPropertyDescriptor", 24, 0,
-                  v7_create_cfunction(Obj_getOwnPropertyDescriptor));
-  v7_set_property(v7, object, "defineProperty", 14, 0,
-                  v7_create_cfunction(Obj_defineProperty));
-  v7_set_property(v7, object, "defineProperties", 16, 0,
-                  v7_create_cfunction(Obj_defineProperties));
-  v7_set_property(v7, object, "create", 6, 0,
-                  v7_create_cfunction(Obj_create));
-  v7_set_property(v7, object, "keys", 4, 0,
-                  v7_create_cfunction(Obj_keys));
-  v7_set_property(v7, object, "getOwnPropertyNames", 26, 0,
-                  v7_create_cfunction(Obj_getOwnPropertyNames));
-  v7_set_property(v7, v7->object_prototype, "propertyIsEnumerable", 20, 0,
-                  v7_create_cfunction(Obj_propertyIsEnumerable));
-  v7_set_property(v7, v7->object_prototype, "hasOwnProperty", 14, 0,
-                  v7_create_cfunction(Obj_hasOwnProperty));
 
+  set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
+  set_cfunc_prop(v7, object, "isPrototypeOf", Obj_isPrototypeOf);
+  set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
+                 Obj_getOwnPropertyDescriptor);
+  set_cfunc_prop(v7, object, "defineProperty", Obj_defineProperty);
+  set_cfunc_prop(v7, object, "defineProperties", Obj_defineProperties);
+  set_cfunc_prop(v7, object, "create", Obj_create);
+  set_cfunc_prop(v7, object, "keys", Obj_keys);
+  set_cfunc_prop(v7, object, "getOwnPropertyNames", Obj_getOwnPropertyNames);
+  set_cfunc_prop(v7, v7->object_prototype, "propertyIsEnumerable",
+                 Obj_propertyIsEnumerable);
+  set_cfunc_prop(v7, v7->object_prototype, "hasOwnProperty",
+                 Obj_hasOwnProperty);
 }

@@ -5,72 +5,75 @@
 
 #include "internal.h"
 
-V7_PRIVATE enum v7_err Math_random(struct v7_c_func_arg *cfa) {
+V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
   static int srand_called = 0;
 
   if (!srand_called) {
-    srand((unsigned)(unsigned long) cfa);
+    srand((unsigned)(unsigned long) v7);
     srand_called++;
   }
 
-  v7_push_number(cfa->v7, (double)rand() / RAND_MAX);
-
-  return V7_OK;
+  (void) this_obj;
+  (void) args;
+  return v7_create_number((double) rand() / RAND_MAX);
 }
 
-V7_PRIVATE enum v7_err Math_sin(struct v7_c_func_arg *cfa) {
-  v7_push_number(cfa->v7, cfa->num_args == 1 ? sin(cfa->args[0]->v.num) : 0.0);
-  return V7_OK;
+V7_PRIVATE val_t Math_sin(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  return v7_create_number(sin(val_to_double(arg0)));
 }
 
-V7_PRIVATE enum v7_err Math_sqrt(struct v7_c_func_arg *cfa) {
-  v7_push_number(cfa->v7, cfa->num_args == 1 ? sqrt(cfa->args[0]->v.num) : 0.0);
-  return V7_OK;
+V7_PRIVATE val_t Math_sqrt(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  return v7_create_number(sqrt(val_to_double(arg0)));
 }
 
-V7_PRIVATE enum v7_err Math_tan(struct v7_c_func_arg *cfa) {
-  v7_push_number(cfa->v7, cfa->num_args == 1 ? tan(cfa->args[0]->v.num) : 0.0);
-  return V7_OK;
+V7_PRIVATE val_t Math_tan(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  return v7_create_number(tan(val_to_double(arg0)));
 }
 
-V7_PRIVATE enum v7_err Math_pow(struct v7_c_func_arg *cfa) {
-  v7_push_number(cfa->v7, cfa->num_args == 2
-                              ? pow(cfa->args[0]->v.num, cfa->args[1]->v.num)
-                              : 0.0);
-  return V7_OK;
+V7_PRIVATE val_t Math_pow(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg1 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  return v7_create_number(pow(val_to_double(arg0), val_to_double(arg1)));
 }
 
-V7_PRIVATE enum v7_err Math_floor(struct v7_c_func_arg *cfa) {
-  v7_push_number(cfa->v7,
-                 cfa->num_args == 1 ? floor(cfa->args[0]->v.num) : 0.0);
-  return V7_OK;
+V7_PRIVATE val_t Math_floor(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  return v7_create_number(floor(val_to_double(arg0)));
 }
 
-V7_PRIVATE enum v7_err Math_ceil(struct v7_c_func_arg *cfa) {
-  v7_push_number(cfa->v7, cfa->num_args == 1 ? ceil(cfa->args[0]->v.num) : 0.0);
-  return V7_OK;
+V7_PRIVATE val_t Math_ceil(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  return v7_create_number(ceil(val_to_double(arg0)));
 }
 
-V7_PRIVATE void init_math(void) {
-  SET_METHOD(s_math, "random", Math_random);
-  SET_METHOD(s_math, "pow", Math_pow);
-  SET_METHOD(s_math, "sin", Math_sin);
-  SET_METHOD(s_math, "tan", Math_tan);
-  SET_METHOD(s_math, "sqrt", Math_sqrt);
-  SET_METHOD(s_math, "floor", Math_floor);
-  SET_METHOD(s_math, "ceil", Math_ceil);
+V7_PRIVATE void init_math(struct v7 *v7) {
+  val_t math = v7_create_object(v7);
 
-  SET_RO_PROP(s_math, "E", V7_TYPE_NUM, num, M_E);
-  SET_RO_PROP(s_math, "PI", V7_TYPE_NUM, num, M_PI);
-  SET_RO_PROP(s_math, "LN2", V7_TYPE_NUM, num, M_LN2);
-  SET_RO_PROP(s_math, "LN10", V7_TYPE_NUM, num, M_LN10);
-  SET_RO_PROP(s_math, "LOG2E", V7_TYPE_NUM, num, M_LOG2E);
-  SET_RO_PROP(s_math, "LOG10E", V7_TYPE_NUM, num, M_LOG10E);
-  SET_RO_PROP(s_math, "SQRT1_2", V7_TYPE_NUM, num, M_SQRT1_2);
-  SET_RO_PROP(s_math, "SQRT2", V7_TYPE_NUM, num, M_SQRT2);
+  set_cfunc_prop(v7, math, "random", Math_random);
+  set_cfunc_prop(v7, math, "pow", Math_pow);
+  set_cfunc_prop(v7, math, "sin", Math_sin);
+  set_cfunc_prop(v7, math, "tan", Math_tan);
+  set_cfunc_prop(v7, math, "sqrt", Math_sqrt);
+  set_cfunc_prop(v7, math, "floor", Math_floor);
+  set_cfunc_prop(v7, math, "ceil", Math_ceil);
 
-  v7_set_class(&s_math, V7_CLASS_OBJECT);
-  s_math.ref_count = 1;
+  v7_set_property(v7, math, "E", 1, 0, v7_create_number(M_E));
+  v7_set_property(v7, math, "PI", 2, 0, v7_create_number(M_PI));
+  v7_set_property(v7, math, "LN2", 3, 0, v7_create_number(M_LN2));
+  v7_set_property(v7, math, "LN10", 4, 0, v7_create_number(M_LN10));
+  v7_set_property(v7, math, "LOG2E", 5, 0, v7_create_number(M_LOG2E));
+  v7_set_property(v7, math, "LOG10E", 6, 0, v7_create_number(M_LOG10E));
+  v7_set_property(v7, math, "SQRT1_2", 7, 0, v7_create_number(M_SQRT1_2));
+  v7_set_property(v7, math, "SQRT2", 5, 0, v7_create_number(M_SQRT2));
 
-  SET_RO_PROP_V(s_global, "Math", s_math);
+  v7_set_property(v7, v7->global_object, "Math", 4, 0, math);
 }

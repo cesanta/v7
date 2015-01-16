@@ -493,6 +493,11 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
   return -1;
 }
 
+V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                              v7_cfunction_t f) {
+  return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
+}
+
 V7_PRIVATE val_t v7_property_value(struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
@@ -747,6 +752,7 @@ struct v7 *v7_create(void) {
     init_array(v7);
     init_error(v7);
     init_boolean(v7);
+    init_math(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }
