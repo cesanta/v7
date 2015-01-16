@@ -34,6 +34,8 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       return V7_TYPE_BOOLEAN;
     case V7_TAG_FUNCTION:
       return V7_TYPE_FUNCTION_OBJECT;
+    case V7_TAG_CFUNCTION:
+      return V7_TYPE_CFUNCTION_OBJECT;
     default:
       /* TODO(mkm): or should we crash? */
       return V7_TYPE_UNDEFINED;
@@ -745,6 +747,8 @@ struct v7 *v7_create(void) {
     init_array(v7);
     init_error(v7);
     init_boolean(v7);
+
+    v7->thrown_error = V7_UNDEFINED;
   }
 
   return v7;

@@ -933,9 +933,11 @@ V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
+    res = v7->thrown_error;
     goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
+    res = v7->thrown_error;
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
