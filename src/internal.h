@@ -196,13 +196,13 @@ struct v7 {
 #define V7_STATIC_ASSERT(COND, MSG) \
       typedef char static_assertion_##MSG[2*(!!(COND)) - 1]
 
-#define V7_CHECK(v7, COND)                                                \
-    do { if (!(COND))                                                     \
-      throw_exception(v7, "Internal error: %s line %d: %s",               \
-                      __func__, __LINE__, #COND);                         \
-    } while (0)
+#define V7_CHECK(v7, COND)                                              \
+  do { if (!(COND))                                                     \
+      throw_exception(v7, "InternalError", "%s line %d: %s",            \
+                      __func__, __LINE__, #COND);                       \
+  } while (0)
 
-V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...);
+V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 #endif /* V7_INTERNAL_H_INCLUDED */

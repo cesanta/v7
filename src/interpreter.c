@@ -33,20 +33,19 @@ V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
   siglongjmp(v7->jmp_buf, 1);
 }  /* LCOV_EXCL_LINE */
 
-V7_PRIVATE void throw_exception(struct v7 *v7, const char *err_fmt, ...) {
+V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
+                                const char *err_fmt, ...) {
+  char js[512];
+  val_t e;
   va_list ap;
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  siglongjmp(v7->jmp_buf, 1);
-}  /* LCOV_EXCL_LINE */
-
-static void abort_exec(struct v7 *v7, const char *err_fmt, ...) {
-  va_list ap;
-  va_start(ap, err_fmt);
-  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
-  va_end(ap);
-  siglongjmp(v7->abort_jmp_buf, 1);
+  snprintf(js, sizeof(js), "new %s(this)", type);
+  e = v7_exec_with(v7, "new ReferenceError(this)",
+                   v7_string_to_value(v7, v7->error_msg,
+                                      strlen(v7->error_msg), 1));
+  throw_value(v7, e);
 }  /* LCOV_EXCL_LINE */
 
 static double i_as_num(struct v7 *v7, val_t v) {
@@ -75,8 +74,8 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
     case AST_NEGATIVE:
       return -a;
     default:
-      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
-      return 0;                        /* LCOV_EXCL_LINE */
+      throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
+      return 0;  /* LCOV_EXCL_LINE */
   }
 }
 
@@ -105,8 +104,8 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) 
     case AST_AND:
       return (int) a & (int) b;
     default:
-      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
-      return 0;                        /* LCOV_EXCL_LINE */
+      throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
+      return 0;  /* LCOV_EXCL_LINE */
   }
 }
 
@@ -131,8 +130,8 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
     case AST_LOGICAL_AND:
       return a && b;
     default:
-      abort_exec(v7, "%s", __func__);  /* LCOV_EXCL_LINE */
-      return 0;                        /* LCOV_EXCL_LINE */
+      throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
+      return 0;  /* LCOV_EXCL_LINE */
   }
 }
 
@@ -164,9 +163,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
           !(v7_is_undefined(v2) || v7_is_double(v2) || v7_is_boolean(v2))) {
         v7_stringify_value(v7, v1, buf, sizeof(buf));
-        v7_stringify_value(v7, v2, buf + strlen(buf),
-                           sizeof(buf) - strlen(buf));
-        return v7_create_string(v7, buf, strlen(buf), 1);
+        v1 = v7_create_string(v7, buf, strlen(buf), 1);
+        v7_stringify_value(v7, v2, buf, sizeof(buf));
+        v2 = v7_create_string(v7, buf, strlen(buf), 1);
+        return s_concat(v7, v1, v2);
       }
       return v7_create_number(i_num_bin_op(v7, tag, i_as_num(v7, v1),
                               i_as_num(v7, v2)));
@@ -254,7 +254,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             name = buf;
             break;
           default:
-            abort_exec(v7, "Invalid left-hand side in assignment");
+            throw_exception(v7, "ReferenceError", "Invalid left-hand side in assignment");
             return V7_UNDEFINED;  /* LCOV_EXCL_LINE */
         }
 
@@ -373,7 +373,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
         if ((p = v7_get_property(scope, name, name_len)) == NULL) {
-          throw_exception(v7, "ReferenceError: [%.*s] is not defined",
+          throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
                           (int) name_len, name);
         }
         return v7_property_value(p);
@@ -521,15 +521,15 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       if (!v7_is_function(v2)) {
-        throw_exception(v7, "Expecting a function in instanceof check");
+        throw_exception(v7, "TypeError", "Expecting a function in instanceof check");
       }
       return v7_create_boolean(is_prototype_of(v1, v7_property_value(v7_get_property(v2, "prototype", 9))));
     case AST_VOID:
       i_eval_expr(v7, a, pos, scope);
       return V7_UNDEFINED;
     default:
-      abort_exec(v7, "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
-      return V7_UNDEFINED;
+      throw_exception(v7, "InternalError", "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
+      return V7_UNDEFINED;  /* LCOV_EXCL_LINE */
   }
 }
 
@@ -571,7 +571,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     }
     return val_to_cfunction(v1)(v7, this_object, args);
   } if (!v7_is_function(v1)) {
-    abort_exec(v7, "%s", "value is not a function"); /* LCOV_EXCL_LINE */
+    throw_exception(v7, "TypeError", "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
 
   func = val_to_function(v1);
@@ -579,7 +579,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     val_t fun_proto = v7_property_value(v7_get_property(v1, "prototype", 9));
     if (!v7_is_object(fun_proto)) {
       /* TODO(mkm): box primitive value */
-      throw_exception(v7, "Cannot set a primitive value as object prototype");
+      throw_exception(v7, "TypeError", "Cannot set a primitive value as object prototype");
     }
     val_to_object(this_object)->prototype = val_to_object(fun_proto);
   }
@@ -889,7 +889,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
          */
         with_scope = i_eval_expr(v7, a, pos, scope);
         if (!v7_is_object(with_scope)) {
-          throw_exception(v7, "with statement is not really implemented yet");
+          throw_exception(v7, "InternalError",
+                          "with statement is not really implemented yet");
         }
         i_eval_stmts(v7, a, pos, end, with_scope, brk);
         break;

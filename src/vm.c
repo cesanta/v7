@@ -214,6 +214,17 @@ v7_val_t v7_create_function(struct v7 *v7) {
   return fval;
 }
 
+/* like snprintf but returns `size` if write is truncated */
+static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  size_t n = vsnprintf(buf, size, fmt, ap);
+  if (n > size) {
+    return size;
+  }
+  return n;
+}
+
 static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   char *vp;
   for (vp = v7->json_visited_stack.buf;
@@ -235,17 +246,17 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
                      val_to_boolean(v) ? "true" : "false", size) - buf;
     case V7_TYPE_NUMBER:
       if (v == V7_TAG_NAN) {
-        return snprintf(buf, size, "NaN");
+        return v_sprintf_s(buf, size, "NaN");
       }
-      return snprintf(buf, size, "%lg", val_to_double(v));
+      return v_sprintf_s(buf, size, "%lg", val_to_double(v));
     case V7_TYPE_STRING:
       {
         size_t n;
         const char *str = val_to_string(v7, &v, &n);
-        return snprintf(buf, size, "\"%.*s\"", (int) n, str);
+        return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
       }
     case V7_TYPE_CFUNCTION_OBJECT:
-      return snprintf(buf, size, "cfunc_%p", val_to_pointer(v));
+      return v_sprintf_s(buf, size, "cfunc_%p", val_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
@@ -257,19 +268,19 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char *b = buf;
         struct v7_property *p;
         mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-        b += snprintf(b, size - (b - buf), "{");
+        b += v_sprintf_s(b, size - (b - buf), "{");
         for (p = val_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
           }
-          b += snprintf(b, size - (b - buf), "\"%s\":", p->name);
+          b += v_sprintf_s(b, size - (b - buf), "\"%s\":", p->name);
           b += to_json(v7, p->value, b, size - (b - buf));
           if (p->next) {
-            b += snprintf(b, size - (b - buf), ",");
+            b += v_sprintf_s(b, size - (b - buf), ",");
           }
         }
-        b += snprintf(b, size - (b - buf), "}");
+        b += v_sprintf_s(b, size - (b - buf), "}");
         v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
@@ -280,18 +291,18 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char key[512];
         size_t i, len = v7_array_length(v7, v);
         mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-        b += snprintf(b, size - (b - buf), "[");
+        b += v_sprintf_s(b, size - (b - buf), "[");
         for (i = 0; i < len; i++) {
           /* TODO */
-          snprintf(key, sizeof(key), "%lu", i);
+          v_sprintf_s(key, sizeof(key), "%lu", i);
           if ((p = v7_get_property(v, key, -1)) != NULL) {
             b += to_json(v7, p->value, b, size - (b - buf));
           }
           if (i != len - 1) {
-            b += snprintf(b, size - (b - buf), ",");
+            b += v_sprintf_s(b, size - (b - buf), ",");
           }
         }
-        b += snprintf(b, size - (b - buf), "]");
+        b += v_sprintf_s(b, size - (b - buf), "]");
         v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
@@ -304,7 +315,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         ast_off_t end, body, var, var_end, start, pos = func->ast_off;
         struct ast *a = func->ast;
 
-        b += snprintf(b, size - (b - buf), "[function");
+        b += v_sprintf_s(b, size - (b - buf), "[function");
 
         assert(ast_fetch_tag(a, &pos) == AST_FUNC);
         start = pos - 1;
@@ -317,22 +328,22 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         if (ast_fetch_tag(a, &pos) == AST_IDENT) {
           name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
-          b += snprintf(b, size - (b - buf), " %.*s", (int) name_len, name);
+          b += v_sprintf_s(b, size - (b - buf), " %.*s", (int) name_len, name);
         }
-        b += snprintf(b, size - (b - buf), "(");
+        b += v_sprintf_s(b, size - (b - buf), "(");
         while (pos < body) {
           assert(ast_fetch_tag(a, &pos) == AST_IDENT);
           name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
-          b += snprintf(b, size - (b - buf), "%.*s", (int) name_len, name);
+          b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
           if (pos < body) {
-            b += snprintf(b, size - (b - buf), ",");
+            b += v_sprintf_s(b, size - (b - buf), ",");
           }
         }
-        b += snprintf(b, size - (b - buf), ")");
+        b += v_sprintf_s(b, size - (b - buf), ")");
         if (var != start) {
           ast_off_t next;
-          b += snprintf(b, size - (b - buf), "{var ");
+          b += v_sprintf_s(b, size - (b - buf), "{var ");
 
           do {
             assert(ast_fetch_tag(a, &var) == AST_VAR);
@@ -349,16 +360,16 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
               ast_move_to_children(a, &var);
               ast_skip_tree(a, &var);
 
-              b += snprintf(b, size - (b - buf), "%.*s", (int) name_len, name);
+              b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
               if (var < var_end || next) {
-                b += snprintf(b, size - (b - buf), ",");
+                b += v_sprintf_s(b, size - (b - buf), ",");
               }
             }
             var = next - 1; /* TODO(mkm): cleanup */
           } while (next != 0);
-          b += snprintf(b, size - (b - buf), "}");
+          b += v_sprintf_s(b, size - (b - buf), "}");
         }
-        b += snprintf(b, size - (b - buf), "]");
+        b += v_sprintf_s(b, size - (b - buf), "]");
         return b - buf;
       }
     default:
@@ -525,7 +536,7 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
 void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
   if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
     char buf[20];
-    int n = snprintf(buf, sizeof(buf), "%ld", v7_array_length(v7, arr));
+    int n = v_sprintf_s(buf, sizeof(buf), "%ld", v7_array_length(v7, arr));
     v7_set_property(v7, arr, buf, n, 0, v);
   }
 }
@@ -533,7 +544,7 @@ void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
 val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
   if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
     char buf[20];
-    int n = snprintf(buf, sizeof(buf), "%ld", index);
+    int n = v_sprintf_s(buf, sizeof(buf), "%ld", index);
     struct v7_property *prop = v7_get_property(arr, buf, n);
     return prop == NULL ? V7_UNDEFINED : prop->value;
   } else {
@@ -551,7 +562,19 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
   while (s < end) {
     s += chartorune(&r, s);
     if (r == '\\' && s < end) {
-      r = nextesc(&s);
+      switch (*s) {
+        case '"':
+          s++, r = '"';
+          break;
+        case '\'':
+          s++, r = '\'';
+          break;
+        case '\n':
+          s++, r = '\n';
+          break;
+        default:
+          r = nextesc(&s);
+      }
     }
     n += runetochar(to == NULL ? tmp : to + n, &r);
   }
@@ -638,10 +661,16 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   /* Create a new string which is a concatenation a + b */
   if (a_len + b_len <= 5) {
     offset = 0;
-    s = ((char *) &offset) + 3;
+    /* TODO(mkm): make it work on big endian too */
+    s = ((char *) &offset) + 1;
+    s[-1] = a_len + b_len;
     tag = V7_TAG_STRING_I;
   } else {
     mbuf_append(&v7->owned_strings, NULL, a_len + b_len);
+    /* all pointers might have been relocated */
+    s = v7->owned_strings.buf + offset;
+    a_ptr = val_to_string(v7, &a, &a_len);
+    b_ptr = val_to_string(v7, &b, &b_len);
     tag = V7_TAG_STRING_O;
   }
   memcpy(s, a_ptr, a_len);
@@ -711,9 +740,9 @@ static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
 int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && val_to_boolean(v)) ||
-         (v7_is_double(v) && val_to_double(v) != 0.0) ||
+         (v7_is_double(v) && val_to_double(v) != 0.0 ) ||
          (v7_is_string(v) && val_to_string(v7, &v, &len) && len > 0) ||
-         (v7_is_object(v)));
+         (v7_is_object(v))) && v != V7_TAG_NAN;
 }
 
 struct v7 *v7_create(void) {

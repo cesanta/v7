@@ -451,13 +451,14 @@ if(0){
 
     return;
 })();
-)
+}
 
 //Date.library.js
 // Copyright 2009 the Sputnik authors.  All rights reserved.
 // This code is governed by the BSD license found in the LICENSE file.
 
 //15.9.1.2 Day Number and Time within Day
+
 function Day(t) {
     return Math.floor(t / msPerDay);
 }
@@ -562,9 +563,11 @@ function WeekDay(t) {
 }
 
 //15.9.1.9 Daylight Saving Time Adjustment
+if(0) {
 $LocalTZ = (new Date()).getTimezoneOffset() / -60;
 if (DaylightSavingTA((new Date()).valueOf()) !== 0) {
     $LocalTZ -= 1;
+}
 }
 var LocalTZA = $LocalTZ * msPerHour;
 
