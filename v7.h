@@ -27,6 +27,12 @@ extern "C" {
 
 #define V7_VERSION "1.0"
 
+enum v7_err {
+  V7_OK,
+  V7_SYNTAX_ERROR,
+  V7_EXEC_EXCEPTION
+};
+
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
@@ -39,9 +45,12 @@ typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
 
 struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
 void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
-v7_val_t v7_exec(struct v7 *, const char *str);       /* Execute string */
-v7_val_t v7_exec_file(struct v7 *, const char *path); /* Execute file */
-v7_val_t v7_exec_with(struct v7 *, const char *, v7_val_t); /* Execute string */
+enum v7_err v7_exec(struct v7 *, v7_val_t *,
+                    const char *str); /* Execute string */
+enum v7_err v7_exec_file(struct v7 *, v7_val_t *,
+                    const char *path); /* Execute file */
+enum v7_err v7_exec_with(struct v7 *, v7_val_t *,
+                         const char *str, v7_val_t); /* Execute string with */
 
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);

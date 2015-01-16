@@ -71,7 +71,9 @@ static int check_value(struct v7 *v7, val_t v, const char *str) {
 }
 
 static int test_if_expr(struct v7 *v7, const char *expr, int result) {
-  val_t v = v7_exec(v7, expr);
+  val_t v;
+  if (v7_exec(v7, &v, expr) != V7_OK)
+    return 0;
   return result == (v7_is_true(v7, v) ? 1 : 0);
 }
 
@@ -112,12 +114,12 @@ static const char *test_closure(void) {
   val_t v;
   struct v7 *v7 = v7_create();
 
-  ASSERT((v = v7_exec(v7, "function a(x){return function(y){return x*y}}")) != V7_UNDEFINED);
-  ASSERT((v = v7_exec(v7, "var f1 = a(5);")) != V7_UNDEFINED);
-  ASSERT((v = v7_exec(v7, "var f2 = a(7);")) != V7_UNDEFINED);
-  ASSERT((v = v7_exec(v7, "f1(3);")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "function a(x){return function(y){return x*y}}") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var f1 = a(5);") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var f2 = a(7);") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "f1(3);") == V7_OK);
   ASSERT(check_value(v7, v, "15"));
-  ASSERT((v = v7_exec(v7, "f2(3);")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "f2(3);") == V7_OK);
   ASSERT(check_value(v7, v, "21"));
 
   v7_destroy(v7);
@@ -141,7 +143,7 @@ static const char *test_native_functions(void) {
 
   ASSERT(v7_set_property(v7, v7_get_global_object(v7), "adder", 5, 0,
          v7_create_cfunction(adder)) == 0);
-  ASSERT((v = v7_exec(v7, "adder(1, 2, 3 + 4);")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(check_value(v7, v, "10"));
   v7_destroy(v7);
 
@@ -152,19 +154,19 @@ static const char *test_stdlib(void) {
   v7_val_t v;
   struct v7 *v7 = v7_create();
 
-  ASSERT((v = v7_exec(v7, "Boolean()")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "Boolean()") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT((v = v7_exec(v7, "Boolean(0)")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "Boolean(0)") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT((v = v7_exec(v7, "Boolean(1)")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "Boolean(1)") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT((v = v7_exec(v7, "Boolean([])")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "Boolean([])") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT((v = v7_exec(v7, "new Boolean([])")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "new Boolean([])") == V7_OK);
   ASSERT(check_value(v7, v, "{}"));
 
   /* Math */
-  ASSERT(!v7_is_error(v7, (v = v7_exec(v7, "Math.sqrt(144)"))));
+  ASSERT(v7_exec(v7, &v, "Math.sqrt(144)") == V7_OK);
   ASSERT(check_value(v7, v, "12"));
 
 #if 0
@@ -674,7 +676,7 @@ static const char *test_parser(void) {
 
   for (i = 0; i < (int) ARRAY_SIZE(invalid); i++ ) {
     ast_free(&a);
-    ASSERT(parse(v7, &a, invalid[i], 0) == V7_ERROR);
+    ASSERT(parse(v7, &a, invalid[i], 0) == V7_SYNTAX_ERROR);
   }
 
   return NULL;
@@ -742,11 +744,10 @@ static const char *test_ecmac(void) {
           i == 2887 || i == 2945 || i == 3173 || i == 10009 || i == 10030 ||
           i == 10051 || i == 10072) continue;
 
-      if (v7_is_error(v7, v7_exec(v7, driver))) {
+      if (v7_exec(v7, &res, driver) != V7_OK) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
-        res = v7_exec(v7, current_case);
-        if (v7_is_error(v7, res)) {
+        if (v7_exec(v7, &res, current_case) != V7_OK) {
 #if 0
           fprintf(stderr, "Test %d failed "
                   "(tail -c +%lu tests/ecmac.db|head -c %lu):\n", i,
@@ -821,404 +822,406 @@ static const char *test_interpreter(void) {
 
   v7_set_property(v7, v7->global_object, "x", -1, 0, v7_create_number(42.0));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1%2/2")));
+  ASSERT(v7_exec(v7, &v, "1%2/2") == V7_OK);
   ASSERT(check_value(v7, v, "0.5"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1+x")));
+  ASSERT(v7_exec(v7, &v, "1+x") == V7_OK);
   ASSERT(check_value(v7, v, "43"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "2-'1'")));
+  ASSERT(v7_exec(v7, &v, "2-'1'") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1+2")));
+  ASSERT(v7_exec(v7, &v, "1+2") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'1'+'2'")));
+  ASSERT(v7_exec(v7, &v, "'1'+'2'") == V7_OK);
   ASSERT(check_value(v7, v, "\"12\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'1'+2")));
+  ASSERT(v7_exec(v7, &v, "'1'+2") == V7_OK);
   ASSERT(check_value(v7, v, "\"12\""));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "false+1")));
+  ASSERT(v7_exec(v7, &v, "false+1") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "true+1")));
+  ASSERT(v7_exec(v7, &v, "true+1") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'1'<2")));
+  ASSERT(v7_exec(v7, &v, "'1'<2") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'1'>2")));
+  ASSERT(v7_exec(v7, &v, "'1'>2") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1==1")));
+  ASSERT(v7_exec(v7, &v, "1==1") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1==2")));
+  ASSERT(v7_exec(v7, &v, "1==2") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'1'==1")));
+  ASSERT(v7_exec(v7, &v, "'1'==1") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'1'!=0")));
+  ASSERT(v7_exec(v7, &v, "'1'!=0") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'-1'==-1")));
+  ASSERT(v7_exec(v7, &v, "'-1'==-1") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a===a")));
+  ASSERT(v7_exec(v7, &v, "a={};a===a") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a!==a")));
+  ASSERT(v7_exec(v7, &v, "a={};a!==a") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a==a")));
+  ASSERT(v7_exec(v7, &v, "a={};a==a") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a!=a")));
+  ASSERT(v7_exec(v7, &v, "a={};a!=a") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};b={};a===b")));
+  ASSERT(v7_exec(v7, &v, "a={};b={};a===b") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};b={};a!==b")));
+  ASSERT(v7_exec(v7, &v, "a={};b={};a!==b") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};b={};a==b")));
+  ASSERT(v7_exec(v7, &v, "a={};b={};a==b") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};b={};a!=b")));
+  ASSERT(v7_exec(v7, &v, "a={};b={};a!=b") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1-{}")));
+  ASSERT(v7_exec(v7, &v, "1-{}") == V7_OK);
   ASSERT(check_value(v7, v, "NaN"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a===(1-{})")));
+  ASSERT(v7_exec(v7, &v, "a={};a===(1-{})") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a!==(1-{})")));
+  ASSERT(v7_exec(v7, &v, "a={};a!==(1-{})") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a==(1-{})")));
+  ASSERT(v7_exec(v7, &v, "a={};a==(1-{})") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a!=(1-{})")));
+  ASSERT(v7_exec(v7, &v, "a={};a!=(1-{})") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a===1")));
+  ASSERT(v7_exec(v7, &v, "a={};a===1") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a!==1")));
+  ASSERT(v7_exec(v7, &v, "a={};a!==1") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a==1")));
+  ASSERT(v7_exec(v7, &v, "a={};a==1") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={};a!=1")));
+  ASSERT(v7_exec(v7, &v, "a={};a!=1") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "+'1'")));
+  ASSERT(v7_exec(v7, &v, "+'1'") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "-'-1'")));
+  ASSERT(v7_exec(v7, &v, "-'-1'") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "v=[10+1,20*2,30/3]")));
+  ASSERT(v7_exec(v7, &v, "v=[10+1,20*2,30/3]") == V7_OK);
   ASSERT(val_type(v7, v) == V7_TYPE_ARRAY_OBJECT);
   ASSERT(v7_array_length(v7, v) == 3);
   ASSERT(check_value(v7, v, "[11,40,10]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "v[0]")));
+  ASSERT(v7_exec(v7, &v, "v[0]") == V7_OK);
   ASSERT(check_value(v7, v, "11"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "v[1]")));
+  ASSERT(v7_exec(v7, &v, "v[1]") == V7_OK);
   ASSERT(check_value(v7, v, "40"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "v[2]")));
+  ASSERT(v7_exec(v7, &v, "v[2]") == V7_OK);
   ASSERT(check_value(v7, v, "10"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "v=[10+1,undefined,30/3]")));
+  ASSERT(v7_exec(v7, &v, "v=[10+1,undefined,30/3]") == V7_OK);
   ASSERT(v7_array_length(v7, v) == 3);
   ASSERT(check_value(v7, v, "[11,undefined,10]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "v=[10+1,,30/3]")));
+  ASSERT(v7_exec(v7, &v, "v=[10+1,,30/3]") == V7_OK);
   ASSERT(v7_array_length(v7, v) == 3);
   ASSERT(check_value(v7, v, "[11,,10]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "3,2,1")));
+  ASSERT(v7_exec(v7, &v, "3,2,1") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1")));
+  ASSERT(v7_exec(v7, &v, "x=1") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1+2; 1")));
+  ASSERT(v7_exec(v7, &v, "1+2; 1") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=42; x")));
+  ASSERT(v7_exec(v7, &v, "x=42; x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=y=42; x+y")));
+  ASSERT(v7_exec(v7, &v, "x=y=42; x+y") == V7_OK);
   ASSERT(check_value(v7, v, "84"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={a: 1, b: 2}")));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o['a'] + o['b']")));
+  ASSERT(v7_exec(v7, &v, "o={a: 1, b: 2}") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "o['a'] + o['b']") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o.a + o.b")));
+  ASSERT(v7_exec(v7, &v, "o.a + o.b") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "Array(1,2)")));
+  ASSERT(v7_exec(v7, &v, "Array(1,2)") == V7_OK);
   ASSERT(check_value(v7, v, "[1,2]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "new Array(1,2)")));
+  ASSERT(v7_exec(v7, &v, "new Array(1,2)") == V7_OK);
   ASSERT(check_value(v7, v, "[1,2]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "Object.isPrototypeOf(Array(1,2), Object.getPrototypeOf([]))")));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a=[];r=a.push(1,2,3);[r,a]")));
+  ASSERT(v7_exec(v7, &v, "Object.isPrototypeOf(Array(1,2), Object.getPrototypeOf([]))") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "a=[];r=a.push(1,2,3);[r,a]") == V7_OK);
   ASSERT(check_value(v7, v, "[3,[1,2,3]]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1;if(x>0){x=2};x")));
+  ASSERT(v7_exec(v7, &v, "x=1;if(x>0){x=2};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1;if(x<0){x=2};x")));
+  ASSERT(v7_exec(v7, &v, "x=1;if(x<0){x=2};x") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;if(true)x=2;else x=3;x")));
+  ASSERT(v7_exec(v7, &v, "x=0;if(true)x=2;else x=3;x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;if(false)x=2;else x=3;x")));
+  ASSERT(v7_exec(v7, &v, "x=0;if(false)x=2;else x=3;x") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "y=1;x=5;while(x > 0){y=y*x;x=x-1};y")));
+  ASSERT(v7_exec(v7, &v, "y=1;x=5;while(x > 0){y=y*x;x=x-1};y") == V7_OK);
   ASSERT(check_value(v7, v, "120"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "y=1;x=5;do{y=y*x;x=x-1}while(x>0);y")));
+  ASSERT(v7_exec(v7, &v, "y=1;x=5;do{y=y*x;x=x-1}while(x>0);y") == V7_OK);
   ASSERT(check_value(v7, v, "120"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "for(y=1,i=1;i<=5;i=i+1)y=y*i;y")));
+  ASSERT(v7_exec(v7, &v, "for(y=1,i=1;i<=5;i=i+1)y=y*i;y") == V7_OK);
   ASSERT(check_value(v7, v, "120"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "for(i=0;1;i++)if(i==5)break;i")));
+  ASSERT(v7_exec(v7, &v, "for(i=0;1;i++)if(i==5)break;i") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "for(i=0;1;i++)if(i==5)break;i")));
+  ASSERT(v7_exec(v7, &v, "for(i=0;1;i++)if(i==5)break;i") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "i=0;while(++i)if(i==5)break;i")));
+  ASSERT(v7_exec(v7, &v, "i=0;while(++i)if(i==5)break;i") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "i=0;do{if(i==5)break}while(++i);i")));
+  ASSERT(v7_exec(v7, &v, "i=0;do{if(i==5)break}while(++i);i") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){i=0;do{if(i==5)break}while(++i);i+=10})();i")));
+  ASSERT(v7_exec(v7, &v, "(function(){i=0;do{if(i==5)break}while(++i);i+=10})();i") == V7_OK);
   ASSERT(check_value(v7, v, "15"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){x=i=0;do{if(i==5)break;if(i%2)continue;x++}while(++i);i+=10})();[i,x]")));
+  ASSERT(v7_exec(v7, &v, "(function(){x=i=0;do{if(i==5)break;if(i%2)continue;x++}while(++i);i+=10})();[i,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[15,3]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){i=0;while(++i){if(i==5)break};i+=10})();i")));
+  ASSERT(v7_exec(v7, &v, "(function(){i=0;while(++i){if(i==5)break};i+=10})();i") == V7_OK);
   ASSERT(check_value(v7, v, "15"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){x=i=0;while(++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]")));
+  ASSERT(v7_exec(v7, &v, "(function(){x=i=0;while(++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[15,2]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){for(i=0;1;++i){if(i==5)break};i+=10})();i")));
+  ASSERT(v7_exec(v7, &v, "(function(){for(i=0;1;++i){if(i==5)break};i+=10})();i") == V7_OK);
   ASSERT(check_value(v7, v, "15"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){x=0;for(i=0;1;++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]")));
+  ASSERT(v7_exec(v7, &v, "(function(){x=0;for(i=0;1;++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[15,3]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;try{x=1};x")));
+  ASSERT(v7_exec(v7, &v, "x=0;try{x=1};x") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;try{x=1}finally{x=x+1};x")));
+  ASSERT(v7_exec(v7, &v, "x=0;try{x=1}finally{x=x+1};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x")));
+  ASSERT(v7_exec(v7, &v, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(a) {return a})")));
+  ASSERT(v7_exec(v7, &v, "(function(a) {return a})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(a)]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function() {var x=1,y=2; return x})")));
+  ASSERT(v7_exec(v7, &v, "(function() {var x=1,y=2; return x})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(){var x,y}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(a) {var x=1,y=2; return x})")));
+  ASSERT(v7_exec(v7, &v, "(function(a) {var x=1,y=2; return x})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(a){var x,y}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(a,b) {var x=1,y=2; return x; var z})")));
+  ASSERT(v7_exec(v7, &v, "(function(a,b) {var x=1,y=2; return x; var z})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(a,b){var x,y,z}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(a) {var x=1; for(var y in x){}; var z})")));
+  ASSERT(v7_exec(v7, &v, "(function(a) {var x=1; for(var y in x){}; var z})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(a) {var x=1; for(var y=0;y<x;y++){}; var z})")));
+  ASSERT(v7_exec(v7, &v, "(function(a) {var x=1; for(var y=0;y<x;y++){}; var z})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function() {var x=(function y(){for(var z;;){}})})")));
+  ASSERT(v7_exec(v7, &v, "(function() {var x=(function y(){for(var z;;){}})})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(){var x}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "function square(x){return x*x;}")));
+  ASSERT(v7_exec(v7, &v, "function square(x){return x*x;}") == V7_OK);
   ASSERT(check_value(v7, v, "[function square(x)]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "0;f=(function(x){return x*x;})")));
+  ASSERT(v7_exec(v7, &v, "0;f=(function(x){return x*x;})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(x)]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "f=(function(x){return x*x;}); f(2)")));
+  ASSERT(v7_exec(v7, &v, "f=(function(x){return x*x;}); f(2)") == V7_OK);
   ASSERT(check_value(v7, v, "4"));
-  ASSERT((v = v7_exec(v7, "(function(x){x*x;})(2)")) == V7_UNDEFINED);
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "f=(function(x){return x*x;x});v=f(2);v*2")));
+  ASSERT(v7_exec(v7, &v, "(function(x){x*x;})(2)") == V7_OK);
+  ASSERT(check_value(v7, v, "undefined"));
+  ASSERT(v7_exec(v7, &v, "f=(function(x){return x*x;x});v=f(2);v*2") == V7_OK);
   ASSERT(check_value(v7, v, "8"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(x,y){return x+y;})(40,2)")));
+  ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y;})(40,2)") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(x,y){if(x==40)return x+y})(40,2)")));
+  ASSERT(v7_exec(v7, &v, "(function(x,y){if(x==40)return x+y})(40,2)") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(x,y){return x+y})(40)")));
+  ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y})(40)") == V7_OK);
   ASSERT(check_value(v7, v, "NaN"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(x){return x+y; var y})(40)")));
+  ASSERT(v7_exec(v7, &v, "(function(x){return x+y; var y})(40)") == V7_OK);
   ASSERT(check_value(v7, v, "NaN"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1;(function(a){return a})(40,(function(){x=x+1})())+x")));
+  ASSERT(v7_exec(v7, &v, "x=1;(function(a){return a})(40,(function(){x=x+1})())+x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){x=42;return;x=0})();x")));
+  ASSERT(v7_exec(v7, &v, "(function(){x=42;return;x=0})();x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){for(i=0;1;i++)if(i==5)return i})()")));
+  ASSERT(v7_exec(v7, &v, "(function(){for(i=0;1;i++)if(i==5)return i})()") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){i=0;while(++i)if(i==5)return i})()")));
+  ASSERT(v7_exec(v7, &v, "(function(){i=0;while(++i)if(i==5)return i})()") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){i=0;do{if(i==5)return i}while(++i)})()")));
+  ASSERT(v7_exec(v7, &v, "(function(){i=0;do{if(i==5)return i}while(++i)})()") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
 
   /* TODO(mkm): check for reference error being thrown */
-  /* ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(x,y){return x+y})(40,2,(function(){return fail})())"))); */
+  /* ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y})(40,2,(function(){return fail})())") == V7_OK); */
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=42; (function(){return x})()")));
+  ASSERT(v7_exec(v7, &v, "x=42; (function(){return x})()") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=2; (function(x){return x})(40)+x")));
+  ASSERT(v7_exec(v7, &v, "x=2; (function(x){return x})(40)+x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1; (function(y){x=x+1; return y})(40)+x")));
+  ASSERT(v7_exec(v7, &v, "x=1; (function(y){x=x+1; return y})(40)+x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;f=function(){x=42; return function() {return x}; var x};f()()")));
+  ASSERT(v7_exec(v7, &v, "x=0;f=function(){x=42; return function() {return x}; var x};f()()") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=42;o={x:66,f:function(){return this}};o.f().x")));
+  ASSERT(v7_exec(v7, &v, "x=42;o={x:66,f:function(){return this}};o.f().x") == V7_OK);
   ASSERT(check_value(v7, v, "66"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=42;o={x:66,f:function(){return this}};(1,o.f)().x")));
+  ASSERT(v7_exec(v7, &v, "x=42;o={x:66,f:function(){return this}};(1,o.f)().x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=66;o={x:42,f:function(){return this.x}};o.f()")));
+  ASSERT(v7_exec(v7, &v, "x=66;o={x:42,f:function(){return this.x}};o.f()") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={};o.x=24")));
+  ASSERT(v7_exec(v7, &v, "o={};o.x=24") == V7_OK);
   ASSERT(check_value(v7, v, "24"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o.a={};o.a.b={c:66};o.a.b.c")));
+  ASSERT(v7_exec(v7, &v, "o.a={};o.a.b={c:66};o.a.b.c") == V7_OK);
   ASSERT(check_value(v7, v, "66"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o['a']['b'].c")));
+  ASSERT(v7_exec(v7, &v, "o['a']['b'].c") == V7_OK);
   ASSERT(check_value(v7, v, "66"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={a:1}; o['a']=2;o.a")));
+  ASSERT(v7_exec(v7, &v, "o={a:1}; o['a']=2;o.a") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a={f:function(){return {b:55}}};a.f().b")));
+  ASSERT(v7_exec(v7, &v, "a={f:function(){return {b:55}}};a.f().b") == V7_OK);
   ASSERT(check_value(v7, v, "55"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){fox=1})();fox")));
+  ASSERT(v7_exec(v7, &v, "(function(){fox=1})();fox") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "fin=0;(function(){while(1){try{xxxx}finally{fin=1;return 1}}})();fin")));
+  ASSERT(v7_exec(v7, &v, "fin=0;(function(){while(1){try{xxxx}finally{fin=1;return 1}}})();fin") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "ca=0;fin=0;(function(){try{(function(){try{xxxx}finally{fin=1}})()}catch(e){ca=1}})();fin+ca")));
+  ASSERT(v7_exec(v7, &v, "ca=0;fin=0;(function(){try{(function(){try{xxxx}finally{fin=1}})()}catch(e){ca=1}})();fin+ca") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;try{throw 1}catch(e){x=42};x")));
+  ASSERT(v7_exec(v7, &v, "x=0;try{throw 1}catch(e){x=42};x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1;x=x<<3;x")));
+  ASSERT(v7_exec(v7, &v, "x=1;x=x<<3;x") == V7_OK);
   ASSERT(check_value(v7, v, "8"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1;x<<=4;x")));
+  ASSERT(v7_exec(v7, &v, "x=1;x<<=4;x") == V7_OK);
   ASSERT(check_value(v7, v, "16"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1;x++")));
+  ASSERT(v7_exec(v7, &v, "x=1;x++") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x")));
+  ASSERT(v7_exec(v7, &v, "x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1;++x")));
+  ASSERT(v7_exec(v7, &v, "x=1;++x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x")));
+  ASSERT(v7_exec(v7, &v, "x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={x:1};o.x++")));
+  ASSERT(v7_exec(v7, &v, "o={x:1};o.x++") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o.x")));
+  ASSERT(v7_exec(v7, &v, "o.x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "typeof dummyx")));
+  ASSERT(v7_exec(v7, &v, "typeof dummyx") == V7_OK);
   ASSERT(check_value(v7, v, "\"undefined\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "typeof null")));
+  ASSERT(v7_exec(v7, &v, "typeof null") == V7_OK);
   ASSERT(check_value(v7, v, "\"object\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "typeof 1")));
+  ASSERT(v7_exec(v7, &v, "typeof 1") == V7_OK);
   ASSERT(check_value(v7, v, "\"number\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "typeof (1+2)")));
+  ASSERT(v7_exec(v7, &v, "typeof (1+2)") == V7_OK);
   ASSERT(check_value(v7, v, "\"number\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "typeof 'test'")));
+  ASSERT(v7_exec(v7, &v, "typeof 'test'") == V7_OK);
   ASSERT(check_value(v7, v, "\"string\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "typeof [1,2]")));
+  ASSERT(v7_exec(v7, &v, "typeof [1,2]") == V7_OK);
   ASSERT(check_value(v7, v, "\"object\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "typeof function(){}")));
+  ASSERT(v7_exec(v7, &v, "typeof function(){}") == V7_OK);
   ASSERT(check_value(v7, v, "\"function\""));
 
-  ASSERT((v = v7_exec(v7, "void(1+2)")) == V7_UNDEFINED);
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "true?1:2")));
+  ASSERT(v7_exec(v7, &v, "void(1+2)") == V7_OK);
+  ASSERT(check_value(v7, v, "undefined"));
+  ASSERT(v7_exec(v7, &v, "true?1:2") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "false?1:2")));
+  ASSERT(v7_exec(v7, &v, "false?1:2") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'a' in {a:1}")));
+  ASSERT(v7_exec(v7, &v, "'a' in {a:1}") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "'b' in {a:1}")));
+  ASSERT(v7_exec(v7, &v, "'b' in {a:1}") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "1 in [10,20]")));
+  ASSERT(v7_exec(v7, &v, "1 in [10,20]") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "20 in [10,20]")));
+  ASSERT(v7_exec(v7, &v, "20 in [10,20]") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1; delete x; typeof x")));
+  ASSERT(v7_exec(v7, &v, "x=1; delete x; typeof x") == V7_OK);
   ASSERT(check_value(v7, v, "\"undefined\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1; (function(){x=2;delete x; return typeof x})()")));
+  ASSERT(v7_exec(v7, &v, "x=1; (function(){x=2;delete x; return typeof x})()") == V7_OK);
   ASSERT(check_value(v7, v, "\"undefined\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1; (function(){x=2;delete x})(); typeof x")));
+  ASSERT(v7_exec(v7, &v, "x=1; (function(){x=2;delete x})(); typeof x") == V7_OK);
   ASSERT(check_value(v7, v, "\"undefined\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=1; (function(){var x=2;delete x})(); x")));
+  ASSERT(v7_exec(v7, &v, "x=1; (function(){var x=2;delete x})(); x") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={a:1};delete o.a;o")));
+  ASSERT(v7_exec(v7, &v, "o={a:1};delete o.a;o") == V7_OK);
   ASSERT(check_value(v7, v, "{}"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={a:1};delete o['a'];o")));
+  ASSERT(v7_exec(v7, &v, "o={a:1};delete o['a'];o") == V7_OK);
   ASSERT(check_value(v7, v, "{}"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;if(delete 1 == true)x=42;x")));
+  ASSERT(v7_exec(v7, &v, "x=0;if(delete 1 == true)x=42;x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={};a=[o];o.a=a;a")));
+  ASSERT(v7_exec(v7, &v, "o={};a=[o];o.a=a;a") == V7_OK);
   ASSERT(check_value(v7, v, "[{\"a\":[Circular]}]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "new TypeError instanceof Error")));
+  ASSERT(v7_exec(v7, &v, "new TypeError instanceof Error") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "new TypeError instanceof TypeError")));
+  ASSERT(v7_exec(v7, &v, "new TypeError instanceof TypeError") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "new Error instanceof Object")));
+  ASSERT(v7_exec(v7, &v, "new Error instanceof Object") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "new Error instanceof TypeError")));
+  ASSERT(v7_exec(v7, &v, "new Error instanceof TypeError") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
   /* TODO(mkm): fix parser: should not require parenthesis */
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "({}) instanceof Object")));
+  ASSERT(v7_exec(v7, &v, "({}) instanceof Object") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
 
-  ASSERT((v = v7_exec(v7, "")) == V7_NULL);
+  ASSERT(v7_exec(v7, &v, "") == V7_OK && v == V7_NULL);
 #if 0
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=0;a=1;o={a:2};with(o){x=a};x")));
+  ASSERT(v7_exec(v7, &v, "x=0;a=1;o={a:2};with(o){x=a};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
 #endif
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "(function(){try {throw new Error}catch(e){c=e}})();c instanceof Error")));
+  ASSERT(v7_exec(v7, &v, "(function(){try {throw new Error}catch(e){c=e}})();c instanceof Error") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "delete e;(function(){try {throw new Error}catch(e){}})();typeof e")));
+  ASSERT(v7_exec(v7, &v, "delete e;(function(){try {throw new Error}catch(e){}})();typeof e") == V7_OK);
   ASSERT(check_value(v7, v, "\"undefined\""));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=(function(){c=1;try {throw 1}catch(e){c=0};return c})()")));
+  ASSERT(v7_exec(v7, &v, "x=(function(){c=1;try {throw 1}catch(e){c=0};return c})()") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "x=(function(){var c=1;try {throw 1}catch(e){c=0};return c})()")));
+  ASSERT(v7_exec(v7, &v, "x=(function(){var c=1;try {throw 1}catch(e){c=0};return c})()") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "c=1;x=(function(){try {throw 1}catch(e){var c=0};return c})();[c,x]")));
+  ASSERT(v7_exec(v7, &v, "c=1;x=(function(){try {throw 1}catch(e){var c=0};return c})();[c,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[1,0]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "c=1;x=(function(){try {throw 1}catch(e){c=0};return c})();[c,x]")));
+  ASSERT(v7_exec(v7, &v, "c=1;x=(function(){try {throw 1}catch(e){c=0};return c})();[c,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[0,0]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "Object.keys(new Boolean(1))")));
+  ASSERT(v7_exec(v7, &v, "Object.keys(new Boolean(1))") == V7_OK);
   ASSERT(check_value(v7, v, "[]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "b={c:1};a=Object.create(b); a.d=4;Object.keys(a)")));
+  ASSERT(v7_exec(v7, &v, "b={c:1};a=Object.create(b); a.d=4;Object.keys(a)") == V7_OK);
   ASSERT(check_value(v7, v, "[\"d\"]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "Object.getOwnPropertyNames(new Boolean(1))")));
+  ASSERT(v7_exec(v7, &v, "Object.getOwnPropertyNames(new Boolean(1))") == V7_OK);
   ASSERT(check_value(v7, v, "[]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "b={c:1};a=Object.create(b); a.d=4;Object.getOwnPropertyNames(a)")));
+  ASSERT(v7_exec(v7, &v, "b={c:1};a=Object.create(b); a.d=4;Object.getOwnPropertyNames(a)") == V7_OK);
   ASSERT(check_value(v7, v, "[\"d\"]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={};Object.defineProperty(o, \"x\", {value:2});[o.x,o]")));
+  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o, \"x\", {value:2});[o.x,o]") == V7_OK);
   ASSERT(check_value(v7, v, "[2,{}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={};Object.defineProperties(o,{x:{value:2},y:{value:3,enumerable:true}});[o.x,o.y,o]")));
+  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperties(o,{x:{value:2},y:{value:3,enumerable:true}});[o.x,o.y,o]") == V7_OK);
   ASSERT(check_value(v7, v, "[2,3,{\"y\":3}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={};Object.defineProperty(o, \"x\", {value:2,enumerable:true});[o.x,o]")));
+  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o, \"x\", {value:2,enumerable:true});[o.x,o]") == V7_OK);
   ASSERT(check_value(v7, v, "[2,{\"x\":2}]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={};Object.defineProperty(o,'a',{value:1});o.propertyIsEnumerable('a')")));
+  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1});o.propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});o.propertyIsEnumerable('a')")));
+  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});o.propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={a:1};o.propertyIsEnumerable('a')")));
+  ASSERT(v7_exec(v7, &v, "o={a:1};o.propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "b={a:1};o=Object.create(b);o.propertyIsEnumerable('a')")));
+  ASSERT(v7_exec(v7, &v, "b={a:1};o=Object.create(b);o.propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "b={a:1};o=Object.create(b);o.hasOwnProperty('a')")));
+  ASSERT(v7_exec(v7, &v, "b={a:1};o=Object.create(b);o.hasOwnProperty('a')") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o={a:1};o.hasOwnProperty('a')")));
+  ASSERT(v7_exec(v7, &v, "o={a:1};o.hasOwnProperty('a')") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT((v = v7_exec(v7, "o={a:1};d=Object.getOwnPropertyDescriptor(o, 'a');"
-                      "[d.value,d.writable,d.enumerable,d.configurable]")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "o={a:1};d=Object.getOwnPropertyDescriptor(o, 'a');"
+                 "[d.value,d.writable,d.enumerable,d.configurable]") == V7_OK);
   ASSERT(check_value(v7, v, "[1,true,true,true]"));
-  ASSERT((v = v7_exec(v7, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});"
-                      "d=Object.getOwnPropertyDescriptor(o, 'a');"
-                      "[d.value,d.writable,d.enumerable,d.configurable]")) != V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});"
+                 "d=Object.getOwnPropertyDescriptor(o, 'a');"
+                 "[d.value,d.writable,d.enumerable,d.configurable]") == V7_OK);
   ASSERT(check_value(v7, v, "[1,false,true,false]"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o=Object.defineProperty({},'a',{value:1,enumerable:true});o.a=2;o.a")));
+  ASSERT(v7_exec(v7, &v, "o=Object.defineProperty({},'a',{value:1,enumerable:true});o.a=2;o.a") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "o=Object.defineProperty({},'a',{value:1,enumerable:true});r=delete o.a;[r,o.a]")));
+  ASSERT(v7_exec(v7, &v, "o=Object.defineProperty({},'a',{value:1,enumerable:true});r=delete o.a;[r,o.a]") == V7_OK);
   ASSERT(check_value(v7, v, "[false,1]"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "r=0;o={a:1,b:2};for(i in o){r+=o[i]};r")));
+  ASSERT(v7_exec(v7, &v, "r=0;o={a:1,b:2};for(i in o){r+=o[i]};r") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "r=0;o={a:1,b:2};for(var i in o){r+=o[i]};r")));
+  ASSERT(v7_exec(v7, &v, "r=0;o={a:1,b:2};for(var i in o){r+=o[i]};r") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "r=1;for(var i in null){r=0};r")));
+  ASSERT(v7_exec(v7, &v, "r=1;for(var i in null){r=0};r") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "r=1;for(var i in undefined){r=0};r")));
+  ASSERT(v7_exec(v7, &v, "r=1;for(var i in undefined){r=0};r") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "r=1;for(var i in 42){r=0};r")));
+  ASSERT(v7_exec(v7, &v, "r=1;for(var i in 42){r=0};r") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec_with(v7, "this", v7_create_number(42))));
+  ASSERT(v7_exec_with(v7, &v, "this", v7_create_number(42)) == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(!v7_is_error(v7, v = v7_exec_with(v7, "a=666;(function(a){return a})(this)", v7_create_number(42))));
+  ASSERT(v7_exec_with(v7, &v, "a=666;(function(a){return a})(this)", v7_create_number(42)) == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
-  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a='aa', b='bb';(function(){return a + ' ' + b;})()")));
+  ASSERT(v7_exec(v7, &v, "a='aa', b='bb';(function(){return a + ' ' + b;})()") == V7_OK);
   ASSERT(check_value(v7, v, "\"aa bb\""));
 
   /* check execution failure caused by bad parsing */
-  ASSERT(v7_is_error(v7, v7_exec(v7, "function")));
+  ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
   return NULL;
 }
 
@@ -1255,7 +1258,7 @@ static const char *test_to_json(void) {
   struct v7 *v7 = v7_create();
   val_t v;
 
-  v = v7_exec(v7, "123.45");
+  v7_exec(v7, &v, "123.45");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT(strcmp(p, "123.45") == 0);
   /* TODO(mkm): fix to_json alloc */

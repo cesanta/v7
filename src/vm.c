@@ -736,7 +736,9 @@ static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
     if (p[0] == '"') {
       p[0] = p[strlen(p) - 1] = ' ';
     }
-    res = v7_exec(v7, p);
+    if (v7_exec(v7, &res, p) == V7_SYNTAX_ERROR) {
+      throw_value(v7, res);
+    }
     if (p != buf) {
       free(p);
     }

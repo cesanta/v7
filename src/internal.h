@@ -202,6 +202,7 @@ struct v7 {
                       __func__, __LINE__, #COND);                       \
   } while (0)
 
+V7_PRIVATE void throw_value(struct v7 *, val_t);
 V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 

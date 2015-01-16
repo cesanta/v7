@@ -42,9 +42,9 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   snprintf(js, sizeof(js), "new %s(this)", type);
-  e = v7_exec_with(v7, "new ReferenceError(this)",
-                   v7_string_to_value(v7, v7->error_msg,
-                                      strlen(v7->error_msg), 1));
+  v7_exec_with(v7, &e, "new ReferenceError(this)",
+               v7_string_to_value(v7, v7->error_msg,
+                                  strlen(v7->error_msg), 1));
   throw_value(v7, e);
 }  /* LCOV_EXCL_LINE */
 
@@ -920,13 +920,15 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_undefined();
 }
 
-val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
+enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
-  val_t res = V7_UNDEFINED, old_this = v7->this_object;
+  val_t old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
   jmp_buf saved_jmp_buf, saved_abort_buf;
+  enum v7_err err = V7_OK;
+  *res = V7_UNDEFINED;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
@@ -934,41 +936,45 @@ val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
-    res = v7->thrown_error;
+    *res = v7->thrown_error;
+    err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
-    res = v7->thrown_error;
+    *res = v7->thrown_error;
+    err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
-    res = v7_exec_with(v7, "new SyntaxError(this)",
-                       v7_string_to_value(v7, v7->error_msg,
-                                          strlen(v7->error_msg), 1));
+    v7_exec_with(v7, res, "new SyntaxError(this)",
+                 v7_string_to_value(v7, v7->error_msg,
+                                    strlen(v7->error_msg), 1));
+    err = V7_SYNTAX_ERROR;
     goto cleanup;
   }
   ast_optimize(a);
 
   v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
-  res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
+  *res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
   v7->this_object = old_this;
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&v7->abort_jmp_buf, &saved_abort_buf, sizeof(saved_abort_buf));
 
-  return res;
+  return err;
 }
 
-val_t v7_exec(struct v7 *v7, const char* src) {
-  return v7_exec_with(v7, src, V7_UNDEFINED);
+enum v7_err v7_exec(struct v7 *v7, val_t *res, const char* src) {
+  return v7_exec_with(v7, res, src, V7_UNDEFINED);
 }
 
-val_t v7_exec_file(struct v7 *v7, const char *path) {
+enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   FILE *fp;
   char *p;
   long file_size;
-  val_t res = V7_UNDEFINED;
+  enum v7_err err = V7_OK;
+  *res = V7_UNDEFINED;
 
   if ((fp = fopen(path, "r")) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]", path);
@@ -981,9 +987,9 @@ val_t v7_exec_file(struct v7 *v7, const char *path) {
     rewind(fp);
     fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
-    res = v7_exec(v7, p);
+    err = v7_exec(v7, res, p);
     free(p);
   }
 
-  return res;
+  return err;
 }

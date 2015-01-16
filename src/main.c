@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
         dump_ast(v7, argv[i + 1], binary_ast);
-      } else if (v7_is_error(v7, res = v7_exec(v7, argv[i + 1]))) {
+      } else if (v7_exec(v7, &res, argv[i + 1]) != V7_OK) {
         print_error(v7, argv[i + 1], res);
         res = V7_UNDEFINED;
       }
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
         dump_ast(v7, source_code, binary_ast);
         free(source_code);
       }
-    } else if (v7_is_error(v7, res = v7_exec_file(v7, argv[i]))) {
+    } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {
       print_error(v7, argv[i], res);
       res = V7_UNDEFINED;
     }

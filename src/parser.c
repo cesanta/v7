@@ -68,7 +68,7 @@ static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
     next_tok(v7);
     return V7_OK;
   }
-  return V7_ERROR;
+  return V7_SYNTAX_ERROR;
 }
 
 static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
@@ -115,7 +115,7 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
     } else if (v7->cur_tok == TOK_STRING_LITERAL) {
       ast_add_inlined_node(a, AST_PROP, v7->tok + 1, v7->tok_len - 2);
     } else {
-      return V7_ERROR;
+      return V7_SYNTAX_ERROR;
     }
     next_tok(v7);
     EXPECT(TOK_COLON);
@@ -245,7 +245,7 @@ static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
         ast_insert_inlined_node(a, pos, AST_MEMBER, v7->tok, v7->tok_len);
         next_tok(v7);
       } else {
-        return V7_ERROR;
+        return V7_SYNTAX_ERROR;
       }
       break;
     case TOK_OPEN_BRACKET:
@@ -456,7 +456,7 @@ static enum v7_err end_of_statement(struct v7 *v7) {
       v7->after_newline) {
     return V7_OK;
   }
-  return V7_ERROR;
+  return V7_SYNTAX_ERROR;
 }
 
 static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
@@ -607,7 +607,7 @@ static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
         ast_set_skip(a, case_start, AST_END_SKIP);
         break;
       default:
-        return V7_ERROR;
+        return V7_SYNTAX_ERROR;
     }
   }
   EXPECT(TOK_CLOSE_CURLY);
@@ -733,9 +733,9 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   ast_off_t outer_last_var_node = v7->last_var_node;
   v7->last_var_node = start;
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-  if (parse_ident(v7, a) == V7_ERROR) {
+  if (parse_ident(v7, a) == V7_SYNTAX_ERROR) {
     if (require_named) {
-      return V7_ERROR;
+      return V7_SYNTAX_ERROR;
     }
     ast_add_node(a, AST_NOP);
   }
