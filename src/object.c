@@ -9,7 +9,8 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_at(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
-    throw_exception(v7, "Object.getPrototypeOf called on non-object");
+    throw_exception(v7, "TypeError",
+                    "Object.getPrototypeOf called on non-object");
   }
   return v7_object_to_value(val_to_object(arg)->prototype);
 }
@@ -18,7 +19,8 @@ V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t proto = v7_array_at(v7, args, 0);
   (void) this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
-    throw_exception(v7, "Object prototype may only be an Object or null");
+    throw_exception(v7, "TypeError",
+                    "Object prototype may only be an Object or null");
   }
   return create_object(v7, proto);
 }
@@ -37,7 +39,8 @@ static val_t _Obj_ownKeys(struct v7 *v7, val_t args, unsigned int ignore_flags) 
   val_t obj = v7_array_at(v7, args, 0);
   val_t res = v7_create_array(v7);
   if (!v7_is_object(obj)) {
-    throw_exception(v7, "Object.keys called on non-object");
+    throw_exception(v7, "TypeError",
+                    "Object.keys called on non-object");
   }
   for (p = val_to_object(obj)->properties; p; p = p->next, i++) {
     if (p->attributes & ignore_flags) {
@@ -128,7 +131,7 @@ V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args)
   (void) this_obj;
 
   if (!v7_is_object(descs)) {
-    throw_exception(v7, "object expected");
+    throw_exception(v7, "TypeError", "object expected");
   }
   for (p = val_to_object(descs)->properties; p; p = p->next) {
     if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {

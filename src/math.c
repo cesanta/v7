@@ -76,4 +76,5 @@ V7_PRIVATE void init_math(struct v7 *v7) {
   v7_set_property(v7, math, "SQRT2", 5, 0, v7_create_number(M_SQRT2));
 
   v7_set_property(v7, v7->global_object, "Math", 4, 0, math);
+  v7_set_property(v7, v7->global_object, "NaN", 3, 0, V7_TAG_NAN);
 }
