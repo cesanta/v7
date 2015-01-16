@@ -163,6 +163,10 @@ static const char *test_stdlib(void) {
   ASSERT((v = v7_exec(v7, "new Boolean([])")) != V7_UNDEFINED);
   ASSERT(check_value(v7, v, "{}"));
 
+  /* Math */
+  ASSERT(!v7_is_error(v7, (v = v7_exec(v7, "Math.sqrt(144)"))));
+  ASSERT(check_value(v7, v, "12"));
+
 #if 0
   /* Number */
 #ifndef _WIN32
@@ -255,10 +259,6 @@ static const char *test_stdlib(void) {
   ASSERT((v = v7_exec(v7, "String('hi')")) != NULL);
   ASSERT(check_str(v7, v, "hi"));
   ASSERT((v = v7_exec(v7, "new String('blah')")) != NULL);
-
-  /* Math */
-  ASSERT((v = v7_exec(v7, "Math.sqrt(144)")) != NULL);
-  ASSERT(check_num(v7, v, 12.0));
 
   /* Regexp */
   ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/; re")) != NULL);

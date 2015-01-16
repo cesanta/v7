@@ -136,6 +136,9 @@ V7_PRIVATE void init_object(struct v7 *v7);
 V7_PRIVATE void init_array(struct v7 *v7);
 V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
+V7_PRIVATE void init_math(struct v7 *v7);
+
+V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 
 V7_PRIVATE val_t v_get_prototype(val_t);
 V7_PRIVATE int is_prototype_of(val_t, val_t);
