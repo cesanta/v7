@@ -696,6 +696,15 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
+static void t_print_error(struct v7 *v7, val_t e) {
+  char buf[512];
+  char *s = v7_to_json(v7, e, buf, sizeof(buf));
+  fprintf(stderr, "%s\n", s);
+  if (s != buf) {
+    free(s);
+  }
+}
+
 static const char *test_ecmac(void) {
   struct ast a;
   int i, passed = 0;
@@ -704,6 +713,7 @@ static const char *test_ecmac(void) {
   char *driver = read_file("ecma_driver.js", &driver_len);
   char *next_case = db - 1;
   struct v7 *v7;
+  val_t res;
 #ifdef ECMA_FORK
   pid_t child;
 #endif
@@ -734,7 +744,11 @@ static const char *test_ecmac(void) {
       if (v7_exec(v7, driver) == V7_UNDEFINED) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
-        if (v7_exec(v7, current_case) == V7_UNDEFINED) {
+        if (v7_is_error(v7, res = v7_exec(v7, current_case))) {
+          fprintf(stderr, "Test %d failed "
+                  "(tail -c +%lu tests/ecmac.db|head -c %lu):\n", i,
+                  current_case - db + 1, next_case - current_case);
+          t_print_error(v7, res);
 #ifdef ECMA_FORK
           exit(1);
 #endif
