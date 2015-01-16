@@ -744,7 +744,8 @@ static const char *test_ecmac(void) {
       if (v7_exec(v7, driver) == V7_UNDEFINED) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
-        if (v7_is_error(v7, res = v7_exec(v7, current_case))) {
+        res = v7_exec(v7, current_case);
+        if (v7_is_error(v7, res)) {
           fprintf(stderr, "Test %d failed "
                   "(tail -c +%lu tests/ecmac.db|head -c %lu):\n", i,
                   current_case - db + 1, next_case - current_case);

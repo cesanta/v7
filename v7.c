@@ -3914,6 +3914,8 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       return V7_TYPE_BOOLEAN;
     case V7_TAG_FUNCTION:
       return V7_TYPE_FUNCTION_OBJECT;
+    case V7_TAG_CFUNCTION:
+      return V7_TYPE_CFUNCTION_OBJECT;
     default:
       /* TODO(mkm): or should we crash? */
       return V7_TYPE_UNDEFINED;
@@ -4625,6 +4627,8 @@ struct v7 *v7_create(void) {
     init_array(v7);
     init_error(v7);
     init_boolean(v7);
+
+    v7->thrown_error = V7_UNDEFINED;
   }
 
   return v7;
@@ -6383,9 +6387,11 @@ V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
+    res = v7->thrown_error;
     goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
+    res = v7->thrown_error;
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
@@ -8336,7 +8342,7 @@ int main(int argc, char *argv[]) {
         free(source_code);
       }
     } else if (v7_is_error(v7, res = v7_exec_file(v7, argv[i]))) {
-      print_error(v7, argv[i + 1], res);
+      print_error(v7, argv[i], res);
       res = V7_UNDEFINED;
     }
   }

@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
         free(source_code);
       }
     } else if (v7_is_error(v7, res = v7_exec_file(v7, argv[i]))) {
-      print_error(v7, argv[i + 1], res);
+      print_error(v7, argv[i], res);
       res = V7_UNDEFINED;
     }
   }
