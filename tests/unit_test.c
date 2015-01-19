@@ -1214,6 +1214,9 @@ static const char *test_interpreter(void) {
   ASSERT(!v7_is_error(v7, v = v7_exec_with(v7, "a=666;(function(a){return a})(this)", v7_create_number(42))));
   ASSERT(check_value(v7, v, "42"));
 
+  ASSERT(!v7_is_error(v7, v = v7_exec(v7, "a='aa', b='bb';(function(){return a + ' ' + b;})()")));
+  ASSERT(check_value(v7, v, "\"aa bb\""));
+
   /* check execution failure caused by bad parsing */
   ASSERT(v7_is_error(v7, v7_exec(v7, "function")));
   return NULL;

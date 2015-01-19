@@ -216,9 +216,10 @@ v7_val_t v7_create_function(struct v7 *v7) {
 
 /* like snprintf but returns `size` if write is truncated */
 static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
+  size_t n;
   va_list ap;
   va_start(ap, fmt);
-  size_t n = vsnprintf(buf, size, fmt, ap);
+  n = vsnprintf(buf, size, fmt, ap);
   if (n > size) {
     return size;
   }
@@ -588,9 +589,8 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len) {
   size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);           /* Calculate how many bytes length takes */
-  mbuf_insert(m, offset, NULL, k);   /* Allocate  buffer for length */
+  mbuf_insert(m, offset, NULL, k + n);   /* Allocate  buffer */
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
-  mbuf_insert(m, offset + k, NULL, n);    /* Reserve space for a string  */
   unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
@@ -652,7 +652,7 @@ V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
 V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   size_t a_len, b_len, offset = v7->owned_strings.len;
   const char *a_ptr, *b_ptr;
-  char *s = v7->owned_strings.buf + offset;
+  char *s = NULL;
   uint64_t tag = V7_TAG_STRING_F;
 
   a_ptr = val_to_string(v7, &a, &a_len);
@@ -666,9 +666,12 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
     s[-1] = a_len + b_len;
     tag = V7_TAG_STRING_I;
   } else {
-    mbuf_append(&v7->owned_strings, NULL, a_len + b_len);
+    int llen = calc_llen(a_len + b_len);
+    mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen);
     /* all pointers might have been relocated */
     s = v7->owned_strings.buf + offset;
+    encode_varint(a_len + b_len, (unsigned char *) s);  /* Write length */
+    s += llen;
     a_ptr = val_to_string(v7, &a, &a_len);
     b_ptr = val_to_string(v7, &b, &b_len);
     tag = V7_TAG_STRING_O;
