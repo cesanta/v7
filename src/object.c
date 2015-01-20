@@ -179,9 +179,9 @@ V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
 
 #endif
 V7_PRIVATE void init_object(struct v7 *v7) {
-  val_t object;
+  val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
-  v7_exec(v7, "function Object() {}");
+  v7_exec(v7, &v, "function Object() {}");
 
   object = v7_property_value(v7_get_property(v7->global_object, "Object", 6));
   v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);

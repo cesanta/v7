@@ -27,6 +27,12 @@ extern "C" {
 
 #define V7_VERSION "1.0"
 
+enum v7_err {
+  V7_OK,
+  V7_SYNTAX_ERROR,
+  V7_EXEC_EXCEPTION
+};
+
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
@@ -39,9 +45,12 @@ typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
 
 struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
 void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
-v7_val_t v7_exec(struct v7 *, const char *str);       /* Execute string */
-v7_val_t v7_exec_file(struct v7 *, const char *path); /* Execute file */
-v7_val_t v7_exec_with(struct v7 *, const char *, v7_val_t); /* Execute string */
+enum v7_err v7_exec(struct v7 *, v7_val_t *,
+                    const char *str); /* Execute string */
+enum v7_err v7_exec_file(struct v7 *, v7_val_t *,
+                    const char *path); /* Execute file */
+enum v7_err v7_exec_with(struct v7 *, v7_val_t *,
+                         const char *str, v7_val_t); /* Execute string with */
 
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);
@@ -542,7 +551,6 @@ struct v7_pstate {
   int inhibit_in;   /* True while `in` expressions are inhibited */
 };
 
-enum v7_err { V7_OK, V7_ERROR, V7_SYNTAX_ERROR };
 V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);
 
 #if defined(__cplusplus)
@@ -744,6 +752,7 @@ struct v7 {
                       __func__, __LINE__, #COND);                       \
   } while (0)
 
+V7_PRIVATE void throw_value(struct v7 *, val_t);
 V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
@@ -4705,7 +4714,9 @@ static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
     if (p[0] == '"') {
       p[0] = p[strlen(p) - 1] = ' ';
     }
-    res = v7_exec(v7, p);
+    if (v7_exec(v7, &res, p) == V7_SYNTAX_ERROR) {
+      throw_value(v7, res);
+    }
     if (p != buf) {
       free(p);
     }
@@ -4845,7 +4856,7 @@ static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
     next_tok(v7);
     return V7_OK;
   }
-  return V7_ERROR;
+  return V7_SYNTAX_ERROR;
 }
 
 static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
@@ -4892,7 +4903,7 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
     } else if (v7->cur_tok == TOK_STRING_LITERAL) {
       ast_add_inlined_node(a, AST_PROP, v7->tok + 1, v7->tok_len - 2);
     } else {
-      return V7_ERROR;
+      return V7_SYNTAX_ERROR;
     }
     next_tok(v7);
     EXPECT(TOK_COLON);
@@ -5022,7 +5033,7 @@ static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
         ast_insert_inlined_node(a, pos, AST_MEMBER, v7->tok, v7->tok_len);
         next_tok(v7);
       } else {
-        return V7_ERROR;
+        return V7_SYNTAX_ERROR;
       }
       break;
     case TOK_OPEN_BRACKET:
@@ -5233,7 +5244,7 @@ static enum v7_err end_of_statement(struct v7 *v7) {
       v7->after_newline) {
     return V7_OK;
   }
-  return V7_ERROR;
+  return V7_SYNTAX_ERROR;
 }
 
 static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
@@ -5384,7 +5395,7 @@ static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
         ast_set_skip(a, case_start, AST_END_SKIP);
         break;
       default:
-        return V7_ERROR;
+        return V7_SYNTAX_ERROR;
     }
   }
   EXPECT(TOK_CLOSE_CURLY);
@@ -5510,9 +5521,9 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   ast_off_t outer_last_var_node = v7->last_var_node;
   v7->last_var_node = start;
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-  if (parse_ident(v7, a) == V7_ERROR) {
+  if (parse_ident(v7, a) == V7_SYNTAX_ERROR) {
     if (require_named) {
-      return V7_ERROR;
+      return V7_SYNTAX_ERROR;
     }
     ast_add_node(a, AST_NOP);
   }
@@ -5627,9 +5638,9 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   snprintf(js, sizeof(js), "new %s(this)", type);
-  e = v7_exec_with(v7, "new ReferenceError(this)",
-                   v7_string_to_value(v7, v7->error_msg,
-                                      strlen(v7->error_msg), 1));
+  v7_exec_with(v7, &e, "new ReferenceError(this)",
+               v7_string_to_value(v7, v7->error_msg,
+                                  strlen(v7->error_msg), 1));
   throw_value(v7, e);
 }  /* LCOV_EXCL_LINE */
 
@@ -6505,13 +6516,15 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_undefined();
 }
 
-val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
+enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
-  val_t res = V7_UNDEFINED, old_this = v7->this_object;
+  val_t old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
   jmp_buf saved_jmp_buf, saved_abort_buf;
+  enum v7_err err = V7_OK;
+  *res = V7_UNDEFINED;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
@@ -6519,41 +6532,45 @@ val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
-    res = v7->thrown_error;
+    *res = v7->thrown_error;
+    err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
-    res = v7->thrown_error;
+    *res = v7->thrown_error;
+    err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
-    res = v7_exec_with(v7, "new SyntaxError(this)",
-                       v7_string_to_value(v7, v7->error_msg,
-                                          strlen(v7->error_msg), 1));
+    v7_exec_with(v7, res, "new SyntaxError(this)",
+                 v7_string_to_value(v7, v7->error_msg,
+                                    strlen(v7->error_msg), 1));
+    err = V7_SYNTAX_ERROR;
     goto cleanup;
   }
   ast_optimize(a);
 
   v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
-  res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
+  *res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
   v7->this_object = old_this;
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&v7->abort_jmp_buf, &saved_abort_buf, sizeof(saved_abort_buf));
 
-  return res;
+  return err;
 }
 
-val_t v7_exec(struct v7 *v7, const char* src) {
-  return v7_exec_with(v7, src, V7_UNDEFINED);
+enum v7_err v7_exec(struct v7 *v7, val_t *res, const char* src) {
+  return v7_exec_with(v7, res, src, V7_UNDEFINED);
 }
 
-val_t v7_exec_file(struct v7 *v7, const char *path) {
+enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   FILE *fp;
   char *p;
   long file_size;
-  val_t res = V7_UNDEFINED;
+  enum v7_err err = V7_OK;
+  *res = V7_UNDEFINED;
 
   if ((fp = fopen(path, "r")) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]", path);
@@ -6566,11 +6583,11 @@ val_t v7_exec_file(struct v7 *v7, const char *path) {
     rewind(fp);
     fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
-    res = v7_exec(v7, p);
+    err = v7_exec(v7, res, p);
     free(p);
   }
 
-  return res;
+  return err;
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -8332,9 +8349,9 @@ V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
 
 #endif
 V7_PRIVATE void init_object(struct v7 *v7) {
-  val_t object;
+  val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
-  v7_exec(v7, "function Object() {}");
+  v7_exec(v7, &v, "function Object() {}");
 
   object = v7_property_value(v7_get_property(v7->global_object, "Object", 6));
   v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);
@@ -8361,14 +8378,15 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 
 
 V7_PRIVATE void init_error(struct v7 *v7) {
-  v7_exec(v7, "function Error(m) {this.message = m}");
-  v7_exec(v7, "function TypeError(m) {this.message = m};"
+  val_t v;
+  v7_exec(v7, &v, "function Error(m) {this.message = m}");
+  v7_exec(v7, &v, "function TypeError(m) {this.message = m};"
             "TypeError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, "function SyntaxError(m) {this.message = m};"
+  v7_exec(v7, &v, "function SyntaxError(m) {this.message = m};"
             "SyntaxError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, "function ReferenceError(m) {this.message = m};"
+  v7_exec(v7, &v, "function ReferenceError(m) {this.message = m};"
             "ReferenceError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, "function ImplementationError(m) {this.message = m};"
+  v7_exec(v7, &v, "function ImplementationError(m) {this.message = m};"
             "ReferenceError.prototype = Object.create(Error.prototype)");
 
   v7->error_prototype = v7_property_value(v7_get_property(
@@ -8443,7 +8461,7 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
         dump_ast(v7, argv[i + 1], binary_ast);
-      } else if (v7_is_error(v7, res = v7_exec(v7, argv[i + 1]))) {
+      } else if (v7_exec(v7, &res, argv[i + 1]) != V7_OK) {
         print_error(v7, argv[i + 1], res);
         res = V7_UNDEFINED;
       }
@@ -8473,7 +8491,7 @@ int main(int argc, char *argv[]) {
         dump_ast(v7, source_code, binary_ast);
         free(source_code);
       }
-    } else if (v7_is_error(v7, res = v7_exec_file(v7, argv[i]))) {
+    } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {
       print_error(v7, argv[i], res);
       res = V7_UNDEFINED;
     }

@@ -21,7 +21,6 @@ struct v7_pstate {
   int inhibit_in;   /* True while `in` expressions are inhibited */
 };
 
-enum v7_err { V7_OK, V7_ERROR, V7_SYNTAX_ERROR };
 V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);
 
 #if defined(__cplusplus)

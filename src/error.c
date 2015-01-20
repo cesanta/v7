@@ -7,14 +7,15 @@
 
 
 V7_PRIVATE void init_error(struct v7 *v7) {
-  v7_exec(v7, "function Error(m) {this.message = m}");
-  v7_exec(v7, "function TypeError(m) {this.message = m};"
+  val_t v;
+  v7_exec(v7, &v, "function Error(m) {this.message = m}");
+  v7_exec(v7, &v, "function TypeError(m) {this.message = m};"
             "TypeError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, "function SyntaxError(m) {this.message = m};"
+  v7_exec(v7, &v, "function SyntaxError(m) {this.message = m};"
             "SyntaxError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, "function ReferenceError(m) {this.message = m};"
+  v7_exec(v7, &v, "function ReferenceError(m) {this.message = m};"
             "ReferenceError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, "function ImplementationError(m) {this.message = m};"
+  v7_exec(v7, &v, "function ImplementationError(m) {this.message = m};"
             "ReferenceError.prototype = Object.create(Error.prototype)");
 
   v7->error_prototype = v7_property_value(v7_get_property(
