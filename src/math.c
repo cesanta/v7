@@ -21,38 +21,38 @@ V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE val_t Math_sin(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   (void) this_obj;
-  return v7_create_number(sin(val_to_double(arg0)));
+  return v7_create_number(sin(v7_to_double(arg0)));
 }
 
 V7_PRIVATE val_t Math_sqrt(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   (void) this_obj;
-  return v7_create_number(sqrt(val_to_double(arg0)));
+  return v7_create_number(sqrt(v7_to_double(arg0)));
 }
 
 V7_PRIVATE val_t Math_tan(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   (void) this_obj;
-  return v7_create_number(tan(val_to_double(arg0)));
+  return v7_create_number(tan(v7_to_double(arg0)));
 }
 
 V7_PRIVATE val_t Math_pow(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = v7_array_at(v7, args, 0);
   (void) this_obj;
-  return v7_create_number(pow(val_to_double(arg0), val_to_double(arg1)));
+  return v7_create_number(pow(v7_to_double(arg0), v7_to_double(arg1)));
 }
 
 V7_PRIVATE val_t Math_floor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   (void) this_obj;
-  return v7_create_number(floor(val_to_double(arg0)));
+  return v7_create_number(floor(v7_to_double(arg0)));
 }
 
 V7_PRIVATE val_t Math_ceil(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   (void) this_obj;
-  return v7_create_number(ceil(val_to_double(arg0)));
+  return v7_create_number(ceil(v7_to_double(arg0)));
 }
 
 V7_PRIVATE void init_math(struct v7 *v7) {

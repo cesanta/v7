@@ -130,7 +130,7 @@ static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void) this_obj;
   for (i = 0; i < v7_array_length(v7, args); i++) {
-    sum += val_to_double(v7_array_at(v7, args, i));
+    sum += v7_to_double(v7_array_at(v7, args, i));
   }
   return v7_double_to_value(sum);
 }
@@ -322,16 +322,16 @@ static const char *test_runtime(void) {
 
   v = v7_create_number(1.0);
   ASSERT(val_type(v7, v) == V7_TYPE_NUMBER);
-  ASSERT(val_to_double(v) == 1.0);
+  ASSERT(v7_to_double(v) == 1.0);
   ASSERT(check_value(v7, v, "1"));
 
   v = v7_create_number(1.5);
-  ASSERT(val_to_double(v) == 1.5);
+  ASSERT(v7_to_double(v) == 1.5);
   ASSERT(check_value(v7, v, "1.5"));
 
   v = v7_create_boolean(1);
   ASSERT(val_type(v7, v) == V7_TYPE_BOOLEAN);
-  ASSERT(val_to_boolean(v) == 1);
+  ASSERT(v7_to_boolean(v) == 1);
   ASSERT(check_value(v7, v, "true"));
 
   v = v7_create_boolean(0);
@@ -339,15 +339,15 @@ static const char *test_runtime(void) {
 
   v = v7_create_string(v7, "foo", 3, 1);
   ASSERT(val_type(v7, v) == V7_TYPE_STRING);
-  val_to_string(v7, &v, &n);
+  v7_to_string(v7, &v, &n);
   ASSERT(n == 3);
   ASSERT(check_value(v7, v, "\"foo\""));
 
   v = v7_create_object(v7);
   ASSERT(val_type(v7, v) == V7_TYPE_GENERIC_OBJECT);
-  ASSERT(val_to_object(v) != NULL);
-  ASSERT(val_to_object(v)->prototype != NULL);
-  ASSERT(val_to_object(v)->prototype->prototype == NULL);
+  ASSERT(v7_to_object(v) != NULL);
+  ASSERT(v7_to_object(v)->prototype != NULL);
+  ASSERT(v7_to_object(v)->prototype->prototype == NULL);
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_null()) == 0);
   ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
@@ -370,7 +370,7 @@ static const char *test_runtime(void) {
   ASSERT(check_value(v7, p->value, "\"zar\""));
 
   ASSERT(v7_del_property(v, "foo", ~0) == 0);
-  ASSERT(val_to_object(v)->properties == NULL);
+  ASSERT(v7_to_object(v)->properties == NULL);
   ASSERT(v7_del_property(v, "foo", -1) == -1);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
          v7_create_string(v7, "bar", 3, 1)) == 0);

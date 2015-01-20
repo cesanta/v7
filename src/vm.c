@@ -18,10 +18,10 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_UNDEFINED:
       return V7_TYPE_UNDEFINED;
     case V7_TAG_OBJECT:
-      if (val_to_object(v)->prototype == val_to_object(v7->array_prototype)) {
+      if (v7_to_object(v)->prototype == v7_to_object(v7->array_prototype)) {
         return V7_TYPE_ARRAY_OBJECT;
-      } else if (val_to_object(v)->prototype ==
-                 val_to_object(v7->boolean_prototype)) {
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->boolean_prototype)) {
         return V7_TYPE_BOOLEAN_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
@@ -43,7 +43,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
 }
 
 int v7_is_double(val_t v) {
-  return v == V7_TAG_NAN || !isnan(val_to_double(v));
+  return v == V7_TAG_NAN || !isnan(v7_to_double(v));
 }
 
 int v7_is_object(val_t v) {
@@ -85,7 +85,7 @@ V7_PRIVATE val_t v7_pointer_to_value(void *p) {
   return ((uint64_t) p & ((1L << 48) -1));
 }
 
-V7_PRIVATE void *val_to_pointer(val_t v) {
+V7_PRIVATE void *v7_to_pointer(val_t v) {
   struct {
     uint64_t s:48;
   } h;
@@ -99,20 +99,20 @@ val_t v7_object_to_value(struct v7_object *o) {
   return v7_pointer_to_value(o) | V7_TAG_OBJECT;
 }
 
-struct v7_object *val_to_object(val_t v) {
-  return (struct v7_object *) val_to_pointer(v);
+struct v7_object *v7_to_object(val_t v) {
+  return (struct v7_object *) v7_to_pointer(v);
 }
 
 val_t v7_function_to_value(struct v7_function *o) {
   return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
 }
 
-struct v7_function *val_to_function(val_t v) {
-  return (struct v7_function *) val_to_pointer(v);
+struct v7_function *v7_to_function(val_t v) {
+  return (struct v7_function *) v7_to_pointer(v);
 }
 
-v7_cfunction_t val_to_cfunction(val_t v) {
-  return (v7_cfunction_t) val_to_pointer(v);
+v7_cfunction_t v7_to_cfunction(val_t v) {
+  return (v7_cfunction_t) v7_to_pointer(v);
 }
 
 val_t v7_cfunction_to_value(v7_cfunction_t f) {
@@ -125,15 +125,15 @@ val_t v7_foreign_to_value(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
-void *val_to_foreign(val_t v) {
-  return val_to_pointer(v);
+void *v7_to_foreign(val_t v) {
+  return v7_to_pointer(v);
 }
 
 val_t v7_boolean_to_value(int v) {
   return (!!v) | V7_TAG_BOOLEAN;
 }
 
-int val_to_boolean(val_t v) {
+int v7_to_boolean(val_t v) {
   return v & 1;
 }
 
@@ -148,12 +148,12 @@ val_t v7_double_to_value(double v) {
   return res;
 }
 
-double val_to_double(val_t v) {
+double v7_to_double(val_t v) {
   return * (double *) &v;
 }
 
 V7_PRIVATE val_t v_get_prototype(val_t obj) {
-  return v7_object_to_value(val_to_object(obj)->prototype);
+  return v7_object_to_value(v7_to_object(obj)->prototype);
 }
 
 V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
@@ -164,7 +164,7 @@ V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   }
   (void) v7;
   o->properties = NULL;
-  o->prototype = val_to_object(prototype);
+  o->prototype = v7_to_object(prototype);
   return v7_object_to_value(o);
 }
 
@@ -244,20 +244,20 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       return stpncpy(buf, "undefined", size) - buf;
     case V7_TYPE_BOOLEAN:
       return stpncpy(buf,
-                     val_to_boolean(v) ? "true" : "false", size) - buf;
+                     v7_to_boolean(v) ? "true" : "false", size) - buf;
     case V7_TYPE_NUMBER:
       if (v == V7_TAG_NAN) {
         return v_sprintf_s(buf, size, "NaN");
       }
-      return v_sprintf_s(buf, size, "%lg", val_to_double(v));
+      return v_sprintf_s(buf, size, "%lg", v7_to_double(v));
     case V7_TYPE_STRING:
       {
         size_t n;
-        const char *str = val_to_string(v7, &v, &n);
+        const char *str = v7_to_string(v7, &v, &n);
         return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
       }
     case V7_TYPE_CFUNCTION_OBJECT:
-      return v_sprintf_s(buf, size, "cfunc_%p", val_to_pointer(v));
+      return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
@@ -270,7 +270,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         struct v7_property *p;
         mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
         b += v_sprintf_s(b, size - (b - buf), "{");
-        for (p = val_to_object(v)->properties;
+        for (p = v7_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
@@ -312,7 +312,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char *name;
         size_t name_len;
         char *b = buf;
-        struct v7_function *func = val_to_function(v);
+        struct v7_function *func = v7_to_function(v);
         ast_off_t end, body, var, var_end, start, pos = func->ast_off;
         struct ast *a = func->ast;
 
@@ -397,7 +397,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
                        size_t size) {
   if (v7_is_string(v)) {
     size_t n;
-    const char *str = val_to_string(v7, &v, &n);
+    const char *str = v7_to_string(v7, &v, &n);
     if (n >= size) {
       n = size - 1;
     }
@@ -423,7 +423,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name, 
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  for (prop = val_to_object(obj)->properties; prop != NULL;
+  for (prop = v7_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
     if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
       return prop;
@@ -432,8 +432,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name, 
   return NULL;
 }
 
-struct v7_property *v7_get_property(val_t obj, const char *name,
-                                    size_t len) {
+struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
   if (!v7_is_object(obj)) {
     return NULL;
   }
@@ -444,6 +443,11 @@ struct v7_property *v7_get_property(val_t obj, const char *name,
     }
   }
   return NULL;
+}
+
+v7_val_t v7_get(val_t obj, const char *name, size_t name_len) {
+  struct v7_property *prop = v7_get_property(obj, name, name_len);
+  return prop == NULL ? V7_UNDEFINED : prop->value;
 }
 
 static void v7_destroy_property(struct v7_property **p) {
@@ -465,8 +469,8 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */
     }
-    prop->next = val_to_object(obj)->properties;
-    val_to_object(obj)->properties = prop;
+    prop->next = v7_to_object(obj)->properties;
+    v7_to_object(obj)->properties = prop;
   }
 
   prop->attributes = attributes;
@@ -490,13 +494,13 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
-  for (prev = NULL, prop = val_to_object(obj)->properties; prop != NULL;
+  for (prev = NULL, prop = v7_to_object(obj)->properties; prop != NULL;
        prev = prop, prop = prop->next) {
     if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
       if (prev) {
         prev->next = prop->next;
       } else {
-        val_to_object(obj)->properties = prop->next;
+        v7_to_object(obj)->properties = prop->next;
       }
       v7_destroy_property(&prop);
       return 0;
@@ -525,7 +529,7 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
     return -1;
   }
-  for (p = val_to_object(v)->properties; p != NULL; p = p->next) {
+  for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     k = strtol(p->name, &end, 10);
     if (end != p->name && k > max) {
       max = k;
@@ -617,7 +621,7 @@ val_t v7_string_to_value(struct v7 *v7, const char *p, size_t len, int own) {
 }
 
 /* Get a pointer to string and string length */
-const char *val_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
+const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
   char *p;
   int llen;
@@ -628,7 +632,7 @@ const char *val_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   } else {
     struct mbuf *m = (tag == V7_TAG_STRING_O) ?
       &v7->owned_strings : &v7->foreign_strings;
-    size_t offset = (size_t) val_to_pointer(*v);
+    size_t offset = (size_t) v7_to_pointer(*v);
     char *s = m->buf + offset;
 
     *sizep = decode_varint((uint8_t *) s, &llen);
@@ -642,8 +646,8 @@ V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   size_t a_len, b_len;
   const char *a_ptr, *b_ptr;
 
-  a_ptr = val_to_string(v7, &a, &a_len);
-  b_ptr = val_to_string(v7, &b, &b_len);
+  a_ptr = v7_to_string(v7, &a, &a_len);
+  b_ptr = v7_to_string(v7, &b, &b_len);
 
   /* TODO(lsm): fix this */
   return memcmp(a_ptr, b_ptr, a_len < b_len ? a_len : b_len);
@@ -655,8 +659,8 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   char *s = NULL;
   uint64_t tag = V7_TAG_STRING_F;
 
-  a_ptr = val_to_string(v7, &a, &a_len);
-  b_ptr = val_to_string(v7, &b, &b_len);
+  a_ptr = v7_to_string(v7, &a, &a_len);
+  b_ptr = v7_to_string(v7, &b, &b_len);
 
   /* Create a new string which is a concatenation a + b */
   if (a_len + b_len <= 5) {
@@ -672,8 +676,8 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
     s = v7->owned_strings.buf + offset;
     encode_varint(a_len + b_len, (unsigned char *) s);  /* Write length */
     s += llen;
-    a_ptr = val_to_string(v7, &a, &a_len);
-    b_ptr = val_to_string(v7, &b, &b_len);
+    a_ptr = v7_to_string(v7, &a, &a_len);
+    b_ptr = v7_to_string(v7, &b, &b_len);
     tag = V7_TAG_STRING_O;
   }
   memcpy(s, a_ptr, a_len);
@@ -684,7 +688,7 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, size_t start, size_t len) {
   size_t n;
-  const char *p = val_to_string(v7, &s, &n);
+  const char *p = v7_to_string(v7, &s, &n);
   if (len > n) len = n;   /* boundary check */
   if (start > n) start = n;
   /* TODO(lsm): if the substring len <= 5 bytes, inline into val_t */
@@ -714,8 +718,8 @@ V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
   }
-  proto = val_to_object(p);
-  for (obj = val_to_object(o); obj; obj = obj->prototype) {
+  proto = v7_to_object(p);
+  for (obj = v7_to_object(o); obj; obj = obj->prototype) {
     if (obj->prototype == proto) {
       return 1;
     }
@@ -742,9 +746,9 @@ static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
 
 int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
-  return ((v7_is_boolean(v) && val_to_boolean(v)) ||
-         (v7_is_double(v) && val_to_double(v) != 0.0 ) ||
-         (v7_is_string(v) && val_to_string(v7, &v, &len) && len > 0) ||
+  return ((v7_is_boolean(v) && v7_to_boolean(v)) ||
+         (v7_is_double(v) && v7_to_double(v) != 0.0 ) ||
+         (v7_is_string(v) && v7_to_string(v7, &v, &len) && len > 0) ||
          (v7_is_object(v))) && v != V7_TAG_NAN;
 }
 

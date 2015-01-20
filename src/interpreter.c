@@ -52,7 +52,7 @@ static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
       size_t n;
-      char buf[20], *s = (char *) val_to_string(v7, &v, &n);
+      char buf[20], *s = (char *) v7_to_string(v7, &v, &n);
       snprintf(buf, sizeof(buf), "%.*s", (int) n, s);
       buf[sizeof(buf) - 1] = '\0';
       return strtod(buf, NULL);
@@ -61,9 +61,9 @@ static double i_as_num(struct v7 *v7, val_t v) {
     }
   } else {
     if(v7_is_boolean(v)) {
-      return (double) val_to_boolean(v);
+      return (double) v7_to_boolean(v);
     }
-    return val_to_double(v);
+    return v7_to_double(v);
   }
 }
 
@@ -381,8 +381,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_FUNC:
       {
         val_t func = v7_create_function(v7);
-        struct v7_function *funcp = val_to_function(func);
-        funcp->scope = val_to_object(scope);
+        struct v7_function *funcp = v7_to_function(func);
+        funcp->scope = v7_to_object(scope);
         funcp->ast = a;
         funcp->ast_off = *pos - 1;
         ast_move_to_children(a, pos);
@@ -569,19 +569,19 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property(v7, args, buf, n, 0, res);
     }
-    return val_to_cfunction(v1)(v7, this_object, args);
+    return v7_to_cfunction(v1)(v7, this_object, args);
   } if (!v7_is_function(v1)) {
     throw_exception(v7, "TypeError", "%s", "value is not a function"); /* LCOV_EXCL_LINE */
   }
 
-  func = val_to_function(v1);
+  func = v7_to_function(v1);
   if (is_constructor) {
     val_t fun_proto = v7_property_value(v7_get_property(v1, "prototype", 9));
     if (!v7_is_object(fun_proto)) {
       /* TODO(mkm): box primitive value */
       throw_exception(v7, "TypeError", "Cannot set a primitive value as object prototype");
     }
-    val_to_object(this_object)->prototype = val_to_object(fun_proto);
+    v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
   }
   fpos = func->ast_off;
   fstart = fpos;
@@ -595,7 +595,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   fargs = fpos;
 
   frame = v7_create_object(v7);
-  val_to_object(frame)->prototype = func->scope;
+  v7_to_object(frame)->prototype = func->scope;
   /* populate the call frame with a property for each local variable */
   if (fvar != fstart) {
     ast_off_t next;
@@ -812,7 +812,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         ast_skip_tree(a, pos);
         loop = *pos;
 
-        for (p = val_to_object(obj)->properties; p; p = p->next, *pos = loop) {
+        for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
           }
@@ -920,7 +920,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_undefined();
 }
 
-V7_PRIVATE val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
+val_t v7_exec_with(struct v7 *v7, const char* src, val_t w) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t res = V7_UNDEFINED, old_this = v7->this_object;
@@ -960,7 +960,7 @@ cleanup:
   return res;
 }
 
-V7_PRIVATE val_t v7_exec(struct v7 *v7, const char* src) {
+val_t v7_exec(struct v7 *v7, const char* src) {
   return v7_exec_with(v7, src, V7_UNDEFINED);
 }
 

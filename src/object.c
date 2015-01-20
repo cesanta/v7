@@ -12,7 +12,7 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, "TypeError",
                     "Object.getPrototypeOf called on non-object");
   }
-  return v7_object_to_value(val_to_object(arg)->prototype);
+  return v7_object_to_value(v7_to_object(arg)->prototype);
 }
 
 V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
@@ -42,7 +42,7 @@ static val_t _Obj_ownKeys(struct v7 *v7, val_t args, unsigned int ignore_flags) 
     throw_exception(v7, "TypeError",
                     "Object.keys called on non-object");
   }
-  for (p = val_to_object(obj)->properties; p; p = p->next, i++) {
+  for (p = v7_to_object(obj)->properties; p; p = p->next, i++) {
     if (p->attributes & ignore_flags) {
       continue;
     }
@@ -133,7 +133,7 @@ V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args)
   if (!v7_is_object(descs)) {
     throw_exception(v7, "TypeError", "object expected");
   }
-  for (p = val_to_object(descs)->properties; p; p = p->next) {
+  for (p = v7_to_object(descs)->properties; p; p = p->next) {
     if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
       continue;
     }
