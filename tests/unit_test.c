@@ -396,6 +396,17 @@ static const char *test_runtime(void) {
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v) == 0);
   ASSERT(check_value(v7, v, "{\"foo\":[Circular]}"));
 
+  v = v7_create_object(v7);
+  ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_DONT_DELETE, v7_create_number(1.0)) == 0);
+  ASSERT(check_value(v7, v, "{\"foo\":1}"));
+  ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) == 0);
+  ASSERT(check_value(v7, v, "{\"foo\":2}"));
+  ASSERT(v7_to_double(v7_get(v, "foo", -1)) == 2.0);
+  ASSERT(v7_get_property(v, "foo", -1)->attributes & V7_PROPERTY_DONT_DELETE);
+  ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY, v7_create_number(1.0)) == 0);
+  ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) != 0);
+  ASSERT(check_value(v7, v, "{\"foo\":1}"));
+
   v7_destroy(v7);
   return NULL;
 }

@@ -462,6 +462,14 @@ static void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
+int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
+  struct v7_property *p = v7_get_own_property(obj, name, len);
+  if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
+    return v7_set_property(v7, obj, name, len, p->attributes, val);
+  }
+  return -1;
+}
+
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
                     unsigned int attributes, v7_val_t val) {
   struct v7_property *prop;
