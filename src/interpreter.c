@@ -786,7 +786,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
         *pos = loop;
       }
-      break;
+      return res;
     case AST_FOR:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       iter_end = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
