@@ -13,8 +13,7 @@ int main(void) {
   v7_val_t domain, port0, config;
 
   /* Load JSON configuration */
-  config = v7_exec_file(v7, "config.json");
-  if (v7_is_undefined(config)) {
+  if (v7_exec_file(v7, &config, "config.json") != V7_OK) {
     printf("%s\n", "Cannot load JSON config");
     return 1;
   }

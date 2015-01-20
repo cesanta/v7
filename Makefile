@@ -11,6 +11,7 @@ include src/sources.mk
 .PHONY: cpplint
 
 all: v7 amalgamated_v7
+	@$(MAKE) -C examples
 	@$(MAKE) -C tests
 
 v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
@@ -53,6 +54,7 @@ w: v7.c
 
 clean:
 	@$(MAKE) -C tests clean
+	@$(MAKE) -C examples clean
 	rm -rf *.gc* *.dSYM *.exe *.obj *.pdb a.out u unit_test v7 amalgamated_v7 t
 
 setup-hooks:
