@@ -52,7 +52,19 @@ v7_val_t v7_create_null(void);
 v7_val_t v7_create_undefined(void);
 v7_val_t v7_create_string(struct v7 *v7, const char *, size_t, int);
 
+void *v7_to_foreign(v7_val_t);
+int v7_to_boolean(v7_val_t);
+double v7_to_double(v7_val_t);
+v7_cfunction_t v7_to_cfunction(v7_val_t);
+const char *v7_to_string(struct v7 *, v7_val_t *, size_t *);
+
 v7_val_t v7_get_global_object(struct v7 *);
+
+/*
+ * TODO(lsm): rename either to v7_get_property(), or
+ * rename v7_set_property() to v7_set()
+ */
+v7_val_t v7_get(v7_val_t obj, const char *name, size_t);
 int v7_set_property(struct v7 *, v7_val_t obj, const char *name, size_t len,
                     unsigned int attributes, v7_val_t val);
 char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);

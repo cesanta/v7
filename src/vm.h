@@ -124,13 +124,8 @@ val_t v7_boolean_to_value(int);
 val_t v7_double_to_value(double);
 val_t v7_cfunction_to_value(v7_cfunction_t);
 
-struct v7_object *val_to_object(val_t);
-struct v7_function *val_to_function(val_t);
-void *val_to_foreign(val_t);
-int val_to_boolean(val_t);
-double val_to_double(val_t);
-v7_cfunction_t val_to_cfunction(val_t);
-const char *val_to_string(struct v7 *, val_t *, size_t *);
+struct v7_object *v7_to_object(val_t);
+struct v7_function *v7_to_function(val_t);
 
 V7_PRIVATE void init_object(struct v7 *v7);
 V7_PRIVATE void init_array(struct v7 *v7);

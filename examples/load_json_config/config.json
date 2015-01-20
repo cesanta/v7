@@ -1,0 +1,4 @@
+config = {
+  ports: [ 80, 8080 ],
+  domain: "foo.com"
+}
