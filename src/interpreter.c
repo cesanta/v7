@@ -831,8 +831,9 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v7_set_property(v7, v7->global_object, name, name_len, 0, key);
           }
 
-          res = i_eval_stmts(v7, a, pos, end, scope, brk);
-          switch (*brk) {
+          /* for some reason lcov doesn't mark the following lines executing */
+          res = i_eval_stmts(v7, a, pos, end, scope, brk); /* LCOV_EXCL_LINE */
+          switch (*brk) {  /* LCOV_EXCL_LINE */
             case B_RUN:
               break;
             case B_CONTINUE:
@@ -846,6 +847,45 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           }
         }
         *pos = end;
+        return res;
+      }
+    case AST_CASE:
+      /* handle fallthroughs */
+      ast_move_to_children(a, pos);
+      ast_skip_tree(a, pos);
+      break;
+    case AST_SWITCH:
+      {
+        val_t test, val;
+        ast_off_t case_end;
+        end = ast_get_skip(a, *pos, AST_END_SKIP);
+        ast_move_to_children(a, pos);
+        test = i_eval_expr(v7, a, pos, scope);
+        while (*pos < end) {
+          V7_CHECK(v7, ast_fetch_tag(a, pos) == AST_CASE);
+          case_end = ast_get_skip(a, *pos, AST_END_SKIP);
+          ast_move_to_children(a, pos);
+          val = i_eval_expr(v7, a, pos, scope);
+          /* TODO(mkm): factor out equality check from eval_expr */
+          if (test == val) {
+            /* for some reason lcov doesn't mark the following lines as executing */
+            res = i_eval_stmts(v7, a, pos, end, scope, /* LCOV_EXCL_LINE */
+                               brk);
+            switch (*brk) {  /* LCOV_EXCL_LINE */
+              case B_CONTINUE:
+              case B_RUN:
+                *pos = case_end;
+                break;
+              case B_BREAK:
+                *brk = B_RUN;  /* fall through */
+              case B_RETURN:
+                *pos = end;
+                break;
+            }
+          } else {
+            *pos = case_end;
+          }
+        }
         return res;
       }
     case AST_TRY:
