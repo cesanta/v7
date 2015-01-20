@@ -206,7 +206,8 @@ int nextesc(const char **p) {
     case '\\':
       return '\\';
     case 'u':
-      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) && isxdigit(s[4])) {
+      if (isxdigit(s[1]) && isxdigit(s[2]) &&
+          isxdigit(s[3]) && isxdigit(s[4])) {
         (*p) += 4;
         return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
       }

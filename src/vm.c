@@ -116,7 +116,10 @@ v7_cfunction_t v7_to_cfunction(val_t v) {
 }
 
 val_t v7_cfunction_to_value(v7_cfunction_t f) {
-  union { void *p; v7_cfunction_t f; } u;
+  union {
+    void *p;
+    v7_cfunction_t f;
+  } u;
   u.f = f;
   return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
@@ -202,7 +205,8 @@ v7_val_t v7_create_array(struct v7 *v7) {
 
 v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): use GC heap */
-  struct v7_function *f = (struct v7_function *) malloc(sizeof(struct v7_function));
+  struct v7_function *f = (struct v7_function *) malloc(
+      sizeof(struct v7_function));
   val_t fval = v7_function_to_value(f);
   if (f == NULL) {
     return V7_NULL;
@@ -361,7 +365,8 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
               ast_move_to_children(a, &var);
               ast_skip_tree(a, &var);
 
-              b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
+              b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len,
+                               name);
               if (var < var_end || next) {
                 b += v_sprintf_s(b, size - (b - buf), ",");
               }
@@ -415,7 +420,8 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name, size_t len) {
+V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name,
+                                                   size_t len) {
   struct v7_property *prop;
   if (len == (size_t) ~0) {
     len = strlen(name);
@@ -585,7 +591,6 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
   }
 
   return n;
-
 }
 
 /* Insert a string into mbuf at specified offset */

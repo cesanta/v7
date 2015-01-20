@@ -32,7 +32,8 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 
-static val_t _Obj_ownKeys(struct v7 *v7, val_t args, unsigned int ignore_flags) {
+static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
+                          unsigned int ignore_flags) {
   struct v7_property *p;
   char buf[20];
   int i = 0;
@@ -66,12 +67,14 @@ V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
-V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
+                                         val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
-V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
+                                              val_t args) {
   struct v7_property *prop;
   val_t obj = v7_array_at(v7, args, 0);
   val_t name = v7_array_at(v7, args, 1);
@@ -124,7 +127,8 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
 
-V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   struct v7_property *p;
   val_t obj = v7_array_at(v7, args, 0);
   val_t descs = v7_array_at(v7, args, 1);
