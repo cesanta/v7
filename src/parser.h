@@ -19,6 +19,9 @@ struct v7_pstate {
   int line_no;    /* Line number */
   int prev_line_no; /* Line number of previous token */
   int inhibit_in;   /* True while `in` expressions are inhibited */
+  int in_function;  /* True if in a function */
+  int in_loop;      /* True if in a loop */
+  int in_switch;    /* True if in a switch block */
 };
 
 V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);

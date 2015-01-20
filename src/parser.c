@@ -85,6 +85,7 @@ static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
 
 static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   ast_off_t start;
+  int saved_in_function = v7->pstate.in_function;
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
       lookahead(v7) != TOK_COLON) {
@@ -93,7 +94,9 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
     PARSE(ident_allow_reserved_words);
     EXPECT(TOK_OPEN_PAREN);
     EXPECT(TOK_CLOSE_PAREN);
+    v7->pstate.in_function = 1;
     PARSE(block);
+    v7->pstate.in_function = saved_in_function;
     ast_set_skip(a, start, AST_END_SKIP);
   } else if (v7->cur_tok == TOK_IDENTIFIER &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
@@ -104,7 +107,9 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
     EXPECT(TOK_OPEN_PAREN);
     PARSE(ident);
     EXPECT(TOK_CLOSE_PAREN);
+    v7->pstate.in_function = 1;
     PARSE(block);
+    v7->pstate.in_function = saved_in_function;
     ast_set_skip(a, start, AST_END_SKIP);
   } else {
     /* Allow reserved words as property names. */
@@ -503,17 +508,23 @@ static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
 
 static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_WHILE);
+  int saved_in_loop = v7->pstate.in_loop;
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
+  v7->pstate.in_loop = 1;
   PARSE(statement);
   ast_set_skip(a, start, AST_END_SKIP);
+  v7->pstate.in_loop = saved_in_loop;
   return V7_OK;
 }
 
 static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_DOWHILE);
+  int saved_in_loop = v7->pstate.in_loop;
+  v7->pstate.in_loop = 1;
   PARSE(statement);
+  v7->pstate.in_loop = saved_in_loop;
   ast_set_skip(a, start, AST_DO_WHILE_COND_SKIP);
   EXPECT(TOK_WHILE);
   EXPECT(TOK_OPEN_PAREN);
@@ -526,6 +537,7 @@ static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
 static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
   ast_off_t start = ast_add_node(a, AST_FOR);
+  int saved_in_loop = v7->pstate.in_loop;
 
   EXPECT(TOK_OPEN_PAREN);
 
@@ -567,18 +579,22 @@ static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
 body:
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FOR_BODY_SKIP);
+  v7->pstate.in_loop = 1;
   PARSE(statement);
+  v7->pstate.in_loop = saved_in_loop;
   ast_set_skip(a, start, AST_END_SKIP);
   return V7_OK;
 }
 
 static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SWITCH);
+  int saved_in_switch = v7->pstate.in_switch;
   ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
   EXPECT(TOK_OPEN_CURLY);
+  v7->pstate.in_switch = 1;
   while (v7->cur_tok != TOK_CLOSE_CURLY) {
     ast_off_t case_start;
     switch (v7->cur_tok) {
@@ -612,6 +628,7 @@ static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
   }
   EXPECT(TOK_CLOSE_CURLY);
   ast_set_skip(a, start, AST_END_SKIP);
+  v7->pstate.in_switch = saved_in_switch;
   return V7_OK;
 }
 
@@ -683,14 +700,23 @@ static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
       next_tok(v7);
       return parse_with(v7, a);
     case TOK_BREAK:
+      if (!(v7->pstate.in_loop || v7->pstate.in_switch)) {
+        return V7_SYNTAX_ERROR;
+      }
       next_tok(v7);
       PARSE_WITH_OPT_ARG(AST_BREAK, AST_LABELED_BREAK, ident);
       break;
     case TOK_CONTINUE:
+      if (!v7->pstate.in_loop) {
+        return V7_SYNTAX_ERROR;
+      }
       next_tok(v7);
       PARSE_WITH_OPT_ARG(AST_CONTINUE, AST_LABELED_CONTINUE, ident);
       break;
     case TOK_RETURN:
+      if (!v7->pstate.in_function) {
+        return V7_SYNTAX_ERROR;
+      }
       next_tok(v7);
       PARSE_WITH_OPT_ARG(AST_RETURN, AST_VALUE_RETURN, expression);
       break;
@@ -731,6 +757,7 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
                                    int require_named) {
   ast_off_t start = ast_add_node(a, AST_FUNC);
   ast_off_t outer_last_var_node = v7->last_var_node;
+  int saved_in_function = v7->pstate.in_function;
   v7->last_var_node = start;
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
   if (parse_ident(v7, a) == V7_SYNTAX_ERROR) {
@@ -743,7 +770,9 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   PARSE(arglist);
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
+  v7->pstate.in_function = 1;
   PARSE(block);
+  v7->pstate.in_function = saved_in_function;
   ast_set_skip(a, start, AST_END_SKIP);
   v7->last_var_node = outer_last_var_node;
   return V7_OK;
@@ -793,6 +822,9 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   v7->pstate.source_code = v7->pstate.pc = src;
   v7->pstate.file_name = "<stdin>";
   v7->pstate.line_no = 1;
+  v7->pstate.in_function = 0;
+  v7->pstate.in_loop = 0;
+  v7->pstate.in_switch = 0;
 
   next_tok(v7);
   err = parse_script(v7, a);
