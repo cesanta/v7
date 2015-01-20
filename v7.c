@@ -4094,7 +4094,10 @@ v7_cfunction_t v7_to_cfunction(val_t v) {
 }
 
 val_t v7_cfunction_to_value(v7_cfunction_t f) {
-  union { void *p; v7_cfunction_t f; } u;
+  union {
+    void *p;
+    v7_cfunction_t f;
+  } u;
   u.f = f;
   return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
@@ -4180,7 +4183,8 @@ v7_val_t v7_create_array(struct v7 *v7) {
 
 v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): use GC heap */
-  struct v7_function *f = (struct v7_function *) malloc(sizeof(struct v7_function));
+  struct v7_function *f = (struct v7_function *) malloc(
+      sizeof(struct v7_function));
   val_t fval = v7_function_to_value(f);
   if (f == NULL) {
     return V7_NULL;
@@ -4339,7 +4343,8 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
               ast_move_to_children(a, &var);
               ast_skip_tree(a, &var);
 
-              b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
+              b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len,
+                               name);
               if (var < var_end || next) {
                 b += v_sprintf_s(b, size - (b - buf), ",");
               }
@@ -4393,7 +4398,8 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name, size_t len) {
+V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name,
+                                                   size_t len) {
   struct v7_property *prop;
   if (len == (size_t) ~0) {
     len = strlen(name);
@@ -4563,7 +4569,6 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
   }
 
   return n;
-
 }
 
 /* Insert a string into mbuf at specified offset */
@@ -5675,7 +5680,8 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
   }
 }
 
-static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
+static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
+                           double b) {
   switch (tag) {
     case AST_ADD:  /* simple fixed width nodes with no payload */
       return a + b;
@@ -5808,10 +5814,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                              i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_boolean_to_value(! (int) v7_is_true(v7, v1));
+      return v7_boolean_to_value(!(int) v7_is_true(v7, v1));
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_double_to_value(~ (int) i_as_num(v7, v1));
+      return v7_double_to_value(~(int) i_as_num(v7, v1));
     case AST_ASSIGN:
     case AST_REM_ASSIGN:
     case AST_MUL_ASSIGN:
@@ -5850,7 +5856,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             name = buf;
             break;
           default:
-            throw_exception(v7, "ReferenceError", "Invalid left-hand side in assignment");
+            throw_exception(v7, "ReferenceError",
+                            "Invalid left-hand side in assignment");
             return V7_UNDEFINED;  /* LCOV_EXCL_LINE */
         }
 
@@ -6117,19 +6124,22 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       if (!v7_is_function(v2)) {
-        throw_exception(v7, "TypeError", "Expecting a function in instanceof check");
+        throw_exception(v7, "TypeError",
+                        "Expecting a function in instanceof check");
       }
-      return v7_create_boolean(is_prototype_of(v1, v7_property_value(v7_get_property(v2, "prototype", 9))));
+      return v7_create_boolean(is_prototype_of(v1, v7_get(v2, "prototype", 9)));
     case AST_VOID:
       i_eval_expr(v7, a, pos, scope);
       return V7_UNDEFINED;
     default:
-      throw_exception(v7, "InternalError", "%s: %s", __func__, def->name); /* LCOV_EXCL_LINE */
+      throw_exception(v7, "InternalError", "%s: %s", __func__,
+                      def->name); /* LCOV_EXCL_LINE */
       return V7_UNDEFINED;  /* LCOV_EXCL_LINE */
   }
 }
 
-static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos, val_t scope) {
+static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
+                         val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, &pos);
   switch (tag) {
     case AST_MEMBER:
@@ -6167,7 +6177,8 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     }
     return v7_to_cfunction(v1)(v7, this_object, args);
   } if (!v7_is_function(v1)) {
-    throw_exception(v7, "TypeError", "%s", "value is not a function"); /* LCOV_EXCL_LINE */
+    throw_exception(v7, "TypeError", "%s",
+                    "value is not a function"); /* LCOV_EXCL_LINE */
   }
 
   func = v7_to_function(v1);
@@ -6175,7 +6186,8 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     val_t fun_proto = v7_property_value(v7_get_property(v1, "prototype", 9));
     if (!v7_is_object(fun_proto)) {
       /* TODO(mkm): box primitive value */
-      throw_exception(v7, "TypeError", "Cannot set a primitive value as object prototype");
+      throw_exception(v7, "TypeError",
+                      "Cannot set a primitive value as object prototype");
     }
     v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
   }
@@ -6251,7 +6263,8 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return res;
 }
 
-static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t, enum i_break *);
+static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t,
+                         enum i_break *);
 
 static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
                           ast_off_t end, val_t scope, enum i_break *brk) {
@@ -6573,11 +6586,13 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   *res = V7_UNDEFINED;
 
   if ((fp = fopen(path, "r")) == NULL) {
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]", path);
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]",
+             path);
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
     fclose(fp);
   } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes", file_size + 1);
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes",
+             file_size + 1);
     fclose(fp);
   } else {
     rewind(fp);
@@ -6795,7 +6810,8 @@ int nextesc(const char **p) {
     case '\\':
       return '\\';
     case 'u':
-      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) && isxdigit(s[4])) {
+      if (isxdigit(s[1]) && isxdigit(s[2]) &&
+          isxdigit(s[3]) && isxdigit(s[4])) {
         (*p) += 4;
         return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
       }
@@ -8202,7 +8218,8 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 
-static val_t _Obj_ownKeys(struct v7 *v7, val_t args, unsigned int ignore_flags) {
+static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
+                          unsigned int ignore_flags) {
   struct v7_property *p;
   char buf[20];
   int i = 0;
@@ -8236,12 +8253,14 @@ V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
-V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
+                                         val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
-V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
+                                              val_t args) {
   struct v7_property *prop;
   val_t obj = v7_array_at(v7, args, 0);
   val_t name = v7_array_at(v7, args, 1);
@@ -8294,7 +8313,8 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
 
-V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   struct v7_property *p;
   val_t obj = v7_array_at(v7, args, 0);
   val_t descs = v7_array_at(v7, args, 1);
