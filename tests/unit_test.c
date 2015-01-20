@@ -759,7 +759,7 @@ static const char *test_ecmac(void) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
         if (v7_exec(v7, &res, current_case) != V7_OK) {
-#if 0
+#ifdef ECMA_VERBOSE
           fprintf(stderr, "Test %d failed "
                   "(tail -c +%lu tests/ecmac.db|head -c %lu):\n", i,
                   current_case - db + 1, next_case - current_case);
@@ -900,6 +900,25 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "a={};a==1") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
   ASSERT(v7_exec(v7, &v, "a={};a!=1") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+
+  ASSERT(v7_exec(v7, &v, "'x'=='x'") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT(v7_exec(v7, &v, "'x'==='x'") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT(v7_exec(v7, &v, "'object'=='object'") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT(v7_exec(v7, &v, "'stringlong'=='longstring'") == V7_OK);
+  ASSERT(check_value(v7, v, "false"));
+  ASSERT(v7_exec(v7, &v, "'object'==='object'") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT(v7_exec(v7, &v, "'a'<'b'") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT(v7_exec(v7, &v, "'b'>'a'") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT(v7_exec(v7, &v, "'a'>='a'") == V7_OK);
+  ASSERT(check_value(v7, v, "true"));
+  ASSERT(v7_exec(v7, &v, "'a'<='a'") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
 
   ASSERT(v7_exec(v7, &v, "+'1'") == V7_OK);

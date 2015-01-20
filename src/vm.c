@@ -662,8 +662,10 @@ V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   a_ptr = v7_to_string(v7, &a, &a_len);
   b_ptr = v7_to_string(v7, &b, &b_len);
 
-  /* TODO(lsm): fix this */
-  return memcmp(a_ptr, b_ptr, a_len < b_len ? a_len : b_len);
+  if (a_len == b_len) {
+    return memcmp(a_ptr, b_ptr, a_len);
+  }
+  return a_len - b_len;
 }
 
 V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
