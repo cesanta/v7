@@ -69,13 +69,9 @@ const char *v7_to_string(struct v7 *, v7_val_t *, size_t *);
 
 v7_val_t v7_get_global_object(struct v7 *);
 
-/*
- * TODO(lsm): rename either to v7_get_property(), or
- * rename v7_set_property() to v7_set()
- */
-v7_val_t v7_get(v7_val_t obj, const char *name, size_t);
-int v7_set_property(struct v7 *, v7_val_t obj, const char *name, size_t len,
-                    unsigned int attributes, v7_val_t val);
+v7_val_t v7_get(v7_val_t obj, const char *name, size_t len);
+int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t len,
+           v7_val_t val);
 char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);
 int v7_is_true(struct v7 *v7, v7_val_t v);
 void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
@@ -909,6 +905,9 @@ V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
                                                const char *name, size_t);
+V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
+                               size_t len, unsigned int attributes,
+                               v7_val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7_property *);
@@ -4438,6 +4437,14 @@ static void v7_destroy_property(struct v7_property **p) {
   free((*p)->name);
   free(*p);
   *p = NULL;
+}
+
+int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
+  struct v7_property *p = v7_get_own_property(obj, name, len);
+  if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
+    return v7_set_property(v7, obj, name, len, p->attributes, val);
+  }
+  return -1;
 }
 
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
