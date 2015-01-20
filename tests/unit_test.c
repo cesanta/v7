@@ -725,11 +725,14 @@ static const char *test_ecmac(void) {
   char *db = read_file("ecmac.db", &db_len);
   char *driver = read_file("ecma_driver.js", &driver_len);
   char *next_case = db - 1;
+  FILE *r;
   struct v7 *v7;
   val_t res;
 #ifdef ECMA_FORK
   pid_t child;
 #endif
+
+  ASSERT((r = fopen(".ecma_report.txt", "wb")) != NULL);
 
   ast_init(&a, 0);
 
@@ -759,6 +762,8 @@ static const char *test_ecmac(void) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
         if (v7_exec(v7, &res, current_case) != V7_OK) {
+          fprintf(r, "%i\tFAIL (tail -c +%lu tests/ecmac.db|head -c %lu)\n", i,
+                  current_case - db + 1, next_case - current_case);
 #ifdef ECMA_VERBOSE
           fprintf(stderr, "Test %d failed "
                   "(tail -c +%lu tests/ecmac.db|head -c %lu):\n", i,
@@ -772,6 +777,8 @@ static const char *test_ecmac(void) {
 #endif
         } else {
           passed++;
+          fprintf(r, "%i\tPASS (tail -c +%lu tests/ecmac.db|head -c %lu)\n", i,
+                  current_case - db + 1, next_case - current_case);
 #ifdef ECMA_FORK
           exit(0);
 #endif
@@ -794,6 +801,8 @@ static const char *test_ecmac(void) {
   printf("ECMA tests coverage: %.2lf%%\n", (double) passed / i * 100.0);
 
   free(db);
+  fclose(r);
+  rename(".ecma_report.txt", "ecma_report.txt");
   return NULL;
 }
 
