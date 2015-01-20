@@ -188,10 +188,16 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_EQ_EQ:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
+      if (v7_is_string(v1) && v7_is_string(v2)) {
+        return v7_boolean_to_value(s_cmp(v7, v1, v2) == 0);
+      }
       return v7_boolean_to_value(v1 == v2);
     case AST_NE_NE:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
+      if (v7_is_string(v1) && v7_is_string(v2)) {
+        return v7_boolean_to_value(s_cmp(v7, v1, v2) != 0);
+      }
       return v7_boolean_to_value(v1 != v2);
     case AST_EQ:
     case AST_NE:
@@ -199,8 +205,6 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_LE:
     case AST_GT:
     case AST_GE:
-    case AST_LOGICAL_OR:
-    case AST_LOGICAL_AND:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       if (tag == AST_EQ && v1 == v2) {
@@ -209,8 +213,33 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if (tag == AST_NE && v1 == v2) {
         return v7_boolean_to_value(0);
       }
-      return v7_create_boolean(i_bool_bin_op(v7, tag,
-                             i_as_num(v7, v1), i_as_num(v7, v2)));
+      if (v7_is_string(v1) && v7_is_string(v2)) {
+        int cmp = s_cmp(v7, v1, v2);
+        switch (tag) {
+          case AST_EQ:
+            return v7_create_boolean(cmp == 0);
+          case AST_NE:
+            return v7_create_boolean(cmp != 0);
+          case AST_LT:
+            return v7_create_boolean(cmp < 0);
+          case AST_LE:
+            return v7_create_boolean(cmp <= 0);
+          case AST_GT:
+            return v7_create_boolean(cmp > 0);
+          case AST_GE:
+            return v7_create_boolean(cmp >= 0);
+          default:
+            break;
+        }
+      }
+      return v7_create_boolean(i_bool_bin_op(
+          v7, tag, i_as_num(v7, v1), i_as_num(v7, v2)));
+    case AST_LOGICAL_OR:
+    case AST_LOGICAL_AND:
+      v1 = i_eval_expr(v7, a, pos, scope);
+      v2 = i_eval_expr(v7, a, pos, scope);
+      return v7_create_boolean(i_bool_bin_op(
+          v7, tag, i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_boolean_to_value(!(int) v7_is_true(v7, v1));
@@ -868,7 +897,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           val = i_eval_expr(v7, a, pos, scope);
           /* TODO(mkm): factor out equality check from eval_expr */
           if (test == val) {
-            /* for some reason lcov doesn't mark the following lines as executing */
+            /* lcov doesn't mark the following lines as executing */
             res = i_eval_stmts(v7, a, pos, end, scope, /* LCOV_EXCL_LINE */
                                brk);
             switch (*brk) {  /* LCOV_EXCL_LINE */
