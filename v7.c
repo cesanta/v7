@@ -6306,7 +6306,7 @@ static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t,
 
 static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
                           ast_off_t end, val_t scope, enum i_break *brk) {
-  val_t res = V7_NULL;
+  val_t res = V7_UNDEFINED;
   while (*pos < end && !*brk) {
     res = i_eval_stmt(v7, a, pos, scope, brk);
   }
@@ -6316,7 +6316,7 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, enum i_break *brk) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
-  val_t res = V7_NULL;
+  val_t res = V7_UNDEFINED;
   ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch;
 
   switch (tag) {

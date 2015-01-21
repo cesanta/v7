@@ -1183,7 +1183,7 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "({}) instanceof Object") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
 
-  ASSERT(v7_exec(v7, &v, "") == V7_OK && v == V7_NULL);
+  ASSERT(v7_exec(v7, &v, "") == V7_OK && v == V7_UNDEFINED);
 #if 0
   ASSERT(v7_exec(v7, &v, "x=0;a=1;o={a:2};with(o){x=a};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
