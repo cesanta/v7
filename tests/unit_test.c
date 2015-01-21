@@ -502,14 +502,14 @@ static const char *test_parser(void) {
     "for (;i<3;) i++",
     "for (;;) i++",
     "debugger",
-    "break",
-    "break loop",
-    "continue",
-    "continue loop",
-    "return",
-    "return 1+2",
-    "if (1) {return;}",
-    "if (1) {return 2}",
+    "while(1) break",
+    "while(1) break loop",
+    "while(1) continue",
+    "while(1) continue loop",
+    "function f() {return}",
+    "function f() {return 1+2}",
+    "function f() {if (1) {return;}}",
+    "function f() {if (1) {return 2}}",
     "throw 1+2",
     "try { 1 }",
     "try { 1 } catch (e) { 2 }",
@@ -529,8 +529,8 @@ static const char *test_parser(void) {
     "({})",
     "(function(a) { return a + 1 })",
     "(function f(a) { return a + 1 })",
-    "return; 1;",
-    "while (1) {return;2}",
+    "(function f() { return; 1;})",
+    "function f() {while (1) {return;2}}",
     "switch(a) {case 1: break;}",
     "switch(a) {case 1: p(); break;}",
     "switch(a) {case 1: a; case 2: b; c;}",
@@ -613,6 +613,14 @@ static const char *test_parser(void) {
     "i\n++",
     "{a: 1, b: 2}",
     "({, a: 0})",
+    "break",
+    "break loop",
+    "continue",
+    "continue loop",
+    "return",
+    "return 1+2",
+    "if (1) {return;}",
+    "if (1) {return 2}",
   };
   FILE *fp;
   const char *want_ast_db = "want_ast.db";
@@ -638,7 +646,7 @@ static const char *test_parser(void) {
     ASSERT((fp = fopen("/tmp/got_ast", "w")) != NULL);
     ast_free(&a);
     #if 0
-    printf("-- Parsing \"%s\"\n", cases[i]);
+      printf("-- Parsing \"%s\"\n", cases[i]);
     #endif
     ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
 
@@ -687,6 +695,9 @@ static const char *test_parser(void) {
 
   for (i = 0; i < (int) ARRAY_SIZE(invalid); i++ ) {
     ast_free(&a);
+#if 0
+    printf("-- Parsing \"%s\"\n", invalid[i]);
+#endif
     ASSERT(parse(v7, &a, invalid[i], 0) == V7_SYNTAX_ERROR);
   }
 
