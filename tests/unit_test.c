@@ -403,7 +403,7 @@ static const char *test_runtime(void) {
   ASSERT(check_value(v7, v, "{\"foo\":1}"));
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) == 0);
   ASSERT(check_value(v7, v, "{\"foo\":2}"));
-  ASSERT(v7_to_double(v7_get(v, "foo", -1)) == 2.0);
+  ASSERT(v7_to_double(v7_get(v7, v, "foo", -1)) == 2.0);
   ASSERT(v7_get_property(v, "foo", -1)->attributes & V7_PROPERTY_DONT_DELETE);
   ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY, v7_create_number(1.0)) == 0);
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) != 0);
@@ -1278,6 +1278,9 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
   ASSERT(v7_exec(v7, &v, "(function(){o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; return o; case 3: o.three=1; }})()") == V7_OK);
   ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
+
+  ASSERT(v7_exec(v7, &v, "o={get x(){return 42}};o.x") == V7_OK);
+  ASSERT(check_value(v7, v, "42"));
 
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);

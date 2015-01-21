@@ -27,6 +27,7 @@ typedef uint64_t val_t;
 #define V7_TAG_STRING_F  ((uint64_t) 0xFFF8 << 48)  /* Foreign string */
 #define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)  /* JavaScript function */
 #define V7_TAG_CFUNCTION ((uint64_t) 0xFFF6 << 48)  /* C function */
+#define V7_TAG_GETSETTER ((uint64_t) 0xFFF5 << 48)  /* getter+setter */
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -35,13 +36,15 @@ typedef uint64_t val_t;
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
   char *name;               /* Property name is a zero-terminated string */
-  val_t value;           /* Property value */
+  val_t value;              /* Property value */
 
   unsigned int attributes;
 #define V7_PROPERTY_READ_ONLY    1
 #define V7_PROPERTY_DONT_ENUM    2
 #define V7_PROPERTY_DONT_DELETE  4
 #define V7_PROPERTY_HIDDEN       8
+#define V7_PROPERTY_GETTER      16
+#define V7_PROPERTY_SETTER      32
 };
 
 /*
@@ -149,14 +152,14 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
-V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
-                                               const char *name, size_t);
+V7_PRIVATE struct v7_property *v7_get_property(val_t obj, const char *name,
+                                               size_t);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
-V7_PRIVATE val_t v7_property_value(struct v7_property *);
+V7_PRIVATE val_t v7_property_value(struct v7 *, struct v7_property *);
 
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.

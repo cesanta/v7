@@ -98,17 +98,14 @@ V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
 V7_PRIVATE val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
                                      int name_len, val_t desc) {
   unsigned int flags = 0;
-  val_t val = v7_property_value(v7_get_property(desc, "value", 5));
-  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "enumerable",
-                                                       10)))) {
+  val_t val = v7_get(v7, desc, "value", 5);
+  if (!v7_is_true(v7, v7_get(v7, desc, "enumerable", 10))) {
     flags |= V7_PROPERTY_DONT_ENUM;
   }
-  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "writable",
-                                                       8)))) {
+  if (!v7_is_true(v7, v7_get(v7, desc, "writable",  8))) {
     flags |= V7_PROPERTY_READ_ONLY;
   }
-  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "configurable",
-                                                       12)))) {
+  if (!v7_is_true(v7, v7_get(v7, desc, "configurable", 12))) {
     flags |= V7_PROPERTY_DONT_DELETE;
   }
 
@@ -187,8 +184,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   /* TODO(mkm): initialize global object without requiring a parser */
   v7_exec(v7, &v, "function Object() {}");
 
-  object = v7_property_value(v7_get_property(v7->global_object, "Object", 6));
-  v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);
+  object = v7_get(v7, v7->global_object, "Object", 6);
+  v7_set(v7, object, "prototype", 9, v7->object_prototype);
 
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "isPrototypeOf", Obj_isPrototypeOf);

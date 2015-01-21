@@ -338,13 +338,10 @@ const struct ast_node_def ast_node_defs[] = {
   {"PROP", 1, 1, 0, 1},
   /*
    * struct {
-   *   ast_skip_t end;
-   *   child name; // TODO(mkm): inline
-   *   child body[];
-   * end:
+   *   child func;
    * }
    */
-  {"GETTER", 0, 0, 1, 1},
+  {"GETTER", 0, 0, 0, 1},
   /*
    * struct {
    *   ast_skip_t end;
