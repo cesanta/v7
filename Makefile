@@ -28,7 +28,7 @@ xrun: unit_test
 	./t
 
 run:
-	@$(MAKE) -C tests coverage
+	@$(MAKE) -C tests test_c99
 
 all_warnings: v7.c
 	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)

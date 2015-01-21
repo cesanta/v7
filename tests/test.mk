@@ -63,6 +63,8 @@ CFLAGS_cxx=-x c++
 
 CFLAGS_ansi=$(PEDANTIC) -ansi
 CFLAGS_c99=$(PEDANTIC) -std=c99
+# TODO(mkm): remove once v7 has #lines for amalgamated sources
+SOURCES_c99=$(addprefix $(SRC_DIR)/, $(SOURCES))
 
 CFLAGS_gcov=$(PEDANTIC) -std=c99 -fprofile-arcs -ftest-coverage
 SOURCES_gcov=$(addprefix $(SRC_DIR)/, $(SOURCES))
