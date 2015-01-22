@@ -23,9 +23,6 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->boolean_prototype)) {
         return V7_TYPE_BOOLEAN_OBJECT;
-      } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->string_prototype)) {
-        return V7_TYPE_STRING_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -791,7 +788,6 @@ struct v7 *v7_create(void) {
     v7->object_prototype = create_object(v7, V7_NULL);
     v7->array_prototype = v7_create_object(v7);
     v7->boolean_prototype = v7_create_object(v7);
-    v7->string_prototype = v7_create_object(v7);
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
 
@@ -810,7 +806,6 @@ struct v7 *v7_create(void) {
     init_error(v7);
     init_boolean(v7);
     init_math(v7);
-    init_string(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }

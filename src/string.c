@@ -5,55 +5,46 @@
 
 #include "internal.h"
 
-V7_PRIVATE val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
-  /* TODO(lsm): if arg0 is not a string, do type conversion */
-  val_t res = v7_is_string(arg0) ? arg0 : v7_create_string(v7, "", 0, 1);
+V7_PRIVATE enum v7_err String_ctor(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  const char *str = NULL;
+  size_t len = 0;
+  int own = 0;
 
-  if (v7_is_object(this_obj)) {
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
-    return this_obj;
+  if (cfa->num_args > 0) {
+    struct v7_val *arg = cfa->args[0];
+    TRY(check_str_re_conv(v7, &arg, 0));
+    str = arg->v.str.buf;
+    len = arg->v.str.len;
+    own = 1;
   }
-
-  return res;
+  if (cfa->called_as_constructor) {
+    struct v7_val *obj = v7_push_new_object(v7);
+    v7_init_str(obj, str, len, own);
+    v7_set_class(obj, V7_CLASS_STRING);
+  } else
+    v7_push_string(v7, str, len, 1);
+  return V7_OK;
+#undef v7
 }
 
-V7_PRIVATE val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
-  int i, num_args = v7_array_length(v7, args);
-  val_t res = v7_create_string(v7, "", 0, 1);   /* Empty string */
-
-  (void) this_obj;
-  for (i = 0; i < num_args; i++) {
-    char buf[10];
-    val_t arg = v7_array_at(v7, args, i);
-    Rune r = (Rune) v7_to_double(arg);
-    int n = runetochar(buf, &r);
-    val_t s = v7_create_string(v7, buf, n, 1);
-    res = s_concat(v7, res, s);
+V7_PRIVATE enum v7_err Str_fromCharCode(struct v7_c_func_arg *cfa) {
+  long n, blen = 0;
+  struct v7_val *str;
+  char *p;
+  Rune runes[500];
+  for (n = 0; n < cfa->num_args; n++) {
+    runes[n] = _conv_to_int(cfa->v7, cfa->args[n]);
+    blen += runelen(runes[n]);
   }
-
-  return res;
+  str = v7_push_string(cfa->v7, NULL, blen, 1);
+  p = str->v.str.buf;
+  for (n = 0; n < cfa->num_args; n++) p += runetochar(p, &runes[n]);
+  *p = '\0';
+  str->v.str.len = blen;
+  return V7_OK;
 }
 
-V7_PRIVATE val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
-  size_t i, n;
-  const char *p = v7_to_string(v7, &this_obj, &n), *end = p + n;
-  val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
-
-  if (v7_is_double(arg) && v7_to_double(arg) >= 0 && v7_is_string(this_obj)) {
-    Rune r;
-    for (i = 0; i < (size_t) v7_to_double(arg) && p < end; i++) {
-      p += runetochar((char *) p, &r);
-    }
-    if (p < end) {
-      runetochar((char *) p, &r);
-      res = v7_create_number(r);
-    }
-  }
-  return res;
-}
-
-#if 0
 V7_PRIVATE enum v7_err Str_valueOf(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   if (!is_string(cfa->this_obj)) THROW(V7_TYPE_ERROR);
@@ -82,6 +73,16 @@ V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
   const char *p;
   TRY(_charAt(cfa, &p));
   TRY(push_string(v7, p, p == NULL ? 0 : 1, 1));
+  return V7_OK;
+#undef v7
+}
+
+V7_PRIVATE enum v7_err Str_charCodeAt(struct v7_c_func_arg *cfa) {
+#define v7 (cfa->v7) /* Needed for TRY() macro below */
+  const char *p;
+  Rune rune;
+  TRY(_charAt(cfa, &p));
+  TRY(push_number(v7, p == NULL ? NAN : (chartorune(&rune, p), rune)));
   return V7_OK;
 #undef v7
 }
@@ -623,18 +624,13 @@ V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg,
   if (NULL == result || arg) return;
   v7_init_num(result, utfnlen(this_obj->v.str.buf, this_obj->v.str.len));
 }
-#endif
 
-V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_cfunction(String_ctor);
-  v7_set_property(v7, v7->global_object, "String", 6, 0, str);
-
-  set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
-  set_cfunc_prop(v7, v7->string_prototype, "fromCharCode", Str_fromCharCode);
-
-#if 0
+V7_PRIVATE void init_string(void) {
+  init_standard_constructor(V7_CLASS_STRING, String_ctor);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "fromCharCode", Str_fromCharCode);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "valueOf", Str_valueOf);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
+  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charCodeAt", Str_charCodeAt);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "concat", Str_concat);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "indexOf", Str_indexOf);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "lastIndexOf", Str_lastIndexOf);
@@ -657,5 +653,4 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   SET_PROP_FUNC(s_prototypes[V7_CLASS_STRING], "length", Str_length);
 
   SET_RO_PROP_V(s_global, "String", s_constructors[V7_CLASS_STRING]);
-#endif
 }

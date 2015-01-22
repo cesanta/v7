@@ -70,22 +70,6 @@ static int check_value(struct v7 *v7, val_t v, const char *str) {
   return 1;
 }
 
-#if 0
-static int check_num(val_t v, double num) {
-  return v7_to_double(v) == num;
-}
-
-static int check_bool(val_t v, int is_true) {
-  return v7_to_boolean(v) == is_true;
-}
-
-static int check_str(struct v7 *v7, val_t v, const char *str) {
-  size_t n1, n2 = strlen(str);
-  const char *s = v7_to_string(v7, &v, &n1);
-  return n1 == n2 && memcmp(s, str, n1) == 0;
-}
-#endif
-
 static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   val_t v;
   if (v7_exec(v7, &v, expr) != V7_OK)
@@ -188,104 +172,102 @@ static const char *test_stdlib(void) {
 #if 0
   /* Number */
 #ifndef _WIN32
-  ASSERT(v7_exec(v7, &v, "Math.PI") == V7_OK);
-  ASSERT(check_num(v, M_PI));
-  ASSERT(v7_exec(v7, &v, "Number.NaN") == V7_OK);
-  ASSERT(check_num(v, NAN));
+  ASSERT((v = v7_exec(v7, "Math.PI")) != NULL);
+  ASSERT(check_num(v7, v, M_PI));
+  ASSERT((v = v7_exec(v7, "Number.NaN")) != NULL);
+  ASSERT(check_num(v7, v, NAN));
 #endif
-  ASSERT(v7_exec(v7, &v, "1 == 2") == V7_OK);
-  ASSERT(check_bool(v, 0));
-  ASSERT(v7_exec(v7, &v, "1 + 2 * 7 === 15") == V7_OK);
-  ASSERT(check_bool(v, 1));
-  ASSERT(v7_exec(v7, &v, "Number(1.23) === 1.23") == V7_OK);
-  ASSERT(check_bool(v, 1));
-  ASSERT(v7_exec(v7, &v, "Number(1.23)") == V7_OK);
-  ASSERT(check_num(v, 1.23));
+  ASSERT((v = v7_exec(v7, "1 == 2")) != NULL);
+  ASSERT(check_bool(v7, v, 0));
+  ASSERT((v = v7_exec(v7, "1 + 2 * 7 === 15")) != NULL);
+  ASSERT(check_bool(v7, v, 1));
+  ASSERT((v = v7_exec(v7, "Number(1.23) === 1.23")) != NULL);
+  ASSERT(check_bool(v7, v, 1));
+  ASSERT((v = v7_exec(v7, "Number(1.23)")) != NULL);
+  ASSERT(check_num(v7, v, 1.23));
 #ifdef TODO /* New operator: Assertion failed: (v7->root_scope.proto == &s_global), function do_exec, file src/util.c, line 557. */
-  ASSERT(v7_exec(v7, &v, "new Number(21.23)") == V7_OK);
+  ASSERT((v = v7_exec(v7, "new Number(21.23)")) != NULL);
 #endif
 
   /* String */
-  ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(1)") == V7_OK);
-  ASSERT(check_num(v, 'e'));
-  ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(4)") == V7_OK);
-  ASSERT(check_num(v, 'o'));
-  ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(5) == Number.NaN") == V7_OK);
-  ASSERT(check_bool(v, 1.0));
-  ASSERT(v7_exec(v7, &v, "'hello'.indexOf()") == V7_OK);
-  ASSERT(check_num(v, -1.0));
-  ASSERT(v7_exec(v7, &v, "'HTTP/1.0\\r\\n'.indexOf('\\r\\n')") == V7_OK);
-  ASSERT(check_num(v, 8.0));
-  ASSERT(v7_exec(v7, &v, "'hi there'.indexOf('e')") == V7_OK);
-  ASSERT(check_num(v, 5.0));
-  ASSERT(v7_exec(v7, &v, "'hi there'.indexOf('e', 6)") == V7_OK);
-  ASSERT(check_num(v, 7.0));
-  ASSERT(v7_exec(v7, &v, "'hi there'.substr(3, 2)") == V7_OK);
+  ASSERT((v = v7_exec(v7, "'hello'.charCodeAt(1)")) != NULL);
+  ASSERT(check_num(v7, v, 'e'));
+  ASSERT((v = v7_exec(v7, "'hello'.charCodeAt(4)")) != NULL);
+  ASSERT(check_num(v7, v, 'o'));
+  ASSERT((v = v7_exec(v7, "'hello'.charCodeAt(5) == Number.NaN")) != NULL);
+  ASSERT(check_bool(v7, v, 1.0));
+  ASSERT((v = v7_exec(v7, "'hello'.indexOf()")) != NULL);
+  ASSERT(check_num(v7, v, -1.0));
+  ASSERT((v = v7_exec(v7, "'HTTP/1.0\\r\\n'.indexOf('\\r\\n')")) != NULL);
+  ASSERT(check_num(v7, v, 8.0));
+  ASSERT((v = v7_exec(v7, "'hi there'.indexOf('e')")) != NULL);
+  ASSERT(check_num(v7, v, 5.0));
+  ASSERT((v = v7_exec(v7, "'hi there'.indexOf('e', 6)")) != NULL);
+  ASSERT(check_num(v7, v, 7.0));
+  ASSERT((v = v7_exec(v7, "'hi there'.substr(3, 2)")) != NULL);
   ASSERT(check_str(v7, v, "th"));
-  ASSERT(v7_exec(v7, &v, "'hi there'.substring(3, 5)") == V7_OK);
+  ASSERT((v = v7_exec(v7, "'hi there'.substring(3, 5)")) != NULL);
   ASSERT(check_str(v7, v, "th"));
-  ASSERT(v7_exec(v7, &v, "'hi there'.substr(3)") == V7_OK);
+  ASSERT((v = v7_exec(v7, "'hi there'.substr(3)")) != NULL);
   ASSERT(check_str(v7, v, "there"));
-  ASSERT(v7_exec(v7, &v, "'hi there'.substr(-2)") == V7_OK);
+  ASSERT((v = v7_exec(v7, "'hi there'.substr(-2)")) != NULL);
   ASSERT(check_str(v7, v, "hi there"));
-  ASSERT(v7_exec(v7, &v, "'hi there'.substr(NaN)") == V7_OK);
+  ASSERT((v = v7_exec(v7, "'hi there'.substr(NaN)")) != NULL);
   ASSERT(check_str(v7, v, "hi there"));
-  ASSERT(v7_exec(v7, &v, "'hi there'.substr(0, 300)") == V7_OK);
+  ASSERT((v = v7_exec(v7, "'hi there'.substr(0, 300)")) != NULL);
   ASSERT(check_str(v7, v, "hi there"));
-  ASSERT(v7_exec(v7, &v, "'dew dee'.match(/\\d+/)") == V7_OK);
-  ASSERT(v == V7_NULL);
-  ASSERT(v7_exec(v7, &v, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "m.length") == V7_OK);
-  ASSERT(check_num(v, 2.0));
-  ASSERT(v7_exec(v7, &v, "m[0]") == V7_OK);
+  ASSERT((v = v7_exec(v7, "'dew dee'.match(/\\d+/)")) != NULL);
+  ASSERT(v7_type(v) == V7_TYPE_NULL);
+  ASSERT((v = v7_exec(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)")) != NULL);
+  ASSERT((v = v7_exec(v7, "m.length")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+  ASSERT((v = v7_exec(v7, "m[0]")) != NULL);
   ASSERT(check_str(v7, v, "foo 1234"));
-  ASSERT(v7_exec(v7, &v, "m[1]") == V7_OK);
+  ASSERT((v = v7_exec(v7, "m[1]")) != NULL);
   ASSERT(check_str(v7, v, "1234"));
-  ASSERT(v7_exec(v7, &v, "m[2]") == V7_OK);
-  ASSERT(v == V7_UNDEFINED);
-  ASSERT(v7_exec(v7, &v, "m = 'should match empty string at index 0'.match(/x*/)") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "m.length") == V7_OK);
-  ASSERT(check_num(v, 1.0));
-  ASSERT(v7_exec(v7, &v, "m[0]") == V7_OK);
+  ASSERT((v = v7_exec(v7, "m[2]")) != NULL);
+  ASSERT(v7_type(v) == V7_TYPE_UNDEF);
+  ASSERT((v = v7_exec(v7, "m = 'should match empty string at index 0'.match(/x*/)")) != NULL);
+  ASSERT((v = v7_exec(v7, "m.length")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec(v7, "m[0]")) != NULL);
   ASSERT(check_str(v7, v, ""));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(); m.length") == V7_OK);
-  ASSERT(check_num(v, 1.0));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(''); m.length") == V7_OK);
-  ASSERT(check_num(v, 8.0));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(RegExp('')); m.length") == V7_OK);
-  ASSERT(check_num(v, 8.0));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(/x*/); m.length") == V7_OK);
-  ASSERT(check_num(v, 8.0));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(/(x)*/); m.length") == V7_OK);
-  ASSERT(check_num(v, 16.0));
-  ASSERT(v7_exec(v7, &v, "m[0]") == V7_OK);
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 1.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(''); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 8.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(RegExp('')); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 8.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(/x*/); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 8.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(/(x)*/); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 16.0));
+  ASSERT((v = v7_exec(v7, "m[0]")) != NULL);
   ASSERT(check_str(v7, v, "a"));
-  ASSERT(v7_exec(v7, &v, "m[1]") == V7_OK);
-  ASSERT(v == V7_UNDEFINED);
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(' '); m.length") == V7_OK);
-  ASSERT(check_num(v, 3.0));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(' ', 2); m.length") == V7_OK);
-  ASSERT(check_num(v, 2.0));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(/ /, 2); m.length") == V7_OK);
-  ASSERT(check_num(v, 2.0));
-  ASSERT(v7_exec(v7, &v, "'aa bb cc'.substr(0, 4).split(' ').length") == V7_OK);
-  ASSERT(check_num(v, 2.0));
-  ASSERT(v7_exec(v7, &v, "'aa bb cc'.substr(0, 4).split(' ')[1]") == V7_OK);
+  ASSERT((v = v7_exec(v7, "m[1]")) != NULL);
+  ASSERT(v7_type(v) == V7_TYPE_UNDEF);
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(' '); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 3.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(' ', 2); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+  ASSERT((v = v7_exec(v7, "m = 'aa bb cc'.split(/ /, 2); m.length")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+  ASSERT((v = v7_exec(v7, "'aa bb cc'.substr(0, 4).split(' ').length")) != NULL);
+  ASSERT(check_num(v7, v, 2.0));
+  ASSERT((v = v7_exec(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]")) != NULL);
   ASSERT(check_str(v7, v, "b"));
-  ASSERT(v7_exec(v7, &v, "{z: '123456'}.z.substr(0, 3).split('').length") == V7_OK);
-  ASSERT(check_num(v, 3.0));
-  ASSERT(v7_exec(v7, &v, "String('hi')") == V7_OK);
+  ASSERT((v = v7_exec(v7, "{z: '123456'}.z.substr(0, 3).split('').length")) != NULL);
+  ASSERT(check_num(v7, v, 3.0));
+  ASSERT((v = v7_exec(v7, "String('hi')")) != NULL);
   ASSERT(check_str(v7, v, "hi"));
-  ASSERT(v7_exec(v7, &v, "new String('blah')") == V7_OK);
-#endif
+  ASSERT((v = v7_exec(v7, "new String('blah')")) != NULL);
 
-#if 0
   /* Regexp */
-  ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/; re")) != NULL);
-  ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/;")) != NULL);
-  ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/ ")) != NULL);
-  ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/\n")) != NULL);
-  ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/")) != NULL);
+  ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/; re")) != NULL);
+  ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/;")) != NULL);
+  ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/ ")) != NULL);
+  ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/\n")) != NULL);
+  ASSERT((v = v7_exec(v7, "re = /GET (\\S+) HTTP/")) != NULL);
 #endif
 
   v7_destroy(v7);
