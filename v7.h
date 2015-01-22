@@ -79,8 +79,7 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
 void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
 v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
 
-/* Invoke a function applying the argument array */
-v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t);
+v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
 
 #ifdef __cplusplus
 }

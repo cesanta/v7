@@ -85,8 +85,6 @@ static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  int saved_in_function = v7->pstate.in_function;
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
       lookahead(v7) != TOK_COLON) {
@@ -96,16 +94,9 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   } else if (v7->cur_tok == TOK_IDENTIFIER &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
-    start = ast_add_node(a, AST_SETTER);
     next_tok(v7);
-    PARSE(ident_allow_reserved_words);
-    EXPECT(TOK_OPEN_PAREN);
-    PARSE(ident);
-    EXPECT(TOK_CLOSE_PAREN);
-    v7->pstate.in_function = 1;
-    PARSE(block);
-    v7->pstate.in_function = saved_in_function;
-    ast_set_skip(a, start, AST_END_SKIP);
+    ast_add_node(a, AST_SETTER);
+    parse_funcdecl(v7, a, 1, 1);
   } else {
     /* Allow reserved words as property names. */
     if (is_reserved_word_token(v7->cur_tok) ||
