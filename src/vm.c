@@ -322,7 +322,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 
         b += v_sprintf_s(b, size - (b - buf), "[function");
 
-        assert(ast_fetch_tag(a, &pos) == AST_FUNC);
+        V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
         start = pos - 1;
         body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);
         /* TODO(mkm) cleanup this - 1*/
@@ -336,7 +336,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         }
         b += v_sprintf_s(b, size - (b - buf), "(");
         while (pos < body) {
-          assert(ast_fetch_tag(a, &pos) == AST_IDENT);
+          V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_IDENT);
           name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
           b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
@@ -350,7 +350,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
           b += v_sprintf_s(b, size - (b - buf), "{var ");
 
           do {
-            assert(ast_fetch_tag(a, &var) == AST_VAR);
+            V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR);
             next = ast_get_skip(a, var, AST_VAR_NEXT_SKIP);
             if (next == var) {
               next = 0;
@@ -359,7 +359,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             var_end = ast_get_skip(a, var, AST_END_SKIP);
             ast_move_to_children(a, &var);
             while (var < var_end) {
-              assert(ast_fetch_tag(a, &var) == AST_VAR_DECL);
+              V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR_DECL);
               name = ast_get_inlined_data(a, var, &name_len);
               ast_move_to_children(a, &var);
               ast_skip_tree(a, &var);
@@ -450,9 +450,8 @@ struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
   return NULL;
 }
 
-v7_val_t v7_get(val_t obj, const char *name, size_t name_len) {
-  struct v7_property *prop = v7_get_property(obj, name, name_len);
-  return prop == NULL ? V7_UNDEFINED : prop->value;
+v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
+  return v7_property_value(v7, v7_get_property(obj, name, name_len));
 }
 
 static void v7_destroy_property(struct v7_property **p) {
@@ -527,9 +526,12 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
 }
 
-V7_PRIVATE val_t v7_property_value(struct v7_property *p) {
+V7_PRIVATE val_t v7_property_value(struct v7 *v7, struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
+  }
+  if (p->attributes & V7_PROPERTY_GETTER) {
+    return v7_apply(v7, p->value, V7_UNDEFINED);
   }
   return p->value;
 }
@@ -563,8 +565,7 @@ val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
   if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
     char buf[20];
     int n = v_sprintf_s(buf, sizeof(buf), "%ld", index);
-    struct v7_property *prop = v7_get_property(arr, buf, n);
-    return prop == NULL ? V7_UNDEFINED : prop->value;
+    return v7_get(v7, arr, buf, n);
   } else {
     return V7_UNDEFINED;
   }

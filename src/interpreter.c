@@ -340,12 +340,12 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       v7_stringify_value(v7, v2, buf, sizeof(buf));
-      return v7_property_value(v7_get_property(v1, buf, -1));
+      return v7_get(v7, v1, buf, -1);
     case AST_MEMBER:
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_property_value(v7_get_property(v1, name, name_len));
+      return v7_get(v7, v1, name, name_len);
     case AST_SEQ:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -373,11 +373,28 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       while (*pos < end) {
         tag = ast_fetch_tag(a, pos);
-        V7_CHECK(v7, tag == AST_PROP);
-        name = ast_get_inlined_data(a, *pos, &name_len);
-        ast_move_to_children(a, pos);
-        v1 = i_eval_expr(v7, a, pos, scope);
-        v7_set_property(v7, res, name, name_len, 0, v1);
+        switch (tag) {
+          case AST_PROP:
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            v1 = i_eval_expr(v7, a, pos, scope);
+            v7_set_property(v7, res, name, name_len, 0, v1);
+            break;
+          case AST_GETTER:
+            {
+              ast_off_t func = *pos;
+              V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
+              ast_move_to_children(a, &func);
+              V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
+              name = ast_get_inlined_data(a, func, &name_len);
+              v1 = i_eval_expr(v7, a, pos, scope);
+              v7_set_property(v7, res, name, name_len, V7_PROPERTY_GETTER, v1);
+            }
+            break;
+          default:
+            throw_exception(v7, "InternalError",
+                            "Expecting AST_(PROP|GETTER) got %d", tag);
+        }
       }
       return res;
     case AST_TRUE:
@@ -407,7 +424,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
                           (int) name_len, name);
         }
-        return v7_property_value(p);
+        return v7_property_value(v7, p);
       }
     case AST_FUNC:
       {
@@ -555,7 +572,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         throw_exception(v7, "TypeError",
                         "Expecting a function in instanceof check");
       }
-      return v7_create_boolean(is_prototype_of(v1, v7_get(v2, "prototype", 9)));
+      return v7_create_boolean(is_prototype_of(v1,
+                                               v7_get(v7, v2, "prototype", 9)));
     case AST_VOID:
       i_eval_expr(v7, a, pos, scope);
       return V7_UNDEFINED;
@@ -580,10 +598,71 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
   }
 }
 
+V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
+                                ast_off_t *pos, ast_off_t *body,
+                                ast_off_t *end) {
+  val_t frame;
+  enum ast_tag tag;
+  ast_off_t fstart, fvar, fvar_end;
+  char *name;
+  size_t name_len;
+
+  *pos = func->ast_off;
+  fstart = *pos;
+  tag = ast_fetch_tag(func->ast, pos);
+  V7_CHECK(v7, tag == AST_FUNC);
+  *end = ast_get_skip(func->ast, *pos, AST_END_SKIP);
+  *body = ast_get_skip(func->ast, *pos, AST_FUNC_BODY_SKIP);
+  fvar = ast_get_skip(func->ast, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
+  ast_move_to_children(func->ast, pos);
+  ast_skip_tree(func->ast, pos);
+
+  frame = v7_create_object(v7);
+  v7_to_object(frame)->prototype = func->scope;
+
+  /* populate the call frame with a property for each local variable */
+  if (fvar != fstart) {
+    ast_off_t next;
+
+    do {
+      tag = ast_fetch_tag(func->ast, &fvar);
+      V7_CHECK(v7, tag == AST_VAR);
+      next = ast_get_skip(func->ast, fvar, AST_VAR_NEXT_SKIP);
+      if (next == fvar) {
+        next = 0;
+      }
+      V7_CHECK(v7, next < 65535);
+
+      fvar_end = ast_get_skip(func->ast, fvar, AST_END_SKIP);
+      ast_move_to_children(func->ast, &fvar);
+      while (fvar < fvar_end) {
+        tag = ast_fetch_tag(func->ast, &fvar);
+        V7_CHECK(v7, tag == AST_VAR_DECL);
+        name = ast_get_inlined_data(func->ast, fvar, &name_len);
+        ast_move_to_children(func->ast, &fvar);
+        ast_skip_tree(func->ast, &fvar);
+
+        v7_set_property(v7, frame, name, name_len, 0, V7_UNDEFINED);
+      }
+      fvar = next - 1; /* TODO(mkm): cleanup */
+    } while (next != 0);
+  }
+  return frame;
+}
+
+V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
+                                   val_t frame, ast_off_t body, ast_off_t end) {
+  enum i_break brk = B_RUN;
+  val_t res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
+  if (brk != B_RETURN) {
+    res = V7_UNDEFINED;
+  }
+  return res;
+}
+
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, val_t this_object, int is_constructor) {
-  ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
-  enum i_break fbrk = B_RUN;
+  ast_off_t end, fpos, fend, fbody;
   val_t frame, res, v1, old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
@@ -611,7 +690,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   func = v7_to_function(v1);
   if (is_constructor) {
-    val_t fun_proto = v7_property_value(v7_get_property(v1, "prototype", 9));
+    val_t fun_proto = v7_get(v7, v1, "prototype", 9);
     if (!v7_is_object(fun_proto)) {
       /* TODO(mkm): box primitive value */
       throw_exception(v7, "TypeError",
@@ -619,50 +698,10 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     }
     v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
   }
-  fpos = func->ast_off;
-  fstart = fpos;
-  tag = ast_fetch_tag(func->ast, &fpos);
-  V7_CHECK(v7, tag == AST_FUNC);
-  fend = ast_get_skip(func->ast, fpos, AST_END_SKIP);
-  fbody = ast_get_skip(func->ast, fpos, AST_FUNC_BODY_SKIP);
-  fvar = ast_get_skip(func->ast, fpos, AST_FUNC_FIRST_VAR_SKIP) - 1;
-  ast_move_to_children(func->ast, &fpos);
-  ast_skip_tree(func->ast, &fpos);
-  fargs = fpos;
 
-  frame = v7_create_object(v7);
-  v7_to_object(frame)->prototype = func->scope;
-  /* populate the call frame with a property for each local variable */
-  if (fvar != fstart) {
-    ast_off_t next;
-    fpos = fbody;
-
-    do {
-      tag = ast_fetch_tag(func->ast, &fvar);
-      V7_CHECK(v7, tag == AST_VAR);
-      next = ast_get_skip(func->ast, fvar, AST_VAR_NEXT_SKIP);
-      if (next == fvar) {
-        next = 0;
-      }
-      V7_CHECK(v7, next < 65535);
-
-      fvar_end = ast_get_skip(func->ast, fvar, AST_END_SKIP);
-      ast_move_to_children(func->ast, &fvar);
-      while (fvar < fvar_end) {
-        tag = ast_fetch_tag(func->ast, &fvar);
-        V7_CHECK(v7, tag == AST_VAR_DECL);
-        name = ast_get_inlined_data(func->ast, fvar, &name_len);
-        ast_move_to_children(func->ast, &fvar);
-        ast_skip_tree(func->ast, &fvar);
-
-        v7_set_property(v7, frame, name, name_len, 0, V7_UNDEFINED);
-      }
-      fvar = next - 1; /* TODO(mkm): cleanup */
-    } while (next != 0);
-  }
+  frame = i_prepare_call(v7, func, &fpos, &fbody, &fend);
 
   /* scan actual and formal arguments and updates the value in the frame */
-  fpos = fargs;
   while (fpos < fbody) {
     tag = ast_fetch_tag(func->ast, &fpos);
     V7_CHECK(v7, tag == AST_IDENT);
@@ -683,10 +722,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   v7->this_object = this_object;
-  res = i_eval_stmts(v7, func->ast, &fpos, fend, frame, &fbrk);
-  if (fbrk != B_RETURN) {
-    res = V7_UNDEFINED;
-  }
+  res = i_invoke_function(v7, func, frame, fbody, fend);
   v7->this_object = old_this;
   return res;
 }
@@ -995,6 +1031,36 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return i_eval_expr(v7, a, pos, scope);
   }
   return v7_create_undefined();
+}
+
+val_t v7_apply(struct v7 *v7, val_t f, val_t args) {
+  struct v7_function *func;
+  ast_off_t pos, body, end;
+  enum ast_tag tag;
+  val_t frame;
+  char *name;
+  size_t name_len;
+  int i;
+
+  if (v7_is_cfunction(f)) {
+    return v7_to_cfunction(f)(v7, v7->this_object, args);
+  }
+  if (!v7_is_function(f)) {
+    throw_exception(v7, "TypeError", "value is not a function");
+  }
+  func = v7_to_function(f);
+  frame = i_prepare_call(v7, func, &pos, &body, &end);
+
+  for (i = 0; pos < body; i++) {
+    tag = ast_fetch_tag(func->ast, &pos);
+    V7_CHECK(v7, tag == AST_IDENT);
+    name = ast_get_inlined_data(func->ast, pos, &name_len);
+    ast_move_to_children(func->ast, &pos);
+    v7_set_property(v7, frame, name, name_len, 0,
+                    v7_array_at(v7, args, i));
+  }
+
+  return i_invoke_function(v7, func, frame, body, end);
 }
 
 enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {

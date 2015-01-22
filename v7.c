@@ -71,13 +71,16 @@ const char *v7_to_string(struct v7 *, v7_val_t *, size_t *);
 
 v7_val_t v7_get_global_object(struct v7 *);
 
-v7_val_t v7_get(v7_val_t obj, const char *name, size_t len);
+v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
 int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t len,
            v7_val_t val);
 char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);
 int v7_is_true(struct v7 *v7, v7_val_t v);
 void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
 v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
+
+/* Invoke a function applying the argument array */
+v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t);
 
 #ifdef __cplusplus
 }
@@ -786,6 +789,7 @@ typedef uint64_t val_t;
 #define V7_TAG_STRING_F  ((uint64_t) 0xFFF8 << 48)  /* Foreign string */
 #define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)  /* JavaScript function */
 #define V7_TAG_CFUNCTION ((uint64_t) 0xFFF6 << 48)  /* C function */
+#define V7_TAG_GETSETTER ((uint64_t) 0xFFF5 << 48)  /* getter+setter */
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -794,13 +798,15 @@ typedef uint64_t val_t;
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
   char *name;               /* Property name is a zero-terminated string */
-  val_t value;           /* Property value */
+  val_t value;              /* Property value */
 
   unsigned int attributes;
 #define V7_PROPERTY_READ_ONLY    1
 #define V7_PROPERTY_DONT_ENUM    2
 #define V7_PROPERTY_DONT_DELETE  4
 #define V7_PROPERTY_HIDDEN       8
+#define V7_PROPERTY_GETTER      16
+#define V7_PROPERTY_SETTER      32
 };
 
 /*
@@ -908,14 +914,14 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
-V7_PRIVATE struct v7_property *v7_get_property(val_t obj,
-                                               const char *name, size_t);
+V7_PRIVATE struct v7_property *v7_get_property(val_t obj, const char *name,
+                                               size_t);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
-V7_PRIVATE val_t v7_property_value(struct v7_property *);
+V7_PRIVATE val_t v7_property_value(struct v7 *, struct v7_property *);
 
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
@@ -3735,13 +3741,10 @@ const struct ast_node_def ast_node_defs[] = {
   {"PROP", 1, 1, 0, 1},
   /*
    * struct {
-   *   ast_skip_t end;
-   *   child name; // TODO(mkm): inline
-   *   child body[];
-   * end:
+   *   child func;
    * }
    */
-  {"GETTER", 0, 0, 1, 1},
+  {"GETTER", 0, 0, 0, 1},
   /*
    * struct {
    *   ast_skip_t end;
@@ -4334,7 +4337,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 
         b += v_sprintf_s(b, size - (b - buf), "[function");
 
-        assert(ast_fetch_tag(a, &pos) == AST_FUNC);
+        V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
         start = pos - 1;
         body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);
         /* TODO(mkm) cleanup this - 1*/
@@ -4348,7 +4351,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         }
         b += v_sprintf_s(b, size - (b - buf), "(");
         while (pos < body) {
-          assert(ast_fetch_tag(a, &pos) == AST_IDENT);
+          V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_IDENT);
           name = ast_get_inlined_data(a, pos, &name_len);
           ast_move_to_children(a, &pos);
           b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
@@ -4362,7 +4365,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
           b += v_sprintf_s(b, size - (b - buf), "{var ");
 
           do {
-            assert(ast_fetch_tag(a, &var) == AST_VAR);
+            V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR);
             next = ast_get_skip(a, var, AST_VAR_NEXT_SKIP);
             if (next == var) {
               next = 0;
@@ -4371,7 +4374,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             var_end = ast_get_skip(a, var, AST_END_SKIP);
             ast_move_to_children(a, &var);
             while (var < var_end) {
-              assert(ast_fetch_tag(a, &var) == AST_VAR_DECL);
+              V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR_DECL);
               name = ast_get_inlined_data(a, var, &name_len);
               ast_move_to_children(a, &var);
               ast_skip_tree(a, &var);
@@ -4462,9 +4465,8 @@ struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
   return NULL;
 }
 
-v7_val_t v7_get(val_t obj, const char *name, size_t name_len) {
-  struct v7_property *prop = v7_get_property(obj, name, name_len);
-  return prop == NULL ? V7_UNDEFINED : prop->value;
+v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
+  return v7_property_value(v7, v7_get_property(obj, name, name_len));
 }
 
 static void v7_destroy_property(struct v7_property **p) {
@@ -4539,9 +4541,12 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
 }
 
-V7_PRIVATE val_t v7_property_value(struct v7_property *p) {
+V7_PRIVATE val_t v7_property_value(struct v7 *v7, struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
+  }
+  if (p->attributes & V7_PROPERTY_GETTER) {
+    return v7_apply(v7, p->value, V7_UNDEFINED);
   }
   return p->value;
 }
@@ -4575,8 +4580,7 @@ val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
   if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
     char buf[20];
     int n = v_sprintf_s(buf, sizeof(buf), "%ld", index);
-    struct v7_property *prop = v7_get_property(arr, buf, n);
-    return prop == NULL ? V7_UNDEFINED : prop->value;
+    return v7_get(v7, arr, buf, n);
   } else {
     return V7_UNDEFINED;
   }
@@ -4846,6 +4850,7 @@ void v7_destroy(struct v7 *v7) {
 
 #define PARSE(p) TRY(parse_ ## p(v7, a))
 #define PARSE_ARG(p, arg) TRY(parse_ ## p(v7, a, arg))
+#define PARSE_ARG_2(p, a1, a2) TRY(parse_ ## p(v7, a, a1, a2))
 
 #define TRY(call)           \
   do {                      \
@@ -4876,7 +4881,7 @@ static enum v7_err parse_statement(struct v7 *, struct ast *);
 static enum v7_err parse_terminal(struct v7 *, struct ast *);
 static enum v7_err parse_assign(struct v7 *, struct ast *);
 static enum v7_err parse_memberexpr(struct v7 *, struct ast *);
-static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int);
+static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int, int);
 static enum v7_err parse_block(struct v7 *, struct ast *);
 static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
 
@@ -4925,15 +4930,9 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
       lookahead(v7) != TOK_COLON) {
-    start = ast_add_node(a, AST_GETTER);
     next_tok(v7);
-    PARSE(ident_allow_reserved_words);
-    EXPECT(TOK_OPEN_PAREN);
-    EXPECT(TOK_CLOSE_PAREN);
-    v7->pstate.in_function = 1;
-    PARSE(block);
-    v7->pstate.in_function = saved_in_function;
-    ast_set_skip(a, start, AST_END_SKIP);
+    ast_add_node(a, AST_GETTER);
+    parse_funcdecl(v7, a, 1, 1);
   } else if (v7->cur_tok == TOK_IDENTIFIER &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
@@ -5067,7 +5066,7 @@ static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
       break;
     case TOK_FUNCTION:
       next_tok(v7);
-      PARSE_ARG(funcdecl, 0);
+      PARSE_ARG_2(funcdecl, 0, 0);
       break;
     default:
       PARSE(terminal);
@@ -5590,13 +5589,14 @@ static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
 }
 
 static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
-                                   int require_named) {
+                                  int require_named, int reserved_name) {
   ast_off_t start = ast_add_node(a, AST_FUNC);
   ast_off_t outer_last_var_node = v7->last_var_node;
   int saved_in_function = v7->pstate.in_function;
   v7->last_var_node = start;
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-  if (parse_ident(v7, a) == V7_SYNTAX_ERROR) {
+  if ((reserved_name ? parse_ident_allow_reserved_words : parse_ident)(v7, a) ==
+      V7_SYNTAX_ERROR) {
     if (require_named) {
       return V7_SYNTAX_ERROR;
     }
@@ -5625,7 +5625,7 @@ static enum v7_err parse_body(struct v7 *v7, struct ast *a,
                                enum v7_tok end) {
   while (v7->cur_tok != end) {
     if (ACCEPT(TOK_FUNCTION)) {
-      PARSE_ARG(funcdecl, 1);
+      PARSE_ARG_2(funcdecl, 1, 0);
     } else {
       PARSE(statement);
     }
@@ -6016,12 +6016,12 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       v7_stringify_value(v7, v2, buf, sizeof(buf));
-      return v7_property_value(v7_get_property(v1, buf, -1));
+      return v7_get(v7, v1, buf, -1);
     case AST_MEMBER:
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_property_value(v7_get_property(v1, name, name_len));
+      return v7_get(v7, v1, name, name_len);
     case AST_SEQ:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -6049,11 +6049,28 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       while (*pos < end) {
         tag = ast_fetch_tag(a, pos);
-        V7_CHECK(v7, tag == AST_PROP);
-        name = ast_get_inlined_data(a, *pos, &name_len);
-        ast_move_to_children(a, pos);
-        v1 = i_eval_expr(v7, a, pos, scope);
-        v7_set_property(v7, res, name, name_len, 0, v1);
+        switch (tag) {
+          case AST_PROP:
+            name = ast_get_inlined_data(a, *pos, &name_len);
+            ast_move_to_children(a, pos);
+            v1 = i_eval_expr(v7, a, pos, scope);
+            v7_set_property(v7, res, name, name_len, 0, v1);
+            break;
+          case AST_GETTER:
+            {
+              ast_off_t func = *pos;
+              V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
+              ast_move_to_children(a, &func);
+              V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
+              name = ast_get_inlined_data(a, func, &name_len);
+              v1 = i_eval_expr(v7, a, pos, scope);
+              v7_set_property(v7, res, name, name_len, V7_PROPERTY_GETTER, v1);
+            }
+            break;
+          default:
+            throw_exception(v7, "InternalError",
+                            "Expecting AST_(PROP|GETTER) got %d", tag);
+        }
       }
       return res;
     case AST_TRUE:
@@ -6083,7 +6100,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
                           (int) name_len, name);
         }
-        return v7_property_value(p);
+        return v7_property_value(v7, p);
       }
     case AST_FUNC:
       {
@@ -6231,7 +6248,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         throw_exception(v7, "TypeError",
                         "Expecting a function in instanceof check");
       }
-      return v7_create_boolean(is_prototype_of(v1, v7_get(v2, "prototype", 9)));
+      return v7_create_boolean(is_prototype_of(v1,
+                                               v7_get(v7, v2, "prototype", 9)));
     case AST_VOID:
       i_eval_expr(v7, a, pos, scope);
       return V7_UNDEFINED;
@@ -6256,10 +6274,71 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
   }
 }
 
+V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
+                                ast_off_t *pos, ast_off_t *body,
+                                ast_off_t *end) {
+  val_t frame;
+  enum ast_tag tag;
+  ast_off_t fstart, fvar, fvar_end;
+  char *name;
+  size_t name_len;
+
+  *pos = func->ast_off;
+  fstart = *pos;
+  tag = ast_fetch_tag(func->ast, pos);
+  V7_CHECK(v7, tag == AST_FUNC);
+  *end = ast_get_skip(func->ast, *pos, AST_END_SKIP);
+  *body = ast_get_skip(func->ast, *pos, AST_FUNC_BODY_SKIP);
+  fvar = ast_get_skip(func->ast, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
+  ast_move_to_children(func->ast, pos);
+  ast_skip_tree(func->ast, pos);
+
+  frame = v7_create_object(v7);
+  v7_to_object(frame)->prototype = func->scope;
+
+  /* populate the call frame with a property for each local variable */
+  if (fvar != fstart) {
+    ast_off_t next;
+
+    do {
+      tag = ast_fetch_tag(func->ast, &fvar);
+      V7_CHECK(v7, tag == AST_VAR);
+      next = ast_get_skip(func->ast, fvar, AST_VAR_NEXT_SKIP);
+      if (next == fvar) {
+        next = 0;
+      }
+      V7_CHECK(v7, next < 65535);
+
+      fvar_end = ast_get_skip(func->ast, fvar, AST_END_SKIP);
+      ast_move_to_children(func->ast, &fvar);
+      while (fvar < fvar_end) {
+        tag = ast_fetch_tag(func->ast, &fvar);
+        V7_CHECK(v7, tag == AST_VAR_DECL);
+        name = ast_get_inlined_data(func->ast, fvar, &name_len);
+        ast_move_to_children(func->ast, &fvar);
+        ast_skip_tree(func->ast, &fvar);
+
+        v7_set_property(v7, frame, name, name_len, 0, V7_UNDEFINED);
+      }
+      fvar = next - 1; /* TODO(mkm): cleanup */
+    } while (next != 0);
+  }
+  return frame;
+}
+
+V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
+                                   val_t frame, ast_off_t body, ast_off_t end) {
+  enum i_break brk = B_RUN;
+  val_t res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
+  if (brk != B_RETURN) {
+    res = V7_UNDEFINED;
+  }
+  return res;
+}
+
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, val_t this_object, int is_constructor) {
-  ast_off_t end, fpos, fstart, fend, fargs, fvar, fvar_end, fbody;
-  enum i_break fbrk = B_RUN;
+  ast_off_t end, fpos, fend, fbody;
   val_t frame, res, v1, old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
@@ -6287,7 +6366,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   func = v7_to_function(v1);
   if (is_constructor) {
-    val_t fun_proto = v7_property_value(v7_get_property(v1, "prototype", 9));
+    val_t fun_proto = v7_get(v7, v1, "prototype", 9);
     if (!v7_is_object(fun_proto)) {
       /* TODO(mkm): box primitive value */
       throw_exception(v7, "TypeError",
@@ -6295,50 +6374,10 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     }
     v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
   }
-  fpos = func->ast_off;
-  fstart = fpos;
-  tag = ast_fetch_tag(func->ast, &fpos);
-  V7_CHECK(v7, tag == AST_FUNC);
-  fend = ast_get_skip(func->ast, fpos, AST_END_SKIP);
-  fbody = ast_get_skip(func->ast, fpos, AST_FUNC_BODY_SKIP);
-  fvar = ast_get_skip(func->ast, fpos, AST_FUNC_FIRST_VAR_SKIP) - 1;
-  ast_move_to_children(func->ast, &fpos);
-  ast_skip_tree(func->ast, &fpos);
-  fargs = fpos;
 
-  frame = v7_create_object(v7);
-  v7_to_object(frame)->prototype = func->scope;
-  /* populate the call frame with a property for each local variable */
-  if (fvar != fstart) {
-    ast_off_t next;
-    fpos = fbody;
-
-    do {
-      tag = ast_fetch_tag(func->ast, &fvar);
-      V7_CHECK(v7, tag == AST_VAR);
-      next = ast_get_skip(func->ast, fvar, AST_VAR_NEXT_SKIP);
-      if (next == fvar) {
-        next = 0;
-      }
-      V7_CHECK(v7, next < 65535);
-
-      fvar_end = ast_get_skip(func->ast, fvar, AST_END_SKIP);
-      ast_move_to_children(func->ast, &fvar);
-      while (fvar < fvar_end) {
-        tag = ast_fetch_tag(func->ast, &fvar);
-        V7_CHECK(v7, tag == AST_VAR_DECL);
-        name = ast_get_inlined_data(func->ast, fvar, &name_len);
-        ast_move_to_children(func->ast, &fvar);
-        ast_skip_tree(func->ast, &fvar);
-
-        v7_set_property(v7, frame, name, name_len, 0, V7_UNDEFINED);
-      }
-      fvar = next - 1; /* TODO(mkm): cleanup */
-    } while (next != 0);
-  }
+  frame = i_prepare_call(v7, func, &fpos, &fbody, &fend);
 
   /* scan actual and formal arguments and updates the value in the frame */
-  fpos = fargs;
   while (fpos < fbody) {
     tag = ast_fetch_tag(func->ast, &fpos);
     V7_CHECK(v7, tag == AST_IDENT);
@@ -6359,10 +6398,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   v7->this_object = this_object;
-  res = i_eval_stmts(v7, func->ast, &fpos, fend, frame, &fbrk);
-  if (fbrk != B_RETURN) {
-    res = V7_UNDEFINED;
-  }
+  res = i_invoke_function(v7, func, frame, fbody, fend);
   v7->this_object = old_this;
   return res;
 }
@@ -6671,6 +6707,36 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return i_eval_expr(v7, a, pos, scope);
   }
   return v7_create_undefined();
+}
+
+val_t v7_apply(struct v7 *v7, val_t f, val_t args) {
+  struct v7_function *func;
+  ast_off_t pos, body, end;
+  enum ast_tag tag;
+  val_t frame;
+  char *name;
+  size_t name_len;
+  int i;
+
+  if (v7_is_cfunction(f)) {
+    return v7_to_cfunction(f)(v7, v7->this_object, args);
+  }
+  if (!v7_is_function(f)) {
+    throw_exception(v7, "TypeError", "value is not a function");
+  }
+  func = v7_to_function(f);
+  frame = i_prepare_call(v7, func, &pos, &body, &end);
+
+  for (i = 0; pos < body; i++) {
+    tag = ast_fetch_tag(func->ast, &pos);
+    V7_CHECK(v7, tag == AST_IDENT);
+    name = ast_get_inlined_data(func->ast, pos, &name_len);
+    ast_move_to_children(func->ast, &pos);
+    v7_set_property(v7, frame, name, name_len, 0,
+                    v7_array_at(v7, args, i));
+  }
+
+  return i_invoke_function(v7, func, frame, body, end);
 }
 
 enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
@@ -8430,17 +8496,14 @@ V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
 V7_PRIVATE val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
                                      int name_len, val_t desc) {
   unsigned int flags = 0;
-  val_t val = v7_property_value(v7_get_property(desc, "value", 5));
-  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "enumerable",
-                                                       10)))) {
+  val_t val = v7_get(v7, desc, "value", 5);
+  if (!v7_is_true(v7, v7_get(v7, desc, "enumerable", 10))) {
     flags |= V7_PROPERTY_DONT_ENUM;
   }
-  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "writable",
-                                                       8)))) {
+  if (!v7_is_true(v7, v7_get(v7, desc, "writable",  8))) {
     flags |= V7_PROPERTY_READ_ONLY;
   }
-  if (!v7_is_true(v7, v7_property_value(v7_get_property(desc, "configurable",
-                                                       12)))) {
+  if (!v7_is_true(v7, v7_get(v7, desc, "configurable", 12))) {
     flags |= V7_PROPERTY_DONT_DELETE;
   }
 
@@ -8519,8 +8582,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   /* TODO(mkm): initialize global object without requiring a parser */
   v7_exec(v7, &v, "function Object() {}");
 
-  object = v7_property_value(v7_get_property(v7->global_object, "Object", 6));
-  v7_set_property(v7, object, "prototype", 9, 0, v7->object_prototype);
+  object = v7_get(v7, v7->global_object, "Object", 6);
+  v7_set(v7, object, "prototype", 9, v7->object_prototype);
 
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "isPrototypeOf", Obj_isPrototypeOf);
@@ -8555,9 +8618,8 @@ V7_PRIVATE void init_error(struct v7 *v7) {
   v7_exec(v7, &v, "function ImplementationError(m) {this.message = m};"
             "ReferenceError.prototype = Object.create(Error.prototype)");
 
-  v7->error_prototype = v7_property_value(v7_get_property(
-      v7_property_value(v7_get_property(v7->global_object, "Error", 5)),
-      "prototype", 9));
+  v7->error_prototype = v7_get(v7, v7_get(v7, v7->global_object, "Error", 5),
+                               "prototype", 9);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
