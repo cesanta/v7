@@ -237,9 +237,11 @@ static unsigned char re_nextc(Rune *r, const char **src, int is_regex) {
 
 static unsigned char re_nextc_env(struct slre_env *e) {
   unsigned char ret = re_nextc(&e->curr_rune, &e->src, 1);
+#if 0  /* TODO(mkm): ask */
   if (ret < 0) {
     SLRE_THROW(e, ret);
   }
+#endif
   return ret;
 }
 

@@ -19,6 +19,8 @@
 #ifndef V7_HEADER_INCLUDED
 #define V7_HEADER_INCLUDED
 
+#define _POSIX_C_SOURCE 200809L
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -4327,14 +4329,13 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         size_t name_len;
         char *b = buf;
         struct v7_function *func = v7_to_function(v);
-        ast_off_t end, body, var, var_end, start, pos = func->ast_off;
+        ast_off_t body, var, var_end, start, pos = func->ast_off;
         struct ast *a = func->ast;
 
         b += v_sprintf_s(b, size - (b - buf), "[function");
 
         assert(ast_fetch_tag(a, &pos) == AST_FUNC);
         start = pos - 1;
-        end = ast_get_skip(a, pos, AST_END_SKIP);
         body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);
         /* TODO(mkm) cleanup this - 1*/
         var = ast_get_skip(a, pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
@@ -6984,9 +6985,11 @@ static unsigned char re_nextc(Rune *r, const char **src, int is_regex) {
 
 static unsigned char re_nextc_env(struct slre_env *e) {
   unsigned char ret = re_nextc(&e->curr_rune, &e->src, 1);
+#if 0  /* TODO(mkm): ask */
   if (ret < 0) {
     SLRE_THROW(e, ret);
   }
+#endif
   return ret;
 }
 

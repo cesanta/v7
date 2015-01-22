@@ -16,6 +16,8 @@
  * license, as set out in <http://cesanta.com/products.html>.
  */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <limits.h>
 #include <math.h>
 #include <stddef.h>
@@ -282,7 +284,7 @@ static const char *test_tokenizer(void) {
   enum v7_tok tok = TOK_END_OF_INPUT;
   double num;
   const char *p = str;
-  int i = 1;
+  unsigned int i = 1;
 
   skip_to_next_tok(&p);
 
