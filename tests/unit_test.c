@@ -1281,6 +1281,8 @@ static const char *test_interpreter(void) {
 
   ASSERT(v7_exec(v7, &v, "o={get x(){return 42}};o.x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
+  ASSERT(v7_exec(v7, &v, "o={set x(a){this.y=a}};o.x=42;o.y") == V7_OK);
+  ASSERT(check_value(v7, v, "42"));
 
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);

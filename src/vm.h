@@ -159,7 +159,7 @@ V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                v7_val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
-V7_PRIVATE val_t v7_property_value(struct v7 *, struct v7_property *);
+V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
 
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.

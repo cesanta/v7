@@ -79,8 +79,7 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
 void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
 v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
 
-/* Invoke a function applying the argument array */
-v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t);
+v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
 
 #ifdef __cplusplus
 }
@@ -921,7 +920,7 @@ V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                v7_val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
-V7_PRIVATE val_t v7_property_value(struct v7 *, struct v7_property *);
+V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
 
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
@@ -3747,14 +3746,11 @@ const struct ast_node_def ast_node_defs[] = {
   {"GETTER", 0, 0, 0, 1},
   /*
    * struct {
-   *   ast_skip_t end;
-   *   child name; // TODO(mkm): inline
-   *   child param; // TODO(mkm): reuse func decl?
-   *   child body[];
+   *   child func;
    * end:
    * }
    */
-  {"SETTER", 0, 0, 1, 2},
+  {"SETTER", 0, 0, 0, 1},
   {"THIS", 0, 0, 0, 0},  /* struct {} */
   {"TRUE", 0, 0, 0, 0},  /* struct {} */
   {"FALSE", 0, 0, 0, 0}, /* struct {} */
@@ -4466,7 +4462,7 @@ struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
 }
 
 v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
-  return v7_property_value(v7, v7_get_property(obj, name, name_len));
+  return v7_property_value(v7, obj, v7_get_property(obj, name, name_len));
 }
 
 static void v7_destroy_property(struct v7_property **p) {
@@ -4478,7 +4474,7 @@ static void v7_destroy_property(struct v7_property **p) {
 int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
   struct v7_property *p = v7_get_own_property(obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    return v7_set_property(v7, obj, name, len, p->attributes, val);
+    return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes, val);
   }
   return -1;
 }
@@ -4500,15 +4496,22 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     v7_to_object(obj)->properties = prop;
   }
 
-  prop->attributes = attributes;
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
-  prop->name = malloc(len + 1);
-  strncpy(prop->name, name, len);
-  prop->name[len] = '\0';
-
+  if (prop->name == NULL) {
+    prop->name = malloc(len + 1);
+    strncpy(prop->name, name, len);
+    prop->name[len] = '\0';
+  }
+  if (prop->attributes & V7_PROPERTY_SETTER) {
+    val_t args = v7_create_array(v7);
+    v7_set(v7, args, "0", 1, val);
+    v7_apply(v7, prop->value, obj, args);
+    return 0;
+  }
   prop->value = val;
+  prop->attributes = attributes;
   return 0;
 }
 
@@ -4541,12 +4544,12 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
 }
 
-V7_PRIVATE val_t v7_property_value(struct v7 *v7, struct v7_property *p) {
+V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
   }
   if (p->attributes & V7_PROPERTY_GETTER) {
-    return v7_apply(v7, p->value, V7_UNDEFINED);
+    return v7_apply(v7, p->value, obj, V7_UNDEFINED);
   }
   return p->value;
 }
@@ -4925,8 +4928,6 @@ static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  int saved_in_function = v7->pstate.in_function;
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 &&
       lookahead(v7) != TOK_COLON) {
@@ -4936,16 +4937,9 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   } else if (v7->cur_tok == TOK_IDENTIFIER &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
-    start = ast_add_node(a, AST_SETTER);
     next_tok(v7);
-    PARSE(ident_allow_reserved_words);
-    EXPECT(TOK_OPEN_PAREN);
-    PARSE(ident);
-    EXPECT(TOK_CLOSE_PAREN);
-    v7->pstate.in_function = 1;
-    PARSE(block);
-    v7->pstate.in_function = saved_in_function;
-    ast_set_skip(a, start, AST_END_SKIP);
+    ast_add_node(a, AST_SETTER);
+    parse_funcdecl(v7, a, 1, 1);
   } else {
     /* Allow reserved words as property names. */
     if (is_reserved_word_token(v7->cur_tok) ||
@@ -6057,6 +6051,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v7_set_property(v7, res, name, name_len, 0, v1);
             break;
           case AST_GETTER:
+          case AST_SETTER:
             {
               ast_off_t func = *pos;
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
@@ -6064,12 +6059,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
               name = ast_get_inlined_data(a, func, &name_len);
               v1 = i_eval_expr(v7, a, pos, scope);
-              v7_set_property(v7, res, name, name_len, V7_PROPERTY_GETTER, v1);
+              /* TODO(mkm): use array to hold setter and getter if both are set */
+              v7_set_property(v7, res, name, name_len, tag == AST_GETTER ? V7_PROPERTY_GETTER : V7_PROPERTY_SETTER, v1);
             }
             break;
           default:
             throw_exception(v7, "InternalError",
-                            "Expecting AST_(PROP|GETTER) got %d", tag);
+                            "Expecting AST_(PROP|GETTER|SETTER) got %d", tag);
         }
       }
       return res;
@@ -6100,7 +6096,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
                           (int) name_len, name);
         }
-        return v7_property_value(v7, p);
+        return v7_property_value(v7, scope, p);
       }
     case AST_FUNC:
       {
@@ -6709,11 +6705,12 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_undefined();
 }
 
-val_t v7_apply(struct v7 *v7, val_t f, val_t args) {
+/* Invoke a function applying the argument array */
+val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
-  val_t frame;
+  val_t frame, res, saved_this = v7->this_object;
   char *name;
   size_t name_len;
   int i;
@@ -6736,7 +6733,10 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t args) {
                     v7_array_at(v7, args, i));
   }
 
-  return i_invoke_function(v7, func, frame, body, end);
+  v7->this_object = this_object;
+  res = i_invoke_function(v7, func, frame, body, end);
+  v7->this_object = saved_this;
+  return res;
 }
 
 enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {

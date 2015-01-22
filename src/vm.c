@@ -451,7 +451,7 @@ struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
 }
 
 v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
-  return v7_property_value(v7, v7_get_property(obj, name, name_len));
+  return v7_property_value(v7, obj, v7_get_property(obj, name, name_len));
 }
 
 static void v7_destroy_property(struct v7_property **p) {
@@ -463,7 +463,7 @@ static void v7_destroy_property(struct v7_property **p) {
 int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
   struct v7_property *p = v7_get_own_property(obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    return v7_set_property(v7, obj, name, len, p->attributes, val);
+    return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes, val);
   }
   return -1;
 }
@@ -485,15 +485,22 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     v7_to_object(obj)->properties = prop;
   }
 
-  prop->attributes = attributes;
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
-  prop->name = malloc(len + 1);
-  strncpy(prop->name, name, len);
-  prop->name[len] = '\0';
-
+  if (prop->name == NULL) {
+    prop->name = malloc(len + 1);
+    strncpy(prop->name, name, len);
+    prop->name[len] = '\0';
+  }
+  if (prop->attributes & V7_PROPERTY_SETTER) {
+    val_t args = v7_create_array(v7);
+    v7_set(v7, args, "0", 1, val);
+    v7_apply(v7, prop->value, obj, args);
+    return 0;
+  }
   prop->value = val;
+  prop->attributes = attributes;
   return 0;
 }
 
@@ -526,12 +533,12 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
 }
 
-V7_PRIVATE val_t v7_property_value(struct v7 *v7, struct v7_property *p) {
+V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
   }
   if (p->attributes & V7_PROPERTY_GETTER) {
-    return v7_apply(v7, p->value, V7_UNDEFINED);
+    return v7_apply(v7, p->value, obj, V7_UNDEFINED);
   }
   return p->value;
 }

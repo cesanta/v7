@@ -381,6 +381,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v7_set_property(v7, res, name, name_len, 0, v1);
             break;
           case AST_GETTER:
+          case AST_SETTER:
             {
               ast_off_t func = *pos;
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
@@ -388,12 +389,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
               name = ast_get_inlined_data(a, func, &name_len);
               v1 = i_eval_expr(v7, a, pos, scope);
-              v7_set_property(v7, res, name, name_len, V7_PROPERTY_GETTER, v1);
+              /* TODO(mkm): use array to hold setter and getter if both are set */
+              v7_set_property(v7, res, name, name_len, tag == AST_GETTER ? V7_PROPERTY_GETTER : V7_PROPERTY_SETTER, v1);
             }
             break;
           default:
             throw_exception(v7, "InternalError",
-                            "Expecting AST_(PROP|GETTER) got %d", tag);
+                            "Expecting AST_(PROP|GETTER|SETTER) got %d", tag);
         }
       }
       return res;
@@ -424,7 +426,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
                           (int) name_len, name);
         }
-        return v7_property_value(v7, p);
+        return v7_property_value(v7, scope, p);
       }
     case AST_FUNC:
       {
@@ -1033,11 +1035,12 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return v7_create_undefined();
 }
 
-val_t v7_apply(struct v7 *v7, val_t f, val_t args) {
+/* Invoke a function applying the argument array */
+val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
-  val_t frame;
+  val_t frame, res, saved_this = v7->this_object;
   char *name;
   size_t name_len;
   int i;
@@ -1060,7 +1063,10 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t args) {
                     v7_array_at(v7, args, i));
   }
 
-  return i_invoke_function(v7, func, frame, body, end);
+  v7->this_object = this_object;
+  res = i_invoke_function(v7, func, frame, body, end);
+  v7->this_object = saved_this;
+  return res;
 }
 
 enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {

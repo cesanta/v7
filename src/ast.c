@@ -344,14 +344,11 @@ const struct ast_node_def ast_node_defs[] = {
   {"GETTER", 0, 0, 0, 1},
   /*
    * struct {
-   *   ast_skip_t end;
-   *   child name; // TODO(mkm): inline
-   *   child param; // TODO(mkm): reuse func decl?
-   *   child body[];
+   *   child func;
    * end:
    * }
    */
-  {"SETTER", 0, 0, 1, 2},
+  {"SETTER", 0, 0, 0, 1},
   {"THIS", 0, 0, 0, 0},  /* struct {} */
   {"TRUE", 0, 0, 0, 0},  /* struct {} */
   {"FALSE", 0, 0, 0, 0}, /* struct {} */
