@@ -19,6 +19,8 @@
 #ifndef V7_HEADER_INCLUDED
 #define V7_HEADER_INCLUDED
 
+#define _POSIX_C_SOURCE 200809L
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
