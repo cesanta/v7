@@ -347,6 +347,11 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       v1 = i_eval_expr(v7, a, pos, scope);
+      if (v7_is_string(v1)) {
+        v1 = v7->string_prototype;
+      } else if (v7_is_double(v1)) {
+        v1 = v7->number_prototype;
+      }
       return v7_get(v7, v1, name, name_len);
     case AST_SEQ:
       end = ast_get_skip(a, *pos, AST_END_SKIP);

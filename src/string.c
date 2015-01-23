@@ -36,18 +36,17 @@ V7_PRIVATE val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
-  size_t i, n;
-  const char *p = v7_to_string(v7, &this_obj, &n), *end = p + n;
+  size_t i = 0, n;
+  const char *p = v7_to_string(v7, &this_obj, &n);
   val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
 
-  if (v7_to_double(arg) && at >= 0 && v7_is_string(this_obj)) {
-    Rune r;
-    for (i = 0; i < (size_t) at && p < end; i++) {
-      p += runetochar((char *) p, &r);
+  if (v7_is_double(arg) && at >= 0 && at < n && v7_is_string(this_obj)) {
+    Rune r = 0;
+    while (i <= n && i <= (size_t) at) {
+      i += chartorune(&r, (char *) (p + i));
     }
-    if (p < end) {
-      runetochar((char *) p, &r);
+    if (i <= n) {
       res = v7_create_number(r);
     }
   }
