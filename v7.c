@@ -6371,19 +6371,21 @@ V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
   siglongjmp(v7->jmp_buf, 1);
 }  /* LCOV_EXCL_LINE */
 
+static val_t create_exception(struct v7 *v7, const char *ex, const char *msg) {
+  char buf[40];
+  val_t e;
+  snprintf(buf, sizeof(buf), "new %s(this)", ex);
+  v7_exec_with(v7, &e, buf, v7_string_to_value(v7, msg, strlen(msg), 1));
+  return e;
+}
+
 V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
                                 const char *err_fmt, ...) {
-  char js[512];
-  val_t e;
   va_list ap;
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
-  snprintf(js, sizeof(js), "new %s(this)", type);
-  v7_exec_with(v7, &e, "new ReferenceError(this)",
-               v7_string_to_value(v7, v7->error_msg,
-                                  strlen(v7->error_msg), 1));
-  throw_value(v7, e);
+  throw_value(v7, create_exception(v7, type, v7->error_msg));
 }  /* LCOV_EXCL_LINE */
 
 static double i_as_num(struct v7 *v7, val_t v) {
@@ -7460,13 +7462,17 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   FILE *fp;
   char *p;
   long file_size;
-  enum v7_err err = V7_OK;
+  enum v7_err err = V7_EXEC_EXCEPTION;
   *res = V7_UNDEFINED;
 
   if ((fp = fopen(path, "r")) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]",
              path);
+    *res = create_exception(v7, "Error", v7->error_msg);
   } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
+    snprintf(v7->error_msg, sizeof(v7->error_msg), "fseek(%s): %s",
+             path, strerror(errno));
+    *res = create_exception(v7, "Error", v7->error_msg);
     fclose(fp);
   } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes",
