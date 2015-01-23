@@ -117,7 +117,6 @@ int v7_is_null(val_t);
 int v7_is_undefined(val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
-V7_PRIVATE void *val_to_pointer(val_t);
 
 val_t v7_object_to_value(struct v7_object *);
 val_t v7_string_to_value(struct v7 *, const char *c, size_t len, int own);
@@ -136,6 +135,7 @@ V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
 V7_PRIVATE void init_math(struct v7 *v7);
 V7_PRIVATE void init_string(struct v7 *v7);
+V7_PRIVATE void init_number(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 

@@ -5,46 +5,58 @@
 
 #include "internal.h"
 
-V7_PRIVATE enum v7_err Number_ctor(struct v7_c_func_arg *cfa) {
-  struct v7_val *obj =
-      cfa->called_as_constructor ? cfa->this_obj : v7_push_new_object(cfa->v7);
-  struct v7_val *arg = cfa->args[0];
+static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  /* TODO(lsm): if arg0 is not a number, do type conversion */
+  val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(NAN);
 
-  v7_init_num(obj, cfa->num_args > 0 ? arg->v.num : 0.0);
-
-  if (cfa->num_args > 0 && !is_num(arg) && !is_bool(arg)) {
-    if (is_string(arg)) {
-      v7_init_num(obj, strtod(arg->v.str.buf, NULL));
-    } else {
-      v7_init_num(obj, NAN);
-    }
+  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
+    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
+    return this_obj;
   }
 
-  if (cfa->called_as_constructor) {
-    obj->type = V7_TYPE_OBJ;
-    obj->proto = &s_prototypes[V7_CLASS_NUMBER];
-    obj->ctor = &s_constructors[V7_CLASS_NUMBER];
-  }
-
-  return V7_OK;
+  return res;
 }
 
-V7_PRIVATE enum v7_err Num_toFixed(struct v7_c_func_arg *cfa) {
-  int len, digits = cfa->num_args > 0 ? (int)cfa->args[0]->v.num : 0;
+static val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  double d = v7_to_double(arg0);
+  int len, digits = v7_is_double(arg0) && d > 0 ? (int) d : 0;
   char fmt[10], buf[100];
 
-  snprintf(fmt, sizeof(fmt), "%%.%dlf", digits);
-  len = snprintf(buf, sizeof(buf), fmt, cfa->this_obj->v.num);
-  v7_push_string(cfa->v7, buf, len, 1);
-  return V7_OK;
+  snprintf(fmt, sizeof(fmt), format, digits);
+  len = snprintf(buf, sizeof(buf), fmt, v7_to_double(t));
+
+  return v7_create_string(v7, buf, len, 1);
 }
 
-#define NUMCTOR s_constructors[V7_CLASS_NUMBER]
-V7_PRIVATE void init_number(void) {
-  init_standard_constructor(V7_CLASS_NUMBER, Number_ctor);
-  SET_RO_PROP(NUMCTOR, "MAX_VALUE", V7_TYPE_NUM, num, LONG_MAX);
-  SET_RO_PROP(NUMCTOR, "MIN_VALUE", V7_TYPE_NUM, num, LONG_MIN);
-  SET_RO_PROP(NUMCTOR, "NaN", V7_TYPE_NUM, num, NAN);
-  SET_METHOD(s_prototypes[V7_CLASS_NUMBER], "toFixed", Num_toFixed);
-  SET_RO_PROP_V(s_global, "Number", s_constructors[V7_CLASS_NUMBER]);
+static val_t Number_toFixed(struct v7 *v7, val_t this_obj, val_t args) {
+  return n_to_str(v7, this_obj, args, "%%.%dlf");
+}
+
+static val_t Number_toExp(struct v7 *v7, val_t this_obj, val_t args) {
+  return n_to_str(v7, this_obj, args, "%%.%de");
+}
+
+static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
+  return Number_toExp(v7, this_obj, args);
+}
+
+V7_PRIVATE void init_number(struct v7 *v7) {
+  val_t num = v7_create_cfunction(Number_ctor);
+  v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
+
+  set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
+  set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
+  set_cfunc_prop(v7, v7->number_prototype, "toExponentioal", Number_toExp);
+
+  v7_set_property(v7, v7->number_prototype, "MAX_VALUE", 9, 0,
+                  v7_create_number(LONG_MAX));
+  v7_set_property(v7, v7->number_prototype, "MIN_VALUE", 9, 0,
+                  v7_create_number(LONG_MIN));
+  v7_set_property(v7, v7->number_prototype, "NEGATIVE_INFINITY", 17, 0,
+                  v7_create_number(-INFINITY));
+  v7_set_property(v7, v7->number_prototype, "POSITIVE_INFINITY", 17, 0,
+                  v7_create_number(INFINITY));
+  v7_set_property(v7, v7->number_prototype, "NaN", 3, 0, V7_TAG_NAN);
 }
