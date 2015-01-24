@@ -1296,6 +1296,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
   ASSERT(v7_exec(v7, &v, "(function(){o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; return o; case 3: o.three=1; }})()") == V7_OK);
   ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
+  ASSERT(v7_exec(v7, &v, "o={};switch(1) {case 1: o.one=1; default: o.fall=2; break; case 3: o.three=1; };o") == V7_OK);
+  ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
 
   ASSERT(v7_exec(v7, &v, "o={get x(){return 42}};o.x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));

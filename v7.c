@@ -7256,6 +7256,10 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         *pos = end;
         return res;
       }
+    case AST_DEFAULT:
+      /* handle fallthroughs */
+      ast_move_to_children(a, pos);
+      break;
     case AST_CASE:
       /* handle fallthroughs */
       ast_move_to_children(a, pos);
