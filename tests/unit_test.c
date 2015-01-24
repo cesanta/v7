@@ -204,7 +204,6 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "new Number(21.23)") == V7_OK);
 
   /* String */
-#if 0
   ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(1)") == V7_OK);
   ASSERT(check_num(v, 'e'));
   ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(4)") == V7_OK);
@@ -226,11 +225,12 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(3)") == V7_OK);
   ASSERT(check_str(v7, v, "there"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(-2)") == V7_OK);
-  ASSERT(check_str(v7, v, "hi there"));
+  ASSERT(check_str(v7, v, "re"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(NaN)") == V7_OK);
   ASSERT(check_str(v7, v, "hi there"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, v, "hi there"));
+#if 0
   ASSERT(v7_exec(v7, &v, "'dew dee'.match(/\\d+/)") == V7_OK);
   ASSERT(v == V7_NULL);
   ASSERT(v7_exec(v7, &v, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);
