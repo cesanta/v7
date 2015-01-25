@@ -708,6 +708,7 @@ struct v7 {
   val_t boolean_prototype;
   val_t error_prototype;
   val_t string_prototype;
+  val_t number_prototype;
   val_t this_object;
 
   /*
@@ -879,7 +880,6 @@ int v7_is_null(val_t);
 int v7_is_undefined(val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
-V7_PRIVATE void *val_to_pointer(val_t);
 
 val_t v7_object_to_value(struct v7_object *);
 val_t v7_string_to_value(struct v7 *, const char *c, size_t len, int own);
@@ -898,6 +898,7 @@ V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
 V7_PRIVATE void init_math(struct v7 *v7);
 V7_PRIVATE void init_string(struct v7 *v7);
+V7_PRIVATE void init_number(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 
@@ -5473,6 +5474,7 @@ struct v7 *v7_create(void) {
     v7->array_prototype = v7_create_object(v7);
     v7->boolean_prototype = v7_create_object(v7);
     v7->string_prototype = v7_create_object(v7);
+    v7->number_prototype = v7_create_object(v7);
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
 
@@ -5492,6 +5494,7 @@ struct v7 *v7_create(void) {
     init_boolean(v7);
     init_math(v7);
     init_string(v7);
+    init_number(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }
@@ -9298,6 +9301,67 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 
   v7->error_prototype = v7_get(v7, v7_get(v7, v7->global_object, "Error", 5),
                                "prototype", 9);
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  /* TODO(lsm): if arg0 is not a number, do type conversion */
+  val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(NAN);
+
+  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
+    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
+    return this_obj;
+  }
+
+  return res;
+}
+
+static val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  double d = v7_to_double(arg0);
+  int len, digits = v7_is_double(arg0) && d > 0 ? (int) d : 0;
+  char fmt[10], buf[100];
+
+  snprintf(fmt, sizeof(fmt), format, digits);
+  len = snprintf(buf, sizeof(buf), fmt, v7_to_double(t));
+
+  return v7_create_string(v7, buf, len, 1);
+}
+
+static val_t Number_toFixed(struct v7 *v7, val_t this_obj, val_t args) {
+  return n_to_str(v7, this_obj, args, "%%.%dlf");
+}
+
+static val_t Number_toExp(struct v7 *v7, val_t this_obj, val_t args) {
+  return n_to_str(v7, this_obj, args, "%%.%de");
+}
+
+static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
+  return Number_toExp(v7, this_obj, args);
+}
+
+V7_PRIVATE void init_number(struct v7 *v7) {
+  val_t num = v7_create_cfunction(Number_ctor);
+  v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
+
+  set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
+  set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
+  set_cfunc_prop(v7, v7->number_prototype, "toExponentioal", Number_toExp);
+
+  v7_set_property(v7, v7->number_prototype, "MAX_VALUE", 9, 0,
+                  v7_create_number(LONG_MAX));
+  v7_set_property(v7, v7->number_prototype, "MIN_VALUE", 9, 0,
+                  v7_create_number(LONG_MIN));
+  v7_set_property(v7, v7->number_prototype, "NEGATIVE_INFINITY", 17, 0,
+                  v7_create_number(-INFINITY));
+  v7_set_property(v7, v7->number_prototype, "POSITIVE_INFINITY", 17, 0,
+                  v7_create_number(INFINITY));
+  v7_set_property(v7, v7->number_prototype, "NaN", 3, 0, V7_TAG_NAN);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited

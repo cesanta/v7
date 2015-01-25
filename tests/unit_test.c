@@ -72,15 +72,16 @@ static int check_value(struct v7 *v7, val_t v, const char *str) {
   return 1;
 }
 
-#if 0
 static int check_num(val_t v, double num) {
-  return v7_to_double(v) == num;
+  return isnan(num) ? isnan(v7_to_double(v)) : v7_to_double(v) == num;
 }
 
 static int check_bool(val_t v, int is_true) {
-  return v7_to_boolean(v) == is_true;
+  int b = v7_to_boolean(v);
+  return is_true ? b : !b;
 }
 
+#if 0
 static int check_str(struct v7 *v7, val_t v, const char *str) {
   size_t n1, n2 = strlen(str);
   const char *s = v7_to_string(v7, &v, &n1);
@@ -187,7 +188,6 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "Math.sqrt(144)") == V7_OK);
   ASSERT(check_value(v7, v, "12"));
 
-#if 0
   /* Number */
 #ifndef _WIN32
   ASSERT(v7_exec(v7, &v, "Math.PI") == V7_OK);
@@ -203,10 +203,9 @@ static const char *test_stdlib(void) {
   ASSERT(check_bool(v, 1));
   ASSERT(v7_exec(v7, &v, "Number(1.23)") == V7_OK);
   ASSERT(check_num(v, 1.23));
-#ifdef TODO /* New operator: Assertion failed: (v7->root_scope.proto == &s_global), function do_exec, file src/util.c, line 557. */
   ASSERT(v7_exec(v7, &v, "new Number(21.23)") == V7_OK);
-#endif
 
+#if 0
   /* String */
   ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(1)") == V7_OK);
   ASSERT(check_num(v, 'e'));
