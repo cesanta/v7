@@ -205,14 +205,14 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 1.23));
   ASSERT(v7_exec(v7, &v, "new Number(21.23)") == V7_OK);
 
-#if 0
   /* String */
   ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(1)") == V7_OK);
   ASSERT(check_num(v, 'e'));
   ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(4)") == V7_OK);
   ASSERT(check_num(v, 'o'));
-  ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(5) == Number.NaN") == V7_OK);
-  ASSERT(check_bool(v, 1.0));
+  ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(5)") == V7_OK);
+  ASSERT(check_num(v, NAN));
+#if 0
   ASSERT(v7_exec(v7, &v, "'hello'.indexOf()") == V7_OK);
   ASSERT(check_num(v, -1.0));
   ASSERT(v7_exec(v7, &v, "'HTTP/1.0\\r\\n'.indexOf('\\r\\n')") == V7_OK);
