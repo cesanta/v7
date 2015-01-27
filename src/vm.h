@@ -151,6 +151,8 @@ V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
 V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
+V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
+                                                    size_t, unsigned int attrs);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj, const char *name,
@@ -176,7 +178,7 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
-V7_PRIVATE val_t s_substr(struct v7 *, val_t, size_t, size_t);
+V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 #endif  /* VM_H_INCLUDED */

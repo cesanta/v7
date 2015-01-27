@@ -422,8 +422,9 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   return (struct v7_property *) calloc(1, sizeof(struct v7_property));
 }
 
-V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name,
-                                                   size_t len) {
+V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
+                                                    size_t len,
+                                                    unsigned int attrs) {
   struct v7_property *prop;
   if (len == (size_t) ~0) {
     len = strlen(name);
@@ -433,11 +434,17 @@ V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name,
   }
   for (prop = v7_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
-    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
+    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0 &&
+        (attrs == 0 || (prop->attributes & attrs))) {
       return prop;
     }
   }
   return NULL;
+}
+
+V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name,
+                                                   size_t len) {
+  return v7_get_own_property2(obj, name, len, 0);
 }
 
 struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
@@ -711,12 +718,14 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   return v7_pointer_to_value((void *) offset) | tag;
 }
 
-V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, size_t start, size_t len) {
+V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
   const char *p = v7_to_string(v7, &s, &n);
-  if (len > n) len = n;   /* boundary check */
-  if (start > n) start = n;
-  /* TODO(lsm): if the substring len <= 5 bytes, inline into val_t */
+  if (start < 0) start = n + start;
+  if (start < 0) start = 0;
+  if (start > (long) n) start = n;
+  if (len < 0) len = 0;
+  if (len > (long) n - start) len = n - start;
   return v7_string_to_value(v7, p + start, len, 1);
 }
 

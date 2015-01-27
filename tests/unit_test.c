@@ -81,13 +81,11 @@ static int check_bool(val_t v, int is_true) {
   return is_true ? b : !b;
 }
 
-#if 0
 static int check_str(struct v7 *v7, val_t v, const char *str) {
   size_t n1, n2 = strlen(str);
   const char *s = v7_to_string(v7, &v, &n1);
   return n1 == n2 && memcmp(s, str, n1) == 0;
 }
-#endif
 
 static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   val_t v;
@@ -212,7 +210,6 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 'o'));
   ASSERT(v7_exec(v7, &v, "'hello'.charCodeAt(5)") == V7_OK);
   ASSERT(check_num(v, NAN));
-#if 0
   ASSERT(v7_exec(v7, &v, "'hello'.indexOf()") == V7_OK);
   ASSERT(check_num(v, -1.0));
   ASSERT(v7_exec(v7, &v, "'HTTP/1.0\\r\\n'.indexOf('\\r\\n')") == V7_OK);
@@ -228,11 +225,12 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(3)") == V7_OK);
   ASSERT(check_str(v7, v, "there"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(-2)") == V7_OK);
-  ASSERT(check_str(v7, v, "hi there"));
+  ASSERT(check_str(v7, v, "re"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(NaN)") == V7_OK);
   ASSERT(check_str(v7, v, "hi there"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, v, "hi there"));
+#if 0
   ASSERT(v7_exec(v7, &v, "'dew dee'.match(/\\d+/)") == V7_OK);
   ASSERT(v == V7_NULL);
   ASSERT(v7_exec(v7, &v, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);

@@ -5,7 +5,7 @@
 
 #include "internal.h"
 
-V7_PRIVATE val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   /* TODO(lsm): if arg0 is not a string, do type conversion */
   val_t res = v7_is_string(arg0) ? arg0 : v7_create_string(v7, "", 0, 1);
@@ -18,7 +18,7 @@ V7_PRIVATE val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-V7_PRIVATE val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   int i, num_args = v7_array_length(v7, args);
   val_t res = v7_create_string(v7, "", 0, 1);   /* Empty string */
 
@@ -35,7 +35,7 @@ V7_PRIVATE val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-V7_PRIVATE val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i = 0, n;
   const char *p = v7_to_string(v7, &this_obj, &n);
   val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
@@ -53,100 +53,88 @@ V7_PRIVATE val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t code = Str_charCodeAt(v7, this_obj, args);
+  val_t res;
+
+  if (code != V7_TAG_NAN) {
+    char buf[10];
+    Rune r = (Rune) v7_to_double(code);
+    int len = runetochar(buf, &r);
+    res = v7_create_string(v7, buf, len, 1);
+  } else {
+    res = v7_create_string(v7, "", 0, 1);
+  }
+
+  return res;
+}
+
+static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t res = this_obj;
+  struct v7_property *p;
+
+  (void) args;
+  if (val_type(v7, this_obj) == V7_TYPE_STRING_OBJECT &&
+      (p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
+    res = p->value;
+  }
+
+  return res;
+}
+
+static val_t to_string(struct v7 *v7, val_t v) {
+  char buf[100], *p = v7_to_json(v7, v, buf, sizeof(buf));
+  val_t res;
+
+  if (p[0] == '"') {
+    p[strlen(p) - 1] = '\0';
+    p++;
+  }
+  res = v7_create_string(v7, p, strlen(p), 1);
+  if (p != buf && p != buf + 1) {
+    free(p);
+  }
+
+  return res;
+}
+
+static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t res = Str_valueOf(v7, this_obj, args);
+  int i, num_args = v7_array_length(v7, args);
+
+  for (i = 0; i < num_args; i++) {
+    val_t str = to_string(v7, v7_array_at(v7, args, i));
+    res = s_concat(v7, res, str);
+  }
+
+  return res;
+}
+
+static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t s = Str_valueOf(v7, this_obj, args);
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t sub, res = v7_create_number(-1);
+  size_t i, n1, n2, fromIndex = v7_is_double(arg1) ? v7_to_double(arg1) : 0;
+  const char *p1, *p2;
+
+  if (arg0 == V7_UNDEFINED) return res;
+
+  sub = to_string(v7, arg0);
+  p1 = v7_to_string(v7, &s, &n1);
+  p2 = v7_to_string(v7, &sub, &n2);
+
+  if (n2 > n1) return res;
+
+  for (i = fromIndex; i <= n1 - n2; i++) {
+    if (memcmp(p1 + i, p2, n2) == 0) return v7_create_number(i);
+  }
+
+  return res;
+}
+
+
 #if 0
-V7_PRIVATE enum v7_err Str_valueOf(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  if (!is_string(cfa->this_obj)) THROW(V7_TYPE_ERROR);
-  TRY(push_string(v7, cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len, 1));
-  return V7_OK;
-#undef v7
-}
-
-static enum v7_err _charAt(struct v7_c_func_arg *cfa, const char **p) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  if (cfa->num_args > 0) {
-    long len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len),
-         idx = _conv_to_int(v7, cfa->args[0]);
-    if (idx < 0) idx = len - idx;
-    if (idx >= 0 && idx < len)
-      return *p = utfnshift(cfa->this_obj->v.str.buf, idx), V7_OK;
-  } else
-    return *p = cfa->this_obj->v.str.buf, V7_OK;
-  return *p = NULL, V7_OK;
-#undef v7
-}
-
-V7_PRIVATE enum v7_err Str_charAt(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  const char *p;
-  TRY(_charAt(cfa, &p));
-  TRY(push_string(v7, p, p == NULL ? 0 : 1, 1));
-  return V7_OK;
-#undef v7
-}
-
-V7_PRIVATE enum v7_err Str_concat(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long n, blen;
-  struct v7_val *str;
-  char *p;
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  blen = cfa->this_obj->v.str.len;
-  for (n = 0; n < cfa->num_args; n++) {
-    TRY(check_str_re_conv(v7, &cfa->args[n], 0));
-    blen += cfa->args[n]->v.str.len;
-  }
-  str = v7_push_string(v7, cfa->this_obj->v.str.buf, blen, 1);
-  p = str->v.str.buf + cfa->this_obj->v.str.len;
-  for (n = 0; n < cfa->num_args; n++) {
-    memcpy(p, cfa->args[n]->v.str.buf, cfa->args[n]->v.str.len);
-    p += cfa->args[n]->v.str.len;
-  }
-  *p = '\0';
-  str->v.str.len = blen;
-  return V7_OK;
-#undef v7
-}
-
-static long _indexOf(char *pp, char *const end, char *p, long blen,
-                     uint8_t last) {
-  long i, idx = -1;
-  if (0 == blen || end - pp == 0) return 0;
-  for (i = 0; pp <= (end - blen); i++, pp = utfnshift(pp, 1))
-    if (0 == memcmp(pp, p, blen)) {
-      idx = i;
-      if (!last) break;
-    }
-  return idx;
-}
-
-V7_PRIVATE enum v7_err Str_indexOf(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long idx = -1, pos = 0;
-  char *p, *end;
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  p = cfa->this_obj->v.str.buf;
-  end = p + cfa->this_obj->v.str.len;
-  if (cfa->num_args > 0) {
-    if (V7_TYPE_UNDEF != cfa->args[0]->type &&
-        V7_TYPE_NULL != cfa->args[0]->type) {
-      TRY(check_str_re_conv(v7, &cfa->args[0], 0));
-      if (cfa->num_args > 1) {
-        p = utfnshift(p, pos = _conv_to_int(v7, cfa->args[1]));
-      }
-      if (p < end)
-        idx = _indexOf(p, end, cfa->args[0]->v.str.buf, cfa->args[0]->v.str.len,
-                       0);
-    } else
-      idx = 0;
-  }
-  if (idx >= 0) idx += pos;
-  TRY(push_number(v7, idx));
-  return V7_OK;
-#undef v7
-}
-
 V7_PRIVATE enum v7_err Str_lastIndexOf(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   long idx = -1;
@@ -481,15 +469,6 @@ V7_PRIVATE enum v7_err _Str_strslice(struct v7_c_func_arg *cfa, int islen) {
 #undef v7
 }
 
-V7_PRIVATE enum v7_err Str_substr(struct v7_c_func_arg *cfa) {
-  return _Str_strslice(cfa, 1);
-}
-
-V7_PRIVATE enum v7_err Str_substring(struct v7_c_func_arg *cfa) {
-  return _Str_strslice(cfa, 0);
-}
-
-
 V7_PRIVATE enum v7_err Str_toLowerCase(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
   long n, blen = 0;
@@ -625,18 +604,37 @@ V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg,
 }
 #endif
 
+static long get_long_arg(struct v7 *v7, val_t args, int n, long default_value) {
+  val_t arg_n = v7_array_at(v7, args, n);
+  return v7_is_double(arg_n) ? (long) v7_to_double(arg_n) : default_value;
+}
+
+static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
+  long start = get_long_arg(v7, args, 0, 0);
+  long len = get_long_arg(v7, args, 1, LONG_MAX);
+  return s_substr(v7, this_obj, start, len);
+}
+
+static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
+  long start = get_long_arg(v7, args, 0, 0);
+  long end = get_long_arg(v7, args, 1, LONG_MAX);
+  return s_substr(v7, this_obj, start, end - start);
+}
+
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str = v7_create_cfunction(String_ctor);
   v7_set_property(v7, v7->global_object, "String", 6, 0, str);
 
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
+  set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);
   set_cfunc_prop(v7, v7->string_prototype, "fromCharCode", Str_fromCharCode);
+  set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
+  set_cfunc_prop(v7, v7->string_prototype, "concat", Str_concat);
+  set_cfunc_prop(v7, v7->string_prototype, "indexOf", Str_indexOf);
+  set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
+  set_cfunc_prop(v7, v7->string_prototype, "substring", Str_substring);
 
 #if 0
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "valueOf", Str_valueOf);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "charAt", Str_charAt);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "concat", Str_concat);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "indexOf", Str_indexOf);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "lastIndexOf", Str_lastIndexOf);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "localeCompare", Str_localeCompare);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
@@ -645,7 +643,6 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "slice", Str_slice);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "split", Str_split);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "substring", Str_substring);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "substr", Str_substr);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "toLowerCase", Str_toLowerCase);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "toLocaleLowerCase",
              Str_toLocaleLowerCase);
