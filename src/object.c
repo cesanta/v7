@@ -177,8 +177,20 @@ V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
   }
   return V7_OK;
 }
-
 #endif
+
+static val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t res = this_obj;
+  struct v7_property *p;
+
+  (void) args; (void) v7;
+  if ((p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
+    res = p->value;
+  }
+
+  return res;
+}
+
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
@@ -187,8 +199,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   object = v7_get(v7, v7->global_object, "Object", 6);
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
 
+  object = v7->object_prototype;
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
-  set_cfunc_prop(v7, object, "isPrototypeOf", Obj_isPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);
   set_cfunc_prop(v7, object, "defineProperty", Obj_defineProperty);
@@ -196,8 +208,11 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, object, "create", Obj_create);
   set_cfunc_prop(v7, object, "keys", Obj_keys);
   set_cfunc_prop(v7, object, "getOwnPropertyNames", Obj_getOwnPropertyNames);
+
   set_cfunc_prop(v7, v7->object_prototype, "propertyIsEnumerable",
                  Obj_propertyIsEnumerable);
   set_cfunc_prop(v7, v7->object_prototype, "hasOwnProperty",
                  Obj_hasOwnProperty);
+  set_cfunc_prop(v7, v7->object_prototype, "isPrototypeOf", Obj_isPrototypeOf);
+  set_cfunc_prop(v7, v7->object_prototype, "valueOf", Obj_valueOf);
 }

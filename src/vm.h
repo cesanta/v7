@@ -175,6 +175,8 @@ V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
  */
 V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
 
+V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
+
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);

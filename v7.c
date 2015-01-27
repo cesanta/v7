@@ -939,6 +939,8 @@ V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
  */
 V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
 
+V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
+
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
@@ -3281,17 +3283,19 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 
 V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t v = v7_create_boolean(0);   /* false by default */
+
   if (v7_is_true(v7, v7_array_at(v7, args, 0))) {
     v = v7_create_boolean(1);
   }
-  if (this_obj != v7->global_object) {
+
+  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     /* called as "new Boolean(...)" */
-    val_t obj = create_object(v7, v7->boolean_prototype);
-    v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v);
-    return obj;
-  } else {
-    return v;
+    v7_to_object(this_obj)->prototype = v7_to_object(v7->boolean_prototype);
+    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, v);
+    v = this_obj;
   }
+
+  return v;
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
@@ -3419,6 +3423,7 @@ static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_is_string(arg0) ? arg0 : v7_create_string(v7, "", 0, 1);
 
   if (v7_is_object(this_obj)) {
+    v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
     return this_obj;
   }
@@ -3477,19 +3482,6 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = this_obj;
-  struct v7_property *p;
-
-  (void) args;
-  if (val_type(v7, this_obj) == V7_TYPE_STRING_OBJECT &&
-      (p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
-    res = p->value;
-  }
-
-  return res;
-}
-
 static val_t to_string(struct v7 *v7, val_t v) {
   char buf[100], *p = v7_to_json(v7, v, buf, sizeof(buf));
   val_t res;
@@ -3507,7 +3499,7 @@ static val_t to_string(struct v7 *v7, val_t v) {
 }
 
 static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = Str_valueOf(v7, this_obj, args);
+  val_t res = i_value_of(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
 
   for (i = 0; i < num_args; i++) {
@@ -3519,7 +3511,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t s = Str_valueOf(v7, this_obj, args);
+  val_t s = i_value_of(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = v7_array_at(v7, args, 1);
   val_t sub, res = v7_create_number(-1);
@@ -4036,7 +4028,6 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);
   set_cfunc_prop(v7, v7->string_prototype, "fromCharCode", Str_fromCharCode);
-  set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
   set_cfunc_prop(v7, v7->string_prototype, "concat", Str_concat);
   set_cfunc_prop(v7, v7->string_prototype, "indexOf", Str_indexOf);
   set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
@@ -4708,6 +4699,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->string_prototype)) {
         return V7_TYPE_STRING_OBJECT;
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->number_prototype)) {
+        return V7_TYPE_NUMBER_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -5114,6 +5108,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return NULL;
   }
+
   for (prop = v7_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
     if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0 &&
@@ -5401,6 +5396,7 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
   const char *p = v7_to_string(v7, &s, &n);
+  if (!v7_is_string(s)) return V7_UNDEFINED;
   if (start < 0) start = n + start;
   if (start < 0) start = 0;
   if (start > (long) n) start = n;
@@ -6417,6 +6413,17 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
   throw_value(v7, create_exception(v7, type, v7->error_msg));
 }  /* LCOV_EXCL_LINE */
 
+V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
+  struct v7_property *prop;
+  if (v7_is_object(v) &&
+      (prop = v7_get_property(v, "valueOf", 7)) != NULL) {
+    if (v7_is_cfunction(prop->value)) {
+      v = v7_to_cfunction(prop->value)(v7, v, V7_UNDEFINED);
+    }
+  }
+  return v;
+}
+
 static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
@@ -6574,8 +6581,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_LE:
     case AST_GT:
     case AST_GE:
-      v1 = i_eval_expr(v7, a, pos, scope);
-      v2 = i_eval_expr(v7, a, pos, scope);
+      v1 = i_value_of(v7, i_eval_expr(v7, a, pos, scope));
+      v2 = i_value_of(v7, i_eval_expr(v7, a, pos, scope));
       if (tag == AST_EQ && v1 == v2) {
         return v7_boolean_to_value(1);
       }
@@ -9341,8 +9348,20 @@ V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
   }
   return V7_OK;
 }
-
 #endif
+
+static val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t res = this_obj;
+  struct v7_property *p;
+
+  (void) args; (void) v7;
+  if ((p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
+    res = p->value;
+  }
+
+  return res;
+}
+
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
@@ -9351,8 +9370,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   object = v7_get(v7, v7->global_object, "Object", 6);
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
 
+  object = v7->object_prototype;
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
-  set_cfunc_prop(v7, object, "isPrototypeOf", Obj_isPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);
   set_cfunc_prop(v7, object, "defineProperty", Obj_defineProperty);
@@ -9364,6 +9383,9 @@ V7_PRIVATE void init_object(struct v7 *v7) {
                  Obj_propertyIsEnumerable);
   set_cfunc_prop(v7, v7->object_prototype, "hasOwnProperty",
                  Obj_hasOwnProperty);
+
+  set_cfunc_prop(v7, v7->object_prototype, "isPrototypeOf", Obj_isPrototypeOf);
+  set_cfunc_prop(v7, v7->object_prototype, "valueOf", Obj_valueOf);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -9399,8 +9421,9 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(NAN);
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
+    v7_to_object(this_obj)->prototype = v7_to_object(v7->number_prototype);
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
-    return this_obj;
+    res = this_obj;
   }
 
   return res;
