@@ -53,6 +53,12 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
+static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  return v7_create_boolean(!v7_is_double(arg0) || arg0 == V7_TAG_NAN);
+}
+
 V7_PRIVATE void init_number(struct v7 *v7) {
   val_t num = v7_create_cfunction(Number_ctor);
   v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
@@ -72,4 +78,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   v7_set_property(v7, v7->number_prototype, "POSITIVE_INFINITY", 17, 0,
                   v7_create_number(INFINITY));
   v7_set_property(v7, v7->number_prototype, "NaN", 3, 0, V7_TAG_NAN);
+
+  v7_set_property(v7, v7->global_object, "isNaN", 5, 0,
+                  v7_create_cfunction(n_isNaN));
 }
