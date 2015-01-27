@@ -100,10 +100,16 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
     case AST_SUB:
       return a - b;
     case AST_REM:
+      if (b == 0 || isnan(b) || isnan(a)) {
+        return NAN;
+      }
       return (int) a % (int) b;
     case AST_MUL:
       return a * b;
     case AST_DIV:
+      if (b == 0) {
+        return signbit(a) == 0 ? INFINITY : -INFINITY;
+      }
       return a / b;
     case AST_LSHIFT:
       return (int) a << (int) b;
