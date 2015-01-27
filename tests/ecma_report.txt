@@ -1233,7 +1233,7 @@
 1227	FAIL (tail -c +869691 tests/ecmac.db|head -c 1513): [{"message":"Expecting a function in instanceof check"}]
 1228	FAIL (tail -c +871205 tests/ecmac.db|head -c 1500): [{"message":"Expecting a function in instanceof check"}]
 1229	FAIL (tail -c +872706 tests/ecmac.db|head -c 3999): [{"message":"Expecting a function in instanceof check"}]
-1230	FAIL (tail -c +876706 tests/ecmac.db|head -c 664): [{"message":"Test case returned non-true value!"}]
+1230	FAIL (tail -c +876706 tests/ecmac.db|head -c 664): [{"message":"[s1] is not defined"}]
 1232	FAIL (tail -c +878218 tests/ecmac.db|head -c 580): [{"message":"Test case returned non-true value!"}]
 1233	FAIL (tail -c +878799 tests/ecmac.db|head -c 593): [{"message":"Test case returned non-true value!"}]
 1234	FAIL (tail -c +879393 tests/ecmac.db|head -c 580): [{"message":"Test case returned non-true value!"}]
