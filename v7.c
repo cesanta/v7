@@ -3297,8 +3297,9 @@ V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
-  v7_set_property(v7, v7->global_object, "Boolean", 7, 0,
-                  v7_create_cfunction(Boolean_ctor));
+  val_t boolean = v7_create_cfunction(Boolean_ctor);
+  v7_set_property(v7, v7->global_object, "Boolean", 7, 0, boolean);
+  v7_set(v7, v7->boolean_prototype, "constructor", 11, boolean);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4029,6 +4030,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str = v7_create_cfunction(String_ctor);
   v7_set_property(v7, v7->global_object, "String", 6, 0, str);
+  v7_set(v7, v7->string_prototype, "constructor", 11, str);
 
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);
@@ -4893,14 +4895,16 @@ v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): use GC heap */
   struct v7_function *f = (struct v7_function *) malloc(
       sizeof(struct v7_function));
-  val_t fval = v7_function_to_value(f);
+  val_t proto, fval = v7_function_to_value(f);
   if (f == NULL) {
     return V7_NULL;
   }
   f->properties = NULL;
   f->scope = NULL;
   /* TODO(mkm): lazily create these properties on first access */
-  v7_set_property(v7, fval, "prototype", -1, 0, v7_create_object(v7));
+  proto = v7_create_object(v7);
+  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
+  v7_set_property(v7, fval, "prototype", 9, 0, proto);
   return fval;
 }
 
@@ -9404,6 +9408,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 
   object = v7_get(v7, v7->global_object, "Object", 6);
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
+  v7_set(v7, v7->object_prototype, "constructor", 11, object);
 
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
@@ -9490,6 +9495,7 @@ static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_number(struct v7 *v7) {
   val_t num = v7_create_cfunction(Number_ctor);
   v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
+  v7_set(v7, v7->number_prototype, "constructor", 11, num);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
