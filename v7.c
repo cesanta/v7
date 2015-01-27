@@ -6604,11 +6604,31 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return v7_create_boolean(i_bool_bin_op(
           v7, tag, i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_OR:
+      {
+        double n1, n2;
+        v1 = i_eval_expr(v7, a, pos, scope);
+        n1 = i_as_num(v7, v1);
+        if (n1) {
+          ast_skip_tree(a, pos);
+          return v1;
+        }
+        v2 = i_eval_expr(v7, a, pos, scope);
+        n2 = i_as_num(v7, v2);
+        return v7_create_boolean(n1 || n2);
+      }
     case AST_LOGICAL_AND:
-      v1 = i_eval_expr(v7, a, pos, scope);
-      v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_boolean(i_bool_bin_op(
-          v7, tag, i_as_num(v7, v1), i_as_num(v7, v2)));
+      {
+        double n1, n2;
+        v1 = i_eval_expr(v7, a, pos, scope);
+        n1 = i_as_num(v7, v1);
+        if (!n1) {
+          ast_skip_tree(a, pos);
+          return v7_create_boolean(0);
+        }
+        v2 = i_eval_expr(v7, a, pos, scope);
+        n2 = i_as_num(v7, v2);
+        return v7_create_boolean(n1 && n2);
+      }
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_boolean_to_value(!(int) v7_is_true(v7, v1));

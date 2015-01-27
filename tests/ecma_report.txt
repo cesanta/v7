@@ -863,7 +863,7 @@
 865	PASS (tail -c +672289 tests/ecmac.db|head -c 472)
 866	FAIL (tail -c +672762 tests/ecmac.db|head -c 784): [{"message":"Test case returned non-true value!"}]
 867	FAIL (tail -c +673547 tests/ecmac.db|head -c 846): [{"message":"Test case returned non-true value!"}]
-868	FAIL (tail -c +674394 tests/ecmac.db|head -c 635): [{"message":"[public] is not defined"}]
+868	FAIL (tail -c +674394 tests/ecmac.db|head -c 635): [{"message":"Test case returned non-true value!"}]
 869	FAIL (tail -c +675030 tests/ecmac.db|head -c 697): [{"message":"Test case returned non-true value!"}]
 870	FAIL (tail -c +675728 tests/ecmac.db|head -c 417): [{"message":"[Function] is not defined"}]
 871	PASS (tail -c +676146 tests/ecmac.db|head -c 387)
@@ -1327,7 +1327,7 @@
 1345	FAIL (tail -c +980050 tests/ecmac.db|head -c 1572): [{"message":"#4: var y = new Boolean(false); (true && y) === y"}]
 1346	PASS (tail -c +981623 tests/ecmac.db|head -c 458)
 1347	PASS (tail -c +982082 tests/ecmac.db|head -c 483)
-1348	FAIL (tail -c +982566 tests/ecmac.db|head -c 315): [{"message":"[x] is not defined"}]
+1348	PASS (tail -c +982566 tests/ecmac.db|head -c 315)
 1349	PASS (tail -c +982882 tests/ecmac.db|head -c 469)
 1350	PASS (tail -c +983352 tests/ecmac.db|head -c 769)
 1351	PASS (tail -c +984122 tests/ecmac.db|head -c 610)
@@ -1340,10 +1340,10 @@
 1358	FAIL (tail -c +989161 tests/ecmac.db|head -c 989): [{"message":"#-1: ("0" && "-1") === "-1""}]
 1359	FAIL (tail -c +990151 tests/ecmac.db|head -c 419): [{"message":"#1: (true && undefined) === undefined"}]
 1360	FAIL (tail -c +990571 tests/ecmac.db|head -c 1665): [{"message":"#5: (false || true) === true"}]
-1361	FAIL (tail -c +992237 tests/ecmac.db|head -c 1630): [{"message":"#3: var x = Boolean(false); (x || true) === x"}]
+1361	FAIL (tail -c +992237 tests/ecmac.db|head -c 1630): [{"message":"#4: var y = Boolean(true); (false || y) === y"}]
 1362	PASS (tail -c +993868 tests/ecmac.db|head -c 458)
 1363	PASS (tail -c +994327 tests/ecmac.db|head -c 488)
-1364	FAIL (tail -c +994816 tests/ecmac.db|head -c 309): [{"message":"[x] is not defined"}]
+1364	PASS (tail -c +994816 tests/ecmac.db|head -c 309)
 1365	PASS (tail -c +995126 tests/ecmac.db|head -c 468)
 1366	PASS (tail -c +995595 tests/ecmac.db|head -c 769)
 1367	PASS (tail -c +996365 tests/ecmac.db|head -c 610)
@@ -1351,9 +1351,9 @@
 1369	FAIL (tail -c +997658 tests/ecmac.db|head -c 826): [{"message":"#1.1: (0 || -0) === 0"}]
 1370	FAIL (tail -c +998485 tests/ecmac.db|head -c 437): [{"message":"#1: ("" || "1") === "1""}]
 1371	FAIL (tail -c +998923 tests/ecmac.db|head -c 424): [{"message":"#1: (false || undefined) === undefined"}]
-1372	FAIL (tail -c +999348 tests/ecmac.db|head -c 1040): [{"message":"#3: (var x = new Boolean(true); (x || new Boolean(true)) === x"}]
-1373	FAIL (tail -c +1000389 tests/ecmac.db|head -c 903): [{"message":"#1: (-1 || 1) === -1"}]
-1374	FAIL (tail -c +1001293 tests/ecmac.db|head -c 989): [{"message":"#-1: ("-1" || "1") === "-1""}]
+1372	PASS (tail -c +999348 tests/ecmac.db|head -c 1040)
+1373	PASS (tail -c +1000389 tests/ecmac.db|head -c 903)
+1374	PASS (tail -c +1001293 tests/ecmac.db|head -c 989)
 1375	PASS (tail -c +1002283 tests/ecmac.db|head -c 403)
 1376	FAIL (tail -c +1002687 tests/ecmac.db|head -c 2276): [{"message":"#5: (false ? true : true) === true"}]
 1377	PASS (tail -c +1004964 tests/ecmac.db|head -c 1199)
@@ -1795,10 +1795,10 @@
 1814	FAIL (tail -c +1378956 tests/ecmac.db|head -c 895): [{"message":"[JSON] is not defined"}]
 1815	FAIL (tail -c +1379852 tests/ecmac.db|head -c 629): [{"message":"[arguments] is not defined"}]
 1816	FAIL (tail -c +1380482 tests/ecmac.db|head -c 550): [{"message":"Test case returned non-true value!"}]
-1817	FAIL (tail -c +1381033 tests/ecmac.db|head -c 553): [{"message":"value is not a function"}]
+1817	FAIL (tail -c +1381033 tests/ecmac.db|head -c 553): [{"message":"Test case returned non-true value!"}]
 1818	PASS (tail -c +1381587 tests/ecmac.db|head -c 544)
 1819	PASS (tail -c +1382132 tests/ecmac.db|head -c 544)
-1820	FAIL (tail -c +1382677 tests/ecmac.db|head -c 511): [{"message":"[arguments] is not defined"}]
+1820	FAIL (tail -c +1382677 tests/ecmac.db|head -c 511): [{"message":"Test case returned non-true value!"}]
 1821	FAIL (tail -c +1383189 tests/ecmac.db|head -c 600): [{"message":"[arguments] is not defined"}]
 1822	PASS (tail -c +1383790 tests/ecmac.db|head -c 754)
 1823	FAIL (tail -c +1384545 tests/ecmac.db|head -c 834): [{"message":"Test case returned non-true value!"}]
@@ -1813,7 +1813,7 @@
 1832	FAIL (tail -c +1390393 tests/ecmac.db|head -c 531): [{"message":"Test case returned non-true value!"}]
 1833	FAIL (tail -c +1390925 tests/ecmac.db|head -c 393): [{"message":"Test case returned non-true value!"}]
 1834	FAIL (tail -c +1391319 tests/ecmac.db|head -c 506): [{"message":"Test case returned non-true value!"}]
-1835	FAIL (tail -c +1391826 tests/ecmac.db|head -c 426): [{"message":"[arguments] is not defined"}]
+1835	FAIL (tail -c +1391826 tests/ecmac.db|head -c 426): [{"message":"Test case returned non-true value!"}]
 1836	FAIL (tail -c +1392253 tests/ecmac.db|head -c 530): [{"message":"Test case returned non-true value!"}]
 1837	FAIL (tail -c +1392784 tests/ecmac.db|head -c 504): [{"message":"Test case returned non-true value!"}]
 1838	FAIL (tail -c +1393289 tests/ecmac.db|head -c 515): [{"message":"Test case returned non-true value!"}]
@@ -4173,8 +4173,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4170	FAIL (tail -c +4637469 tests/ecmac.db|head -c 662): [{"message":"#2: Object(NaN) returns ToObject(NaN)"}]
 4171	FAIL (tail -c +4638132 tests/ecmac.db|head -c 819): [{"message":"#2: Object(Infinity) returns ToObject(Infinity)"}]
 4172	FAIL (tail -c +4638952 tests/ecmac.db|head -c 746): [{"message":"#2: Object("") returns ToObject("")"}]
-4173	FAIL (tail -c +4639699 tests/ecmac.db|head -c 625): [{"message":"value is not a function"}]
-4174	FAIL (tail -c +4640325 tests/ecmac.db|head -c 636): [{"message":"value is not a function"}]
+4173	FAIL (tail -c +4639699 tests/ecmac.db|head -c 625): [{"message":"#2: Object(function) returns function"}]
+4174	FAIL (tail -c +4640325 tests/ecmac.db|head -c 636): [{"message":"#2: Object(function) returns function"}]
 4175	FAIL (tail -c +4640962 tests/ecmac.db|head -c 824): [{"message":"#1: Since Object as a function calling is the same as function calling list of arguments can appears in braces;"}]
 4176	FAIL (tail -c +4641787 tests/ecmac.db|head -c 661): [{"message":"#1: Since Object as a function calling is the same as function calling list of arguments can appears in braces;"}]
 4177	FAIL (tail -c +4642449 tests/ecmac.db|head -c 842): [{"message":"#1: Since Object as a function calling is the same as function calling list of arguments can appears in braces;"}]
@@ -4604,7 +4604,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4601	FAIL (tail -c +4866327 tests/ecmac.db|head -c 686): [{"message":"Test case returned non-true value!"}]
 4602	FAIL (tail -c +4867014 tests/ecmac.db|head -c 697): [{"message":"Test case returned non-true value!"}]
 4603	FAIL (tail -c +4867712 tests/ecmac.db|head -c 552): [{"message":"Test case returned non-true value!"}]
-4604	FAIL (tail -c +4868265 tests/ecmac.db|head -c 699): [{"message":"value is not a function"}]
+4604	FAIL (tail -c +4868265 tests/ecmac.db|head -c 699): [{"message":"Test case returned non-true value!"}]
 4605	FAIL (tail -c +4868965 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
 4606	FAIL (tail -c +4869573 tests/ecmac.db|head -c 471): [{"message":"[Function] is not defined"}]
 4607	PASS (tail -c +4870045 tests/ecmac.db|head -c 453)
@@ -4612,22 +4612,22 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4609	FAIL (tail -c +4871111 tests/ecmac.db|head -c 605): [{"message":"[Function] is not defined"}]
 4610	FAIL (tail -c +4871717 tests/ecmac.db|head -c 646): [{"message":"[Function] is not defined"}]
 4611	FAIL (tail -c +4872364 tests/ecmac.db|head -c 473): [{"message":"[Function] is not defined"}]
-4612	FAIL (tail -c +4872838 tests/ecmac.db|head -c 605): [{"message":"value is not a function"}]
+4612	FAIL (tail -c +4872838 tests/ecmac.db|head -c 605): [{"message":"Test case returned non-true value!"}]
 4613	FAIL (tail -c +4873444 tests/ecmac.db|head -c 558): [{"message":"Test case returned non-true value!"}]
-4614	FAIL (tail -c +4874003 tests/ecmac.db|head -c 607): [{"message":"value is not a function"}]
-4615	FAIL (tail -c +4874611 tests/ecmac.db|head -c 601): [{"message":"value is not a function"}]
-4616	FAIL (tail -c +4875213 tests/ecmac.db|head -c 637): [{"message":"value is not a function"}]
-4617	FAIL (tail -c +4875851 tests/ecmac.db|head -c 609): [{"message":"value is not a function"}]
-4618	FAIL (tail -c +4876461 tests/ecmac.db|head -c 603): [{"message":"value is not a function"}]
-4619	FAIL (tail -c +4877065 tests/ecmac.db|head -c 607): [{"message":"value is not a function"}]
-4620	FAIL (tail -c +4877673 tests/ecmac.db|head -c 607): [{"message":"value is not a function"}]
-4621	FAIL (tail -c +4878281 tests/ecmac.db|head -c 607): [{"message":"value is not a function"}]
-4622	FAIL (tail -c +4878889 tests/ecmac.db|head -c 595): [{"message":"value is not a function"}]
-4623	FAIL (tail -c +4879485 tests/ecmac.db|head -c 623): [{"message":"value is not a function"}]
+4614	FAIL (tail -c +4874003 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
+4615	FAIL (tail -c +4874611 tests/ecmac.db|head -c 601): [{"message":"Test case returned non-true value!"}]
+4616	FAIL (tail -c +4875213 tests/ecmac.db|head -c 637): [{"message":"Test case returned non-true value!"}]
+4617	FAIL (tail -c +4875851 tests/ecmac.db|head -c 609): [{"message":"Test case returned non-true value!"}]
+4618	FAIL (tail -c +4876461 tests/ecmac.db|head -c 603): [{"message":"Test case returned non-true value!"}]
+4619	FAIL (tail -c +4877065 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
+4620	FAIL (tail -c +4877673 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
+4621	FAIL (tail -c +4878281 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
+4622	FAIL (tail -c +4878889 tests/ecmac.db|head -c 595): [{"message":"Test case returned non-true value!"}]
+4623	FAIL (tail -c +4879485 tests/ecmac.db|head -c 623): [{"message":"Test case returned non-true value!"}]
 4624	PASS (tail -c +4880109 tests/ecmac.db|head -c 415)
 4625	FAIL (tail -c +4880525 tests/ecmac.db|head -c 522): [{"message":"Test case returned non-true value!"}]
-4626	FAIL (tail -c +4881048 tests/ecmac.db|head -c 623): [{"message":"value is not a function"}]
-4627	FAIL (tail -c +4881672 tests/ecmac.db|head -c 601): [{"message":"value is not a function"}]
+4626	FAIL (tail -c +4881048 tests/ecmac.db|head -c 623): [{"message":"Test case returned non-true value!"}]
+4627	FAIL (tail -c +4881672 tests/ecmac.db|head -c 601): [{"message":"Test case returned non-true value!"}]
 4628	FAIL (tail -c +4882274 tests/ecmac.db|head -c 587): [{"message":"Test case returned non-true value!"}]
 4629	FAIL (tail -c +4882862 tests/ecmac.db|head -c 593): [{"message":"Test case returned non-true value!"}]
 4630	FAIL (tail -c +4883456 tests/ecmac.db|head -c 591): [{"message":"Test case returned non-true value!"}]
@@ -5035,7 +5035,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5032	FAIL (tail -c +5149810 tests/ecmac.db|head -c 816): [{"message":"Test case returned non-true value!"}]
 5033	FAIL (tail -c +5150627 tests/ecmac.db|head -c 755): [{"message":"Test case returned non-true value!"}]
 5034	FAIL (tail -c +5151383 tests/ecmac.db|head -c 425): [{"message":"Test case returned non-true value!"}]
-5035	FAIL (tail -c +5151809 tests/ecmac.db|head -c 1111): [{"message":"[isNaN] is not defined"}]
+5035	FAIL (tail -c +5151809 tests/ecmac.db|head -c 1111): [{"message":"Test case returned non-true value!"}]
 5036	FAIL (tail -c +5152921 tests/ecmac.db|head -c 1036): [{"message":"Test case returned non-true value!"}]
 5037	FAIL (tail -c +5153958 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
 5038	PASS (tail -c +5154524 tests/ecmac.db|head -c 628)
@@ -5486,20 +5486,20 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5483	FAIL (tail -c +5466846 tests/ecmac.db|head -c 642): [{"message":"Test case returned non-true value!"}]
 5484	FAIL (tail -c +5467489 tests/ecmac.db|head -c 631): [{"message":"Test case returned non-true value!"}]
 5485	FAIL (tail -c +5468121 tests/ecmac.db|head -c 625): [{"message":"Test case returned non-true value!"}]
-5486	FAIL (tail -c +5468747 tests/ecmac.db|head -c 653): [{"message":"[isNaN] is not defined"}]
+5486	FAIL (tail -c +5468747 tests/ecmac.db|head -c 653): [{"message":"Test case returned non-true value!"}]
 5487	FAIL (tail -c +5469401 tests/ecmac.db|head -c 674): [{"message":"Test case returned non-true value!"}]
-5488	FAIL (tail -c +5470076 tests/ecmac.db|head -c 733): [{"message":"[isNaN] is not defined"}]
+5488	FAIL (tail -c +5470076 tests/ecmac.db|head -c 733): [{"message":"Test case returned non-true value!"}]
 5489	FAIL (tail -c +5470810 tests/ecmac.db|head -c 795): [{"message":"Test case returned non-true value!"}]
-5490	FAIL (tail -c +5471606 tests/ecmac.db|head -c 954): [{"message":"[isNaN] is not defined"}]
+5490	FAIL (tail -c +5471606 tests/ecmac.db|head -c 954): [{"message":"Test case returned non-true value!"}]
 5491	FAIL (tail -c +5472561 tests/ecmac.db|head -c 940): [{"message":"Test case returned non-true value!"}]
-5492	FAIL (tail -c +5473502 tests/ecmac.db|head -c 916): [{"message":"[isNaN] is not defined"}]
+5492	FAIL (tail -c +5473502 tests/ecmac.db|head -c 916): [{"message":"Test case returned non-true value!"}]
 5493	FAIL (tail -c +5474419 tests/ecmac.db|head -c 1384): [{"message":"Test case returned non-true value!"}]
 5494	FAIL (tail -c +5475804 tests/ecmac.db|head -c 894): [{"message":"Test case returned non-true value!"}]
 5495	FAIL (tail -c +5476699 tests/ecmac.db|head -c 970): [{"message":"Test case returned non-true value!"}]
-5496	FAIL (tail -c +5477670 tests/ecmac.db|head -c 911): [{"message":"[isNaN] is not defined"}]
-5497	FAIL (tail -c +5478582 tests/ecmac.db|head -c 819): [{"message":"[isNaN] is not defined"}]
-5498	FAIL (tail -c +5479402 tests/ecmac.db|head -c 914): [{"message":"[isNaN] is not defined"}]
-5499	FAIL (tail -c +5480317 tests/ecmac.db|head -c 1079): [{"message":"[isNaN] is not defined"}]
+5496	FAIL (tail -c +5477670 tests/ecmac.db|head -c 911): [{"message":"Test case returned non-true value!"}]
+5497	FAIL (tail -c +5478582 tests/ecmac.db|head -c 819): [{"message":"Test case returned non-true value!"}]
+5498	FAIL (tail -c +5479402 tests/ecmac.db|head -c 914): [{"message":"Test case returned non-true value!"}]
+5499	FAIL (tail -c +5480317 tests/ecmac.db|head -c 1079): [{"message":"Test case returned non-true value!"}]
 5500	FAIL (tail -c +5481397 tests/ecmac.db|head -c 875): [{"message":"Test case returned non-true value!"}]
 5501	FAIL (tail -c +5482273 tests/ecmac.db|head -c 980): [{"message":"Test case returned non-true value!"}]
 5502	FAIL (tail -c +5483254 tests/ecmac.db|head -c 1061): [{"message":"Test case returned non-true value!"}]
@@ -5509,7 +5509,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5506	FAIL (tail -c +5487631 tests/ecmac.db|head -c 712): [{"message":"Test case returned non-true value!"}]
 5507	FAIL (tail -c +5488344 tests/ecmac.db|head -c 673): [{"message":"Test case returned non-true value!"}]
 5508	FAIL (tail -c +5489018 tests/ecmac.db|head -c 815): [{"message":"Test case returned non-true value!"}]
-5509	FAIL (tail -c +5489834 tests/ecmac.db|head -c 646): [{"message":"[isNaN] is not defined"}]
+5509	FAIL (tail -c +5489834 tests/ecmac.db|head -c 646): [{"message":"Test case returned non-true value!"}]
 5510	FAIL (tail -c +5490481 tests/ecmac.db|head -c 648): [{"message":"Test case returned non-true value!"}]
 5511	FAIL (tail -c +5491130 tests/ecmac.db|head -c 510): [{"message":"Test case returned non-true value!"}]
 5512	FAIL (tail -c +5491641 tests/ecmac.db|head -c 595): [{"message":"Test case returned non-true value!"}]
@@ -5592,21 +5592,21 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5589	PASS (tail -c +5555762 tests/ecmac.db|head -c 633)
 5590	PASS (tail -c +5556396 tests/ecmac.db|head -c 1002)
 5591	FAIL (tail -c +5557399 tests/ecmac.db|head -c 1291): [{"message":"Test case returned non-true value!"}]
-5592	FAIL (tail -c +5558691 tests/ecmac.db|head -c 740): [{"message":"[isNaN] is not defined"}]
+5592	FAIL (tail -c +5558691 tests/ecmac.db|head -c 740): [{"message":"Test case returned non-true value!"}]
 5593	PASS (tail -c +5559432 tests/ecmac.db|head -c 729)
-5594	FAIL (tail -c +5560162 tests/ecmac.db|head -c 718): [{"message":"[isNaN] is not defined"}]
-5595	FAIL (tail -c +5560881 tests/ecmac.db|head -c 720): [{"message":"[isNaN] is not defined"}]
+5594	FAIL (tail -c +5560162 tests/ecmac.db|head -c 718): [{"message":"Test case returned non-true value!"}]
+5595	FAIL (tail -c +5560881 tests/ecmac.db|head -c 720): [{"message":"Test case returned non-true value!"}]
 5596	PASS (tail -c +5561602 tests/ecmac.db|head -c 766)
 5597	FAIL (tail -c +5562369 tests/ecmac.db|head -c 860): [{"message":"Test case returned non-true value!"}]
 5598	FAIL (tail -c +5563230 tests/ecmac.db|head -c 861): [{"message":"Test case returned non-true value!"}]
 5599	FAIL (tail -c +5564092 tests/ecmac.db|head -c 905): [{"message":"Test case returned non-true value!"}]
 5600	FAIL (tail -c +5564998 tests/ecmac.db|head -c 905): [{"message":"Test case returned non-true value!"}]
-5601	FAIL (tail -c +5565904 tests/ecmac.db|head -c 1121): [{"message":"[isNaN] is not defined"}]
+5601	FAIL (tail -c +5565904 tests/ecmac.db|head -c 1121): [{"message":"Test case returned non-true value!"}]
 5602	FAIL (tail -c +5567026 tests/ecmac.db|head -c 1235): [{"message":"Test case returned non-true value!"}]
-5603	FAIL (tail -c +5568262 tests/ecmac.db|head -c 666): [{"message":"[isNaN] is not defined"}]
-5604	FAIL (tail -c +5568929 tests/ecmac.db|head -c 926): [{"message":"[isNaN] is not defined"}]
-5605	FAIL (tail -c +5569856 tests/ecmac.db|head -c 852): [{"message":"[isNaN] is not defined"}]
-5606	FAIL (tail -c +5570709 tests/ecmac.db|head -c 1158): [{"message":"[isNaN] is not defined"}]
+5603	FAIL (tail -c +5568262 tests/ecmac.db|head -c 666): [{"message":"Test case returned non-true value!"}]
+5604	FAIL (tail -c +5568929 tests/ecmac.db|head -c 926): [{"message":"Test case returned non-true value!"}]
+5605	PASS (tail -c +5569856 tests/ecmac.db|head -c 852)
+5606	FAIL (tail -c +5570709 tests/ecmac.db|head -c 1158): [{"message":"Test case returned non-true value!"}]
 5607	FAIL (tail -c +5571868 tests/ecmac.db|head -c 944): [{"message":"Test case returned non-true value!"}]
 5608	PASS (tail -c +5572813 tests/ecmac.db|head -c 654)
 5609	PASS (tail -c +5573468 tests/ecmac.db|head -c 635)
@@ -5623,10 +5623,10 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5620	PASS (tail -c +5582204 tests/ecmac.db|head -c 705)
 5621	FAIL (tail -c +5582910 tests/ecmac.db|head -c 971): [{"message":"Test case returned non-true value!"}]
 5622	PASS (tail -c +5583882 tests/ecmac.db|head -c 672)
-5623	FAIL (tail -c +5584555 tests/ecmac.db|head -c 695): [{"message":"[isNaN] is not defined"}]
+5623	FAIL (tail -c +5584555 tests/ecmac.db|head -c 695): [{"message":"Test case returned non-true value!"}]
 5624	FAIL (tail -c +5585251 tests/ecmac.db|head -c 730): [{"message":"Test case returned non-true value!"}]
-5625	FAIL (tail -c +5585982 tests/ecmac.db|head -c 972): [{"message":"[isNaN] is not defined"}]
-5626	FAIL (tail -c +5586955 tests/ecmac.db|head -c 1090): [{"message":"[isNaN] is not defined"}]
+5625	FAIL (tail -c +5585982 tests/ecmac.db|head -c 972): [{"message":"Test case returned non-true value!"}]
+5626	FAIL (tail -c +5586955 tests/ecmac.db|head -c 1090): [{"message":"Test case returned non-true value!"}]
 5627	FAIL (tail -c +5588046 tests/ecmac.db|head -c 792): [{"message":"Test case returned non-true value!"}]
 5628	FAIL (tail -c +5588839 tests/ecmac.db|head -c 891): [{"message":"Test case returned non-true value!"}]
 5629	PASS (tail -c +5589731 tests/ecmac.db|head -c 680)
@@ -5640,7 +5640,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5637	FAIL (tail -c +5596505 tests/ecmac.db|head -c 898): [{"message":"Test case returned non-true value!"}]
 5638	FAIL (tail -c +5597404 tests/ecmac.db|head -c 730): [{"message":"Test case returned non-true value!"}]
 5639	FAIL (tail -c +5598135 tests/ecmac.db|head -c 824): [{"message":"Test case returned non-true value!"}]
-5640	FAIL (tail -c +5598960 tests/ecmac.db|head -c 807): [{"message":"[isNaN] is not defined"}]
+5640	FAIL (tail -c +5598960 tests/ecmac.db|head -c 807): [{"message":"Test case returned non-true value!"}]
 5641	FAIL (tail -c +5599768 tests/ecmac.db|head -c 878): [{"message":"Test case returned non-true value!"}]
 5642	FAIL (tail -c +5600647 tests/ecmac.db|head -c 1005): [{"message":"Test case returned non-true value!"}]
 5643	FAIL (tail -c +5601653 tests/ecmac.db|head -c 1090): [{"message":"Test case returned non-true value!"}]
@@ -5661,28 +5661,28 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5658	FAIL (tail -c +5618940 tests/ecmac.db|head -c 641): [{"message":"Test case returned non-true value!"}]
 5659	FAIL (tail -c +5619582 tests/ecmac.db|head -c 814): [{"message":"Test case returned non-true value!"}]
 5660	FAIL (tail -c +5620397 tests/ecmac.db|head -c 645): [{"message":"Test case returned non-true value!"}]
-5661	FAIL (tail -c +5621043 tests/ecmac.db|head -c 624): [{"message":"[isNaN] is not defined"}]
-5662	FAIL (tail -c +5621668 tests/ecmac.db|head -c 630): [{"message":"[isNaN] is not defined"}]
-5663	FAIL (tail -c +5622299 tests/ecmac.db|head -c 634): [{"message":"[isNaN] is not defined"}]
-5664	FAIL (tail -c +5622934 tests/ecmac.db|head -c 685): [{"message":"[isNaN] is not defined"}]
-5665	FAIL (tail -c +5623620 tests/ecmac.db|head -c 880): [{"message":"[isNaN] is not defined"}]
+5661	FAIL (tail -c +5621043 tests/ecmac.db|head -c 624): [{"message":"Test case returned non-true value!"}]
+5662	FAIL (tail -c +5621668 tests/ecmac.db|head -c 630): [{"message":"Test case returned non-true value!"}]
+5663	FAIL (tail -c +5622299 tests/ecmac.db|head -c 634): [{"message":"Test case returned non-true value!"}]
+5664	FAIL (tail -c +5622934 tests/ecmac.db|head -c 685): [{"message":"Test case returned non-true value!"}]
+5665	FAIL (tail -c +5623620 tests/ecmac.db|head -c 880): [{"message":"Test case returned non-true value!"}]
 5666	FAIL (tail -c +5624501 tests/ecmac.db|head -c 848): [{"message":"Test case returned non-true value!"}]
-5667	FAIL (tail -c +5625350 tests/ecmac.db|head -c 868): [{"message":"[isNaN] is not defined"}]
+5667	FAIL (tail -c +5625350 tests/ecmac.db|head -c 868): [{"message":"Test case returned non-true value!"}]
 5668	FAIL (tail -c +5626219 tests/ecmac.db|head -c 878): [{"message":"Test case returned non-true value!"}]
 5669	FAIL (tail -c +5627098 tests/ecmac.db|head -c 791): [{"message":"Test case returned non-true value!"}]
 5670	FAIL (tail -c +5627890 tests/ecmac.db|head -c 856): [{"message":"Test case returned non-true value!"}]
 5671	FAIL (tail -c +5628747 tests/ecmac.db|head -c 908): [{"message":"Test case returned non-true value!"}]
 5672	FAIL (tail -c +5629656 tests/ecmac.db|head -c 915): [{"message":"Test case returned non-true value!"}]
 5673	FAIL (tail -c +5630572 tests/ecmac.db|head -c 887): [{"message":"Test case returned non-true value!"}]
-5674	FAIL (tail -c +5631460 tests/ecmac.db|head -c 1104): [{"message":"[isNaN] is not defined"}]
+5674	FAIL (tail -c +5631460 tests/ecmac.db|head -c 1104): [{"message":"Test case returned non-true value!"}]
 5675	PASS (tail -c +5632565 tests/ecmac.db|head -c 706)
 5676	FAIL (tail -c +5633272 tests/ecmac.db|head -c 720): [{"message":"Test case returned non-true value!"}]
 5677	FAIL (tail -c +5633993 tests/ecmac.db|head -c 615): [{"message":"Test case returned non-true value!"}]
-5678	FAIL (tail -c +5634609 tests/ecmac.db|head -c 719): [{"message":"[isNaN] is not defined"}]
-5679	FAIL (tail -c +5635329 tests/ecmac.db|head -c 899): [{"message":"[isNaN] is not defined"}]
-5680	FAIL (tail -c +5636229 tests/ecmac.db|head -c 1105): [{"message":"[isNaN] is not defined"}]
+5678	PASS (tail -c +5634609 tests/ecmac.db|head -c 719)
+5679	FAIL (tail -c +5635329 tests/ecmac.db|head -c 899): [{"message":"Test case returned non-true value!"}]
+5680	FAIL (tail -c +5636229 tests/ecmac.db|head -c 1105): [{"message":"Test case returned non-true value!"}]
 5681	FAIL (tail -c +5637335 tests/ecmac.db|head -c 937): [{"message":"Test case returned non-true value!"}]
-5682	FAIL (tail -c +5638273 tests/ecmac.db|head -c 796): [{"message":"[isNaN] is not defined"}]
+5682	FAIL (tail -c +5638273 tests/ecmac.db|head -c 796): [{"message":"Test case returned non-true value!"}]
 5683	FAIL (tail -c +5639070 tests/ecmac.db|head -c 863): [{"message":"Test case returned non-true value!"}]
 5684	FAIL (tail -c +5639934 tests/ecmac.db|head -c 867): [{"message":"Test case returned non-true value!"}]
 5685	FAIL (tail -c +5640802 tests/ecmac.db|head -c 888): [{"message":"Test case returned non-true value!"}]
@@ -5952,7 +5952,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5949	FAIL (tail -c +5893481 tests/ecmac.db|head -c 914): [{"message":"Test case returned non-true value!"}]
 5950	FAIL (tail -c +5894396 tests/ecmac.db|head -c 987): [{"message":"Test case returned non-true value!"}]
 5951	PASS (tail -c +5895384 tests/ecmac.db|head -c 1000)
-5952	FAIL (tail -c +5896385 tests/ecmac.db|head -c 658): [{"message":"[isNaN] is not defined"}]
+5952	FAIL (tail -c +5896385 tests/ecmac.db|head -c 658): [{"message":"Test case returned non-true value!"}]
 5953	PASS (tail -c +5897044 tests/ecmac.db|head -c 940)
 5954	FAIL (tail -c +5897985 tests/ecmac.db|head -c 1376): [{"message":"Test case returned non-true value!"}]
 5955	FAIL (tail -c +5899362 tests/ecmac.db|head -c 1141): [{"message":"Test case returned non-true value!"}]
@@ -5974,7 +5974,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5971	PASS (tail -c +5916555 tests/ecmac.db|head -c 1007)
 5972	PASS (tail -c +5917563 tests/ecmac.db|head -c 942)
 5973	FAIL (tail -c +5918506 tests/ecmac.db|head -c 1378): [{"message":"Test case returned non-true value!"}]
-5974	FAIL (tail -c +5919885 tests/ecmac.db|head -c 667): [{"message":"[isNaN] is not defined"}]
+5974	FAIL (tail -c +5919885 tests/ecmac.db|head -c 667): [{"message":"Test case returned non-true value!"}]
 5975	FAIL (tail -c +5920553 tests/ecmac.db|head -c 1143): [{"message":"Test case returned non-true value!"}]
 5976	FAIL (tail -c +5921697 tests/ecmac.db|head -c 1518): [{"message":"Test case returned non-true value!"}]
 5977	FAIL (tail -c +5923216 tests/ecmac.db|head -c 1228): [{"message":"Test case returned non-true value!"}]
@@ -5986,7 +5986,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5983	FAIL (tail -c +5929158 tests/ecmac.db|head -c 1097): [{"message":"Test case returned non-true value!"}]
 5984	FAIL (tail -c +5930256 tests/ecmac.db|head -c 1176): [{"message":"Test case returned non-true value!"}]
 5985	PASS (tail -c +5931433 tests/ecmac.db|head -c 1524)
-5986	FAIL (tail -c +5932958 tests/ecmac.db|head -c 651): [{"message":"[isNaN] is not defined"}]
+5986	FAIL (tail -c +5932958 tests/ecmac.db|head -c 651): [{"message":"Test case returned non-true value!"}]
 5987	PASS (tail -c +5933610 tests/ecmac.db|head -c 1313)
 5988	PASS (tail -c +5934924 tests/ecmac.db|head -c 1047)
 5989	FAIL (tail -c +5935972 tests/ecmac.db|head -c 958): [{"message":"Test case returned non-true value!"}]
@@ -6021,17 +6021,17 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6018	FAIL (tail -c +5965913 tests/ecmac.db|head -c 1084): [{"message":"Test case returned non-true value!"}]
 6019	FAIL (tail -c +5966998 tests/ecmac.db|head -c 785): [{"message":"Test case returned non-true value!"}]
 6020	FAIL (tail -c +5967784 tests/ecmac.db|head -c 1010): [{"message":"Test case returned non-true value!"}]
-6021	FAIL (tail -c +5968795 tests/ecmac.db|head -c 1237): [{"message":"[isNaN] is not defined"}]
-6022	FAIL (tail -c +5970033 tests/ecmac.db|head -c 1221): [{"message":"[isNaN] is not defined"}]
-6023	FAIL (tail -c +5971255 tests/ecmac.db|head -c 1227): [{"message":"[isNaN] is not defined"}]
+6021	FAIL (tail -c +5968795 tests/ecmac.db|head -c 1237): [{"message":"Test case returned non-true value!"}]
+6022	FAIL (tail -c +5970033 tests/ecmac.db|head -c 1221): [{"message":"Test case returned non-true value!"}]
+6023	FAIL (tail -c +5971255 tests/ecmac.db|head -c 1227): [{"message":"Test case returned non-true value!"}]
 6024	FAIL (tail -c +5972483 tests/ecmac.db|head -c 1277): [{"message":"[arguments] is not defined"}]
-6025	FAIL (tail -c +5973761 tests/ecmac.db|head -c 1484): [{"message":"[isNaN] is not defined"}]
+6025	PASS (tail -c +5973761 tests/ecmac.db|head -c 1484)
 6026	FAIL (tail -c +5975246 tests/ecmac.db|head -c 1024): [{"message":"Test case returned non-true value!"}]
 6027	FAIL (tail -c +5976271 tests/ecmac.db|head -c 1061): [{"message":"[arguments] is not defined"}]
 6028	PASS (tail -c +5977333 tests/ecmac.db|head -c 1218)
-6029	FAIL (tail -c +5978552 tests/ecmac.db|head -c 1219): [{"message":"[isNaN] is not defined"}]
+6029	FAIL (tail -c +5978552 tests/ecmac.db|head -c 1219): [{"message":"Test case returned non-true value!"}]
 6030	FAIL (tail -c +5979772 tests/ecmac.db|head -c 1295): [{"message":"[arguments] is not defined"}]
-6031	FAIL (tail -c +5981068 tests/ecmac.db|head -c 1508): [{"message":"[isNaN] is not defined"}]
+6031	PASS (tail -c +5981068 tests/ecmac.db|head -c 1508)
 6032	FAIL (tail -c +5982577 tests/ecmac.db|head -c 911): [{"message":"Test case returned non-true value!"}]
 6033	FAIL (tail -c +5983489 tests/ecmac.db|head -c 982): [{"message":"[arguments] is not defined"}]
 6034	PASS (tail -c +5984472 tests/ecmac.db|head -c 1107)
@@ -6075,7 +6075,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6072	FAIL (tail -c +6033449 tests/ecmac.db|head -c 1210): [{"message":"Test case returned non-true value!"}]
 6073	FAIL (tail -c +6034660 tests/ecmac.db|head -c 1012): [{"message":"Test case returned non-true value!"}]
 6074	FAIL (tail -c +6035673 tests/ecmac.db|head -c 1063): [{"message":"Test case returned non-true value!"}]
-6075	FAIL (tail -c +6036737 tests/ecmac.db|head -c 874): [{"message":"[isNaN] is not defined"}]
+6075	FAIL (tail -c +6036737 tests/ecmac.db|head -c 874): [{"message":"Test case returned non-true value!"}]
 6076	PASS (tail -c +6037612 tests/ecmac.db|head -c 1081)
 6077	PASS (tail -c +6038694 tests/ecmac.db|head -c 1014)
 6078	FAIL (tail -c +6039709 tests/ecmac.db|head -c 1229): [{"message":"Test case returned non-true value!"}]
@@ -6086,7 +6086,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6083	FAIL (tail -c +6045766 tests/ecmac.db|head -c 1014): [{"message":"Test case returned non-true value!"}]
 6084	FAIL (tail -c +6046781 tests/ecmac.db|head -c 1065): [{"message":"Test case returned non-true value!"}]
 6085	PASS (tail -c +6047847 tests/ecmac.db|head -c 1083)
-6086	FAIL (tail -c +6048931 tests/ecmac.db|head -c 856): [{"message":"[isNaN] is not defined"}]
+6086	FAIL (tail -c +6048931 tests/ecmac.db|head -c 856): [{"message":"Test case returned non-true value!"}]
 6087	PASS (tail -c +6049788 tests/ecmac.db|head -c 1018)
 6088	FAIL (tail -c +6050807 tests/ecmac.db|head -c 1329): [{"message":"Test case returned non-true value!"}]
 6089	FAIL (tail -c +6052137 tests/ecmac.db|head -c 1219): [{"message":"Test case returned non-true value!"}]
@@ -6097,7 +6097,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6094	FAIL (tail -c +6058092 tests/ecmac.db|head -c 626): [{"message":"Test case returned non-true value!"}]
 6095	FAIL (tail -c +6058719 tests/ecmac.db|head -c 633): [{"message":"Test case returned non-true value!"}]
 6096	FAIL (tail -c +6059353 tests/ecmac.db|head -c 735): [{"message":"Test case returned non-true value!"}]
-6097	FAIL (tail -c +6060089 tests/ecmac.db|head -c 1073): [{"message":"[isNaN] is not defined"}]
+6097	FAIL (tail -c +6060089 tests/ecmac.db|head -c 1073): [{"message":"Test case returned non-true value!"}]
 6098	FAIL (tail -c +6061163 tests/ecmac.db|head -c 715): [{"message":"Test case returned non-true value!"}]
 6099	FAIL (tail -c +6061879 tests/ecmac.db|head -c 678): [{"message":"Test case returned non-true value!"}]
 6100	FAIL (tail -c +6062558 tests/ecmac.db|head -c 569): [{"message":"Test case returned non-true value!"}]
@@ -6108,7 +6108,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6105	FAIL (tail -c +6065916 tests/ecmac.db|head -c 683): [{"message":"Test case returned non-true value!"}]
 6106	PASS (tail -c +6066600 tests/ecmac.db|head -c 898)
 6107	PASS (tail -c +6067499 tests/ecmac.db|head -c 920)
-6108	FAIL (tail -c +6068420 tests/ecmac.db|head -c 579): [{"message":"[isNaN] is not defined"}]
+6108	FAIL (tail -c +6068420 tests/ecmac.db|head -c 579): [{"message":"Test case returned non-true value!"}]
 6109	PASS (tail -c +6069000 tests/ecmac.db|head -c 1046)
 6110	PASS (tail -c +6070047 tests/ecmac.db|head -c 817)
 6111	FAIL (tail -c +6070865 tests/ecmac.db|head -c 959): [{"message":"[Function] is not defined"}]
@@ -6119,7 +6119,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6116	PASS (tail -c +6075493 tests/ecmac.db|head -c 895)
 6117	FAIL (tail -c +6076389 tests/ecmac.db|head -c 1650): [{"message":"Test case returned non-true value!"}]
 6118	FAIL (tail -c +6078040 tests/ecmac.db|head -c 2010): [{"message":"[Date] is not defined"}]
-6119	FAIL (tail -c +6080051 tests/ecmac.db|head -c 767): [{"message":"[isNaN] is not defined"}]
+6119	FAIL (tail -c +6080051 tests/ecmac.db|head -c 767): [{"message":"Test case returned non-true value!"}]
 6120	FAIL (tail -c +6080819 tests/ecmac.db|head -c 2121): [{"message":"Test case returned non-true value!"}]
 6121	FAIL (tail -c +6082941 tests/ecmac.db|head -c 1749): [{"message":"[Date] is not defined"}]
 6122	PASS (tail -c +6084691 tests/ecmac.db|head -c 1875)
@@ -6172,39 +6172,39 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6169	PASS (tail -c +6136958 tests/ecmac.db|head -c 597)
 6170	FAIL (tail -c +6137556 tests/ecmac.db|head -c 684): [{"message":"Test case returned non-true value!"}]
 6171	PASS (tail -c +6138241 tests/ecmac.db|head -c 573)
-6172	FAIL (tail -c +6138815 tests/ecmac.db|head -c 596): [{"message":"[isNaN] is not defined"}]
-6173	FAIL (tail -c +6139412 tests/ecmac.db|head -c 797): [{"message":"[isNaN] is not defined"}]
-6174	FAIL (tail -c +6140210 tests/ecmac.db|head -c 905): [{"message":"[isNaN] is not defined"}]
+6172	FAIL (tail -c +6138815 tests/ecmac.db|head -c 596): [{"message":"Test case returned non-true value!"}]
+6173	FAIL (tail -c +6139412 tests/ecmac.db|head -c 797): [{"message":"Test case returned non-true value!"}]
+6174	FAIL (tail -c +6140210 tests/ecmac.db|head -c 905): [{"message":"Test case returned non-true value!"}]
 6175	FAIL (tail -c +6141116 tests/ecmac.db|head -c 693): [{"message":"Test case returned non-true value!"}]
 6176	FAIL (tail -c +6141810 tests/ecmac.db|head -c 787): [{"message":"Test case returned non-true value!"}]
 6177	PASS (tail -c +6142598 tests/ecmac.db|head -c 582)
 6178	FAIL (tail -c +6143181 tests/ecmac.db|head -c 1318): [{"message":"Test case returned non-true value!"}]
 6179	FAIL (tail -c +6144500 tests/ecmac.db|head -c 590): [{"message":"Test case returned non-true value!"}]
 6180	PASS (tail -c +6145091 tests/ecmac.db|head -c 588)
-6181	FAIL (tail -c +6145680 tests/ecmac.db|head -c 922): [{"message":"[isNaN] is not defined"}]
-6182	FAIL (tail -c +6146603 tests/ecmac.db|head -c 1250): [{"message":"[isNaN] is not defined"}]
-6183	FAIL (tail -c +6147854 tests/ecmac.db|head -c 1255): [{"message":"[isNaN] is not defined"}]
-6184	FAIL (tail -c +6149110 tests/ecmac.db|head -c 1197): [{"message":"[isNaN] is not defined"}]
-6185	FAIL (tail -c +6150308 tests/ecmac.db|head -c 924): [{"message":"[isNaN] is not defined"}]
-6186	FAIL (tail -c +6151233 tests/ecmac.db|head -c 991): [{"message":"[isNaN] is not defined"}]
-6187	FAIL (tail -c +6152225 tests/ecmac.db|head -c 896): [{"message":"[isNaN] is not defined"}]
-6188	FAIL (tail -c +6153122 tests/ecmac.db|head -c 986): [{"message":"[isNaN] is not defined"}]
-6189	FAIL (tail -c +6154109 tests/ecmac.db|head -c 989): [{"message":"[isNaN] is not defined"}]
-6190	FAIL (tail -c +6155099 tests/ecmac.db|head -c 931): [{"message":"[isNaN] is not defined"}]
-6191	FAIL (tail -c +6156031 tests/ecmac.db|head -c 1183): [{"message":"[isNaN] is not defined"}]
-6192	FAIL (tail -c +6157215 tests/ecmac.db|head -c 989): [{"message":"[isNaN] is not defined"}]
-6193	FAIL (tail -c +6158205 tests/ecmac.db|head -c 1246): [{"message":"[isNaN] is not defined"}]
-6194	FAIL (tail -c +6159452 tests/ecmac.db|head -c 1187): [{"message":"[isNaN] is not defined"}]
-6195	FAIL (tail -c +6160640 tests/ecmac.db|head -c 1250): [{"message":"[isNaN] is not defined"}]
-6196	FAIL (tail -c +6161891 tests/ecmac.db|head -c 1255): [{"message":"[isNaN] is not defined"}]
-6197	FAIL (tail -c +6163147 tests/ecmac.db|head -c 1197): [{"message":"[isNaN] is not defined"}]
-6198	FAIL (tail -c +6164345 tests/ecmac.db|head -c 894): [{"message":"[isNaN] is not defined"}]
-6199	FAIL (tail -c +6165240 tests/ecmac.db|head -c 984): [{"message":"[isNaN] is not defined"}]
-6200	FAIL (tail -c +6166225 tests/ecmac.db|head -c 987): [{"message":"[isNaN] is not defined"}]
-6201	FAIL (tail -c +6167213 tests/ecmac.db|head -c 929): [{"message":"[isNaN] is not defined"}]
-6202	FAIL (tail -c +6168143 tests/ecmac.db|head -c 1182): [{"message":"[isNaN] is not defined"}]
-6203	FAIL (tail -c +6169326 tests/ecmac.db|head -c 1245): [{"message":"[isNaN] is not defined"}]
-6204	FAIL (tail -c +6170572 tests/ecmac.db|head -c 1186): [{"message":"[isNaN] is not defined"}]
+6181	FAIL (tail -c +6145680 tests/ecmac.db|head -c 922): [{"message":"Test case returned non-true value!"}]
+6182	FAIL (tail -c +6146603 tests/ecmac.db|head -c 1250): [{"message":"Test case returned non-true value!"}]
+6183	FAIL (tail -c +6147854 tests/ecmac.db|head -c 1255): [{"message":"Test case returned non-true value!"}]
+6184	FAIL (tail -c +6149110 tests/ecmac.db|head -c 1197): [{"message":"Test case returned non-true value!"}]
+6185	FAIL (tail -c +6150308 tests/ecmac.db|head -c 924): [{"message":"Test case returned non-true value!"}]
+6186	FAIL (tail -c +6151233 tests/ecmac.db|head -c 991): [{"message":"Test case returned non-true value!"}]
+6187	FAIL (tail -c +6152225 tests/ecmac.db|head -c 896): [{"message":"Test case returned non-true value!"}]
+6188	FAIL (tail -c +6153122 tests/ecmac.db|head -c 986): [{"message":"Test case returned non-true value!"}]
+6189	FAIL (tail -c +6154109 tests/ecmac.db|head -c 989): [{"message":"Test case returned non-true value!"}]
+6190	FAIL (tail -c +6155099 tests/ecmac.db|head -c 931): [{"message":"Test case returned non-true value!"}]
+6191	FAIL (tail -c +6156031 tests/ecmac.db|head -c 1183): [{"message":"Test case returned non-true value!"}]
+6192	FAIL (tail -c +6157215 tests/ecmac.db|head -c 989): [{"message":"Test case returned non-true value!"}]
+6193	FAIL (tail -c +6158205 tests/ecmac.db|head -c 1246): [{"message":"Test case returned non-true value!"}]
+6194	FAIL (tail -c +6159452 tests/ecmac.db|head -c 1187): [{"message":"Test case returned non-true value!"}]
+6195	FAIL (tail -c +6160640 tests/ecmac.db|head -c 1250): [{"message":"Test case returned non-true value!"}]
+6196	FAIL (tail -c +6161891 tests/ecmac.db|head -c 1255): [{"message":"Test case returned non-true value!"}]
+6197	FAIL (tail -c +6163147 tests/ecmac.db|head -c 1197): [{"message":"Test case returned non-true value!"}]
+6198	FAIL (tail -c +6164345 tests/ecmac.db|head -c 894): [{"message":"Test case returned non-true value!"}]
+6199	FAIL (tail -c +6165240 tests/ecmac.db|head -c 984): [{"message":"Test case returned non-true value!"}]
+6200	FAIL (tail -c +6166225 tests/ecmac.db|head -c 987): [{"message":"Test case returned non-true value!"}]
+6201	FAIL (tail -c +6167213 tests/ecmac.db|head -c 929): [{"message":"Test case returned non-true value!"}]
+6202	FAIL (tail -c +6168143 tests/ecmac.db|head -c 1182): [{"message":"Test case returned non-true value!"}]
+6203	FAIL (tail -c +6169326 tests/ecmac.db|head -c 1245): [{"message":"Test case returned non-true value!"}]
+6204	FAIL (tail -c +6170572 tests/ecmac.db|head -c 1186): [{"message":"Test case returned non-true value!"}]
 6205	PASS (tail -c +6171759 tests/ecmac.db|head -c 584)
 6206	PASS (tail -c +6172344 tests/ecmac.db|head -c 813)
 6207	PASS (tail -c +6173158 tests/ecmac.db|head -c 790)
@@ -6224,7 +6224,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6221	FAIL (tail -c +6185665 tests/ecmac.db|head -c 1007): [{"message":"Test case returned non-true value!"}]
 6222	FAIL (tail -c +6186673 tests/ecmac.db|head -c 988): [{"message":"Test case returned non-true value!"}]
 6223	FAIL (tail -c +6187662 tests/ecmac.db|head -c 1022): [{"message":"Test case returned non-true value!"}]
-6224	FAIL (tail -c +6188685 tests/ecmac.db|head -c 1058): [{"message":"[document] is not defined"}]
+6224	PASS (tail -c +6188685 tests/ecmac.db|head -c 1058)
 6225	PASS (tail -c +6189744 tests/ecmac.db|head -c 442)
 6226	FAIL (tail -c +6190187 tests/ecmac.db|head -c 344): [{"message":"Test case returned non-true value!"}]
 6227	FAIL (tail -c +6190532 tests/ecmac.db|head -c 340): [{"message":"Test case returned non-true value!"}]
@@ -6528,17 +6528,17 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6525	FAIL (tail -c +6399075 tests/ecmac.db|head -c 724): [{"message":"Test case returned non-true value!"}]
 6526	FAIL (tail -c +6399800 tests/ecmac.db|head -c 1106): [{"message":"Test case returned non-true value!"}]
 6527	PASS (tail -c +6400907 tests/ecmac.db|head -c 786)
-6528	FAIL (tail -c +6401694 tests/ecmac.db|head -c 1014): [{"message":"[isNaN] is not defined"}]
+6528	FAIL (tail -c +6401694 tests/ecmac.db|head -c 1014): [{"message":"Test case returned non-true value!"}]
 6529	FAIL (tail -c +6402709 tests/ecmac.db|head -c 939): [{"message":"Test case returned non-true value!"}]
-6530	FAIL (tail -c +6403649 tests/ecmac.db|head -c 945): [{"message":"[isNaN] is not defined"}]
-6531	FAIL (tail -c +6404595 tests/ecmac.db|head -c 1016): [{"message":"[isNaN] is not defined"}]
+6530	FAIL (tail -c +6403649 tests/ecmac.db|head -c 945): [{"message":"Test case returned non-true value!"}]
+6531	FAIL (tail -c +6404595 tests/ecmac.db|head -c 1016): [{"message":"Test case returned non-true value!"}]
 6532	FAIL (tail -c +6405612 tests/ecmac.db|head -c 1508): [{"message":"Test case returned non-true value!"}]
-6533	FAIL (tail -c +6407121 tests/ecmac.db|head -c 945): [{"message":"[isNaN] is not defined"}]
-6534	FAIL (tail -c +6408067 tests/ecmac.db|head -c 945): [{"message":"[isNaN] is not defined"}]
-6535	FAIL (tail -c +6409013 tests/ecmac.db|head -c 930): [{"message":"[isNaN] is not defined"}]
-6536	FAIL (tail -c +6409944 tests/ecmac.db|head -c 1092): [{"message":"[isNaN] is not defined"}]
+6533	FAIL (tail -c +6407121 tests/ecmac.db|head -c 945): [{"message":"Test case returned non-true value!"}]
+6534	FAIL (tail -c +6408067 tests/ecmac.db|head -c 945): [{"message":"Test case returned non-true value!"}]
+6535	FAIL (tail -c +6409013 tests/ecmac.db|head -c 930): [{"message":"Test case returned non-true value!"}]
+6536	FAIL (tail -c +6409944 tests/ecmac.db|head -c 1092): [{"message":"Test case returned non-true value!"}]
 6537	FAIL (tail -c +6411037 tests/ecmac.db|head -c 843): [{"message":"Test case returned non-true value!"}]
-6538	FAIL (tail -c +6411881 tests/ecmac.db|head -c 1105): [{"message":"[isNaN] is not defined"}]
+6538	FAIL (tail -c +6411881 tests/ecmac.db|head -c 1105): [{"message":"Test case returned non-true value!"}]
 6539	FAIL (tail -c +6412987 tests/ecmac.db|head -c 1070): [{"message":"Test case returned non-true value!"}]
 6540	FAIL (tail -c +6414058 tests/ecmac.db|head -c 856): [{"message":"Test case returned non-true value!"}]
 6541	FAIL (tail -c +6414915 tests/ecmac.db|head -c 1080): [{"message":"Test case returned non-true value!"}]
@@ -6642,11 +6642,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6639	FAIL (tail -c +6496449 tests/ecmac.db|head -c 1356): [{"message":"Test case returned non-true value!"}]
 6640	PASS (tail -c +6497806 tests/ecmac.db|head -c 872)
 6641	FAIL (tail -c +6498679 tests/ecmac.db|head -c 1187): [{"message":"Test case returned non-true value!"}]
-6642	FAIL (tail -c +6499867 tests/ecmac.db|head -c 1203): [{"message":"[isNaN] is not defined"}]
+6642	FAIL (tail -c +6499867 tests/ecmac.db|head -c 1203): [{"message":"Test case returned non-true value!"}]
 6643	FAIL (tail -c +6501071 tests/ecmac.db|head -c 773): [{"message":"Test case returned non-true value!"}]
 6644	FAIL (tail -c +6501845 tests/ecmac.db|head -c 1037): [{"message":"Test case returned non-true value!"}]
-6645	FAIL (tail -c +6502883 tests/ecmac.db|head -c 884): [{"message":"[isNaN] is not defined"}]
-6646	FAIL (tail -c +6503768 tests/ecmac.db|head -c 1105): [{"message":"[isNaN] is not defined"}]
+6645	PASS (tail -c +6502883 tests/ecmac.db|head -c 884)
+6646	FAIL (tail -c +6503768 tests/ecmac.db|head -c 1105): [{"message":"Test case returned non-true value!"}]
 6647	FAIL (tail -c +6504874 tests/ecmac.db|head -c 861): [{"message":"Test case returned non-true value!"}]
 6648	PASS (tail -c +6505736 tests/ecmac.db|head -c 727)
 6649	PASS (tail -c +6506464 tests/ecmac.db|head -c 707)
@@ -6660,7 +6660,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6657	FAIL (tail -c +6512971 tests/ecmac.db|head -c 821): [{"message":"Test case returned non-true value!"}]
 6658	FAIL (tail -c +6513793 tests/ecmac.db|head -c 838): [{"message":"[arguments] is not defined"}]
 6659	FAIL (tail -c +6514632 tests/ecmac.db|head -c 856): [{"message":"Test case returned non-true value!"}]
-6660	FAIL (tail -c +6515489 tests/ecmac.db|head -c 825): [{"message":"[isNaN] is not defined"}]
+6660	FAIL (tail -c +6515489 tests/ecmac.db|head -c 825): [{"message":"Test case returned non-true value!"}]
 6661	FAIL (tail -c +6516315 tests/ecmac.db|head -c 960): [{"message":"Test case returned non-true value!"}]
 6662	PASS (tail -c +6517276 tests/ecmac.db|head -c 826)
 6663	FAIL (tail -c +6518103 tests/ecmac.db|head -c 861): [{"message":"Test case returned non-true value!"}]
@@ -6695,9 +6695,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6692	FAIL (tail -c +6545894 tests/ecmac.db|head -c 776): [{"message":"Test case returned non-true value!"}]
 6693	FAIL (tail -c +6546671 tests/ecmac.db|head -c 780): [{"message":"Test case returned non-true value!"}]
 6694	FAIL (tail -c +6547452 tests/ecmac.db|head -c 840): [{"message":"Test case returned non-true value!"}]
-6695	FAIL (tail -c +6548293 tests/ecmac.db|head -c 957): [{"message":"[isNaN] is not defined"}]
+6695	FAIL (tail -c +6548293 tests/ecmac.db|head -c 957): [{"message":"Test case returned non-true value!"}]
 6696	FAIL (tail -c +6549251 tests/ecmac.db|head -c 876): [{"message":"Test case returned non-true value!"}]
-6697	FAIL (tail -c +6550128 tests/ecmac.db|head -c 906): [{"message":"[isNaN] is not defined"}]
+6697	FAIL (tail -c +6550128 tests/ecmac.db|head -c 906): [{"message":"Test case returned non-true value!"}]
 6698	FAIL (tail -c +6551035 tests/ecmac.db|head -c 1052): [{"message":"Test case returned non-true value!"}]
 6699	FAIL (tail -c +6552088 tests/ecmac.db|head -c 835): [{"message":"Test case returned non-true value!"}]
 6700	FAIL (tail -c +6552924 tests/ecmac.db|head -c 1041): [{"message":"Test case returned non-true value!"}]
@@ -6708,10 +6708,10 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6705	PASS (tail -c +6558311 tests/ecmac.db|head -c 725)
 6706	FAIL (tail -c +6559037 tests/ecmac.db|head -c 738): [{"message":"Test case returned non-true value!"}]
 6707	FAIL (tail -c +6559776 tests/ecmac.db|head -c 634): [{"message":"Test case returned non-true value!"}]
-6708	FAIL (tail -c +6560411 tests/ecmac.db|head -c 773): [{"message":"[isNaN] is not defined"}]
-6709	FAIL (tail -c +6561185 tests/ecmac.db|head -c 957): [{"message":"[isNaN] is not defined"}]
-6710	FAIL (tail -c +6562143 tests/ecmac.db|head -c 1083): [{"message":"[isNaN] is not defined"}]
-6711	FAIL (tail -c +6563227 tests/ecmac.db|head -c 842): [{"message":"[isNaN] is not defined"}]
+6708	FAIL (tail -c +6560411 tests/ecmac.db|head -c 773): [{"message":"Test case returned non-true value!"}]
+6709	FAIL (tail -c +6561185 tests/ecmac.db|head -c 957): [{"message":"Test case returned non-true value!"}]
+6710	FAIL (tail -c +6562143 tests/ecmac.db|head -c 1083): [{"message":"Test case returned non-true value!"}]
+6711	FAIL (tail -c +6563227 tests/ecmac.db|head -c 842): [{"message":"Test case returned non-true value!"}]
 6712	FAIL (tail -c +6564070 tests/ecmac.db|head -c 898): [{"message":"Test case returned non-true value!"}]
 6713	FAIL (tail -c +6564969 tests/ecmac.db|head -c 897): [{"message":"Test case returned non-true value!"}]
 6714	FAIL (tail -c +6565867 tests/ecmac.db|head -c 902): [{"message":"Test case returned non-true value!"}]
@@ -6766,18 +6766,18 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6763	FAIL (tail -c +6618023 tests/ecmac.db|head -c 911): [{"message":"Test case returned non-true value!"}]
 6764	FAIL (tail -c +6618935 tests/ecmac.db|head -c 796): [{"message":"Test case returned non-true value!"}]
 6765	FAIL (tail -c +6619732 tests/ecmac.db|head -c 806): [{"message":"Test case returned non-true value!"}]
-6766	FAIL (tail -c +6620539 tests/ecmac.db|head -c 866): [{"message":"[isNaN] is not defined"}]
-6767	FAIL (tail -c +6621406 tests/ecmac.db|head -c 866): [{"message":"[isNaN] is not defined"}]
-6768	FAIL (tail -c +6622273 tests/ecmac.db|head -c 861): [{"message":"[isNaN] is not defined"}]
-6769	FAIL (tail -c +6623135 tests/ecmac.db|head -c 826): [{"message":"[isNaN] is not defined"}]
-6770	FAIL (tail -c +6623962 tests/ecmac.db|head -c 620): [{"message":"[isNaN] is not defined"}]
-6771	FAIL (tail -c +6624583 tests/ecmac.db|head -c 766): [{"message":"[isNaN] is not defined"}]
+6766	FAIL (tail -c +6620539 tests/ecmac.db|head -c 866): [{"message":"Test case returned non-true value!"}]
+6767	FAIL (tail -c +6621406 tests/ecmac.db|head -c 866): [{"message":"Test case returned non-true value!"}]
+6768	FAIL (tail -c +6622273 tests/ecmac.db|head -c 861): [{"message":"Test case returned non-true value!"}]
+6769	FAIL (tail -c +6623135 tests/ecmac.db|head -c 826): [{"message":"Test case returned non-true value!"}]
+6770	FAIL (tail -c +6623962 tests/ecmac.db|head -c 620): [{"message":"Test case returned non-true value!"}]
+6771	PASS (tail -c +6624583 tests/ecmac.db|head -c 766)
 6772	FAIL (tail -c +6625350 tests/ecmac.db|head -c 1032): [{"message":"Test case returned non-true value!"}]
-6773	FAIL (tail -c +6626383 tests/ecmac.db|head -c 1058): [{"message":"[isNaN] is not defined"}]
+6773	FAIL (tail -c +6626383 tests/ecmac.db|head -c 1058): [{"message":"Test case returned non-true value!"}]
 6774	FAIL (tail -c +6627442 tests/ecmac.db|head -c 647): [{"message":"Test case returned non-true value!"}]
 6775	PASS (tail -c +6628090 tests/ecmac.db|head -c 630)
 6776	PASS (tail -c +6628721 tests/ecmac.db|head -c 610)
-6777	FAIL (tail -c +6629332 tests/ecmac.db|head -c 1020): [{"message":"[isNaN] is not defined"}]
+6777	FAIL (tail -c +6629332 tests/ecmac.db|head -c 1020): [{"message":"Test case returned non-true value!"}]
 6778	FAIL (tail -c +6630353 tests/ecmac.db|head -c 728): [{"message":"Test case returned non-true value!"}]
 6779	FAIL (tail -c +6631082 tests/ecmac.db|head -c 729): [{"message":"Test case returned non-true value!"}]
 6780	PASS (tail -c +6631812 tests/ecmac.db|head -c 627)
@@ -6790,16 +6790,16 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6787	PASS (tail -c +6636629 tests/ecmac.db|head -c 678)
 6788	FAIL (tail -c +6637308 tests/ecmac.db|head -c 741): [{"message":"Test case returned non-true value!"}]
 6789	PASS (tail -c +6638050 tests/ecmac.db|head -c 657)
-6790	FAIL (tail -c +6638708 tests/ecmac.db|head -c 712): [{"message":"[isNaN] is not defined"}]
+6790	FAIL (tail -c +6638708 tests/ecmac.db|head -c 712): [{"message":"Test case returned non-true value!"}]
 6791	FAIL (tail -c +6639421 tests/ecmac.db|head -c 1203): [{"message":"Test case returned non-true value!"}]
 6792	FAIL (tail -c +6640625 tests/ecmac.db|head -c 1313): [{"message":"Test case returned non-true value!"}]
 6793	FAIL (tail -c +6641939 tests/ecmac.db|head -c 776): [{"message":"Test case returned non-true value!"}]
 6794	FAIL (tail -c +6642716 tests/ecmac.db|head -c 858): [{"message":"Test case returned non-true value!"}]
 6795	FAIL (tail -c +6643575 tests/ecmac.db|head -c 848): [{"message":"Test case returned non-true value!"}]
-6796	FAIL (tail -c +6644424 tests/ecmac.db|head -c 681): [{"message":"[isNaN] is not defined"}]
-6797	FAIL (tail -c +6645106 tests/ecmac.db|head -c 713): [{"message":"[isNaN] is not defined"}]
-6798	FAIL (tail -c +6645820 tests/ecmac.db|head -c 689): [{"message":"[isNaN] is not defined"}]
-6799	FAIL (tail -c +6646510 tests/ecmac.db|head -c 687): [{"message":"[isNaN] is not defined"}]
+6796	FAIL (tail -c +6644424 tests/ecmac.db|head -c 681): [{"message":"Test case returned non-true value!"}]
+6797	FAIL (tail -c +6645106 tests/ecmac.db|head -c 713): [{"message":"Test case returned non-true value!"}]
+6798	FAIL (tail -c +6645820 tests/ecmac.db|head -c 689): [{"message":"Test case returned non-true value!"}]
+6799	FAIL (tail -c +6646510 tests/ecmac.db|head -c 687): [{"message":"Test case returned non-true value!"}]
 6800	FAIL (tail -c +6647198 tests/ecmac.db|head -c 809): [{"message":"Test case returned non-true value!"}]
 6801	FAIL (tail -c +6648008 tests/ecmac.db|head -c 868): [{"message":"Test case returned non-true value!"}]
 6802	FAIL (tail -c +6648877 tests/ecmac.db|head -c 866): [{"message":"Test case returned non-true value!"}]
@@ -6812,7 +6812,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6809	FAIL (tail -c +6656050 tests/ecmac.db|head -c 917): [{"message":"Test case returned non-true value!"}]
 6810	PASS (tail -c +6656968 tests/ecmac.db|head -c 785)
 6811	PASS (tail -c +6657754 tests/ecmac.db|head -c 760)
-6812	FAIL (tail -c +6658515 tests/ecmac.db|head -c 1265): [{"message":"[isNaN] is not defined"}]
+6812	FAIL (tail -c +6658515 tests/ecmac.db|head -c 1265): [{"message":"Test case returned non-true value!"}]
 6813	FAIL (tail -c +6659781 tests/ecmac.db|head -c 872): [{"message":"Test case returned non-true value!"}]
 6814	FAIL (tail -c +6660654 tests/ecmac.db|head -c 872): [{"message":"Test case returned non-true value!"}]
 6815	PASS (tail -c +6661527 tests/ecmac.db|head -c 778)
@@ -6831,7 +6831,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6828	FAIL (tail -c +6673456 tests/ecmac.db|head -c 1415): [{"message":"Test case returned non-true value!"}]
 6829	FAIL (tail -c +6674872 tests/ecmac.db|head -c 1209): [{"message":"Test case returned non-true value!"}]
 6830	FAIL (tail -c +6676082 tests/ecmac.db|head -c 764): [{"message":"Test case returned non-true value!"}]
-6831	FAIL (tail -c +6676847 tests/ecmac.db|head -c 1000): [{"message":"[isNaN] is not defined"}]
+6831	FAIL (tail -c +6676847 tests/ecmac.db|head -c 1000): [{"message":"Test case returned non-true value!"}]
 6832	FAIL (tail -c +6677848 tests/ecmac.db|head -c 1197): [{"message":"Test case returned non-true value!"}]
 6833	FAIL (tail -c +6679046 tests/ecmac.db|head -c 1101): [{"message":"Test case returned non-true value!"}]
 6834	FAIL (tail -c +6680148 tests/ecmac.db|head -c 1326): [{"message":"Test case returned non-true value!"}]
@@ -6842,9 +6842,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6839	FAIL (tail -c +6686191 tests/ecmac.db|head -c 665): [{"message":"Test case returned non-true value!"}]
 6840	FAIL (tail -c +6686857 tests/ecmac.db|head -c 743): [{"message":"Test case returned non-true value!"}]
 6841	FAIL (tail -c +6687601 tests/ecmac.db|head -c 737): [{"message":"Test case returned non-true value!"}]
-6842	FAIL (tail -c +6688339 tests/ecmac.db|head -c 743): [{"message":"[isNaN] is not defined"}]
-6843	FAIL (tail -c +6689083 tests/ecmac.db|head -c 749): [{"message":"[isNaN] is not defined"}]
-6844	FAIL (tail -c +6689833 tests/ecmac.db|head -c 735): [{"message":"[isNaN] is not defined"}]
+6842	FAIL (tail -c +6688339 tests/ecmac.db|head -c 743): [{"message":"Test case returned non-true value!"}]
+6843	FAIL (tail -c +6689083 tests/ecmac.db|head -c 749): [{"message":"Test case returned non-true value!"}]
+6844	FAIL (tail -c +6689833 tests/ecmac.db|head -c 735): [{"message":"Test case returned non-true value!"}]
 6845	FAIL (tail -c +6690569 tests/ecmac.db|head -c 320): [{"message":"Test case returned non-true value!"}]
 6846	FAIL (tail -c +6690890 tests/ecmac.db|head -c 315): [{"message":"Test case returned non-true value!"}]
 6847	PASS (tail -c +6691206 tests/ecmac.db|head -c 426)
