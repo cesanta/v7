@@ -737,15 +737,6 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void t_print_error(struct v7 *v7, val_t e) {
-  char buf[512];
-  char *s = v7_to_json(v7, e, buf, sizeof(buf));
-  fprintf(stderr, "%s\n", s);
-  if (s != buf) {
-    free(s);
-  }
-}
-
 static const char *test_ecmac(void) {
   struct ast a;
   int i, passed = 0;
@@ -789,24 +780,23 @@ static const char *test_ecmac(void) {
       if (v7_exec(v7, &res, driver) != V7_OK) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
+        char tail_cmd[100];
+        snprintf(tail_cmd, sizeof(tail_cmd),
+                 "(tail -c +%lu tests/ecmac.db|head -c %lu)",
+                 current_case - db + 1, next_case - current_case);
+
         if (v7_exec(v7, &res, current_case) != V7_OK) {
-          fprintf(r, "%i\tFAIL (tail -c +%lu tests/ecmac.db|head -c %lu)\n", i,
-                  current_case - db + 1, next_case - current_case);
-#ifdef ECMA_VERBOSE
-          fprintf(stderr, "Test %d failed "
-                  "(tail -c +%lu tests/ecmac.db|head -c %lu):\n", i,
-                  current_case - db + 1, next_case - current_case);
-          t_print_error(v7, res);
-#else
-          (void) t_print_error;
-#endif
+          char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
+          fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
+          if (err_str != buf) {
+            free(err_str);
+          }
 #ifdef ECMA_FORK
           exit(1);
 #endif
         } else {
           passed++;
-          fprintf(r, "%i\tPASS (tail -c +%lu tests/ecmac.db|head -c %lu)\n", i,
-                  current_case - db + 1, next_case - current_case);
+          fprintf(r, "%i\tPASS %s\n", i, tail_cmd);
 #ifdef ECMA_FORK
           exit(0);
 #endif
