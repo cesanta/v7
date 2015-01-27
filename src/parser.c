@@ -774,9 +774,21 @@ static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
 
 static enum v7_err parse_body(struct v7 *v7, struct ast *a,
                                enum v7_tok end) {
+  ast_off_t start;
   while (v7->cur_tok != end) {
     if (ACCEPT(TOK_FUNCTION)) {
+      if (v7->cur_tok != TOK_IDENTIFIER) {
+        return V7_SYNTAX_ERROR;
+      }
+      start = ast_add_node(a, AST_VAR);
+      ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
+      /* zero out var node pointer */
+      ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
+      v7->last_var_node = start;
+      ast_add_inlined_node(a, AST_FUNC_DECL, v7->tok, v7->tok_len);
+
       PARSE_ARG_2(funcdecl, 1, 0);
+      ast_set_skip(a, start, AST_END_SKIP);
     } else {
       PARSE(statement);
     }

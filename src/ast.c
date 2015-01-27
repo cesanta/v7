@@ -73,6 +73,14 @@ const struct ast_node_def ast_node_defs[] = {
   {"VAR_DECL", 1, 1, 0, 1},
   /*
    * struct {
+   *   varint len;
+   *   char name[len];
+   *   child expr;
+   * }
+   */
+  {"FUNC_DECL", 1, 1, 0, 1},
+  /*
+   * struct {
    *   ast_skip_t end;
    *   ast_skip_t end_true;
    *   child cond;
