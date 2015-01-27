@@ -9396,7 +9396,11 @@ static val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
-  v7_exec(v7, &v, "function Object() {}");
+  v7_exec(v7, &v, "function Object(v) {"
+          "if (typeof v === 'boolean') return new Boolean(v);"
+          "if (typeof v === 'number') return new Number(v);"
+          "if (typeof v === 'string') return new String(v);"
+          "}");
 
   object = v7_get(v7, v7->global_object, "Object", 6);
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
