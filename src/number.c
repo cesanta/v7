@@ -11,8 +11,9 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(NAN);
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
+    v7_to_object(this_obj)->prototype = v7_to_object(v7->number_prototype);
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
-    return this_obj;
+    res = this_obj;
   }
 
   return res;

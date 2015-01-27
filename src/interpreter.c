@@ -50,6 +50,17 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
   throw_value(v7, create_exception(v7, type, v7->error_msg));
 }  /* LCOV_EXCL_LINE */
 
+V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
+  struct v7_property *prop;
+  if (v7_is_object(v) &&
+      (prop = v7_get_property(v, "valueOf", 7)) != NULL) {
+    if (v7_is_cfunction(prop->value)) {
+      v = v7_to_cfunction(prop->value)(v7, v, V7_UNDEFINED);
+    }
+  }
+  return v;
+}
+
 static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
@@ -207,8 +218,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_LE:
     case AST_GT:
     case AST_GE:
-      v1 = i_eval_expr(v7, a, pos, scope);
-      v2 = i_eval_expr(v7, a, pos, scope);
+      v1 = i_value_of(v7, i_eval_expr(v7, a, pos, scope));
+      v2 = i_value_of(v7, i_eval_expr(v7, a, pos, scope));
       if (tag == AST_EQ && v1 == v2) {
         return v7_boolean_to_value(1);
       }

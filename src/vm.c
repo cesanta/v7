@@ -26,6 +26,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->string_prototype)) {
         return V7_TYPE_STRING_OBJECT;
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->number_prototype)) {
+        return V7_TYPE_NUMBER_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -432,6 +435,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return NULL;
   }
+
   for (prop = v7_to_object(obj)->properties; prop != NULL;
        prop = prop->next) {
     if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0 &&
@@ -719,6 +723,7 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
   const char *p = v7_to_string(v7, &s, &n);
+  if (!v7_is_string(s)) return V7_UNDEFINED;
   if (start < 0) start = n + start;
   if (start < 0) start = 0;
   if (start > (long) n) start = n;

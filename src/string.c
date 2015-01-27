@@ -11,6 +11,7 @@ static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_is_string(arg0) ? arg0 : v7_create_string(v7, "", 0, 1);
 
   if (v7_is_object(this_obj)) {
+    v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
     return this_obj;
   }
@@ -69,19 +70,6 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = this_obj;
-  struct v7_property *p;
-
-  (void) args;
-  if (val_type(v7, this_obj) == V7_TYPE_STRING_OBJECT &&
-      (p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
-    res = p->value;
-  }
-
-  return res;
-}
-
 static val_t to_string(struct v7 *v7, val_t v) {
   char buf[100], *p = v7_to_json(v7, v, buf, sizeof(buf));
   val_t res;
@@ -99,7 +87,7 @@ static val_t to_string(struct v7 *v7, val_t v) {
 }
 
 static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = Str_valueOf(v7, this_obj, args);
+  val_t res = i_value_of(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
 
   for (i = 0; i < num_args; i++) {
@@ -111,7 +99,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t s = Str_valueOf(v7, this_obj, args);
+  val_t s = i_value_of(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = v7_array_at(v7, args, 1);
   val_t sub, res = v7_create_number(-1);
@@ -628,7 +616,6 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);
   set_cfunc_prop(v7, v7->string_prototype, "fromCharCode", Str_fromCharCode);
-  set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
   set_cfunc_prop(v7, v7->string_prototype, "concat", Str_concat);
   set_cfunc_prop(v7, v7->string_prototype, "indexOf", Str_indexOf);
   set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
