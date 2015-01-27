@@ -506,9 +506,12 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     prop->name[len] = '\0';
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
-    val_t args = v7_create_array(v7);
+    val_t setter = prop->value, args = v7_create_array(v7);
+    if (prop->attributes & V7_PROPERTY_GETTER) {
+      setter = v7_array_at(v7, prop->value, 1);
+    }
     v7_set(v7, args, "0", 1, val);
-    v7_apply(v7, prop->value, obj, args);
+    v7_apply(v7, setter, obj, args);
     return 0;
   }
   prop->value = val;
@@ -550,7 +553,11 @@ V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj, struct v7_property 
     return V7_UNDEFINED;
   }
   if (p->attributes & V7_PROPERTY_GETTER) {
-    return v7_apply(v7, p->value, obj, V7_UNDEFINED);
+    val_t getter = p->value;
+    if (p->attributes & V7_PROPERTY_SETTER) {
+      getter = v7_array_at(v7, p->value, 0);
+    }
+    return v7_apply(v7, getter, obj, V7_UNDEFINED);
   }
   return p->value;
 }

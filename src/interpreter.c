@@ -422,13 +422,23 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           case AST_SETTER:
             {
               ast_off_t func = *pos;
+              unsigned int attr = tag == AST_GETTER ? V7_PROPERTY_GETTER : V7_PROPERTY_SETTER;
+              unsigned int other = tag == AST_GETTER ? V7_PROPERTY_SETTER : V7_PROPERTY_GETTER;
+              struct v7_property *p;
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
               ast_move_to_children(a, &func);
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
               name = ast_get_inlined_data(a, func, &name_len);
               v1 = i_eval_expr(v7, a, pos, scope);
-              /* TODO(mkm): use array to hold setter and getter if both are set */
-              v7_set_property(v7, res, name, name_len, tag == AST_GETTER ? V7_PROPERTY_GETTER : V7_PROPERTY_SETTER, v1);
+              if ((p = v7_get_property(res, name, name_len)) && p->attributes & other) {
+                val_t arr = v7_create_array(v7);
+                v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
+                v7_set(v7, arr, tag == AST_SETTER ? "1" : "0", 1, v1);
+                p->value = arr;
+                p->attributes |= attr;
+              } else {
+                v7_set_property(v7, res, name, name_len, attr, v1);
+              }
             }
             break;
           default:
