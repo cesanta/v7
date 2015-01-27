@@ -5150,6 +5150,12 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     v = v7->string_prototype;
   } else if (v7_is_double(obj)) {
     v = v7->number_prototype;
+  } else if (v7_is_boolean(obj)) {
+    v = v7->boolean_prototype;
+  } else if (v7_is_undefined(obj)) {
+    throw_exception(v7, "TypeError",
+                    "cannot read property '%.*s' of undefined",
+                    (int) name_len, name);
   }
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
 }
