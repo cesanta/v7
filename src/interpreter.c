@@ -1007,7 +1007,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
 
         memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-        if (finally) {
+        if (finally != end) {
           enum i_break fin_brk = B_RUN;
           res = i_eval_stmts(v7, a, &finally, end, scope, &fin_brk);
           if (fin_brk != B_RUN) {
