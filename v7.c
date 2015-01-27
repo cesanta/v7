@@ -365,6 +365,7 @@ enum ast_tag {
   AST_SCRIPT,
   AST_VAR,
   AST_VAR_DECL,
+  AST_FUNC_DECL,
   AST_IF,
   AST_FUNC,
 
@@ -4137,6 +4138,14 @@ const struct ast_node_def ast_node_defs[] = {
   {"VAR_DECL", 1, 1, 0, 1},
   /*
    * struct {
+   *   varint len;
+   *   char name[len];
+   *   child expr;
+   * }
+   */
+  {"FUNC_DECL", 1, 1, 0, 1},
+  /*
+   * struct {
    *   ast_skip_t end;
    *   ast_skip_t end_true;
    *   child cond;
@@ -5138,8 +5147,6 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
 }
 
 static void v7_destroy_property(struct v7_property **p) {
-  free((*p)->name);
-  free(*p);
   *p = NULL;
 }
 
@@ -6295,9 +6302,21 @@ static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
 
 static enum v7_err parse_body(struct v7 *v7, struct ast *a,
                                enum v7_tok end) {
+  ast_off_t start;
   while (v7->cur_tok != end) {
     if (ACCEPT(TOK_FUNCTION)) {
+      if (v7->cur_tok != TOK_IDENTIFIER) {
+        return V7_SYNTAX_ERROR;
+      }
+      start = ast_add_node(a, AST_VAR);
+      ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
+      /* zero out var node pointer */
+      ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
+      v7->last_var_node = start;
+      ast_add_inlined_node(a, AST_FUNC_DECL, v7->tok, v7->tok_len);
+
       PARSE_ARG_2(funcdecl, 1, 0);
+      ast_set_skip(a, start, AST_END_SKIP);
     } else {
       PARSE(statement);
     }
@@ -6835,6 +6854,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       while (*pos < end) {
         struct v7_property *prop;
         tag = ast_fetch_tag(a, pos);
+        /* func declarations are already set during hoisting */
+        if (tag == AST_FUNC_DECL) {
+          ast_move_to_children(a, pos);
+          ast_skip_tree(a, pos);
+          continue;
+        }
+
         V7_CHECK(v7, tag == AST_VAR_DECL);
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
@@ -6955,14 +6981,51 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
   }
 }
 
+static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
+                                  ast_off_t fvar, val_t frame) {
+  enum ast_tag tag;
+  ast_off_t next, fvar_end;
+  char *name;
+  size_t name_len;
+
+  if (fvar == start) {
+    return;
+  }
+
+  do {
+    tag = ast_fetch_tag(a, &fvar);
+    V7_CHECK(v7, tag == AST_VAR);
+    next = ast_get_skip(a, fvar, AST_VAR_NEXT_SKIP);
+    if (next == fvar) {
+      next = 0;
+    }
+    V7_CHECK(v7, next < 65535);
+
+    fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
+    ast_move_to_children(a, &fvar);
+    while (fvar < fvar_end) {
+      val_t val = V7_UNDEFINED;
+      tag = ast_fetch_tag(a, &fvar);
+      V7_CHECK(v7, tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
+      name = ast_get_inlined_data(a, fvar, &name_len);
+      ast_move_to_children(a, &fvar);
+      if (tag == AST_VAR_DECL) {
+        ast_skip_tree(a, &fvar);
+      } else {
+        val = i_eval_expr(v7, a, &fvar, frame);
+      }
+      v7_set_property(v7, frame, name, name_len, 0, val);
+    }
+    fvar = next - 1; /* TODO(mkm): cleanup */
+  } while (next != 0);
+}
+
 V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
                                 ast_off_t *pos, ast_off_t *body,
                                 ast_off_t *end) {
   val_t frame;
   enum ast_tag tag;
-  ast_off_t fstart, fvar, fvar_end;
-  char *name;
-  size_t name_len;
+  ast_off_t fstart, fvar;
 
   *pos = func->ast_off;
   fstart = *pos;
@@ -6977,33 +7040,7 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
   frame = v7_create_object(v7);
   v7_to_object(frame)->prototype = func->scope;
 
-  /* populate the call frame with a property for each local variable */
-  if (fvar != fstart) {
-    ast_off_t next;
-
-    do {
-      tag = ast_fetch_tag(func->ast, &fvar);
-      V7_CHECK(v7, tag == AST_VAR);
-      next = ast_get_skip(func->ast, fvar, AST_VAR_NEXT_SKIP);
-      if (next == fvar) {
-        next = 0;
-      }
-      V7_CHECK(v7, next < 65535);
-
-      fvar_end = ast_get_skip(func->ast, fvar, AST_END_SKIP);
-      ast_move_to_children(func->ast, &fvar);
-      while (fvar < fvar_end) {
-        tag = ast_fetch_tag(func->ast, &fvar);
-        V7_CHECK(v7, tag == AST_VAR_DECL);
-        name = ast_get_inlined_data(func->ast, fvar, &name_len);
-        ast_move_to_children(func->ast, &fvar);
-        ast_skip_tree(func->ast, &fvar);
-
-        v7_set_property(v7, frame, name, name_len, 0, V7_UNDEFINED);
-      }
-      fvar = next - 1; /* TODO(mkm): cleanup */
-    } while (next != 0);
-  }
+  i_populate_local_vars(v7, func->ast, fstart, fvar, frame);
   return frame;
 }
 
@@ -7098,19 +7135,18 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
 static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, enum i_break *brk) {
+  ast_off_t start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
-  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch;
+  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch, fvar;
 
   switch (tag) {
     case AST_SCRIPT: /* TODO(mkm): push up */
       end = ast_get_skip(a, *pos, AST_END_SKIP);
+      fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
       ast_move_to_children(a, pos);
-      while (*pos < end) {
-        res = i_eval_stmt(v7, a, pos, scope, brk);
-        /* TODO(mkm): handle illegal returns and breaks in SCRIPT node */
-      }
-      return res;
+      i_populate_local_vars(v7, a, start, fvar, scope);
+      return i_eval_stmts(v7, a, pos, end, scope, brk);
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       end_true = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
@@ -7355,7 +7391,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
 
         memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-        if (finally) {
+        if (finally != end) {
           enum i_break fin_brk = B_RUN;
           res = i_eval_stmts(v7, a, &finally, end, scope, &fin_brk);
           if (fin_brk != B_RUN) {

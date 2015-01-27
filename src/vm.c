@@ -465,8 +465,6 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
 }
 
 static void v7_destroy_property(struct v7_property **p) {
-  free((*p)->name);
-  free(*p);
   *p = NULL;
 }
 

@@ -773,9 +773,13 @@ static const char *test_ecmac(void) {
           i == 993 || i == 995 || i == 996 || i == 1085 || i == 1231 ||
           i == 1250 || i == 1252 || i == 1253 || i == 1251 || i == 1255 ||
           i == 1256 || i == 1257 || i == 1740 || i == 2634 || i == 2635 ||
-          i == 2636 || i == 2655 || i == 2884 || i == 2885 || i == 2886 ||
+          i == 2636 || i == 2649 || i == 2655 || i == 2884 || i == 2885 || i == 2886 ||
           i == 2887 || i == 2945 || i == 3173 || i == 10009 || i == 10030 ||
           i == 10051 || i == 10072) continue;
+
+#ifndef ECMA_SLOW
+      if (i == 3348 || i == 3349 || i == 3401) continue;
+#endif
 
       if (v7_exec(v7, &res, driver) != V7_OK) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
@@ -1034,6 +1038,14 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "15"));
   ASSERT(v7_exec(v7, &v, "(function(){x=0;for(i=0;1;++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[15,3]"));
+  ASSERT(v7_exec(v7, &v, "a=1,[(function(){function a(){1+2}; return a})(),a]") == V7_OK);
+  ASSERT(check_value(v7, v, "[[function a()],1]"));
+  ASSERT(v7_exec(v7, &v, "x=0;(function(){try{ff; x=42}catch(e){x=1};function ff(){}})();x") == V7_OK);
+  ASSERT(check_value(v7, v, "42"));
+  ASSERT(v7_exec(v7, &v, "a=1,[(function(){return a; function a(){1+2}})(),a]") == V7_OK);
+  ASSERT(check_value(v7, v, "[[function a()],1]"));
+  ASSERT(v7_exec(v7, &v, "(function(){f=42;function f(){};return f})()") == V7_OK);
+  ASSERT(check_value(v7, v, "42"));
 
   ASSERT(v7_exec(v7, &v, "x=0;try{x=1};x") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
@@ -1041,6 +1053,9 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "2"));
   ASSERT(v7_exec(v7, &v, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
+
+  ASSERT(v7_exec(v7, &v, "x=0;try{xxx;var xxx;x=42}catch(e){x=1};x") == V7_OK);
+  ASSERT(check_value(v7, v, "42"));
 
   ASSERT(v7_exec(v7, &v, "(function(a) {return a})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(a)]"));
@@ -1056,7 +1071,7 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
   ASSERT(v7_exec(v7, &v, "(function() {var x=(function y(){for(var z;;){}})})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(){var x}]"));
-  ASSERT(v7_exec(v7, &v, "function square(x){return x*x;}") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "function square(x){return x*x;};square") == V7_OK);
   ASSERT(check_value(v7, v, "[function square(x)]"));
   ASSERT(v7_exec(v7, &v, "0;f=(function(x){return x*x;})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(x)]"));
