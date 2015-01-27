@@ -21,17 +21,13 @@ V7_PRIVATE val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   return v;
 }
 
-#if 0
-V7_PRIVATE void Arr_length(struct v7_val *this_obj, struct v7_val *arg,
-                           struct v7_val *result) {
-  struct v7_prop *p;
-  if (NULL == result || arg) return;
-  v7_init_num(result, 0.0);
-  for (p = this_obj->v.array; p != NULL; p = p->next) {
-    result->v.num += 1.0;
-  }
+static val_t Arr_length(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) args;
+  assert(val_type(v7, this_obj) == V7_TYPE_ARRAY_OBJECT);
+  return v7_create_number(v7_array_length(v7, this_obj));
 }
 
+#if 0
 V7_PRIVATE int cmp_prop(const void *pa, const void *pb) {
   const struct v7_prop *p1 = *(struct v7_prop **) pa;
   const struct v7_prop *p2 = *(struct v7_prop **) pb;
@@ -67,4 +63,6 @@ V7_PRIVATE void init_array(struct v7 *v7) {
                   v7_create_cfunction(Array_ctor));
   v7_set_property(v7, v7->array_prototype, "push", 4, 0,
                   v7_create_cfunction(Array_push));
+  v7_set_property(v7, v7->array_prototype, "length", 6, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Arr_length));
 }

@@ -3228,17 +3228,13 @@ V7_PRIVATE val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   return v;
 }
 
-#if 0
-V7_PRIVATE void Arr_length(struct v7_val *this_obj, struct v7_val *arg,
-                           struct v7_val *result) {
-  struct v7_prop *p;
-  if (NULL == result || arg) return;
-  v7_init_num(result, 0.0);
-  for (p = this_obj->v.array; p != NULL; p = p->next) {
-    result->v.num += 1.0;
-  }
+static val_t Arr_length(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) args;
+  assert(val_type(v7, this_obj) == V7_TYPE_ARRAY_OBJECT);
+  return v7_create_number(v7_array_length(v7, this_obj));
 }
 
+#if 0
 V7_PRIVATE int cmp_prop(const void *pa, const void *pb) {
   const struct v7_prop *p1 = *(struct v7_prop **) pa;
   const struct v7_prop *p2 = *(struct v7_prop **) pb;
@@ -3274,6 +3270,8 @@ V7_PRIVATE void init_array(struct v7 *v7) {
                   v7_create_cfunction(Array_ctor));
   v7_set_property(v7, v7->array_prototype, "push", 4, 0,
                   v7_create_cfunction(Array_push));
+  v7_set_property(v7, v7->array_prototype, "length", 6, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Arr_length));
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -3450,11 +3448,12 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i = 0, n;
-  const char *p = v7_to_string(v7, &this_obj, &n);
+  val_t s = i_value_of(v7, this_obj);
+  const char *p = v7_to_string(v7, &s, &n);
   val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
 
-  if (v7_is_double(arg) && at >= 0 && at < n && v7_is_string(this_obj)) {
+  if (v7_is_double(arg) && at >= 0 && at < n && v7_is_string(s)) {
     Rune r = 0;
     while (i <= n && i <= (size_t) at) {
       i += chartorune(&r, (char *) (p + i));
@@ -3996,13 +3995,19 @@ V7_PRIVATE enum v7_err Str_trim(struct v7_c_func_arg *cfa) {
   return V7_OK;
 #undef v7
 }
-
-V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg,
-                           struct v7_val *result) {
-  if (NULL == result || arg) return;
-  v7_init_num(result, utfnlen(this_obj->v.str.buf, this_obj->v.str.len));
-}
 #endif
+
+static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
+  size_t len = 0;
+  val_t s = i_value_of(v7, this_obj);
+
+  (void) args;
+  if (v7_is_string(s)) {
+    v7_to_string(v7, &s, &len);
+  }
+
+  return v7_create_number(len);
+}
 
 static long get_long_arg(struct v7 *v7, val_t args, int n, long default_value) {
   val_t arg_n = v7_array_at(v7, args, n);
@@ -4033,6 +4038,8 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
   set_cfunc_prop(v7, v7->string_prototype, "substring", Str_substring);
 
+  v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Str_length));
 #if 0
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "lastIndexOf", Str_lastIndexOf);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "localeCompare", Str_localeCompare);
@@ -5138,7 +5145,13 @@ struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
 }
 
 v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
-  return v7_property_value(v7, obj, v7_get_property(obj, name, name_len));
+  val_t v = obj;
+  if (v7_is_string(obj)) {
+    v = v7->string_prototype;
+  } else if (v7_is_double(obj)) {
+    v = v7->number_prototype;
+  }
+  return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
 }
 
 static void v7_destroy_property(struct v7_property **p) {
@@ -6741,11 +6754,6 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       v1 = i_eval_expr(v7, a, pos, scope);
-      if (v7_is_string(v1)) {
-        v1 = v7->string_prototype;
-      } else if (v7_is_double(v1)) {
-        v1 = v7->number_prototype;
-      }
       return v7_get(v7, v1, name, name_len);
     case AST_SEQ:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -7485,7 +7493,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   int i;
 
   if (v7_is_cfunction(f)) {
-    return v7_to_cfunction(f)(v7, v7->this_object, args);
+    return v7_to_cfunction(f)(v7, this_object, args);
   }
   if (!v7_is_function(f)) {
     throw_exception(v7, "TypeError", "value is not a function");

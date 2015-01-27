@@ -465,7 +465,13 @@ struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
 }
 
 v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
-  return v7_property_value(v7, obj, v7_get_property(obj, name, name_len));
+  val_t v = obj;
+  if (v7_is_string(obj)) {
+    v = v7->string_prototype;
+  } else if (v7_is_double(obj)) {
+    v = v7->number_prototype;
+  }
+  return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
 }
 
 static void v7_destroy_property(struct v7_property **p) {

@@ -38,11 +38,12 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i = 0, n;
-  const char *p = v7_to_string(v7, &this_obj, &n);
+  val_t s = i_value_of(v7, this_obj);
+  const char *p = v7_to_string(v7, &s, &n);
   val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
 
-  if (v7_is_double(arg) && at >= 0 && at < n && v7_is_string(this_obj)) {
+  if (v7_is_double(arg) && at >= 0 && at < n && v7_is_string(s)) {
     Rune r = 0;
     while (i <= n && i <= (size_t) at) {
       i += chartorune(&r, (char *) (p + i));
@@ -584,13 +585,19 @@ V7_PRIVATE enum v7_err Str_trim(struct v7_c_func_arg *cfa) {
   return V7_OK;
 #undef v7
 }
-
-V7_PRIVATE void Str_length(struct v7_val *this_obj, struct v7_val *arg,
-                           struct v7_val *result) {
-  if (NULL == result || arg) return;
-  v7_init_num(result, utfnlen(this_obj->v.str.buf, this_obj->v.str.len));
-}
 #endif
+
+static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
+  size_t len = 0;
+  val_t s = i_value_of(v7, this_obj);
+
+  (void) args;
+  if (v7_is_string(s)) {
+    v7_to_string(v7, &s, &len);
+  }
+
+  return v7_create_number(len);
+}
 
 static long get_long_arg(struct v7 *v7, val_t args, int n, long default_value) {
   val_t arg_n = v7_array_at(v7, args, n);
@@ -621,6 +628,8 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
   set_cfunc_prop(v7, v7->string_prototype, "substring", Str_substring);
 
+  v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Str_length));
 #if 0
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "lastIndexOf", Str_lastIndexOf);
   SET_METHOD(s_prototypes[V7_CLASS_STRING], "localeCompare", Str_localeCompare);
