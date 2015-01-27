@@ -213,14 +213,16 @@ v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): use GC heap */
   struct v7_function *f = (struct v7_function *) malloc(
       sizeof(struct v7_function));
-  val_t fval = v7_function_to_value(f);
+  val_t proto, fval = v7_function_to_value(f);
   if (f == NULL) {
     return V7_NULL;
   }
   f->properties = NULL;
   f->scope = NULL;
   /* TODO(mkm): lazily create these properties on first access */
-  v7_set_property(v7, fval, "prototype", -1, 0, v7_create_object(v7));
+  proto = v7_create_object(v7);
+  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
+  v7_set_property(v7, fval, "prototype", 9, 0, proto);
   return fval;
 }
 

@@ -46,6 +46,7 @@ static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_number(struct v7 *v7) {
   val_t num = v7_create_cfunction(Number_ctor);
   v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
+  v7_set(v7, v7->number_prototype, "constructor", 11, num);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);

@@ -619,6 +619,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str = v7_create_cfunction(String_ctor);
   v7_set_property(v7, v7->global_object, "String", 6, 0, str);
+  v7_set(v7, v7->string_prototype, "constructor", 11, str);
 
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);

@@ -23,6 +23,7 @@ V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
-  v7_set_property(v7, v7->global_object, "Boolean", 7, 0,
-                  v7_create_cfunction(Boolean_ctor));
+  val_t boolean = v7_create_cfunction(Boolean_ctor);
+  v7_set_property(v7, v7->global_object, "Boolean", 7, 0, boolean);
+  v7_set(v7, v7->boolean_prototype, "constructor", 11, boolean);
 }
