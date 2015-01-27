@@ -478,6 +478,23 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     throw_exception(v7, "TypeError",
                     "cannot read property '%.*s' of undefined",
                     (int) name_len, name);
+  } else if (v7_is_cfunction(obj)) {
+    /*
+     * TODO(mkm): until cfunctions can have properties
+     * let's treat special constructors specially.
+     * Slow path acceptable here.
+     */
+    if (obj == v7_get(v7, v7->global_object, "Boolean", 7) &&
+        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
+      return v7->boolean_prototype;
+    } else if (obj == v7_get(v7, v7->global_object, "String", 7) &&
+        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
+      return v7->string_prototype;
+    } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
+        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
+      return v7->number_prototype;
+    }
+    return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
 }

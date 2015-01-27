@@ -4467,7 +4467,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4435	FAIL (tail -c +4779657 tests/ecmac.db|head -c 433): [{"message":"[Function] is not defined"}]
 4436	FAIL (tail -c +4780091 tests/ecmac.db|head -c 382): [{"message":"Test case returned non-true value!"}]
 4437	FAIL (tail -c +4780474 tests/ecmac.db|head -c 391): [{"message":"Test case returned non-true value!"}]
-4438	FAIL (tail -c +4780866 tests/ecmac.db|head -c 393): [{"message":"Test case returned non-true value!"}]
+4438	PASS (tail -c +4780866 tests/ecmac.db|head -c 393)
 4439	FAIL (tail -c +4781260 tests/ecmac.db|head -c 388): [{"message":"Test case returned non-true value!"}]
 4440	FAIL (tail -c +4781649 tests/ecmac.db|head -c 380): [{"message":"[Date] is not defined"}]
 4441	FAIL (tail -c +4782030 tests/ecmac.db|head -c 386): [{"message":"[RegExp] is not defined"}]
@@ -4773,7 +4773,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4741	FAIL (tail -c +4950226 tests/ecmac.db|head -c 591): [{"message":"cannot read property 'value' of undefined"}]
 4742	FAIL (tail -c +4950818 tests/ecmac.db|head -c 579): [{"message":"cannot read property 'value' of undefined"}]
 4743	FAIL (tail -c +4951398 tests/ecmac.db|head -c 552): [{"message":"cannot read property 'value' of undefined"}]
-4744	FAIL (tail -c +4951951 tests/ecmac.db|head -c 576): [{"message":"cannot read property 'value' of undefined"}]
+4744	FAIL (tail -c +4951951 tests/ecmac.db|head -c 576): [{"message":"Test case returned non-true value!"}]
 4745	FAIL (tail -c +4952528 tests/ecmac.db|head -c 567): [{"message":"cannot read property 'value' of undefined"}]
 4746	FAIL (tail -c +4953096 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'value' of undefined"}]
 4747	FAIL (tail -c +4953661 tests/ecmac.db|head -c 573): [{"message":"cannot read property 'value' of undefined"}]
@@ -10395,7 +10395,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10363	PASS (tail -c +9487538 tests/ecmac.db|head -c 1480)
 10364	PASS (tail -c +9489019 tests/ecmac.db|head -c 414)
 10365	PASS (tail -c +9489434 tests/ecmac.db|head -c 1189)
-10366	FAIL (tail -c +9490624 tests/ecmac.db|head -c 803): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
+10366	FAIL (tail -c +9490624 tests/ecmac.db|head -c 803): [{"message":"#2: Boolean.prototype.isPrototypeOf(x2)"}]
 10367	PASS (tail -c +9491428 tests/ecmac.db|head -c 811)
 10368	FAIL (tail -c +9492240 tests/ecmac.db|head -c 462): [{"message":"value is not a function"}]
 10369	FAIL (tail -c +9492703 tests/ecmac.db|head -c 348): [{"message":"value is not a function"}]
@@ -10405,21 +10405,21 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10373	PASS (tail -c +9494621 tests/ecmac.db|head -c 398)
 10374	FAIL (tail -c +9495020 tests/ecmac.db|head -c 368): [{"message":"#1: Boolean.prototype has the attribute DontDelete"}]
 10375	FAIL (tail -c +9495389 tests/ecmac.db|head -c 490): [{"message":"value is not a function"}]
-10376	FAIL (tail -c +9495880 tests/ecmac.db|head -c 394): [{"message":"cannot read property 'constructor' of undefined"}]
-10377	FAIL (tail -c +9496275 tests/ecmac.db|head -c 1148): [{"message":"cannot read property 'toString' of undefined"}]
-10378	FAIL (tail -c +9497424 tests/ecmac.db|head -c 1216): [{"message":"cannot read property 'toString' of undefined"}]
+10376	PASS (tail -c +9495880 tests/ecmac.db|head -c 394)
+10377	FAIL (tail -c +9496275 tests/ecmac.db|head -c 1148): [{"message":"value is not a function"}]
+10378	FAIL (tail -c +9497424 tests/ecmac.db|head -c 1216): [{"message":"value is not a function"}]
 10379	PASS (tail -c +9498641 tests/ecmac.db|head -c 1089)
 10380	PASS (tail -c +9499731 tests/ecmac.db|head -c 1089)
 10381	FAIL (tail -c +9500821 tests/ecmac.db|head -c 1083): [{"message":"#1: Boolean.prototype.toString on not a Boolean object should throw TypeError, not {"message":"[Date] is not defined"}"}]
 10382	PASS (tail -c +9501905 tests/ecmac.db|head -c 1089)
 10383	PASS (tail -c +9502995 tests/ecmac.db|head -c 1076)
-10384	FAIL (tail -c +9504072 tests/ecmac.db|head -c 878): [{"message":"cannot read property 'valueOf' of undefined"}]
-10385	FAIL (tail -c +9504951 tests/ecmac.db|head -c 941): [{"message":"cannot read property 'valueOf' of undefined"}]
-10386	PASS (tail -c +9505893 tests/ecmac.db|head -c 1078)
-10387	PASS (tail -c +9506972 tests/ecmac.db|head -c 1078)
+10384	FAIL (tail -c +9504072 tests/ecmac.db|head -c 878): [{"message":"#1: Boolean.prototype.valueOf() === false"}]
+10385	FAIL (tail -c +9504951 tests/ecmac.db|head -c 941): [{"message":"#1: Boolean.prototype.valueOf(true) === false"}]
+10386	FAIL (tail -c +9505893 tests/ecmac.db|head -c 1078): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
+10387	FAIL (tail -c +9506972 tests/ecmac.db|head -c 1078): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
 10388	FAIL (tail -c +9508051 tests/ecmac.db|head -c 1072): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"[Date] is not defined"}"}]
-10389	PASS (tail -c +9509124 tests/ecmac.db|head -c 1078)
-10390	PASS (tail -c +9510203 tests/ecmac.db|head -c 1065)
+10389	FAIL (tail -c +9509124 tests/ecmac.db|head -c 1078): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
+10390	FAIL (tail -c +9510203 tests/ecmac.db|head -c 1065): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
 10391	FAIL (tail -c +9511269 tests/ecmac.db|head -c 680): [{"message":"#2: Boolean.prototype == false"}]
 10392	FAIL (tail -c +9511950 tests/ecmac.db|head -c 463): [{"message":"#1: Object prototype object is the prototype of Boolean prototype object"}]
 10393	FAIL (tail -c +9512414 tests/ecmac.db|head -c 1197): [{"message":"[isNaN] is not defined"}]
