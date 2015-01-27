@@ -4775,7 +4775,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4743	FAIL (tail -c +4951398 tests/ecmac.db|head -c 552): [{"message":"cannot read property 'value' of undefined"}]
 4744	FAIL (tail -c +4951951 tests/ecmac.db|head -c 576): [{"message":"Test case returned non-true value!"}]
 4745	FAIL (tail -c +4952528 tests/ecmac.db|head -c 567): [{"message":"cannot read property 'value' of undefined"}]
-4746	FAIL (tail -c +4953096 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'value' of undefined"}]
+4746	FAIL (tail -c +4953096 tests/ecmac.db|head -c 564): [{"message":"Test case returned non-true value!"}]
 4747	FAIL (tail -c +4953661 tests/ecmac.db|head -c 573): [{"message":"cannot read property 'value' of undefined"}]
 4748	FAIL (tail -c +4954235 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'value' of undefined"}]
 4749	FAIL (tail -c +4954800 tests/ecmac.db|head -c 570): [{"message":"cannot read property 'value' of undefined"}]
@@ -10401,7 +10401,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10369	FAIL (tail -c +9492703 tests/ecmac.db|head -c 348): [{"message":"value is not a function"}]
 10370	FAIL (tail -c +9493052 tests/ecmac.db|head -c 482): [{"message":"[Function] is not defined"}]
 10371	FAIL (tail -c +9493535 tests/ecmac.db|head -c 437): [{"message":"value is not a function"}]
-10372	FAIL (tail -c +9493973 tests/ecmac.db|head -c 647): [{"message":"#2: Boolean.prototype == false"}]
+10372	FAIL (tail -c +9493973 tests/ecmac.db|head -c 647): [{"message":"Boolean.valueOf called on non-boolean object"}]
 10373	PASS (tail -c +9494621 tests/ecmac.db|head -c 398)
 10374	FAIL (tail -c +9495020 tests/ecmac.db|head -c 368): [{"message":"#1: Boolean.prototype has the attribute DontDelete"}]
 10375	FAIL (tail -c +9495389 tests/ecmac.db|head -c 490): [{"message":"value is not a function"}]
@@ -10413,14 +10413,14 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10381	FAIL (tail -c +9500821 tests/ecmac.db|head -c 1083): [{"message":"#1: Boolean.prototype.toString on not a Boolean object should throw TypeError, not {"message":"[Date] is not defined"}"}]
 10382	PASS (tail -c +9501905 tests/ecmac.db|head -c 1089)
 10383	PASS (tail -c +9502995 tests/ecmac.db|head -c 1076)
-10384	FAIL (tail -c +9504072 tests/ecmac.db|head -c 878): [{"message":"#1: Boolean.prototype.valueOf() === false"}]
-10385	FAIL (tail -c +9504951 tests/ecmac.db|head -c 941): [{"message":"#1: Boolean.prototype.valueOf(true) === false"}]
-10386	FAIL (tail -c +9505893 tests/ecmac.db|head -c 1078): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
-10387	FAIL (tail -c +9506972 tests/ecmac.db|head -c 1078): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
+10384	FAIL (tail -c +9504072 tests/ecmac.db|head -c 878): [{"message":"Boolean.valueOf called on non-boolean object"}]
+10385	FAIL (tail -c +9504951 tests/ecmac.db|head -c 941): [{"message":"Boolean.valueOf called on non-boolean object"}]
+10386	PASS (tail -c +9505893 tests/ecmac.db|head -c 1078)
+10387	PASS (tail -c +9506972 tests/ecmac.db|head -c 1078)
 10388	FAIL (tail -c +9508051 tests/ecmac.db|head -c 1072): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"[Date] is not defined"}"}]
-10389	FAIL (tail -c +9509124 tests/ecmac.db|head -c 1078): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
-10390	FAIL (tail -c +9510203 tests/ecmac.db|head -c 1065): [{"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError, not {"message":"#1: Boolean.prototype.valueOf on not a Boolean object should throw TypeError"}"}]
-10391	FAIL (tail -c +9511269 tests/ecmac.db|head -c 680): [{"message":"#2: Boolean.prototype == false"}]
+10389	PASS (tail -c +9509124 tests/ecmac.db|head -c 1078)
+10390	PASS (tail -c +9510203 tests/ecmac.db|head -c 1065)
+10391	FAIL (tail -c +9511269 tests/ecmac.db|head -c 680): [{"message":"Boolean.valueOf called on non-boolean object"}]
 10392	FAIL (tail -c +9511950 tests/ecmac.db|head -c 463): [{"message":"#1: Object prototype object is the prototype of Boolean prototype object"}]
 10393	FAIL (tail -c +9512414 tests/ecmac.db|head -c 1197): [{"message":"[isNaN] is not defined"}]
 10394	FAIL (tail -c +9513612 tests/ecmac.db|head -c 519): [{"message":"#2: Number() === 0, actual is NaN"}]

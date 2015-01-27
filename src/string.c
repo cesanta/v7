@@ -122,6 +122,15 @@ static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+  if (!(v7_is_object(this_obj) || v7_is_string(this_obj)) ||
+      v7_object_to_value(v7_to_object(this_obj)->prototype) !=
+      v7->string_prototype) {
+    throw_exception(v7, "TypeError",
+                    "String.valueOf called on non-string object");
+  }
+  return Obj_valueOf(v7, this_obj, args);
+}
 
 #if 0
 V7_PRIVATE enum v7_err Str_lastIndexOf(struct v7_c_func_arg *cfa) {
@@ -628,6 +637,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "indexOf", Str_indexOf);
   set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
   set_cfunc_prop(v7, v7->string_prototype, "substring", Str_substring);
+  set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));

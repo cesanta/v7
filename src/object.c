@@ -179,7 +179,7 @@ V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
 }
 #endif
 
-static val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
