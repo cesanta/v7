@@ -43,6 +43,16 @@ static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
   return Number_toExp(v7, this_obj, args);
 }
 
+static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+  if (!(v7_is_object(this_obj) || v7_is_double(this_obj)) ||
+      v7_object_to_value(v7_to_object(this_obj)->prototype) !=
+      v7->number_prototype) {
+    throw_exception(v7, "TypeError",
+                    "Number.valueOf called on non-number object");
+  }
+  return Obj_valueOf(v7, this_obj, args);
+}
+
 V7_PRIVATE void init_number(struct v7 *v7) {
   val_t num = v7_create_cfunction(Number_ctor);
   v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
@@ -51,6 +61,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
   set_cfunc_prop(v7, v7->number_prototype, "toExponentioal", Number_toExp);
+  set_cfunc_prop(v7, v7->number_prototype, "valueOf", Number_valueOf);
 
   v7_set_property(v7, v7->number_prototype, "MAX_VALUE", 9, 0,
                   v7_create_number(LONG_MAX));
