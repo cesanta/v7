@@ -23,9 +23,10 @@ V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  if (!(v7_is_object(this_obj) || v7_is_boolean(this_obj)) ||
-      v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-      v7->boolean_prototype) {
+  if (!v7_is_boolean(this_obj) &&
+      (v7_is_object(this_obj) &&
+       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
+       v7->boolean_prototype)) {
     throw_exception(v7, "TypeError",
                     "Boolean.valueOf called on non-boolean object");
   }

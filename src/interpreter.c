@@ -36,8 +36,14 @@ V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
 static val_t create_exception(struct v7 *v7, const char *ex, const char *msg) {
   char buf[40];
   val_t e;
+  if (v7->creating_exception) {
+    fprintf(stderr, "Exception creation throws an exception %s: %s", ex, msg);
+    return V7_UNDEFINED;
+  }
   snprintf(buf, sizeof(buf), "new %s(this)", ex);
+  v7->creating_exception++;
   v7_exec_with(v7, &e, buf, v7_string_to_value(v7, msg, strlen(msg), 1));
+  v7->creating_exception--;
   return e;
 }
 
@@ -61,7 +67,7 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   return v;
 }
 
-static double i_as_num(struct v7 *v7, val_t v) {
+V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
       double res;
@@ -108,7 +114,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
     case AST_SUB:
       return a - b;
     case AST_REM:
-      if (b == 0 || isnan(b) || isnan(a)) {
+      if (b == 0 || isnan(b) || isnan(a) || isinf(b) || isinf(a)) {
         return NAN;
       }
       return (int) a % (int) b;
@@ -116,7 +122,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       return a * b;
     case AST_DIV:
       if (b == 0) {
-        return signbit(a) == 0 ? INFINITY : -INFINITY;
+        return (!signbit(a) == !signbit(b)) ? INFINITY : -INFINITY;
       }
       return a / b;
     case AST_LSHIFT:

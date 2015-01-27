@@ -732,6 +732,7 @@ struct v7 {
   jmp_buf abort_jmp_buf;
   val_t thrown_error;
   char error_msg[60];           /* Exception message */
+  int creating_exception;  /* Avoids reentrant exception creation */
 
   struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
 
@@ -948,6 +949,7 @@ V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
+V7_PRIVATE double i_as_num(struct v7 *, val_t);
 
 #endif  /* VM_H_INCLUDED */
 /*
@@ -3299,9 +3301,10 @@ V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  if (!(v7_is_object(this_obj) || v7_is_boolean(this_obj)) ||
-      v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-      v7->boolean_prototype) {
+  if (!v7_is_boolean(this_obj) &&
+      (v7_is_object(this_obj) &&
+       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
+       v7->boolean_prototype)) {
     throw_exception(v7, "TypeError",
                     "Boolean.valueOf called on non-boolean object");
   }
@@ -3430,12 +3433,14 @@ V7_PRIVATE void init_math(struct v7 *v7) {
  */
 
 
+static val_t to_string(struct v7 *, val_t);
+
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  /* TODO(lsm): if arg0 is not a string, do type conversion */
-  val_t res = v7_is_string(arg0) ? arg0 : v7_create_string(v7, "", 0, 1);
+  val_t res = v7_is_string(arg0) ? arg0 : (
+      v7_is_undefined(arg0) ? v7_create_string(v7, "", 0, 1) : to_string(v7, arg0));
 
-  if (v7_is_object(this_obj)) {
+  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
     return this_obj;
@@ -3554,9 +3559,10 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
 }
 
 static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  if (!(v7_is_object(this_obj) || v7_is_string(this_obj)) ||
-      v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-      v7->string_prototype) {
+  if (!v7_is_string(this_obj) &&
+      (v7_is_object(this_obj) &&
+       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
+       v7->string_prototype)) {
     throw_exception(v7, "TypeError",
                     "String.valueOf called on non-string object");
   }
@@ -4824,7 +4830,8 @@ v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): lazily create these properties on first access */
   proto = v7_create_object(v7);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
-  v7_set_property(v7, fval, "prototype", 9, 0, proto);
+  v7_set_property(v7, fval, "prototype", 9, V7_PROPERTY_DONT_ENUM |
+                  V7_PROPERTY_DONT_DELETE, proto);
   return fval;
 }
 
@@ -4842,6 +4849,7 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 
 static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   char *vp;
+  double num;
   for (vp = v7->json_visited_stack.buf;
        vp < v7->json_visited_stack.buf+ v7->json_visited_stack.len;
        vp += sizeof(val_t)) {
@@ -4863,7 +4871,11 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       if (v == V7_TAG_NAN) {
         return v_sprintf_s(buf, size, "NaN");
       }
-      return v_sprintf_s(buf, size, "%lg", v7_to_double(v));
+      num = v7_to_double(v);
+      if (isinf(num)) {
+        return v_sprintf_s(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
+      }
+      return v_sprintf_s(buf, size, "%lg", num);
     case V7_TYPE_STRING:
       {
         size_t n;
@@ -6366,8 +6378,14 @@ V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
 static val_t create_exception(struct v7 *v7, const char *ex, const char *msg) {
   char buf[40];
   val_t e;
+  if (v7->creating_exception) {
+    fprintf(stderr, "Exception creation throws an exception %s: %s", ex, msg);
+    return V7_UNDEFINED;
+  }
   snprintf(buf, sizeof(buf), "new %s(this)", ex);
+  v7->creating_exception++;
   v7_exec_with(v7, &e, buf, v7_string_to_value(v7, msg, strlen(msg), 1));
+  v7->creating_exception--;
   return e;
 }
 
@@ -6391,7 +6409,7 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   return v;
 }
 
-static double i_as_num(struct v7 *v7, val_t v) {
+V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
       double res;
@@ -6438,7 +6456,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
     case AST_SUB:
       return a - b;
     case AST_REM:
-      if (b == 0 || isnan(b) || isnan(a)) {
+      if (b == 0 || isnan(b) || isnan(a) || isinf(b) || isinf(a)) {
         return NAN;
       }
       return (int) a % (int) b;
@@ -6446,7 +6464,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       return a * b;
     case AST_DIV:
       if (b == 0) {
-        return signbit(a) == 0 ? INFINITY : -INFINITY;
+        return (!signbit(a) == !signbit(b)) ? INFINITY : -INFINITY;
       }
       return a / b;
     case AST_LSHIFT:
@@ -9189,25 +9207,31 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 
+/* Hack to ensure that the iteration order of the keys array is consistent
+ * with the iteration order if properties in `for in`
+ * This will be obsoleted when arrays will have a special object type. */
+static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
+                           int i, unsigned int ignore_flags) {
+  char buf[20];
+  while (p && p->attributes & ignore_flags) p = p->next;
+  if (p == NULL) return;
+  if (p->next) _Obj_append_reverse(v7, p->next, res, i+1, ignore_flags);
+
+  snprintf(buf, sizeof(buf), "%d", i);
+  v7_set_property(v7, res, buf, -1, 0,
+                  v7_string_to_value(v7, p->name, strlen(p->name), 1));
+}
+
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
                           unsigned int ignore_flags) {
-  struct v7_property *p;
-  char buf[20];
-  int i = 0;
   val_t obj = v7_array_at(v7, args, 0);
   val_t res = v7_create_array(v7);
   if (!v7_is_object(obj)) {
     throw_exception(v7, "TypeError",
                     "Object.keys called on non-object");
   }
-  for (p = v7_to_object(obj)->properties; p; p = p->next, i++) {
-    if (p->attributes & ignore_flags) {
-      continue;
-    }
-    snprintf(buf, sizeof(buf), "%d", i);
-    v7_set_property(v7, res, buf, -1, 0,
-                    v7_string_to_value(v7, p->name, strlen(p->name), 1));
-  }
+
+  _Obj_append_reverse(v7, v7_to_object(obj)->properties, res, 0, ignore_flags);
   return res;
 }
 
@@ -9407,8 +9431,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 
 static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  /* TODO(lsm): if arg0 is not a number, do type conversion */
-  val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(NAN);
+  val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->number_prototype);
@@ -9444,9 +9467,10 @@ static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  if (!(v7_is_object(this_obj) || v7_is_double(this_obj)) ||
-      v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-      v7->number_prototype) {
+  if (!v7_is_double(this_obj) &&
+      (v7_is_object(this_obj) &&
+       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
+       v7->number_prototype)) {
     throw_exception(v7, "TypeError",
                     "Number.valueOf called on non-number object");
   }
@@ -9460,26 +9484,36 @@ static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_number(struct v7 *v7) {
-  val_t num = v7_create_cfunction(Number_ctor);
-  v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
-  v7_set(v7, v7->number_prototype, "constructor", 11, num);
+  val_t num, ctor = v7_create_cfunction(Number_ctor);
+  unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
+                       V7_PROPERTY_DONT_DELETE;
+  v7_exec(v7, &num, "function Number(v) { "
+          "  Object.defineProperty(this, '__ctor',"
+          "                        {value:__Number_ctor});"
+          "   return this.__ctor(v)}; "
+          "Number");
+  v7->number_prototype = v7_get(v7, num, "prototype", 9);
+  v7_get_property(num, "prototype", 9)->attributes |= V7_PROPERTY_READ_ONLY;
+
+  v7_set_property(v7, v7->global_object, "__Number_ctor", 13, attrs, ctor);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
   set_cfunc_prop(v7, v7->number_prototype, "toExponentioal", Number_toExp);
   set_cfunc_prop(v7, v7->number_prototype, "valueOf", Number_valueOf);
 
-  v7_set_property(v7, v7->number_prototype, "MAX_VALUE", 9, 0,
-                  v7_create_number(LONG_MAX));
-  v7_set_property(v7, v7->number_prototype, "MIN_VALUE", 9, 0,
-                  v7_create_number(LONG_MIN));
-  v7_set_property(v7, v7->number_prototype, "NEGATIVE_INFINITY", 17, 0,
+  v7_set_property(v7, num, "MAX_VALUE", 9, attrs,
+                  v7_create_number(1.7976931348623157e+308));
+  v7_set_property(v7, num, "MIN_VALUE", 9, attrs,
+                  v7_create_number(5e-324));
+  v7_set_property(v7, num, "NEGATIVE_INFINITY", 17, attrs,
                   v7_create_number(-INFINITY));
-  v7_set_property(v7, v7->number_prototype, "POSITIVE_INFINITY", 17, 0,
+  v7_set_property(v7, num, "POSITIVE_INFINITY", 17, attrs,
                   v7_create_number(INFINITY));
-  v7_set_property(v7, v7->number_prototype, "NaN", 3, 0, V7_TAG_NAN);
+  v7_set_property(v7, num, "NaN", 3, attrs, V7_TAG_NAN);
 
-  v7_set_property(v7, v7->global_object, "isNaN", 5, 0,
+  v7_set_property(v7, v7->global_object, "NaN", 3, attrs, V7_TAG_NAN);
+  v7_set_property(v7, v7->global_object, "isNaN", 5, V7_PROPERTY_DONT_ENUM,
                   v7_create_cfunction(n_isNaN));
 }
 /*
