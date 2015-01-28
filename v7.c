@@ -3865,107 +3865,35 @@ V7_PRIVATE enum v7_err _Str_strslice(struct v7_c_func_arg *cfa, int islen) {
   return V7_OK;
 #undef v7
 }
-
-V7_PRIVATE enum v7_err Str_toLowerCase(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long n, blen = 0;
-  struct v7_val *str;
-  char *p, *end;
-  Rune runes[500];
-
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  p = cfa->this_obj->v.str.buf;
-  end = p + cfa->this_obj->v.str.len;
-  for (n = 0; p < end; n++) {
-    p += chartorune(&runes[n], p);
-    runes[n] = tolowerrune(runes[n]);
-    blen += runelen(runes[n]);
-  }
-  str = v7_push_string(v7, NULL, blen, 1);
-  p = str->v.str.buf;
-  end = p + blen;
-  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
-  *p = '\0';
-  str->v.str.len = blen;
-  return V7_OK;
-#undef v7
-}
-
-V7_PRIVATE enum v7_err Str_toLocaleLowerCase(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long n, blen = 0;
-  struct v7_val *str;
-  char *p, *end;
-  Rune runes[500];
-
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  p = cfa->this_obj->v.str.buf;
-  end = p + cfa->this_obj->v.str.len;
-  for (n = 0; p < end; n++) {
-    p += chartorune(&runes[n], p);
-    runes[n] = tolowerrune(runes[n]);
-    blen += runelen(runes[n]);
-  }
-  str = v7_push_string(v7, NULL, blen, 1);
-  p = str->v.str.buf;
-  end = p + blen;
-  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
-  *p = '\0';
-  str->v.str.len = blen;
-  return V7_OK;
-#undef v7
-}
-
-V7_PRIVATE enum v7_err Str_toUpperCase(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long n, blen = 0;
-  struct v7_val *str;
-  char *p, *end;
-  Rune runes[500];
-
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  p = cfa->this_obj->v.str.buf;
-  end = p + cfa->this_obj->v.str.len;
-  for (n = 0; p < end; n++) {
-    p += chartorune(&runes[n], p);
-    runes[n] = toupperrune(runes[n]);
-    blen += runelen(runes[n]);
-  }
-  str = v7_push_string(v7, NULL, blen, 1);
-  p = str->v.str.buf;
-  end = p + blen;
-  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
-  *p = '\0';
-  str->v.str.len = blen;
-  return V7_OK;
-#undef v7
-}
-
-V7_PRIVATE enum v7_err Str_toLocaleUpperCase(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  long n, blen = 0;
-  struct v7_val *str;
-  char *p, *end;
-  Rune runes[500];
-
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  p = cfa->this_obj->v.str.buf;
-  end = p + cfa->this_obj->v.str.len;
-  for (n = 0; p < end; n++) {
-    p += chartorune(&runes[n], p);
-    runes[n] = toupperrune(runes[n]);
-    blen += runelen(runes[n]);
-  }
-  str = v7_push_string(v7, NULL, blen, 1);
-  p = str->v.str.buf;
-  end = p + blen;
-  for (n = 0; p < end; n++) p += runetochar(p, &runes[n]);
-  *p = '\0';
-  str->v.str.len = blen;
-  return V7_OK;
-#undef v7
-}
 #endif
+
+static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
+                         Rune (*func)(Rune)) {
+  val_t s = i_value_of(v7, this_obj);
+  size_t i, n, len;
+  const char *p = v7_to_string(v7, &s, &len);
+  val_t res = v7_create_string(v7, p, len, 1);
+  Rune r;
+
+  (void) args;
+
+  p = v7_to_string(v7, &res, &len);
+  for (i = 0; i < len; i += n) {
+    n = chartorune(&r, p + i);
+    r = func(r);
+    runetochar((char *) p + i, &r);
+  }
+
+  return res;
+}
+
+static val_t Str_toLowerCase(struct v7 *v7, val_t this_obj, val_t args) {
+  return s_transform(v7, this_obj, args, tolowerrune);
+}
+
+static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj, val_t args) {
+  return s_transform(v7, this_obj, args, toupperrune);
+}
 
 static int s_isspase(Rune c) {
   return isspacerune(c) || isnewline(c);
@@ -4035,6 +3963,10 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "lastIndexOf", Str_lastIndexOf);
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
   set_cfunc_prop(v7, v7->string_prototype, "trim", Str_trim);
+  set_cfunc_prop(v7, v7->string_prototype, "toLowerCase", Str_toLowerCase);
+  set_cfunc_prop(v7, v7->string_prototype, "toLocaleLowerCase", Str_toLowerCase);
+  set_cfunc_prop(v7, v7->string_prototype, "toUpperCase", Str_toUpperCase);
+  set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase", Str_toUpperCase);
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));

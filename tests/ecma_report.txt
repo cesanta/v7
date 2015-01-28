@@ -10038,14 +10038,14 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10006	FAIL (tail -c +9226922 tests/ecmac.db|head -c 1236): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10007	FAIL (tail -c +9228159 tests/ecmac.db|head -c 682): [{"message":"[RegExp] is not defined"}]
 10008	FAIL (tail -c +9228842 tests/ecmac.db|head -c 679): [{"message":"cannot read property 'toLowerCase' of undefined"}]
-10009	FAIL (tail -c +9229522 tests/ecmac.db|head -c 518): [{"message":"value is not a function"}]
-10010	FAIL (tail -c +9230041 tests/ecmac.db|head -c 1722): [{"message":"value is not a function"}]
-10011	FAIL (tail -c +9231764 tests/ecmac.db|head -c 684): [{"message":"value is not a function"}]
+10009	PASS (tail -c +9229522 tests/ecmac.db|head -c 518)
+10010	PASS (tail -c +9230041 tests/ecmac.db|head -c 1722)
+10011	PASS (tail -c +9231764 tests/ecmac.db|head -c 684)
 10012	FAIL (tail -c +9232449 tests/ecmac.db|head -c 724): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10013	FAIL (tail -c +9233174 tests/ecmac.db|head -c 617): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10014	FAIL (tail -c +9233792 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'toLowerCase' of undefined"}]
-10015	FAIL (tail -c +9234269 tests/ecmac.db|head -c 2159): [{"message":"value is not a function"}]
-10016	FAIL (tail -c +9236429 tests/ecmac.db|head -c 1264): [{"message":"value is not a function"}]
+10015	FAIL (tail -c +9234269 tests/ecmac.db|head -c 2159): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __lowerCase = new String(__obj).toLowerCase(); __expected ="undefined"; __lowerCase.length === __expected.length. Actual: 0"}]
+10016	FAIL (tail -c +9236429 tests/ecmac.db|head -c 1264): [{"message":"#2: "Hello, WoRlD!".toLowerCase() === String("hello, world!"). Actual: hello, world!"}]
 10017	FAIL (tail -c +9237694 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10018	FAIL (tail -c +9238298 tests/ecmac.db|head -c 674): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10019	FAIL (tail -c +9238973 tests/ecmac.db|head -c 1426): [{"message":"cannot read property 'toLowerCase' of undefined"}]
@@ -10059,14 +10059,14 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10027	FAIL (tail -c +9247349 tests/ecmac.db|head -c 1320): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10028	FAIL (tail -c +9248670 tests/ecmac.db|head -c 736): [{"message":"[RegExp] is not defined"}]
 10029	FAIL (tail -c +9249407 tests/ecmac.db|head -c 731): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
-10030	FAIL (tail -c +9250139 tests/ecmac.db|head -c 542): [{"message":"value is not a function"}]
-10031	FAIL (tail -c +9250682 tests/ecmac.db|head -c 1760): [{"message":"value is not a function"}]
-10032	FAIL (tail -c +9252443 tests/ecmac.db|head -c 714): [{"message":"value is not a function"}]
+10030	PASS (tail -c +9250139 tests/ecmac.db|head -c 542)
+10031	PASS (tail -c +9250682 tests/ecmac.db|head -c 1760)
+10032	PASS (tail -c +9252443 tests/ecmac.db|head -c 714)
 10033	FAIL (tail -c +9253158 tests/ecmac.db|head -c 776): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10034	FAIL (tail -c +9253935 tests/ecmac.db|head -c 671): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10035	FAIL (tail -c +9254607 tests/ecmac.db|head -c 530): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
-10036	FAIL (tail -c +9255138 tests/ecmac.db|head -c 2203): [{"message":"value is not a function"}]
-10037	FAIL (tail -c +9257342 tests/ecmac.db|head -c 1319): [{"message":"value is not a function"}]
+10036	FAIL (tail -c +9255138 tests/ecmac.db|head -c 2203): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __lowerCase = new String(__obj).toLocaleLowerCase(); __expected ="undefined"; __lowerCase.length === __expected.length. Actual: 0"}]
+10037	FAIL (tail -c +9257342 tests/ecmac.db|head -c 1319): [{"message":"#2: "Hello, WoRlD!".toLocaleLowerCase() === String("hello, world!"). Actual: hello, world!"}]
 10038	FAIL (tail -c +9258662 tests/ecmac.db|head -c 633): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10039	FAIL (tail -c +9259296 tests/ecmac.db|head -c 718): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10040	FAIL (tail -c +9260015 tests/ecmac.db|head -c 1484): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
@@ -10080,14 +10080,14 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10048	FAIL (tail -c +9268223 tests/ecmac.db|head -c 1236): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10049	FAIL (tail -c +9269460 tests/ecmac.db|head -c 680): [{"message":"[RegExp] is not defined"}]
 10050	FAIL (tail -c +9270141 tests/ecmac.db|head -c 683): [{"message":"cannot read property 'toUpperCase' of undefined"}]
-10051	FAIL (tail -c +9270825 tests/ecmac.db|head -c 518): [{"message":"value is not a function"}]
-10052	FAIL (tail -c +9271344 tests/ecmac.db|head -c 1722): [{"message":"value is not a function"}]
-10053	FAIL (tail -c +9273067 tests/ecmac.db|head -c 683): [{"message":"value is not a function"}]
+10051	PASS (tail -c +9270825 tests/ecmac.db|head -c 518)
+10052	PASS (tail -c +9271344 tests/ecmac.db|head -c 1722)
+10053	PASS (tail -c +9273067 tests/ecmac.db|head -c 683)
 10054	FAIL (tail -c +9273751 tests/ecmac.db|head -c 722): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10055	FAIL (tail -c +9274474 tests/ecmac.db|head -c 617): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10056	FAIL (tail -c +9275092 tests/ecmac.db|head -c 477): [{"message":"cannot read property 'toUpperCase' of undefined"}]
-10057	FAIL (tail -c +9275570 tests/ecmac.db|head -c 2159): [{"message":"value is not a function"}]
-10058	FAIL (tail -c +9277730 tests/ecmac.db|head -c 1264): [{"message":"value is not a function"}]
+10057	FAIL (tail -c +9275570 tests/ecmac.db|head -c 2159): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __upperCase = new String(__obj).toUpperCase(); __expected ="UNDEFINED"; __upperCase.length === __expected.length. Actual: 0"}]
+10058	FAIL (tail -c +9277730 tests/ecmac.db|head -c 1264): [{"message":"#2: "Hello, WoRlD!".toUpperCase() === String("HELLO, WORLD!"). Actual: HELLO, WORLD!"}]
 10059	FAIL (tail -c +9278995 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10060	FAIL (tail -c +9279599 tests/ecmac.db|head -c 671): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10061	FAIL (tail -c +9280271 tests/ecmac.db|head -c 1426): [{"message":"cannot read property 'toUpperCase' of undefined"}]
@@ -10101,14 +10101,14 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10069	FAIL (tail -c +9288647 tests/ecmac.db|head -c 1319): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10070	FAIL (tail -c +9289967 tests/ecmac.db|head -c 735): [{"message":"[RegExp] is not defined"}]
 10071	FAIL (tail -c +9290703 tests/ecmac.db|head -c 731): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
-10072	FAIL (tail -c +9291435 tests/ecmac.db|head -c 542): [{"message":"value is not a function"}]
-10073	FAIL (tail -c +9291978 tests/ecmac.db|head -c 1746): [{"message":"value is not a function"}]
-10074	FAIL (tail -c +9293725 tests/ecmac.db|head -c 713): [{"message":"value is not a function"}]
+10072	PASS (tail -c +9291435 tests/ecmac.db|head -c 542)
+10073	PASS (tail -c +9291978 tests/ecmac.db|head -c 1746)
+10074	PASS (tail -c +9293725 tests/ecmac.db|head -c 713)
 10075	FAIL (tail -c +9294439 tests/ecmac.db|head -c 777): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10076	FAIL (tail -c +9295217 tests/ecmac.db|head -c 671): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10077	FAIL (tail -c +9295889 tests/ecmac.db|head -c 530): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
-10078	FAIL (tail -c +9296420 tests/ecmac.db|head -c 2201): [{"message":"value is not a function"}]
-10079	FAIL (tail -c +9298622 tests/ecmac.db|head -c 1317): [{"message":"value is not a function"}]
+10078	FAIL (tail -c +9296420 tests/ecmac.db|head -c 2201): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __lowerCase = new String(__obj).toLocaleUpperCase(); __expected ="UNDEFINED"; __lowerCase.length === __expected.length. Actual: 0"}]
+10079	FAIL (tail -c +9298622 tests/ecmac.db|head -c 1317): [{"message":"#2: "Hello, WoRlD!".toLocaleUpperCase() === String("HELLO, WORLD!"). Actual: HELLO, WORLD!"}]
 10080	FAIL (tail -c +9299940 tests/ecmac.db|head -c 633): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10081	FAIL (tail -c +9300574 tests/ecmac.db|head -c 674): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10082	FAIL (tail -c +9301249 tests/ecmac.db|head -c 1484): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
