@@ -184,5 +184,6 @@ V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
+V7_PRIVATE double i_as_num(struct v7 *, val_t);
 
 #endif  /* VM_H_INCLUDED */

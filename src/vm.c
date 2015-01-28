@@ -222,7 +222,8 @@ v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): lazily create these properties on first access */
   proto = v7_create_object(v7);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
-  v7_set_property(v7, fval, "prototype", 9, 0, proto);
+  v7_set_property(v7, fval, "prototype", 9, V7_PROPERTY_DONT_ENUM |
+                  V7_PROPERTY_DONT_DELETE, proto);
   return fval;
 }
 
@@ -240,6 +241,7 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 
 static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   char *vp;
+  double num;
   for (vp = v7->json_visited_stack.buf;
        vp < v7->json_visited_stack.buf+ v7->json_visited_stack.len;
        vp += sizeof(val_t)) {
@@ -261,7 +263,11 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       if (v == V7_TAG_NAN) {
         return v_sprintf_s(buf, size, "NaN");
       }
-      return v_sprintf_s(buf, size, "%lg", v7_to_double(v));
+      num = v7_to_double(v);
+      if (isinf(num)) {
+        return v_sprintf_s(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
+      }
+      return v_sprintf_s(buf, size, "%lg", num);
     case V7_TYPE_STRING:
       {
         size_t n;

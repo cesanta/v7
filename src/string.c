@@ -5,12 +5,14 @@
 
 #include "internal.h"
 
+static val_t to_string(struct v7 *, val_t);
+
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  /* TODO(lsm): if arg0 is not a string, do type conversion */
-  val_t res = v7_is_string(arg0) ? arg0 : v7_create_string(v7, "", 0, 1);
+  val_t res = v7_is_string(arg0) ? arg0 : (
+      v7_is_undefined(arg0) ? v7_create_string(v7, "", 0, 1) : to_string(v7, arg0));
 
-  if (v7_is_object(this_obj)) {
+  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, res);
     return this_obj;
@@ -129,9 +131,10 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
 }
 
 static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  if (!(v7_is_object(this_obj) || v7_is_string(this_obj)) ||
-      v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-      v7->string_prototype) {
+  if (!v7_is_string(this_obj) &&
+      (v7_is_object(this_obj) &&
+       v7_object_to_value(v7_to_object(this_obj)->prototype) !=
+       v7->string_prototype)) {
     throw_exception(v7, "TypeError",
                     "String.valueOf called on non-string object");
   }
