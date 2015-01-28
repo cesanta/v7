@@ -6498,11 +6498,19 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 static double i_as_num(struct v7 *v7, val_t v) {
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
+      double res;
       size_t n;
-      char buf[20], *s = (char *) v7_to_string(v7, &v, &n);
+      char buf[20], *e, *s = (char *) v7_to_string(v7, &v, &n);
+      if (n == 0) {
+        return 0;
+      }
       snprintf(buf, sizeof(buf), "%.*s", (int) n, s);
       buf[sizeof(buf) - 1] = '\0';
-      return strtod(buf, NULL);
+      res = strtod(buf, &e);
+      if (e != buf + n) {
+        return NAN;
+      }
+      return res;
     } else {
       return NAN;
     }
