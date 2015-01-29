@@ -35,6 +35,11 @@
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
+ /* Regex flags */
+#define SLRE_FLAG_G 1     /* Global - match in the whole string */
+#define SLRE_FLAG_I 2     /* Ignore case */
+#define SLRE_FLAG_M 4     /* Multiline */
+
 /* Parser Information */
 struct slre_node {
   unsigned char type;
@@ -88,11 +93,13 @@ struct slre_instruction {
 struct slre_prog {
   struct slre_instruction *start, *end;
   unsigned int num_captures;
+  int flags;
   struct slre_class charset[SLRE_MAX_SETS];
 };
 
 struct slre_env {
   const char *src;
+  const char *src_end;
   Rune curr_rune;
 
   struct slre_prog *prog;
@@ -223,26 +230,19 @@ int nextesc(const char **p) {
   }
 }
 
-static unsigned char re_nextc(Rune *r, const char **src, int is_regex) {
+static unsigned char re_nextc(Rune *r, const char **src, const char *src_end) {
+  *r = 0;
+  if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
-  if (is_regex && *r == '\\') {
-    /* signed char ret = */ *r = nextesc(src);
-    /* if(2 != ret) return ret;
-    if (!strchr("$()*+-./0123456789?BDSW[\\]^bdsw{|}", *r))
-      return INVALID_ESC_CHAR; */
+  if (*r == '\\') {
+    *r = nextesc(src);
     return 1;
   }
   return 0;
 }
 
 static unsigned char re_nextc_env(struct slre_env *e) {
-  unsigned char ret = re_nextc(&e->curr_rune, &e->src, 1);
-#if 0  /* TODO(mkm): ask */
-  if (ret < 0) {
-    SLRE_THROW(e, ret);
-  }
-#endif
-  return ret;
+  return re_nextc(&e->curr_rune, &e->src, e->src_end);
 }
 
 static void re_nchset(struct slre_env *e) {
@@ -1080,14 +1080,15 @@ static void program_print(struct slre_prog *prog) {
 }
 #endif
 
-int slre_compile(const char *pat, struct slre_prog **pr) {
+int slre_compile(const char *pat, size_t pat_len, const char *flags,
+                 size_t fl_len,struct slre_prog **pr) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
   int err_code;
 
   e.prog = SLRE_MALLOC(sizeof(struct slre_prog));
-  e.pstart = e.pend = SLRE_MALLOC(sizeof(struct slre_node) * strlen(pat) * 2);
+  e.pstart = e.pend = SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -1095,7 +1096,16 @@ int slre_compile(const char *pat, struct slre_prog **pr) {
     return err_code;
   }
 
+  while (fl_len--) {
+    switch (flags[fl_len]) {
+      case 'g': e.prog->flags |= SLRE_FLAG_G; break;
+      case 'i': e.prog->flags |= SLRE_FLAG_I; break;
+      case 'm': e.prog->flags |= SLRE_FLAG_M; break;
+    }
+  }
+
   e.src = pat;
+  e.src_end = pat + pat_len;
   e.sets_num = 0;
   e.num_captures = 1;
   /*e.flags = flags;*/
@@ -1159,8 +1169,16 @@ static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
 #define RE_NO_MATCH() \
   if (!(thr = 0)) continue
 
+Rune re_getrune(const char *s, size_t n, size_t *off) {
+  Rune r = 0;
+  if (*off < n) {
+    *off += chartorune(&r, s + *off);
+  }
+  return r;
+}
+
 static unsigned char re_match(struct slre_instruction *pc, const char *start,
-                              const char *bol, unsigned int flags,
+                              size_t len, const char *bol, unsigned int flags,
                               struct slre_loot *loot) {
   struct slre_thread threads[SLRE_MAX_THREADS];
   struct slre_loot sub, tmpsub;
@@ -1168,7 +1186,9 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   struct slre_range *p;
   unsigned short thr_num = 1;
   unsigned char thr;
-  int i;
+  size_t i, off = 0;
+
+  return 0;
 
   /* queue initial thread */
   re_newthread(threads, pc, start, loot);
@@ -1185,25 +1205,25 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           return 1;
         case I_ANY:
         case I_ANYNL:
-          start += chartorune(&c, start);
+          c = re_getrune(start, len, &off);
           if (!c || (pc->opcode == I_ANY && isnewline(c))) RE_NO_MATCH();
           break;
 
         case I_BOL:
-          if (start == bol) break;
+          if (start + off == bol) break;
           if ((flags & SLRE_FLAG_M) && isnewline(start[-1])) break;
           RE_NO_MATCH();
         case I_CH:
-          start += chartorune(&c, start);
+          c = re_getrune(start, len, &off);
           if (c && (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
               tolowerrune(c) == tolowerrune(pc->par.c)))) break;
           RE_NO_MATCH();
         case I_EOL:
-          if (!*start) break;
-          if ((flags & SLRE_FLAG_M) && isnewline(*start)) break;
+          if (off >= len) break;
+          if ((flags & SLRE_FLAG_M) && isnewline(start[off])) break;
           RE_NO_MATCH();
         case I_EOS:
-          if (!*start) break;
+          if (off >= len) break;
           RE_NO_MATCH();
 
         case I_JUMP:
@@ -1211,14 +1231,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           continue;
 
         case I_LA:
-          if (re_match(pc->par.xy.x, start, bol, flags, &sub)) {
+          if (re_match(pc->par.xy.x, start, len, bol, flags, &sub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
           RE_NO_MATCH();
         case I_LA_N:
           tmpsub = sub;
-          if (!re_match(pc->par.xy.x, start, bol, flags, &tmpsub)) {
+          if (!re_match(pc->par.xy.x, start, len, bol, flags, &tmpsub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
@@ -1232,7 +1252,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           i = sub.caps[pc->par.n].end - sub.caps[pc->par.n].start;
           if (flags & SLRE_FLAG_I) {
             int num = i;
-            const char *s = start, *p = sub.caps[pc->par.n].start;
+            const char *s = start + off, *p = sub.caps[pc->par.n].start;
             Rune rr;
             for (; num && *s && *p; num--) {
               s += chartorune(&r, s);
@@ -1240,9 +1260,9 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
               if (tolowerrune(r) != tolowerrune(rr)) break;
             }
             if (num) RE_NO_MATCH();
-          } else if (strncmp(start, sub.caps[pc->par.n].start, i))
+          } else if (strncmp(start + off, sub.caps[pc->par.n].start, i))
             RE_NO_MATCH();
-          if (i > 0) start += i;
+          if (i > 0) off += i;
           break;
 
         case I_REP:
@@ -1266,7 +1286,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
 
         case I_SET:
         case I_SET_N:
-          start += chartorune(&c, start);
+          c = re_getrune(start, len, &off);
           if (!c) RE_NO_MATCH();
 
           i = 1;
@@ -1295,8 +1315,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
 
         case I_WORD:
         case I_WORD_N:
-          i = (start > bol && iswordchar(start[-1]));
-          if (iswordchar(start[0])) i = !i;
+          i = (start + off > bol && iswordchar(start[off - 1]));
+          if (iswordchar(start[off])) i = !i;
           if (pc->opcode == I_WORD_N) i = !i;
           if (i) break;
         /* RE_NO_MATCH(); */
@@ -1310,18 +1330,21 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   return 0;
 }
 
-int slre_exec(struct slre_prog *prog, unsigned int flags, const char *start,
+int slre_exec(struct slre_prog *prog, const char *start, size_t len,
               struct slre_loot *loot) {
   struct slre_loot tmpsub;
   const char *st = start;
 
-  if (loot) memset(loot, 0, sizeof(*loot));
-  if (!(flags & SLRE_FLAG_G) || !loot) {
-    if (!loot) loot = &tmpsub;
+  if (!loot) loot = &tmpsub;
+  memset(loot, 0, sizeof(*loot));
+
+  if (!(prog->flags & SLRE_FLAG_G)) {
     loot->num_captures = prog->num_captures;
-    return !re_match(prog->start, start, start, flags, loot);
+    return !re_match(prog->start, start, len, start, prog->flags, loot);
   }
-  while (re_match(prog->start, st, start, flags, &tmpsub)) {
+  printf("%s [%.*s] %d\n", __func__, (int) len, start, loot->num_captures);
+
+  while (re_match(prog->start, st, len, start, prog->flags, &tmpsub)) {
     unsigned int i;
     st = tmpsub.caps[0].end;
     for (i = 0; i < prog->num_captures; i++) {
@@ -1335,17 +1358,18 @@ int slre_exec(struct slre_prog *prog, unsigned int flags, const char *start,
   return !loot->num_captures;
 }
 
+#if 0
 int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
                  struct slre_loot *dstsub) {
   int size = 0, n;
   Rune curr_rune;
 
   memset(dstsub, 0, sizeof(*dstsub));
-  while (!(n = re_nextc(&curr_rune, &rstr, 1)) && curr_rune) {
+  while (!(n = re_nextc(&curr_rune, &rstr)) && curr_rune) {
     int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
-      n = re_nextc(&curr_rune, &rstr, 1);
+      n = re_nextc(&curr_rune, &rstr);
       if (n < 0) return n;
       switch (curr_rune) {
         case '&':
@@ -1365,7 +1389,7 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
         case '9': {
           int sbn = dec(curr_rune);
           if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
-            n = re_nextc(&curr_rune, &rstr, 1);
+            n = re_nextc(&curr_rune, &rstr);
             if (n < 0) return n;
             sz = dec(curr_rune);
             sbn = sbn * 10 + sz;
@@ -1409,14 +1433,15 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
   }
   return size;
 }
+#endif
 
-int slre_match(const char *re, unsigned int flags, const char *str,
-               struct slre_loot *loot) {
+int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
+               const char *str, size_t str_len, struct slre_loot *loot) {
   struct slre_prog *prog = NULL;
   int res;
 
-  if ((res = slre_compile(re, &prog)) == SLRE_OK) {
-    res = slre_exec(prog, flags, str, loot);
+  if ((res = slre_compile(re, re_len, flags, fl_len, &prog)) == SLRE_OK) {
+    res = slre_exec(prog, str, str_len, loot);
     slre_free(prog);
   }
 
