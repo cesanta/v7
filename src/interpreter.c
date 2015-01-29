@@ -183,7 +183,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
    * or use alloca.
    */
   char buf[512];
-  char *name;
+  char *name, *p;
   size_t name_len;
 
   switch (tag) {
@@ -479,6 +479,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       res = v7_create_string(v7, name, name_len, 1);
+      return res;
+    case AST_REGEX:
+      name = ast_get_inlined_data(a, *pos, &name_len);
+      ast_move_to_children(a, pos);
+      for (p = name + name_len - 1; *p != '/'; ) p--;
+      res = v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
+                             (name + name_len) - p - 1);
       return res;
     case AST_IDENT:
       {

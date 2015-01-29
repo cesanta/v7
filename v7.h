@@ -45,14 +45,11 @@ typedef uint64_t v7_val_t;
 
 typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
 
-struct v7 *v7_create(void);     /* Creates and initializes V7 engine */
-void v7_destroy(struct v7 *);   /* Cleanes up and deallocates V7 engine */
-enum v7_err v7_exec(struct v7 *, v7_val_t *,
-                    const char *str); /* Execute string */
-enum v7_err v7_exec_file(struct v7 *, v7_val_t *,
-                    const char *path); /* Execute file */
-enum v7_err v7_exec_with(struct v7 *, v7_val_t *,
-                         const char *str, v7_val_t); /* Execute string with */
+struct v7 *v7_create(void);
+void v7_destroy(struct v7 *);
+enum v7_err v7_exec(struct v7 *, v7_val_t *, const char *str);
+enum v7_err v7_exec_file(struct v7 *, v7_val_t *, const char *path);
+enum v7_err v7_exec_with(struct v7 *, v7_val_t *, const char *str, v7_val_t);
 
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);
@@ -62,6 +59,17 @@ v7_val_t v7_create_boolean(int is_true);
 v7_val_t v7_create_null(void);
 v7_val_t v7_create_undefined(void);
 v7_val_t v7_create_string(struct v7 *v7, const char *, size_t, int);
+v7_val_t v7_create_regexp(struct v7 *, const char *, size_t, const char *, size_t);
+
+int v7_is_object(v7_val_t);
+int v7_is_function(v7_val_t);
+int v7_is_cfunction(v7_val_t);
+int v7_is_string(v7_val_t);
+int v7_is_boolean(v7_val_t);
+int v7_is_double(v7_val_t);
+int v7_is_null(v7_val_t);
+int v7_is_undefined(v7_val_t);
+int v7_is_regexp(v7_val_t);
 
 void *v7_to_foreign(v7_val_t);
 int v7_to_boolean(v7_val_t);
@@ -70,15 +78,12 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
 const char *v7_to_string(struct v7 *, v7_val_t *, size_t *);
 
 v7_val_t v7_get_global_object(struct v7 *);
-
 v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
-int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t len,
-           v7_val_t val);
+int v7_set(struct v7 *v7, v7_val_t obj, const char *, size_t, v7_val_t val);
 char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);
 int v7_is_true(struct v7 *v7, v7_val_t v);
 void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
 v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
-
 v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
 
 #ifdef __cplusplus

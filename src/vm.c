@@ -42,6 +42,8 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       return V7_TYPE_FUNCTION_OBJECT;
     case V7_TAG_CFUNCTION:
       return V7_TYPE_CFUNCTION_OBJECT;
+    case V7_TAG_REGEXP:
+      return V7_TYPE_REGEXP_OBJECT;
     default:
       /* TODO(mkm): or should we crash? */
       return V7_TYPE_UNDEFINED;
@@ -68,6 +70,10 @@ int v7_is_string(val_t v) {
 
 int v7_is_boolean(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN;
+}
+
+int v7_is_regexp(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_REGEXP;
 }
 
 int v7_is_null(val_t v) {
@@ -209,6 +215,24 @@ v7_val_t v7_create_array(struct v7 *v7) {
   return create_object(v7, v7->array_prototype);
 }
 
+v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
+                          const char *flags, size_t flags_len) {
+  struct slre_prog *p = NULL;
+  struct v7_regexp *rp;
+
+  if (slre_compile(re, re_len, flags, flags_len, &p) != SLRE_OK || p == NULL) {
+    throw_exception(v7, "Error", "Invalid regex");
+    return V7_UNDEFINED;
+  } else {
+    rp = (struct v7_regexp *) malloc(sizeof(*rp));
+    rp->regexp_string = v7_create_string(v7, re, re_len, 1);
+    rp->flags_string = v7_create_string(v7, flags, flags_len, 1);
+    rp->compiled_regexp = p;
+
+    return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
+  }
+}
+
 v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): use GC heap */
   struct v7_function *f = (struct v7_function *) malloc(
@@ -274,13 +298,20 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         const char *str = v7_to_string(v7, &v, &n);
         return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
       }
+    case V7_TYPE_REGEXP_OBJECT:
+      {
+        size_t n1, n2;
+        struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(v);
+        const char *s1 = v7_to_string(v7, &rp->regexp_string, &n1);
+        const char *s2 = v7_to_string(v7, &rp->flags_string, &n2);
+        return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
+      }
     case V7_TYPE_CFUNCTION_OBJECT:
       return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
     case V7_TYPE_NUMBER_OBJECT:
-    case V7_TYPE_REGEXP_OBJECT:
     case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT:
       {

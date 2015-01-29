@@ -28,6 +28,7 @@ typedef uint64_t val_t;
 #define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)  /* JavaScript function */
 #define V7_TAG_CFUNCTION ((uint64_t) 0xFFF6 << 48)  /* C function */
 #define V7_TAG_GETSETTER ((uint64_t) 0xFFF5 << 48)  /* getter+setter */
+#define V7_TAG_REGEXP    ((uint64_t) 0xFFF4 << 48)  /* Regex */
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -105,16 +106,14 @@ struct v7_function {
   unsigned int ast_off;       /* Position of the function node in the AST */
 };
 
+struct v7_regexp {
+  val_t regexp_string;
+  val_t flags_string;
+  struct slre_prog *compiled_regexp;
+};
+
 /* TODO(mkm): possibly replace those with macros for inlining */
 enum v7_type val_type(struct v7 *v7, val_t);
-int v7_is_object(val_t);
-int v7_is_function(val_t);
-int v7_is_cfunction(val_t);
-int v7_is_string(val_t);
-int v7_is_boolean(val_t);
-int v7_is_double(val_t);
-int v7_is_null(val_t);
-int v7_is_undefined(val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
@@ -128,6 +127,7 @@ val_t v7_cfunction_to_value(v7_cfunction_t);
 
 struct v7_object *v7_to_object(val_t);
 struct v7_function *v7_to_function(val_t);
+V7_PRIVATE void *v7_to_pointer(val_t v);
 
 V7_PRIVATE void init_object(struct v7 *v7);
 V7_PRIVATE void init_array(struct v7 *v7);
