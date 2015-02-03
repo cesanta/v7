@@ -756,8 +756,12 @@ static const char *test_ecmac(void) {
   ast_init(&a, 0);
 
   for (i = 0; next_case < db + db_len; i++ ) {
+    char tail_cmd[100];
     char *current_case = next_case + 1;
     ASSERT((next_case = strchr(current_case, '\0')) != NULL);
+    snprintf(tail_cmd, sizeof(tail_cmd),
+             "(tail -c +%lu tests/ecmac.db|head -c %lu)",
+             current_case - db + 1, next_case - current_case);
 
 #if 0
     printf("-- Parsing %d: \"%s\"\n", i, current_case);
@@ -769,20 +773,18 @@ static const char *test_ecmac(void) {
     if ((child = fork()) == 0) {
 #endif
       if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
-          i == 1255 || i == 2649) continue;
-
+          i == 1255 || i == 2649
 #ifndef ECMA_SLOW
-      if (i == 3348 || i == 3349 || i == 3401) continue;
+          || i == 3348 || i == 3349 || i == 3401
 #endif
+          ) {
+        fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
+        continue;
+      }
 
       if (v7_exec(v7, &res, driver) != V7_OK) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
       } else {
-        char tail_cmd[100];
-        snprintf(tail_cmd, sizeof(tail_cmd),
-                 "(tail -c +%lu tests/ecmac.db|head -c %lu)",
-                 current_case - db + 1, next_case - current_case);
-
         if (v7_exec(v7, &res, current_case) != V7_OK) {
           char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
           fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);

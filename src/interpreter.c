@@ -68,6 +68,7 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
+  v = i_value_of(v7, v);
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
       double res;
@@ -106,6 +107,33 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
   }
 }
 
+static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
+                           double b) {
+  switch (tag) {
+    case AST_LSHIFT:
+      return (int) a << (int) b;
+    case AST_RSHIFT:
+      return (int) a >> (int) b;
+    case AST_URSHIFT:
+      return (unsigned int) a >> (int) b;
+    case AST_OR:
+      if (isnan(a)) {
+        a = 0.0;
+      }
+      if (isnan(b)) {
+        b = 0.0;
+      }
+      return (int) a | (int) b;
+    case AST_XOR:
+      return (int) a ^ (int) b;
+    case AST_AND:
+      return (int) a & (int) b;
+    default:
+      throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
+      return 0;  /* LCOV_EXCL_LINE */
+  }
+}
+
 static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
                            double b) {
   switch (tag) {
@@ -126,17 +154,14 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       }
       return a / b;
     case AST_LSHIFT:
-      return (int) a << (int) b;
     case AST_RSHIFT:
-      return (int) a >> (int) b;
     case AST_URSHIFT:
-      return (unsigned int) a >> (int) b;
     case AST_OR:
-      return (int) a | (int) b;
     case AST_XOR:
-      return (int) a ^ (int) b;
     case AST_AND:
-      return (int) a & (int) b;
+      return i_int_bin_op(v7, tag,
+                          isnan(a) || isinf(a) ? 0.0 : a,
+                          isnan(b) || isinf(b) ? 0.0 : b);
     default:
       throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
       return 0;  /* LCOV_EXCL_LINE */

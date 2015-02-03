@@ -157,7 +157,7 @@ static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_string(arg0) || !v7_is_string(s)) {
     throw_exception(v7, "TypeError", "%s", "string expected");
   } else {
-    res = s_cmp(v7, s, arg0);
+    res = v7_create_boolean(s_cmp(v7, s, arg0));
   }
 
   return res;
