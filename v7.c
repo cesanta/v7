@@ -6373,12 +6373,10 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
 }  /* LCOV_EXCL_LINE */
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
-  struct v7_property *prop;
+  val_t f;
   if (v7_is_object(v) &&
-      (prop = v7_get_property(v, "valueOf", 7)) != NULL) {
-    if (v7_is_cfunction(prop->value)) {
-      v = v7_to_cfunction(prop->value)(v7, v, V7_UNDEFINED);
-    }
+      (f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
+    v = v7_apply(v7, f, v, v7_create_array(v7));
   }
   return v;
 }
