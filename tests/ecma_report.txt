@@ -679,7 +679,7 @@
 678	PASS (tail -c +476053 tests/ecmac.db|head -c 818)
 679	FAIL (tail -c +476872 tests/ecmac.db|head -c 2988): [{"message":"#1: Native ECMAScript objects have an internal property called [[Prototype]]. "}]
 680	PASS (tail -c +479861 tests/ecmac.db|head -c 1294)
-681	FAIL (tail -c +481156 tests/ecmac.db|head -c 672): [{"message":"value is not a function"}]
+681	PASS (tail -c +481156 tests/ecmac.db|head -c 672)
 682	FAIL (tail -c +481829 tests/ecmac.db|head -c 1904): [{"message":"[Function] is not defined"}]
 683	PASS (tail -c +483734 tests/ecmac.db|head -c 1044)
 684	PASS (tail -c +484779 tests/ecmac.db|head -c 1052)
@@ -1215,7 +1215,7 @@
 1211	FAIL (tail -c +856112 tests/ecmac.db|head -c 386): [{"message":"[arguments] is not defined"}]
 1212	PASS (tail -c +856499 tests/ecmac.db|head -c 287)
 1213	PASS (tail -c +856787 tests/ecmac.db|head -c 677)
-1214	FAIL (tail -c +857465 tests/ecmac.db|head -c 877): [{"message":"value is not a function"}]
+1214	PASS (tail -c +857465 tests/ecmac.db|head -c 877)
 1215	FAIL (tail -c +858343 tests/ecmac.db|head -c 699): [{"message":"[Function] is not defined"}]
 1216	FAIL (tail -c +859043 tests/ecmac.db|head -c 1013): [{"message":"[Function] is not defined"}]
 1217	PASS (tail -c +860057 tests/ecmac.db|head -c 628)
@@ -1259,7 +1259,7 @@
 1255	SKIP (tail -c +895701 tests/ecmac.db|head -c 751)
 1256	PASS (tail -c +896453 tests/ecmac.db|head -c 693)
 1257	PASS (tail -c +897147 tests/ecmac.db|head -c 640)
-1258	FAIL (tail -c +897788 tests/ecmac.db|head -c 864): [{"message":"value is not a function"}]
+1258	PASS (tail -c +897788 tests/ecmac.db|head -c 864)
 1259	PASS (tail -c +898653 tests/ecmac.db|head -c 997)
 1260	PASS (tail -c +899651 tests/ecmac.db|head -c 1007)
 1261	PASS (tail -c +900659 tests/ecmac.db|head -c 1023)
@@ -1710,13 +1710,13 @@
 1706	FAIL (tail -c +1264931 tests/ecmac.db|head -c 2287): [{"message":"#5: Number . POSITIVE_INFINITY === Number.POSITIVE_INFINITY"}]
 1707	FAIL (tail -c +1267219 tests/ecmac.db|head -c 2347): [{"message":"parse error at at line 1 col 8: [ Number[]"}]
 1708	PASS (tail -c +1269567 tests/ecmac.db|head -c 753)
-1709	FAIL (tail -c +1270321 tests/ecmac.db|head -c 896): [{"message":"value is not a function"}]
-1710	FAIL (tail -c +1271218 tests/ecmac.db|head -c 1087): [{"message":"value is not a function"}]
+1709	PASS (tail -c +1270321 tests/ecmac.db|head -c 896)
+1710	FAIL (tail -c +1271218 tests/ecmac.db|head -c 1087): [{"message":"#6: new Number(1)["toFixed"](5) === "1.00000". Actual: nan"}]
 1711	PASS (tail -c +1272306 tests/ecmac.db|head -c 1110)
 1712	PASS (tail -c +1273417 tests/ecmac.db|head -c 866)
 1713	PASS (tail -c +1274284 tests/ecmac.db|head -c 821)
 1714	PASS (tail -c +1275106 tests/ecmac.db|head -c 2897)
-1715	FAIL (tail -c +1278004 tests/ecmac.db|head -c 1359): [{"message":"#3: typeof Object.toString === "function". Actual: object"}]
+1715	FAIL (tail -c +1278004 tests/ecmac.db|head -c 1359): [{"message":"#5: typeof Object.valueOf === "function". Actual: object"}]
 1716	FAIL (tail -c +1279364 tests/ecmac.db|head -c 1554): [{"message":"[Function] is not defined"}]
 1717	FAIL (tail -c +1280919 tests/ecmac.db|head -c 2387): [{"message":"#3: typeof Array.length === "number". Actual: object"}]
 1718	FAIL (tail -c +1283307 tests/ecmac.db|head -c 4903): [{"message":"#3: typeof String.fromCharCode === "function". Actual: object"}]
@@ -2070,7 +2070,7 @@
 2066	PASS (tail -c +1599358 tests/ecmac.db|head -c 439)
 2067	FAIL (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 1{"toString":[function()]}"}]
 2068	FAIL (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"[Date] is not defined"}]
-2069	FAIL (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"value is not a function"}]
+2069	FAIL (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
 2070	PASS (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS (tail -c +1605816 tests/ecmac.db|head -c 464)
 2072	PASS (tail -c +1606281 tests/ecmac.db|head -c 762)
@@ -2084,7 +2084,7 @@
 2080	PASS (tail -c +1613463 tests/ecmac.db|head -c 1013)
 2081	FAIL (tail -c +1614477 tests/ecmac.db|head -c 864): [{"message":"#1: true + null === 1. Actual: truenull"}]
 2082	PASS (tail -c +1615342 tests/ecmac.db|head -c 1123)
-2083	FAIL (tail -c +1616466 tests/ecmac.db|head -c 1359): [{"message":"value is not a function"}]
+2083	FAIL (tail -c +1616466 tests/ecmac.db|head -c 1359): [{"message":"#1: ({} + function(){return 1}) === ({}.toString() + function(){return 1}.toString()). Actual: {}[function()]"}]
 2084	PASS (tail -c +1617826 tests/ecmac.db|head -c 1662)
 2085	PASS (tail -c +1619489 tests/ecmac.db|head -c 1608)
 2086	PASS (tail -c +1621098 tests/ecmac.db|head -c 1027)
@@ -2238,7 +2238,7 @@
 2234	PASS (tail -c +2412296 tests/ecmac.db|head -c 810)
 2235	PASS (tail -c +2413107 tests/ecmac.db|head -c 761)
 2236	PASS (tail -c +2413869 tests/ecmac.db|head -c 900)
-2237	FAIL (tail -c +2414770 tests/ecmac.db|head -c 1147): [{"message":"value is not a function"}]
+2237	PASS (tail -c +2414770 tests/ecmac.db|head -c 1147)
 2238	PASS (tail -c +2415918 tests/ecmac.db|head -c 1047)
 2239	PASS (tail -c +2416966 tests/ecmac.db|head -c 757)
 2240	FAIL (tail -c +2417724 tests/ecmac.db|head -c 951): [{"message":"#8: ("x" < " x") === false"}]
@@ -2278,7 +2278,7 @@
 2274	PASS (tail -c +2448524 tests/ecmac.db|head -c 810)
 2275	PASS (tail -c +2449335 tests/ecmac.db|head -c 761)
 2276	PASS (tail -c +2450097 tests/ecmac.db|head -c 905)
-2277	FAIL (tail -c +2451003 tests/ecmac.db|head -c 1152): [{"message":"value is not a function"}]
+2277	PASS (tail -c +2451003 tests/ecmac.db|head -c 1152)
 2278	PASS (tail -c +2452156 tests/ecmac.db|head -c 1047)
 2279	PASS (tail -c +2453204 tests/ecmac.db|head -c 756)
 2280	FAIL (tail -c +2453961 tests/ecmac.db|head -c 949): [{"message":"#8: (" x" > "x") === false"}]
@@ -2319,7 +2319,7 @@
 2315	PASS (tail -c +2485695 tests/ecmac.db|head -c 815)
 2316	PASS (tail -c +2486511 tests/ecmac.db|head -c 766)
 2317	PASS (tail -c +2487278 tests/ecmac.db|head -c 906)
-2318	FAIL (tail -c +2488185 tests/ecmac.db|head -c 1165): [{"message":"value is not a function"}]
+2318	FAIL (tail -c +2488185 tests/ecmac.db|head -c 1165): [{"message":"#1: ({} <= function(){return 1}) === ({}.toString() <= function(){return 1}.toString())"}]
 2319	PASS (tail -c +2489351 tests/ecmac.db|head -c 1063)
 2320	PASS (tail -c +2490415 tests/ecmac.db|head -c 781)
 2321	FAIL (tail -c +2491197 tests/ecmac.db|head -c 951): [{"message":"#8: ("x" <= " x") === false"}]
@@ -2355,7 +2355,7 @@
 2351	PASS (tail -c +2519507 tests/ecmac.db|head -c 820)
 2352	PASS (tail -c +2520328 tests/ecmac.db|head -c 771)
 2353	PASS (tail -c +2521100 tests/ecmac.db|head -c 906)
-2354	FAIL (tail -c +2522007 tests/ecmac.db|head -c 1165): [{"message":"value is not a function"}]
+2354	FAIL (tail -c +2522007 tests/ecmac.db|head -c 1165): [{"message":"#1: ({} >= function(){return 1}) === ({}.toString() >= function(){return 1}.toString())"}]
 2355	PASS (tail -c +2523173 tests/ecmac.db|head -c 1063)
 2356	PASS (tail -c +2524237 tests/ecmac.db|head -c 780)
 2357	FAIL (tail -c +2525018 tests/ecmac.db|head -c 949): [{"message":"#8: (" x" >= "x") === false"}]
@@ -2706,7 +2706,7 @@
 2702	FAIL (tail -c +2976163 tests/ecmac.db|head -c 3396): [{"message":"#2.2: x2===0. Actual: x2===1"}]
 2703	PASS (tail -c +2979560 tests/ecmac.db|head -c 1761)
 2704	PASS (tail -c +2981322 tests/ecmac.db|head -c 2106)
-2705	FAIL (tail -c +2983429 tests/ecmac.db|head -c 888): [{"message":"value is not a function"}]
+2705	PASS (tail -c +2983429 tests/ecmac.db|head -c 888)
 2706	PASS (tail -c +2984318 tests/ecmac.db|head -c 320)
 2707	PASS (tail -c +2984639 tests/ecmac.db|head -c 299)
 2708	PASS (tail -c +2984939 tests/ecmac.db|head -c 992)
@@ -3883,7 +3883,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 3875	FAIL (tail -c +4360572 tests/ecmac.db|head -c 329): [{"message":"[RegExp] is not defined"}]
 3876	FAIL (tail -c +4360902 tests/ecmac.db|head -c 434): [{"message":"[Function] is not defined"}]
 3877	FAIL (tail -c +4361337 tests/ecmac.db|head -c 508): [{"message":"[Function] is not defined"}]
-3878	FAIL (tail -c +4361846 tests/ecmac.db|head -c 321): [{"message":"cannot read property 'call' of undefined"}]
+3878	FAIL (tail -c +4361846 tests/ecmac.db|head -c 321): [{"message":"value is not a function"}]
 3879	FAIL (tail -c +4362168 tests/ecmac.db|head -c 434): [{"message":"[RegExp] is not defined"}]
 3880	FAIL (tail -c +4362603 tests/ecmac.db|head -c 787): [{"message":"[RegExp] is not defined"}]
 3881	FAIL (tail -c +4363391 tests/ecmac.db|head -c 453): [{"message":"[RegExp] is not defined"}]
@@ -4030,7 +4030,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4022	FAIL (tail -c +4523785 tests/ecmac.db|head -c 729): [{"message":"cannot read property 'constructor' of undefined"}]
 4023	FAIL (tail -c +4524515 tests/ecmac.db|head -c 1782): [{"message":"#3: function otherScope(msg){return new Error(msg);} var err3=otherScope(); err3.hasOwnProperty("message"). Actual: undefined"}]
 4024	FAIL (tail -c +4526298 tests/ecmac.db|head -c 726): [{"message":"#1: Error.prototype.isPrototypeOf(err1) return true. Actual: false"}]
-4025	FAIL (tail -c +4527025 tests/ecmac.db|head -c 667): [{"message":"value is not a function"}]
+4025	FAIL (tail -c +4527025 tests/ecmac.db|head -c 667): [{"message":"#1: err1.toString()==='[object Error]'. Actual: [object Object]"}]
 4026	PASS (tail -c +4527693 tests/ecmac.db|head -c 856)
 4027	PASS (tail -c +4528550 tests/ecmac.db|head -c 1225)
 4028	FAIL (tail -c +4529776 tests/ecmac.db|head -c 1287): [{"message":"#2: __obj = Error.prototype; Error.prototype = function(){return "shifted";}; Error.prototype === __obj. Actual: [function()]"}]
@@ -4044,19 +4044,19 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4036	FAIL (tail -c +4537499 tests/ecmac.db|head -c 559): [{"message":"#1: Error.prototype.hasOwnProperty('message') reurn true. Actual: false"}]
 4037	FAIL (tail -c +4538059 tests/ecmac.db|head -c 553): [{"message":"#1: typeof Error.prototype.message === "string". Actual: undefined"}]
 4038	FAIL (tail -c +4538613 tests/ecmac.db|head -c 565): [{"message":"#1: Error.prototype.hasOwnProperty('toString') return true. Actual: false"}]
-4039	FAIL (tail -c +4539179 tests/ecmac.db|head -c 757): [{"message":"#1: var err1=new Error("Error"); var toStr=err1.toString(); lead to throwing exception. Exception is {"message":"value is not a function"}"}]
+4039	PASS (tail -c +4539179 tests/ecmac.db|head -c 757)
 4040	FAIL (tail -c +4539937 tests/ecmac.db|head -c 677): [{"message":"#1: Object.prototype.isPrototypeOf(Error.prototype) return true. Actual: false"}]
-4041	FAIL (tail -c +4540615 tests/ecmac.db|head -c 767): [{"message":"value is not a function"}]
+4041	FAIL (tail -c +4540615 tests/ecmac.db|head -c 767): [{"message":"#1: Error.prototype.toString=Object.prototype.toString; __tostr = Error.prototype.toString(); __tostr === "[object Error]". Actual: [object Object]"}]
 4042	PASS (tail -c +4541383 tests/ecmac.db|head -c 585)
 4043	PASS (tail -c +4541969 tests/ecmac.db|head -c 612)
 4044	PASS (tail -c +4542582 tests/ecmac.db|head -c 396)
 4045	PASS (tail -c +4542979 tests/ecmac.db|head -c 402)
-4046	FAIL (tail -c +4543382 tests/ecmac.db|head -c 511): [{"message":"value is not a function"}]
-4047	FAIL (tail -c +4543894 tests/ecmac.db|head -c 412): [{"message":"value is not a function"}]
-4048	FAIL (tail -c +4544307 tests/ecmac.db|head -c 449): [{"message":"value is not a function"}]
-4049	FAIL (tail -c +4544757 tests/ecmac.db|head -c 443): [{"message":"value is not a function"}]
-4050	FAIL (tail -c +4545201 tests/ecmac.db|head -c 408): [{"message":"value is not a function"}]
-4051	FAIL (tail -c +4545610 tests/ecmac.db|head -c 427): [{"message":"value is not a function"}]
+4046	FAIL (tail -c +4543382 tests/ecmac.db|head -c 511): [{"message":"Test case returned non-true value!"}]
+4047	FAIL (tail -c +4543894 tests/ecmac.db|head -c 412): [{"message":"Test case returned non-true value!"}]
+4048	FAIL (tail -c +4544307 tests/ecmac.db|head -c 449): [{"message":"Test case returned non-true value!"}]
+4049	FAIL (tail -c +4544757 tests/ecmac.db|head -c 443): [{"message":"Test case returned non-true value!"}]
+4050	FAIL (tail -c +4545201 tests/ecmac.db|head -c 408): [{"message":"Test case returned non-true value!"}]
+4051	FAIL (tail -c +4545610 tests/ecmac.db|head -c 427): [{"message":"Test case returned non-true value!"}]
 4052	FAIL (tail -c +4546038 tests/ecmac.db|head -c 467): [{"message":"[JSON] is not defined"}]
 4053	FAIL (tail -c +4546506 tests/ecmac.db|head -c 586): [{"message":"[JSON] is not defined"}]
 4054	FAIL (tail -c +4547093 tests/ecmac.db|head -c 572): [{"message":"[JSON] is not defined"}]
@@ -4379,8 +4379,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4371	PASS (tail -c +4740863 tests/ecmac.db|head -c 396)
 4372	PASS (tail -c +4741260 tests/ecmac.db|head -c 406)
 4373	FAIL (tail -c +4741667 tests/ecmac.db|head -c 365): [{"message":"value is not a function"}]
-4374	FAIL (tail -c +4742033 tests/ecmac.db|head -c 425): [{"message":"cannot read property 'call' of undefined"}]
-4375	FAIL (tail -c +4742459 tests/ecmac.db|head -c 455): [{"message":"cannot read property 'call' of undefined"}]
+4374	FAIL (tail -c +4742033 tests/ecmac.db|head -c 425): [{"message":"value is not a function"}]
+4375	FAIL (tail -c +4742459 tests/ecmac.db|head -c 455): [{"message":"value is not a function"}]
 4376	FAIL (tail -c +4742915 tests/ecmac.db|head -c 390): [{"message":"value is not a function"}]
 4377	FAIL (tail -c +4743306 tests/ecmac.db|head -c 387): [{"message":"value is not a function"}]
 4378	FAIL (tail -c +4743694 tests/ecmac.db|head -c 387): [{"message":"value is not a function"}]
@@ -4396,9 +4396,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4388	FAIL (tail -c +4749742 tests/ecmac.db|head -c 775): [{"message":"Test case returned non-true value!"}]
 4389	PASS (tail -c +4750518 tests/ecmac.db|head -c 560)
 4390	PASS (tail -c +4751079 tests/ecmac.db|head -c 984)
-4391	FAIL (tail -c +4752064 tests/ecmac.db|head -c 673): [{"message":"value is not a function"}]
+4391	FAIL (tail -c +4752064 tests/ecmac.db|head -c 673): [{"message":"Test case returned non-true value!"}]
 4392	PASS (tail -c +4752738 tests/ecmac.db|head -c 801)
-4393	FAIL (tail -c +4753540 tests/ecmac.db|head -c 1049): [{"message":"value is not a function"}]
+4393	FAIL (tail -c +4753540 tests/ecmac.db|head -c 1049): [{"message":"Test case returned non-true value!"}]
 4394	PASS (tail -c +4754590 tests/ecmac.db|head -c 758)
 4395	PASS (tail -c +4755349 tests/ecmac.db|head -c 763)
 4396	PASS (tail -c +4756113 tests/ecmac.db|head -c 935)
@@ -4414,7 +4414,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4406	PASS (tail -c +4764867 tests/ecmac.db|head -c 656)
 4407	PASS (tail -c +4765524 tests/ecmac.db|head -c 721)
 4408	FAIL (tail -c +4766246 tests/ecmac.db|head -c 588): [{"message":"Test case returned non-true value!"}]
-4409	FAIL (tail -c +4766835 tests/ecmac.db|head -c 660): [{"message":"value is not a function"}]
+4409	PASS (tail -c +4766835 tests/ecmac.db|head -c 660)
 4410	PASS (tail -c +4767496 tests/ecmac.db|head -c 783)
 4411	PASS (tail -c +4768280 tests/ecmac.db|head -c 793)
 4412	PASS (tail -c +4769074 tests/ecmac.db|head -c 763)
@@ -4689,7 +4689,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4681	FAIL (tail -c +4916215 tests/ecmac.db|head -c 639): [{"message":"Test case returned non-true value!"}]
 4682	FAIL (tail -c +4916855 tests/ecmac.db|head -c 522): [{"message":"Test case returned non-true value!"}]
 4683	FAIL (tail -c +4917378 tests/ecmac.db|head -c 573): [{"message":"Test case returned non-true value!"}]
-4684	FAIL (tail -c +4917952 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'value' of undefined"}]
+4684	FAIL (tail -c +4917952 tests/ecmac.db|head -c 564): [{"message":"Test case returned non-true value!"}]
 4685	FAIL (tail -c +4918517 tests/ecmac.db|head -c 561): [{"message":"Test case returned non-true value!"}]
 4686	FAIL (tail -c +4919079 tests/ecmac.db|head -c 701): [{"message":"Test case returned non-true value!"}]
 4687	FAIL (tail -c +4919781 tests/ecmac.db|head -c 579): [{"message":"Test case returned non-true value!"}]
@@ -4750,10 +4750,10 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4742	FAIL (tail -c +4950818 tests/ecmac.db|head -c 579): [{"message":"cannot read property 'value' of undefined"}]
 4743	FAIL (tail -c +4951398 tests/ecmac.db|head -c 552): [{"message":"cannot read property 'value' of undefined"}]
 4744	FAIL (tail -c +4951951 tests/ecmac.db|head -c 576): [{"message":"Test case returned non-true value!"}]
-4745	FAIL (tail -c +4952528 tests/ecmac.db|head -c 567): [{"message":"cannot read property 'value' of undefined"}]
+4745	FAIL (tail -c +4952528 tests/ecmac.db|head -c 567): [{"message":"Test case returned non-true value!"}]
 4746	FAIL (tail -c +4953096 tests/ecmac.db|head -c 564): [{"message":"Test case returned non-true value!"}]
 4747	PASS (tail -c +4953661 tests/ecmac.db|head -c 573)
-4748	FAIL (tail -c +4954235 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'value' of undefined"}]
+4748	FAIL (tail -c +4954235 tests/ecmac.db|head -c 564): [{"message":"Test case returned non-true value!"}]
 4749	FAIL (tail -c +4954800 tests/ecmac.db|head -c 570): [{"message":"cannot read property 'value' of undefined"}]
 4750	FAIL (tail -c +4955371 tests/ecmac.db|head -c 582): [{"message":"cannot read property 'value' of undefined"}]
 4751	FAIL (tail -c +4955954 tests/ecmac.db|head -c 561): [{"message":"Test case returned non-true value!"}]
@@ -6940,26 +6940,26 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6932	PASS (tail -c +6744050 tests/ecmac.db|head -c 426)
 6933	FAIL (tail -c +6744477 tests/ecmac.db|head -c 1172): [{"message":"#2: when new Object() calls the [[Prototype]] property of the newly constructed object is set to the Object prototype object."}]
 6934	PASS (tail -c +6745650 tests/ecmac.db|head -c 346)
-6935	FAIL (tail -c +6745997 tests/ecmac.db|head -c 734): [{"message":"value is not a function"}]
-6936	FAIL (tail -c +6746732 tests/ecmac.db|head -c 502): [{"message":"value is not a function"}]
+6935	PASS (tail -c +6745997 tests/ecmac.db|head -c 734)
+6936	PASS (tail -c +6746732 tests/ecmac.db|head -c 502)
 6937	PASS (tail -c +6747235 tests/ecmac.db|head -c 426)
 6938	PASS (tail -c +6747662 tests/ecmac.db|head -c 436)
-6939	FAIL (tail -c +6748099 tests/ecmac.db|head -c 385): [{"message":"cannot read property 'call' of undefined"}]
-6940	FAIL (tail -c +6748485 tests/ecmac.db|head -c 390): [{"message":"cannot read property 'apply' of undefined"}]
-6941	FAIL (tail -c +6748876 tests/ecmac.db|head -c 365): [{"message":"cannot read property 'call' of undefined"}]
-6942	FAIL (tail -c +6749242 tests/ecmac.db|head -c 370): [{"message":"cannot read property 'apply' of undefined"}]
-6943	FAIL (tail -c +6749613 tests/ecmac.db|head -c 960): [{"message":"#1: toString method defined"}]
-6944	FAIL (tail -c +6750574 tests/ecmac.db|head -c 708): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-6945	FAIL (tail -c +6751283 tests/ecmac.db|head -c 510): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-6946	FAIL (tail -c +6751794 tests/ecmac.db|head -c 350): [{"message":"cannot read property 'call' of undefined"}]
-6947	FAIL (tail -c +6752145 tests/ecmac.db|head -c 320): [{"message":"cannot read property 'call' of undefined"}]
-6948	FAIL (tail -c +6752466 tests/ecmac.db|head -c 392): [{"message":"cannot read property 'call' of undefined"}]
-6949	FAIL (tail -c +6752859 tests/ecmac.db|head -c 395): [{"message":"cannot read property 'call' of undefined"}]
-6950	FAIL (tail -c +6753255 tests/ecmac.db|head -c 395): [{"message":"cannot read property 'call' of undefined"}]
-6951	FAIL (tail -c +6753651 tests/ecmac.db|head -c 455): [{"message":"cannot read property 'prototype' of undefined"}]
+6939	FAIL (tail -c +6748099 tests/ecmac.db|head -c 385): [{"message":"value is not a function"}]
+6940	FAIL (tail -c +6748485 tests/ecmac.db|head -c 390): [{"message":"value is not a function"}]
+6941	FAIL (tail -c +6748876 tests/ecmac.db|head -c 365): [{"message":"value is not a function"}]
+6942	FAIL (tail -c +6749242 tests/ecmac.db|head -c 370): [{"message":"value is not a function"}]
+6943	PASS (tail -c +6749613 tests/ecmac.db|head -c 960)
+6944	FAIL (tail -c +6750574 tests/ecmac.db|head -c 708): [{"message":"#1: the Object.prototype.toString has length property."}]
+6945	FAIL (tail -c +6751283 tests/ecmac.db|head -c 510): [{"message":"#1: The length property of the toString method is 0"}]
+6946	FAIL (tail -c +6751794 tests/ecmac.db|head -c 350): [{"message":"value is not a function"}]
+6947	FAIL (tail -c +6752145 tests/ecmac.db|head -c 320): [{"message":"value is not a function"}]
+6948	FAIL (tail -c +6752466 tests/ecmac.db|head -c 392): [{"message":"value is not a function"}]
+6949	FAIL (tail -c +6752859 tests/ecmac.db|head -c 395): [{"message":"value is not a function"}]
+6950	FAIL (tail -c +6753255 tests/ecmac.db|head -c 395): [{"message":"value is not a function"}]
+6951	FAIL (tail -c +6753651 tests/ecmac.db|head -c 455): [{"message":"#1: Object.prototype.toString has not prototype property{}"}]
 6952	PASS (tail -c +6754107 tests/ecmac.db|head -c 437)
-6953	FAIL (tail -c +6754545 tests/ecmac.db|head -c 779): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-6954	FAIL (tail -c +6755325 tests/ecmac.db|head -c 766): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
+6953	FAIL (tail -c +6754545 tests/ecmac.db|head -c 779): [{"message":"#0: the Object.prototype.toString has length property."}]
+6954	FAIL (tail -c +6755325 tests/ecmac.db|head -c 766): [{"message":"#0: the Object.prototype.toString has length property"}]
 6955	FAIL (tail -c +6756092 tests/ecmac.db|head -c 712): [{"message":"#1: toLocaleString method defined"}]
 6956	FAIL (tail -c +6756805 tests/ecmac.db|head -c 743): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
 6957	FAIL (tail -c +6757549 tests/ecmac.db|head -c 537): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
@@ -7074,7 +7074,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7066	PASS (tail -c +6843777 tests/ecmac.db|head -c 689)
 7067	FAIL (tail -c +6844467 tests/ecmac.db|head -c 462): [{"message":"[Function] is not defined"}]
 7068	FAIL (tail -c +6844930 tests/ecmac.db|head -c 436): [{"message":"[Function] is not defined"}]
-7069	FAIL (tail -c +6845367 tests/ecmac.db|head -c 487): [{"message":"cannot read property 'call' of undefined"}]
+7069	FAIL (tail -c +6845367 tests/ecmac.db|head -c 487): [{"message":"value is not a function"}]
 7070	FAIL (tail -c +6845855 tests/ecmac.db|head -c 650): [{"message":"#1.1: The Function prototype object is itself a Function object that, when invoked, accepts any arguments and returns undefined: {"message":"[Function] is not defined"}"}]
 7071	FAIL (tail -c +6846506 tests/ecmac.db|head -c 672): [{"message":"#1.1: The Function prototype object is itself a Function object that, when invoked, accepts any arguments and returns undefined: {"message":"[Function] is not defined"}"}]
 7072	FAIL (tail -c +6847179 tests/ecmac.db|head -c 695): [{"message":"#1.1: The Function prototype object is itself a Function object that, when invoked, accepts any arguments and returns undefined: {"message":"[Function] is not defined"}"}]
@@ -7340,24 +7340,24 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7332	FAIL (tail -c +7006710 tests/ecmac.db|head -c 769): [{"message":"#1: x = []; x[new String("0")] = 0; x[0] === 0. Actual: undefined"}]
 7333	FAIL (tail -c +7007480 tests/ecmac.db|head -c 3376): [{"message":"#1: x = []; var object = {valueOf: function() {return 1}}; x[object] = 0; x["[object Object]"] === 0. Actual: undefined"}]
 7334	FAIL (tail -c +7010857 tests/ecmac.db|head -c 798): [{"message":"#1: Array.prototype.myproperty = 1; var x = Array(); x.myproperty === 1. Actual: undefined"}]
-7335	FAIL (tail -c +7011656 tests/ecmac.db|head -c 956): [{"message":"value is not a function"}]
+7335	FAIL (tail -c +7011656 tests/ecmac.db|head -c 956): [{"message":"#1: Array.prototype.toString = Object.prototype.toString; var x = Array(); x.toString() === "[object " + "Array" + "]". Actual: [object Object]"}]
 7336	FAIL (tail -c +7012613 tests/ecmac.db|head -c 516): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-7337	FAIL (tail -c +7013130 tests/ecmac.db|head -c 741): [{"message":"value is not a function"}]
+7337	FAIL (tail -c +7013130 tests/ecmac.db|head -c 741): [{"message":"#1: var x = Array(); x.getClass = Object.prototype.toString; x is Array object. Actual: [object Object]"}]
 7338	FAIL (tail -c +7013872 tests/ecmac.db|head -c 511): [{"message":"#1: var x = Array(2); x.length !== 1"}]
 7339	PASS (tail -c +7014384 tests/ecmac.db|head -c 701)
 7340	PASS (tail -c +7015086 tests/ecmac.db|head -c 1031)
 7341	FAIL (tail -c +7016118 tests/ecmac.db|head -c 557): [{"message":"Expecting a function in instanceof check"}]
 7342	FAIL (tail -c +7016676 tests/ecmac.db|head -c 821): [{"message":"#1: Array.prototype.myproperty = 1; var x = new Array(); x.myproperty === 1. Actual: undefined"}]
-7343	FAIL (tail -c +7017498 tests/ecmac.db|head -c 983): [{"message":"value is not a function"}]
+7343	FAIL (tail -c +7017498 tests/ecmac.db|head -c 983): [{"message":"#1: Array.prototype.toString = Object.prototype.toString; var x = new Array(); x.toString() === "[object " + "Array" + "]". Actual: [object Object]"}]
 7344	FAIL (tail -c +7018482 tests/ecmac.db|head -c 539): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-7345	FAIL (tail -c +7019022 tests/ecmac.db|head -c 768): [{"message":"value is not a function"}]
+7345	FAIL (tail -c +7019022 tests/ecmac.db|head -c 768): [{"message":"#1: var x = new Array(); x.getClass = Object.prototype.toString; x is Array object. Actual: [object Object]"}]
 7346	FAIL (tail -c +7019791 tests/ecmac.db|head -c 534): [{"message":"#1: var x = new Array(2); x.length !== 1"}]
 7347	PASS (tail -c +7020326 tests/ecmac.db|head -c 745)
 7348	PASS (tail -c +7021072 tests/ecmac.db|head -c 1046)
 7349	FAIL (tail -c +7022119 tests/ecmac.db|head -c 604): [{"message":"#1: Array.prototype.myproperty = 1; var x = new Array(0); x.myproperty === 1. Actual: undefined"}]
-7350	FAIL (tail -c +7022724 tests/ecmac.db|head -c 671): [{"message":"value is not a function"}]
+7350	FAIL (tail -c +7022724 tests/ecmac.db|head -c 671): [{"message":"#1: Array.prototype.toString = Object.prototype.toString; var x = new Array(0); x.toString() === "[object " + "Array" + "]". Actual: [object Object]"}]
 7351	FAIL (tail -c +7023396 tests/ecmac.db|head -c 542): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-7352	FAIL (tail -c +7023939 tests/ecmac.db|head -c 511): [{"message":"value is not a function"}]
+7352	FAIL (tail -c +7023939 tests/ecmac.db|head -c 511): [{"message":"#1: var x = new Array(0); x.getClass = Object.prototype.toString; x is Array object. Actual: [object Object]"}]
 7353	FAIL (tail -c +7024451 tests/ecmac.db|head -c 784): [{"message":"#1: var x = new Array(0); x.length === 0. Actual: 1"}]
 7354	FAIL (tail -c +7025236 tests/ecmac.db|head -c 1115): [{"message":"[RangeError] is not defined"}]
 7355	FAIL (tail -c +7026352 tests/ecmac.db|head -c 1221): [{"message":"[RangeError] is not defined"}]
@@ -7404,7 +7404,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7396	FAIL (tail -c +7048387 tests/ecmac.db|head -c 460): [{"message":"Cannot set a primitive value as object prototype"}]
 7397	FAIL (tail -c +7048848 tests/ecmac.db|head -c 352): [{"message":"value is not a function"}]
 7398	FAIL (tail -c +7049201 tests/ecmac.db|head -c 791): [{"message":"cannot read property 'myproperty' of undefined"}]
-7399	FAIL (tail -c +7049993 tests/ecmac.db|head -c 392): [{"message":"cannot read property 'call' of undefined"}]
+7399	FAIL (tail -c +7049993 tests/ecmac.db|head -c 392): [{"message":"value is not a function"}]
 7400	FAIL (tail -c +7050386 tests/ecmac.db|head -c 490): [{"message":"#1: Object.prototype.isPrototypeOf(Array.prototype) === true. Actual: false"}]
 7401	FAIL (tail -c +7050877 tests/ecmac.db|head -c 523): [{"message":"cannot read property 'getClass' of undefined"}]
 7402	FAIL (tail -c +7051401 tests/ecmac.db|head -c 532): [{"message":"cannot read property 'length' of undefined"}]
@@ -8757,7 +8757,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8749	FAIL (tail -c +8021504 tests/ecmac.db|head -c 1740): [{"message":"value is not a function"}]
 8750	FAIL (tail -c +8023245 tests/ecmac.db|head -c 3552): [{"message":"value is not a function"}]
 8751	FAIL (tail -c +8026798 tests/ecmac.db|head -c 5078): [{"message":"value is not a function"}]
-8752	FAIL (tail -c +8031877 tests/ecmac.db|head -c 450): [{"message":"value is not a function"}]
+8752	FAIL (tail -c +8031877 tests/ecmac.db|head -c 450): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.toString() === "0,1". Actual: [object Object]"}]
 8753	FAIL (tail -c +8032328 tests/ecmac.db|head -c 743): [{"message":"cannot read property 'toString' of undefined"}]
 8754	FAIL (tail -c +8033072 tests/ecmac.db|head -c 948): [{"message":"cannot read property 'toString' of undefined"}]
 8755	FAIL (tail -c +8034021 tests/ecmac.db|head -c 589): [{"message":"cannot read property 'toString' of undefined"}]
@@ -9625,7 +9625,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9617	FAIL (tail -c +8751434 tests/ecmac.db|head -c 657): [{"message":"value is not a function"}]
 9618	FAIL (tail -c +8752092 tests/ecmac.db|head -c 416): [{"message":"cannot read property 'shift' of undefined"}]
 9619	PASS (tail -c +8752509 tests/ecmac.db|head -c 594)
-9620	FAIL (tail -c +8753104 tests/ecmac.db|head -c 351): [{"message":"cannot read property 'call' of undefined"}]
+9620	FAIL (tail -c +8753104 tests/ecmac.db|head -c 351): [{"message":"value is not a function"}]
 9621	FAIL (tail -c +8753456 tests/ecmac.db|head -c 389): [{"message":"Test case returned non-true value!"}]
 9622	FAIL (tail -c +8753846 tests/ecmac.db|head -c 391): [{"message":"Test case returned non-true value!"}]
 9623	PASS (tail -c +8754238 tests/ecmac.db|head -c 341)
@@ -9672,7 +9672,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9664	FAIL (tail -c +8805291 tests/ecmac.db|head -c 1595): [{"message":"#2: __str = new String(__obj); __str =="tostr". Actual: __str =={}"}]
 9665	FAIL (tail -c +8806887 tests/ecmac.db|head -c 1625): [{"message":"#2: function __obj(){}; __str = new String(__obj); __str =="true". Actual: __str ==[function __obj()]"}]
 9666	FAIL (tail -c +8808513 tests/ecmac.db|head -c 1051): [{"message":"#1.1: e==="intostr". Actual: e==={"message":"#1: var __obj = {toString:function(){throw "intostr"}}; __str = new String(__obj) lead throwing exception"}"}]
-9667	FAIL (tail -c +8809565 tests/ecmac.db|head -c 1059): [{"message":"#1.1: e==="invalueof". Actual: e==={"message":"to_json line 407: ast_fetch_tag(a, &var) == AST_VAR_DECL"}"}]
+9667	FAIL (tail -c +8809565 tests/ecmac.db|head -c 1059): [{"message":"#1.1: e==="invalueof". Actual: e==={"message":"to_json line 406: ast_fetch_tag(a, &var) == AST_VAR_DECL"}"}]
 9668	FAIL (tail -c +8810625 tests/ecmac.db|head -c 4412): [{"message":"#8: __str =new  String(.00000012345); __str =="1.2345e-7". Actual: __str ==1.2345e-07"}]
 9669	FAIL (tail -c +8815038 tests/ecmac.db|head -c 3557): [{"message":"#4: __str = new String(1.234567890); __str =="1.23456789". Actual: __str ==1.23457"}]
 9670	PASS (tail -c +8818596 tests/ecmac.db|head -c 2571)
@@ -9687,7 +9687,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9679	FAIL (tail -c +8833473 tests/ecmac.db|head -c 1522): [{"message":"#2: __str = new String(function(){return [1,2,3]}()); __str =="1,2,3". Actual: __str ==[1,2,3]"}]
 9680	FAIL (tail -c +8834996 tests/ecmac.db|head -c 682): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
 9681	FAIL (tail -c +8835679 tests/ecmac.db|head -c 1233): [{"message":"#2: var __str__obj = new String("shocking blue"); String.prototype.__custom__prop = "bor"; __str__obj["__custom__prop"]==="bor". Actual: __str__obj["__custom__prop"]===undefined"}]
-9682	FAIL (tail -c +8836913 tests/ecmac.db|head -c 849): [{"message":"value is not a function"}]
+9682	FAIL (tail -c +8836913 tests/ecmac.db|head -c 849): [{"message":"#1: var __str__obj = new String("seamaid"); __str__obj.toString = Object.prototype.toString; __str__obj.toString() === "[object String]". Actual: __str__obj.toString() ===[object Object]"}]
 9683	FAIL (tail -c +8837763 tests/ecmac.db|head -c 543): [{"message":"value is not a function"}]
 9684	FAIL (tail -c +8838307 tests/ecmac.db|head -c 1307): [{"message":"value is not a function"}]
 9685	FAIL (tail -c +8839615 tests/ecmac.db|head -c 960): [{"message":"value is not a function"}]
@@ -9702,13 +9702,13 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9694	FAIL (tail -c +8846597 tests/ecmac.db|head -c 670): [{"message":"[Function] is not defined"}]
 9695	FAIL (tail -c +8847268 tests/ecmac.db|head -c 611): [{"message":"cannot read property 'constructor' of undefined"}]
 9696	FAIL (tail -c +8847880 tests/ecmac.db|head -c 2200): [{"message":"cannot read property 'constructor' of undefined"}]
-9697	FAIL (tail -c +8850081 tests/ecmac.db|head -c 647): [{"message":"value is not a function"}]
-9698	FAIL (tail -c +8850729 tests/ecmac.db|head -c 660): [{"message":"value is not a function"}]
-9699	FAIL (tail -c +8851390 tests/ecmac.db|head -c 665): [{"message":"value is not a function"}]
-9700	FAIL (tail -c +8852056 tests/ecmac.db|head -c 695): [{"message":"value is not a function"}]
+9697	PASS (tail -c +8850081 tests/ecmac.db|head -c 647)
+9698	PASS (tail -c +8850729 tests/ecmac.db|head -c 660)
+9699	PASS (tail -c +8851390 tests/ecmac.db|head -c 665)
+9700	FAIL (tail -c +8852056 tests/ecmac.db|head -c 695): [{"message":"#1: __string__obj = new String(function(){}()); __string__obj.toString() === "undefined". Actual: __string__obj.toString() ==="}]
 9701	FAIL (tail -c +8852752 tests/ecmac.db|head -c 1331): [{"message":"cannot read property 'toString' of undefined"}]
 9702	FAIL (tail -c +8854084 tests/ecmac.db|head -c 1244): [{"message":"cannot read property 'toString' of undefined"}]
-9703	FAIL (tail -c +8855329 tests/ecmac.db|head -c 889): [{"message":"value is not a function"}]
+9703	PASS (tail -c +8855329 tests/ecmac.db|head -c 889)
 9704	FAIL (tail -c +8856219 tests/ecmac.db|head -c 662): [{"message":"cannot read property 'toString' of undefined"}]
 9705	PASS (tail -c +8856882 tests/ecmac.db|head -c 646)
 9706	PASS (tail -c +8857529 tests/ecmac.db|head -c 661)
@@ -10098,7 +10098,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10090	FAIL (tail -c +9306435 tests/ecmac.db|head -c 363): [{"message":"Test case returned non-true value!"}]
 10091	FAIL (tail -c +9306799 tests/ecmac.db|head -c 360): [{"message":"Test case returned non-true value!"}]
 10092	FAIL (tail -c +9307160 tests/ecmac.db|head -c 368): [{"message":"Test case returned non-true value!"}]
-10093	FAIL (tail -c +9307529 tests/ecmac.db|head -c 396): [{"message":"value is not a function"}]
+10093	PASS (tail -c +9307529 tests/ecmac.db|head -c 396)
 10094	FAIL (tail -c +9307926 tests/ecmac.db|head -c 371): [{"message":"Test case returned non-true value!"}]
 10095	FAIL (tail -c +9308298 tests/ecmac.db|head -c 343): [{"message":"cannot read property 'trim' of undefined"}]
 10096	FAIL (tail -c +9308642 tests/ecmac.db|head -c 376): [{"message":"cannot read property 'trim' of undefined"}]
@@ -10332,7 +10332,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10324	FAIL (tail -c +9451214 tests/ecmac.db|head -c 1490): [{"message":"cannot read property 'lastIndexOf' of undefined"}]
 10325	FAIL (tail -c +9452705 tests/ecmac.db|head -c 1410): [{"message":"cannot read property 'lastIndexOf' of undefined"}]
 10326	FAIL (tail -c +9454116 tests/ecmac.db|head -c 814): [{"message":"string expected"}]
-10327	FAIL (tail -c +9454931 tests/ecmac.db|head -c 2076): [{"message":"value is not a function"}]
+10327	FAIL (tail -c +9454931 tests/ecmac.db|head -c 2076): [{"message":"String.prototype.localeCompare considers ö (111776776) ≠ ö (246246)."}]
 10328	FAIL (tail -c +9457008 tests/ecmac.db|head -c 1277): [{"message":"cannot read property 'localeCompare' of undefined"}]
 10329	FAIL (tail -c +9458286 tests/ecmac.db|head -c 970): [{"message":"cannot read property 'localeCompare' of undefined"}]
 10330	FAIL (tail -c +9459257 tests/ecmac.db|head -c 926): [{"message":"#1: var str1 = new String("h"); var str2 = new String ("h"); str1.localeCompare(str2)===0. Actual: false"}]
@@ -10373,7 +10373,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10365	PASS (tail -c +9489434 tests/ecmac.db|head -c 1189)
 10366	FAIL (tail -c +9490624 tests/ecmac.db|head -c 803): [{"message":"#2: Boolean.prototype.isPrototypeOf(x2)"}]
 10367	PASS (tail -c +9491428 tests/ecmac.db|head -c 811)
-10368	FAIL (tail -c +9492240 tests/ecmac.db|head -c 462): [{"message":"value is not a function"}]
+10368	FAIL (tail -c +9492240 tests/ecmac.db|head -c 462): [{"message":"#1: The [[Class]] property of the newly constructed object is set to "Boolean""}]
 10369	FAIL (tail -c +9492703 tests/ecmac.db|head -c 348): [{"message":"value is not a function"}]
 10370	FAIL (tail -c +9493052 tests/ecmac.db|head -c 482): [{"message":"[Function] is not defined"}]
 10371	FAIL (tail -c +9493535 tests/ecmac.db|head -c 437): [{"message":"value is not a function"}]
@@ -10382,8 +10382,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10374	FAIL (tail -c +9495020 tests/ecmac.db|head -c 368): [{"message":"#1: Boolean.prototype has the attribute DontDelete"}]
 10375	FAIL (tail -c +9495389 tests/ecmac.db|head -c 490): [{"message":"value is not a function"}]
 10376	PASS (tail -c +9495880 tests/ecmac.db|head -c 394)
-10377	FAIL (tail -c +9496275 tests/ecmac.db|head -c 1148): [{"message":"value is not a function"}]
-10378	FAIL (tail -c +9497424 tests/ecmac.db|head -c 1216): [{"message":"value is not a function"}]
+10377	PASS (tail -c +9496275 tests/ecmac.db|head -c 1148)
+10378	PASS (tail -c +9497424 tests/ecmac.db|head -c 1216)
 10379	PASS (tail -c +9498641 tests/ecmac.db|head -c 1089)
 10380	PASS (tail -c +9499731 tests/ecmac.db|head -c 1089)
 10381	FAIL (tail -c +9500821 tests/ecmac.db|head -c 1083): [{"message":"#1: Boolean.prototype.toString on not a Boolean object should throw TypeError, not {"message":"[Date] is not defined"}"}]
@@ -10403,7 +10403,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10395	PASS (tail -c +9514132 tests/ecmac.db|head -c 1179)
 10396	FAIL (tail -c +9515312 tests/ecmac.db|head -c 795): [{"message":"#2: Number.prototype.isPrototypeOf(x2)"}]
 10397	FAIL (tail -c +9516108 tests/ecmac.db|head -c 662): [{"message":"#2.1: var x2 = new Number(); x2.valueOf() === 0"}]
-10398	FAIL (tail -c +9516771 tests/ecmac.db|head -c 457): [{"message":"value is not a function"}]
+10398	FAIL (tail -c +9516771 tests/ecmac.db|head -c 457): [{"message":"#1: The [[Class]] property of the newly constructed object is set to "Number""}]
 10399	FAIL (tail -c +9517229 tests/ecmac.db|head -c 339): [{"message":"[Function] is not defined"}]
 10400	FAIL (tail -c +9517569 tests/ecmac.db|head -c 379): [{"message":"[Function] is not defined"}]
 10401	PASS (tail -c +9517949 tests/ecmac.db|head -c 345)
@@ -10419,8 +10419,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10411	PASS (tail -c +9521835 tests/ecmac.db|head -c 450)
 10412	PASS (tail -c +9522286 tests/ecmac.db|head -c 552)
 10413	PASS (tail -c +9522839 tests/ecmac.db|head -c 532)
-10414	FAIL (tail -c +9523372 tests/ecmac.db|head -c 580): [{"message":"value is not a function"}]
-10415	FAIL (tail -c +9523953 tests/ecmac.db|head -c 607): [{"message":"value is not a function"}]
+10414	FAIL (tail -c +9523372 tests/ecmac.db|head -c 580): [{"message":"#3: The [[Class]] property of the Number prototype object is set to "Number""}]
+10415	FAIL (tail -c +9523953 tests/ecmac.db|head -c 607): [{"message":"#3: The [[Class]] property of the Number prototype object is set to "Number""}]
 10416	FAIL (tail -c +9524561 tests/ecmac.db|head -c 398): [{"message":"Number.valueOf called on non-number object"}]
 10417	PASS (tail -c +9524960 tests/ecmac.db|head -c 445)
 10418	PASS (tail -c +9525406 tests/ecmac.db|head -c 391)
@@ -10442,54 +10442,54 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10434	FAIL (tail -c +9531996 tests/ecmac.db|head -c 544): [{"message":"[isFinite] is not defined"}]
 10435	PASS (tail -c +9532541 tests/ecmac.db|head -c 369)
 10436	PASS (tail -c +9532911 tests/ecmac.db|head -c 523)
-10437	FAIL (tail -c +9533435 tests/ecmac.db|head -c 393): [{"message":"cannot read property 'call' of undefined"}]
+10437	FAIL (tail -c +9533435 tests/ecmac.db|head -c 393): [{"message":"value is not a function"}]
 10438	FAIL (tail -c +9533829 tests/ecmac.db|head -c 766): [{"message":"Number.valueOf called on non-number object"}]
 10439	FAIL (tail -c +9534596 tests/ecmac.db|head -c 459): [{"message":"#1: Object prototype object is the prototype of Number prototype object"}]
 10440	PASS (tail -c +9535056 tests/ecmac.db|head -c 378)
-10441	FAIL (tail -c +9535435 tests/ecmac.db|head -c 369): [{"message":"#1: The Number prototype object has the property toString"}]
+10441	PASS (tail -c +9535435 tests/ecmac.db|head -c 369)
 10442	FAIL (tail -c +9535805 tests/ecmac.db|head -c 387): [{"message":"#1: The Number prototype object has the property toLocaleString"}]
 10443	PASS (tail -c +9536193 tests/ecmac.db|head -c 366)
 10444	PASS (tail -c +9536560 tests/ecmac.db|head -c 366)
 10445	FAIL (tail -c +9536927 tests/ecmac.db|head -c 384): [{"message":"#1: The Number prototype object has the property toExponential"}]
 10446	PASS (tail -c +9537312 tests/ecmac.db|head -c 378)
 10447	PASS (tail -c +9537691 tests/ecmac.db|head -c 396)
-10448	FAIL (tail -c +9538088 tests/ecmac.db|head -c 1319): [{"message":"value is not a function"}]
-10449	FAIL (tail -c +9539408 tests/ecmac.db|head -c 1347): [{"message":"value is not a function"}]
-10450	FAIL (tail -c +9540756 tests/ecmac.db|head -c 1472): [{"message":"value is not a function"}]
-10451	FAIL (tail -c +9542229 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10452	FAIL (tail -c +9543526 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10453	FAIL (tail -c +9544823 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10454	FAIL (tail -c +9546120 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10455	FAIL (tail -c +9547417 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10456	FAIL (tail -c +9548714 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10457	FAIL (tail -c +9550011 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10458	FAIL (tail -c +9551308 tests/ecmac.db|head -c 1296): [{"message":"value is not a function"}]
-10459	FAIL (tail -c +9552605 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10460	FAIL (tail -c +9553919 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10461	FAIL (tail -c +9555233 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10462	FAIL (tail -c +9556547 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10463	FAIL (tail -c +9557861 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10464	FAIL (tail -c +9559175 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10465	FAIL (tail -c +9560489 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10466	FAIL (tail -c +9561803 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10467	FAIL (tail -c +9563117 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10468	FAIL (tail -c +9564431 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10469	FAIL (tail -c +9565745 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10470	FAIL (tail -c +9567059 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10471	FAIL (tail -c +9568373 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10472	FAIL (tail -c +9569687 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10473	FAIL (tail -c +9571001 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10474	FAIL (tail -c +9572315 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10475	FAIL (tail -c +9573629 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10476	FAIL (tail -c +9574943 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10477	FAIL (tail -c +9576257 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10478	FAIL (tail -c +9577571 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10479	FAIL (tail -c +9578885 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10480	FAIL (tail -c +9580199 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10481	FAIL (tail -c +9581513 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10482	FAIL (tail -c +9582827 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10483	FAIL (tail -c +9584141 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
-10484	FAIL (tail -c +9585455 tests/ecmac.db|head -c 1313): [{"message":"value is not a function"}]
+10448	FAIL (tail -c +9538088 tests/ecmac.db|head -c 1319): [{"message":"#2: (new Number()).toString() === "0""}]
+10449	FAIL (tail -c +9539408 tests/ecmac.db|head -c 1347): [{"message":"#2: (new Number()).toString(10) === "0""}]
+10450	FAIL (tail -c +9540756 tests/ecmac.db|head -c 1472): [{"message":"#2: (new Number()).toString(undefined) === "0""}]
+10451	FAIL (tail -c +9542229 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(2) === "0""}]
+10452	FAIL (tail -c +9543526 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(3) === "0""}]
+10453	FAIL (tail -c +9544823 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(4) === "0""}]
+10454	FAIL (tail -c +9546120 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(5) === "0""}]
+10455	FAIL (tail -c +9547417 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(6) === "0""}]
+10456	FAIL (tail -c +9548714 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(7) === "0""}]
+10457	FAIL (tail -c +9550011 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(8) === "0""}]
+10458	FAIL (tail -c +9551308 tests/ecmac.db|head -c 1296): [{"message":"#2: (new Number()).toString(9) === "0""}]
+10459	FAIL (tail -c +9552605 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(11) === "0""}]
+10460	FAIL (tail -c +9553919 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(12) === "0""}]
+10461	FAIL (tail -c +9555233 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(13) === "0""}]
+10462	FAIL (tail -c +9556547 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(14) === "0""}]
+10463	FAIL (tail -c +9557861 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(15) === "0""}]
+10464	FAIL (tail -c +9559175 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(16) === "0""}]
+10465	FAIL (tail -c +9560489 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(17) === "0""}]
+10466	FAIL (tail -c +9561803 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(18) === "0""}]
+10467	FAIL (tail -c +9563117 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(19) === "0""}]
+10468	FAIL (tail -c +9564431 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(20) === "0""}]
+10469	FAIL (tail -c +9565745 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(21) === "0""}]
+10470	FAIL (tail -c +9567059 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(22) === "0""}]
+10471	FAIL (tail -c +9568373 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(23) === "0""}]
+10472	FAIL (tail -c +9569687 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(24) === "0""}]
+10473	FAIL (tail -c +9571001 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(25) === "0""}]
+10474	FAIL (tail -c +9572315 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(26) === "0""}]
+10475	FAIL (tail -c +9573629 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(27) === "0""}]
+10476	FAIL (tail -c +9574943 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(28) === "0""}]
+10477	FAIL (tail -c +9576257 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(29) === "0""}]
+10478	FAIL (tail -c +9577571 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(30) === "0""}]
+10479	FAIL (tail -c +9578885 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(31) === "0""}]
+10480	FAIL (tail -c +9580199 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(32) === "0""}]
+10481	FAIL (tail -c +9581513 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(33) === "0""}]
+10482	FAIL (tail -c +9582827 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(34) === "0""}]
+10483	FAIL (tail -c +9584141 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(35) === "0""}]
+10484	FAIL (tail -c +9585455 tests/ecmac.db|head -c 1313): [{"message":"#2: (new Number()).toString(36) === "0""}]
 10485	PASS (tail -c +9586769 tests/ecmac.db|head -c 1408)
 10486	PASS (tail -c +9588178 tests/ecmac.db|head -c 1421)
 10487	PASS (tail -c +9589600 tests/ecmac.db|head -c 1469)

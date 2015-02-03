@@ -3313,12 +3313,32 @@ static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
+static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  char buf[512];
+  (void) args;
+
+  if (this_obj == v7->boolean_prototype) {
+    return v7_create_string(v7, "false", 5, 1);
+  }
+
+  if (!v7_is_boolean(this_obj) &&
+      !(v7_is_object(this_obj) &&
+        is_prototype_of(this_obj, v7->boolean_prototype))) {
+    throw_exception(v7, "TypeError",
+                    "Boolean.toString called on non-boolean object");
+  }
+
+  v7_stringify_value(v7, i_value_of(v7, this_obj), buf, sizeof(buf));
+  return v7_create_string(v7, buf, strlen(buf), 1);
+}
+
 V7_PRIVATE void init_boolean(struct v7 *v7) {
   val_t boolean = v7_create_cfunction(Boolean_ctor);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, boolean);
   v7_set(v7, v7->boolean_prototype, "constructor", 11, boolean);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
+  set_cfunc_prop(v7, v7->boolean_prototype, "toString", Boolean_toString);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -3591,6 +3611,23 @@ static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
   }
 
   return res;
+}
+
+static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) args;
+
+  if (this_obj == v7->string_prototype) {
+    return v7_create_string(v7, "false", 5, 1);
+  }
+
+  if (!v7_is_string(this_obj) &&
+      !(v7_is_object(this_obj) &&
+        is_prototype_of(this_obj, v7->string_prototype))) {
+    throw_exception(v7, "TypeError",
+                    "String.toString called on non-string object");
+  }
+
+  return to_string(v7, i_value_of(v7, this_obj));
 }
 
 #if 0
@@ -3924,6 +3961,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase", Str_toUpperCase);
   set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
+  set_cfunc_prop(v7, v7->string_prototype, "toString", Str_toString);
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));
@@ -4825,7 +4863,6 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
     }
   }
 
-  /* TODO(mkm): call the toString method instead of custom C code. */
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
       return stpncpy(buf, "null", size) - buf;
@@ -7551,7 +7588,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   ast_off_t pos = 0;
   jmp_buf saved_jmp_buf, saved_abort_buf;
   enum v7_err err = V7_OK;
-  *res = V7_UNDEFINED;
+  val_t r = V7_UNDEFINED;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
@@ -7559,17 +7596,17 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
 
   ast_init(a, 0);
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
-    *res = v7->thrown_error;
+    r = v7->thrown_error;
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
-    *res = v7->thrown_error;
+    r = v7->thrown_error;
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
-    v7_exec_with(v7, res, "new SyntaxError(this)",
+    v7_exec_with(v7, &r, "new SyntaxError(this)",
                  v7_string_to_value(v7, v7->error_msg,
                                     strlen(v7->error_msg), 1));
     err = V7_SYNTAX_ERROR;
@@ -7578,9 +7615,12 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   ast_optimize(a);
 
   v7->this_object = v7_is_undefined(w) ? v7->global_object : w;
-  *res = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
+  r = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
+  if (res != NULL) {
+    *res = r;
+  }
   v7->this_object = old_this;
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&v7->abort_jmp_buf, &saved_abort_buf, sizeof(saved_abort_buf));
@@ -9441,6 +9481,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
   v7_set(v7, v7->object_prototype, "constructor", 11, object);
 
+  v7_exec(v7, NULL, "Object.prototype.toString = function() {return '[object Object]'}");
+
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);
@@ -9533,6 +9575,26 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
+static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  char buf[512];
+  (void) args;
+
+  if (this_obj == v7->number_prototype) {
+    return v7_create_string(v7, "0", 1, 1);
+  }
+
+  if (!v7_is_double(this_obj) &&
+      !(v7_is_object(this_obj) &&
+        is_prototype_of(this_obj, v7->number_prototype))) {
+    throw_exception(v7, "TypeError",
+                    "Number.toString called on non-number object");
+  }
+
+  /* TODO(mkm) handle radix first arg */
+  v7_stringify_value(v7, i_value_of(v7, this_obj), buf, sizeof(buf));
+  return v7_create_string(v7, buf, strlen(buf), 1);
+}
+
 static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   (void) this_obj;
@@ -9557,6 +9619,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
   set_cfunc_prop(v7, v7->number_prototype, "toExponentioal", Number_toExp);
   set_cfunc_prop(v7, v7->number_prototype, "valueOf", Number_valueOf);
+  set_cfunc_prop(v7, v7->number_prototype, "toString", Number_toString);
 
   v7_set_property(v7, num, "MAX_VALUE", 9, attrs,
                   v7_create_number(1.7976931348623157e+308));

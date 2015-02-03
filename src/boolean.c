@@ -33,10 +33,30 @@ static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
+static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  char buf[512];
+  (void) args;
+
+  if (this_obj == v7->boolean_prototype) {
+    return v7_create_string(v7, "false", 5, 1);
+  }
+
+  if (!v7_is_boolean(this_obj) &&
+      !(v7_is_object(this_obj) &&
+        is_prototype_of(this_obj, v7->boolean_prototype))) {
+    throw_exception(v7, "TypeError",
+                    "Boolean.toString called on non-boolean object");
+  }
+
+  v7_stringify_value(v7, i_value_of(v7, this_obj), buf, sizeof(buf));
+  return v7_create_string(v7, buf, strlen(buf), 1);
+}
+
 V7_PRIVATE void init_boolean(struct v7 *v7) {
   val_t boolean = v7_create_cfunction(Boolean_ctor);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, boolean);
   v7_set(v7, v7->boolean_prototype, "constructor", 11, boolean);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
+  set_cfunc_prop(v7, v7->boolean_prototype, "toString", Boolean_toString);
 }

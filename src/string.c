@@ -163,6 +163,23 @@ static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) args;
+
+  if (this_obj == v7->string_prototype) {
+    return v7_create_string(v7, "false", 5, 1);
+  }
+
+  if (!v7_is_string(this_obj) &&
+      !(v7_is_object(this_obj) &&
+        is_prototype_of(this_obj, v7->string_prototype))) {
+    throw_exception(v7, "TypeError",
+                    "String.toString called on non-string object");
+  }
+
+  return to_string(v7, i_value_of(v7, this_obj));
+}
+
 #if 0
 V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
 #define v7 (cfa->v7) /* Needed for TRY() macro below */
@@ -494,6 +511,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase", Str_toUpperCase);
   set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
+  set_cfunc_prop(v7, v7->string_prototype, "toString", Str_toString);
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));
