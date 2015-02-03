@@ -84,6 +84,8 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
         return NAN;
       }
       return res;
+    } else if (v7_is_null(v)) {
+      return 0.0;
     } else {
       return NAN;
     }
@@ -184,10 +186,6 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
       return a > b;
     case AST_GE:
       return a >= b;
-    case AST_LOGICAL_OR:
-      return a || b;
-    case AST_LOGICAL_AND:
-      return a && b;
     default:
       throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
       return 0;  /* LCOV_EXCL_LINE */
@@ -219,6 +217,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_ADD:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
+      v1 = i_value_of(v7, v1);
+      v2 = i_value_of(v7, v2);
       if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
           !(v7_is_undefined(v2) || v7_is_double(v2) || v7_is_boolean(v2))) {
         v7_stringify_value(v7, v1, buf, sizeof(buf));
@@ -249,12 +249,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if (v7_is_string(v1) && v7_is_string(v2)) {
         return v7_boolean_to_value(s_cmp(v7, v1, v2) == 0);
       }
+      if (v1 == v2 && v1 == V7_TAG_NAN) {
+        return v7_boolean_to_value(0);
+      }
       return v7_boolean_to_value(v1 == v2);
     case AST_NE_NE:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       if (v7_is_string(v1) && v7_is_string(v2)) {
         return v7_boolean_to_value(s_cmp(v7, v1, v2) != 0);
+      }
+      if (v1 == v2 & v1 == V7_TAG_NAN) {
+        return v7_boolean_to_value(1);
       }
       return v7_boolean_to_value(v1 != v2);
     case AST_EQ:
@@ -265,11 +271,16 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_GE:
       v1 = i_value_of(v7, i_eval_expr(v7, a, pos, scope));
       v2 = i_value_of(v7, i_eval_expr(v7, a, pos, scope));
-      if (tag == AST_EQ && v1 == v2) {
-        return v7_boolean_to_value(1);
-      }
-      if (tag == AST_NE && v1 == v2) {
-        return v7_boolean_to_value(0);
+      if (tag == AST_EQ || tag == AST_NE) {
+        if (((v7_is_object(v1) || v7_is_object(v2)) && v1 == v2)) {
+          return v7_boolean_to_value(tag == AST_EQ);
+        } else if (v7_is_undefined(v1) || v7_is_null(v1)) {
+          return v7_boolean_to_value((tag != AST_EQ) ^
+                                     (v7_is_undefined(v2) || v7_is_null(v2)));
+        } else if (v7_is_undefined(v2) || v7_is_null(v2)) {
+          return v7_boolean_to_value((tag != AST_EQ) ^
+                                     (v7_is_undefined(v1) || v7_is_null(v1)));
+        }
       }
       if (v7_is_string(v1) && v7_is_string(v2)) {
         int cmp = s_cmp(v7, v1, v2);
@@ -387,15 +398,31 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v1 = res = v7_double_to_value(i_as_num(v7, v1) - 1.0);
             break;
           case AST_POSTINC:
-            res = v1;
+            res = i_value_of(v7, v1);
             v1 = v7_double_to_value(i_as_num(v7, v1) + 1.0);
             break;
           case AST_POSTDEC:
-            res = v1;
+            res = i_value_of(v7, v1);
             v1 = v7_double_to_value(i_as_num(v7, v1) - 1.0);
             break;
           case AST_ASSIGN:
             v1 = res = i_eval_expr(v7, a, pos, scope);
+            break;
+          case AST_PLUS_ASSIGN:
+            res = i_eval_expr(v7, a, pos, scope);
+            v1 = i_value_of(v7, v1);
+            res = i_value_of(v7, res);
+            if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
+                !(v7_is_undefined(res) || v7_is_double(res) || v7_is_boolean(res))) {
+              v7_stringify_value(v7, v1, buf, sizeof(buf));
+              v1 = v7_create_string(v7, buf, strlen(buf), 1);
+              v7_stringify_value(v7, res, buf, sizeof(buf));
+              res = v7_create_string(v7, buf, strlen(buf), 1);
+              v1 = res = s_concat(v7, v1, res);
+              break;
+            }
+            res = v1 = v7_double_to_value(i_num_bin_op(
+                v7, AST_ADD, i_as_num(v7, v1), i_as_num(v7, res)));
             break;
           default:
             op = assign_op_map[op - AST_ASSIGN - 1];
