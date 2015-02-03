@@ -210,6 +210,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
   v7_set(v7, v7->object_prototype, "constructor", 11, object);
 
+  v7_exec(v7, NULL, "Object.prototype.toString = function() {return '[object Object]'}");
+
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);

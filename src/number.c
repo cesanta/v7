@@ -53,6 +53,26 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
+static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  char buf[512];
+  (void) args;
+
+  if (this_obj == v7->number_prototype) {
+    return v7_create_string(v7, "0", 1, 1);
+  }
+
+  if (!v7_is_double(this_obj) &&
+      !(v7_is_object(this_obj) &&
+        is_prototype_of(this_obj, v7->number_prototype))) {
+    throw_exception(v7, "TypeError",
+                    "Number.toString called on non-number object");
+  }
+
+  /* TODO(mkm) handle radix first arg */
+  v7_stringify_value(v7, i_value_of(v7, this_obj), buf, sizeof(buf));
+  return v7_create_string(v7, buf, strlen(buf), 1);
+}
+
 static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   (void) this_obj;
@@ -77,6 +97,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
   set_cfunc_prop(v7, v7->number_prototype, "toExponentioal", Number_toExp);
   set_cfunc_prop(v7, v7->number_prototype, "valueOf", Number_valueOf);
+  set_cfunc_prop(v7, v7->number_prototype, "toString", Number_toString);
 
   v7_set_property(v7, num, "MAX_VALUE", 9, attrs,
                   v7_create_number(1.7976931348623157e+308));

@@ -274,7 +274,6 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
     }
   }
 
-  /* TODO(mkm): call the toString method instead of custom C code. */
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
       return stpncpy(buf, "null", size) - buf;
