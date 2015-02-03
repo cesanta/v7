@@ -1711,7 +1711,7 @@
 1707	FAIL (tail -c +1267219 tests/ecmac.db|head -c 2347): [{"message":"parse error at at line 1 col 8: [ Number[]"}]
 1708	PASS (tail -c +1269567 tests/ecmac.db|head -c 753)
 1709	PASS (tail -c +1270321 tests/ecmac.db|head -c 896)
-1710	FAIL (tail -c +1271218 tests/ecmac.db|head -c 1087): [{"message":"#6: new Number(1)["toFixed"](5) === "1.00000". Actual: nan"}]
+1710	PASS (tail -c +1271218 tests/ecmac.db|head -c 1087)
 1711	PASS (tail -c +1272306 tests/ecmac.db|head -c 1110)
 1712	PASS (tail -c +1273417 tests/ecmac.db|head -c 866)
 1713	PASS (tail -c +1274284 tests/ecmac.db|head -c 821)
@@ -10506,8 +10506,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10498	FAIL (tail -c +9602619 tests/ecmac.db|head -c 1071): [{"message":"#1: Number.prototype.valueOf on not a Number object should throw TypeError, not {"message":"[Date] is not defined"}"}]
 10499	PASS (tail -c +9603691 tests/ecmac.db|head -c 1077)
 10500	PASS (tail -c +9604769 tests/ecmac.db|head -c 1064)
-10501	FAIL (tail -c +9605834 tests/ecmac.db|head -c 1660): [{"message":"#1: Number.prototype.toFixed() === "0""}]
-10502	FAIL (tail -c +9607495 tests/ecmac.db|head -c 1657): [{"message":"#1: (new Number(1)).prototype.toFixed() === "1""}]
+10501	FAIL (tail -c +9605834 tests/ecmac.db|head -c 1660): [{"message":"Number.valueOf called on non-number object"}]
+10502	PASS (tail -c +9607495 tests/ecmac.db|head -c 1657)
 10503	FAIL (tail -c +9609153 tests/ecmac.db|head -c 1821): [{"message":"#1: (new Number("a")).prototype.toFixed() === "NaN""}]
 10504	FAIL (tail -c +9610975 tests/ecmac.db|head -c 1640): [{"message":"#1: Number.NaN.prototype.toFixed() === "NaN""}]
 10505	FAIL (tail -c +9612616 tests/ecmac.db|head -c 1937): [{"message":"#1: (new Number(1e21)).prototype.toFixed() === String(1e21)"}]

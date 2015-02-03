@@ -9542,12 +9542,12 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  double d = v7_to_double(arg0);
-  int len, digits = v7_is_double(arg0) && d > 0 ? (int) d : 0;
+  double d = i_as_num(v7, arg0);
+  int len, digits = d > 0 ? (int) d : 0;
   char fmt[10], buf[100];
 
   snprintf(fmt, sizeof(fmt), format, digits);
-  len = snprintf(buf, sizeof(buf), fmt, v7_to_double(t));
+  len = snprintf(buf, sizeof(buf), fmt, v7_to_double(i_value_of(v7, t)));
 
   return v7_create_string(v7, buf, len, 1);
 }
