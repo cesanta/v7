@@ -1,3 +1,11 @@
+general:
+  artifacts:
+    - "v7.c"
+    - "v7.h"
+    - "tests/hist_ecma_report.svg"
+
 test:
   pre:
     - make run
+  post:
+    - tests/update_hist_ecma_report.sh
