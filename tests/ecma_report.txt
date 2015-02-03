@@ -9672,7 +9672,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9664	FAIL (tail -c +8805291 tests/ecmac.db|head -c 1595): [{"message":"#2: __str = new String(__obj); __str =="tostr". Actual: __str =={}"}]
 9665	FAIL (tail -c +8806887 tests/ecmac.db|head -c 1625): [{"message":"#2: function __obj(){}; __str = new String(__obj); __str =="true". Actual: __str ==[function __obj()]"}]
 9666	FAIL (tail -c +8808513 tests/ecmac.db|head -c 1051): [{"message":"#1.1: e==="intostr". Actual: e==={"message":"#1: var __obj = {toString:function(){throw "intostr"}}; __str = new String(__obj) lead throwing exception"}"}]
-9667	FAIL (tail -c +8809565 tests/ecmac.db|head -c 1059): [{"message":"#1.1: e==="invalueof". Actual: e==={"message":"to_json line 406: ast_fetch_tag(a, &var) == AST_VAR_DECL"}"}]
+9667	FAIL (tail -c +8809565 tests/ecmac.db|head -c 1059): [{"message":"#1.1: e==="invalueof". Actual: e==={"message":"to_json line 5003: ast_fetch_tag(a, &var) == AST_VAR_DECL"}"}]
 9668	FAIL (tail -c +8810625 tests/ecmac.db|head -c 4412): [{"message":"#8: __str =new  String(.00000012345); __str =="1.2345e-7". Actual: __str ==1.2345e-07"}]
 9669	FAIL (tail -c +8815038 tests/ecmac.db|head -c 3557): [{"message":"#4: __str = new String(1.234567890); __str =="1.23456789". Actual: __str ==1.23457"}]
 9670	PASS (tail -c +8818596 tests/ecmac.db|head -c 2571)
