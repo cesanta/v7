@@ -207,7 +207,7 @@ int nextesc(const char **p) {
     case 'r':
       return '\r';
     case 't':
-      return'\t';
+      return '\t';
     case 'v':
       return '\v';
     case '\\':
@@ -230,7 +230,7 @@ int nextesc(const char **p) {
   }
 }
 
-static unsigned char re_nextc(Rune *r, const char **src, const char *src_end) {
+static int re_nextc(Rune *r, const char **src, const char *src_end) {
   *r = 0;
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
@@ -241,7 +241,7 @@ static unsigned char re_nextc(Rune *r, const char **src, const char *src_end) {
   return 0;
 }
 
-static unsigned char re_nextc_env(struct slre_env *e) {
+static int re_nextc_env(struct slre_env *e) {
   return re_nextc(&e->curr_rune, &e->src, e->src_end);
 }
 
@@ -486,38 +486,34 @@ static int re_lexer(struct slre_env *e) {
     return L_CH;
   }
 
-  if (1) {
-    switch (e->curr_rune) {
-      case 0:
-      case '$':
-      case ')':
-      case '*':
-      case '+':
-      case '.':
-      case '?':
-      case '^':
-      case '|':
-        return e->curr_rune;
-      case '{':
-        return re_countrep(e);
-      case '[':
-        return re_lexset(e);
-      case '(':
-        if (e->src[0] == '?') switch (e->src[1]) {
-            case '=':
-              e->src += 2;
-              return L_LA;
-            case ':':
-              e->src += 2;
-              return L_LA_CAP;
-            case '!':
-              e->src += 2;
-              return L_LA_N;
-          }
-        return '(';
-    }
-  } else if (e->curr_rune == 0) {
-    return 0;
+  switch (e->curr_rune) {
+    case 0: return 0;
+    case '$':
+    case ')':
+    case '*':
+    case '+':
+    case '.':
+    case '?':
+    case '^':
+    case '|':
+      return e->curr_rune;
+    case '{':
+      return re_countrep(e);
+    case '[':
+      return re_lexset(e);
+    case '(':
+      if (e->src[0] == '?') switch (e->src[1]) {
+          case '=':
+            e->src += 2;
+            return L_LA;
+          case ':':
+            e->src += 2;
+            return L_LA_CAP;
+          case '!':
+            e->src += 2;
+            return L_LA_N;
+        }
+      return '(';
   }
 
   return L_CH;
@@ -945,7 +941,6 @@ static void node_print(struct slre_node *nd) {
       printf("^");
       break;
     case P_BRA:
-      printf("(%d,", nd->par.xy.y.n);
       node_print(nd->par.xy.x);
       printf(")");
       break;
@@ -1004,7 +999,7 @@ static void node_print(struct slre_node *nd) {
 static void program_print(struct slre_prog *prog) {
   struct slre_instruction *inst;
   for (inst = prog->start; inst < prog->end; ++inst) {
-    printf("%3d: ", inst - prog->start);
+    printf("%3ld: ", inst - prog->start);
     switch (inst->opcode) {
       case I_END:
         puts("end");
@@ -1029,14 +1024,14 @@ static void program_print(struct slre_prog *prog) {
         puts("\\0");
         break;
       case I_JUMP:
-        printf("-->%d\n", inst->par.xy.x - prog->start);
+        printf("-->%ld\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %d %d\n", inst->par.xy.x - prog->start,
+        printf("la %ld %ld\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %d %d\n", inst->par.xy.x - prog->start,
+        printf("la_n %ld %ld\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
@@ -1046,14 +1041,14 @@ static void program_print(struct slre_prog *prog) {
         printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start,
+        printf("-->%ld | -->%ld\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
         printf("\\%d\n", inst->par.n);
         break;
       case I_REP:
-        printf("repeat -->%d\n", inst->par.xy.x - prog->start);
+        printf("repeat -->%ld\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
         printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
@@ -1188,8 +1183,6 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   unsigned char thr;
   size_t i, off = 0;
 
-  return 0;
-
   /* queue initial thread */
   re_newthread(threads, pc, start, loot);
 
@@ -1211,7 +1204,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
 
         case I_BOL:
           if (start + off == bol) break;
-          if ((flags & SLRE_FLAG_M) && isnewline(start[-1])) break;
+          if ((flags & SLRE_FLAG_M) && isnewline(start[off - 1])) break;
           RE_NO_MATCH();
         case I_CH:
           c = re_getrune(start, len, &off);
@@ -1231,21 +1224,22 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           continue;
 
         case I_LA:
-          if (re_match(pc->par.xy.x, start, len, bol, flags, &sub)) {
+          if (re_match(pc->par.xy.x, start + off, len - off, bol, flags, &sub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
           RE_NO_MATCH();
         case I_LA_N:
           tmpsub = sub;
-          if (!re_match(pc->par.xy.x, start, len, bol, flags, &tmpsub)) {
+          if (!re_match(pc->par.xy.x, start + off, len - off, bol, flags,
+              &tmpsub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
           RE_NO_MATCH();
 
         case I_LBRA:
-          sub.caps[pc->par.n].start = start;
+          sub.caps[pc->par.n].start = start + off;
           break;
 
         case I_REF:
@@ -1260,8 +1254,9 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
               if (tolowerrune(r) != tolowerrune(rr)) break;
             }
             if (num) RE_NO_MATCH();
-          } else if (strncmp(start + off, sub.caps[pc->par.n].start, i))
+          } else if (strncmp(start + off, sub.caps[pc->par.n].start, i)) {
             RE_NO_MATCH();
+          }
           if (i > 0) off += i;
           break;
 
@@ -1281,7 +1276,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           break;
 
         case I_RBRA:
-          sub.caps[pc->par.n].end = start;
+          sub.caps[pc->par.n].end = start + off;
           break;
 
         case I_SET:
@@ -1309,7 +1304,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
             fprintf(stderr, "re_match: backtrack overflow!\n");
             return 0;
           }
-          re_newthread(&threads[thr_num++], pc->par.xy.y.y, start, &sub);
+          re_newthread(&threads[thr_num++], pc->par.xy.y.y, start + off, &sub);
           pc = pc->par.xy.x;
           continue;
 
@@ -1342,7 +1337,6 @@ int slre_exec(struct slre_prog *prog, const char *start, size_t len,
     loot->num_captures = prog->num_captures;
     return !re_match(prog->start, start, len, start, prog->flags, loot);
   }
-  printf("%s [%.*s] %d\n", __func__, (int) len, start, loot->num_captures);
 
   while (re_match(prog->start, st, len, start, prog->flags, &tmpsub)) {
     unsigned int i;
@@ -1520,7 +1514,7 @@ static int process_line(struct slre_prog *pr, const char *flags,
   int i, n = cap_no == NULL ? -1 : atoi(cap_no), err_code = 0;
   struct slre_cap *cap = &loot.caps[n];
 
-  err_code = slre_exec(pr, fl, line, &loot);
+  err_code = slre_exec(pr, line, strlen(line), &loot);
   if (err_code == SLRE_OK) {
     if (n >= 0 && n < loot.num_captures && replace != NULL) {
       struct slre_cap *cap = &loot.caps[n];
@@ -1546,7 +1540,7 @@ static int process_line(struct slre_prog *pr, const char *flags,
 
 int main(int argc, char **argv) {
   const char *str = NULL, *pattern = NULL, *replace = NULL;
-  const char *flags = NULL, *file_name = NULL, *cap_no = NULL, *verbose = NULL;
+  const char *flags = "", *file_name = NULL, *cap_no = NULL, *verbose = NULL;
   struct slre_prog *pr = NULL;
   int i, err_code = 0;
 
@@ -1576,7 +1570,8 @@ int main(int argc, char **argv) {
   if (pattern == NULL) {
     fprintf(stderr, "%s\n", "-p option is mandatory");
     exit(1);
-  } else if ((err_code = slre_compile(pattern, &pr)) != SLRE_OK) {
+  } else if ((err_code = slre_compile(pattern, strlen(pattern),
+             flags, strlen(flags), &pr)) != SLRE_OK) {
     fprintf(stderr, "slre_compile(%s): %s\n",
             argv[0], err_code_to_str(err_code));
     exit(1);

@@ -476,9 +476,17 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
         v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
         num_elems++;
         i = j = i + n2;
-      } else if (v7_is_regexp(arg0) &&
-                 slre_exec(rp->compiled_regexp, s1 + i, n1 - i, &loot)) {
-        /* TODO(lsm): fix SLRE and complete regexp branch */
+      } else if (v7_is_regexp(arg0)) {
+        if (slre_exec(rp->compiled_regexp, s1 + i, n1 - i, &loot) == SLRE_OK) {
+          /* TODO(lsm): fix this */
+          struct slre_cap *cap = &loot.caps[0];
+          i = cap->start - s1;
+          v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
+          num_elems++;
+          i = j = cap->end - s1;
+        } else {
+          i = n1 - n2 + 1;  /* No match, stop the loop */
+        }
       }
     }
     if (j < i && n2 > 0) {
