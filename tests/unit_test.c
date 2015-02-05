@@ -1313,6 +1313,8 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "r=0;o={get x() {return 10}, set x(v){r=v}};o.x=10;r") == V7_OK);
   ASSERT(check_value(v7, v, "10"));
 
+  ASSERT(v7_exec(v7, &v, "String(new Number(42))") == V7_OK);
+  ASSERT(check_value(v7, v, "\"42\""));
 
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
@@ -1393,8 +1395,8 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_stdlib);
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);
-  RUN_TEST(test_ecmac);
   RUN_TEST(test_interpreter);
+  RUN_TEST(test_ecmac);
   RUN_TEST(test_strings);
   return NULL;
 }

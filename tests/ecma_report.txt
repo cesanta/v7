@@ -623,7 +623,7 @@
 622	PASS (tail -c +405971 tests/ecmac.db|head -c 1591)
 623	PASS (tail -c +407563 tests/ecmac.db|head -c 2387)
 624	FAIL (tail -c +409951 tests/ecmac.db|head -c 753): [{"message":"#1.2: var __obj = {toString: function() {return new Object();}}; String(__obj) throw TypeError. Actual: {"message":"#1.1: var __obj = {toString: function() {return new Object();}}; String(__obj) throw TypeError. Actual: {"toString":[function()]}"}"}]
-625	FAIL (tail -c +410705 tests/ecmac.db|head -c 887): [{"message":"#1.2: var __obj = {toString: function() {return new Object();}, valueOf: function() {return 1;}}; String(__obj) === "1". Actual: {"message":"#1.1: var __obj = {toString: function() {return new Object();}, valueOf: function() {return 1;}}; String(__obj) === "1". Actual: {"valueOf":[function()],"toString":[function()]}"}"}]
+625	PASS (tail -c +410705 tests/ecmac.db|head -c 887)
 626	FAIL (tail -c +411593 tests/ecmac.db|head -c 824): [{"message":"#1.2: var __obj = {toNumber: function() {return "1"}, valueOf: function() {return new Object();}}; Number(__obj) === 1. Actual: {"message":"#1.1: var __obj = {toNumber: function() {return "1"}, valueOf: function() {return new Object();}}; Number(__obj) === 1. Actual: NaN"}"}]
 627	FAIL (tail -c +412418 tests/ecmac.db|head -c 907): [{"message":"#1.2: var __obj = {valueOf:function(){return new Object;},toNumber: function() {return new Object();}}; Number(__obj) throw TypeError. Actual: {"message":"#1.1: var __obj = {valueOf:function(){return new Object;},toNumber: function() {return new Object();}}; Number(__obj) throw TypeError. Actual: NaN"}"}]
 628	FAIL (tail -c +413326 tests/ecmac.db|head -c 833): [{"message":"value is not a function"}]
@@ -712,7 +712,7 @@
 711	FAIL (tail -c +507731 tests/ecmac.db|head -c 589): [{"message":"[arguments] is not defined"}]
 712	FAIL (tail -c +508321 tests/ecmac.db|head -c 816): [{"message":"[arguments] is not defined"}]
 713	FAIL (tail -c +509138 tests/ecmac.db|head -c 821): [{"message":"#2: var object = {valueOf: function() {return {}}, toString: function() {return "0"}}; Number(object) === 0. Actual: NaN"}]
-714	FAIL (tail -c +509960 tests/ecmac.db|head -c 822): [{"message":"#1: var object = {valueOf: function() {return 0}, toString: function() {return 1}}; String(object) === "1". Actual: {"toString":[function()],"valueOf":[function()]}"}]
+714	FAIL (tail -c +509960 tests/ecmac.db|head -c 822): [{"message":"#1: var object = {valueOf: function() {return 0}, toString: function() {return 1}}; String(object) === "1". Actual: 0"}]
 715	PASS (tail -c +510783 tests/ecmac.db|head -c 829)
 716	PASS (tail -c +511613 tests/ecmac.db|head -c 765)
 717	PASS (tail -c +512379 tests/ecmac.db|head -c 760)
@@ -824,7 +824,7 @@
 820	PASS (tail -c +626113 tests/ecmac.db|head -c 503)
 821	PASS (tail -c +626617 tests/ecmac.db|head -c 548)
 822	PASS (tail -c +627166 tests/ecmac.db|head -c 528)
-823	FAIL (tail -c +627695 tests/ecmac.db|head -c 2708): [{"message":"#1: String(new Number()) === "0". Actual: {}"}]
+823	FAIL (tail -c +627695 tests/ecmac.db|head -c 2708): [{"message":"#1: String(new Number()) === "0". Actual: NaN"}]
 824	FAIL (tail -c +630404 tests/ecmac.db|head -c 2675): [{"message":"#1: new Number() + "" === "0". Actual: NaN"}]
 825	PASS (tail -c +633080 tests/ecmac.db|head -c 614)
 826	FAIL (tail -c +633695 tests/ecmac.db|head -c 1881): [{"message":"#2: String(1.234567890) === "1.23456789". Actual: 1.23457"}]
@@ -9670,9 +9670,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9662	PASS (tail -c +8802861 tests/ecmac.db|head -c 810)
 9663	PASS (tail -c +8803672 tests/ecmac.db|head -c 1618)
 9664	FAIL (tail -c +8805291 tests/ecmac.db|head -c 1595): [{"message":"#2: __str = new String(__obj); __str =="tostr". Actual: __str =={}"}]
-9665	FAIL (tail -c +8806887 tests/ecmac.db|head -c 1625): [{"message":"#2: function __obj(){}; __str = new String(__obj); __str =="true". Actual: __str ==[function __obj()]"}]
+9665	PASS (tail -c +8806887 tests/ecmac.db|head -c 1625)
 9666	FAIL (tail -c +8808513 tests/ecmac.db|head -c 1051): [{"message":"#1.1: e==="intostr". Actual: e==={"message":"#1: var __obj = {toString:function(){throw "intostr"}}; __str = new String(__obj) lead throwing exception"}"}]
-9667	FAIL (tail -c +8809565 tests/ecmac.db|head -c 1059): [{"message":"#1.1: e==="invalueof". Actual: e==={"message":"to_json line 407: ast_fetch_tag(a, &var) == AST_VAR_DECL"}"}]
+9667	PASS (tail -c +8809565 tests/ecmac.db|head -c 1059)
 9668	FAIL (tail -c +8810625 tests/ecmac.db|head -c 4412): [{"message":"#8: __str =new  String(.00000012345); __str =="1.2345e-7". Actual: __str ==1.2345e-07"}]
 9669	FAIL (tail -c +8815038 tests/ecmac.db|head -c 3557): [{"message":"#4: __str = new String(1.234567890); __str =="1.23456789". Actual: __str ==1.23457"}]
 9670	PASS (tail -c +8818596 tests/ecmac.db|head -c 2571)
@@ -10020,7 +10020,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10012	FAIL (tail -c +9232449 tests/ecmac.db|head -c 724): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10013	FAIL (tail -c +9233174 tests/ecmac.db|head -c 617): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10014	FAIL (tail -c +9233792 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'toLowerCase' of undefined"}]
-10015	FAIL (tail -c +9234269 tests/ecmac.db|head -c 2159): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __lowerCase = new String(__obj).toLowerCase(); __expected ="undefined"; __lowerCase.length === __expected.length. Actual: 45"}]
+10015	PASS (tail -c +9234269 tests/ecmac.db|head -c 2159)
 10016	PASS (tail -c +9236429 tests/ecmac.db|head -c 1264)
 10017	FAIL (tail -c +9237694 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'toLowerCase' of undefined"}]
 10018	FAIL (tail -c +9238298 tests/ecmac.db|head -c 674): [{"message":"cannot read property 'toLowerCase' of undefined"}]
@@ -10041,7 +10041,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10033	FAIL (tail -c +9253158 tests/ecmac.db|head -c 776): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10034	FAIL (tail -c +9253935 tests/ecmac.db|head -c 671): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10035	FAIL (tail -c +9254607 tests/ecmac.db|head -c 530): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
-10036	FAIL (tail -c +9255138 tests/ecmac.db|head -c 2203): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __lowerCase = new String(__obj).toLocaleLowerCase(); __expected ="undefined"; __lowerCase.length === __expected.length. Actual: 45"}]
+10036	PASS (tail -c +9255138 tests/ecmac.db|head -c 2203)
 10037	PASS (tail -c +9257342 tests/ecmac.db|head -c 1319)
 10038	FAIL (tail -c +9258662 tests/ecmac.db|head -c 633): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
 10039	FAIL (tail -c +9259296 tests/ecmac.db|head -c 718): [{"message":"cannot read property 'toLocaleLowerCase' of undefined"}]
@@ -10062,7 +10062,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10054	FAIL (tail -c +9273751 tests/ecmac.db|head -c 722): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10055	FAIL (tail -c +9274474 tests/ecmac.db|head -c 617): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10056	FAIL (tail -c +9275092 tests/ecmac.db|head -c 477): [{"message":"cannot read property 'toUpperCase' of undefined"}]
-10057	FAIL (tail -c +9275570 tests/ecmac.db|head -c 2159): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __upperCase = new String(__obj).toUpperCase(); __expected ="UNDEFINED"; __upperCase.length === __expected.length. Actual: 45"}]
+10057	PASS (tail -c +9275570 tests/ecmac.db|head -c 2159)
 10058	PASS (tail -c +9277730 tests/ecmac.db|head -c 1264)
 10059	FAIL (tail -c +9278995 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'toUpperCase' of undefined"}]
 10060	FAIL (tail -c +9279599 tests/ecmac.db|head -c 671): [{"message":"cannot read property 'toUpperCase' of undefined"}]
@@ -10083,7 +10083,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10075	FAIL (tail -c +9294439 tests/ecmac.db|head -c 777): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10076	FAIL (tail -c +9295217 tests/ecmac.db|head -c 671): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10077	FAIL (tail -c +9295889 tests/ecmac.db|head -c 530): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
-10078	FAIL (tail -c +9296420 tests/ecmac.db|head -c 2201): [{"message":"#1: __obj = {valueOf:function(){}, toString:void 0}; __lowerCase = new String(__obj).toLocaleUpperCase(); __expected ="UNDEFINED"; __lowerCase.length === __expected.length. Actual: 45"}]
+10078	PASS (tail -c +9296420 tests/ecmac.db|head -c 2201)
 10079	PASS (tail -c +9298622 tests/ecmac.db|head -c 1317)
 10080	FAIL (tail -c +9299940 tests/ecmac.db|head -c 633): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
 10081	FAIL (tail -c +9300574 tests/ecmac.db|head -c 674): [{"message":"cannot read property 'toLocaleUpperCase' of undefined"}]
