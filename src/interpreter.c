@@ -196,7 +196,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
   val_t res = V7_UNDEFINED, v1, v2;
-  double dv;
+  double d1, d2, dv;
   int i;
 
   /*
@@ -237,10 +237,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_OR:
     case AST_XOR:
     case AST_AND:
-      v1 = i_eval_expr(v7, a, pos, scope);
-      v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_number(i_num_bin_op(v7, tag, i_as_num(v7, v1),
-                              i_as_num(v7, v2)));
+      d1 = i_as_num(v7, i_eval_expr(v7, a, pos, scope));
+      d2 = i_as_num(v7, i_eval_expr(v7, a, pos, scope));
+      return v7_create_number(i_num_bin_op(v7, tag, d1, d2));
     case AST_EQ_EQ:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -425,8 +424,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           default:
             op = assign_op_map[op - AST_ASSIGN - 1];
             res = i_eval_expr(v7, a, pos, scope);
-            res = v1 = v7_double_to_value(i_num_bin_op(
-                v7, op, i_as_num(v7, v1), i_as_num(v7, res)));
+            d1 = i_as_num(v7, v1);
+            d2 = i_as_num(v7, res);
+            res = v1 = v7_double_to_value(i_num_bin_op(v7, op, d1, d2));
         }
 
         /* variables are modified where they are found in the scope chain */
