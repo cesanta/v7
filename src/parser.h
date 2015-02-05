@@ -22,6 +22,7 @@ struct v7_pstate {
   int in_function;  /* True if in a function */
   int in_loop;      /* True if in a loop */
   int in_switch;    /* True if in a switch block */
+  int in_strict;    /* True if in strict mode */
 };
 
 V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);
