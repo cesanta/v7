@@ -639,6 +639,9 @@ static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
 
 static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_WITH);
+  if (v7->pstate.in_strict) {
+    return V7_SYNTAX_ERROR;
+  }
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
   EXPECT(TOK_CLOSE_PAREN);
@@ -745,6 +748,7 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   ast_off_t start = ast_add_node(a, AST_FUNC);
   ast_off_t outer_last_var_node = v7->last_var_node;
   int saved_in_function = v7->pstate.in_function;
+  int saved_in_strict = v7->pstate.in_strict;
   v7->last_var_node = start;
   ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
   if ((reserved_name ? parse_ident_allow_reserved_words : parse_ident)(v7, a) ==
@@ -760,9 +764,12 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
   v7->pstate.in_function = 1;
   EXPECT(TOK_OPEN_CURLY);
-  parse_use_strict(v7, a);
+  if (parse_use_strict(v7, a) == V7_OK) {
+    v7->pstate.in_strict = 1;
+  }
   PARSE_ARG(body, TOK_CLOSE_CURLY);
   EXPECT(TOK_CLOSE_CURLY);
+  v7->pstate.in_strict = saved_in_strict;
   v7->pstate.in_function = saved_in_function;
   ast_set_skip(a, start, AST_END_SKIP);
   v7->last_var_node = outer_last_var_node;
