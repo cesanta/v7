@@ -7209,11 +7209,13 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, val_t this_object, int is_constructor) {
   ast_off_t end, fpos, fend, fbody;
-  val_t frame, res, v1, old_this = v7->this_object;
+  val_t frame, res, v1, args = V7_UNDEFINED, old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
   size_t name_len;
+  char buf[20];
+  int i, n;
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
@@ -7223,9 +7225,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (v7_is_cfunction(v1)) {
-    char buf[20];
-    int n, i;
-    val_t args = v7_create_array(v7);
+    args = v7_create_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       n = snprintf(buf, sizeof(buf), "%d", i);
@@ -7257,8 +7257,14 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   frame = i_prepare_call(v7, func, &fpos, &fbody, &fend);
 
+  /*
+   * TODO(mkm): don't create args array if the parser didn't see
+   * any `arguments` or `eval` identifier being referenced in the function.
+   */
+  args = v7_create_array(v7);
+
   /* scan actual and formal arguments and updates the value in the frame */
-  while (fpos < fbody) {
+  for (i = 0; fpos < fbody; i++) {
     tag = ast_fetch_tag(func->ast, &fpos);
     V7_CHECK(v7, tag == AST_IDENT);
     name = ast_get_inlined_data(func->ast, fpos, &name_len);
@@ -7266,15 +7272,28 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
     if (*pos < end) {
       res = i_eval_expr(v7, a, pos, scope);
+      if (!v7_is_undefined(args)) {
+        n = snprintf(buf, sizeof(buf), "%d", i);
+        v7_set_property(v7, args, buf, n, 0, res);
+      }
     } else {
       res = V7_UNDEFINED;
     }
+
     v7_set_property(v7, frame, name, name_len, 0, res);
   }
 
   /* evaluate trailing actual arguments for side effects */
-  while (*pos < end) {
-    i_eval_expr(v7, a, pos, scope);
+  for (;*pos < end; i++) {
+    res = i_eval_expr(v7, a, pos, scope);
+    if (!v7_is_undefined(args)) {
+      n = snprintf(buf, sizeof(buf), "%d", i);
+      v7_set_property(v7, args, buf, n, 0, res);
+    }
+  }
+
+  if (!v7_is_undefined(args)) {
+    v7_set(v7, frame, "arguments", 9, args);
   }
 
   v7->this_object = this_object;
