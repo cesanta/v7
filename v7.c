@@ -6618,7 +6618,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if (v7_is_string(v1) && v7_is_string(v2)) {
         return v7_boolean_to_value(s_cmp(v7, v1, v2) != 0);
       }
-      if (v1 == v2 & v1 == V7_TAG_NAN) {
+      if (v1 == v2 && v1 == V7_TAG_NAN) {
         return v7_boolean_to_value(1);
       }
       return v7_boolean_to_value(v1 != v2);
