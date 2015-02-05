@@ -481,6 +481,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             name = ast_get_inlined_data(a, *pos, &name_len);
             ast_move_to_children(a, pos);
             v1 = i_eval_expr(v7, a, pos, scope);
+            if (v7->strict_mode &&
+                v7_get_own_property(res, name, name_len) != NULL) {
+              /* Ideally this should be thrown at parse time */
+              throw_exception(v7, "SyntaxError",
+                              "duplicate data property in object literal "
+                              "not allowed in strict mode");
+            }
             v7_set_property(v7, res, name, name_len, 0, v1);
             break;
           case AST_GETTER:

@@ -6383,11 +6383,15 @@ static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
 static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SCRIPT);
   ast_off_t outer_last_var_node = v7->last_var_node;
+  int saved_in_strict = v7->pstate.in_strict;
   v7->last_var_node = start;
   ast_modify_skip(a, start, 1, AST_FUNC_FIRST_VAR_SKIP);
-  parse_use_strict(v7, a);
+  if (parse_use_strict(v7, a) == V7_OK) {
+    v7->pstate.in_strict = 1;
+  }
   PARSE_ARG(body, TOK_END_OF_INPUT);
   ast_set_skip(a, start, AST_END_SKIP);
+  v7->pstate.in_strict = saved_in_strict;
   v7->last_var_node = outer_last_var_node;
   return V7_OK;
 }
@@ -6905,6 +6909,13 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             name = ast_get_inlined_data(a, *pos, &name_len);
             ast_move_to_children(a, pos);
             v1 = i_eval_expr(v7, a, pos, scope);
+            if (v7->strict_mode &&
+                v7_get_own_property(res, name, name_len) != NULL) {
+              /* Ideally this should be thrown at parse time */
+              throw_exception(v7, "SyntaxError",
+                              "duplicate data property in object literal "
+                              "not allowed in strict mode");
+            }
             v7_set_property(v7, res, name, name_len, 0, v1);
             break;
           case AST_GETTER:
