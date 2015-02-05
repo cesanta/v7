@@ -173,6 +173,8 @@ struct v7 {
   struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
+  int strict_mode;  /* true if currently in strict mode */
+
   jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
   /* Handle implementation errors that shouldn't be caught from JS */
   jmp_buf abort_jmp_buf;

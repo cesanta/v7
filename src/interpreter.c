@@ -518,6 +518,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return v7_create_boolean(0);
     case AST_NULL:
       return V7_NULL;
+    case AST_USE_STRICT:
     case AST_NOP:
     case AST_UNDEFINED:
       return V7_UNDEFINED;
@@ -551,6 +552,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_FUNC:
       {
         val_t func = v7_create_function(v7);
+        ast_off_t fbody;
         struct v7_function *funcp = v7_to_function(func);
         funcp->scope = v7_to_object(scope);
         funcp->ast = a;
@@ -562,6 +564,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           v7_set_property(v7, scope, name, name_len, 0, func);
         }
         *pos = ast_get_skip(a, funcp->ast_off + 1, AST_END_SKIP);
+        fbody = ast_get_skip(a, funcp->ast_off + 1, AST_FUNC_BODY_SKIP);
+        if (fbody < *pos && (tag = ast_fetch_tag(a, &fbody)) == AST_USE_STRICT) {
+          funcp->attributes |= V7_FUNCTION_STRICT;
+        }
         return func;
       }
     case AST_CALL:
@@ -723,7 +729,7 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
     case AST_INDEX:
       return i_eval_expr(v7, a, &pos, scope);
     default:
-      return v7->global_object;
+      return V7_UNDEFINED;
   }
 }
 
@@ -792,11 +798,17 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
 
 V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
                                    val_t frame, ast_off_t body, ast_off_t end) {
+  int saved_strict_mode = v7->strict_mode;
   enum i_break brk = B_RUN;
-  val_t res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
+  val_t res;
+  if (func->attributes & V7_FUNCTION_STRICT) {
+    v7->strict_mode = 1;
+  }
+  res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
   if (brk != B_RETURN) {
     res = V7_UNDEFINED;
   }
+  v7->strict_mode = saved_strict_mode;
   return res;
 }
 
@@ -837,6 +849,13 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                       "Cannot set a primitive value as object prototype");
     }
     v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
+  } else if (v7_is_undefined(this_object) &&
+             !(func->attributes & V7_FUNCTION_STRICT)) {
+    /*
+     * null and undefined are replaced with `global` in non-strict mode,
+     * as per ECMA-262 6th, 19.2.3.3.
+     */
+    this_object = v7->global_object;
   }
 
   frame = i_prepare_call(v7, func, &fpos, &fbody, &fend);
@@ -881,18 +900,26 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
 static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, enum i_break *brk) {
-  ast_off_t start = *pos;
+  ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
   ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch, fvar;
+  int saved_strict_mode = v7->strict_mode;
 
   switch (tag) {
     case AST_SCRIPT: /* TODO(mkm): push up */
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
       ast_move_to_children(a, pos);
+      maybe_strict = *pos;
+      if (*pos < end && (tag = ast_fetch_tag(a, &maybe_strict)) == AST_USE_STRICT) {
+        v7->strict_mode = 1;
+        *pos = maybe_strict;
+      }
       i_populate_local_vars(v7, a, start, fvar, scope);
-      return i_eval_stmts(v7, a, pos, end, scope, brk);
+      res = i_eval_stmts(v7, a, pos, end, scope, brk);
+      v7->strict_mode = saved_strict_mode;
+      return res;
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       end_true = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);

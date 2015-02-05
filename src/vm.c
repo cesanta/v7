@@ -243,6 +243,7 @@ v7_val_t v7_create_function(struct v7 *v7) {
   }
   f->properties = NULL;
   f->scope = NULL;
+  f->attributes = 0;
   /* TODO(mkm): lazily create these properties on first access */
   proto = v7_create_object(v7);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);

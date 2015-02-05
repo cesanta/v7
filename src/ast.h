@@ -124,6 +124,8 @@ enum ast_tag {
   AST_NULL,
   AST_UNDEFINED,
 
+  AST_USE_STRICT,
+
   AST_MAX_TAG
 };
 
