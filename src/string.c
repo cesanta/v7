@@ -74,7 +74,7 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t to_string(struct v7 *v7, val_t v) {
-  char buf[100], *p = v7_to_json(v7, v, buf, sizeof(buf));
+  char buf[100], *p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
   val_t res;
 
   if (p[0] == '"') {
