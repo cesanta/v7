@@ -703,7 +703,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_INSTANCEOF:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      if (!v7_is_function(v2)) {
+      if (!v7_is_function(v2) && !v7_is_cfunction(i_value_of(v7, v2))) {
         throw_exception(v7, "TypeError",
                         "Expecting a function in instanceof check");
       }
@@ -824,6 +824,9 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
   v1 = i_eval_expr(v7, a, pos, scope);
+  if (!v7_is_cfunction(v1) && !v7_is_function(v1)) {
+    v1 = i_value_of(v7, v1);
+  }
 
   if (v7_is_cfunction(v1)) {
     char buf[20];

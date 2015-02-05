@@ -7097,7 +7097,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_INSTANCEOF:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      if (!v7_is_function(v2)) {
+      if (!v7_is_function(v2) && !v7_is_cfunction(i_value_of(v7, v2))) {
         throw_exception(v7, "TypeError",
                         "Expecting a function in instanceof check");
       }
@@ -7218,6 +7218,9 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
   v1 = i_eval_expr(v7, a, pos, scope);
+  if (!v7_is_cfunction(v1) && !v7_is_function(v1)) {
+    v1 = i_value_of(v7, v1);
+  }
 
   if (v7_is_cfunction(v1)) {
     char buf[20];
@@ -9591,7 +9594,8 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 
 
 static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_length(v7, args) <= 0 ?
+    v7_create_number(0.0) : v7_array_at(v7, args, 0);
   val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
@@ -9665,22 +9669,18 @@ static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_number(struct v7 *v7) {
-  val_t num, ctor = v7_create_cfunction(Number_ctor);
+  val_t num = create_object(v7, v7->number_prototype);
+  val_t ctor = v7_create_cfunction(Number_ctor);
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
                        V7_PROPERTY_DONT_DELETE;
-  v7_exec(v7, &num, "function Number(v) { "
-          "  Object.defineProperty(this, '__ctor',"
-          "                        {value:__Number_ctor});"
-          "   return this.__ctor(v)}; "
-          "Number");
-  v7->number_prototype = v7_get(v7, num, "prototype", 9);
-  v7_get_property(num, "prototype", 9)->attributes |= V7_PROPERTY_READ_ONLY;
-
-  v7_set_property(v7, v7->global_object, "__Number_ctor", 13, attrs, ctor);
+  v7_set_property(v7, num, "", 0, V7_PROPERTY_HIDDEN, ctor);
+  v7_set_property(v7, num, "prototype", 9, attrs, v7->number_prototype);
+  v7_set_property(v7, v7->number_prototype, "constructor", 11, attrs, num);
+  v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
-  set_cfunc_prop(v7, v7->number_prototype, "toExponentioal", Number_toExp);
+  set_cfunc_prop(v7, v7->number_prototype, "toExponential", Number_toExp);
   set_cfunc_prop(v7, v7->number_prototype, "valueOf", Number_valueOf);
   set_cfunc_prop(v7, v7->number_prototype, "toString", Number_toString);
 
