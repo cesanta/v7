@@ -6,7 +6,7 @@ CFLAGS = -W -Wall -I../.. $(CFLAGS_EXTRA) $(MODULE_CFLAGS)
 all: $(PROG)
 
 $(PROG): $(SOURCES)
-	$(CC) $(SOURCES) -o $@ $(CFLAGS)
+	$(CC) $(SOURCES) -o $@ $(CFLAGS) -lm
 
 $(PROG).exe: $(SOURCES)
 	cl $(SOURCES) /I../.. /MD /Fe$@
