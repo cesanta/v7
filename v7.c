@@ -7641,10 +7641,11 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
-  val_t frame, res, saved_this = v7->this_object;
+  val_t frame, res, arguments, saved_this = v7->this_object;
   char *name;
   size_t name_len;
-  int i;
+  char buf[20];
+  int i, n;
 
   if (v7_is_cfunction(f)) {
     return v7_to_cfunction(f)(v7, this_object, args);
@@ -7655,13 +7656,27 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   func = v7_to_function(f);
   frame = i_prepare_call(v7, func, &pos, &body, &end);
 
+  /*
+   * TODO(mkm): don't create arguments array if the parser didn't see
+   * any `arguments` or `eval` identifier being referenced in the function.
+   */
+  arguments = v7_create_array(v7);
+
   for (i = 0; pos < body; i++) {
     tag = ast_fetch_tag(func->ast, &pos);
     V7_CHECK(v7, tag == AST_IDENT);
     name = ast_get_inlined_data(func->ast, pos, &name_len);
     ast_move_to_children(func->ast, &pos);
-    v7_set_property(v7, frame, name, name_len, 0,
-                    v7_array_at(v7, args, i));
+    res = v7_array_at(v7, args, i);
+    v7_set_property(v7, frame, name, name_len, 0, res);
+    if (!v7_is_undefined(arguments)) {
+      n = snprintf(buf, sizeof(buf), "%d", i);
+      v7_set_property(v7, arguments, buf, n, 0, res);
+    }
+  }
+
+  if (!v7_is_undefined(arguments)) {
+    v7_set(v7, frame, "arguments", 9, arguments);
   }
 
   v7->this_object = this_object;
