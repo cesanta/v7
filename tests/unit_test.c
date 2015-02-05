@@ -623,7 +623,10 @@ static const char *test_parser(void) {
     "var \\u0076, _\\u0077, a\\u0078b, жабоскрипт;",
     "a.in + b.for",
     "var x = { null: 5, else: 4 }",
-    "lab: x=1"
+    "lab: x=1",
+    "'use strict';0;'use strict';",
+    "'use strict';if(0){'use strict';}",
+    "(function(){'use strict';0;'use strict';})()"
   };
   const char *invalid[] = {
     "function(a) { return 1 }",

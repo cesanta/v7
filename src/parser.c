@@ -44,6 +44,7 @@ static enum v7_err parse_memberexpr(struct v7 *, struct ast *);
 static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int, int);
 static enum v7_err parse_block(struct v7 *, struct ast *);
 static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
+static enum v7_err parse_use_strict(struct v7 *, struct ast *);
 
 static enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
@@ -758,7 +759,10 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
   v7->pstate.in_function = 1;
-  PARSE(block);
+  EXPECT(TOK_OPEN_CURLY);
+  parse_use_strict(v7, a);
+  PARSE_ARG(body, TOK_CLOSE_CURLY);
+  EXPECT(TOK_CLOSE_CURLY);
   v7->pstate.in_function = saved_in_function;
   ast_set_skip(a, start, AST_END_SKIP);
   v7->last_var_node = outer_last_var_node;
@@ -796,11 +800,23 @@ static enum v7_err parse_body(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
+static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
+  if (v7->cur_tok == TOK_STRING_LITERAL &&
+      (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
+       strncmp(v7->tok, "'use strict'", v7->tok_len) == 0)) {
+    next_tok(v7);
+    ast_add_node(a, AST_USE_STRICT);
+    return V7_OK;
+  }
+  return V7_SYNTAX_ERROR;
+}
+
 static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SCRIPT);
   ast_off_t outer_last_var_node = v7->last_var_node;
   v7->last_var_node = start;
   ast_modify_skip(a, start, 1, AST_FUNC_FIRST_VAR_SKIP);
+  parse_use_strict(v7, a);
   PARSE_ARG(body, TOK_END_OF_INPUT);
   ast_set_skip(a, start, AST_END_SKIP);
   v7->last_var_node = outer_last_var_node;

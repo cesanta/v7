@@ -104,6 +104,8 @@ struct v7_function {
   struct v7_object *scope;    /* lexical scope of the closure */
   struct ast *ast;            /* AST, used as a byte code for execution */
   unsigned int ast_off;       /* Position of the function node in the AST */
+  unsigned int attributes;    /* Function attributes */
+#define V7_FUNCTION_STRICT    1
 };
 
 struct v7_regexp {

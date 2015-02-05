@@ -362,8 +362,10 @@ const struct ast_node_def ast_node_defs[] = {
   {"FALSE", 0, 0, 0, 0}, /* struct {} */
   {"NULL", 0, 0, 0, 0},  /* struct {} */
   {"UNDEF", 0, 0, 0, 0}, /* struct {} */
+  {"USE_STRICT", 0, 0, 0, 0},   /* struct {} */
 };
 
+V7_STATIC_ASSERT(AST_MAX_TAG < 256, ast_tag_should_fit_in_char);
 V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
 
 /*

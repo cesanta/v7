@@ -1083,10 +1083,10 @@
 1079	FAIL (tail -c +791407 tests/ecmac.db|head -c 427): ["'this' had incorrect value!"]
 1080	FAIL (tail -c +791835 tests/ecmac.db|head -c 429): [{"message":"Test case returned non-true value!"}]
 1081	FAIL (tail -c +792265 tests/ecmac.db|head -c 436): ["'this' had incorrect value!"]
-1082	FAIL (tail -c +792702 tests/ecmac.db|head -c 413): [{"message":"Test case returned non-true value!"}]
-1083	FAIL (tail -c +793116 tests/ecmac.db|head -c 417): ["'this' had incorrect value!"]
+1082	PASS (tail -c +792702 tests/ecmac.db|head -c 413)
+1083	PASS (tail -c +793116 tests/ecmac.db|head -c 417)
 1084	FAIL (tail -c +793534 tests/ecmac.db|head -c 373): [{"message":"[f] is not defined"}]
-1085	FAIL (tail -c +793908 tests/ecmac.db|head -c 379): ["'this' had incorrect value!"]
+1085	PASS (tail -c +793908 tests/ecmac.db|head -c 379)
 1086	FAIL (tail -c +794288 tests/ecmac.db|head -c 421): [{"message":"[Function] is not defined"}]
 1087	FAIL (tail -c +794710 tests/ecmac.db|head -c 410): [{"message":"[Function] is not defined"}]
 1088	FAIL (tail -c +795121 tests/ecmac.db|head -c 435): [{"message":"[Function] is not defined"}]
@@ -9672,7 +9672,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9664	FAIL (tail -c +8805291 tests/ecmac.db|head -c 1595): [{"message":"#2: __str = new String(__obj); __str =="tostr". Actual: __str =={}"}]
 9665	FAIL (tail -c +8806887 tests/ecmac.db|head -c 1625): [{"message":"#2: function __obj(){}; __str = new String(__obj); __str =="true". Actual: __str ==[function __obj()]"}]
 9666	FAIL (tail -c +8808513 tests/ecmac.db|head -c 1051): [{"message":"#1.1: e==="intostr". Actual: e==={"message":"#1: var __obj = {toString:function(){throw "intostr"}}; __str = new String(__obj) lead throwing exception"}"}]
-9667	FAIL (tail -c +8809565 tests/ecmac.db|head -c 1059): [{"message":"#1.1: e==="invalueof". Actual: e==={"message":"to_json line 406: ast_fetch_tag(a, &var) == AST_VAR_DECL"}"}]
+9667	FAIL (tail -c +8809565 tests/ecmac.db|head -c 1059): [{"message":"#1.1: e==="invalueof". Actual: e==={"message":"to_json line 407: ast_fetch_tag(a, &var) == AST_VAR_DECL"}"}]
 9668	FAIL (tail -c +8810625 tests/ecmac.db|head -c 4412): [{"message":"#8: __str =new  String(.00000012345); __str =="1.2345e-7". Actual: __str ==1.2345e-07"}]
 9669	FAIL (tail -c +8815038 tests/ecmac.db|head -c 3557): [{"message":"#4: __str = new String(1.234567890); __str =="1.23456789". Actual: __str ==1.23457"}]
 9670	PASS (tail -c +8818596 tests/ecmac.db|head -c 2571)

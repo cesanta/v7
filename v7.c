@@ -475,6 +475,8 @@ enum ast_tag {
   AST_NULL,
   AST_UNDEFINED,
 
+  AST_USE_STRICT,
+
   AST_MAX_TAG
 };
 
@@ -732,6 +734,8 @@ struct v7 {
   struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
+  int strict_mode;  /* true if currently in strict mode */
+
   jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
   /* Handle implementation errors that shouldn't be caught from JS */
   jmp_buf abort_jmp_buf;
@@ -874,6 +878,8 @@ struct v7_function {
   struct v7_object *scope;    /* lexical scope of the closure */
   struct ast *ast;            /* AST, used as a byte code for execution */
   unsigned int ast_off;       /* Position of the function node in the AST */
+  unsigned int attributes;    /* Function attributes */
+#define V7_FUNCTION_STRICT    1
 };
 
 struct v7_regexp {
@@ -4342,8 +4348,10 @@ const struct ast_node_def ast_node_defs[] = {
   {"FALSE", 0, 0, 0, 0}, /* struct {} */
   {"NULL", 0, 0, 0, 0},  /* struct {} */
   {"UNDEF", 0, 0, 0, 0}, /* struct {} */
+  {"USE_STRICT", 0, 0, 0, 0},   /* struct {} */
 };
 
+V7_STATIC_ASSERT(AST_MAX_TAG < 256, ast_tag_should_fit_in_char);
 V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
 
 /*
@@ -4840,6 +4848,7 @@ v7_val_t v7_create_function(struct v7 *v7) {
   }
   f->properties = NULL;
   f->scope = NULL;
+  f->attributes = 0;
   /* TODO(mkm): lazily create these properties on first access */
   proto = v7_create_object(v7);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
@@ -5566,6 +5575,7 @@ static enum v7_err parse_memberexpr(struct v7 *, struct ast *);
 static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int, int);
 static enum v7_err parse_block(struct v7 *, struct ast *);
 static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
+static enum v7_err parse_use_strict(struct v7 *, struct ast *);
 
 static enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
@@ -6280,7 +6290,10 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   EXPECT(TOK_CLOSE_PAREN);
   ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
   v7->pstate.in_function = 1;
-  PARSE(block);
+  EXPECT(TOK_OPEN_CURLY);
+  parse_use_strict(v7, a);
+  PARSE_ARG(body, TOK_CLOSE_CURLY);
+  EXPECT(TOK_CLOSE_CURLY);
   v7->pstate.in_function = saved_in_function;
   ast_set_skip(a, start, AST_END_SKIP);
   v7->last_var_node = outer_last_var_node;
@@ -6318,11 +6331,23 @@ static enum v7_err parse_body(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
+static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
+  if (v7->cur_tok == TOK_STRING_LITERAL &&
+      (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
+       strncmp(v7->tok, "'use strict'", v7->tok_len) == 0)) {
+    next_tok(v7);
+    ast_add_node(a, AST_USE_STRICT);
+    return V7_OK;
+  }
+  return V7_SYNTAX_ERROR;
+}
+
 static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SCRIPT);
   ast_off_t outer_last_var_node = v7->last_var_node;
   v7->last_var_node = start;
   ast_modify_skip(a, start, 1, AST_FUNC_FIRST_VAR_SKIP);
+  parse_use_strict(v7, a);
   PARSE_ARG(body, TOK_END_OF_INPUT);
   ast_set_skip(a, start, AST_END_SKIP);
   v7->last_var_node = outer_last_var_node;
@@ -6879,6 +6904,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return v7_create_boolean(0);
     case AST_NULL:
       return V7_NULL;
+    case AST_USE_STRICT:
     case AST_NOP:
     case AST_UNDEFINED:
       return V7_UNDEFINED;
@@ -6912,6 +6938,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_FUNC:
       {
         val_t func = v7_create_function(v7);
+        ast_off_t fbody;
         struct v7_function *funcp = v7_to_function(func);
         funcp->scope = v7_to_object(scope);
         funcp->ast = a;
@@ -6923,6 +6950,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           v7_set_property(v7, scope, name, name_len, 0, func);
         }
         *pos = ast_get_skip(a, funcp->ast_off + 1, AST_END_SKIP);
+        fbody = ast_get_skip(a, funcp->ast_off + 1, AST_FUNC_BODY_SKIP);
+        if (fbody < *pos && (tag = ast_fetch_tag(a, &fbody)) == AST_USE_STRICT) {
+          funcp->attributes |= V7_FUNCTION_STRICT;
+        }
         return func;
       }
     case AST_CALL:
@@ -7084,7 +7115,7 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
     case AST_INDEX:
       return i_eval_expr(v7, a, &pos, scope);
     default:
-      return v7->global_object;
+      return V7_UNDEFINED;
   }
 }
 
@@ -7153,11 +7184,17 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
 
 V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
                                    val_t frame, ast_off_t body, ast_off_t end) {
+  int saved_strict_mode = v7->strict_mode;
   enum i_break brk = B_RUN;
-  val_t res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
+  val_t res;
+  if (func->attributes & V7_FUNCTION_STRICT) {
+    v7->strict_mode = 1;
+  }
+  res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
   if (brk != B_RETURN) {
     res = V7_UNDEFINED;
   }
+  v7->strict_mode = saved_strict_mode;
   return res;
 }
 
@@ -7198,6 +7235,13 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                       "Cannot set a primitive value as object prototype");
     }
     v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
+  } else if (v7_is_undefined(this_object) &&
+             !(func->attributes & V7_FUNCTION_STRICT)) {
+    /*
+     * null and undefined are replaced with `global` in non-strict mode,
+     * as per ECMA-262 6th, 19.2.3.3.
+     */
+    this_object = v7->global_object;
   }
 
   frame = i_prepare_call(v7, func, &fpos, &fbody, &fend);
@@ -7242,18 +7286,26 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
 static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, enum i_break *brk) {
-  ast_off_t start = *pos;
+  ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
   ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch, fvar;
+  int saved_strict_mode = v7->strict_mode;
 
   switch (tag) {
     case AST_SCRIPT: /* TODO(mkm): push up */
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
       ast_move_to_children(a, pos);
+      maybe_strict = *pos;
+      if (*pos < end && (tag = ast_fetch_tag(a, &maybe_strict)) == AST_USE_STRICT) {
+        v7->strict_mode = 1;
+        *pos = maybe_strict;
+      }
       i_populate_local_vars(v7, a, start, fvar, scope);
-      return i_eval_stmts(v7, a, pos, end, scope, brk);
+      res = i_eval_stmts(v7, a, pos, end, scope, brk);
+      v7->strict_mode = saved_strict_mode;
+      return res;
     case AST_IF:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       end_true = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
