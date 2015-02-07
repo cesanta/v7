@@ -137,6 +137,7 @@ enum v7_type {
   V7_TYPE_STRING_OBJECT,
   V7_TYPE_NUMBER_OBJECT,
   V7_TYPE_FUNCTION_OBJECT,
+  V7_TYPE_CFUNCTION_OBJECT,
   V7_TYPE_REGEXP_OBJECT,
   V7_TYPE_ARRAY_OBJECT,
   V7_TYPE_DATE_OBJECT,
@@ -156,6 +157,7 @@ struct v7 {
   val_t error_prototype;
   val_t string_prototype;
   val_t number_prototype;
+  val_t cfunction_prototype;
   val_t this_object;
 
   /*
