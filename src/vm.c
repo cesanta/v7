@@ -41,7 +41,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_FUNCTION:
       return V7_TYPE_FUNCTION_OBJECT;
     case V7_TAG_CFUNCTION:
-      return V7_TYPE_CFUNCTION_OBJECT;
+      return V7_TYPE_CFUNCTION;
     case V7_TAG_REGEXP:
       return V7_TYPE_REGEXP_OBJECT;
     default:
@@ -286,7 +286,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         const char *s2 = v7_to_string(v7, &rp->flags_string, &n2);
         return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
       }
-    case V7_TYPE_CFUNCTION_OBJECT:
+    case V7_TYPE_CFUNCTION:
       return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
