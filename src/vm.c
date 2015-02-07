@@ -127,7 +127,7 @@ v7_cfunction_t v7_to_cfunction(val_t v) {
   return (v7_cfunction_t) v7_to_pointer(v);
 }
 
-val_t v7_cfunction_to_value(v7_cfunction_t f) {
+v7_val_t v7_create_cfunction(v7_cfunction_t f) {
   union {
     void *p;
     v7_cfunction_t f;
@@ -136,15 +136,11 @@ val_t v7_cfunction_to_value(v7_cfunction_t f) {
   return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
 
-val_t v7_foreign_to_value(void *p) {
-  return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
-}
-
 void *v7_to_foreign(val_t v) {
   return v7_to_pointer(v);
 }
 
-val_t v7_boolean_to_value(int v) {
+v7_val_t v7_create_boolean(int v) {
   return (!!v) | V7_TAG_BOOLEAN;
 }
 
@@ -152,7 +148,7 @@ int v7_to_boolean(val_t v) {
   return v & 1;
 }
 
-val_t v7_double_to_value(double v) {
+v7_val_t v7_create_number(double v) {
   val_t res;
   /* not every NaN is a JS NaN */
   if (isnan(v)) {
@@ -193,22 +189,6 @@ v7_val_t v7_create_null(void) {
 
 v7_val_t v7_create_undefined(void) {
   return V7_UNDEFINED;
-}
-
-v7_val_t v7_create_cfunction(v7_cfunction_t f) {
-  return v7_cfunction_to_value(f);
-}
-
-v7_val_t v7_create_number(double num) {
-  return v7_double_to_value(num);
-}
-
-v7_val_t v7_create_boolean(int is_true) {
-  return v7_boolean_to_value(is_true);
-}
-
-v7_val_t v7_create_string(struct v7 *v7, const char *s, size_t len, int own) {
-  return v7_string_to_value(v7, s, len, own);
 }
 
 v7_val_t v7_create_array(struct v7 *v7) {
@@ -706,7 +686,7 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
 }
 
 /* Create a string */
-val_t v7_string_to_value(struct v7 *v7, const char *p, size_t len, int own) {
+v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
 
@@ -804,7 +784,7 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   if (start > (long) n) start = n;
   if (len < 0) len = 0;
   if (len > (long) n - start) len = n - start;
-  return v7_string_to_value(v7, p + start, len, 1);
+  return v7_create_string(v7, p + start, len, 1);
 }
 
 /* TODO(lsm): remove this when init_stdlib() is upgraded */

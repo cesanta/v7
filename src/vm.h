@@ -120,12 +120,7 @@ int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
 val_t v7_object_to_value(struct v7_object *);
-val_t v7_string_to_value(struct v7 *, const char *c, size_t len, int own);
 val_t v7_function_to_value(struct v7_function *);
-val_t v7_foreign_to_value(void *);
-val_t v7_boolean_to_value(int);
-val_t v7_double_to_value(double);
-val_t v7_cfunction_to_value(v7_cfunction_t);
 
 struct v7_object *v7_to_object(val_t);
 struct v7_function *v7_to_function(val_t);

@@ -44,7 +44,7 @@ static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
 
   snprintf(buf, sizeof(buf), "%d", i);
   v7_set_property(v7, res, buf, -1, 0,
-                  v7_string_to_value(v7, p->name, strlen(p->name), 1));
+                  v7_create_string(v7, p->name, strlen(p->name), 1));
 }
 
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
