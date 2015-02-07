@@ -908,6 +908,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7);
 V7_PRIVATE void init_math(struct v7 *v7);
 V7_PRIVATE void init_string(struct v7 *v7);
 V7_PRIVATE void init_number(struct v7 *v7);
+V7_PRIVATE void init_json(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 
@@ -948,6 +949,7 @@ V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
 V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
+V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
@@ -5420,7 +5422,7 @@ V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
   return 0;
 }
 
-static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
+V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
   val_t res = V7_UNDEFINED, arg = v7_array_at(v7, args, 0);
   (void) t;
   if (arg != V7_UNDEFINED) {
@@ -5488,6 +5490,7 @@ struct v7 *v7_create(void) {
     init_math(v7);
     init_string(v7);
     init_number(v7);
+    init_json(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }
@@ -9707,6 +9710,30 @@ V7_PRIVATE void init_number(struct v7 *v7) {
   v7_set_property(v7, v7->global_object, "NaN", 3, attrs, V7_TAG_NAN);
   v7_set_property(v7, v7->global_object, "isNaN", 5, V7_PROPERTY_DONT_ENUM,
                   v7_create_cfunction(n_isNaN));
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  char buf[100], *p = v7_to_json(v7, arg0, buf, sizeof(buf));
+  val_t res = v7_create_string(v7, p, strlen(p), 1);
+  (void) this_obj;
+  if (p != buf) free(p);
+  return res;
+}
+
+V7_PRIVATE void init_json(struct v7 *v7) {
+  val_t o = v7_create_object(v7);
+  unsigned flags = V7_PROPERTY_DONT_ENUM;
+
+  v7_set_property(v7, o, "stringify", 9, flags,
+                  v7_create_cfunction(Json_stringify));
+  v7_set_property(v7, o, "parse", 5, flags, v7_create_cfunction(Std_eval));
+  v7_set_property(v7, v7->global_object, "JSON", 4, 0, o);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited

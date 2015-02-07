@@ -133,6 +133,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7);
 V7_PRIVATE void init_math(struct v7 *v7);
 V7_PRIVATE void init_string(struct v7 *v7);
 V7_PRIVATE void init_number(struct v7 *v7);
+V7_PRIVATE void init_json(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 
@@ -173,6 +174,7 @@ V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
 V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
+V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);

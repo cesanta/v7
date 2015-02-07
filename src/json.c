@@ -5,17 +5,21 @@
 
 #include "internal.h"
 
-V7_PRIVATE enum v7_err Json_stringify(struct v7_c_func_arg *cfa) {
-  v7_push_string(cfa->v7, "implement me", 12, 0);
-  /* TODO(lsm): implement JSON.stringify */
-  return V7_OK;
+static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  char buf[100], *p = v7_to_json(v7, arg0, buf, sizeof(buf));
+  val_t res = v7_create_string(v7, p, strlen(p), 1);
+  (void) this_obj;
+  if (p != buf) free(p);
+  return res;
 }
 
-V7_PRIVATE void init_json(void) {
-  SET_METHOD(s_json, "stringify", Json_stringify);
+V7_PRIVATE void init_json(struct v7 *v7) {
+  val_t o = v7_create_object(v7);
+  unsigned flags = V7_PROPERTY_DONT_ENUM;
 
-  v7_set_class(&s_json, V7_CLASS_OBJECT);
-  s_json.ref_count = 1;
-
-  SET_RO_PROP_V(s_global, "JSON", s_json);
+  v7_set_property(v7, o, "stringify", 9, flags,
+                  v7_create_cfunction(Json_stringify));
+  v7_set_property(v7, o, "parse", 5, flags, v7_create_cfunction(Std_eval));
+  v7_set_property(v7, v7->global_object, "JSON", 4, 0, o);
 }
