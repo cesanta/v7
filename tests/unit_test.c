@@ -151,7 +151,7 @@ static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
   for (i = 0; i < v7_array_length(v7, args); i++) {
     sum += v7_to_double(v7_array_at(v7, args, i));
   }
-  return v7_double_to_value(sum);
+  return v7_create_number(sum);
 }
 
 static const char *test_native_functions(void) {
@@ -1328,17 +1328,17 @@ static const char *test_strings(void) {
 
   v7 = v7_create();
 
-  s = v7_string_to_value(v7, "hi", 2, 1);
+  s = v7_create_string(v7, "hi", 2, 1);
   ASSERT(memcmp(&s, "\x02\x68\x69\x00\x00\x00\xfa\xff", sizeof(s)) == 0);
   ASSERT(v7->owned_strings.len == 0);
   ASSERT(v7->foreign_strings.len == 0);
 
-  s = v7_string_to_value(v7, "longer one", 10, 1);
+  s = v7_create_string(v7, "longer one", 10, 1);
   ASSERT(v7->owned_strings.len == 11);
   ASSERT(memcmp(v7->owned_strings.buf, "\x0alonger one", 11) == 0);
   ASSERT(memcmp(&s, "\x00\x00\x00\x00\x00\x00\xf9\xff", sizeof(s)) == 0);
 
-  s = v7_string_to_value(v7, "with embedded \x00 one", 19, 1);
+  s = v7_create_string(v7, "with embedded \x00 one", 19, 1);
 
   ASSERT(v7->owned_strings.len == 31);
   ASSERT(memcmp(&s, "\x0b\x00\x00\x00\x00\x00\xf9\xff", sizeof(s)) == 0);

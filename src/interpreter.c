@@ -42,7 +42,7 @@ static val_t create_exception(struct v7 *v7, const char *ex, const char *msg) {
   }
   snprintf(buf, sizeof(buf), "new %s(this)", ex);
   v7->creating_exception++;
-  v7_exec_with(v7, &e, buf, v7_string_to_value(v7, msg, strlen(msg), 1));
+  v7_exec_with(v7, &e, buf, v7_create_string(v7, msg, strlen(msg), 1));
   v7->creating_exception--;
   return e;
 }
@@ -244,22 +244,22 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       if (v7_is_string(v1) && v7_is_string(v2)) {
-        return v7_boolean_to_value(s_cmp(v7, v1, v2) == 0);
+        return v7_create_boolean(s_cmp(v7, v1, v2) == 0);
       }
       if (v1 == v2 && v1 == V7_TAG_NAN) {
-        return v7_boolean_to_value(0);
+        return v7_create_boolean(0);
       }
-      return v7_boolean_to_value(v1 == v2);
+      return v7_create_boolean(v1 == v2);
     case AST_NE_NE:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
       if (v7_is_string(v1) && v7_is_string(v2)) {
-        return v7_boolean_to_value(s_cmp(v7, v1, v2) != 0);
+        return v7_create_boolean(s_cmp(v7, v1, v2) != 0);
       }
       if (v1 == v2 && v1 == V7_TAG_NAN) {
-        return v7_boolean_to_value(1);
+        return v7_create_boolean(1);
       }
-      return v7_boolean_to_value(v1 != v2);
+      return v7_create_boolean(v1 != v2);
     case AST_EQ:
     case AST_NE:
     case AST_LT:
@@ -270,12 +270,12 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v2 = i_value_of(v7, i_eval_expr(v7, a, pos, scope));
       if (tag == AST_EQ || tag == AST_NE) {
         if (((v7_is_object(v1) || v7_is_object(v2)) && v1 == v2)) {
-          return v7_boolean_to_value(tag == AST_EQ);
+          return v7_create_boolean(tag == AST_EQ);
         } else if (v7_is_undefined(v1) || v7_is_null(v1)) {
-          return v7_boolean_to_value((tag != AST_EQ) ^
+          return v7_create_boolean((tag != AST_EQ) ^
                                      (v7_is_undefined(v2) || v7_is_null(v2)));
         } else if (v7_is_undefined(v2) || v7_is_null(v2)) {
-          return v7_boolean_to_value((tag != AST_EQ) ^
+          return v7_create_boolean((tag != AST_EQ) ^
                                      (v7_is_undefined(v1) || v7_is_null(v1)));
         }
       }
@@ -328,10 +328,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_boolean_to_value(!(int) v7_is_true(v7, v1));
+      return v7_create_boolean(!(int) v7_is_true(v7, v1));
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_double_to_value(~(int) i_as_num(v7, v1));
+      return v7_create_number(~(int) i_as_num(v7, v1));
     case AST_ASSIGN:
     case AST_REM_ASSIGN:
     case AST_MUL_ASSIGN:
@@ -389,18 +389,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
         switch (op) {
           case AST_PREINC:
-            v1 = res = v7_double_to_value(i_as_num(v7, v1) + 1.0);
+            v1 = res = v7_create_number(i_as_num(v7, v1) + 1.0);
             break;
           case AST_PREDEC:
-            v1 = res = v7_double_to_value(i_as_num(v7, v1) - 1.0);
+            v1 = res = v7_create_number(i_as_num(v7, v1) - 1.0);
             break;
           case AST_POSTINC:
             res = i_value_of(v7, v1);
-            v1 = v7_double_to_value(i_as_num(v7, v1) + 1.0);
+            v1 = v7_create_number(i_as_num(v7, v1) + 1.0);
             break;
           case AST_POSTDEC:
             res = i_value_of(v7, v1);
-            v1 = v7_double_to_value(i_as_num(v7, v1) - 1.0);
+            v1 = v7_create_number(i_as_num(v7, v1) - 1.0);
             break;
           case AST_ASSIGN:
             v1 = res = i_eval_expr(v7, a, pos, scope);
@@ -418,7 +418,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
               v1 = res = s_concat(v7, v1, res);
               break;
             }
-            res = v1 = v7_double_to_value(i_num_bin_op(
+            res = v1 = v7_create_number(i_num_bin_op(
                 v7, AST_ADD, i_as_num(v7, v1), i_as_num(v7, res)));
             break;
           default:
@@ -426,7 +426,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             res = i_eval_expr(v7, a, pos, scope);
             d1 = i_as_num(v7, v1);
             d2 = i_as_num(v7, res);
-            res = v1 = v7_double_to_value(i_num_bin_op(v7, op, d1, d2));
+            res = v1 = v7_create_number(i_num_bin_op(v7, op, d1, d2));
         }
 
         /* variables are modified where they are found in the scope chain */
@@ -599,7 +599,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v7_stringify_value(v7, v1, buf, sizeof(buf));
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_boolean_to_value(v7_get_property(v2, buf, -1) != NULL);
+      return v7_create_boolean(v7_get_property(v2, buf, -1) != NULL);
     case AST_VAR:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -642,23 +642,23 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             ast_move_to_children(a, &peek);
             *pos = peek;
             /* TODO(mkm): use interned strings*/
-            return v7_string_to_value(v7, "undefined", 9, 1);
+            return v7_create_string(v7, "undefined", 9, 1);
           }
         }
         /* for some reason lcov doesn't mark the following lines as executing */
         res = i_eval_expr(v7, a, pos, scope);  /* LCOV_EXCL_LINE */
         switch (val_type(v7, res)) {           /* LCOV_EXCL_LINE */
           case V7_TYPE_NUMBER:
-            return v7_string_to_value(v7, "number", 6, 1);
+            return v7_create_string(v7, "number", 6, 1);
           case V7_TYPE_STRING:
-            return v7_string_to_value(v7, "string", 6, 1);
+            return v7_create_string(v7, "string", 6, 1);
           case V7_TYPE_BOOLEAN:
-            return v7_string_to_value(v7, "boolean", 7, 1);
+            return v7_create_string(v7, "boolean", 7, 1);
           case V7_TYPE_FUNCTION_OBJECT:
           case V7_TYPE_CFUNCTION_OBJECT:
-            return v7_string_to_value(v7, "function", 8, 1);
+            return v7_create_string(v7, "function", 8, 1);
           default:
-            return v7_string_to_value(v7, "object", 6, 1);
+            return v7_create_string(v7, "object", 6, 1);
         }
       }
     case AST_DELETE:
@@ -689,17 +689,17 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           default:
             *pos = start;
             i_eval_expr(v7, a, pos, scope);
-            return v7_boolean_to_value(1);
+            return v7_create_boolean(1);
         }
 
         prop = v7_get_property(lval, name, name_len);
         if (prop != NULL) {
           if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
-            return v7_boolean_to_value(0);
+            return v7_create_boolean(0);
           }
           v7_del_property(lval, name, name_len);
         }
-        return v7_boolean_to_value(1);
+        return v7_create_boolean(1);
       }
     case AST_INSTANCEOF:
       v1 = i_eval_expr(v7, a, pos, scope);
@@ -1078,7 +1078,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
           }
-          key = v7_string_to_value(v7, p->name, strlen(p->name), 1);
+          key = v7_create_string(v7, p->name, strlen(p->name), 1);
           if ((var = v7_get_property(scope, name, name_len)) != NULL) {
             var->value = key;
           } else {
@@ -1319,7 +1319,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   }
   if (parse(v7, a, src, 1) != V7_OK) {
     v7_exec_with(v7, &r, "new SyntaxError(this)",
-                 v7_string_to_value(v7, v7->error_msg,
+                 v7_create_string(v7, v7->error_msg,
                                     strlen(v7->error_msg), 1));
     err = V7_SYNTAX_ERROR;
     goto cleanup;
