@@ -7049,6 +7049,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           case V7_TYPE_BOOLEAN:
             return v7_string_to_value(v7, "boolean", 7, 1);
           case V7_TYPE_FUNCTION_OBJECT:
+          case V7_TYPE_CFUNCTION_OBJECT:
             return v7_string_to_value(v7, "function", 8, 1);
           default:
             return v7_string_to_value(v7, "object", 6, 1);
