@@ -29,6 +29,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->number_prototype)) {
         return V7_TYPE_NUMBER_OBJECT;
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->cfunction_prototype)) {
+        return V7_TYPE_CFUNCTION_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -288,6 +291,9 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       }
     case V7_TYPE_CFUNCTION:
       return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
+    case V7_TYPE_CFUNCTION_OBJECT:
+      v = i_value_of(v7, v);
+      return v_sprintf_s(buf, size, "Function cfunc_%p", v7_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
@@ -591,6 +597,19 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
   return -1;
 }
 
+V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
+                                               v7_cfunction_t f) {
+  val_t obj = create_object(v7, v7->cfunction_prototype);
+  v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
+  return obj;
+}
+
+V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
+                                  v7_cfunction_t f) {
+  return v7_set_property(v7, o, name, strlen(name), 0,
+                         v7_create_cfunction_object(v7, f));
+}
+
 V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
                               v7_cfunction_t f) {
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
@@ -867,6 +886,7 @@ struct v7 *v7_create(void) {
     v7->boolean_prototype = v7_create_object(v7);
     v7->string_prototype = v7_create_object(v7);
     v7->number_prototype = v7_create_object(v7);
+    v7->cfunction_prototype = v7_create_object(v7);
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
 
