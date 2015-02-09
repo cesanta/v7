@@ -1236,7 +1236,7 @@
 1232	FAIL (tail -c +878218 tests/ecmac.db|head -c 580): [{"message":"Test case returned non-true value!"}]
 1233	FAIL (tail -c +878799 tests/ecmac.db|head -c 593): [{"message":"Test case returned non-true value!"}]
 1234	FAIL (tail -c +879393 tests/ecmac.db|head -c 580): [{"message":"Test case returned non-true value!"}]
-1235	FAIL (tail -c +879974 tests/ecmac.db|head -c 824): [{"message":"Test case returned non-true value!"}]
+1235	PASS (tail -c +879974 tests/ecmac.db|head -c 824)
 1236	FAIL (tail -c +880799 tests/ecmac.db|head -c 586): [{"message":"Test case returned non-true value!"}]
 1237	PASS (tail -c +881386 tests/ecmac.db|head -c 917)
 1238	PASS (tail -c +882304 tests/ecmac.db|head -c 708)
