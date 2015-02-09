@@ -749,6 +749,7 @@ struct v7 {
   jmp_buf label_jmp_buf;  /* Target for non local (labeled) breaks */
   char *label;            /* Inner label */
   size_t label_len;       /* Inner label length */
+  int lab_cont; /* True if re-entering a loop with labeled continue */
 
   struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
 
@@ -6457,7 +6458,8 @@ enum i_break {
 enum jmp_type {
   NO_JMP,
   THROW_JMP,
-  BREAK_JMP
+  BREAK_JMP,
+  CONTINUE_JMP
 };
 
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
@@ -7406,6 +7408,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       *pos = end;
       break;
     case AST_WHILE:
+      v7->lab_cont = 0;
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       cond = *pos;
@@ -7435,6 +7438,11 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       iter_end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
       ast_move_to_children(a, pos);
+      /* skip to condition if coming from a labeled continue */
+      if (v7->lab_cont) {
+        *pos = iter_end;
+        v7->lab_cont = 0;
+      }
       loop = *pos;
       for (;;) {
         res = i_eval_stmts(v7, a, pos, iter_end, scope, brk);
@@ -7462,7 +7470,15 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       iter_end = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
       ast_move_to_children(a, pos);
       /* initializer */
-      i_eval_expr(v7, a, pos, scope);
+      if (!v7->lab_cont) {
+        i_eval_expr(v7, a, pos, scope);
+      } else {
+        ast_skip_tree(a, pos);
+        iter = *pos;
+        ast_skip_tree(a, &iter);
+        i_eval_expr(v7, a, &iter, scope);
+        v7->lab_cont = 0;
+      }
       for (;;) {
         loop = *pos;
         if (!v7_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
@@ -7620,12 +7636,17 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * Percolate up all exceptions and labeled breaks
          * not matching the current label.
          */
+     hack:
         if ((j = sigsetjmp(v7->jmp_buf, 0)) == 0) {
           res = i_eval_stmt(v7, a, pos, scope, brk);
-        } else if (j == BREAK_JMP &&
+        } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
                    name_len == v7->label_len &&
                    memcmp(name, v7->label, name_len) == 0) {
           *pos = saved_pos;
+          if (j == CONTINUE_JMP) {
+            v7->lab_cont = 1;
+            goto hack;
+          }
           ast_skip_tree(a, pos);
         } else {
           siglongjmp(old_jmp, j);
@@ -7710,6 +7731,10 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       V7_CHECK(v7, ast_fetch_tag(a, pos) == AST_IDENT);
       v7->label = ast_get_inlined_data(a, *pos, &v7->label_len);
       siglongjmp(v7->jmp_buf, BREAK_JMP);
+    case AST_LABELED_CONTINUE:
+      V7_CHECK(v7, ast_fetch_tag(a, pos) == AST_IDENT);
+      v7->label = ast_get_inlined_data(a, *pos, &v7->label_len);
+      siglongjmp(v7->jmp_buf, CONTINUE_JMP);
     case AST_THROW:
       /* TODO(mkm): store exception value */
       v7->thrown_error = i_eval_expr(v7, a, pos, scope);
