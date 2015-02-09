@@ -838,7 +838,7 @@ V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
   return 0;
 }
 
-static val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
+V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
   val_t res = V7_UNDEFINED, arg = v7_array_at(v7, args, 0);
   (void) t;
   if (arg != V7_UNDEFINED) {
@@ -907,6 +907,7 @@ struct v7 *v7_create(void) {
     init_math(v7);
     init_string(v7);
     init_number(v7);
+    init_json(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }
