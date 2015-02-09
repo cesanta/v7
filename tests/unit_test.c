@@ -1317,6 +1317,14 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "String(new Number(42))") == V7_OK);
   ASSERT(check_value(v7, v, "\"42\""));
 
+  ASSERT(v7_exec(v7, &v, "L: for(i=0;i<10;i++){for(j=4;j<10;j++){if(i==j) break L}};i") == V7_OK);
+  ASSERT(check_value(v7, v, "4"));
+  ASSERT(v7_exec(v7, &v, "L: for(i=0;i<10;i++){M:for(j=4;j<10;j++){if(i==j) break L}};i") == V7_OK);
+  ASSERT(check_value(v7, v, "4"));
+  ASSERT(v7_exec(v7, &v, "x=0;L: for(i=0;i<10;i++){try{for(j=4;j<10;j++){if(i==j) break L}}finally{x++}};x") == V7_OK);
+  ASSERT(check_value(v7, v, "5"));
+
+
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
   return NULL;
