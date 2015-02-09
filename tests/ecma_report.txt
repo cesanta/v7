@@ -4093,7 +4093,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4085	PASS (tail -c +4562063 tests/ecmac.db|head -c 334)
 4086	PASS (tail -c +4562398 tests/ecmac.db|head -c 334)
 4087	PASS (tail -c +4562733 tests/ecmac.db|head -c 334)
-4088	FAIL (tail -c +4563068 tests/ecmac.db|head -c 937): [{"message":"Test case returned non-true value!"}]
+4088	PASS (tail -c +4563068 tests/ecmac.db|head -c 937)
 4089	FAIL (tail -c +4564006 tests/ecmac.db|head -c 975): [{"message":"Test case returned non-true value!"}]
 4090	PASS (tail -c +4564982 tests/ecmac.db|head -c 576)
 4091	PASS (tail -c +4565559 tests/ecmac.db|head -c 1905)
@@ -4107,7 +4107,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4099	PASS (tail -c +4580955 tests/ecmac.db|head -c 1922)
 4100	PASS (tail -c +4582878 tests/ecmac.db|head -c 1952)
 4101	FAIL (tail -c +4584831 tests/ecmac.db|head -c 523): [{"message":"parse error at at line 1 col 13: [ {"__proto__":]"}]
-4102	FAIL (tail -c +4585355 tests/ecmac.db|head -c 952): [{"message":"Test case returned non-true value!"}]
+4102	PASS (tail -c +4585355 tests/ecmac.db|head -c 952)
 4103	FAIL (tail -c +4586308 tests/ecmac.db|head -c 990): [{"message":"Test case returned non-true value!"}]
 4104	PASS (tail -c +4587299 tests/ecmac.db|head -c 606)
 4105	FAIL (tail -c +4587906 tests/ecmac.db|head -c 290): [{"message":"Test case returned non-true value!"}]
