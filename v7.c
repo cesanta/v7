@@ -971,6 +971,8 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj, const char *name,
                                                size_t);
+V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
+                                 val_t);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);
@@ -3325,6 +3327,14 @@ static val_t Array_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(v7_array_length(v7, this_obj));
 }
 
+static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) v7;
+  (void) args;
+  (void) this_obj;
+  /* TODO(mkm): extend or trim array */
+  return V7_UNDEFINED;
+}
+
 static int a_cmp(const void *pa, const void *pb) {
   val_t a = * (val_t *) pa, b = * (val_t *) pb;
   /* TODO(lsm): support comparison for all types, not just numbers */
@@ -3383,13 +3393,18 @@ static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_array(struct v7 *v7) {
+  val_t length = v7_create_array(v7);
+
   set_cfunc_obj_prop(v7, v7->global_object, "Array", Array_ctor);
   set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push);
   set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort);
   set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse);
   set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop);
-  v7_set_property(v7, v7->array_prototype, "length", 6, V7_PROPERTY_GETTER,
-                  v7_create_cfunction(Array_length));
+
+  v7_set(v7, length, "0", 1, v7_create_cfunction(Array_length));
+  v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
+  v7_set_property(v7, v7->array_prototype, "length", 6,
+                  V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, length);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5247,6 +5262,16 @@ int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
   return -1;
 }
 
+V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
+                                 val_t obj, val_t val) {
+  val_t setter = prop->value, args = v7_create_array(v7);
+  if (prop->attributes & V7_PROPERTY_GETTER) {
+    setter = v7_array_at(v7, prop->value, 1);
+  }
+  v7_set(v7, args, "0", 1, val);
+  v7_apply(v7, setter, obj, args);
+}
+
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
                     unsigned int attributes, v7_val_t val) {
   struct v7_property *prop;
@@ -5273,12 +5298,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     prop->name[len] = '\0';
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
-    val_t setter = prop->value, args = v7_create_array(v7);
-    if (prop->attributes & V7_PROPERTY_GETTER) {
-      setter = v7_array_at(v7, prop->value, 1);
-    }
-    v7_set(v7, args, "0", 1, val);
-    v7_apply(v7, setter, obj, args);
+    v7_invoke_setter(v7, prop, obj, val);
     return 0;
   }
   prop->value = val;
@@ -6972,6 +6992,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           prop->value = v1;
         } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
           /* nop */
+        } else if (prop != NULL && prop->attributes & V7_PROPERTY_SETTER) {
+          v7_invoke_setter(v7, prop, root, v1);
         } else {
           v7_set_property(v7, root, name, name_len, 0, v1);
         }

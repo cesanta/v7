@@ -158,6 +158,8 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(val_t obj, const char *name,
                                                size_t);
+V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
+                                 val_t);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);

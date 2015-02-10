@@ -1323,6 +1323,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "10"));
   ASSERT(v7_exec(v7, &v, "r=0;o={get x() {return 10}, set x(v){r=v}};o.x=10;r") == V7_OK);
   ASSERT(check_value(v7, v, "10"));
+  ASSERT(v7_exec(v7, &v, "g=0;function O() {}; O.prototype = {set x(v) {g=v}};o=new O;o.x=42;[g,Object.keys(o)]") == V7_OK);
+  ASSERT(check_value(v7, v, "[42,[]]"));
 
   ASSERT(v7_exec(v7, &v, "String(new Number(42))") == V7_OK);
   ASSERT(check_value(v7, v, "\"42\""));
