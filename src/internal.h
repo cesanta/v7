@@ -184,6 +184,10 @@ struct v7 {
   char error_msg[60];           /* Exception message */
   int creating_exception;  /* Avoids reentrant exception creation */
 
+  jmp_buf label_jmp_buf;  /* Target for non local (labeled) breaks */
+  char *label;            /* Inner label */
+  size_t label_len;       /* Inner label length */
+
   struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
 
   /* Parser state */

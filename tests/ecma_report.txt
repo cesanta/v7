@@ -482,11 +482,11 @@
 481	FAIL (tail -c +336999 tests/ecmac.db|head -c 424): [{"message":"#1: var regexp = /(?:)/m; regexp.multiline === true. Actual: undefined"}]
 482	FAIL (tail -c +337424 tests/ecmac.db|head -c 440): [{"message":"[RegExp] is not defined"}]
 483	PASS (tail -c +337865 tests/ecmac.db|head -c 529)
-484	FAIL (tail -c +338395 tests/ecmac.db|head -c 756): [{"message":"i_eval_expr: LABEL"}]
+484	FAIL (tail -c +338395 tests/ecmac.db|head -c 756): [{"message":"i_eval_expr: LAB_CONTINUE"}]
 485	PASS (tail -c +339152 tests/ecmac.db|head -c 227)
-486	FAIL (tail -c +339380 tests/ecmac.db|head -c 234): [{"message":"i_eval_expr: LABEL"}]
-487	FAIL (tail -c +339615 tests/ecmac.db|head -c 239): [{"message":"i_eval_expr: LABEL"}]
-488	FAIL (tail -c +339855 tests/ecmac.db|head -c 250): [{"message":"i_eval_expr: LABEL"}]
+486	PASS (tail -c +339380 tests/ecmac.db|head -c 234)
+487	PASS (tail -c +339615 tests/ecmac.db|head -c 239)
+488	PASS (tail -c +339855 tests/ecmac.db|head -c 250)
 489	PASS (tail -c +340106 tests/ecmac.db|head -c 231)
 490	PASS (tail -c +340338 tests/ecmac.db|head -c 245)
 491	PASS (tail -c +340584 tests/ecmac.db|head -c 225)
@@ -500,7 +500,7 @@
 499	PASS (tail -c +343193 tests/ecmac.db|head -c 363)
 500	PASS (tail -c +343557 tests/ecmac.db|head -c 365)
 501	PASS (tail -c +343923 tests/ecmac.db|head -c 367)
-502	FAIL (tail -c +344291 tests/ecmac.db|head -c 643): [{"message":"i_eval_expr: LABEL"}]
+502	PASS (tail -c +344291 tests/ecmac.db|head -c 643)
 503	PASS (tail -c +344935 tests/ecmac.db|head -c 507)
 504	PASS (tail -c +345443 tests/ecmac.db|head -c 494)
 505	PASS (tail -c +345938 tests/ecmac.db|head -c 492)
@@ -2658,7 +2658,7 @@
 2654	PASS (tail -c +2927207 tests/ecmac.db|head -c 2243)
 2655	FAIL (tail -c +2929451 tests/ecmac.db|head -c 1980): [{"message":"[parseInt] is not defined"}]
 2656	PASS (tail -c +2931432 tests/ecmac.db|head -c 697)
-2657	FAIL (tail -c +2932130 tests/ecmac.db|head -c 507): [{"message":"i_eval_expr: LABEL"}]
+2657	PASS (tail -c +2932130 tests/ecmac.db|head -c 507)
 2658	PASS (tail -c +2932638 tests/ecmac.db|head -c 379)
 2659	PASS (tail -c +2933018 tests/ecmac.db|head -c 359)
 2660	PASS (tail -c +2933378 tests/ecmac.db|head -c 754)
@@ -2813,10 +2813,10 @@
 2809	PASS (tail -c +3076186 tests/ecmac.db|head -c 798)
 2810	PASS (tail -c +3076985 tests/ecmac.db|head -c 876)
 2811	PASS (tail -c +3077862 tests/ecmac.db|head -c 1077)
-2812	FAIL (tail -c +3078940 tests/ecmac.db|head -c 1203): [{"message":"i_eval_expr: LABEL"}]
-2813	FAIL (tail -c +3080144 tests/ecmac.db|head -c 1199): [{"message":"i_eval_expr: LABEL"}]
-2814	FAIL (tail -c +3081344 tests/ecmac.db|head -c 1206): [{"message":"i_eval_expr: LABEL"}]
-2815	FAIL (tail -c +3082551 tests/ecmac.db|head -c 496): [{"message":"i_eval_expr: LABEL"}]
+2812	PASS (tail -c +3078940 tests/ecmac.db|head -c 1203)
+2813	PASS (tail -c +3080144 tests/ecmac.db|head -c 1199)
+2814	PASS (tail -c +3081344 tests/ecmac.db|head -c 1206)
+2815	PASS (tail -c +3082551 tests/ecmac.db|head -c 496)
 2816	FAIL (tail -c +3083048 tests/ecmac.db|head -c 1262): [{"message":"#3: __evaluated === 1. Actual:  __evaluated ===undefined"}]
 2817	PASS (tail -c +3084311 tests/ecmac.db|head -c 871)
 2818	FAIL (tail -c +3085183 tests/ecmac.db|head -c 901): [{"message":"parse error at at line 1 col 99: [ do { __condition++; if ("}]
@@ -2829,10 +2829,10 @@
 2825	PASS (tail -c +3091275 tests/ecmac.db|head -c 876)
 2826	PASS (tail -c +3092152 tests/ecmac.db|head -c 852)
 2827	PASS (tail -c +3093005 tests/ecmac.db|head -c 1065)
-2828	FAIL (tail -c +3094071 tests/ecmac.db|head -c 949): [{"message":"i_eval_expr: LABEL"}]
-2829	FAIL (tail -c +3095021 tests/ecmac.db|head -c 942): [{"message":"i_eval_expr: LABEL"}]
-2830	FAIL (tail -c +3095964 tests/ecmac.db|head -c 938): [{"message":"i_eval_expr: LABEL"}]
-2831	FAIL (tail -c +3096903 tests/ecmac.db|head -c 494): [{"message":"i_eval_expr: LABEL"}]
+2828	PASS (tail -c +3094071 tests/ecmac.db|head -c 949)
+2829	PASS (tail -c +3095021 tests/ecmac.db|head -c 942)
+2830	PASS (tail -c +3095964 tests/ecmac.db|head -c 938)
+2831	PASS (tail -c +3096903 tests/ecmac.db|head -c 494)
 2832	FAIL (tail -c +3097398 tests/ecmac.db|head -c 1307): [{"message":"#3: __evaluated === 1. Actual:  __evaluated ===undefined"}]
 2833	FAIL (tail -c +3098706 tests/ecmac.db|head -c 862): [{"message":"#2: The "while" statement returns (normal, V, empty)"}]
 2834	FAIL (tail -c +3099569 tests/ecmac.db|head -c 895): [{"message":"parse error at at line 1 col 99: [ while(__condition < 10) "}]
@@ -2862,13 +2862,13 @@
 2858	PASS (tail -c +3115805 tests/ecmac.db|head -c 3517)
 2859	PASS (tail -c +3119323 tests/ecmac.db|head -c 1827)
 2860	PASS (tail -c +3121151 tests/ecmac.db|head -c 505)
-2861	FAIL (tail -c +3121657 tests/ecmac.db|head -c 1736): [{"message":"i_eval_expr: LABEL"}]
+2861	FAIL (tail -c +3121657 tests/ecmac.db|head -c 1736): [{"message":"i_eval_expr: LAB_CONTINUE"}]
 2862	PASS (tail -c +3123394 tests/ecmac.db|head -c 499)
-2863	FAIL (tail -c +3123894 tests/ecmac.db|head -c 1704): [{"message":"i_eval_expr: LABEL"}]
+2863	FAIL (tail -c +3123894 tests/ecmac.db|head -c 1704): [{"message":"i_eval_expr: LAB_CONTINUE"}]
 2864	PASS (tail -c +3125599 tests/ecmac.db|head -c 526)
-2865	FAIL (tail -c +3126126 tests/ecmac.db|head -c 1738): [{"message":"i_eval_expr: LABEL"}]
+2865	PASS (tail -c +3126126 tests/ecmac.db|head -c 1738)
 2866	PASS (tail -c +3127865 tests/ecmac.db|head -c 511)
-2867	FAIL (tail -c +3128377 tests/ecmac.db|head -c 1706): [{"message":"i_eval_expr: LABEL"}]
+2867	PASS (tail -c +3128377 tests/ecmac.db|head -c 1706)
 2868	PASS (tail -c +3130084 tests/ecmac.db|head -c 634)
 2869	PASS (tail -c +3130719 tests/ecmac.db|head -c 1051)
 2870	PASS (tail -c +3131771 tests/ecmac.db|head -c 499)
@@ -2896,21 +2896,19 @@
 2892	PASS (tail -c +3154959 tests/ecmac.db|head -c 1236)
 2893	PASS (tail -c +3156196 tests/ecmac.db|head -c 1245)
 2894	PASS (tail -c +3157442 tests/ecmac.db|head -c 459)
-2895	FAIL (tail -c +3157902 tests/ecmac.db|head -c 2708): [{"message":"#1.1: eval("FOR1 : for(var i=1;i<2;i++){FOR1NESTED : for(var j=1;j<2;j++) { continue
-FOR1; } while(0);}") does not lead to throwing exception"}]
-2896	FAIL (tail -c +3160611 tests/ecmac.db|head -c 778): [{"message":"1.1: Appearing of continue within eval statement inside of IterationStatement yields SyntaxError"}]
-2897	FAIL (tail -c +3161390 tests/ecmac.db|head -c 639): [{"message":"i_eval_expr: LABEL"}]
-2898	FAIL (tail -c +3162030 tests/ecmac.db|head -c 624): [{"message":"i_eval_expr: LABEL"}]
+2895	FAIL (tail -c +3157902 tests/ecmac.db|head -c 2708): [{"message":"#2.1: eval("FOR2 : for(var i=1;i<2;i++){FOR2NESTED : for(var j=1;j<2;j++) { continueFOR2; } while(0);}") does not lead to throwing exception"}]
+2896	PASS (tail -c +3160611 tests/ecmac.db|head -c 778)
+2897	FAIL (tail -c +3161390 tests/ecmac.db|head -c 639): [{"message":"#1: Continue inside of try-catch nested in loop is allowed"}]
+2898	FAIL (tail -c +3162030 tests/ecmac.db|head -c 624): [{"message":"#1: Continue inside of try-catch nested in loop is allowed"}]
 2899	PASS (tail -c +3162655 tests/ecmac.db|head -c 502)
-2900	FAIL (tail -c +3163158 tests/ecmac.db|head -c 2602): [{"message":"#1.1: eval("FOR1 : for(var i=1;i<2;i++){ LABEL1 : do {var x =1;break
-FOR1;var y=2;} while(0);}") does not lead to throwing exception"}]
-2901	FAIL (tail -c +3165761 tests/ecmac.db|head -c 724): [{"message":"i_eval_expr: LABEL"}]
-2902	FAIL (tail -c +3166486 tests/ecmac.db|head -c 788): [{"message":"i_eval_expr: LABEL"}]
-2903	FAIL (tail -c +3167275 tests/ecmac.db|head -c 1036): [{"message":"i_eval_expr: LABEL"}]
-2904	FAIL (tail -c +3168312 tests/ecmac.db|head -c 1031): [{"message":"i_eval_expr: LABEL"}]
-2905	FAIL (tail -c +3169344 tests/ecmac.db|head -c 768): [{"message":"1.1: Appearing of break within eval statement inside of IterationStatement yields SyntaxError"}]
-2906	FAIL (tail -c +3170113 tests/ecmac.db|head -c 638): [{"message":"i_eval_expr: LABEL"}]
-2907	FAIL (tail -c +3170752 tests/ecmac.db|head -c 635): [{"message":"i_eval_expr: LABEL"}]
+2900	FAIL (tail -c +3163158 tests/ecmac.db|head -c 2602): [{"message":"#2.1: eval("FOR2 : for(var i=1;i<2;i++){ LABEL2 : do {var x =1;breakFOR2;var y=2;} while(0);}") does not lead to throwing exception"}]
+2901	PASS (tail -c +3165761 tests/ecmac.db|head -c 724)
+2902	PASS (tail -c +3166486 tests/ecmac.db|head -c 788)
+2903	PASS (tail -c +3167275 tests/ecmac.db|head -c 1036)
+2904	PASS (tail -c +3168312 tests/ecmac.db|head -c 1031)
+2905	PASS (tail -c +3169344 tests/ecmac.db|head -c 768)
+2906	FAIL (tail -c +3170113 tests/ecmac.db|head -c 638): [{"message":"#1: break inside of try-catch nested in loop is allowed"}]
+2907	FAIL (tail -c +3170752 tests/ecmac.db|head -c 635): [{"message":"#1: break inside of try-catch nested in loop is allowed"}]
 2908	PASS (tail -c +3171388 tests/ecmac.db|head -c 581)
 2909	FAIL (tail -c +3171970 tests/ecmac.db|head -c 1660): [{"message":"#2: eval("(function(){var x = 1;returnx;var y=2;})()") does not lead to throwing exception"}]
 2910	PASS (tail -c +3173631 tests/ecmac.db|head -c 525)
@@ -3349,7 +3347,7 @@ FOR1;var y=2;} while(0);}") does not lead to throwing exception"}]
 3343	FAIL (tail -c +3572671 tests/ecmac.db|head -c 2057): [{"message":"[URIError] is not defined"}]
 3344	FAIL (tail -c +3574729 tests/ecmac.db|head -c 2057): [{"message":"[URIError] is not defined"}]
 3345	FAIL (tail -c +3576787 tests/ecmac.db|head -c 1299): [{"message":"#0000 "}]
-3346	FAIL (tail -c +3578087 tests/ecmac.db|head -c 2269): [{"message":"i_eval_expr: LABEL"}]
+3346	FAIL (tail -c +3578087 tests/ecmac.db|head -c 2269): [{"message":"#0001-007F "}]
 3347	FAIL (tail -c +3580357 tests/ecmac.db|head -c 2265): [{"message":"#0080-07FF "}]
 3348	SKIP (tail -c +3582623 tests/ecmac.db|head -c 2673)
 3349	SKIP (tail -c +3585297 tests/ecmac.db|head -c 3030)
@@ -3425,8 +3423,8 @@ FOR1;var y=2;} while(0);}") does not lead to throwing exception"}]
 3419	FAIL (tail -c +3691082 tests/ecmac.db|head -c 1932): [{"message":"[URIError] is not defined"}]
 3420	FAIL (tail -c +3693015 tests/ecmac.db|head -c 1941): [{"message":"[URIError] is not defined"}]
 3421	FAIL (tail -c +3694957 tests/ecmac.db|head -c 2268): [{"message":"[URIError] is not defined"}]
-3422	FAIL (tail -c +3697226 tests/ecmac.db|head -c 2684): [{"message":"i_eval_expr: LABEL"}]
-3423	FAIL (tail -c +3699911 tests/ecmac.db|head -c 2078): [{"message":"i_eval_expr: LABEL"}]
+3422	FAIL (tail -c +3697226 tests/ecmac.db|head -c 2684): [{"message":"value is not a function"}]
+3423	FAIL (tail -c +3699911 tests/ecmac.db|head -c 2078): [{"message":"value is not a function"}]
 3424	FAIL (tail -c +3701990 tests/ecmac.db|head -c 2175): [{"message":"value is not a function"}]
 3425	FAIL (tail -c +3704166 tests/ecmac.db|head -c 2695): [{"message":"value is not a function"}]
 3426	FAIL (tail -c +3706862 tests/ecmac.db|head -c 2693): [{"message":"value is not a function"}]
@@ -3453,8 +3451,8 @@ FOR1;var y=2;} while(0);}") does not lead to throwing exception"}]
 3447	FAIL (tail -c +3729511 tests/ecmac.db|head -c 1941): [{"message":"[URIError] is not defined"}]
 3448	FAIL (tail -c +3731453 tests/ecmac.db|head -c 1950): [{"message":"[URIError] is not defined"}]
 3449	FAIL (tail -c +3733404 tests/ecmac.db|head -c 2277): [{"message":"[URIError] is not defined"}]
-3450	FAIL (tail -c +3735682 tests/ecmac.db|head -c 2463): [{"message":"i_eval_expr: LABEL"}]
-3451	FAIL (tail -c +3738146 tests/ecmac.db|head -c 2087): [{"message":"i_eval_expr: LABEL"}]
+3450	FAIL (tail -c +3735682 tests/ecmac.db|head -c 2463): [{"message":"value is not a function"}]
+3451	FAIL (tail -c +3738146 tests/ecmac.db|head -c 2087): [{"message":"value is not a function"}]
 3452	FAIL (tail -c +3740234 tests/ecmac.db|head -c 2184): [{"message":"value is not a function"}]
 3453	FAIL (tail -c +3742419 tests/ecmac.db|head -c 2704): [{"message":"value is not a function"}]
 3454	FAIL (tail -c +3745124 tests/ecmac.db|head -c 2702): [{"message":"value is not a function"}]
@@ -7480,7 +7478,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7472	FAIL (tail -c +7125859 tests/ecmac.db|head -c 1510): [{"message":"cannot read property 'sort' of undefined"}]
 7473	FAIL (tail -c +7127370 tests/ecmac.db|head -c 1439): [{"message":"cannot read property 'sort' of undefined"}]
 7474	FAIL (tail -c +7128810 tests/ecmac.db|head -c 486): [{"message":"#1.2: Array.sort should not eat exceptions"}]
-7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: 2.31584e+77"}]
+7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: -3.10504e+231"}]
 7476	FAIL (tail -c +7131367 tests/ecmac.db|head -c 721): [{"message":"cannot read property 'sort' of undefined"}]
 7477	FAIL (tail -c +7132089 tests/ecmac.db|head -c 902): [{"message":"cannot read property 'sort' of undefined"}]
 7478	FAIL (tail -c +7132992 tests/ecmac.db|head -c 550): [{"message":"cannot read property 'sort' of undefined"}]
@@ -9597,8 +9595,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9589	FAIL (tail -c +8714122 tests/ecmac.db|head -c 1221): [{"message":"cannot read property 'reverse' of undefined"}]
 9590	FAIL (tail -c +8715344 tests/ecmac.db|head -c 1582): [{"message":"cannot read property 'reverse' of undefined"}]
 9591	FAIL (tail -c +8716927 tests/ecmac.db|head -c 1511): [{"message":"cannot read property 'reverse' of undefined"}]
-9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: 2.31584e+77"}]
-9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: 2.31584e+77"}]
+9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: -3.10504e+231"}]
+9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: -3.10504e+231"}]
 9594	FAIL (tail -c +8722651 tests/ecmac.db|head -c 737): [{"message":"cannot read property 'reverse' of undefined"}]
 9595	FAIL (tail -c +8723389 tests/ecmac.db|head -c 936): [{"message":"cannot read property 'reverse' of undefined"}]
 9596	FAIL (tail -c +8724326 tests/ecmac.db|head -c 581): [{"message":"cannot read property 'reverse' of undefined"}]
