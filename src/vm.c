@@ -4,6 +4,7 @@
  */
 
 #include "internal.h"
+#include "gc.h"
 
 enum v7_type val_type(struct v7 *v7, val_t v) {
   if (v7_is_double(v)) {
@@ -172,7 +173,7 @@ V7_PRIVATE val_t v_get_prototype(val_t obj) {
 
 V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   /* TODO(mkm): use GC heap */
-  struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
+  struct v7_object *o = new_object(v7);
   if (o == NULL) {
     return V7_NULL;
   }
@@ -218,8 +219,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
 v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): use GC heap */
-  struct v7_function *f = (struct v7_function *) malloc(
-      sizeof(struct v7_function));
+  struct v7_function *f = new_function(v7);
   val_t proto, fval = v7_function_to_value(f);
   if (f == NULL) {
     return V7_NULL;
@@ -445,9 +445,12 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
 }
 
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
-  /* TODO(mkm): allocate from GC pool */
-  (void) v7;
-  return (struct v7_property *) calloc(1, sizeof(struct v7_property));
+  struct v7_property *p = new_property(v7);
+  p->next = NULL;
+  p->name = NULL;
+  p->value = V7_UNDEFINED;
+  p->attributes = 0;
+  return p;
 }
 
 V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
