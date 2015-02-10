@@ -537,6 +537,16 @@ int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
   return -1;
 }
 
+V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
+                                 val_t obj, val_t val) {
+  val_t setter = prop->value, args = v7_create_array(v7);
+  if (prop->attributes & V7_PROPERTY_GETTER) {
+    setter = v7_array_at(v7, prop->value, 1);
+  }
+  v7_set(v7, args, "0", 1, val);
+  v7_apply(v7, setter, obj, args);
+}
+
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
                     unsigned int attributes, v7_val_t val) {
   struct v7_property *prop;
@@ -563,12 +573,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     prop->name[len] = '\0';
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
-    val_t setter = prop->value, args = v7_create_array(v7);
-    if (prop->attributes & V7_PROPERTY_GETTER) {
-      setter = v7_array_at(v7, prop->value, 1);
-    }
-    v7_set(v7, args, "0", 1, val);
-    v7_apply(v7, setter, obj, args);
+    v7_invoke_setter(v7, prop, obj, val);
     return 0;
   }
   prop->value = val;

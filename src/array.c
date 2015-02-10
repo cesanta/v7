@@ -27,6 +27,14 @@ static val_t Array_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(v7_array_length(v7, this_obj));
 }
 
+static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
+  (void) v7;
+  (void) args;
+  (void) this_obj;
+  /* TODO(mkm): extend or trim array */
+  return V7_UNDEFINED;
+}
+
 static int a_cmp(const void *pa, const void *pb) {
   val_t a = * (val_t *) pa, b = * (val_t *) pb;
   /* TODO(lsm): support comparison for all types, not just numbers */
@@ -85,11 +93,16 @@ static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_array(struct v7 *v7) {
+  val_t length = v7_create_array(v7);
+
   set_cfunc_obj_prop(v7, v7->global_object, "Array", Array_ctor);
   set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push);
   set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort);
   set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse);
   set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop);
-  v7_set_property(v7, v7->array_prototype, "length", 6, V7_PROPERTY_GETTER,
-                  v7_create_cfunction(Array_length));
+
+  v7_set(v7, length, "0", 1, v7_create_cfunction(Array_length));
+  v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
+  v7_set_property(v7, v7->array_prototype, "length", 6,
+                  V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, length);
 }

@@ -441,6 +441,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           prop->value = v1;
         } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
           /* nop */
+        } else if (prop != NULL && prop->attributes & V7_PROPERTY_SETTER) {
+          v7_invoke_setter(v7, prop, root, v1);
         } else {
           v7_set_property(v7, root, name, name_len, 0, v1);
         }
