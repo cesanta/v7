@@ -21,10 +21,6 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #include <stddef.h>   /* For size_t */
 
 #define V7_VERSION "1.0"
@@ -44,6 +40,10 @@ struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 typedef uint64_t v7_val_t;
 
 typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct v7 *v7_create(void);
 void v7_destroy(struct v7 *);

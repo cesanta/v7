@@ -8,10 +8,6 @@
 
 #include "internal.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif  /* __cplusplus */
-
 /* TODO(mkm): remove ifdef once v7 has been moved here */
 #ifndef V7_VALUE_DEFINED
 typedef uint64_t val_t;
@@ -114,6 +110,10 @@ struct v7_regexp {
   struct slre_prog *compiled_regexp;
 };
 
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
 /* TODO(mkm): possibly replace those with macros for inlining */
 enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
@@ -187,5 +187,9 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
 
 #endif  /* VM_H_INCLUDED */

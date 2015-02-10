@@ -177,14 +177,23 @@ struct v7 {
 
   int strict_mode;  /* true if currently in strict mode */
 
+#if defined(__cplusplus)
+  ::jmp_buf jmp_buf;
+  ::jmp_buf abort_jmp_buf;
+#else
   jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
   /* Handle implementation errors that shouldn't be caught from JS */
   jmp_buf abort_jmp_buf;
+#endif
   val_t thrown_error;
   char error_msg[60];           /* Exception message */
   int creating_exception;  /* Avoids reentrant exception creation */
 
+#if defined(__cplusplus)
+  ::jmp_buf label_jmp_buf;
+#else
   jmp_buf label_jmp_buf;  /* Target for non local (labeled) breaks */
+#endif
   char *label;            /* Inner label */
   size_t label_len;       /* Inner label length */
   int lab_cont; /* True if re-entering a loop with labeled continue */
@@ -214,8 +223,16 @@ struct v7 {
                       __func__, __LINE__, #COND);                       \
   } while (0)
 
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
 V7_PRIVATE void throw_value(struct v7 *, val_t);
 V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
 
 #endif /* V7_INTERNAL_H_INCLUDED */

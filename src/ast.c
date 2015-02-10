@@ -592,7 +592,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     while (*pos < end) {
       int s;
       for (s = ast_node_defs[tag].num_skips - 1; s > 0; s--) {
-        if (*pos == ast_get_skip(a, skips, s)) {
+        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip) s)) {
           comment_at_depth(fp, "%d ->", depth + 1, s);
           break;
         }

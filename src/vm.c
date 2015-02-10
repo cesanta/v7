@@ -419,7 +419,7 @@ char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 
   if (len > (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
-    char *p = malloc(len + 1);
+    char *p = (char *) malloc(len + 1);
     to_json(v7, v, p, len + 1);
     p[len] = '\0';
     return p;
@@ -558,7 +558,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     len = strlen(name);
   }
   if (prop->name == NULL) {
-    prop->name = malloc(len + 1);
+    prop->name = (char *) malloc(len + 1);
     strncpy(prop->name, name, len);
     prop->name[len] = '\0';
   }

@@ -940,7 +940,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
-  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch, fvar;
+  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
   int saved_strict_mode = v7->strict_mode;
 
   switch (tag) {
@@ -1203,8 +1203,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * Percolate up all exceptions and labeled breaks
          * not matching the current label.
          */
-     hack:
-        if ((j = sigsetjmp(v7->jmp_buf, 0)) == 0) {
+     cont:
+        if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
           res = i_eval_stmt(v7, a, pos, scope, brk);
         } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
                    name_len == v7->label_len &&
@@ -1212,7 +1212,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           *pos = saved_pos;
           if (j == CONTINUE_JMP) {
             v7->lab_cont = 1;
-            goto hack;
+            goto cont;
           }
           ast_skip_tree(a, pos);
         } else {
@@ -1231,20 +1231,20 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
         end = ast_get_skip(a, *pos, AST_END_SKIP);
-        catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+        acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
         finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
         ast_move_to_children(a, pos);
-        if ((j = sigsetjmp(v7->jmp_buf, 0)) == 0) {
-          res = i_eval_stmts(v7, a, pos, catch, scope, brk);
-        } else if (j == THROW_JMP && catch != finally) {
+        if ((j = (enum jmp_type)  sigsetjmp(v7->jmp_buf, 0)) == 0) {
+          res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
+        } else if (j == THROW_JMP && acatch != finally) {
           val_t catch_scope = create_object(v7, scope);
-          tag = ast_fetch_tag(a, &catch);
+          tag = ast_fetch_tag(a, &acatch);
           V7_CHECK(v7, tag == AST_IDENT);
-          name = ast_get_inlined_data(a, catch, &name_len);
+          name = ast_get_inlined_data(a, acatch, &name_len);
           v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
-          ast_move_to_children(a, &catch);
+          ast_move_to_children(a, &acatch);
           memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-          res = i_eval_stmts(v7, a, &catch, finally, catch_scope, brk);
+          res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
         } else {
           percolate = 1;
         }
