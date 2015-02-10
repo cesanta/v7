@@ -17,6 +17,8 @@ V7_PRIVATE struct v7_object *new_object(struct v7 *);
 V7_PRIVATE struct v7_property *new_property(struct v7 *);
 V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
+V7_PRIVATE void gc_mark(val_t);
+
 #if defined(__cplusplus)
 }
 #endif  /* __cplusplus */

@@ -51,6 +51,8 @@ enum v7_err v7_exec(struct v7 *, v7_val_t *, const char *str);
 enum v7_err v7_exec_file(struct v7 *, v7_val_t *, const char *path);
 enum v7_err v7_exec_with(struct v7 *, v7_val_t *, const char *str, v7_val_t);
 
+void v7_gc(struct v7 *);
+
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);
 v7_val_t v7_create_cfunction(v7_cfunction_t func);
