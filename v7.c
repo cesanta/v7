@@ -51,6 +51,8 @@ enum v7_err v7_exec(struct v7 *, v7_val_t *, const char *str);
 enum v7_err v7_exec_file(struct v7 *, v7_val_t *, const char *path);
 enum v7_err v7_exec_with(struct v7 *, v7_val_t *, const char *str, v7_val_t);
 
+void v7_gc(struct v7 *);
+
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);
 v7_val_t v7_create_cfunction(v7_cfunction_t func);
@@ -1024,6 +1026,8 @@ extern "C" {
 V7_PRIVATE struct v7_object *new_object(struct v7 *);
 V7_PRIVATE struct v7_property *new_property(struct v7 *);
 V7_PRIVATE struct v7_function *new_function(struct v7 *);
+
+V7_PRIVATE void gc_mark(val_t);
 
 #if defined(__cplusplus)
 }
@@ -5665,6 +5669,13 @@ void v7_destroy(struct v7 *v7) {
  */
 
 
+#define MARK(p) (* (uintptr_t *) &(p) |= 1)
+
+/* call only on already marked values */
+#define UNMARK(p) (* (uintptr_t *) &(p)) &= ~1)
+
+#define MARKED(p) ((uintptr_t) (p) & 1)
+
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   (void) v7;
   return (struct v7_object *) malloc(sizeof(struct v7_object));
@@ -5678,6 +5689,33 @@ V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
 V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
   (void) v7;
   return (struct v7_function *) malloc(sizeof(struct v7_function));
+}
+
+V7_PRIVATE void gc_mark(val_t v) {
+  struct v7_object *obj;
+  struct v7_property *prop;
+  struct v7_property *next;
+
+  if (!v7_is_object(v)) {
+    return;
+  }
+  obj = v7_to_object(v);
+  if (MARKED(obj->properties)) return;
+
+  for ((prop = obj->properties), MARK(obj->properties);
+       prop != NULL; prop = next) {
+    gc_mark(prop->value);
+    next = prop->next;
+    MARK(prop->next);
+  }
+
+  /* function scope pointer is aliased to the object's prototype pointer */
+  gc_mark(v7_object_to_value(obj->prototype));
+}
+
+/* Perform garbage collection */
+void v7_gc(struct v7 *v7) {
+  gc_mark(v7->global_object);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
