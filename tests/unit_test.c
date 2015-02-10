@@ -762,9 +762,19 @@ static const char *test_ecmac(void) {
   for (i = 0; next_case < db + db_len; i++ ) {
     char tail_cmd[100];
     char *current_case = next_case + 1;
+    char *chap_begin = NULL, *chap_end = NULL;
+    int chap_len = 0;
     ASSERT((next_case = strchr(current_case, '\0')) != NULL);
+    if ((chap_begin = strstr(current_case, " * @path ")) != NULL) {
+      chap_begin += 9;
+      if ((chap_end = strchr(chap_begin, '\r')) != NULL ||
+          (chap_end = strchr(chap_begin, '\n')) != NULL) {
+        chap_len = chap_end - chap_begin;
+      }
+    }
     snprintf(tail_cmd, sizeof(tail_cmd),
-             "(tail -c +%lu tests/ecmac.db|head -c %lu)",
+             "%.*s (tail -c +%lu tests/ecmac.db|head -c %lu)",
+             chap_len, chap_begin == NULL ? "" : chap_begin,
              current_case - db + 1, next_case - current_case);
 
 #if 0
