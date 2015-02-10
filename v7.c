@@ -21,10 +21,6 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #include <stddef.h>   /* For size_t */
 
 #define V7_VERSION "1.0"
@@ -44,6 +40,10 @@ struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 typedef uint64_t v7_val_t;
 
 typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct v7 *v7_create(void);
 void v7_destroy(struct v7 *);
@@ -188,6 +188,10 @@ char* utfutf(char *s1, char *s2);
  * All rights reserved
  */
 
+#ifndef V7_TOKENIZER_H_INCLUDED
+#define V7_TOKENIZER_H_INCLUDED
+
+
 enum v7_tok {
   TOK_END_OF_INPUT,
   TOK_NUMBER,
@@ -303,9 +307,19 @@ enum v7_tok {
   NUM_TOKENS
 };
 
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
 V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
+
+#endif  /* V7_TOKENIZER_H_INCLUDED */
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
@@ -739,14 +753,23 @@ struct v7 {
 
   int strict_mode;  /* true if currently in strict mode */
 
+#if defined(__cplusplus)
+  ::jmp_buf jmp_buf;
+  ::jmp_buf abort_jmp_buf;
+#else
   jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
   /* Handle implementation errors that shouldn't be caught from JS */
   jmp_buf abort_jmp_buf;
+#endif
   val_t thrown_error;
   char error_msg[60];           /* Exception message */
   int creating_exception;  /* Avoids reentrant exception creation */
 
+#if defined(__cplusplus)
+  ::jmp_buf label_jmp_buf;
+#else
   jmp_buf label_jmp_buf;  /* Target for non local (labeled) breaks */
+#endif
   char *label;            /* Inner label */
   size_t label_len;       /* Inner label length */
   int lab_cont; /* True if re-entering a loop with labeled continue */
@@ -776,9 +799,17 @@ struct v7 {
                       __func__, __LINE__, #COND);                       \
   } while (0)
 
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
 V7_PRIVATE void throw_value(struct v7 *, val_t);
 V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
 
 #endif /* V7_INTERNAL_H_INCLUDED */
 /*
@@ -789,10 +820,6 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 #ifndef VM_H_INCLUDED
 #define VM_H_INCLUDED
 
-
-#if defined(__cplusplus)
-extern "C" {
-#endif  /* __cplusplus */
 
 /* TODO(mkm): remove ifdef once v7 has been moved here */
 #ifndef V7_VALUE_DEFINED
@@ -896,6 +923,10 @@ struct v7_regexp {
   struct slre_prog *compiled_regexp;
 };
 
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
 /* TODO(mkm): possibly replace those with macros for inlining */
 enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
@@ -969,6 +1000,10 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
 
 #endif  /* VM_H_INCLUDED */
 /*
@@ -1076,9 +1111,23 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *replace,
  * All rights reserved
  */
 
+#ifndef V7_VARINT_H_INCLUDED
+#define V7_VARINT_H_INCLUDED
+
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  /* __cplusplus */
+
 V7_PRIVATE int encode_varint(size_t len, unsigned char *p);
 V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen);
 V7_PRIVATE int calc_llen(size_t len);
+
+#if defined(__cplusplus)
+}
+#endif  /* __cplusplus */
+
+#endif  /* V7_VARINT_H_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -4635,7 +4684,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     while (*pos < end) {
       int s;
       for (s = ast_node_defs[tag].num_skips - 1; s > 0; s--) {
-        if (*pos == ast_get_skip(a, skips, s)) {
+        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip) s)) {
           comment_at_depth(fp, "%d ->", depth + 1, s);
           break;
         }
@@ -5080,7 +5129,7 @@ char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 
   if (len > (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
-    char *p = malloc(len + 1);
+    char *p = (char *) malloc(len + 1);
     to_json(v7, v, p, len + 1);
     p[len] = '\0';
     return p;
@@ -5219,7 +5268,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     len = strlen(name);
   }
   if (prop->name == NULL) {
-    prop->name = malloc(len + 1);
+    prop->name = (char *) malloc(len + 1);
     strncpy(prop->name, name, len);
     prop->name[len] = '\0';
   }
@@ -5970,6 +6019,9 @@ enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
 
 static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
                                  int level, ast_off_t pos) {
+
+#define NONE {(enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0}
+
   struct {
     int len, left_to_right;
     struct {
@@ -5977,18 +6029,18 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
       enum ast_tag start_ast;
     } parts[2];
   } levels[] = {
-    {1, 0, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, {0, 0, 0}}},
-    {1, 0, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, {0, 0, 0}}},
-    {1, 1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, {0, 0, 0}}},
-    {1, 1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, {0, 0, 0}}},
-    {1, 1, {{TOK_OR, TOK_OR, AST_OR}, {0, 0, 0}}},
-    {1, 1, {{TOK_XOR, TOK_XOR, AST_XOR}, {0, 0, 0}}},
-    {1, 1, {{TOK_AND, TOK_AND, AST_AND}, {0, 0, 0}}},
-    {1, 1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, {0, 0, 0}}},
+    {1, 0, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, NONE}},
+    {1, 0, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, NONE}},
+    {1, 1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, NONE}},
+    {1, 1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, NONE}},
+    {1, 1, {{TOK_OR, TOK_OR, AST_OR}, NONE}},
+    {1, 1, {{TOK_XOR, TOK_XOR, AST_XOR}, NONE}},
+    {1, 1, {{TOK_AND, TOK_AND, AST_AND}, NONE}},
+    {1, 1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, NONE}},
     {2, 1, {{TOK_LE, TOK_GT, AST_LE}, {TOK_IN, TOK_INSTANCEOF, AST_IN}}},
-    {1, 1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, {0, 0, 0}}},
-    {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, {0, 0, 0}}},
-    {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, {0, 0, 0}}}
+    {1, 1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, NONE}},
+    {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, NONE}},
+    {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, NONE}}
   };
 
   int i;
@@ -6030,7 +6082,9 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
           ast_insert_node(a, pos, ast);
         }
       }
-    } while(ast++, tok++ < levels[level].parts[i].end_tok);
+    } while(ast = (enum ast_tag) (ast + 1),
+            tok < levels[level].parts[i].end_tok &&
+            (tok = (enum v7_tok) (tok + 1)));
   }
 
   return V7_OK;
@@ -7417,7 +7471,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
-  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch, fvar;
+  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
   int saved_strict_mode = v7->strict_mode;
 
   switch (tag) {
@@ -7680,8 +7734,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * Percolate up all exceptions and labeled breaks
          * not matching the current label.
          */
-     hack:
-        if ((j = sigsetjmp(v7->jmp_buf, 0)) == 0) {
+     cont:
+        if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
           res = i_eval_stmt(v7, a, pos, scope, brk);
         } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
                    name_len == v7->label_len &&
@@ -7689,7 +7743,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           *pos = saved_pos;
           if (j == CONTINUE_JMP) {
             v7->lab_cont = 1;
-            goto hack;
+            goto cont;
           }
           ast_skip_tree(a, pos);
         } else {
@@ -7708,20 +7762,20 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
         end = ast_get_skip(a, *pos, AST_END_SKIP);
-        catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+        acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
         finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
         ast_move_to_children(a, pos);
-        if ((j = sigsetjmp(v7->jmp_buf, 0)) == 0) {
-          res = i_eval_stmts(v7, a, pos, catch, scope, brk);
-        } else if (j == THROW_JMP && catch != finally) {
+        if ((j = (enum jmp_type)  sigsetjmp(v7->jmp_buf, 0)) == 0) {
+          res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
+        } else if (j == THROW_JMP && acatch != finally) {
           val_t catch_scope = create_object(v7, scope);
-          tag = ast_fetch_tag(a, &catch);
+          tag = ast_fetch_tag(a, &acatch);
           V7_CHECK(v7, tag == AST_IDENT);
-          name = ast_get_inlined_data(a, catch, &name_len);
+          name = ast_get_inlined_data(a, acatch, &name_len);
           v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
-          ast_move_to_children(a, &catch);
+          ast_move_to_children(a, &acatch);
           memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-          res = i_eval_stmts(v7, a, &catch, finally, catch_scope, brk);
+          res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
         } else {
           percolate = 1;
         }
@@ -8037,7 +8091,11 @@ struct slre_env {
   struct slre_class *curr_set;
   int min_rep, max_rep;
 
+#if defined(__cplusplus)
+  ::jmp_buf jmp_buf;
+#else
   jmp_buf jmp_buf;
+#endif
 };
 
 struct slre_thread {
@@ -9006,8 +9064,9 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   struct slre_instruction *split, *jump;
   int err_code;
 
-  e.prog = SLRE_MALLOC(sizeof(struct slre_prog));
-  e.pstart = e.pend = SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+  e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
+  e.pstart = e.pend = (struct slre_node *)
+             SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -9040,7 +9099,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   }
 
   e.prog->num_captures = e.num_captures;
-  e.prog->start = e.prog->end =
+  e.prog->start = e.prog->end = (struct slre_instruction *)
       SLRE_MALLOC((re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
 
   split = re_newinst(e.prog, I_SPLIT);

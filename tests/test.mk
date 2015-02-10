@@ -41,8 +41,7 @@ PEDANTIC=$(shell gcc --version 2>/dev/null | grep -q clang && echo -pedantic)
 
 # TODO(mkm) fix cxx issues. This file should be the same file used in fossa
 # and we should keep it in sync with subtree or something.
-#DIALECTS=cxx ansi c99 c11
-DIALECTS=ansi c99 c11
+DIALECTS=cxx ansi c99 c11
 SPECIALS=asan gcov valgrind
 
 # Each test target might require either a different compiler name
@@ -60,6 +59,8 @@ CMD=MallocLogFile=/dev/null
 
 CC_cxx=$(CXX)
 CFLAGS_cxx=-x c++
+# TODO(mkm): remove once v7 has #lines for amalgamated sources
+SOURCES_cxx=$(addprefix $(SRC_DIR)/, $(SOURCES))
 
 CFLAGS_ansi=$(PEDANTIC) -ansi
 CFLAGS_c99=$(PEDANTIC) -std=c99
