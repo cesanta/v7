@@ -187,6 +187,7 @@ struct v7 {
   jmp_buf label_jmp_buf;  /* Target for non local (labeled) breaks */
   char *label;            /* Inner label */
   size_t label_len;       /* Inner label length */
+  int lab_cont; /* True if re-entering a loop with labeled continue */
 
   struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
 

@@ -1323,7 +1323,16 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "4"));
   ASSERT(v7_exec(v7, &v, "x=0;L: for(i=0;i<10;i++){try{for(j=4;j<10;j++){if(i==j) break L}}finally{x++}};x") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-
+  ASSERT(v7_exec(v7, &v, "x=0;L: for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(check_value(v7, v, "50"));
+  ASSERT(v7_exec(v7, &v, "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(check_value(v7, v, "50"));
+  ASSERT(v7_exec(v7, &v, "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(check_value(v7, v, "50"));
+  ASSERT(v7_exec(v7, &v, "L:do {i=0;continue L;}while(i>0);i") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(v7_exec(v7, &v, "i=1; L:while(i>0){i=0;continue L;};i") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
 
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
