@@ -7835,7 +7835,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         char *name;
         size_t name_len;
         ast_off_t saved_pos;
-        enum jmp_type j;
+        volatile enum jmp_type j;
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
         name = ast_get_inlined_data(a, *pos, &name_len);
 
