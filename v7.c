@@ -992,7 +992,10 @@ V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
  * Returns the array length, or `-1` if the object is not an array
  */
 V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
-
+V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value);
+V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                      int as_json);
+V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
 V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 
@@ -3325,18 +3328,44 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   return v;
 }
 
-static val_t Array_length(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
-  assert(val_type(v7, this_obj) == V7_TYPE_ARRAY_OBJECT);
+  assert(is_prototype_of(this_obj, v7->array_prototype));
   return v7_create_number(v7_array_length(v7, this_obj));
 }
 
 static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
-  (void) v7;
-  (void) args;
-  (void) this_obj;
-  /* TODO(mkm): extend or trim array */
-  return V7_UNDEFINED;
+  long new_len = arg_long(v7, args, 0, -1);
+
+  if (!v7_is_object(this_obj)) {
+    throw_exception(v7, "TypeError", "Array expected");
+  } else if (new_len < 0) {
+    throw_exception(v7, "RangeError", "Invalid array length");
+  } else {
+    struct v7_property **p, **next;
+    long index, max_index = -1;
+
+    /* Remove all items with an index higher then new_len */
+    for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      next = &p[0]->next;
+      index = strtol(p[0]->name, NULL, 10);
+      if (index >= new_len) {
+        v7_destroy_property(p);
+        *p = *next;
+        next = p;
+      } else if (index > max_index) {
+        max_index = index;
+      }
+    }
+
+    /* If we have to expand, insert an item with appropriate index */
+    if (new_len > 0 && max_index < new_len - 1) {
+      char buf[40];
+      snprintf(buf, sizeof(buf), "%ld", new_len - 1);
+      v7_set_property(v7, this_obj, buf, strlen(buf), 0, V7_UNDEFINED);
+    }
+  }
+  return v7_create_number(new_len);
 }
 
 static int a_cmp(const void *pa, const void *pb) {
@@ -3397,15 +3426,18 @@ static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_array(struct v7 *v7) {
+  val_t ctor = v7_create_cfunction_object(v7, Array_ctor);
   val_t length = v7_create_array(v7);
 
-  set_cfunc_obj_prop(v7, v7->global_object, "Array", Array_ctor);
+  v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
+  v7_to_object(ctor)->prototype = v7_to_object(v7->array_prototype);
+
   set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push);
   set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort);
   set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse);
   set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop);
 
-  v7_set(v7, length, "0", 1, v7_create_cfunction(Array_length));
+  v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
   v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
   v7_set_property(v7, v7->array_prototype, "length", 6,
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, length);
@@ -4016,20 +4048,25 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
-static long get_long_arg(struct v7 *v7, val_t args, int n, long default_value) {
-  val_t arg_n = v7_array_at(v7, args, n);
-  return v7_is_double(arg_n) ? (long) v7_to_double(arg_n) : default_value;
+V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
+  char buf[40];
+  val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
+  if (v7_is_double(arg_n)) return (long) v7_to_double(arg_n);
+  if (arg_n == V7_NULL) return 0;
+  to_str(v7, arg_n, buf, sizeof(buf), 0);
+  if (isdigit(buf[0])) return strtol(buf, NULL, 10);
+  return default_value;
 }
 
 static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
-  long start = get_long_arg(v7, args, 0, 0);
-  long len = get_long_arg(v7, args, 1, LONG_MAX);
+  long start = arg_long(v7, args, 0, 0);
+  long len = arg_long(v7, args, 1, LONG_MAX);
   return s_substr(v7, this_obj, start, len);
 }
 
 static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
-  long start = get_long_arg(v7, args, 0, 0);
-  long end = get_long_arg(v7, args, 1, LONG_MAX);
+  long start = arg_long(v7, args, 0, 0);
+  long end = arg_long(v7, args, 1, LONG_MAX);
   return s_substr(v7, this_obj, start, end - start);
 }
 
@@ -4041,7 +4078,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_array(v7);
   val_t s = i_value_of(v7, this_obj);
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
-  long num_elems = 0, limit = get_long_arg(v7, args, 1, LONG_MAX);
+  long num_elems = 0, limit = arg_long(v7, args, 1, LONG_MAX);
   size_t n1, n2, i, j;
   const char *s1 = v7_to_string(v7, &s, &n1);
 
@@ -4976,7 +5013,8 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   return n;
 }
 
-static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                      int as_json) {
   char *vp;
   double num;
   for (vp = v7->json_visited_stack.buf;
@@ -5008,7 +5046,11 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       {
         size_t n;
         const char *str = v7_to_string(v7, &v, &n);
-        return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
+        if (as_json) {
+          return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
+        } else {
+          return v_sprintf_s(buf, size, "%.*s", (int) n, str);
+        }
       }
     case V7_TYPE_REGEXP_OBJECT:
       {
@@ -5040,7 +5082,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             continue;
           }
           b += v_sprintf_s(b, size - (b - buf), "\"%s\":", p->name);
-          b += to_json(v7, p->value, b, size - (b - buf));
+          b += to_str(v7, p->value, b, size - (b - buf), 1);
           if (p->next) {
             b += v_sprintf_s(b, size - (b - buf), ",");
           }
@@ -5056,18 +5098,22 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char key[512];
         size_t i, len = v7_array_length(v7, v);
         mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-        b += v_sprintf_s(b, size - (b - buf), "[");
+        if (as_json) {
+          b += v_sprintf_s(b, size - (b - buf), "[");
+        }
         for (i = 0; i < len; i++) {
           /* TODO */
           v_sprintf_s(key, sizeof(key), "%lu", i);
           if ((p = v7_get_property(v, key, -1)) != NULL) {
-            b += to_json(v7, p->value, b, size - (b - buf));
+            b += to_str(v7, p->value, b, size - (b - buf), 1);
           }
           if (i != len - 1) {
             b += v_sprintf_s(b, size - (b - buf), ",");
           }
         }
-        b += v_sprintf_s(b, size - (b - buf), "]");
+        if (as_json) {
+          b += v_sprintf_s(b, size - (b - buf), "]");
+        }
         v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
@@ -5144,12 +5190,12 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 }
 
 char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
-  int len = to_json(v7, v, buf, size);
+  int len = to_str(v7, v, buf, size, 1);
 
   if (len > (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
     char *p = (char *) malloc(len + 1);
-    to_json(v7, v, p, len + 1);
+    to_str(v7, v, p, len + 1, 1);
     p[len] = '\0';
     return p;
   } else {
@@ -5169,7 +5215,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
     buf[n] = '\0';
     return n;
   } else {
-    return to_json(v7, v, buf, size);
+    return to_str(v7, v, buf, size, 1);
   }
 }
 
@@ -5254,7 +5300,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
 }
 
-static void v7_destroy_property(struct v7_property **p) {
+V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
@@ -5371,9 +5417,10 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   long max = -1, k;
   char *end;
 
-  if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
+  if (!is_prototype_of(v, v7->array_prototype)) {
     return -1;
   }
+
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     k = strtol(p->name, &end, 10);
     if (end != p->name && k > max) {
@@ -9893,6 +9940,8 @@ V7_PRIVATE void init_error(struct v7 *v7) {
             "ReferenceError.prototype = Object.create(Error.prototype)");
   v7_exec(v7, &v, "function InternalError(m) {this.message = m};"
             "ReferenceError.prototype = Object.create(Error.prototype)");
+  v7_exec(v7, &v, "function RangeError(m) {this.message = m};"
+          "RangeError.prototype = Object.create(Error.prototype)");
 
   v7->error_prototype = v7_get(v7, v7_get(v7, v7->global_object, "Error", 5),
                                "prototype", 9);

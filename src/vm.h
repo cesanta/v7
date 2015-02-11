@@ -177,7 +177,10 @@ V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
  * Returns the array length, or `-1` if the object is not an array
  */
 V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
-
+V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value);
+V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                      int as_json);
+V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
 V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 

@@ -247,7 +247,8 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   return n;
 }
 
-static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                      int as_json) {
   char *vp;
   double num;
   for (vp = v7->json_visited_stack.buf;
@@ -279,7 +280,11 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       {
         size_t n;
         const char *str = v7_to_string(v7, &v, &n);
-        return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
+        if (as_json) {
+          return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
+        } else {
+          return v_sprintf_s(buf, size, "%.*s", (int) n, str);
+        }
       }
     case V7_TYPE_REGEXP_OBJECT:
       {
@@ -311,7 +316,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             continue;
           }
           b += v_sprintf_s(b, size - (b - buf), "\"%s\":", p->name);
-          b += to_json(v7, p->value, b, size - (b - buf));
+          b += to_str(v7, p->value, b, size - (b - buf), 1);
           if (p->next) {
             b += v_sprintf_s(b, size - (b - buf), ",");
           }
@@ -327,18 +332,22 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char key[512];
         size_t i, len = v7_array_length(v7, v);
         mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-        b += v_sprintf_s(b, size - (b - buf), "[");
+        if (as_json) {
+          b += v_sprintf_s(b, size - (b - buf), "[");
+        }
         for (i = 0; i < len; i++) {
           /* TODO */
           v_sprintf_s(key, sizeof(key), "%lu", i);
           if ((p = v7_get_property(v, key, -1)) != NULL) {
-            b += to_json(v7, p->value, b, size - (b - buf));
+            b += to_str(v7, p->value, b, size - (b - buf), 1);
           }
           if (i != len - 1) {
             b += v_sprintf_s(b, size - (b - buf), ",");
           }
         }
-        b += v_sprintf_s(b, size - (b - buf), "]");
+        if (as_json) {
+          b += v_sprintf_s(b, size - (b - buf), "]");
+        }
         v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
@@ -415,12 +424,12 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 }
 
 char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
-  int len = to_json(v7, v, buf, size);
+  int len = to_str(v7, v, buf, size, 1);
 
   if (len > (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
     char *p = (char *) malloc(len + 1);
-    to_json(v7, v, p, len + 1);
+    to_str(v7, v, p, len + 1, 1);
     p[len] = '\0';
     return p;
   } else {
@@ -440,7 +449,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
     buf[n] = '\0';
     return n;
   } else {
-    return to_json(v7, v, buf, size);
+    return to_str(v7, v, buf, size, 1);
   }
 }
 
@@ -525,7 +534,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
 }
 
-static void v7_destroy_property(struct v7_property **p) {
+V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
@@ -642,9 +651,10 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   long max = -1, k;
   char *end;
 
-  if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
+  if (!is_prototype_of(v, v7->array_prototype)) {
     return -1;
   }
+
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     k = strtol(p->name, &end, 10);
     if (end != p->name && k > max) {
