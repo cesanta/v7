@@ -1229,7 +1229,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         jmp_buf old_jmp;
         char *name;
         size_t name_len;
-        enum jmp_type j;
+        volatile enum jmp_type j;
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
         end = ast_get_skip(a, *pos, AST_END_SKIP);
