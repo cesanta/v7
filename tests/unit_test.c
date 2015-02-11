@@ -799,7 +799,10 @@ static const char *test_ecmac(void) {
 
       if (v7_exec(v7, &res, driver) != V7_OK) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
+        ast_free(v7->last_ast);
+        free(v7->last_ast);
       } else {
+        struct ast *driver_ast = v7->last_ast;
         if (v7_exec(v7, &res, current_case) != V7_OK) {
           char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
           fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
@@ -816,6 +819,11 @@ static const char *test_ecmac(void) {
           exit(0);
 #endif
         }
+        ast_free(driver_ast);
+        free(driver_ast);
+
+        ast_free(v7->last_ast);
+        free(v7->last_ast);
       }
 #ifdef ECMA_FORK
     } else {
