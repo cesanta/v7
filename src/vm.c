@@ -33,6 +33,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->cfunction_prototype)) {
         return V7_TYPE_CFUNCTION_OBJECT;
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->date_prototype)) {
+        return V7_TYPE_DATE_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -556,7 +559,11 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->number_prototype;
+    }else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
+        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
+      return v7->date_prototype;
     }
+    
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
@@ -961,7 +968,8 @@ struct v7 *v7_create(void) {
     v7->cfunction_prototype = v7_create_object(v7);
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
-
+    v7->date_prototype = v7_create_object(v7);
+    
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property(v7, v7->global_object, "print", 5, 0,
                     v7_create_cfunction(Std_print_2));
@@ -980,7 +988,8 @@ struct v7 *v7_create(void) {
     init_string(v7);
     init_number(v7);
     init_json(v7);
-
+    init_date(v7);
+    
     v7->thrown_error = V7_UNDEFINED;
   }
 
