@@ -278,6 +278,20 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "new String('blah')") == V7_OK);
 #endif
 
+  /* Date */
+  ASSERT(v7_exec(v7, &v, "new Date(99,10).valueOf()") == V7_OK);
+  ASSERT(check_num(v, 941407200000));  
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5).valueOf()") == V7_OK);
+  ASSERT(check_num(v, 941752800000));
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11).valueOf()") == V7_OK);
+  ASSERT(check_num(v, 941792400000));  
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35).valueOf()") == V7_OK);
+  ASSERT(check_num(v, 941794500000));    
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45).valueOf()") == V7_OK);
+  ASSERT(check_num(v, 941794545000));    
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45,567).valueOf()") == V7_OK);
+  ASSERT(check_num(v, 941794545567));   
+    
 #if 0
   /* Regexp */
   ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/; re")) != NULL);
