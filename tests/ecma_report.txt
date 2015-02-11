@@ -785,8 +785,8 @@
 781	PASS (tail -c +583893 tests/ecmac.db|head -c 971)
 782	FAIL (tail -c +584865 tests/ecmac.db|head -c 528): [{"message":"#1: "abc".charAt(Number.NaN) === "a". Actual: "}]
 783	PASS (tail -c +585394 tests/ecmac.db|head -c 536)
-784	FAIL (tail -c +585931 tests/ecmac.db|head -c 1969): [{"message":"Date expected"}]
-785	FAIL (tail -c +587901 tests/ecmac.db|head -c 1007): [{"message":"Date expected"}]
+784	FAIL (tail -c +585931 tests/ecmac.db|head -c 1969): [{"message":"#12: var d12 = new Date(-1.23e-15); d12.valueOf() === -0;"}]
+785	FAIL (tail -c +587901 tests/ecmac.db|head -c 1007): [{"message":"#1: var d1 = new Date(Number.NaN); d1.valueOf() === Number.NaN;"}]
 786	PASS (tail -c +588909 tests/ecmac.db|head -c 1629)
 787	FAIL (tail -c +590539 tests/ecmac.db|head -c 1325): [{"message":"#3: (-2147483649 << 0) === 2147483647. Actual: -2.14748e+09"}]
 788	FAIL (tail -c +591865 tests/ecmac.db|head -c 600): [{"message":"#1: ~-2147483649 === ~2147483647"}]
@@ -2069,7 +2069,7 @@
 2065	PASS (tail -c +1598918 tests/ecmac.db|head -c 439)
 2066	PASS (tail -c +1599358 tests/ecmac.db|head -c 439)
 2067	FAIL (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 1{"toString":[function()]}"}]
-2068	FAIL (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84734e+12"}]
+2068	FAIL (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84736e+12"}]
 2069	FAIL (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
 2070	PASS (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS (tail -c +1605816 tests/ecmac.db|head -c 464)
@@ -5896,9 +5896,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5888	PASS (tail -c +5830858 tests/ecmac.db|head -c 771)
 5889	PASS (tail -c +5831630 tests/ecmac.db|head -c 890)
 5890	PASS (tail -c +5832521 tests/ecmac.db|head -c 1411)
-5891	FAIL (tail -c +5833933 tests/ecmac.db|head -c 1652): [{"message":"Date expected"}]
+5891	FAIL (tail -c +5833933 tests/ecmac.db|head -c 1652): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
 5892	FAIL (tail -c +5835586 tests/ecmac.db|head -c 1767): [{"message":"Test case returned non-true value!"}]
-5893	FAIL (tail -c +5837354 tests/ecmac.db|head -c 1665): [{"message":"Date expected"}]
+5893	FAIL (tail -c +5837354 tests/ecmac.db|head -c 1665): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
 5894	PASS (tail -c +5839020 tests/ecmac.db|head -c 1773)
 5895	FAIL (tail -c +5840794 tests/ecmac.db|head -c 791): [{"message":"[Function] is not defined"}]
 5896	FAIL (tail -c +5841586 tests/ecmac.db|head -c 865): [{"message":"[Function] is not defined"}]
@@ -6123,10 +6123,10 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6115	PASS (tail -c +6074690 tests/ecmac.db|head -c 802)
 6116	PASS (tail -c +6075493 tests/ecmac.db|head -c 895)
 6117	FAIL (tail -c +6076389 tests/ecmac.db|head -c 1650): [{"message":"Test case returned non-true value!"}]
-6118	FAIL (tail -c +6078040 tests/ecmac.db|head -c 2010): [{"message":"Date expected"}]
+6118	FAIL (tail -c +6078040 tests/ecmac.db|head -c 2010): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
 6119	FAIL (tail -c +6080051 tests/ecmac.db|head -c 767): [{"message":"Test case returned non-true value!"}]
 6120	FAIL (tail -c +6080819 tests/ecmac.db|head -c 2121): [{"message":"Test case returned non-true value!"}]
-6121	FAIL (tail -c +6082941 tests/ecmac.db|head -c 1749): [{"message":"Date expected"}]
+6121	FAIL (tail -c +6082941 tests/ecmac.db|head -c 1749): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
 6122	PASS (tail -c +6084691 tests/ecmac.db|head -c 1875)
 6123	FAIL (tail -c +6086567 tests/ecmac.db|head -c 937): [{"message":"[Function] is not defined"}]
 6124	FAIL (tail -c +6087505 tests/ecmac.db|head -c 982): [{"message":"[Function] is not defined"}]
@@ -7480,7 +7480,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7472	FAIL (tail -c +7125859 tests/ecmac.db|head -c 1510): [{"message":"cannot read property 'sort' of undefined"}]
 7473	FAIL (tail -c +7127370 tests/ecmac.db|head -c 1439): [{"message":"cannot read property 'sort' of undefined"}]
 7474	FAIL (tail -c +7128810 tests/ecmac.db|head -c 486): [{"message":"#1.2: Array.sort should not eat exceptions"}]
-7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: 3.10504e+231"}]
+7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: 2.68156e+154"}]
 7476	FAIL (tail -c +7131367 tests/ecmac.db|head -c 721): [{"message":"cannot read property 'sort' of undefined"}]
 7477	FAIL (tail -c +7132089 tests/ecmac.db|head -c 902): [{"message":"cannot read property 'sort' of undefined"}]
 7478	FAIL (tail -c +7132992 tests/ecmac.db|head -c 550): [{"message":"cannot read property 'sort' of undefined"}]
@@ -9597,8 +9597,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9589	FAIL (tail -c +8714122 tests/ecmac.db|head -c 1221): [{"message":"cannot read property 'reverse' of undefined"}]
 9590	FAIL (tail -c +8715344 tests/ecmac.db|head -c 1582): [{"message":"cannot read property 'reverse' of undefined"}]
 9591	FAIL (tail -c +8716927 tests/ecmac.db|head -c 1511): [{"message":"cannot read property 'reverse' of undefined"}]
-9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: 3.10504e+231"}]
-9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: 3.10504e+231"}]
+9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: 2.68156e+154"}]
+9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: 2.68156e+154"}]
 9594	FAIL (tail -c +8722651 tests/ecmac.db|head -c 737): [{"message":"cannot read property 'reverse' of undefined"}]
 9595	FAIL (tail -c +8723389 tests/ecmac.db|head -c 936): [{"message":"cannot read property 'reverse' of undefined"}]
 9596	FAIL (tail -c +8724326 tests/ecmac.db|head -c 581): [{"message":"cannot read property 'reverse' of undefined"}]
@@ -10279,7 +10279,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10271	FAIL (tail -c +9405547 tests/ecmac.db|head -c 924): [{"message":"cannot read property 'indexOf' of undefined"}]
 10272	FAIL (tail -c +9406472 tests/ecmac.db|head -c 729): [{"message":"cannot read property 'indexOf' of undefined"}]
 10273	FAIL (tail -c +9407202 tests/ecmac.db|head -c 862): [{"message":"with statement is not really implemented yet"}]
-10274	FAIL (tail -c +9408065 tests/ecmac.db|head -c 869): [{"message":"Date expected"}]
+10274	FAIL (tail -c +9408065 tests/ecmac.db|head -c 869): [{"message":"cannot read property 'indexOf' of undefined"}]
 10275	FAIL (tail -c +9408935 tests/ecmac.db|head -c 1005): [{"message":"value is not a function"}]
 10276	FAIL (tail -c +9409941 tests/ecmac.db|head -c 848): [{"message":"cannot read property 'indexOf' of undefined"}]
 10277	PASS (tail -c +9410790 tests/ecmac.db|head -c 606)
@@ -10689,7 +10689,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10681	PASS (tail -c +9755884 tests/ecmac.db|head -c 383)
 10682	PASS (tail -c +9756268 tests/ecmac.db|head -c 654)
 10683	PASS (tail -c +9756923 tests/ecmac.db|head -c 473)
-10684	FAIL (tail -c +9757397 tests/ecmac.db|head -c 596): [{"message":"Date expected"}]
+10684	FAIL (tail -c +9757397 tests/ecmac.db|head -c 596): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
 10685	PASS (tail -c +9757994 tests/ecmac.db|head -c 2596)
 10686	FAIL (tail -c +9760591 tests/ecmac.db|head -c 2636): [{"message":"value is not a function"}]
 10687	PASS (tail -c +9763228 tests/ecmac.db|head -c 5764)
@@ -10733,10 +10733,10 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10725	FAIL (tail -c +9893368 tests/ecmac.db|head -c 1447): [{"message":"Number or String expected"}]
 10726	FAIL (tail -c +9894816 tests/ecmac.db|head -c 1496): [{"message":"Number or String expected"}]
 10727	FAIL (tail -c +9896313 tests/ecmac.db|head -c 1545): [{"message":"Number or String expected"}]
-10728	FAIL (tail -c +9897859 tests/ecmac.db|head -c 4128): [{"message":"Date expected"}]
-10729	FAIL (tail -c +9901988 tests/ecmac.db|head -c 3930): [{"message":"Date expected"}]
-10730	FAIL (tail -c +9905919 tests/ecmac.db|head -c 1790): [{"message":"Date expected"}]
-10731	FAIL (tail -c +9907710 tests/ecmac.db|head -c 1681): [{"message":"Date expected"}]
+10728	PASS (tail -c +9897859 tests/ecmac.db|head -c 4128)
+10729	FAIL (tail -c +9901988 tests/ecmac.db|head -c 3930): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
+10730	FAIL (tail -c +9905919 tests/ecmac.db|head -c 1790): [{"message":"value is not a function"}]
+10731	FAIL (tail -c +9907710 tests/ecmac.db|head -c 1681): [{"message":"#1: The [[Class]] property of the newly constructed object is set to 'Date'"}]
 10732	FAIL (tail -c +9909392 tests/ecmac.db|head -c 339): [{"message":"value is not a function"}]
 10733	FAIL (tail -c +9909732 tests/ecmac.db|head -c 323): [{"message":"value is not a function"}]
 10734	FAIL (tail -c +9910056 tests/ecmac.db|head -c 315): [{"message":"value is not a function"}]
