@@ -10282,6 +10282,7 @@ int64_t strtoll(const char *, char **, int);
 
 /* ECMA5.1 defines "extended years", -+285,426 years from 01 January, 1970 UTC
  * As result we cannot use standart break & make time functions */
+typedef int64_t etime_t;
 
 struct timeparts {
   int year; /* can be negative */
@@ -10295,7 +10296,7 @@ struct timeparts {
 
 /* TODO(alashkin): replace mktime etc to something with extyears support */
 
-static uint64_t d_mktime(struct timeparts* tp) {
+static etime_t d_mktime(struct timeparts* tp) {
   struct tm t;
   memset(&t, 0, sizeof(t));
   
@@ -10306,10 +10307,10 @@ static uint64_t d_mktime(struct timeparts* tp) {
   t.tm_min = tp->min;
   t.tm_sec = tp->sec;
   
-  return (uint64_t)mktime(&t)*1000 + tp->msec;
+  return (etime_t)mktime(&t)*1000 + tp->msec;
 }
 
-static void d_gmtime(uint64_t* time, struct timeparts* tp) {
+static void d_gmtime(etime_t* time, struct timeparts* tp) {
   time_t sec = *time/1000;
   time_t msec = *time%1000;
   struct tm t;
@@ -10324,7 +10325,11 @@ static void d_gmtime(uint64_t* time, struct timeparts* tp) {
   tp->msec = msec;
 }
 
-static int d_timetoUTCstr(uint64_t* time, char* buf, size_t buf_size) {
+static int d_timeFromString(etime_t* time, const char* buf, size_t buf_size) {
+  return -1;
+}
+
+static int d_timetoUTCstr(etime_t* time, char* buf, size_t buf_size) {
   /* ISO format: "+XXYYYY-MM-DDTHH:mm:ss.sssZ"; */
   struct timeparts tp;
   char use_ext = 0;
@@ -10344,27 +10349,45 @@ static int d_timetoUTCstr(uint64_t* time, char* buf, size_t buf_size) {
         use_ext? ey_frm: simpl_frm, tp.year, tp.month + 1, tp.day, tp.hour, tp.min, tp.sec, tp.msec) + use_ext;
 }
 
-static void d_gettime(uint64_t* time) {
+static void d_gettime(etime_t* time) {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  *time = (uint64_t)tv.tv_sec * 1000 + (uint64_t)tv.tv_usec / 1000;  
+  *time = (etime_t)tv.tv_sec * 1000 + (etime_t)tv.tv_usec / 1000;  
+}
+
+static int d_toint(val_t* obj, etime_t* ret) {
+  if(v7_is_double(*obj)) {
+    *ret = v7_to_double(*obj);
+  } else if(v7_is_boolean(*obj)) {
+    *ret = v7_to_boolean(*obj);
+  } else {
+    return -1;
+  }
+  
+  return 0;
 }
 
 static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  uint64_t ret_time = 0;   
+  etime_t ret_time = 0;   
   if(v7_is_object(this_obj) && this_obj != v7->global_object) {
     int cargs = v7_array_length(v7, args);
     if(cargs <=0 ) {
       /* no parameters - return current date & time */
       d_gettime(&ret_time);
     } else if(cargs == 1) {
-      /* one parameter - should be another Date object */
-      val_t obj = v7_array_at(v7, args, 0);
-      /* TODO(alashkin): check this statement */
-      if(!v7_is_object(obj) || (v7_is_object(obj) && v7_to_object(obj)->prototype != v7_to_object(v7->date_prototype))) {
-        throw_exception(v7, "TypeError","%s","Date expected");
+      /* one parameter */
+      val_t arg = v7_array_at(v7, args, 0);
+      if(v7_is_string(arg)){ /* it could be string */
+        size_t str_size;
+        const char* str = v7_to_string(v7, &arg, &str_size);
+        if(d_timeFromString(&ret_time, str, str_size) != 0) {
+          throw_exception(v7, "Range error", "Invalid Date: %s", str);
+        }
+      } else {
+        if(d_toint(&arg,&ret_time) != 0) {
+          throw_exception(v7, "TypeError", "%s", "Primitive type expected");
+        }
       }
-      ret_time = v7_to_double(i_value_of(v7, obj));
     } else {
       /* 2+ paramaters - should be parts of a date */
       struct timeparts tp;
@@ -10410,7 +10433,7 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
           }
       }
       
-      ret_time = (uint64_t)d_mktime(&tp);
+      ret_time = (etime_t)d_mktime(&tp);
     }
   
     v7_to_object(this_obj)->prototype = v7_to_object(v7->date_prototype);
@@ -10429,7 +10452,7 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[30];
-  uint64_t time; int len;
+  etime_t time; int len;
   (void)args;
   
   time = v7_to_double(i_value_of(v7, this_obj));
@@ -10440,7 +10463,7 @@ static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Date_getDate(struct v7 *v7, val_t this_obj, val_t args) {
   struct timeparts tp;
-  uint64_t time;
+  etime_t time;
   (void)args;
   
   time = v7_to_double(i_value_of(v7, this_obj));
@@ -10467,3 +10490,61 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   set_cfunc_prop(v7, v7->date_prototype, "toISOString", Date_toISOString);
   set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);  
 }
+
+/*
+ 
+++ 01. Date ( [ year [, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] ] ] )
+++ 02. new Date (year, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] )
+03. new Date (value)
+++ 04. new Date ( )
+05. Date.prototype
+06. Date.parse (string)
+07. Date.UTC (year, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] )
+08. Date.now ( )
+09. Date.prototype.constructor
+10. Date.prototype.toString ( )
+11. Date.prototype.toDateString ( )
+12. Date.prototype.toTimeString ( )
+13. Date.prototype.toLocaleString ( 
+14. Date.prototype.toLocaleDateString ( )
+15. Date.prototype.toLocaleTimeString ( )
+++ 16. Date.prototype.valueOf ( )
+17. Date.prototype.getTime ( )
+18. Date.prototype.getFullYear ( )
+19. Date.prototype.getUTCFullYear ( )
+20. Date.prototype.getMonth ( )
+21. Date.prototype.getUTCMonth ( )
+22. Date.prototype.getDate ( )
+23. Date.prototype.getUTCDate ( )
+24. Date.prototype.getDay ( )
+25. Date.prototype.getUTCDay ( )
+27. Date.prototype.getHours ( )
+28. Date.prototype.getUTCHours ( )
+29. Date.prototype.getMinutes ( )
+30. Date.prototype.getUTCMinutes ( )
+31. Date.prototype.getSeconds ( )
+32. Date.prototype.getUTCSeconds ( )
+33. Date.prototype.getMilliseconds ( )
+34. Date.prototype.getUTCMilliseconds ( )
+35. Date.prototype.getTimezoneOffset ( )
+36. Date.prototype.setTime (time)
+37. Date.prototype.setMilliseconds (ms)
+38. Date.prototype.setUTCMilliseconds (ms)
+39. Date.prototype.setSeconds (sec [, ms ] )
+40. Date.prototype.setUTCSeconds (sec [, ms ] )
+41. Date.prototype.setMinutes (min [, sec [, ms ] ] )
+42. Date.prototype.setUTCMinutes (min [, sec [, ms ] ] )
+43. Date.prototype.setHours (hour [, min [, sec [, ms ] ] ] )
+44. Date.prototype.setUTCHours (hour [, min [, sec [, ms ] ] ] )
+45. Date.prototype.setDate (date)
+46. Date.prototype.setUTCDate (date)
+47. Date.prototype.setMonth (month [, date ] )
+48. Date.prototype.setUTCMonth (month [, date ] )
+49. Date.prototype.setFullYear (year [, month [, date ] ] )
+50. Date.prototype.setUTCFullYear (year [, month [, date ] ] )
+51. Date.prototype.toUTCString ( )
+++ 52. Date.prototype.toISOString ( )
+53. Date.prototype.toJSON ( key )
+
+*/
+
