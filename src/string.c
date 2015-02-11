@@ -435,20 +435,25 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
-static long get_long_arg(struct v7 *v7, val_t args, int n, long default_value) {
-  val_t arg_n = v7_array_at(v7, args, n);
-  return v7_is_double(arg_n) ? (long) v7_to_double(arg_n) : default_value;
+V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
+  char buf[40];
+  val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
+  if (v7_is_double(arg_n)) return (long) v7_to_double(arg_n);
+  if (arg_n == V7_NULL) return 0;
+  to_str(v7, arg_n, buf, sizeof(buf), 0);
+  if (isdigit(buf[0])) return strtol(buf, NULL, 10);
+  return default_value;
 }
 
 static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
-  long start = get_long_arg(v7, args, 0, 0);
-  long len = get_long_arg(v7, args, 1, LONG_MAX);
+  long start = arg_long(v7, args, 0, 0);
+  long len = arg_long(v7, args, 1, LONG_MAX);
   return s_substr(v7, this_obj, start, len);
 }
 
 static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
-  long start = get_long_arg(v7, args, 0, 0);
-  long end = get_long_arg(v7, args, 1, LONG_MAX);
+  long start = arg_long(v7, args, 0, 0);
+  long end = arg_long(v7, args, 1, LONG_MAX);
   return s_substr(v7, this_obj, start, end - start);
 }
 
@@ -460,7 +465,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_array(v7);
   val_t s = i_value_of(v7, this_obj);
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
-  long num_elems = 0, limit = get_long_arg(v7, args, 1, LONG_MAX);
+  long num_elems = 0, limit = arg_long(v7, args, 1, LONG_MAX);
   size_t n1, n2, i, j;
   const char *s1 = v7_to_string(v7, &s, &n1);
 
