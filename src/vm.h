@@ -68,6 +68,7 @@ struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
   struct v7_object *prototype;
+  uintptr_t debug;
 };
 
 /*
@@ -98,6 +99,7 @@ struct v7_function {
    */
   struct v7_property *properties;
   struct v7_object *scope;    /* lexical scope of the closure */
+  uintptr_t debug;
   struct ast *ast;            /* AST, used as a byte code for execution */
   unsigned int ast_off;       /* Position of the function node in the AST */
   unsigned int attributes;    /* Function attributes */

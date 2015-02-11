@@ -53,6 +53,7 @@ typedef unsigned char uint8_t;
 #include "varint.h"
 #include "ast.h"
 #include "parser.h"
+#include "mm.h"
 
 /* Max captures for String.replace() */
 #define V7_RE_MAX_REPL_SUB 255
@@ -173,6 +174,12 @@ struct v7 {
 
   struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
+
+  struct mbuf tmp_stack; /* Stack of val_t* elements, used as root set */
+
+  struct gc_arena object_arena;
+  struct gc_arena function_arena;
+  struct gc_arena property_arena;
 
   int strict_mode;  /* true if currently in strict mode */
 
