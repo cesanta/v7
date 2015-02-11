@@ -1381,6 +1381,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
 
   ast_init(a, 0);
+  v7->last_ast = a;
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
     r = v7->thrown_error;
     err = V7_EXEC_EXCEPTION;

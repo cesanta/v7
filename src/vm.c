@@ -931,6 +931,7 @@ void v7_destroy(struct v7 *v7) {
   if (v7 != NULL) {
     mbuf_free(&v7->owned_strings);
     mbuf_free(&v7->foreign_strings);
+    mbuf_free(&v7->json_visited_stack);
     free(v7);
   }
 }
