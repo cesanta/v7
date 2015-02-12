@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "../v7.h"
 #include "../src/internal.h"
@@ -278,7 +279,10 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "new String('blah')") == V7_OK);
 #endif
 
+
   /* Date */
+  tzset();
+  
   ASSERT(v7_exec(v7, &v, "new Date(99,10).valueOf()") == V7_OK);
   ASSERT(check_num(v, 941407200000));  
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5).valueOf()") == V7_OK);
@@ -290,8 +294,78 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45).valueOf()") == V7_OK);
   ASSERT(check_num(v, 941794545000));    
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45,567).valueOf()") == V7_OK);
-  ASSERT(check_num(v, 941794545567));   
-    
+  ASSERT(check_num(v, 941794545567));
+  ASSERT(v7_exec(v7, &v, "var d = new Date(1999,10,5,11,35,45,567)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.getTime()") == V7_OK);
+  ASSERT(check_num(v, 941794545567));
+  ASSERT(v7_exec(v7, &v, "d.getFullYear()") == V7_OK);
+  ASSERT(check_num(v, 1999));
+  ASSERT(v7_exec(v7, &v, "d.getUTCFullYear()") == V7_OK);
+  ASSERT(check_num(v, 1999));
+  ASSERT(v7_exec(v7, &v, "d.getMonth()") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "d.getUTCMonth()") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "d.getDate()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getUTCDate()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getDay()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getUTCDay()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getHours()") == V7_OK);
+  ASSERT(check_num(v, 11));
+  ASSERT(v7_exec(v7, &v, "d.getUTCHours()") == V7_OK);
+  ASSERT(check_num(v, 11+timezone/3600));
+  ASSERT(v7_exec(v7, &v, "d.getMinutes()") == V7_OK);
+  ASSERT(check_num(v, 35));
+  ASSERT(v7_exec(v7, &v, "d.getUTCMinutes()") == V7_OK);
+  ASSERT(check_num(v, 35));
+  ASSERT(v7_exec(v7, &v, "d.getSeconds()") == V7_OK);
+  ASSERT(check_num(v, 45));
+  ASSERT(v7_exec(v7, &v, "d.getUTCSeconds()") == V7_OK);
+  ASSERT(check_num(v, 45));
+  ASSERT(v7_exec(v7, &v, "d.getMilliseconds()") == V7_OK);
+  ASSERT(check_num(v, 567));
+  ASSERT(v7_exec(v7, &v, "d.getUTCMilliseconds()") == V7_OK);
+  ASSERT(check_num(v, 567));
+  ASSERT(v7_exec(v7, &v, "d.getTimezoneOffset()") == V7_OK);
+  ASSERT(check_num(v, timezone/60));
+  ASSERT(v7_exec(v7, &v, "d.setTime(10)") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "d.valueOf()") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "var j = new Date(1999,10,5,11,35,45,567)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "j.setMilliseconds(10)") == V7_OK);
+  ASSERT(check_num(v, 941794545010));
+  ASSERT(v7_exec(v7, &v, "j.setUTCMilliseconds(100)") == V7_OK);
+  ASSERT(check_num(v, 941794545100));
+  ASSERT(v7_exec(v7, &v, "j.setSeconds(10)") == V7_OK);
+  ASSERT(check_num(v, 941794510100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCSeconds(30)") == V7_OK);
+  ASSERT(check_num(v, 941794530100));
+  ASSERT(v7_exec(v7, &v, "j.setMinutes(10)") == V7_OK);
+  ASSERT(check_num(v, 941793030100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCMinutes(30)") == V7_OK);
+  ASSERT(check_num(v, 941794230100));
+  ASSERT(v7_exec(v7, &v, "j.setHours(10)") == V7_OK);
+  ASSERT(check_num(v, 941790630100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCHours(20)") == V7_OK);
+  ASSERT(check_num(v, 941833830100));
+  ASSERT(v7_exec(v7, &v, "j.setDate(15)") == V7_OK);
+  ASSERT(check_num(v, 942697830100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCDate(20)") == V7_OK);
+  ASSERT(check_num(v, 943129830100));
+  ASSERT(v7_exec(v7, &v, "j.setMonth(10)") == V7_OK);
+  ASSERT(check_num(v, 943129830100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCMonth(11)") == V7_OK);
+  ASSERT(check_num(v, 945721830100));
+  ASSERT(v7_exec(v7, &v, "j.setFullYear(2014)") == V7_OK);
+  ASSERT(check_num(v, 1419107430100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCFullYear(2015)") == V7_OK);
+  ASSERT(check_num(v, 1450643430100));
+  
 #if 0
   /* Regexp */
   ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/; re")) != NULL);
@@ -834,7 +908,7 @@ static const char *test_ecmac(void) {
     ast_dump(stdout, &a, 0);
 #endif
   }
-  printf("ECMA tests coverage: %.2lf%%\n", (double) passed / i * 100.0);
+  printf("ECMA tests coverage: %.2lf%% (%d of %d)\n", (double) passed / i * 100.0, passed, i);
 
   free(db);
   fclose(r);

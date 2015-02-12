@@ -685,7 +685,7 @@
 684	PASS (tail -c +484779 tests/ecmac.db|head -c 1052)
 685	PASS (tail -c +485832 tests/ecmac.db|head -c 934)
 686	PASS (tail -c +486767 tests/ecmac.db|head -c 978)
-687	PASS (tail -c +487746 tests/ecmac.db|head -c 1027)
+687	FAIL (tail -c +487746 tests/ecmac.db|head -c 1027): [{"message":"#2: var numInstance=new Number; numInstance.constructor === Number. Actual: cfunc_0x10b3661d0"}]
 688	FAIL (tail -c +488774 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
 689	PASS (tail -c +489343 tests/ecmac.db|head -c 854)
 690	FAIL (tail -c +490198 tests/ecmac.db|head -c 777): [{"message":"#1: y = 1; (delete y) === false. Actual: true"}]
@@ -785,7 +785,7 @@
 781	PASS (tail -c +583893 tests/ecmac.db|head -c 971)
 782	FAIL (tail -c +584865 tests/ecmac.db|head -c 528): [{"message":"#1: "abc".charAt(Number.NaN) === "a". Actual: "}]
 783	PASS (tail -c +585394 tests/ecmac.db|head -c 536)
-784	FAIL (tail -c +585931 tests/ecmac.db|head -c 1969): [{"message":"#12: var d12 = new Date(-1.23e-15); d12.valueOf() === -0;"}]
+784	PASS (tail -c +585931 tests/ecmac.db|head -c 1969)
 785	FAIL (tail -c +587901 tests/ecmac.db|head -c 1007): [{"message":"#1: var d1 = new Date(Number.NaN); d1.valueOf() === Number.NaN;"}]
 786	PASS (tail -c +588909 tests/ecmac.db|head -c 1629)
 787	FAIL (tail -c +590539 tests/ecmac.db|head -c 1325): [{"message":"#3: (-2147483649 << 0) === 2147483647. Actual: -2.14748e+09"}]
@@ -839,7 +839,7 @@
 835	FAIL (tail -c +646435 tests/ecmac.db|head -c 762): [{"message":"#2.2: with(undefined) x = 2 must throw TypeError. Actual: {"message":"with statement is not really implemented yet"}"}]
 836	FAIL (tail -c +647198 tests/ecmac.db|head -c 722): [{"message":"#1.2: null['foo'] must throw TypeError. Actual: {"message":"#1.1: null['foo'] throw TypeError. Actual: undefined"}"}]
 837	PASS (tail -c +647921 tests/ecmac.db|head -c 1248)
-838	PASS (tail -c +649170 tests/ecmac.db|head -c 6380)
+838	FAIL (tail -c +649170 tests/ecmac.db|head -c 6380): [{"message":"Date.valueOf called on non-Date object"}]
 839	PASS (tail -c +655551 tests/ecmac.db|head -c 2437)
 840	FAIL (tail -c +657989 tests/ecmac.db|head -c 924): [{"message":"cannot read property 'valueOf' of undefined"}]
 841	PASS (tail -c +658914 tests/ecmac.db|head -c 471)
@@ -2069,7 +2069,7 @@
 2065	PASS (tail -c +1598918 tests/ecmac.db|head -c 439)
 2066	PASS (tail -c +1599358 tests/ecmac.db|head -c 439)
 2067	FAIL (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 1{"toString":[function()]}"}]
-2068	FAIL (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84736e+12"}]
+2068	FAIL (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84751e+12"}]
 2069	FAIL (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
 2070	PASS (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS (tail -c +1605816 tests/ecmac.db|head -c 464)
@@ -4169,20 +4169,20 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4161	PASS (tail -c +4630767 tests/ecmac.db|head -c 785)
 4162	FAIL (tail -c +4631553 tests/ecmac.db|head -c 616): [{"message":"#2: Object([1,2,3]) returns ToObject([1,2,3])"}]
 4163	FAIL (tail -c +4632170 tests/ecmac.db|head -c 755): [{"message":"cannot read property 'constructor' of undefined"}]
-4164	PASS (tail -c +4632926 tests/ecmac.db|head -c 736)
+4164	FAIL (tail -c +4632926 tests/ecmac.db|head -c 736): [{"message":"#3: Object(expression) returns ToObject(expression)"}]
 4165	PASS (tail -c +4633663 tests/ecmac.db|head -c 804)
 4166	PASS (tail -c +4634468 tests/ecmac.db|head -c 725)
-4167	PASS (tail -c +4635194 tests/ecmac.db|head -c 769)
+4167	FAIL (tail -c +4635194 tests/ecmac.db|head -c 769): [{"message":"#3: Object(1.1) returns ToObject(1.1)"}]
 4168	PASS (tail -c +4635964 tests/ecmac.db|head -c 894)
 4169	FAIL (tail -c +4636859 tests/ecmac.db|head -c 609): [{"message":"#2: Object({flag:true}) returns ToObject({flag:true})"}]
-4170	PASS (tail -c +4637469 tests/ecmac.db|head -c 662)
-4171	PASS (tail -c +4638132 tests/ecmac.db|head -c 819)
+4170	FAIL (tail -c +4637469 tests/ecmac.db|head -c 662): [{"message":"#2: Object(NaN) returns ToObject(NaN)"}]
+4171	FAIL (tail -c +4638132 tests/ecmac.db|head -c 819): [{"message":"#2: Object(Infinity) returns ToObject(Infinity)"}]
 4172	PASS (tail -c +4638952 tests/ecmac.db|head -c 746)
 4173	FAIL (tail -c +4639699 tests/ecmac.db|head -c 625): [{"message":"#2: Object(function) returns function"}]
 4174	FAIL (tail -c +4640325 tests/ecmac.db|head -c 636): [{"message":"#2: Object(function) returns function"}]
-4175	PASS (tail -c +4640962 tests/ecmac.db|head -c 824)
+4175	FAIL (tail -c +4640962 tests/ecmac.db|head -c 824): [{"message":"#1: Since Object as a function calling is the same as function calling list of arguments can appears in braces;"}]
 4176	FAIL (tail -c +4641787 tests/ecmac.db|head -c 661): [{"message":"cannot read property 'constructor' of undefined"}]
-4177	PASS (tail -c +4642449 tests/ecmac.db|head -c 842)
+4177	FAIL (tail -c +4642449 tests/ecmac.db|head -c 842): [{"message":"#1: Since Object as a function calling is the same as function calling list of arguments can appears in braces;"}]
 4178	FAIL (tail -c +4643292 tests/ecmac.db|head -c 1549): [{"message":"#2: when new Object() calls the [[Prototype]] property of the newly constructed object is set to the Object prototype object."}]
 4179	FAIL (tail -c +4644842 tests/ecmac.db|head -c 1626): [{"message":"#2: when new Object(undefined) calls the [[Prototype]] property of the newly constructed object is set to the Object prototype object."}]
 4180	FAIL (tail -c +4646469 tests/ecmac.db|head -c 1577): [{"message":"#2: when new Object(null) calls the [[Prototype]] property of the newly constructed object is set to the Object prototype object."}]
@@ -4201,13 +4201,13 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4193	PASS (tail -c +4659133 tests/ecmac.db|head -c 995)
 4194	PASS (tail -c +4660129 tests/ecmac.db|head -c 998)
 4195	PASS (tail -c +4661128 tests/ecmac.db|head -c 917)
-4196	PASS (tail -c +4662046 tests/ecmac.db|head -c 979)
-4197	PASS (tail -c +4663026 tests/ecmac.db|head -c 703)
-4198	PASS (tail -c +4663730 tests/ecmac.db|head -c 987)
-4199	PASS (tail -c +4664718 tests/ecmac.db|head -c 910)
-4200	PASS (tail -c +4665629 tests/ecmac.db|head -c 832)
+4196	FAIL (tail -c +4662046 tests/ecmac.db|head -c 979): [{"message":"#2: When the Object constructor is called with Number argument return ToObject(number)"}]
+4197	FAIL (tail -c +4663026 tests/ecmac.db|head -c 703): [{"message":"#2: When the Object constructor is called with Number argument return ToObject(number)"}]
+4198	FAIL (tail -c +4663730 tests/ecmac.db|head -c 987): [{"message":"#2: When the Object constructor is called with Number argument return ToObject(number)"}]
+4199	FAIL (tail -c +4664718 tests/ecmac.db|head -c 910): [{"message":"#2: When the Object constructor is called with Number argument return ToObject(number)"}]
+4200	FAIL (tail -c +4665629 tests/ecmac.db|head -c 832): [{"message":"#1: Since Object as a function calling is the same as function calling list of arguments can appears in braces;"}]
 4201	PASS (tail -c +4666462 tests/ecmac.db|head -c 669)
-4202	PASS (tail -c +4667132 tests/ecmac.db|head -c 850)
+4202	FAIL (tail -c +4667132 tests/ecmac.db|head -c 850): [{"message":"#1: Since Object as a function calling is the same as function calling list of arguments can appears in braces;"}]
 4203	PASS (tail -c +4667983 tests/ecmac.db|head -c 344)
 4204	FAIL (tail -c +4668328 tests/ecmac.db|head -c 483): [{"message":"[Function] is not defined"}]
 4205	FAIL (tail -c +4668812 tests/ecmac.db|head -c 426): [{"message":"#1: The Object constructor has the property "length""}]
@@ -4445,7 +4445,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4437	FAIL (tail -c +4780474 tests/ecmac.db|head -c 391): [{"message":"Test case returned non-true value!"}]
 4438	PASS (tail -c +4780866 tests/ecmac.db|head -c 393)
 4439	PASS (tail -c +4781260 tests/ecmac.db|head -c 388)
-4440	FAIL (tail -c +4781649 tests/ecmac.db|head -c 380): [{"message":"Test case returned non-true value!"}]
+4440	PASS (tail -c +4781649 tests/ecmac.db|head -c 380)
 4441	FAIL (tail -c +4782030 tests/ecmac.db|head -c 386): [{"message":"[RegExp] is not defined"}]
 4442	PASS (tail -c +4782417 tests/ecmac.db|head -c 383)
 4443	FAIL (tail -c +4782801 tests/ecmac.db|head -c 464): [{"message":"Test case returned non-true value!"}]
@@ -4457,7 +4457,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4449	FAIL (tail -c +4785084 tests/ecmac.db|head -c 361): [{"message":"Object.getPrototypeOf called on non-object"}]
 4450	FAIL (tail -c +4785446 tests/ecmac.db|head -c 361): [{"message":"[Function] is not defined"}]
 4451	PASS (tail -c +4785808 tests/ecmac.db|head -c 355)
-4452	FAIL (tail -c +4786164 tests/ecmac.db|head -c 357): [{"message":"Object.getPrototypeOf called on non-object"}]
+4452	FAIL (tail -c +4786164 tests/ecmac.db|head -c 357): [{"message":"[Function] is not defined"}]
 4453	PASS (tail -c +4786522 tests/ecmac.db|head -c 346)
 4454	FAIL (tail -c +4786869 tests/ecmac.db|head -c 356): [{"message":"Test case returned non-true value!"}]
 4455	FAIL (tail -c +4787226 tests/ecmac.db|head -c 447): [{"message":"Test case returned non-true value!"}]
@@ -4545,41 +4545,41 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4537	FAIL (tail -c +4830035 tests/ecmac.db|head -c 520): [{"message":"cannot read property 'value' of undefined"}]
 4538	FAIL (tail -c +4830556 tests/ecmac.db|head -c 514): [{"message":"cannot read property 'value' of undefined"}]
 4539	FAIL (tail -c +4831071 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4540	FAIL (tail -c +4831640 tests/ecmac.db|head -c 556): [{"message":"cannot read property 'value' of undefined"}]
-4541	FAIL (tail -c +4832197 tests/ecmac.db|head -c 586): [{"message":"cannot read property 'value' of undefined"}]
-4542	FAIL (tail -c +4832784 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4543	FAIL (tail -c +4833353 tests/ecmac.db|head -c 559): [{"message":"cannot read property 'value' of undefined"}]
-4544	FAIL (tail -c +4833913 tests/ecmac.db|head -c 556): [{"message":"cannot read property 'value' of undefined"}]
-4545	FAIL (tail -c +4834470 tests/ecmac.db|head -c 553): [{"message":"cannot read property 'value' of undefined"}]
-4546	FAIL (tail -c +4835024 tests/ecmac.db|head -c 559): [{"message":"cannot read property 'value' of undefined"}]
-4547	FAIL (tail -c +4835584 tests/ecmac.db|head -c 565): [{"message":"cannot read property 'value' of undefined"}]
-4548	FAIL (tail -c +4836150 tests/ecmac.db|head -c 565): [{"message":"cannot read property 'value' of undefined"}]
-4549	FAIL (tail -c +4836716 tests/ecmac.db|head -c 580): [{"message":"cannot read property 'value' of undefined"}]
-4550	FAIL (tail -c +4837297 tests/ecmac.db|head -c 577): [{"message":"cannot read property 'value' of undefined"}]
-4551	FAIL (tail -c +4837875 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4552	FAIL (tail -c +4838444 tests/ecmac.db|head -c 565): [{"message":"cannot read property 'value' of undefined"}]
-4553	FAIL (tail -c +4839010 tests/ecmac.db|head -c 562): [{"message":"cannot read property 'value' of undefined"}]
-4554	FAIL (tail -c +4839573 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4555	FAIL (tail -c +4840142 tests/ecmac.db|head -c 574): [{"message":"cannot read property 'value' of undefined"}]
-4556	FAIL (tail -c +4840717 tests/ecmac.db|head -c 574): [{"message":"cannot read property 'value' of undefined"}]
-4557	FAIL (tail -c +4841292 tests/ecmac.db|head -c 589): [{"message":"cannot read property 'value' of undefined"}]
-4558	FAIL (tail -c +4841882 tests/ecmac.db|head -c 556): [{"message":"cannot read property 'value' of undefined"}]
-4559	FAIL (tail -c +4842439 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4560	FAIL (tail -c +4843008 tests/ecmac.db|head -c 559): [{"message":"cannot read property 'value' of undefined"}]
+4540	FAIL (tail -c +4831640 tests/ecmac.db|head -c 556): [{"message":"Test case returned non-true value!"}]
+4541	FAIL (tail -c +4832197 tests/ecmac.db|head -c 586): [{"message":"Test case returned non-true value!"}]
+4542	FAIL (tail -c +4832784 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
+4543	FAIL (tail -c +4833353 tests/ecmac.db|head -c 559): [{"message":"Test case returned non-true value!"}]
+4544	FAIL (tail -c +4833913 tests/ecmac.db|head -c 556): [{"message":"Test case returned non-true value!"}]
+4545	FAIL (tail -c +4834470 tests/ecmac.db|head -c 553): [{"message":"Test case returned non-true value!"}]
+4546	FAIL (tail -c +4835024 tests/ecmac.db|head -c 559): [{"message":"Test case returned non-true value!"}]
+4547	FAIL (tail -c +4835584 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
+4548	FAIL (tail -c +4836150 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
+4549	FAIL (tail -c +4836716 tests/ecmac.db|head -c 580): [{"message":"Test case returned non-true value!"}]
+4550	FAIL (tail -c +4837297 tests/ecmac.db|head -c 577): [{"message":"Test case returned non-true value!"}]
+4551	FAIL (tail -c +4837875 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
+4552	FAIL (tail -c +4838444 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
+4553	FAIL (tail -c +4839010 tests/ecmac.db|head -c 562): [{"message":"Test case returned non-true value!"}]
+4554	FAIL (tail -c +4839573 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
+4555	FAIL (tail -c +4840142 tests/ecmac.db|head -c 574): [{"message":"Test case returned non-true value!"}]
+4556	FAIL (tail -c +4840717 tests/ecmac.db|head -c 574): [{"message":"Test case returned non-true value!"}]
+4557	FAIL (tail -c +4841292 tests/ecmac.db|head -c 589): [{"message":"Test case returned non-true value!"}]
+4558	FAIL (tail -c +4841882 tests/ecmac.db|head -c 556): [{"message":"Test case returned non-true value!"}]
+4559	FAIL (tail -c +4842439 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
+4560	FAIL (tail -c +4843008 tests/ecmac.db|head -c 559): [{"message":"Test case returned non-true value!"}]
 4561	FAIL (tail -c +4843568 tests/ecmac.db|head -c 552): [{"message":"Test case returned non-true value!"}]
-4562	FAIL (tail -c +4844121 tests/ecmac.db|head -c 556): [{"message":"cannot read property 'value' of undefined"}]
-4563	FAIL (tail -c +4844678 tests/ecmac.db|head -c 559): [{"message":"cannot read property 'value' of undefined"}]
-4564	FAIL (tail -c +4845238 tests/ecmac.db|head -c 565): [{"message":"cannot read property 'value' of undefined"}]
-4565	FAIL (tail -c +4845804 tests/ecmac.db|head -c 565): [{"message":"cannot read property 'value' of undefined"}]
-4566	FAIL (tail -c +4846370 tests/ecmac.db|head -c 580): [{"message":"cannot read property 'value' of undefined"}]
-4567	FAIL (tail -c +4846951 tests/ecmac.db|head -c 577): [{"message":"cannot read property 'value' of undefined"}]
-4568	FAIL (tail -c +4847529 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4569	FAIL (tail -c +4848098 tests/ecmac.db|head -c 565): [{"message":"cannot read property 'value' of undefined"}]
-4570	FAIL (tail -c +4848664 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4571	FAIL (tail -c +4849233 tests/ecmac.db|head -c 574): [{"message":"cannot read property 'value' of undefined"}]
+4562	FAIL (tail -c +4844121 tests/ecmac.db|head -c 556): [{"message":"Test case returned non-true value!"}]
+4563	FAIL (tail -c +4844678 tests/ecmac.db|head -c 559): [{"message":"Test case returned non-true value!"}]
+4564	FAIL (tail -c +4845238 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
+4565	FAIL (tail -c +4845804 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
+4566	FAIL (tail -c +4846370 tests/ecmac.db|head -c 580): [{"message":"Test case returned non-true value!"}]
+4567	FAIL (tail -c +4846951 tests/ecmac.db|head -c 577): [{"message":"Test case returned non-true value!"}]
+4568	FAIL (tail -c +4847529 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
+4569	FAIL (tail -c +4848098 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
+4570	FAIL (tail -c +4848664 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
+4571	FAIL (tail -c +4849233 tests/ecmac.db|head -c 574): [{"message":"Test case returned non-true value!"}]
 4572	FAIL (tail -c +4849808 tests/ecmac.db|head -c 582): [{"message":"Test case returned non-true value!"}]
-4573	FAIL (tail -c +4850391 tests/ecmac.db|head -c 574): [{"message":"cannot read property 'value' of undefined"}]
-4574	FAIL (tail -c +4850966 tests/ecmac.db|head -c 589): [{"message":"cannot read property 'value' of undefined"}]
+4573	FAIL (tail -c +4850391 tests/ecmac.db|head -c 574): [{"message":"Test case returned non-true value!"}]
+4574	FAIL (tail -c +4850966 tests/ecmac.db|head -c 589): [{"message":"Test case returned non-true value!"}]
 4575	FAIL (tail -c +4851556 tests/ecmac.db|head -c 577): [{"message":"cannot read property 'value' of undefined"}]
 4576	FAIL (tail -c +4852134 tests/ecmac.db|head -c 559): [{"message":"cannot read property 'value' of undefined"}]
 4577	FAIL (tail -c +4852694 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
@@ -4588,8 +4588,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4580	FAIL (tail -c +4854407 tests/ecmac.db|head -c 589): [{"message":"cannot read property 'value' of undefined"}]
 4581	FAIL (tail -c +4854997 tests/ecmac.db|head -c 589): [{"message":"cannot read property 'value' of undefined"}]
 4582	FAIL (tail -c +4855587 tests/ecmac.db|head -c 567): [{"message":"Test case returned non-true value!"}]
-4583	FAIL (tail -c +4856155 tests/ecmac.db|head -c 556): [{"message":"cannot read property 'value' of undefined"}]
-4584	FAIL (tail -c +4856712 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
+4583	FAIL (tail -c +4856155 tests/ecmac.db|head -c 556): [{"message":"Test case returned non-true value!"}]
+4584	FAIL (tail -c +4856712 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
 4585	FAIL (tail -c +4857281 tests/ecmac.db|head -c 553): [{"message":"cannot read property 'value' of undefined"}]
 4586	FAIL (tail -c +4857835 tests/ecmac.db|head -c 574): [{"message":"[RegExp] is not defined"}]
 4587	FAIL (tail -c +4858410 tests/ecmac.db|head -c 553): [{"message":"[RegExp] is not defined"}]
@@ -4642,7 +4642,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4634	FAIL (tail -c +4885832 tests/ecmac.db|head -c 599): [{"message":"Test case returned non-true value!"}]
 4635	FAIL (tail -c +4886432 tests/ecmac.db|head -c 595): [{"message":"Test case returned non-true value!"}]
 4636	FAIL (tail -c +4887028 tests/ecmac.db|head -c 528): [{"message":"cannot read property 'value' of undefined"}]
-4637	FAIL (tail -c +4887557 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'writable' of undefined"}]
+4637	PASS (tail -c +4887557 tests/ecmac.db|head -c 603)
 4638	FAIL (tail -c +4888161 tests/ecmac.db|head -c 607): [{"message":"[RegExp] is not defined"}]
 4639	FAIL (tail -c +4888769 tests/ecmac.db|head -c 621): [{"message":"[RegExp] is not defined"}]
 4640	FAIL (tail -c +4889391 tests/ecmac.db|head -c 621): [{"message":"[RegExp] is not defined"}]
@@ -6162,7 +6162,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6154	FAIL (tail -c +6123557 tests/ecmac.db|head -c 1374): [{"message":"cannot read property 'writable' of undefined"}]
 6155	FAIL (tail -c +6124932 tests/ecmac.db|head -c 1320): [{"message":"cannot read property 'writable' of undefined"}]
 6156	FAIL (tail -c +6126253 tests/ecmac.db|head -c 1203): [{"message":"cannot read property 'writable' of undefined"}]
-6157	FAIL (tail -c +6127457 tests/ecmac.db|head -c 1365): [{"message":"cannot read property 'writable' of undefined"}]
+6157	FAIL (tail -c +6127457 tests/ecmac.db|head -c 1365): [{"message":"Test case returned non-true value!"}]
 6158	FAIL (tail -c +6128823 tests/ecmac.db|head -c 1320): [{"message":"cannot read property 'writable' of undefined"}]
 6159	PASS (tail -c +6130144 tests/ecmac.db|head -c 600)
 6160	PASS (tail -c +6130745 tests/ecmac.db|head -c 908)
@@ -7480,7 +7480,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7472	FAIL (tail -c +7125859 tests/ecmac.db|head -c 1510): [{"message":"cannot read property 'sort' of undefined"}]
 7473	FAIL (tail -c +7127370 tests/ecmac.db|head -c 1439): [{"message":"cannot read property 'sort' of undefined"}]
 7474	FAIL (tail -c +7128810 tests/ecmac.db|head -c 486): [{"message":"#1.2: Array.sort should not eat exceptions"}]
-7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: 2.68156e+154"}]
+7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: 1.72723e-77"}]
 7476	FAIL (tail -c +7131367 tests/ecmac.db|head -c 721): [{"message":"cannot read property 'sort' of undefined"}]
 7477	FAIL (tail -c +7132089 tests/ecmac.db|head -c 902): [{"message":"cannot read property 'sort' of undefined"}]
 7478	FAIL (tail -c +7132992 tests/ecmac.db|head -c 550): [{"message":"cannot read property 'sort' of undefined"}]
@@ -9597,8 +9597,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9589	FAIL (tail -c +8714122 tests/ecmac.db|head -c 1221): [{"message":"cannot read property 'reverse' of undefined"}]
 9590	FAIL (tail -c +8715344 tests/ecmac.db|head -c 1582): [{"message":"cannot read property 'reverse' of undefined"}]
 9591	FAIL (tail -c +8716927 tests/ecmac.db|head -c 1511): [{"message":"cannot read property 'reverse' of undefined"}]
-9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: 2.68156e+154"}]
-9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: 2.68156e+154"}]
+9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: 1.72723e-77"}]
+9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: 1.72723e-77"}]
 9594	FAIL (tail -c +8722651 tests/ecmac.db|head -c 737): [{"message":"cannot read property 'reverse' of undefined"}]
 9595	FAIL (tail -c +8723389 tests/ecmac.db|head -c 936): [{"message":"cannot read property 'reverse' of undefined"}]
 9596	FAIL (tail -c +8724326 tests/ecmac.db|head -c 581): [{"message":"cannot read property 'reverse' of undefined"}]
@@ -10452,7 +10452,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10444	PASS (tail -c +9536560 tests/ecmac.db|head -c 366)
 10445	PASS (tail -c +9536927 tests/ecmac.db|head -c 384)
 10446	PASS (tail -c +9537312 tests/ecmac.db|head -c 378)
-10447	PASS (tail -c +9537691 tests/ecmac.db|head -c 396)
+10447	FAIL (tail -c +9537691 tests/ecmac.db|head -c 396): [{"message":"#1: Number.prototype.constructor === Number"}]
 10448	PASS (tail -c +9538088 tests/ecmac.db|head -c 1319)
 10449	PASS (tail -c +9539408 tests/ecmac.db|head -c 1347)
 10450	PASS (tail -c +9540756 tests/ecmac.db|head -c 1472)
@@ -10698,12 +10698,12 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10690	PASS (tail -c +9781502 tests/ecmac.db|head -c 6746)
 10691	PASS (tail -c +9788249 tests/ecmac.db|head -c 7075)
 10692	PASS (tail -c +9795325 tests/ecmac.db|head -c 7431)
-10693	FAIL (tail -c +9802757 tests/ecmac.db|head -c 5439): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-10694	FAIL (tail -c +9808197 tests/ecmac.db|head -c 5565): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-10695	FAIL (tail -c +9813763 tests/ecmac.db|head -c 5692): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-10696	FAIL (tail -c +9819456 tests/ecmac.db|head -c 5821): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-10697	FAIL (tail -c +9825278 tests/ecmac.db|head -c 5950): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
-10698	FAIL (tail -c +9831229 tests/ecmac.db|head -c 6086): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
+10693	FAIL (tail -c +9802757 tests/ecmac.db|head -c 5439): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
+10694	FAIL (tail -c +9808197 tests/ecmac.db|head -c 5565): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
+10695	FAIL (tail -c +9813763 tests/ecmac.db|head -c 5692): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
+10696	FAIL (tail -c +9819456 tests/ecmac.db|head -c 5821): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
+10697	FAIL (tail -c +9825278 tests/ecmac.db|head -c 5950): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
+10698	FAIL (tail -c +9831229 tests/ecmac.db|head -c 6086): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
 10699	FAIL (tail -c +9837316 tests/ecmac.db|head -c 2472): [{"message":"value is not a function"}]
 10700	FAIL (tail -c +9839789 tests/ecmac.db|head -c 2280): [{"message":"#1: The [[Class]] property of the newly constructed object is set to 'Date'"}]
 10701	FAIL (tail -c +9842070 tests/ecmac.db|head -c 2518): [{"message":"value is not a function"}]
@@ -10728,392 +10728,392 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10720	FAIL (tail -c +9884166 tests/ecmac.db|head -c 2099): [{"message":"#1: Incorrect value of Date"}]
 10721	FAIL (tail -c +9886266 tests/ecmac.db|head -c 2148): [{"message":"#1: Incorrect value of Date"}]
 10722	FAIL (tail -c +9888415 tests/ecmac.db|head -c 2196): [{"message":"#1: Incorrect value of Date"}]
-10723	FAIL (tail -c +9890612 tests/ecmac.db|head -c 1354): [{"message":"Number or String expected"}]
-10724	FAIL (tail -c +9891967 tests/ecmac.db|head -c 1400): [{"message":"Number or String expected"}]
-10725	FAIL (tail -c +9893368 tests/ecmac.db|head -c 1447): [{"message":"Number or String expected"}]
-10726	FAIL (tail -c +9894816 tests/ecmac.db|head -c 1496): [{"message":"Number or String expected"}]
-10727	FAIL (tail -c +9896313 tests/ecmac.db|head -c 1545): [{"message":"Number or String expected"}]
+10723	FAIL (tail -c +9890612 tests/ecmac.db|head -c 1354): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+10724	FAIL (tail -c +9891967 tests/ecmac.db|head -c 1400): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+10725	FAIL (tail -c +9893368 tests/ecmac.db|head -c 1447): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+10726	FAIL (tail -c +9894816 tests/ecmac.db|head -c 1496): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+10727	FAIL (tail -c +9896313 tests/ecmac.db|head -c 1545): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
 10728	PASS (tail -c +9897859 tests/ecmac.db|head -c 4128)
-10729	FAIL (tail -c +9901988 tests/ecmac.db|head -c 3930): [{"message":"cannot read property 'isPrototypeOf' of undefined"}]
+10729	FAIL (tail -c +9901988 tests/ecmac.db|head -c 3930): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
 10730	FAIL (tail -c +9905919 tests/ecmac.db|head -c 1790): [{"message":"value is not a function"}]
 10731	FAIL (tail -c +9907710 tests/ecmac.db|head -c 1681): [{"message":"#1: The [[Class]] property of the newly constructed object is set to 'Date'"}]
-10732	FAIL (tail -c +9909392 tests/ecmac.db|head -c 339): [{"message":"value is not a function"}]
-10733	FAIL (tail -c +9909732 tests/ecmac.db|head -c 323): [{"message":"value is not a function"}]
-10734	FAIL (tail -c +9910056 tests/ecmac.db|head -c 315): [{"message":"value is not a function"}]
+10732	PASS (tail -c +9909392 tests/ecmac.db|head -c 339)
+10733	FAIL (tail -c +9909732 tests/ecmac.db|head -c 323): [{"message":"#1: The Date constructor has the property "parse""}]
+10734	FAIL (tail -c +9910056 tests/ecmac.db|head -c 315): [{"message":"#1: The Date constructor has the property "UTC""}]
 10735	FAIL (tail -c +9910372 tests/ecmac.db|head -c 475): [{"message":"[Function] is not defined"}]
-10736	FAIL (tail -c +9910848 tests/ecmac.db|head -c 426): [{"message":"value is not a function"}]
+10736	FAIL (tail -c +9910848 tests/ecmac.db|head -c 426): [{"message":"#1: Date constructor has length property"}]
 10737	PASS (tail -c +9911275 tests/ecmac.db|head -c 389)
-10738	FAIL (tail -c +9911665 tests/ecmac.db|head -c 492): [{"message":"#1: The Date.prototype property has the attributes DontDelete"}]
-10739	FAIL (tail -c +9912158 tests/ecmac.db|head -c 491): [{"message":"value is not a function"}]
-10740	FAIL (tail -c +9912650 tests/ecmac.db|head -c 399): [{"message":"#1: The Date.parse has not the attribute ReadOnly"}]
-10741	FAIL (tail -c +9913050 tests/ecmac.db|head -c 469): [{"message":"value is not a function"}]
-10742	FAIL (tail -c +9913520 tests/ecmac.db|head -c 449): [{"message":"value is not a function"}]
+10738	PASS (tail -c +9911665 tests/ecmac.db|head -c 492)
+10739	PASS (tail -c +9912158 tests/ecmac.db|head -c 491)
+10740	PASS (tail -c +9912650 tests/ecmac.db|head -c 399)
+10741	PASS (tail -c +9913050 tests/ecmac.db|head -c 469)
+10742	PASS (tail -c +9913520 tests/ecmac.db|head -c 449)
 10743	FAIL (tail -c +9913970 tests/ecmac.db|head -c 424): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
 10744	FAIL (tail -c +9914395 tests/ecmac.db|head -c 404): [{"message":"cannot read property 'length' of undefined"}]
 10745	FAIL (tail -c +9914800 tests/ecmac.db|head -c 508): [{"message":"#1: The Date.parse.length property has the attributes DontDelete"}]
 10746	FAIL (tail -c +9915309 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10747	FAIL (tail -c +9915816 tests/ecmac.db|head -c 387): [{"message":"#1: The Date.UTC has not the attribute ReadOnly"}]
-10748	FAIL (tail -c +9916204 tests/ecmac.db|head -c 459): [{"message":"value is not a function"}]
-10749	FAIL (tail -c +9916664 tests/ecmac.db|head -c 439): [{"message":"value is not a function"}]
+10747	PASS (tail -c +9915816 tests/ecmac.db|head -c 387)
+10748	PASS (tail -c +9916204 tests/ecmac.db|head -c 459)
+10749	PASS (tail -c +9916664 tests/ecmac.db|head -c 439)
 10750	FAIL (tail -c +9917104 tests/ecmac.db|head -c 412): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
 10751	FAIL (tail -c +9917517 tests/ecmac.db|head -c 394): [{"message":"cannot read property 'length' of undefined"}]
 10752	FAIL (tail -c +9917912 tests/ecmac.db|head -c 498): [{"message":"#1: The Date.UTC.length property has the attributes DontDelete"}]
 10753	FAIL (tail -c +9918411 tests/ecmac.db|head -c 496): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10754	FAIL (tail -c +9918908 tests/ecmac.db|head -c 286): [{"message":"Test case returned non-true value!"}]
-10755	FAIL (tail -c +9919195 tests/ecmac.db|head -c 297): [{"message":"cannot read property 'length' of undefined"}]
-10756	FAIL (tail -c +9919493 tests/ecmac.db|head -c 316): [{"message":"Test case returned non-true value!"}]
-10757	FAIL (tail -c +9919810 tests/ecmac.db|head -c 286): [{"message":"value is not a function"}]
-10758	FAIL (tail -c +9920097 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10759	FAIL (tail -c +9920464 tests/ecmac.db|head -c 354): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10760	FAIL (tail -c +9920819 tests/ecmac.db|head -c 370): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10761	FAIL (tail -c +9921190 tests/ecmac.db|head -c 370): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10762	FAIL (tail -c +9921561 tests/ecmac.db|head -c 378): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10763	FAIL (tail -c +9921940 tests/ecmac.db|head -c 394): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10764	FAIL (tail -c +9922335 tests/ecmac.db|head -c 394): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10765	FAIL (tail -c +9922730 tests/ecmac.db|head -c 350): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10766	FAIL (tail -c +9923081 tests/ecmac.db|head -c 350): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10767	FAIL (tail -c +9923432 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10768	FAIL (tail -c +9923799 tests/ecmac.db|head -c 378): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10769	FAIL (tail -c +9924178 tests/ecmac.db|head -c 354): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10770	FAIL (tail -c +9924533 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10771	FAIL (tail -c +9924900 tests/ecmac.db|head -c 350): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10772	FAIL (tail -c +9925251 tests/ecmac.db|head -c 362): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10773	FAIL (tail -c +9925614 tests/ecmac.db|head -c 346): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10774	FAIL (tail -c +9925961 tests/ecmac.db|head -c 358): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10775	FAIL (tail -c +9926320 tests/ecmac.db|head -c 354): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10776	FAIL (tail -c +9926675 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10777	FAIL (tail -c +9927042 tests/ecmac.db|head -c 362): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10778	FAIL (tail -c +9927405 tests/ecmac.db|head -c 374): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10779	FAIL (tail -c +9927780 tests/ecmac.db|head -c 362): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10780	FAIL (tail -c +9928143 tests/ecmac.db|head -c 374): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10781	FAIL (tail -c +9928518 tests/ecmac.db|head -c 382): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10782	FAIL (tail -c +9928901 tests/ecmac.db|head -c 394): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10783	FAIL (tail -c +9929296 tests/ecmac.db|head -c 390): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10784	FAIL (tail -c +9929687 tests/ecmac.db|head -c 350): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10785	FAIL (tail -c +9930038 tests/ecmac.db|head -c 382): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10786	FAIL (tail -c +9930421 tests/ecmac.db|head -c 394): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10787	FAIL (tail -c +9930816 tests/ecmac.db|head -c 362): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10788	FAIL (tail -c +9931179 tests/ecmac.db|head -c 374): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10789	FAIL (tail -c +9931554 tests/ecmac.db|head -c 362): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10790	FAIL (tail -c +9931917 tests/ecmac.db|head -c 374): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10791	FAIL (tail -c +9932292 tests/ecmac.db|head -c 354): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10792	FAIL (tail -c +9932647 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10793	FAIL (tail -c +9933014 tests/ecmac.db|head -c 350): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10794	FAIL (tail -c +9933365 tests/ecmac.db|head -c 362): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10795	FAIL (tail -c +9933728 tests/ecmac.db|head -c 354): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10796	FAIL (tail -c +9934083 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10797	FAIL (tail -c +9934450 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10798	FAIL (tail -c +9934817 tests/ecmac.db|head -c 378): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10799	FAIL (tail -c +9935196 tests/ecmac.db|head -c 366): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10800	FAIL (tail -c +9935563 tests/ecmac.db|head -c 495): [{"message":"cannot read property 'constructor' of undefined"}]
-10801	FAIL (tail -c +9936059 tests/ecmac.db|head -c 549): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10802	FAIL (tail -c +9936609 tests/ecmac.db|head -c 529): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10803	FAIL (tail -c +9937139 tests/ecmac.db|head -c 480): [{"message":"cannot read property 'constructor' of undefined"}]
-10804	FAIL (tail -c +9937620 tests/ecmac.db|head -c 484): [{"message":"cannot read property 'constructor' of undefined"}]
-10805	FAIL (tail -c +9938105 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'constructor' of undefined"}]
-10806	FAIL (tail -c +9938694 tests/ecmac.db|head -c 586): [{"message":"cannot read property 'constructor' of undefined"}]
-10807	FAIL (tail -c +9939281 tests/ecmac.db|head -c 497): [{"message":"cannot read property 'getFullYear' of undefined"}]
-10808	FAIL (tail -c +9939779 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10809	FAIL (tail -c +9940331 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10810	FAIL (tail -c +9940863 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'getFullYear' of undefined"}]
-10811	FAIL (tail -c +9941346 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'getFullYear' of undefined"}]
-10812	FAIL (tail -c +9941833 tests/ecmac.db|head -c 590): [{"message":"cannot read property 'getFullYear' of undefined"}]
-10813	FAIL (tail -c +9942424 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'getFullYear' of undefined"}]
-10814	FAIL (tail -c +9943013 tests/ecmac.db|head -c 515): [{"message":"cannot read property 'getUTCFullYear' of undefined"}]
-10815	FAIL (tail -c +9943529 tests/ecmac.db|head -c 566): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10816	FAIL (tail -c +9944096 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10817	FAIL (tail -c +9944643 tests/ecmac.db|head -c 500): [{"message":"cannot read property 'getUTCFullYear' of undefined"}]
-10818	FAIL (tail -c +9945144 tests/ecmac.db|head -c 501): [{"message":"cannot read property 'getUTCFullYear' of undefined"}]
-10819	FAIL (tail -c +9945646 tests/ecmac.db|head -c 605): [{"message":"cannot read property 'getUTCFullYear' of undefined"}]
-10820	FAIL (tail -c +9946252 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'getUTCFullYear' of undefined"}]
-10821	FAIL (tail -c +9946856 tests/ecmac.db|head -c 479): [{"message":"cannot read property 'getMonth' of undefined"}]
-10822	FAIL (tail -c +9947336 tests/ecmac.db|head -c 536): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10823	FAIL (tail -c +9947873 tests/ecmac.db|head -c 516): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10824	FAIL (tail -c +9948390 tests/ecmac.db|head -c 464): [{"message":"cannot read property 'getMonth' of undefined"}]
-10825	FAIL (tail -c +9948855 tests/ecmac.db|head -c 471): [{"message":"cannot read property 'getMonth' of undefined"}]
-10826	FAIL (tail -c +9949327 tests/ecmac.db|head -c 575): [{"message":"cannot read property 'getMonth' of undefined"}]
-10827	FAIL (tail -c +9949903 tests/ecmac.db|head -c 573): [{"message":"cannot read property 'getMonth' of undefined"}]
-10828	FAIL (tail -c +9950477 tests/ecmac.db|head -c 497): [{"message":"cannot read property 'getUTCMonth' of undefined"}]
-10829	FAIL (tail -c +9950975 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10830	FAIL (tail -c +9951527 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10831	FAIL (tail -c +9952059 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'getUTCMonth' of undefined"}]
-10832	FAIL (tail -c +9952542 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'getUTCMonth' of undefined"}]
-10833	FAIL (tail -c +9953029 tests/ecmac.db|head -c 590): [{"message":"cannot read property 'getUTCMonth' of undefined"}]
-10834	FAIL (tail -c +9953620 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'getUTCMonth' of undefined"}]
-10835	FAIL (tail -c +9954209 tests/ecmac.db|head -c 473): [{"message":"cannot read property 'getDate' of undefined"}]
-10836	FAIL (tail -c +9954683 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10837	FAIL (tail -c +9955215 tests/ecmac.db|head -c 511): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10838	FAIL (tail -c +9955727 tests/ecmac.db|head -c 458): [{"message":"cannot read property 'getDate' of undefined"}]
-10839	FAIL (tail -c +9956186 tests/ecmac.db|head -c 466): [{"message":"cannot read property 'getDate' of undefined"}]
-10840	FAIL (tail -c +9956653 tests/ecmac.db|head -c 570): [{"message":"cannot read property 'getDate' of undefined"}]
-10841	FAIL (tail -c +9957224 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'getDate' of undefined"}]
-10842	FAIL (tail -c +9957793 tests/ecmac.db|head -c 491): [{"message":"cannot read property 'getUTCDate' of undefined"}]
-10843	FAIL (tail -c +9958285 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10844	FAIL (tail -c +9958832 tests/ecmac.db|head -c 526): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10845	FAIL (tail -c +9959359 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'getUTCDate' of undefined"}]
-10846	FAIL (tail -c +9959836 tests/ecmac.db|head -c 481): [{"message":"cannot read property 'getUTCDate' of undefined"}]
-10847	FAIL (tail -c +9960318 tests/ecmac.db|head -c 585): [{"message":"cannot read property 'getUTCDate' of undefined"}]
-10848	FAIL (tail -c +9960904 tests/ecmac.db|head -c 583): [{"message":"cannot read property 'getUTCDate' of undefined"}]
-10849	FAIL (tail -c +9961488 tests/ecmac.db|head -c 467): [{"message":"cannot read property 'getDay' of undefined"}]
-10850	FAIL (tail -c +9961956 tests/ecmac.db|head -c 526): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10851	FAIL (tail -c +9962483 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10852	FAIL (tail -c +9962990 tests/ecmac.db|head -c 452): [{"message":"cannot read property 'getDay' of undefined"}]
-10853	FAIL (tail -c +9963443 tests/ecmac.db|head -c 461): [{"message":"cannot read property 'getDay' of undefined"}]
-10854	FAIL (tail -c +9963905 tests/ecmac.db|head -c 565): [{"message":"cannot read property 'getDay' of undefined"}]
-10855	FAIL (tail -c +9964471 tests/ecmac.db|head -c 563): [{"message":"cannot read property 'getDay' of undefined"}]
-10856	FAIL (tail -c +9965035 tests/ecmac.db|head -c 485): [{"message":"cannot read property 'getUTCDay' of undefined"}]
-10857	FAIL (tail -c +9965521 tests/ecmac.db|head -c 541): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10858	FAIL (tail -c +9966063 tests/ecmac.db|head -c 521): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10859	FAIL (tail -c +9966585 tests/ecmac.db|head -c 470): [{"message":"cannot read property 'getUTCDay' of undefined"}]
-10860	FAIL (tail -c +9967056 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'getUTCDay' of undefined"}]
-10861	FAIL (tail -c +9967533 tests/ecmac.db|head -c 580): [{"message":"cannot read property 'getUTCDay' of undefined"}]
-10862	FAIL (tail -c +9968114 tests/ecmac.db|head -c 578): [{"message":"cannot read property 'getUTCDay' of undefined"}]
-10863	FAIL (tail -c +9968693 tests/ecmac.db|head -c 479): [{"message":"cannot read property 'getHours' of undefined"}]
-10864	FAIL (tail -c +9969173 tests/ecmac.db|head -c 536): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10865	FAIL (tail -c +9969710 tests/ecmac.db|head -c 516): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10866	FAIL (tail -c +9970227 tests/ecmac.db|head -c 464): [{"message":"cannot read property 'getHours' of undefined"}]
-10867	FAIL (tail -c +9970692 tests/ecmac.db|head -c 471): [{"message":"cannot read property 'getHours' of undefined"}]
-10868	FAIL (tail -c +9971164 tests/ecmac.db|head -c 575): [{"message":"cannot read property 'getHours' of undefined"}]
-10869	FAIL (tail -c +9971740 tests/ecmac.db|head -c 573): [{"message":"cannot read property 'getHours' of undefined"}]
-10870	FAIL (tail -c +9972314 tests/ecmac.db|head -c 497): [{"message":"cannot read property 'getUTCHours' of undefined"}]
-10871	FAIL (tail -c +9972812 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10872	FAIL (tail -c +9973364 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10873	FAIL (tail -c +9973896 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'getUTCHours' of undefined"}]
-10874	FAIL (tail -c +9974379 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'getUTCHours' of undefined"}]
-10875	FAIL (tail -c +9974866 tests/ecmac.db|head -c 590): [{"message":"cannot read property 'getUTCHours' of undefined"}]
-10876	FAIL (tail -c +9975457 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'getUTCHours' of undefined"}]
-10877	FAIL (tail -c +9976046 tests/ecmac.db|head -c 477): [{"message":"cannot read property 'toString' of undefined"}]
-10878	FAIL (tail -c +9976524 tests/ecmac.db|head -c 534): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10879	FAIL (tail -c +9977059 tests/ecmac.db|head -c 514): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10880	FAIL (tail -c +9977574 tests/ecmac.db|head -c 462): [{"message":"cannot read property 'toString' of undefined"}]
-10881	FAIL (tail -c +9978037 tests/ecmac.db|head -c 469): [{"message":"cannot read property 'toString' of undefined"}]
-10882	FAIL (tail -c +9978507 tests/ecmac.db|head -c 573): [{"message":"cannot read property 'toString' of undefined"}]
-10883	FAIL (tail -c +9979081 tests/ecmac.db|head -c 571): [{"message":"cannot read property 'toString' of undefined"}]
-10884	FAIL (tail -c +9979653 tests/ecmac.db|head -c 491): [{"message":"cannot read property 'getMinutes' of undefined"}]
-10885	FAIL (tail -c +9980145 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10886	FAIL (tail -c +9980692 tests/ecmac.db|head -c 526): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10887	FAIL (tail -c +9981219 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'getMinutes' of undefined"}]
-10888	FAIL (tail -c +9981696 tests/ecmac.db|head -c 481): [{"message":"cannot read property 'getMinutes' of undefined"}]
-10889	FAIL (tail -c +9982178 tests/ecmac.db|head -c 585): [{"message":"cannot read property 'getMinutes' of undefined"}]
-10890	FAIL (tail -c +9982764 tests/ecmac.db|head -c 583): [{"message":"cannot read property 'getMinutes' of undefined"}]
-10891	FAIL (tail -c +9983348 tests/ecmac.db|head -c 509): [{"message":"cannot read property 'getUTCMinutes' of undefined"}]
-10892	FAIL (tail -c +9983858 tests/ecmac.db|head -c 561): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10893	FAIL (tail -c +9984420 tests/ecmac.db|head -c 541): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10894	FAIL (tail -c +9984962 tests/ecmac.db|head -c 494): [{"message":"cannot read property 'getUTCMinutes' of undefined"}]
-10895	FAIL (tail -c +9985457 tests/ecmac.db|head -c 496): [{"message":"cannot read property 'getUTCMinutes' of undefined"}]
-10896	FAIL (tail -c +9985954 tests/ecmac.db|head -c 600): [{"message":"cannot read property 'getUTCMinutes' of undefined"}]
-10897	FAIL (tail -c +9986555 tests/ecmac.db|head -c 598): [{"message":"cannot read property 'getUTCMinutes' of undefined"}]
-10898	FAIL (tail -c +9987154 tests/ecmac.db|head -c 491): [{"message":"cannot read property 'getSeconds' of undefined"}]
-10899	FAIL (tail -c +9987646 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10900	FAIL (tail -c +9988193 tests/ecmac.db|head -c 526): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10901	FAIL (tail -c +9988720 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'getSeconds' of undefined"}]
-10902	FAIL (tail -c +9989197 tests/ecmac.db|head -c 481): [{"message":"cannot read property 'getSeconds' of undefined"}]
-10903	FAIL (tail -c +9989679 tests/ecmac.db|head -c 585): [{"message":"cannot read property 'getSeconds' of undefined"}]
-10904	FAIL (tail -c +9990265 tests/ecmac.db|head -c 583): [{"message":"cannot read property 'getSeconds' of undefined"}]
-10905	FAIL (tail -c +9990849 tests/ecmac.db|head -c 509): [{"message":"cannot read property 'getUTCSeconds' of undefined"}]
-10906	FAIL (tail -c +9991359 tests/ecmac.db|head -c 561): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10907	FAIL (tail -c +9991921 tests/ecmac.db|head -c 541): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10908	FAIL (tail -c +9992463 tests/ecmac.db|head -c 494): [{"message":"cannot read property 'getUTCSeconds' of undefined"}]
-10909	FAIL (tail -c +9992958 tests/ecmac.db|head -c 496): [{"message":"cannot read property 'getUTCSeconds' of undefined"}]
-10910	FAIL (tail -c +9993455 tests/ecmac.db|head -c 600): [{"message":"cannot read property 'getUTCSeconds' of undefined"}]
-10911	FAIL (tail -c +9994056 tests/ecmac.db|head -c 598): [{"message":"cannot read property 'getUTCSeconds' of undefined"}]
-10912	FAIL (tail -c +9994655 tests/ecmac.db|head -c 521): [{"message":"cannot read property 'getMilliseconds' of undefined"}]
-10913	FAIL (tail -c +9995177 tests/ecmac.db|head -c 571): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10914	FAIL (tail -c +9995749 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10915	FAIL (tail -c +9996301 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'getMilliseconds' of undefined"}]
-10916	FAIL (tail -c +9996808 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'getMilliseconds' of undefined"}]
-10917	FAIL (tail -c +9997315 tests/ecmac.db|head -c 610): [{"message":"cannot read property 'getMilliseconds' of undefined"}]
-10918	FAIL (tail -c +9997926 tests/ecmac.db|head -c 608): [{"message":"cannot read property 'getMilliseconds' of undefined"}]
-10919	FAIL (tail -c +9998535 tests/ecmac.db|head -c 539): [{"message":"cannot read property 'getUTCMilliseconds' of undefined"}]
-10920	FAIL (tail -c +9999075 tests/ecmac.db|head -c 586): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10921	FAIL (tail -c +9999662 tests/ecmac.db|head -c 566): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10922	FAIL (tail -c +10000229 tests/ecmac.db|head -c 524): [{"message":"cannot read property 'getUTCMilliseconds' of undefined"}]
-10923	FAIL (tail -c +10000754 tests/ecmac.db|head -c 521): [{"message":"cannot read property 'getUTCMilliseconds' of undefined"}]
-10924	FAIL (tail -c +10001276 tests/ecmac.db|head -c 625): [{"message":"cannot read property 'getUTCMilliseconds' of undefined"}]
-10925	FAIL (tail -c +10001902 tests/ecmac.db|head -c 623): [{"message":"cannot read property 'getUTCMilliseconds' of undefined"}]
-10926	FAIL (tail -c +10002526 tests/ecmac.db|head -c 533): [{"message":"cannot read property 'getTimezoneOffset' of undefined"}]
-10927	FAIL (tail -c +10003060 tests/ecmac.db|head -c 581): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10928	FAIL (tail -c +10003642 tests/ecmac.db|head -c 561): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10929	FAIL (tail -c +10004204 tests/ecmac.db|head -c 518): [{"message":"cannot read property 'getTimezoneOffset' of undefined"}]
-10930	FAIL (tail -c +10004723 tests/ecmac.db|head -c 516): [{"message":"cannot read property 'getTimezoneOffset' of undefined"}]
-10931	FAIL (tail -c +10005240 tests/ecmac.db|head -c 620): [{"message":"cannot read property 'getTimezoneOffset' of undefined"}]
-10932	FAIL (tail -c +10005861 tests/ecmac.db|head -c 618): [{"message":"cannot read property 'getTimezoneOffset' of undefined"}]
-10933	FAIL (tail -c +10006480 tests/ecmac.db|head -c 473): [{"message":"cannot read property 'setTime' of undefined"}]
-10934	FAIL (tail -c +10006954 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10935	FAIL (tail -c +10007486 tests/ecmac.db|head -c 511): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10936	FAIL (tail -c +10007998 tests/ecmac.db|head -c 458): [{"message":"cannot read property 'setTime' of undefined"}]
-10937	FAIL (tail -c +10008457 tests/ecmac.db|head -c 466): [{"message":"cannot read property 'setTime' of undefined"}]
-10938	FAIL (tail -c +10008924 tests/ecmac.db|head -c 570): [{"message":"cannot read property 'setTime' of undefined"}]
-10939	FAIL (tail -c +10009495 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'setTime' of undefined"}]
-10940	FAIL (tail -c +10010064 tests/ecmac.db|head -c 521): [{"message":"cannot read property 'setMilliseconds' of undefined"}]
-10941	FAIL (tail -c +10010586 tests/ecmac.db|head -c 571): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10942	FAIL (tail -c +10011158 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10943	FAIL (tail -c +10011710 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'setMilliseconds' of undefined"}]
-10944	FAIL (tail -c +10012217 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'setMilliseconds' of undefined"}]
-10945	FAIL (tail -c +10012724 tests/ecmac.db|head -c 610): [{"message":"cannot read property 'setMilliseconds' of undefined"}]
-10946	FAIL (tail -c +10013335 tests/ecmac.db|head -c 608): [{"message":"cannot read property 'setMilliseconds' of undefined"}]
-10947	FAIL (tail -c +10013944 tests/ecmac.db|head -c 539): [{"message":"cannot read property 'setUTCMilliseconds' of undefined"}]
-10948	FAIL (tail -c +10014484 tests/ecmac.db|head -c 586): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10949	FAIL (tail -c +10015071 tests/ecmac.db|head -c 566): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10950	FAIL (tail -c +10015638 tests/ecmac.db|head -c 524): [{"message":"cannot read property 'setUTCMilliseconds' of undefined"}]
-10951	FAIL (tail -c +10016163 tests/ecmac.db|head -c 521): [{"message":"cannot read property 'setUTCMilliseconds' of undefined"}]
-10952	FAIL (tail -c +10016685 tests/ecmac.db|head -c 625): [{"message":"cannot read property 'setUTCMilliseconds' of undefined"}]
-10953	FAIL (tail -c +10017311 tests/ecmac.db|head -c 623): [{"message":"cannot read property 'setUTCMilliseconds' of undefined"}]
-10954	FAIL (tail -c +10017935 tests/ecmac.db|head -c 501): [{"message":"cannot read property 'toDateString' of undefined"}]
-10955	FAIL (tail -c +10018437 tests/ecmac.db|head -c 554): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10956	FAIL (tail -c +10018992 tests/ecmac.db|head -c 534): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10957	FAIL (tail -c +10019527 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'toDateString' of undefined"}]
-10958	FAIL (tail -c +10020014 tests/ecmac.db|head -c 489): [{"message":"cannot read property 'toDateString' of undefined"}]
-10959	FAIL (tail -c +10020504 tests/ecmac.db|head -c 593): [{"message":"cannot read property 'toDateString' of undefined"}]
-10960	FAIL (tail -c +10021098 tests/ecmac.db|head -c 591): [{"message":"cannot read property 'toDateString' of undefined"}]
-10961	FAIL (tail -c +10021690 tests/ecmac.db|head -c 491): [{"message":"cannot read property 'setSeconds' of undefined"}]
-10962	FAIL (tail -c +10022182 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10963	FAIL (tail -c +10022729 tests/ecmac.db|head -c 526): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10964	FAIL (tail -c +10023256 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'setSeconds' of undefined"}]
-10965	FAIL (tail -c +10023733 tests/ecmac.db|head -c 481): [{"message":"cannot read property 'setSeconds' of undefined"}]
-10966	FAIL (tail -c +10024215 tests/ecmac.db|head -c 585): [{"message":"cannot read property 'setSeconds' of undefined"}]
-10967	FAIL (tail -c +10024801 tests/ecmac.db|head -c 583): [{"message":"cannot read property 'setSeconds' of undefined"}]
-10968	FAIL (tail -c +10025385 tests/ecmac.db|head -c 509): [{"message":"cannot read property 'setUTCSeconds' of undefined"}]
-10969	FAIL (tail -c +10025895 tests/ecmac.db|head -c 561): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10970	FAIL (tail -c +10026457 tests/ecmac.db|head -c 541): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10971	FAIL (tail -c +10026999 tests/ecmac.db|head -c 494): [{"message":"cannot read property 'setUTCSeconds' of undefined"}]
-10972	FAIL (tail -c +10027494 tests/ecmac.db|head -c 496): [{"message":"cannot read property 'setUTCSeconds' of undefined"}]
-10973	FAIL (tail -c +10027991 tests/ecmac.db|head -c 600): [{"message":"cannot read property 'setUTCSeconds' of undefined"}]
-10974	FAIL (tail -c +10028592 tests/ecmac.db|head -c 598): [{"message":"cannot read property 'setUTCSeconds' of undefined"}]
-10975	FAIL (tail -c +10029191 tests/ecmac.db|head -c 491): [{"message":"cannot read property 'setMinutes' of undefined"}]
-10976	FAIL (tail -c +10029683 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10977	FAIL (tail -c +10030230 tests/ecmac.db|head -c 526): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10978	FAIL (tail -c +10030757 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'setMinutes' of undefined"}]
-10979	FAIL (tail -c +10031234 tests/ecmac.db|head -c 481): [{"message":"cannot read property 'setMinutes' of undefined"}]
-10980	FAIL (tail -c +10031716 tests/ecmac.db|head -c 585): [{"message":"cannot read property 'setMinutes' of undefined"}]
-10981	FAIL (tail -c +10032302 tests/ecmac.db|head -c 583): [{"message":"cannot read property 'setMinutes' of undefined"}]
-10982	FAIL (tail -c +10032886 tests/ecmac.db|head -c 509): [{"message":"cannot read property 'setUTCMinutes' of undefined"}]
-10983	FAIL (tail -c +10033396 tests/ecmac.db|head -c 561): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10984	FAIL (tail -c +10033958 tests/ecmac.db|head -c 541): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10985	FAIL (tail -c +10034500 tests/ecmac.db|head -c 494): [{"message":"cannot read property 'setUTCMinutes' of undefined"}]
-10986	FAIL (tail -c +10034995 tests/ecmac.db|head -c 496): [{"message":"cannot read property 'setUTCMinutes' of undefined"}]
-10987	FAIL (tail -c +10035492 tests/ecmac.db|head -c 600): [{"message":"cannot read property 'setUTCMinutes' of undefined"}]
-10988	FAIL (tail -c +10036093 tests/ecmac.db|head -c 598): [{"message":"cannot read property 'setUTCMinutes' of undefined"}]
-10989	FAIL (tail -c +10036692 tests/ecmac.db|head -c 479): [{"message":"cannot read property 'setHours' of undefined"}]
-10990	FAIL (tail -c +10037172 tests/ecmac.db|head -c 536): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10991	FAIL (tail -c +10037709 tests/ecmac.db|head -c 516): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10992	FAIL (tail -c +10038226 tests/ecmac.db|head -c 464): [{"message":"cannot read property 'setHours' of undefined"}]
-10993	FAIL (tail -c +10038691 tests/ecmac.db|head -c 471): [{"message":"cannot read property 'setHours' of undefined"}]
-10994	FAIL (tail -c +10039163 tests/ecmac.db|head -c 575): [{"message":"cannot read property 'setHours' of undefined"}]
-10995	FAIL (tail -c +10039739 tests/ecmac.db|head -c 573): [{"message":"cannot read property 'setHours' of undefined"}]
-10996	FAIL (tail -c +10040313 tests/ecmac.db|head -c 497): [{"message":"cannot read property 'setUTCHours' of undefined"}]
-10997	FAIL (tail -c +10040811 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10998	FAIL (tail -c +10041363 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-10999	FAIL (tail -c +10041895 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'setUTCHours' of undefined"}]
-11000	FAIL (tail -c +10042378 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'setUTCHours' of undefined"}]
-11001	FAIL (tail -c +10042865 tests/ecmac.db|head -c 590): [{"message":"cannot read property 'setUTCHours' of undefined"}]
-11002	FAIL (tail -c +10043456 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'setUTCHours' of undefined"}]
-11003	FAIL (tail -c +10044045 tests/ecmac.db|head -c 473): [{"message":"cannot read property 'setDate' of undefined"}]
-11004	FAIL (tail -c +10044519 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11005	FAIL (tail -c +10045051 tests/ecmac.db|head -c 511): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11006	FAIL (tail -c +10045563 tests/ecmac.db|head -c 458): [{"message":"cannot read property 'setDate' of undefined"}]
-11007	FAIL (tail -c +10046022 tests/ecmac.db|head -c 466): [{"message":"cannot read property 'setDate' of undefined"}]
-11008	FAIL (tail -c +10046489 tests/ecmac.db|head -c 570): [{"message":"cannot read property 'setDate' of undefined"}]
-11009	FAIL (tail -c +10047060 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'setDate' of undefined"}]
-11010	FAIL (tail -c +10047629 tests/ecmac.db|head -c 491): [{"message":"cannot read property 'setUTCDate' of undefined"}]
-11011	FAIL (tail -c +10048121 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11012	FAIL (tail -c +10048668 tests/ecmac.db|head -c 526): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11013	FAIL (tail -c +10049195 tests/ecmac.db|head -c 476): [{"message":"cannot read property 'setUTCDate' of undefined"}]
-11014	FAIL (tail -c +10049672 tests/ecmac.db|head -c 481): [{"message":"cannot read property 'setUTCDate' of undefined"}]
-11015	FAIL (tail -c +10050154 tests/ecmac.db|head -c 585): [{"message":"cannot read property 'setUTCDate' of undefined"}]
-11016	FAIL (tail -c +10050740 tests/ecmac.db|head -c 583): [{"message":"cannot read property 'setUTCDate' of undefined"}]
-11017	FAIL (tail -c +10051324 tests/ecmac.db|head -c 479): [{"message":"cannot read property 'setMonth' of undefined"}]
-11018	FAIL (tail -c +10051804 tests/ecmac.db|head -c 536): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11019	FAIL (tail -c +10052341 tests/ecmac.db|head -c 516): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11020	FAIL (tail -c +10052858 tests/ecmac.db|head -c 464): [{"message":"cannot read property 'setMonth' of undefined"}]
-11021	FAIL (tail -c +10053323 tests/ecmac.db|head -c 471): [{"message":"cannot read property 'setMonth' of undefined"}]
-11022	FAIL (tail -c +10053795 tests/ecmac.db|head -c 575): [{"message":"cannot read property 'setMonth' of undefined"}]
-11023	FAIL (tail -c +10054371 tests/ecmac.db|head -c 573): [{"message":"cannot read property 'setMonth' of undefined"}]
-11024	FAIL (tail -c +10054945 tests/ecmac.db|head -c 497): [{"message":"cannot read property 'setUTCMonth' of undefined"}]
-11025	FAIL (tail -c +10055443 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11026	FAIL (tail -c +10055995 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11027	FAIL (tail -c +10056527 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'setUTCMonth' of undefined"}]
-11028	FAIL (tail -c +10057010 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'setUTCMonth' of undefined"}]
-11029	FAIL (tail -c +10057497 tests/ecmac.db|head -c 590): [{"message":"cannot read property 'setUTCMonth' of undefined"}]
-11030	FAIL (tail -c +10058088 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'setUTCMonth' of undefined"}]
-11031	FAIL (tail -c +10058677 tests/ecmac.db|head -c 501): [{"message":"cannot read property 'toTimeString' of undefined"}]
-11032	FAIL (tail -c +10059179 tests/ecmac.db|head -c 554): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11033	FAIL (tail -c +10059734 tests/ecmac.db|head -c 534): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11034	FAIL (tail -c +10060269 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'toTimeString' of undefined"}]
-11035	FAIL (tail -c +10060756 tests/ecmac.db|head -c 489): [{"message":"cannot read property 'toTimeString' of undefined"}]
-11036	FAIL (tail -c +10061246 tests/ecmac.db|head -c 593): [{"message":"cannot read property 'toTimeString' of undefined"}]
-11037	FAIL (tail -c +10061840 tests/ecmac.db|head -c 591): [{"message":"cannot read property 'toTimeString' of undefined"}]
-11038	FAIL (tail -c +10062432 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'setFullYear' of undefined"}]
-11039	FAIL (tail -c +10062939 tests/ecmac.db|head -c 497): [{"message":"cannot read property 'setFullYear' of undefined"}]
-11040	FAIL (tail -c +10063437 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11041	FAIL (tail -c +10063989 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11042	FAIL (tail -c +10064521 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'setFullYear' of undefined"}]
-11043	FAIL (tail -c +10065004 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'setFullYear' of undefined"}]
-11044	FAIL (tail -c +10065491 tests/ecmac.db|head -c 590): [{"message":"cannot read property 'setFullYear' of undefined"}]
-11045	FAIL (tail -c +10066082 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'setFullYear' of undefined"}]
-11046	FAIL (tail -c +10066671 tests/ecmac.db|head -c 515): [{"message":"cannot read property 'setUTCFullYear' of undefined"}]
-11047	FAIL (tail -c +10067187 tests/ecmac.db|head -c 566): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11048	FAIL (tail -c +10067754 tests/ecmac.db|head -c 546): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11049	FAIL (tail -c +10068301 tests/ecmac.db|head -c 500): [{"message":"cannot read property 'setUTCFullYear' of undefined"}]
-11050	FAIL (tail -c +10068802 tests/ecmac.db|head -c 501): [{"message":"cannot read property 'setUTCFullYear' of undefined"}]
-11051	FAIL (tail -c +10069304 tests/ecmac.db|head -c 605): [{"message":"cannot read property 'setUTCFullYear' of undefined"}]
-11052	FAIL (tail -c +10069910 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'setUTCFullYear' of undefined"}]
-11053	FAIL (tail -c +10070514 tests/ecmac.db|head -c 497): [{"message":"cannot read property 'toUTCString' of undefined"}]
-11054	FAIL (tail -c +10071012 tests/ecmac.db|head -c 551): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11055	FAIL (tail -c +10071564 tests/ecmac.db|head -c 531): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11056	FAIL (tail -c +10072096 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'toUTCString' of undefined"}]
-11057	FAIL (tail -c +10072579 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'toUTCString' of undefined"}]
-11058	FAIL (tail -c +10073066 tests/ecmac.db|head -c 590): [{"message":"cannot read property 'toUTCString' of undefined"}]
-11059	FAIL (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'toUTCString' of undefined"}]
-11060	FAIL (tail -c +10074246 tests/ecmac.db|head -c 941): [{"message":"value is not a function"}]
-11061	FAIL (tail -c +10075188 tests/ecmac.db|head -c 622): [{"message":"value is not a function"}]
-11062	FAIL (tail -c +10075811 tests/ecmac.db|head -c 620): [{"message":"value is not a function"}]
-11063	FAIL (tail -c +10076432 tests/ecmac.db|head -c 921): [{"message":"value is not a function"}]
+10754	PASS (tail -c +9918908 tests/ecmac.db|head -c 286)
+10755	FAIL (tail -c +9919195 tests/ecmac.db|head -c 297): [{"message":"Test case returned non-true value!"}]
+10756	PASS (tail -c +9919493 tests/ecmac.db|head -c 316)
+10757	PASS (tail -c +9919810 tests/ecmac.db|head -c 286)
+10758	FAIL (tail -c +9920097 tests/ecmac.db|head -c 366): [{"message":"#1: The Date.prototype has the property "constructor""}]
+10759	FAIL (tail -c +9920464 tests/ecmac.db|head -c 354): [{"message":"#1: The Date.prototype has the property "toString""}]
+10760	FAIL (tail -c +9920819 tests/ecmac.db|head -c 370): [{"message":"#1: The Date.prototype has the property "toDateString""}]
+10761	FAIL (tail -c +9921190 tests/ecmac.db|head -c 370): [{"message":"#1: The Date.prototype has the property "toTimeString""}]
+10762	FAIL (tail -c +9921561 tests/ecmac.db|head -c 378): [{"message":"#1: The Date.prototype has the property "toLocaleString""}]
+10763	FAIL (tail -c +9921940 tests/ecmac.db|head -c 394): [{"message":"#1: The Date.prototype has the property "toLocaleDateString""}]
+10764	FAIL (tail -c +9922335 tests/ecmac.db|head -c 394): [{"message":"#1: The Date.prototype has the property "toLocaleTimeString""}]
+10765	PASS (tail -c +9922730 tests/ecmac.db|head -c 350)
+10766	PASS (tail -c +9923081 tests/ecmac.db|head -c 350)
+10767	PASS (tail -c +9923432 tests/ecmac.db|head -c 366)
+10768	PASS (tail -c +9923799 tests/ecmac.db|head -c 378)
+10769	PASS (tail -c +9924178 tests/ecmac.db|head -c 354)
+10770	PASS (tail -c +9924533 tests/ecmac.db|head -c 366)
+10771	PASS (tail -c +9924900 tests/ecmac.db|head -c 350)
+10772	PASS (tail -c +9925251 tests/ecmac.db|head -c 362)
+10773	PASS (tail -c +9925614 tests/ecmac.db|head -c 346)
+10774	PASS (tail -c +9925961 tests/ecmac.db|head -c 358)
+10775	PASS (tail -c +9926320 tests/ecmac.db|head -c 354)
+10776	PASS (tail -c +9926675 tests/ecmac.db|head -c 366)
+10777	PASS (tail -c +9927042 tests/ecmac.db|head -c 362)
+10778	PASS (tail -c +9927405 tests/ecmac.db|head -c 374)
+10779	PASS (tail -c +9927780 tests/ecmac.db|head -c 362)
+10780	PASS (tail -c +9928143 tests/ecmac.db|head -c 374)
+10781	PASS (tail -c +9928518 tests/ecmac.db|head -c 382)
+10782	PASS (tail -c +9928901 tests/ecmac.db|head -c 394)
+10783	PASS (tail -c +9929296 tests/ecmac.db|head -c 390)
+10784	PASS (tail -c +9929687 tests/ecmac.db|head -c 350)
+10785	PASS (tail -c +9930038 tests/ecmac.db|head -c 382)
+10786	PASS (tail -c +9930421 tests/ecmac.db|head -c 394)
+10787	PASS (tail -c +9930816 tests/ecmac.db|head -c 362)
+10788	PASS (tail -c +9931179 tests/ecmac.db|head -c 374)
+10789	PASS (tail -c +9931554 tests/ecmac.db|head -c 362)
+10790	PASS (tail -c +9931917 tests/ecmac.db|head -c 374)
+10791	PASS (tail -c +9932292 tests/ecmac.db|head -c 354)
+10792	PASS (tail -c +9932647 tests/ecmac.db|head -c 366)
+10793	PASS (tail -c +9933014 tests/ecmac.db|head -c 350)
+10794	PASS (tail -c +9933365 tests/ecmac.db|head -c 362)
+10795	PASS (tail -c +9933728 tests/ecmac.db|head -c 354)
+10796	PASS (tail -c +9934083 tests/ecmac.db|head -c 366)
+10797	PASS (tail -c +9934450 tests/ecmac.db|head -c 366)
+10798	PASS (tail -c +9934817 tests/ecmac.db|head -c 378)
+10799	FAIL (tail -c +9935196 tests/ecmac.db|head -c 366): [{"message":"#1: The Date.prototype has the property "toUTCString""}]
+10800	PASS (tail -c +9935563 tests/ecmac.db|head -c 495)
+10801	PASS (tail -c +9936059 tests/ecmac.db|head -c 549)
+10802	PASS (tail -c +9936609 tests/ecmac.db|head -c 529)
+10803	FAIL (tail -c +9937139 tests/ecmac.db|head -c 480): [{"message":"#1: The constructor has a "length" property"}]
+10804	FAIL (tail -c +9937620 tests/ecmac.db|head -c 484): [{"message":"#1: The Date.prototype.constructor.length has the attribute ReadOnly"}]
+10805	FAIL (tail -c +9938105 tests/ecmac.db|head -c 588): [{"message":"#1: The Date.prototype.constructor.length property has the attributes DontDelete"}]
+10806	PASS (tail -c +9938694 tests/ecmac.db|head -c 586)
+10807	PASS (tail -c +9939281 tests/ecmac.db|head -c 497)
+10808	PASS (tail -c +9939779 tests/ecmac.db|head -c 551)
+10809	FAIL (tail -c +9940331 tests/ecmac.db|head -c 531): [{"message":"#1: The Date.prototype.getFullYear property has the attribute DontEnum"}]
+10810	FAIL (tail -c +9940863 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+10811	PASS (tail -c +9941346 tests/ecmac.db|head -c 486)
+10812	FAIL (tail -c +9941833 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.getFullYear.length property has the attributes DontDelete"}]
+10813	FAIL (tail -c +9942424 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+10814	PASS (tail -c +9943013 tests/ecmac.db|head -c 515)
+10815	PASS (tail -c +9943529 tests/ecmac.db|head -c 566)
+10816	FAIL (tail -c +9944096 tests/ecmac.db|head -c 546): [{"message":"#1: The Date.prototype.getUTCFullYear property has the attribute DontEnum"}]
+10817	FAIL (tail -c +9944643 tests/ecmac.db|head -c 500): [{"message":"value is not a function"}]
+10818	PASS (tail -c +9945144 tests/ecmac.db|head -c 501)
+10819	FAIL (tail -c +9945646 tests/ecmac.db|head -c 605): [{"message":"#1: The Date.prototype.getUTCFullYear.length property has the attributes DontDelete"}]
+10820	FAIL (tail -c +9946252 tests/ecmac.db|head -c 603): [{"message":"value is not a function"}]
+10821	PASS (tail -c +9946856 tests/ecmac.db|head -c 479)
+10822	PASS (tail -c +9947336 tests/ecmac.db|head -c 536)
+10823	FAIL (tail -c +9947873 tests/ecmac.db|head -c 516): [{"message":"#1: The Date.prototype.getMonth property has the attribute DontEnum"}]
+10824	FAIL (tail -c +9948390 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+10825	PASS (tail -c +9948855 tests/ecmac.db|head -c 471)
+10826	FAIL (tail -c +9949327 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.getMonth.length property has the attributes DontDelete"}]
+10827	FAIL (tail -c +9949903 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+10828	PASS (tail -c +9950477 tests/ecmac.db|head -c 497)
+10829	PASS (tail -c +9950975 tests/ecmac.db|head -c 551)
+10830	FAIL (tail -c +9951527 tests/ecmac.db|head -c 531): [{"message":"#1: The Date.prototype.getUTCMonth property has the attribute DontEnum"}]
+10831	FAIL (tail -c +9952059 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+10832	PASS (tail -c +9952542 tests/ecmac.db|head -c 486)
+10833	FAIL (tail -c +9953029 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.getUTCMonth.length property has the attributes DontDelete"}]
+10834	FAIL (tail -c +9953620 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+10835	PASS (tail -c +9954209 tests/ecmac.db|head -c 473)
+10836	PASS (tail -c +9954683 tests/ecmac.db|head -c 531)
+10837	FAIL (tail -c +9955215 tests/ecmac.db|head -c 511): [{"message":"#1: The Date.prototype.getDate property has the attribute DontEnum"}]
+10838	FAIL (tail -c +9955727 tests/ecmac.db|head -c 458): [{"message":"value is not a function"}]
+10839	PASS (tail -c +9956186 tests/ecmac.db|head -c 466)
+10840	FAIL (tail -c +9956653 tests/ecmac.db|head -c 570): [{"message":"#1: The Date.prototype.getDate.length property has the attributes DontDelete"}]
+10841	FAIL (tail -c +9957224 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
+10842	PASS (tail -c +9957793 tests/ecmac.db|head -c 491)
+10843	PASS (tail -c +9958285 tests/ecmac.db|head -c 546)
+10844	FAIL (tail -c +9958832 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.getUTCDate property has the attribute DontEnum"}]
+10845	FAIL (tail -c +9959359 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10846	PASS (tail -c +9959836 tests/ecmac.db|head -c 481)
+10847	FAIL (tail -c +9960318 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.getUTCDate.length property has the attributes DontDelete"}]
+10848	FAIL (tail -c +9960904 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10849	PASS (tail -c +9961488 tests/ecmac.db|head -c 467)
+10850	PASS (tail -c +9961956 tests/ecmac.db|head -c 526)
+10851	FAIL (tail -c +9962483 tests/ecmac.db|head -c 506): [{"message":"#1: The Date.prototype.getDay property has the attribute DontEnum"}]
+10852	FAIL (tail -c +9962990 tests/ecmac.db|head -c 452): [{"message":"value is not a function"}]
+10853	PASS (tail -c +9963443 tests/ecmac.db|head -c 461)
+10854	FAIL (tail -c +9963905 tests/ecmac.db|head -c 565): [{"message":"#1: The Date.prototype.getDay.length property has the attributes DontDelete"}]
+10855	FAIL (tail -c +9964471 tests/ecmac.db|head -c 563): [{"message":"value is not a function"}]
+10856	PASS (tail -c +9965035 tests/ecmac.db|head -c 485)
+10857	PASS (tail -c +9965521 tests/ecmac.db|head -c 541)
+10858	FAIL (tail -c +9966063 tests/ecmac.db|head -c 521): [{"message":"#1: The Date.prototype.getUTCDay property has the attribute DontEnum"}]
+10859	FAIL (tail -c +9966585 tests/ecmac.db|head -c 470): [{"message":"value is not a function"}]
+10860	PASS (tail -c +9967056 tests/ecmac.db|head -c 476)
+10861	FAIL (tail -c +9967533 tests/ecmac.db|head -c 580): [{"message":"#1: The Date.prototype.getUTCDay.length property has the attributes DontDelete"}]
+10862	FAIL (tail -c +9968114 tests/ecmac.db|head -c 578): [{"message":"value is not a function"}]
+10863	PASS (tail -c +9968693 tests/ecmac.db|head -c 479)
+10864	PASS (tail -c +9969173 tests/ecmac.db|head -c 536)
+10865	FAIL (tail -c +9969710 tests/ecmac.db|head -c 516): [{"message":"#1: The Date.prototype.getHours property has the attribute DontEnum"}]
+10866	FAIL (tail -c +9970227 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+10867	PASS (tail -c +9970692 tests/ecmac.db|head -c 471)
+10868	FAIL (tail -c +9971164 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.getHours.length property has the attributes DontDelete"}]
+10869	FAIL (tail -c +9971740 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+10870	PASS (tail -c +9972314 tests/ecmac.db|head -c 497)
+10871	PASS (tail -c +9972812 tests/ecmac.db|head -c 551)
+10872	FAIL (tail -c +9973364 tests/ecmac.db|head -c 531): [{"message":"#1: The Date.prototype.getUTCHours property has the attribute DontEnum"}]
+10873	FAIL (tail -c +9973896 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+10874	PASS (tail -c +9974379 tests/ecmac.db|head -c 486)
+10875	FAIL (tail -c +9974866 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.getUTCHours.length property has the attributes DontDelete"}]
+10876	FAIL (tail -c +9975457 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+10877	PASS (tail -c +9976046 tests/ecmac.db|head -c 477)
+10878	PASS (tail -c +9976524 tests/ecmac.db|head -c 534)
+10879	PASS (tail -c +9977059 tests/ecmac.db|head -c 514)
+10880	FAIL (tail -c +9977574 tests/ecmac.db|head -c 462): [{"message":"#1: The toString has a "length" property"}]
+10881	FAIL (tail -c +9978037 tests/ecmac.db|head -c 469): [{"message":"#1: The Date.prototype.toString.length has the attribute ReadOnly"}]
+10882	FAIL (tail -c +9978507 tests/ecmac.db|head -c 573): [{"message":"#1: The Date.prototype.toString.length property has the attributes DontDelete"}]
+10883	PASS (tail -c +9979081 tests/ecmac.db|head -c 571)
+10884	PASS (tail -c +9979653 tests/ecmac.db|head -c 491)
+10885	PASS (tail -c +9980145 tests/ecmac.db|head -c 546)
+10886	FAIL (tail -c +9980692 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.getMinutes property has the attribute DontEnum"}]
+10887	FAIL (tail -c +9981219 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10888	PASS (tail -c +9981696 tests/ecmac.db|head -c 481)
+10889	FAIL (tail -c +9982178 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.getMinutes.length property has the attributes DontDelete"}]
+10890	FAIL (tail -c +9982764 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10891	PASS (tail -c +9983348 tests/ecmac.db|head -c 509)
+10892	PASS (tail -c +9983858 tests/ecmac.db|head -c 561)
+10893	FAIL (tail -c +9984420 tests/ecmac.db|head -c 541): [{"message":"#1: The Date.prototype.getUTCMinutes property has the attribute DontEnum"}]
+10894	FAIL (tail -c +9984962 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10895	PASS (tail -c +9985457 tests/ecmac.db|head -c 496)
+10896	FAIL (tail -c +9985954 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.getUTCMinutes.length property has the attributes DontDelete"}]
+10897	FAIL (tail -c +9986555 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10898	PASS (tail -c +9987154 tests/ecmac.db|head -c 491)
+10899	PASS (tail -c +9987646 tests/ecmac.db|head -c 546)
+10900	FAIL (tail -c +9988193 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.getSeconds property has the attribute DontEnum"}]
+10901	FAIL (tail -c +9988720 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10902	PASS (tail -c +9989197 tests/ecmac.db|head -c 481)
+10903	FAIL (tail -c +9989679 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.getSeconds.length property has the attributes DontDelete"}]
+10904	FAIL (tail -c +9990265 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10905	PASS (tail -c +9990849 tests/ecmac.db|head -c 509)
+10906	PASS (tail -c +9991359 tests/ecmac.db|head -c 561)
+10907	FAIL (tail -c +9991921 tests/ecmac.db|head -c 541): [{"message":"#1: The Date.prototype.getUTCSeconds property has the attribute DontEnum"}]
+10908	FAIL (tail -c +9992463 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10909	PASS (tail -c +9992958 tests/ecmac.db|head -c 496)
+10910	FAIL (tail -c +9993455 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.getUTCSeconds.length property has the attributes DontDelete"}]
+10911	FAIL (tail -c +9994056 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10912	PASS (tail -c +9994655 tests/ecmac.db|head -c 521)
+10913	PASS (tail -c +9995177 tests/ecmac.db|head -c 571)
+10914	FAIL (tail -c +9995749 tests/ecmac.db|head -c 551): [{"message":"#1: The Date.prototype.getMilliseconds property has the attribute DontEnum"}]
+10915	FAIL (tail -c +9996301 tests/ecmac.db|head -c 506): [{"message":"value is not a function"}]
+10916	PASS (tail -c +9996808 tests/ecmac.db|head -c 506)
+10917	FAIL (tail -c +9997315 tests/ecmac.db|head -c 610): [{"message":"#1: The Date.prototype.getMilliseconds.length property has the attributes DontDelete"}]
+10918	FAIL (tail -c +9997926 tests/ecmac.db|head -c 608): [{"message":"value is not a function"}]
+10919	PASS (tail -c +9998535 tests/ecmac.db|head -c 539)
+10920	PASS (tail -c +9999075 tests/ecmac.db|head -c 586)
+10921	FAIL (tail -c +9999662 tests/ecmac.db|head -c 566): [{"message":"#1: The Date.prototype.getUTCMilliseconds property has the attribute DontEnum"}]
+10922	FAIL (tail -c +10000229 tests/ecmac.db|head -c 524): [{"message":"value is not a function"}]
+10923	PASS (tail -c +10000754 tests/ecmac.db|head -c 521)
+10924	FAIL (tail -c +10001276 tests/ecmac.db|head -c 625): [{"message":"#1: The Date.prototype.getUTCMilliseconds.length property has the attributes DontDelete"}]
+10925	FAIL (tail -c +10001902 tests/ecmac.db|head -c 623): [{"message":"value is not a function"}]
+10926	PASS (tail -c +10002526 tests/ecmac.db|head -c 533)
+10927	PASS (tail -c +10003060 tests/ecmac.db|head -c 581)
+10928	FAIL (tail -c +10003642 tests/ecmac.db|head -c 561): [{"message":"#1: The Date.prototype.getTimezoneOffset property has the attribute DontEnum"}]
+10929	FAIL (tail -c +10004204 tests/ecmac.db|head -c 518): [{"message":"value is not a function"}]
+10930	PASS (tail -c +10004723 tests/ecmac.db|head -c 516)
+10931	FAIL (tail -c +10005240 tests/ecmac.db|head -c 620): [{"message":"#1: The Date.prototype.getTimezoneOffset.length property has the attributes DontDelete"}]
+10932	FAIL (tail -c +10005861 tests/ecmac.db|head -c 618): [{"message":"value is not a function"}]
+10933	PASS (tail -c +10006480 tests/ecmac.db|head -c 473)
+10934	PASS (tail -c +10006954 tests/ecmac.db|head -c 531)
+10935	FAIL (tail -c +10007486 tests/ecmac.db|head -c 511): [{"message":"#1: The Date.prototype.setTime property has the attribute DontEnum"}]
+10936	FAIL (tail -c +10007998 tests/ecmac.db|head -c 458): [{"message":"value is not a function"}]
+10937	PASS (tail -c +10008457 tests/ecmac.db|head -c 466)
+10938	FAIL (tail -c +10008924 tests/ecmac.db|head -c 570): [{"message":"#1: The Date.prototype.setTime.length property has the attributes DontDelete"}]
+10939	FAIL (tail -c +10009495 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
+10940	PASS (tail -c +10010064 tests/ecmac.db|head -c 521)
+10941	PASS (tail -c +10010586 tests/ecmac.db|head -c 571)
+10942	FAIL (tail -c +10011158 tests/ecmac.db|head -c 551): [{"message":"#1: The Date.prototype.setMilliseconds property has the attribute DontEnum"}]
+10943	FAIL (tail -c +10011710 tests/ecmac.db|head -c 506): [{"message":"value is not a function"}]
+10944	PASS (tail -c +10012217 tests/ecmac.db|head -c 506)
+10945	FAIL (tail -c +10012724 tests/ecmac.db|head -c 610): [{"message":"#1: The Date.prototype.setMilliseconds.length property has the attributes DontDelete"}]
+10946	FAIL (tail -c +10013335 tests/ecmac.db|head -c 608): [{"message":"value is not a function"}]
+10947	PASS (tail -c +10013944 tests/ecmac.db|head -c 539)
+10948	PASS (tail -c +10014484 tests/ecmac.db|head -c 586)
+10949	FAIL (tail -c +10015071 tests/ecmac.db|head -c 566): [{"message":"#1: The Date.prototype.setUTCMilliseconds property has the attribute DontEnum"}]
+10950	FAIL (tail -c +10015638 tests/ecmac.db|head -c 524): [{"message":"value is not a function"}]
+10951	PASS (tail -c +10016163 tests/ecmac.db|head -c 521)
+10952	FAIL (tail -c +10016685 tests/ecmac.db|head -c 625): [{"message":"#1: The Date.prototype.setUTCMilliseconds.length property has the attributes DontDelete"}]
+10953	FAIL (tail -c +10017311 tests/ecmac.db|head -c 623): [{"message":"value is not a function"}]
+10954	PASS (tail -c +10017935 tests/ecmac.db|head -c 501)
+10955	PASS (tail -c +10018437 tests/ecmac.db|head -c 554)
+10956	PASS (tail -c +10018992 tests/ecmac.db|head -c 534)
+10957	FAIL (tail -c +10019527 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
+10958	FAIL (tail -c +10020014 tests/ecmac.db|head -c 489): [{"message":"cannot read property 'length' of undefined"}]
+10959	FAIL (tail -c +10020504 tests/ecmac.db|head -c 593): [{"message":"#1: The Date.prototype.toDateString.length property has the attributes DontDelete"}]
+10960	FAIL (tail -c +10021098 tests/ecmac.db|head -c 591): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+10961	PASS (tail -c +10021690 tests/ecmac.db|head -c 491)
+10962	PASS (tail -c +10022182 tests/ecmac.db|head -c 546)
+10963	FAIL (tail -c +10022729 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.setSeconds property has the attribute DontEnum"}]
+10964	FAIL (tail -c +10023256 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10965	PASS (tail -c +10023733 tests/ecmac.db|head -c 481)
+10966	FAIL (tail -c +10024215 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.setSeconds.length property has the attributes DontDelete"}]
+10967	FAIL (tail -c +10024801 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10968	PASS (tail -c +10025385 tests/ecmac.db|head -c 509)
+10969	PASS (tail -c +10025895 tests/ecmac.db|head -c 561)
+10970	FAIL (tail -c +10026457 tests/ecmac.db|head -c 541): [{"message":"#1: The Date.prototype.setUTCSeconds property has the attribute DontEnum"}]
+10971	FAIL (tail -c +10026999 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10972	PASS (tail -c +10027494 tests/ecmac.db|head -c 496)
+10973	FAIL (tail -c +10027991 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.setUTCSeconds.length property has the attributes DontDelete"}]
+10974	FAIL (tail -c +10028592 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10975	PASS (tail -c +10029191 tests/ecmac.db|head -c 491)
+10976	PASS (tail -c +10029683 tests/ecmac.db|head -c 546)
+10977	FAIL (tail -c +10030230 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.setMinutes property has the attribute DontEnum"}]
+10978	FAIL (tail -c +10030757 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10979	PASS (tail -c +10031234 tests/ecmac.db|head -c 481)
+10980	FAIL (tail -c +10031716 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.setMinutes.length property has the attributes DontDelete"}]
+10981	FAIL (tail -c +10032302 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10982	PASS (tail -c +10032886 tests/ecmac.db|head -c 509)
+10983	PASS (tail -c +10033396 tests/ecmac.db|head -c 561)
+10984	FAIL (tail -c +10033958 tests/ecmac.db|head -c 541): [{"message":"#1: The Date.prototype.setUTCMinutes property has the attribute DontEnum"}]
+10985	FAIL (tail -c +10034500 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10986	PASS (tail -c +10034995 tests/ecmac.db|head -c 496)
+10987	FAIL (tail -c +10035492 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.setUTCMinutes.length property has the attributes DontDelete"}]
+10988	FAIL (tail -c +10036093 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10989	PASS (tail -c +10036692 tests/ecmac.db|head -c 479)
+10990	PASS (tail -c +10037172 tests/ecmac.db|head -c 536)
+10991	FAIL (tail -c +10037709 tests/ecmac.db|head -c 516): [{"message":"#1: The Date.prototype.setHours property has the attribute DontEnum"}]
+10992	FAIL (tail -c +10038226 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+10993	PASS (tail -c +10038691 tests/ecmac.db|head -c 471)
+10994	FAIL (tail -c +10039163 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.setHours.length property has the attributes DontDelete"}]
+10995	FAIL (tail -c +10039739 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+10996	PASS (tail -c +10040313 tests/ecmac.db|head -c 497)
+10997	PASS (tail -c +10040811 tests/ecmac.db|head -c 551)
+10998	FAIL (tail -c +10041363 tests/ecmac.db|head -c 531): [{"message":"#1: The Date.prototype.setUTCHours property has the attribute DontEnum"}]
+10999	FAIL (tail -c +10041895 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+11000	PASS (tail -c +10042378 tests/ecmac.db|head -c 486)
+11001	FAIL (tail -c +10042865 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.setUTCHours.length property has the attributes DontDelete"}]
+11002	FAIL (tail -c +10043456 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+11003	PASS (tail -c +10044045 tests/ecmac.db|head -c 473)
+11004	PASS (tail -c +10044519 tests/ecmac.db|head -c 531)
+11005	FAIL (tail -c +10045051 tests/ecmac.db|head -c 511): [{"message":"#1: The Date.prototype.setDate property has the attribute DontEnum"}]
+11006	FAIL (tail -c +10045563 tests/ecmac.db|head -c 458): [{"message":"value is not a function"}]
+11007	PASS (tail -c +10046022 tests/ecmac.db|head -c 466)
+11008	FAIL (tail -c +10046489 tests/ecmac.db|head -c 570): [{"message":"#1: The Date.prototype.setDate.length property has the attributes DontDelete"}]
+11009	FAIL (tail -c +10047060 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
+11010	PASS (tail -c +10047629 tests/ecmac.db|head -c 491)
+11011	PASS (tail -c +10048121 tests/ecmac.db|head -c 546)
+11012	FAIL (tail -c +10048668 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.setUTCDate property has the attribute DontEnum"}]
+11013	FAIL (tail -c +10049195 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+11014	PASS (tail -c +10049672 tests/ecmac.db|head -c 481)
+11015	FAIL (tail -c +10050154 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.setUTCDate.length property has the attributes DontDelete"}]
+11016	FAIL (tail -c +10050740 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+11017	PASS (tail -c +10051324 tests/ecmac.db|head -c 479)
+11018	PASS (tail -c +10051804 tests/ecmac.db|head -c 536)
+11019	FAIL (tail -c +10052341 tests/ecmac.db|head -c 516): [{"message":"#1: The Date.prototype.setMonth property has the attribute DontEnum"}]
+11020	FAIL (tail -c +10052858 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+11021	PASS (tail -c +10053323 tests/ecmac.db|head -c 471)
+11022	FAIL (tail -c +10053795 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.setMonth.length property has the attributes DontDelete"}]
+11023	FAIL (tail -c +10054371 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+11024	PASS (tail -c +10054945 tests/ecmac.db|head -c 497)
+11025	PASS (tail -c +10055443 tests/ecmac.db|head -c 551)
+11026	FAIL (tail -c +10055995 tests/ecmac.db|head -c 531): [{"message":"#1: The Date.prototype.setUTCMonth property has the attribute DontEnum"}]
+11027	FAIL (tail -c +10056527 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+11028	PASS (tail -c +10057010 tests/ecmac.db|head -c 486)
+11029	FAIL (tail -c +10057497 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.setUTCMonth.length property has the attributes DontDelete"}]
+11030	FAIL (tail -c +10058088 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+11031	PASS (tail -c +10058677 tests/ecmac.db|head -c 501)
+11032	PASS (tail -c +10059179 tests/ecmac.db|head -c 554)
+11033	PASS (tail -c +10059734 tests/ecmac.db|head -c 534)
+11034	FAIL (tail -c +10060269 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
+11035	FAIL (tail -c +10060756 tests/ecmac.db|head -c 489): [{"message":"cannot read property 'length' of undefined"}]
+11036	FAIL (tail -c +10061246 tests/ecmac.db|head -c 593): [{"message":"#1: The Date.prototype.toTimeString.length property has the attributes DontDelete"}]
+11037	FAIL (tail -c +10061840 tests/ecmac.db|head -c 591): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11038	FAIL (tail -c +10062432 tests/ecmac.db|head -c 506): [{"message":"Date.valueOf called on non-Date object"}]
+11039	PASS (tail -c +10062939 tests/ecmac.db|head -c 497)
+11040	PASS (tail -c +10063437 tests/ecmac.db|head -c 551)
+11041	FAIL (tail -c +10063989 tests/ecmac.db|head -c 531): [{"message":"#1: The Date.prototype.setFullYear property has the attribute DontEnum"}]
+11042	FAIL (tail -c +10064521 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+11043	PASS (tail -c +10065004 tests/ecmac.db|head -c 486)
+11044	FAIL (tail -c +10065491 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.setFullYear.length property has the attributes DontDelete"}]
+11045	FAIL (tail -c +10066082 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+11046	PASS (tail -c +10066671 tests/ecmac.db|head -c 515)
+11047	PASS (tail -c +10067187 tests/ecmac.db|head -c 566)
+11048	FAIL (tail -c +10067754 tests/ecmac.db|head -c 546): [{"message":"#1: The Date.prototype.setUTCFullYear property has the attribute DontEnum"}]
+11049	FAIL (tail -c +10068301 tests/ecmac.db|head -c 500): [{"message":"value is not a function"}]
+11050	PASS (tail -c +10068802 tests/ecmac.db|head -c 501)
+11051	FAIL (tail -c +10069304 tests/ecmac.db|head -c 605): [{"message":"#1: The Date.prototype.setUTCFullYear.length property has the attributes DontDelete"}]
+11052	FAIL (tail -c +10069910 tests/ecmac.db|head -c 603): [{"message":"value is not a function"}]
+11053	PASS (tail -c +10070514 tests/ecmac.db|head -c 497)
+11054	PASS (tail -c +10071012 tests/ecmac.db|head -c 551)
+11055	PASS (tail -c +10071564 tests/ecmac.db|head -c 531)
+11056	FAIL (tail -c +10072096 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
+11057	FAIL (tail -c +10072579 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'length' of undefined"}]
+11058	FAIL (tail -c +10073066 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.toUTCString.length property has the attributes DontDelete"}]
+11059	FAIL (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11060	FAIL (tail -c +10074246 tests/ecmac.db|head -c 941): [{"message":"Test case returned non-true value!"}]
+11061	FAIL (tail -c +10075188 tests/ecmac.db|head -c 622): [{"message":"Test case returned non-true value!"}]
+11062	FAIL (tail -c +10075811 tests/ecmac.db|head -c 620): [{"message":"Test case returned non-true value!"}]
+11063	FAIL (tail -c +10076432 tests/ecmac.db|head -c 921): [{"message":"Test case returned non-true value!"}]
 11064	FAIL (tail -c +10077354 tests/ecmac.db|head -c 504): [{"message":"Test case returned non-true value!"}]
 11065	FAIL (tail -c +10077859 tests/ecmac.db|head -c 497): [{"message":"Test case returned non-true value!"}]
 11066	PASS (tail -c +10078357 tests/ecmac.db|head -c 596)
-11067	FAIL (tail -c +10078954 tests/ecmac.db|head -c 335): [{"message":"cannot read property 'toISOString' of undefined"}]
-11068	FAIL (tail -c +10079290 tests/ecmac.db|head -c 326): [{"message":"cannot read property 'toISOString' of undefined"}]
-11069	FAIL (tail -c +10079617 tests/ecmac.db|head -c 535): [{"message":"value is not a function"}]
+11067	FAIL (tail -c +10078954 tests/ecmac.db|head -c 335): [{"message":"Test case returned non-true value!"}]
+11068	PASS (tail -c +10079290 tests/ecmac.db|head -c 326)
+11069	PASS (tail -c +10079617 tests/ecmac.db|head -c 535)
 11070	FAIL (tail -c +10080153 tests/ecmac.db|head -c 383): [{"message":"Test case returned non-true value!"}]
 11071	PASS (tail -c +10080537 tests/ecmac.db|head -c 483)
 11072	PASS (tail -c +10081021 tests/ecmac.db|head -c 463)
-11073	FAIL (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"value is not a function"}]
-11074	FAIL (tail -c +10082327 tests/ecmac.db|head -c 940): [{"message":"value is not a function"}]
-11075	FAIL (tail -c +10083268 tests/ecmac.db|head -c 342): [{"message":"cannot read property 'toJSON' of undefined"}]
-11076	FAIL (tail -c +10083611 tests/ecmac.db|head -c 337): [{"message":"cannot read property 'toJSON' of undefined"}]
-11077	FAIL (tail -c +10083949 tests/ecmac.db|head -c 513): [{"message":"cannot read property 'toLocaleString' of undefined"}]
-11078	FAIL (tail -c +10084463 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11079	FAIL (tail -c +10085028 tests/ecmac.db|head -c 544): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11080	FAIL (tail -c +10085573 tests/ecmac.db|head -c 498): [{"message":"cannot read property 'toLocaleString' of undefined"}]
-11081	FAIL (tail -c +10086072 tests/ecmac.db|head -c 499): [{"message":"cannot read property 'toLocaleString' of undefined"}]
-11082	FAIL (tail -c +10086572 tests/ecmac.db|head -c 603): [{"message":"cannot read property 'toLocaleString' of undefined"}]
-11083	FAIL (tail -c +10087176 tests/ecmac.db|head -c 601): [{"message":"cannot read property 'toLocaleString' of undefined"}]
-11084	FAIL (tail -c +10087778 tests/ecmac.db|head -c 537): [{"message":"cannot read property 'toLocaleDateString' of undefined"}]
-11085	FAIL (tail -c +10088316 tests/ecmac.db|head -c 584): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11086	FAIL (tail -c +10088901 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11087	FAIL (tail -c +10089466 tests/ecmac.db|head -c 522): [{"message":"cannot read property 'toLocaleDateString' of undefined"}]
-11088	FAIL (tail -c +10089989 tests/ecmac.db|head -c 519): [{"message":"cannot read property 'toLocaleDateString' of undefined"}]
-11089	FAIL (tail -c +10090509 tests/ecmac.db|head -c 623): [{"message":"cannot read property 'toLocaleDateString' of undefined"}]
-11090	FAIL (tail -c +10091133 tests/ecmac.db|head -c 621): [{"message":"cannot read property 'toLocaleDateString' of undefined"}]
-11091	FAIL (tail -c +10091755 tests/ecmac.db|head -c 537): [{"message":"cannot read property 'toLocaleTimeString' of undefined"}]
-11092	FAIL (tail -c +10092293 tests/ecmac.db|head -c 584): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11093	FAIL (tail -c +10092878 tests/ecmac.db|head -c 564): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11094	FAIL (tail -c +10093443 tests/ecmac.db|head -c 522): [{"message":"cannot read property 'toLocaleTimeString' of undefined"}]
-11095	FAIL (tail -c +10093966 tests/ecmac.db|head -c 519): [{"message":"cannot read property 'toLocaleTimeString' of undefined"}]
-11096	FAIL (tail -c +10094486 tests/ecmac.db|head -c 623): [{"message":"cannot read property 'toLocaleTimeString' of undefined"}]
-11097	FAIL (tail -c +10095110 tests/ecmac.db|head -c 621): [{"message":"cannot read property 'toLocaleTimeString' of undefined"}]
-11098	FAIL (tail -c +10095732 tests/ecmac.db|head -c 471): [{"message":"cannot read property 'valueOf' of undefined"}]
-11099	FAIL (tail -c +10096204 tests/ecmac.db|head -c 529): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11100	FAIL (tail -c +10096734 tests/ecmac.db|head -c 509): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11101	FAIL (tail -c +10097244 tests/ecmac.db|head -c 456): [{"message":"cannot read property 'valueOf' of undefined"}]
-11102	FAIL (tail -c +10097701 tests/ecmac.db|head -c 464): [{"message":"cannot read property 'valueOf' of undefined"}]
-11103	FAIL (tail -c +10098166 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'valueOf' of undefined"}]
-11104	FAIL (tail -c +10098735 tests/ecmac.db|head -c 566): [{"message":"cannot read property 'valueOf' of undefined"}]
-11105	FAIL (tail -c +10099302 tests/ecmac.db|head -c 471): [{"message":"cannot read property 'getTime' of undefined"}]
-11106	FAIL (tail -c +10099774 tests/ecmac.db|head -c 529): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11107	FAIL (tail -c +10100304 tests/ecmac.db|head -c 509): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
-11108	FAIL (tail -c +10100814 tests/ecmac.db|head -c 456): [{"message":"cannot read property 'getTime' of undefined"}]
-11109	FAIL (tail -c +10101271 tests/ecmac.db|head -c 464): [{"message":"cannot read property 'getTime' of undefined"}]
-11110	FAIL (tail -c +10101736 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'getTime' of undefined"}]
-11111	FAIL (tail -c +10102305 tests/ecmac.db|head -c 566): [{"message":"cannot read property 'getTime' of undefined"}]
+11073	FAIL (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"Test case returned non-true value!"}]
+11074	FAIL (tail -c +10082327 tests/ecmac.db|head -c 940): [{"message":"Test case returned non-true value!"}]
+11075	FAIL (tail -c +10083268 tests/ecmac.db|head -c 342): [{"message":"Test case returned non-true value!"}]
+11076	FAIL (tail -c +10083611 tests/ecmac.db|head -c 337): [{"message":"cannot read property 'length' of undefined"}]
+11077	PASS (tail -c +10083949 tests/ecmac.db|head -c 513)
+11078	PASS (tail -c +10084463 tests/ecmac.db|head -c 564)
+11079	PASS (tail -c +10085028 tests/ecmac.db|head -c 544)
+11080	FAIL (tail -c +10085573 tests/ecmac.db|head -c 498): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
+11081	FAIL (tail -c +10086072 tests/ecmac.db|head -c 499): [{"message":"cannot read property 'length' of undefined"}]
+11082	FAIL (tail -c +10086572 tests/ecmac.db|head -c 603): [{"message":"#1: The Date.prototype.toLocaleString.length property has the attributes DontDelete"}]
+11083	FAIL (tail -c +10087176 tests/ecmac.db|head -c 601): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11084	PASS (tail -c +10087778 tests/ecmac.db|head -c 537)
+11085	PASS (tail -c +10088316 tests/ecmac.db|head -c 584)
+11086	PASS (tail -c +10088901 tests/ecmac.db|head -c 564)
+11087	FAIL (tail -c +10089466 tests/ecmac.db|head -c 522): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
+11088	FAIL (tail -c +10089989 tests/ecmac.db|head -c 519): [{"message":"cannot read property 'length' of undefined"}]
+11089	FAIL (tail -c +10090509 tests/ecmac.db|head -c 623): [{"message":"#1: The Date.prototype.toLocaleDateString.length property has the attributes DontDelete"}]
+11090	FAIL (tail -c +10091133 tests/ecmac.db|head -c 621): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11091	PASS (tail -c +10091755 tests/ecmac.db|head -c 537)
+11092	PASS (tail -c +10092293 tests/ecmac.db|head -c 584)
+11093	PASS (tail -c +10092878 tests/ecmac.db|head -c 564)
+11094	FAIL (tail -c +10093443 tests/ecmac.db|head -c 522): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
+11095	FAIL (tail -c +10093966 tests/ecmac.db|head -c 519): [{"message":"cannot read property 'length' of undefined"}]
+11096	FAIL (tail -c +10094486 tests/ecmac.db|head -c 623): [{"message":"#1: The Date.prototype.toLocaleTimeString.length property has the attributes DontDelete"}]
+11097	FAIL (tail -c +10095110 tests/ecmac.db|head -c 621): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11098	PASS (tail -c +10095732 tests/ecmac.db|head -c 471)
+11099	PASS (tail -c +10096204 tests/ecmac.db|head -c 529)
+11100	FAIL (tail -c +10096734 tests/ecmac.db|head -c 509): [{"message":"#1: The Date.prototype.valueOf property has the attribute DontEnum"}]
+11101	FAIL (tail -c +10097244 tests/ecmac.db|head -c 456): [{"message":"value is not a function"}]
+11102	PASS (tail -c +10097701 tests/ecmac.db|head -c 464)
+11103	FAIL (tail -c +10098166 tests/ecmac.db|head -c 568): [{"message":"#1: The Date.prototype.valueOf.length property has the attributes DontDelete"}]
+11104	FAIL (tail -c +10098735 tests/ecmac.db|head -c 566): [{"message":"value is not a function"}]
+11105	PASS (tail -c +10099302 tests/ecmac.db|head -c 471)
+11106	PASS (tail -c +10099774 tests/ecmac.db|head -c 529)
+11107	FAIL (tail -c +10100304 tests/ecmac.db|head -c 509): [{"message":"#1: The Date.prototype.getTime property has the attribute DontEnum"}]
+11108	FAIL (tail -c +10100814 tests/ecmac.db|head -c 456): [{"message":"value is not a function"}]
+11109	PASS (tail -c +10101271 tests/ecmac.db|head -c 464)
+11110	FAIL (tail -c +10101736 tests/ecmac.db|head -c 568): [{"message":"#1: The Date.prototype.getTime.length property has the attributes DontDelete"}]
+11111	FAIL (tail -c +10102305 tests/ecmac.db|head -c 566): [{"message":"value is not a function"}]
