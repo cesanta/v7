@@ -1355,6 +1355,17 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "i=1; L:while(i>0){i=0;continue L;};i") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
 
+  ASSERT(v7_exec(v7, &v, "0 || 1") == V7_OK);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT(v7_exec(v7, &v, "0 || {}") == V7_OK);
+  ASSERT(check_value(v7, v, "{}"));
+  ASSERT(v7_exec(v7, &v, "1 && 0") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(v7_exec(v7, &v, "1 && {}") == V7_OK);
+  ASSERT(check_value(v7, v, "{}"));
+  ASSERT(v7_exec(v7, &v, "'' && {}") == V7_OK);
+  ASSERT(check_value(v7, v, "\"\""));
+
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
   return NULL;
