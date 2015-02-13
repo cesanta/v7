@@ -226,6 +226,14 @@ struct v7 {
                       __func__, __LINE__, #COND);                       \
   } while (0)
 
+#define TRACE_VAL(v7, val)                                              \
+  do {                                                                  \
+    char buf[200], *p = v7_to_json(v7, val, buf, sizeof(buf));          \
+    printf("%s %d: [%s]\n", __func__, __LINE__, p);                     \
+    if (p != buf) free(p);                                              \
+  } while (0)
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif  /* __cplusplus */

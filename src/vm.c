@@ -651,7 +651,8 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   long max = -1, k;
   char *end;
 
-  if (!is_prototype_of(v, v7->array_prototype)) {
+  (void) v7;
+  if (!v7_is_object(v)) {
     return -1;
   }
 
@@ -673,7 +674,7 @@ void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
 }
 
 val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
-  if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
+  if (v7_is_object(arr)) {
     char buf[20];
     int n = v_sprintf_s(buf, sizeof(buf), "%ld", index);
     return v7_get(v7, arr, buf, n);

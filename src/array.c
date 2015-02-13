@@ -22,9 +22,12 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
+  long len = 0;
   (void) args;
-  assert(is_prototype_of(this_obj, v7->array_prototype));
-  return v7_create_number(v7_array_length(v7, this_obj));
+  if (is_prototype_of(this_obj, v7->array_prototype)) {
+    len = v7_array_length(v7, this_obj);
+  }
+  return v7_create_number(len);
 }
 
 static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
@@ -61,40 +64,75 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(new_len);
 }
 
-static int a_cmp(const void *pa, const void *pb) {
+static int a_cmp(void *user_data, const void *pa, const void *pb) {
+  struct v7 *v7 = (struct v7 *) user_data;
   val_t a = * (val_t *) pa, b = * (val_t *) pb;
-  /* TODO(lsm): support comparison for all types, not just numbers */
-  return v7_to_double(b) - v7_to_double(a);
+
+  if (v7_is_double(a) && v7_is_double(b)) {
+    return v7_to_double(b) - v7_to_double(a);
+  } else {
+    char sa[100], sb[100];
+    to_str(v7, a, sa, sizeof(sa), 0);
+    to_str(v7, b, sb, sizeof(sb), 0);
+    sa[sizeof(sa) - 1] = sb[sizeof(sb) - 1] = '\0';
+    return strcmp(sb, sa);
+  }
 }
 
-static val_t a_sort(struct v7 *v7, val_t this_obj, val_t args,
-                    int (*sorting_func)(const void *, const void *)) {
-  int i = 0, len = v7_array_length(v7, this_obj);
+static int a_partition(val_t *a, int l, int r, void *user_data) {
+  val_t t, pivot = a[l];
+  int i = l, j = r + 1;
+
+  for (;;) {
+    do ++i; while (a_cmp(user_data, &a[i], &pivot) <= 0 && i <= r);
+    do --j; while (a_cmp(user_data, &a[j], &pivot) > 0);
+    if (i >= j) break;
+    t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  t = a[l]; a[l] = a[j]; a[j] = t;
+  return j;
+}
+
+static void a_qsort(val_t *a, int l, int r, void *user_data) {
+  if (l < r) {
+    int j = a_partition(a, l, r, user_data);
+    a_qsort(a, l, j - 1, user_data);
+    a_qsort(a, j + 1, r, user_data);
+  }
+}
+
+static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
+                    int (*sorting_func)(void *, const void *, const void *)) {
+  int i = 0, len = v7_array_length(v7, obj);
   val_t *arr = (val_t *) malloc(len * sizeof(arr[0]));
   val_t arg0 = v7_array_at(v7, args, 0);
   struct v7_property *p;
 
-  assert(v7_is_object(this_obj));
-  assert(this_obj != v7->global_object);
+  if (!v7_is_object(obj)) return obj;
+  assert(obj != v7->global_object);
 
   /* TODO(lsm): respect first argument, a sorting function */
   (void) arg0;
 
   for (i = 0; i < len; i++) {
-    arr[i] = v7_array_at(v7, this_obj, i);
-  }
-  if (sorting_func != NULL) {
-    qsort(arr, len, sizeof(arr[0]), sorting_func);
+    arr[i] = v7_array_at(v7, obj, i);
   }
 
-  i = 0;
-  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-    p->value = arr[i++];
+  if (sorting_func != NULL) {
+    a_qsort(arr, 0, len - 1, v7);
+  }
+
+  for (i = 0; i < len; i++) {
+    char buf[40];
+    snprintf(buf, sizeof(buf), "%d", i);
+    if ((p = v7_get_own_property(obj, buf, strlen(buf))) != NULL) {
+      p->value = arr[len - (i + 1)];
+    }
   }
 
   free(arr);
 
-  return this_obj;
+  return obj;
 }
 
 static val_t Array_sort(struct v7 *v7, val_t this_obj, val_t args) {
@@ -122,6 +160,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Array_ctor);
   val_t length = v7_create_array(v7);
 
+  v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
   v7_to_object(ctor)->prototype = v7_to_object(v7->array_prototype);
 
