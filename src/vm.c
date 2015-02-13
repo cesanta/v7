@@ -445,7 +445,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
     if (n >= size) {
       n = size - 1;
     }
-    stpncpy(buf, str, n);
+    strncpy(buf, str, n);
     buf[n] = '\0';
     return n;
   } else {
