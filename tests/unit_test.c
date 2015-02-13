@@ -366,6 +366,11 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 1419107430100));
   ASSERT(v7_exec(v7, &v, "j.setUTCFullYear(2015)") == V7_OK);
   ASSERT(check_num(v, 1450643430100));
+  ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(1999,10,5,10,20,30,400)).toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1999-11-05T10:20:30.400Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(1999,10,5,10,20,30,400)).toJSON()") == V7_OK);
+  ASSERT(check_str(v7, v, "1999-11-05T10:20:30.400Z"));
+  
   
 #if 0
   /* Regexp */
