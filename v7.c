@@ -6362,7 +6362,7 @@ static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
      */
     v7->pstate.inhibit_in = 1;
     if (ACCEPT(TOK_VAR)) {
-      parse_var(v7, a);
+      PARSE(var);
     } else {
       PARSE(expression);
     }
@@ -6548,7 +6548,7 @@ static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
       break;
     case TOK_VAR:
       next_tok(v7);
-      parse_var(v7, a);
+      PARSE(var);
       break;
     case TOK_IDENTIFIER:
       if (lookahead(v7) == TOK_COLON) {

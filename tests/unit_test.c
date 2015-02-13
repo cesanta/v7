@@ -642,7 +642,9 @@ static const char *test_parser(void) {
     "return 1+2",
     "if (1) {return;}",
     "if (1) {return 2}",
-    "(function(){'use strict'; with({}){}})"
+    "(function(){'use strict'; with({}){}})",
+    "v = [",
+    "var v = ["
   };
   FILE *fp;
   const char *want_ast_db = "want_ast.db";
