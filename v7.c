@@ -3466,6 +3466,11 @@ static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = V7_UNDEFINED;
 
   (void) v7; (void) args;
+
+  if (!is_prototype_of(this_obj, v7->array_prototype)) {
+    return res;
+  }
+
   if (p != NULL) {
     res = p->value;
     v7_to_object(this_obj)->properties = p->next;
