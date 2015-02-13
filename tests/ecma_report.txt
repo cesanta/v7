@@ -685,7 +685,7 @@
 684	PASS (tail -c +484779 tests/ecmac.db|head -c 1052)
 685	PASS (tail -c +485832 tests/ecmac.db|head -c 934)
 686	PASS (tail -c +486767 tests/ecmac.db|head -c 978)
-687	FAIL (tail -c +487746 tests/ecmac.db|head -c 1027): [{"message":"#2: var numInstance=new Number; numInstance.constructor === Number. Actual: cfunc_0x10b3661d0"}]
+687	FAIL (tail -c +487746 tests/ecmac.db|head -c 1027): [{"message":"#2: var numInstance=new Number; numInstance.constructor === Number. Actual: cfunc_0x107ff0600"}]
 688	FAIL (tail -c +488774 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
 689	PASS (tail -c +489343 tests/ecmac.db|head -c 854)
 690	FAIL (tail -c +490198 tests/ecmac.db|head -c 777): [{"message":"#1: y = 1; (delete y) === false. Actual: true"}]
@@ -1723,7 +1723,7 @@
 1719	FAIL (tail -c +1288211 tests/ecmac.db|head -c 1500): [{"message":"#3: typeof Boolean.constructor === "function". Actual: object"}]
 1720	FAIL (tail -c +1289712 tests/ecmac.db|head -c 2711): [{"message":"#13: typeof Number.prototype.constructor === "function". Actual: object"}]
 1721	PASS (tail -c +1292424 tests/ecmac.db|head -c 6501)
-1722	FAIL (tail -c +1298926 tests/ecmac.db|head -c 13756): [{"message":"#1: typeof Date.parse === "function". Actual: object"}]
+1722	PASS (tail -c +1298926 tests/ecmac.db|head -c 13756)
 1723	FAIL (tail -c +1312683 tests/ecmac.db|head -c 1223): [{"message":"parse error at at line 1 col 4: [ new]"}]
 1724	FAIL (tail -c +1313907 tests/ecmac.db|head -c 1246): [{"message":"parse error at at line 1 col 4: [ new]"}]
 1725	PASS (tail -c +1315154 tests/ecmac.db|head -c 666)
@@ -2069,7 +2069,7 @@
 2065	PASS (tail -c +1598918 tests/ecmac.db|head -c 439)
 2066	PASS (tail -c +1599358 tests/ecmac.db|head -c 439)
 2067	FAIL (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 1{"toString":[function()]}"}]
-2068	FAIL (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84751e+12"}]
+2068	FAIL (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84767e+12"}]
 2069	FAIL (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
 2070	PASS (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS (tail -c +1605816 tests/ecmac.db|head -c 464)
@@ -4580,17 +4580,17 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4572	FAIL (tail -c +4849808 tests/ecmac.db|head -c 582): [{"message":"Test case returned non-true value!"}]
 4573	FAIL (tail -c +4850391 tests/ecmac.db|head -c 574): [{"message":"Test case returned non-true value!"}]
 4574	FAIL (tail -c +4850966 tests/ecmac.db|head -c 589): [{"message":"Test case returned non-true value!"}]
-4575	FAIL (tail -c +4851556 tests/ecmac.db|head -c 577): [{"message":"cannot read property 'value' of undefined"}]
-4576	FAIL (tail -c +4852134 tests/ecmac.db|head -c 559): [{"message":"cannot read property 'value' of undefined"}]
-4577	FAIL (tail -c +4852694 tests/ecmac.db|head -c 568): [{"message":"cannot read property 'value' of undefined"}]
-4578	FAIL (tail -c +4853263 tests/ecmac.db|head -c 571): [{"message":"cannot read property 'value' of undefined"}]
-4579	FAIL (tail -c +4853835 tests/ecmac.db|head -c 571): [{"message":"cannot read property 'value' of undefined"}]
-4580	FAIL (tail -c +4854407 tests/ecmac.db|head -c 589): [{"message":"cannot read property 'value' of undefined"}]
-4581	FAIL (tail -c +4854997 tests/ecmac.db|head -c 589): [{"message":"cannot read property 'value' of undefined"}]
+4575	FAIL (tail -c +4851556 tests/ecmac.db|head -c 577): [{"message":"Test case returned non-true value!"}]
+4576	FAIL (tail -c +4852134 tests/ecmac.db|head -c 559): [{"message":"Test case returned non-true value!"}]
+4577	FAIL (tail -c +4852694 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
+4578	FAIL (tail -c +4853263 tests/ecmac.db|head -c 571): [{"message":"Test case returned non-true value!"}]
+4579	FAIL (tail -c +4853835 tests/ecmac.db|head -c 571): [{"message":"Test case returned non-true value!"}]
+4580	FAIL (tail -c +4854407 tests/ecmac.db|head -c 589): [{"message":"Test case returned non-true value!"}]
+4581	FAIL (tail -c +4854997 tests/ecmac.db|head -c 589): [{"message":"Test case returned non-true value!"}]
 4582	FAIL (tail -c +4855587 tests/ecmac.db|head -c 567): [{"message":"Test case returned non-true value!"}]
 4583	FAIL (tail -c +4856155 tests/ecmac.db|head -c 556): [{"message":"Test case returned non-true value!"}]
 4584	FAIL (tail -c +4856712 tests/ecmac.db|head -c 568): [{"message":"Test case returned non-true value!"}]
-4585	FAIL (tail -c +4857281 tests/ecmac.db|head -c 553): [{"message":"cannot read property 'value' of undefined"}]
+4585	FAIL (tail -c +4857281 tests/ecmac.db|head -c 553): [{"message":"Test case returned non-true value!"}]
 4586	FAIL (tail -c +4857835 tests/ecmac.db|head -c 574): [{"message":"[RegExp] is not defined"}]
 4587	FAIL (tail -c +4858410 tests/ecmac.db|head -c 553): [{"message":"[RegExp] is not defined"}]
 4588	FAIL (tail -c +4858964 tests/ecmac.db|head -c 553): [{"message":"[RegExp] is not defined"}]
@@ -5896,9 +5896,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 5888	PASS (tail -c +5830858 tests/ecmac.db|head -c 771)
 5889	PASS (tail -c +5831630 tests/ecmac.db|head -c 890)
 5890	PASS (tail -c +5832521 tests/ecmac.db|head -c 1411)
-5891	FAIL (tail -c +5833933 tests/ecmac.db|head -c 1652): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+5891	PASS (tail -c +5833933 tests/ecmac.db|head -c 1652)
 5892	FAIL (tail -c +5835586 tests/ecmac.db|head -c 1767): [{"message":"Test case returned non-true value!"}]
-5893	FAIL (tail -c +5837354 tests/ecmac.db|head -c 1665): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+5893	PASS (tail -c +5837354 tests/ecmac.db|head -c 1665)
 5894	PASS (tail -c +5839020 tests/ecmac.db|head -c 1773)
 5895	FAIL (tail -c +5840794 tests/ecmac.db|head -c 791): [{"message":"[Function] is not defined"}]
 5896	FAIL (tail -c +5841586 tests/ecmac.db|head -c 865): [{"message":"[Function] is not defined"}]
@@ -6123,10 +6123,10 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6115	PASS (tail -c +6074690 tests/ecmac.db|head -c 802)
 6116	PASS (tail -c +6075493 tests/ecmac.db|head -c 895)
 6117	FAIL (tail -c +6076389 tests/ecmac.db|head -c 1650): [{"message":"Test case returned non-true value!"}]
-6118	FAIL (tail -c +6078040 tests/ecmac.db|head -c 2010): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+6118	FAIL (tail -c +6078040 tests/ecmac.db|head -c 2010): [{"message":"Test case returned non-true value!"}]
 6119	FAIL (tail -c +6080051 tests/ecmac.db|head -c 767): [{"message":"Test case returned non-true value!"}]
 6120	FAIL (tail -c +6080819 tests/ecmac.db|head -c 2121): [{"message":"Test case returned non-true value!"}]
-6121	FAIL (tail -c +6082941 tests/ecmac.db|head -c 1749): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+6121	FAIL (tail -c +6082941 tests/ecmac.db|head -c 1749): [{"message":"Test case returned non-true value!"}]
 6122	PASS (tail -c +6084691 tests/ecmac.db|head -c 1875)
 6123	FAIL (tail -c +6086567 tests/ecmac.db|head -c 937): [{"message":"[Function] is not defined"}]
 6124	FAIL (tail -c +6087505 tests/ecmac.db|head -c 982): [{"message":"[Function] is not defined"}]
@@ -6163,7 +6163,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6155	FAIL (tail -c +6124932 tests/ecmac.db|head -c 1320): [{"message":"cannot read property 'writable' of undefined"}]
 6156	FAIL (tail -c +6126253 tests/ecmac.db|head -c 1203): [{"message":"cannot read property 'writable' of undefined"}]
 6157	FAIL (tail -c +6127457 tests/ecmac.db|head -c 1365): [{"message":"Test case returned non-true value!"}]
-6158	FAIL (tail -c +6128823 tests/ecmac.db|head -c 1320): [{"message":"cannot read property 'writable' of undefined"}]
+6158	FAIL (tail -c +6128823 tests/ecmac.db|head -c 1320): [{"message":"Test case returned non-true value!"}]
 6159	PASS (tail -c +6130144 tests/ecmac.db|head -c 600)
 6160	PASS (tail -c +6130745 tests/ecmac.db|head -c 908)
 6161	FAIL (tail -c +6131654 tests/ecmac.db|head -c 625): [{"message":"Test case returned non-true value!"}]
@@ -7480,7 +7480,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7472	FAIL (tail -c +7125859 tests/ecmac.db|head -c 1510): [{"message":"cannot read property 'sort' of undefined"}]
 7473	FAIL (tail -c +7127370 tests/ecmac.db|head -c 1439): [{"message":"cannot read property 'sort' of undefined"}]
 7474	FAIL (tail -c +7128810 tests/ecmac.db|head -c 486): [{"message":"#1.2: Array.sort should not eat exceptions"}]
-7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: 1.72723e-77"}]
+7475	FAIL (tail -c +7129297 tests/ecmac.db|head -c 2069): [{"message":"#1: Array.prototype[1] = -1; x = [1,0]; x.length = 2; x.sort(); x[0] === 0. Actual: -2.68156e+154"}]
 7476	FAIL (tail -c +7131367 tests/ecmac.db|head -c 721): [{"message":"cannot read property 'sort' of undefined"}]
 7477	FAIL (tail -c +7132089 tests/ecmac.db|head -c 902): [{"message":"cannot read property 'sort' of undefined"}]
 7478	FAIL (tail -c +7132992 tests/ecmac.db|head -c 550): [{"message":"cannot read property 'sort' of undefined"}]
@@ -9597,8 +9597,8 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9589	FAIL (tail -c +8714122 tests/ecmac.db|head -c 1221): [{"message":"cannot read property 'reverse' of undefined"}]
 9590	FAIL (tail -c +8715344 tests/ecmac.db|head -c 1582): [{"message":"cannot read property 'reverse' of undefined"}]
 9591	FAIL (tail -c +8716927 tests/ecmac.db|head -c 1511): [{"message":"cannot read property 'reverse' of undefined"}]
-9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: 1.72723e-77"}]
-9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: 1.72723e-77"}]
+9592	FAIL (tail -c +8718439 tests/ecmac.db|head -c 2083): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.reverse(); x[0] === 1. Actual: -2.68156e+154"}]
+9593	FAIL (tail -c +8720523 tests/ecmac.db|head -c 2127): [{"message":"#1: Array.prototype[1] = -1; x = [0,1]; x.length = 2; x.reverse(); x[0] === 1. Actual: -2.68156e+154"}]
 9594	FAIL (tail -c +8722651 tests/ecmac.db|head -c 737): [{"message":"cannot read property 'reverse' of undefined"}]
 9595	FAIL (tail -c +8723389 tests/ecmac.db|head -c 936): [{"message":"cannot read property 'reverse' of undefined"}]
 9596	FAIL (tail -c +8724326 tests/ecmac.db|head -c 581): [{"message":"cannot read property 'reverse' of undefined"}]
@@ -10689,9 +10689,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10681	PASS (tail -c +9755884 tests/ecmac.db|head -c 383)
 10682	PASS (tail -c +9756268 tests/ecmac.db|head -c 654)
 10683	PASS (tail -c +9756923 tests/ecmac.db|head -c 473)
-10684	FAIL (tail -c +9757397 tests/ecmac.db|head -c 596): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+10684	FAIL (tail -c +9757397 tests/ecmac.db|head -c 596): [{"message":"Date is invalid (for string)"}]
 10685	PASS (tail -c +9757994 tests/ecmac.db|head -c 2596)
-10686	FAIL (tail -c +9760591 tests/ecmac.db|head -c 2636): [{"message":"value is not a function"}]
+10686	FAIL (tail -c +9760591 tests/ecmac.db|head -c 2636): [{"message":"#1: Date() is equal to (new Date()).toString()"}]
 10687	PASS (tail -c +9763228 tests/ecmac.db|head -c 5764)
 10688	PASS (tail -c +9768993 tests/ecmac.db|head -c 6090)
 10689	PASS (tail -c +9775084 tests/ecmac.db|head -c 6417)
@@ -10728,11 +10728,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10720	FAIL (tail -c +9884166 tests/ecmac.db|head -c 2099): [{"message":"#1: Incorrect value of Date"}]
 10721	FAIL (tail -c +9886266 tests/ecmac.db|head -c 2148): [{"message":"#1: Incorrect value of Date"}]
 10722	FAIL (tail -c +9888415 tests/ecmac.db|head -c 2196): [{"message":"#1: Incorrect value of Date"}]
-10723	FAIL (tail -c +9890612 tests/ecmac.db|head -c 1354): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
-10724	FAIL (tail -c +9891967 tests/ecmac.db|head -c 1400): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
-10725	FAIL (tail -c +9893368 tests/ecmac.db|head -c 1447): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
-10726	FAIL (tail -c +9894816 tests/ecmac.db|head -c 1496): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
-10727	FAIL (tail -c +9896313 tests/ecmac.db|head -c 1545): [{"message":"parse error at at line 1 col 10: [new Range error]"}]
+10723	FAIL (tail -c +9890612 tests/ecmac.db|head -c 1354): [{"message":"#1: The value should be NaN"}]
+10724	FAIL (tail -c +9891967 tests/ecmac.db|head -c 1400): [{"message":"#1: The value should be NaN"}]
+10725	FAIL (tail -c +9893368 tests/ecmac.db|head -c 1447): [{"message":"#1: The value should be NaN"}]
+10726	FAIL (tail -c +9894816 tests/ecmac.db|head -c 1496): [{"message":"#1: The value should be NaN"}]
+10727	FAIL (tail -c +9896313 tests/ecmac.db|head -c 1545): [{"message":"#1: The value should be NaN"}]
 10728	PASS (tail -c +9897859 tests/ecmac.db|head -c 4128)
 10729	FAIL (tail -c +9901988 tests/ecmac.db|head -c 3930): [{"message":"#1.2: Date.prototype.isPrototypeOf(x12)"}]
 10730	FAIL (tail -c +9905919 tests/ecmac.db|head -c 1790): [{"message":"value is not a function"}]
@@ -10748,28 +10748,28 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10740	PASS (tail -c +9912650 tests/ecmac.db|head -c 399)
 10741	PASS (tail -c +9913050 tests/ecmac.db|head -c 469)
 10742	PASS (tail -c +9913520 tests/ecmac.db|head -c 449)
-10743	FAIL (tail -c +9913970 tests/ecmac.db|head -c 424): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10744	FAIL (tail -c +9914395 tests/ecmac.db|head -c 404): [{"message":"cannot read property 'length' of undefined"}]
+10743	FAIL (tail -c +9913970 tests/ecmac.db|head -c 424): [{"message":"value is not a function"}]
+10744	PASS (tail -c +9914395 tests/ecmac.db|head -c 404)
 10745	FAIL (tail -c +9914800 tests/ecmac.db|head -c 508): [{"message":"#1: The Date.parse.length property has the attributes DontDelete"}]
-10746	FAIL (tail -c +9915309 tests/ecmac.db|head -c 506): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+10746	FAIL (tail -c +9915309 tests/ecmac.db|head -c 506): [{"message":"value is not a function"}]
 10747	PASS (tail -c +9915816 tests/ecmac.db|head -c 387)
 10748	PASS (tail -c +9916204 tests/ecmac.db|head -c 459)
 10749	PASS (tail -c +9916664 tests/ecmac.db|head -c 439)
-10750	FAIL (tail -c +9917104 tests/ecmac.db|head -c 412): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10751	FAIL (tail -c +9917517 tests/ecmac.db|head -c 394): [{"message":"cannot read property 'length' of undefined"}]
+10750	FAIL (tail -c +9917104 tests/ecmac.db|head -c 412): [{"message":"value is not a function"}]
+10751	PASS (tail -c +9917517 tests/ecmac.db|head -c 394)
 10752	FAIL (tail -c +9917912 tests/ecmac.db|head -c 498): [{"message":"#1: The Date.UTC.length property has the attributes DontDelete"}]
-10753	FAIL (tail -c +9918411 tests/ecmac.db|head -c 496): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+10753	FAIL (tail -c +9918411 tests/ecmac.db|head -c 496): [{"message":"value is not a function"}]
 10754	PASS (tail -c +9918908 tests/ecmac.db|head -c 286)
 10755	FAIL (tail -c +9919195 tests/ecmac.db|head -c 297): [{"message":"Test case returned non-true value!"}]
 10756	PASS (tail -c +9919493 tests/ecmac.db|head -c 316)
 10757	PASS (tail -c +9919810 tests/ecmac.db|head -c 286)
 10758	FAIL (tail -c +9920097 tests/ecmac.db|head -c 366): [{"message":"#1: The Date.prototype has the property "constructor""}]
-10759	FAIL (tail -c +9920464 tests/ecmac.db|head -c 354): [{"message":"#1: The Date.prototype has the property "toString""}]
-10760	FAIL (tail -c +9920819 tests/ecmac.db|head -c 370): [{"message":"#1: The Date.prototype has the property "toDateString""}]
-10761	FAIL (tail -c +9921190 tests/ecmac.db|head -c 370): [{"message":"#1: The Date.prototype has the property "toTimeString""}]
-10762	FAIL (tail -c +9921561 tests/ecmac.db|head -c 378): [{"message":"#1: The Date.prototype has the property "toLocaleString""}]
-10763	FAIL (tail -c +9921940 tests/ecmac.db|head -c 394): [{"message":"#1: The Date.prototype has the property "toLocaleDateString""}]
-10764	FAIL (tail -c +9922335 tests/ecmac.db|head -c 394): [{"message":"#1: The Date.prototype has the property "toLocaleTimeString""}]
+10759	PASS (tail -c +9920464 tests/ecmac.db|head -c 354)
+10760	PASS (tail -c +9920819 tests/ecmac.db|head -c 370)
+10761	PASS (tail -c +9921190 tests/ecmac.db|head -c 370)
+10762	PASS (tail -c +9921561 tests/ecmac.db|head -c 378)
+10763	PASS (tail -c +9921940 tests/ecmac.db|head -c 394)
+10764	PASS (tail -c +9922335 tests/ecmac.db|head -c 394)
 10765	PASS (tail -c +9922730 tests/ecmac.db|head -c 350)
 10766	PASS (tail -c +9923081 tests/ecmac.db|head -c 350)
 10767	PASS (tail -c +9923432 tests/ecmac.db|head -c 366)
@@ -10804,7 +10804,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10796	PASS (tail -c +9934083 tests/ecmac.db|head -c 366)
 10797	PASS (tail -c +9934450 tests/ecmac.db|head -c 366)
 10798	PASS (tail -c +9934817 tests/ecmac.db|head -c 378)
-10799	FAIL (tail -c +9935196 tests/ecmac.db|head -c 366): [{"message":"#1: The Date.prototype has the property "toUTCString""}]
+10799	PASS (tail -c +9935196 tests/ecmac.db|head -c 366)
 10800	PASS (tail -c +9935563 tests/ecmac.db|head -c 495)
 10801	PASS (tail -c +9936059 tests/ecmac.db|head -c 549)
 10802	PASS (tail -c +9936609 tests/ecmac.db|head -c 529)
@@ -10884,11 +10884,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10876	FAIL (tail -c +9975457 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
 10877	PASS (tail -c +9976046 tests/ecmac.db|head -c 477)
 10878	PASS (tail -c +9976524 tests/ecmac.db|head -c 534)
-10879	PASS (tail -c +9977059 tests/ecmac.db|head -c 514)
-10880	FAIL (tail -c +9977574 tests/ecmac.db|head -c 462): [{"message":"#1: The toString has a "length" property"}]
-10881	FAIL (tail -c +9978037 tests/ecmac.db|head -c 469): [{"message":"#1: The Date.prototype.toString.length has the attribute ReadOnly"}]
+10879	FAIL (tail -c +9977059 tests/ecmac.db|head -c 514): [{"message":"#1: The Date.prototype.toString property has the attribute DontEnum"}]
+10880	FAIL (tail -c +9977574 tests/ecmac.db|head -c 462): [{"message":"value is not a function"}]
+10881	PASS (tail -c +9978037 tests/ecmac.db|head -c 469)
 10882	FAIL (tail -c +9978507 tests/ecmac.db|head -c 573): [{"message":"#1: The Date.prototype.toString.length property has the attributes DontDelete"}]
-10883	PASS (tail -c +9979081 tests/ecmac.db|head -c 571)
+10883	FAIL (tail -c +9979081 tests/ecmac.db|head -c 571): [{"message":"value is not a function"}]
 10884	PASS (tail -c +9979653 tests/ecmac.db|head -c 491)
 10885	PASS (tail -c +9980145 tests/ecmac.db|head -c 546)
 10886	FAIL (tail -c +9980692 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.getMinutes property has the attribute DontEnum"}]
@@ -10961,11 +10961,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10953	FAIL (tail -c +10017311 tests/ecmac.db|head -c 623): [{"message":"value is not a function"}]
 10954	PASS (tail -c +10017935 tests/ecmac.db|head -c 501)
 10955	PASS (tail -c +10018437 tests/ecmac.db|head -c 554)
-10956	PASS (tail -c +10018992 tests/ecmac.db|head -c 534)
-10957	FAIL (tail -c +10019527 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-10958	FAIL (tail -c +10020014 tests/ecmac.db|head -c 489): [{"message":"cannot read property 'length' of undefined"}]
+10956	FAIL (tail -c +10018992 tests/ecmac.db|head -c 534): [{"message":"#1: The Date.prototype.toDateString property has the attribute DontEnum"}]
+10957	FAIL (tail -c +10019527 tests/ecmac.db|head -c 486): [{"message":"value is not a function"}]
+10958	PASS (tail -c +10020014 tests/ecmac.db|head -c 489)
 10959	FAIL (tail -c +10020504 tests/ecmac.db|head -c 593): [{"message":"#1: The Date.prototype.toDateString.length property has the attributes DontDelete"}]
-10960	FAIL (tail -c +10021098 tests/ecmac.db|head -c 591): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+10960	FAIL (tail -c +10021098 tests/ecmac.db|head -c 591): [{"message":"value is not a function"}]
 10961	PASS (tail -c +10021690 tests/ecmac.db|head -c 491)
 10962	PASS (tail -c +10022182 tests/ecmac.db|head -c 546)
 10963	FAIL (tail -c +10022729 tests/ecmac.db|head -c 526): [{"message":"#1: The Date.prototype.setSeconds property has the attribute DontEnum"}]
@@ -11038,11 +11038,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 11030	FAIL (tail -c +10058088 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
 11031	PASS (tail -c +10058677 tests/ecmac.db|head -c 501)
 11032	PASS (tail -c +10059179 tests/ecmac.db|head -c 554)
-11033	PASS (tail -c +10059734 tests/ecmac.db|head -c 534)
-11034	FAIL (tail -c +10060269 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11035	FAIL (tail -c +10060756 tests/ecmac.db|head -c 489): [{"message":"cannot read property 'length' of undefined"}]
+11033	FAIL (tail -c +10059734 tests/ecmac.db|head -c 534): [{"message":"#1: The Date.prototype.toTimeString property has the attribute DontEnum"}]
+11034	FAIL (tail -c +10060269 tests/ecmac.db|head -c 486): [{"message":"value is not a function"}]
+11035	PASS (tail -c +10060756 tests/ecmac.db|head -c 489)
 11036	FAIL (tail -c +10061246 tests/ecmac.db|head -c 593): [{"message":"#1: The Date.prototype.toTimeString.length property has the attributes DontDelete"}]
-11037	FAIL (tail -c +10061840 tests/ecmac.db|head -c 591): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11037	FAIL (tail -c +10061840 tests/ecmac.db|head -c 591): [{"message":"value is not a function"}]
 11038	FAIL (tail -c +10062432 tests/ecmac.db|head -c 506): [{"message":"Date.valueOf called on non-Date object"}]
 11039	PASS (tail -c +10062939 tests/ecmac.db|head -c 497)
 11040	PASS (tail -c +10063437 tests/ecmac.db|head -c 551)
@@ -11060,11 +11060,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 11052	FAIL (tail -c +10069910 tests/ecmac.db|head -c 603): [{"message":"value is not a function"}]
 11053	PASS (tail -c +10070514 tests/ecmac.db|head -c 497)
 11054	PASS (tail -c +10071012 tests/ecmac.db|head -c 551)
-11055	PASS (tail -c +10071564 tests/ecmac.db|head -c 531)
-11056	FAIL (tail -c +10072096 tests/ecmac.db|head -c 482): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11057	FAIL (tail -c +10072579 tests/ecmac.db|head -c 486): [{"message":"cannot read property 'length' of undefined"}]
+11055	FAIL (tail -c +10071564 tests/ecmac.db|head -c 531): [{"message":"#1: The Date.prototype.toUTCString property has the attribute DontEnum"}]
+11056	FAIL (tail -c +10072096 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+11057	PASS (tail -c +10072579 tests/ecmac.db|head -c 486)
 11058	FAIL (tail -c +10073066 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.toUTCString.length property has the attributes DontDelete"}]
-11059	FAIL (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11059	FAIL (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
 11060	FAIL (tail -c +10074246 tests/ecmac.db|head -c 941): [{"message":"Test case returned non-true value!"}]
 11061	FAIL (tail -c +10075188 tests/ecmac.db|head -c 622): [{"message":"Test case returned non-true value!"}]
 11062	FAIL (tail -c +10075811 tests/ecmac.db|head -c 620): [{"message":"Test case returned non-true value!"}]
@@ -11080,29 +11080,29 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 11072	PASS (tail -c +10081021 tests/ecmac.db|head -c 463)
 11073	FAIL (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"Test case returned non-true value!"}]
 11074	FAIL (tail -c +10082327 tests/ecmac.db|head -c 940): [{"message":"Test case returned non-true value!"}]
-11075	FAIL (tail -c +10083268 tests/ecmac.db|head -c 342): [{"message":"Test case returned non-true value!"}]
-11076	FAIL (tail -c +10083611 tests/ecmac.db|head -c 337): [{"message":"cannot read property 'length' of undefined"}]
+11075	PASS (tail -c +10083268 tests/ecmac.db|head -c 342)
+11076	FAIL (tail -c +10083611 tests/ecmac.db|head -c 337): [{"message":"Test case returned non-true value!"}]
 11077	PASS (tail -c +10083949 tests/ecmac.db|head -c 513)
 11078	PASS (tail -c +10084463 tests/ecmac.db|head -c 564)
-11079	PASS (tail -c +10085028 tests/ecmac.db|head -c 544)
-11080	FAIL (tail -c +10085573 tests/ecmac.db|head -c 498): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11081	FAIL (tail -c +10086072 tests/ecmac.db|head -c 499): [{"message":"cannot read property 'length' of undefined"}]
+11079	FAIL (tail -c +10085028 tests/ecmac.db|head -c 544): [{"message":"#1: The Date.prototype.toLocaleString property has the attribute DontEnum"}]
+11080	FAIL (tail -c +10085573 tests/ecmac.db|head -c 498): [{"message":"value is not a function"}]
+11081	PASS (tail -c +10086072 tests/ecmac.db|head -c 499)
 11082	FAIL (tail -c +10086572 tests/ecmac.db|head -c 603): [{"message":"#1: The Date.prototype.toLocaleString.length property has the attributes DontDelete"}]
-11083	FAIL (tail -c +10087176 tests/ecmac.db|head -c 601): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11083	FAIL (tail -c +10087176 tests/ecmac.db|head -c 601): [{"message":"value is not a function"}]
 11084	PASS (tail -c +10087778 tests/ecmac.db|head -c 537)
 11085	PASS (tail -c +10088316 tests/ecmac.db|head -c 584)
-11086	PASS (tail -c +10088901 tests/ecmac.db|head -c 564)
-11087	FAIL (tail -c +10089466 tests/ecmac.db|head -c 522): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11088	FAIL (tail -c +10089989 tests/ecmac.db|head -c 519): [{"message":"cannot read property 'length' of undefined"}]
+11086	FAIL (tail -c +10088901 tests/ecmac.db|head -c 564): [{"message":"#1: The Date.prototype.toLocaleDateString property has the attribute DontEnum"}]
+11087	FAIL (tail -c +10089466 tests/ecmac.db|head -c 522): [{"message":"value is not a function"}]
+11088	PASS (tail -c +10089989 tests/ecmac.db|head -c 519)
 11089	FAIL (tail -c +10090509 tests/ecmac.db|head -c 623): [{"message":"#1: The Date.prototype.toLocaleDateString.length property has the attributes DontDelete"}]
-11090	FAIL (tail -c +10091133 tests/ecmac.db|head -c 621): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11090	FAIL (tail -c +10091133 tests/ecmac.db|head -c 621): [{"message":"value is not a function"}]
 11091	PASS (tail -c +10091755 tests/ecmac.db|head -c 537)
 11092	PASS (tail -c +10092293 tests/ecmac.db|head -c 584)
-11093	PASS (tail -c +10092878 tests/ecmac.db|head -c 564)
-11094	FAIL (tail -c +10093443 tests/ecmac.db|head -c 522): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-11095	FAIL (tail -c +10093966 tests/ecmac.db|head -c 519): [{"message":"cannot read property 'length' of undefined"}]
+11093	FAIL (tail -c +10092878 tests/ecmac.db|head -c 564): [{"message":"#1: The Date.prototype.toLocaleTimeString property has the attribute DontEnum"}]
+11094	FAIL (tail -c +10093443 tests/ecmac.db|head -c 522): [{"message":"value is not a function"}]
+11095	PASS (tail -c +10093966 tests/ecmac.db|head -c 519)
 11096	FAIL (tail -c +10094486 tests/ecmac.db|head -c 623): [{"message":"#1: The Date.prototype.toLocaleTimeString.length property has the attributes DontDelete"}]
-11097	FAIL (tail -c +10095110 tests/ecmac.db|head -c 621): [{"message":"cannot read property 'propertyIsEnumerable' of undefined"}]
+11097	FAIL (tail -c +10095110 tests/ecmac.db|head -c 621): [{"message":"value is not a function"}]
 11098	PASS (tail -c +10095732 tests/ecmac.db|head -c 471)
 11099	PASS (tail -c +10096204 tests/ecmac.db|head -c 529)
 11100	FAIL (tail -c +10096734 tests/ecmac.db|head -c 509): [{"message":"#1: The Date.prototype.valueOf property has the attribute DontEnum"}]
