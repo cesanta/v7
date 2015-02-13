@@ -40,7 +40,7 @@
 39	PASS ch07/7.2/S7.2_A4.5_T1.js (tail -c +19256 tests/ecmac.db|head -c 487)
 40	PASS ch07/7.2/S7.2_A4.5_T2.js (tail -c +19744 tests/ecmac.db|head -c 368)
 41	FAIL ch07/7.3/7.3-1.js (tail -c +20113 tests/ecmac.db|head -c 392): [{"message":"[prop] is not defined"}]
-42	FAIL ch07/7.3/7.3-10.js (tail -c +20506 tests/ecmac.db|head -c 418): [{"message":"Test case returned non-true value!"}]
+42	PASS ch07/7.3/7.3-10.js (tail -c +20506 tests/ecmac.db|head -c 418)
 43	PASS ch07/7.3/7.3-11.js (tail -c +20925 tests/ecmac.db|head -c 464)
 44	PASS ch07/7.3/7.3-12.js (tail -c +21390 tests/ecmac.db|head -c 464)
 45	PASS ch07/7.3/7.3-13.js (tail -c +21855 tests/ecmac.db|head -c 464)
@@ -53,7 +53,7 @@
 52	FAIL ch07/7.3/7.3-6.js (tail -c +24795 tests/ecmac.db|head -c 379): [{"message":"Test case returned non-true value!"}]
 53	FAIL ch07/7.3/7.3-7.js (tail -c +25175 tests/ecmac.db|head -c 471): [{"message":"Test case returned non-true value!"}]
 54	FAIL ch07/7.3/7.3-8.js (tail -c +25647 tests/ecmac.db|head -c 471): [{"message":"Test case returned non-true value!"}]
-55	FAIL ch07/7.3/7.3-9.js (tail -c +26119 tests/ecmac.db|head -c 417): [{"message":"Test case returned non-true value!"}]
+55	PASS ch07/7.3/7.3-9.js (tail -c +26119 tests/ecmac.db|head -c 417)
 56	PASS ch07/7.3/S7.3_A1.1_T1.js (tail -c +26537 tests/ecmac.db|head -c 1212)
 57	PASS ch07/7.3/S7.3_A1.1_T2.js (tail -c +27750 tests/ecmac.db|head -c 326)
 58	PASS ch07/7.3/S7.3_A1.2_T1.js (tail -c +28077 tests/ecmac.db|head -c 1224)
