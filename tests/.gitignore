@@ -5,6 +5,7 @@ unit_test_c11
 unit_test_gcov
 unit_test_valgrind
 unit_test_asan
+unit_test_msan
 *.gcov
 *.gcno
 *.gcda
