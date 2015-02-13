@@ -19,10 +19,9 @@ int64_t strtoll(const char *, char **, int);
 
 /* ECMA5.1 defines "extended years", -+285,426 years from 01 January, 1970 UTC
  * As result we cannot use standart break & make time functions */
-typedef int64_t etime_t;
+typedef double etime_t;
 #define MAX_TIME 8640000000000000
-#define INVALID_TIME (MAX_TIME+1)
-#define MINUS_ZERO (MAX_TIME+2)
+#define INVALID_TIME NAN
 
 struct timeparts {
   int year; /* can be negative */
@@ -36,6 +35,9 @@ struct timeparts {
 };
 
 /* TODO(alashkin): replace mktime etc with something with extyears support */
+static int d_istimeinvalid(etime_t* time) {
+  return isnan(*time);
+}
 
 static int d_gettimezone() {
   return (int)timezone/60; /* TODO(alashkin): check non-OSX */
@@ -71,8 +73,8 @@ static etime_t d_gmktime(struct timeparts* tp) {
 typedef etime_t (*fmaketime)(struct timeparts* );
 
 static void d_gmtime(etime_t* time, struct timeparts* tp) {
-  time_t sec = *time/1000;
-  time_t msec = *time%1000;
+  time_t sec = (int64_t)*time/1000;
+  time_t msec = (int64_t)*time%1000;
   struct tm t;
   gmtime_r(&sec, &t); 
 
@@ -87,8 +89,8 @@ static void d_gmtime(etime_t* time, struct timeparts* tp) {
 }
 
 static void d_localtime(etime_t* time, struct timeparts* tp) {
-  time_t sec = *time/1000;
-  time_t msec = *time%1000;
+  time_t sec = (int64_t)*time/1000;
+  time_t msec = (int64_t)*time%1000;
   struct tm t;
   localtime_r(&sec, &t);
   
@@ -190,7 +192,10 @@ static void d_gettime(etime_t* time) {
 static int d_argtoint(struct v7* v7, val_t* obj, etime_t* ret) {
   *ret = INVALID_TIME;
   if(v7_is_double(*obj)) {
-    *ret = v7_to_double(*obj);
+    *ret = trunc(v7_to_double(*obj));
+    if(isinf(*ret)) {
+      *ret = INVALID_TIME;
+    }
   } else if(v7_is_boolean(*obj)) {
     *ret = v7_to_boolean(*obj);
   } else if(v7_is_string(*obj)) {
@@ -204,26 +209,6 @@ static int d_argtoint(struct v7* v7, val_t* obj, etime_t* ret) {
   }
   
   return *ret <= MAX_TIME;
-}
-
-static int d_timetoint(struct v7* v7, val_t* obj, etime_t* ret) {
-  int res = d_argtoint(v7, obj, ret);
-  if(res && *ret==0 && v7_to_double(*obj) < 0) {
-    *ret = MINUS_ZERO;
-  }
-  
-  return res;
-}
-
-static val_t d_createnumber(etime_t* time) {
-  switch(*time){
-    case INVALID_TIME:
-      return v7_create_number(NAN);
-    case MINUS_ZERO:
-      return v7_create_number(-0.0);
-    default:
-      return v7_create_number(*time);
-  }
 }
 
 struct dtimepartsarr {
@@ -243,11 +228,11 @@ static etime_t d_changepartoftime(etime_t* current, struct dtimepartsarr* a, fbr
   memset(&tp, 0, sizeof(tp));
   
   if(breaktimefunc != NULL) {
-    (breaktimefunc)(current, &tp);
+    breaktimefunc(current, &tp);
   }
   
   for(i = 0; i < ARRAY_SIZE(tp_arr); i++) {
-    if(a->args[i] != INVALID_TIME) {
+    if(!d_istimeinvalid(&a->args[i])) {
       *tp_arr[i] = (int)a->args[i];
     }
   }
@@ -274,7 +259,7 @@ static etime_t d_time_number_from_tp(struct v7 *v7, val_t this_obj, val_t args, 
       a.args[i+start_pos] = new_part;
     }
     
-    if(new_part != INVALID_TIME) {
+    if(!d_istimeinvalid(&new_part)) {
       etime_t current_time = v7_to_double(i_value_of(v7, this_obj));
       ret_time = d_changepartoftime(&current_time, &a, breaktimefunc, makefilefunc);
     }
@@ -287,7 +272,7 @@ static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args, int start_
   val_t n;
   etime_t ret_time = d_time_number_from_tp(v7, this_obj, args, start_pos, breaktimefunc, makefilefunc);
                                                                        
-  n = d_createnumber(&ret_time);
+  n = v7_create_number(ret_time);
   v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, n);
                                                                        
   return n;
@@ -308,7 +293,7 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
         const char* str = v7_to_string(v7, &arg, &str_size);
         d_timeFromString(&ret_time, str, str_size);
       } else {
-        d_timetoint(v7, &arg, &ret_time);
+        d_argtoint(v7, &arg, &ret_time);
       }
     } else {
       /* 2+ paramaters - should be parts of a date */
@@ -338,7 +323,7 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     }
   
     v7_to_object(this_obj)->prototype = v7_to_object(v7->date_prototype);
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, d_createnumber(&ret_time));
+    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_number(ret_time));
     return this_obj;
   } else {
     /* according to 15.9.2.1 we should ignore all parameters in case of function-call */    
@@ -500,10 +485,10 @@ static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
   val_t n;
   if(v7_array_length(v7, args) >= 1) {
     val_t arg0 = v7_array_at(v7, args, 0);
-    d_timetoint(v7, &arg0, &ret_time);
+    d_argtoint(v7, &arg0, &ret_time);
   }
 
-  n = d_createnumber(&ret_time);
+  n = v7_create_number(ret_time);
   v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, n);
   return n;
 }
@@ -540,7 +525,7 @@ static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
 
   d_gettime(&ret_time);
   
-  return d_createnumber(&ret_time);
+  return v7_create_number(ret_time);
 }
 
 static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
@@ -562,7 +547,7 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
     }
   }
   
-  return d_createnumber(&ret_time);
+  return v7_create_number(ret_time);
 }
 
 static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
@@ -574,7 +559,7 @@ static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   }
 
   ret_time = d_time_number_from_tp(v7, this_obj, args, tpyear, 0, d_gmktime);
-  return d_createnumber(&ret_time);
+  return v7_create_number(ret_time);
 }
 
 /****** Initialization *******/
@@ -595,7 +580,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
   v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
   v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
-  v7_set_property(v7, v7->number_prototype, "constructor", 11, attrs, date);
+  v7_set_property(v7, v7->date_prototype, "constructor", 11, 0, date);
   v7_set_property(v7, v7->global_object, "Date", 6, 0, date);
   
   DECLARE_GET_AND_SET(Date);
