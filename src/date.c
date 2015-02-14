@@ -23,6 +23,233 @@ typedef double etime_t;
 #define MAX_TIME 8640000000000000
 #define INVALID_TIME NAN
 
+/*** ecma helpers ****/
+#define msPerDay 86400000
+#define HoursPerDay 24
+#define MinutesPerHour 60
+#define SecondsPerMinute 60
+#define msPerSecond 1000
+#define msPerMinute 60000
+#define msPerHour 3600000
+
+typedef int64_t etimeint_t;
+
+static etimeint_t ecma_Day(etime_t t) {
+  return floor(t/ msPerDay);
+}
+
+/*
+static etimeint_t ecma_TimeWithinDay(etime_t t) {
+  return (etimeint_t)t % msPerDay;
+}
+*/
+
+static etimeint_t ecma_DaysInYear(etimeint_t y) {
+  if(y % 4 != 0 ) {
+    return 365;
+  } else if( y % 4 == 0 && y % 100 != 0 ) {
+    return 366;
+  } else if(y % 100 == 0 && y % 400 != 0) {
+    return 365;
+  } else if(y % 400 == 0) {
+    return 366;
+  } else {
+    return 365;
+  }
+}
+
+static etimeint_t ecma_DayFromYear(etimeint_t y) {
+  return 365 * (y-1970) + floor((y-1969)/4) - floor((y-1901)/100) + floor((y-1601)/400);
+}
+
+static etimeint_t ecma_TimeFromYear(etimeint_t y) {
+  return msPerDay * ecma_DayFromYear(y);
+}
+
+static etimeint_t ecma_YearFromTime(etime_t t)
+{
+  etimeint_t lo = (etimeint_t) floor((t / msPerDay) / 366) + 1970;
+  etimeint_t hi = (etimeint_t) floor((t / msPerDay) / 365) + 1970;
+  etimeint_t mid;
+  
+  if (hi < lo) {
+    etimeint_t temp = lo;
+    lo = hi;
+    hi = temp;
+  }
+  
+  while (hi > lo) {
+    mid = (hi + lo) / 2;
+    if (ecma_TimeFromYear(mid) > t) {
+      hi = mid - 1;
+    } else {
+      if (ecma_TimeFromYear(mid) <= t) {
+        etimeint_t temp = mid + 1;
+        if (ecma_TimeFromYear(temp) > t) {
+          return mid;
+        }
+        lo = mid + 1;
+      }
+    }
+  }
+  return lo;
+}
+
+static etimeint_t ecma_InLeapYear(etime_t t) {
+  return ecma_DaysInYear(ecma_YearFromTime(t)) == 366;
+}
+
+static etimeint_t ecma_DayWithinYear(etime_t t) {
+  return ecma_Day(t) - ecma_DayFromYear(ecma_YearFromTime(t));
+}
+
+static etimeint_t ecma_MonthFromTime(etime_t t) {
+  etimeint_t dwy = ecma_DayWithinYear(t);
+  etimeint_t ily = ecma_InLeapYear(t);
+  
+  if( dwy >= 0 && dwy < 31 ) {
+    return 0;
+  } else if( dwy >=31 && dwy < 59 + ily ) {
+    return 1;
+  } else if( dwy >= 59 + ily && dwy < 90 + ily ) {
+    return 2;
+  } else if( dwy >= 90 + ily && dwy < 120 + ily ) {
+    return 3;
+  } else if( dwy >=120 + ily && dwy < 151 + ily ) {
+    return 4;
+  } else if( dwy >= 151 + ily && dwy < 181 + ily ) {
+    return 5;
+  } else if( dwy >= 181 + ily && dwy < 212 + ily ) {
+    return 6;
+  } else if( dwy >= 212 + ily && dwy < 243 +ily ) {
+    return 7;
+  } else if( dwy >= 243 + ily && dwy < 273 + ily ) {
+    return 8;
+  } else if( dwy >= 273 + ily && dwy < 304 + ily ) {
+    return 9;
+  } else if( dwy >= 304 + ily && dwy < 334 + ily ) {
+    return 10;
+  } else if( dwy >= 334 + ily && dwy < 365 + ily ) {
+    return 11;
+  } else {
+    return -1;
+  }
+}
+
+static etimeint_t ecma_DateFromTime(etime_t t) {
+  etimeint_t mft = ecma_MonthFromTime(t);
+  etimeint_t dwy = ecma_DayWithinYear(t);
+  etimeint_t ily = ecma_InLeapYear(t);
+  
+  switch (mft) {
+    case 0:
+      return dwy + 1;
+    case 1:
+      return dwy - 30;
+    case 2:
+      return dwy - 58 - ily;
+    case 3:
+      return dwy - 89 - ily;
+    case 4:
+      return dwy - 119 - ily;
+    case 5:
+      return dwy - 150 - ily;
+    case 6:
+      return dwy - 180 - ily;
+    case 7:
+      return dwy - 211 - ily;
+    case 8:
+      return dwy - 242 - ily;
+    case 9:
+      return dwy - 272 - ily;
+    case 10:
+      return dwy - 303 - ily;
+    case 11:
+      return dwy - 333 - ily;
+    default:
+      return -1;
+  }
+}
+
+static etimeint_t ecma_WeekDay(etime_t t) {
+  return (ecma_Day(t)+4) % 7;
+}
+
+static etimeint_t ecma_DaylightSavingTA(etime_t t) {
+  time_t time = t / 1000;
+  struct tm tm;
+  memset(&tm, 0, sizeof(t));
+  localtime_r(&time, &tm);
+  if(tm.tm_isdst > 0) {
+    return msPerHour;
+  } else {
+    return 0;
+  }
+}
+
+static etimeint_t ecma_LocalTZA() {
+  return -timezone * 1000;
+}
+
+static etimeint_t ecma_LocalTime(etime_t t) {
+  return t + ecma_LocalTZA() + ecma_DaylightSavingTA(t);
+}
+
+static etimeint_t ecma_UTC(etime_t t) {
+  return t - ecma_LocalTZA() - ecma_DaylightSavingTA(t-ecma_LocalTZA());
+}
+
+static etimeint_t ecma_HourFromTime(etime_t t) {
+  return (etimeint_t)floor(t / msPerHour) % HoursPerDay;
+}
+
+static etimeint_t ecma_MinFromTime(etime_t t) {
+  return (etimeint_t)floor(t / msPerMinute) % MinutesPerHour;
+}
+
+static etimeint_t ecma_SecFromTime(etime_t t) {
+  return (etimeint_t)floor(t / msPerSecond) % SecondsPerMinute;
+}
+
+static etimeint_t ecma_msFromTime(etime_t t) {
+  return (etimeint_t)t % msPerSecond;
+}
+
+static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min, etimeint_t sec, etimeint_t ms) {
+  return ((hour * MinutesPerHour + min) * SecondsPerMinute + sec) * msPerSecond + ms;
+}
+
+static etime_t firstDayOfMonth[2][12] = {
+  {0.0, 31.0, 59.0, 90.0, 120.0, 151.0, 181.0, 212.0, 243.0, 273.0, 304.0, 334.0},
+  {0.0, 31.0, 60.0, 91.0, 121.0, 152.0, 182.0, 213.0, 244.0, 274.0, 305.0, 335.0}
+};
+
+#define DayFromMonth(m, leap) firstDayOfMonth[leap][m];
+
+static etimeint_t ecma_MakeDay(etimeint_t year, etimeint_t month, etimeint_t date)
+{
+  etimeint_t ily;
+  etimeint_t yearday;
+  etimeint_t monthday;
+  
+  year += floor(month / 12);
+  
+  month = month % 12;
+  
+  ily = (ecma_DaysInYear(year) == 366);
+  
+  yearday = floor(ecma_TimeFromYear(year) / msPerDay);
+  monthday = DayFromMonth(month, ily);
+  
+  return yearday + monthday + date - 1;
+}
+
+static etimeint_t ecma_MakeDate(etimeint_t day, etimeint_t time) {
+  return (day * msPerDay + time);
+}
+
+/***************************/
+
 struct timeparts {
   int year; /* can be negative */
   int month; /* 0-11 */
@@ -48,60 +275,35 @@ static char* d_gettzname() {
 }
 
 static etime_t d_mktime_impl(struct timeparts* tp) {
-  struct tm t;
-  memset(&t, 0, sizeof(t));
-  
-  t.tm_year = tp->year - 1900;
-  t.tm_mon = tp->month;
-  t.tm_mday = tp->day;
-  t.tm_hour = tp->hour;
-  t.tm_min = tp->min;
-  t.tm_sec = tp->sec;
-  
-  return (etime_t)mktime(&t)*1000 + tp->msec;
+  return ecma_MakeDate(ecma_MakeDay(tp->year, tp->month, tp->day),
+                       ecma_MakeTime(tp->hour, tp->min, tp->sec, tp->msec));
 }
 
 static etime_t d_lmktime(struct timeparts* tp) {
-  return d_mktime_impl(tp);
+  return ecma_UTC(d_mktime_impl(tp));
 }
 
 static etime_t d_gmktime(struct timeparts* tp) {
-  return d_mktime_impl(tp) - d_gettimezone() * 60 * 1000;
+  return d_mktime_impl(tp);
 }
 
 
 typedef etime_t (*fmaketime)(struct timeparts* );
 
-static void d_gmtime(etime_t* time, struct timeparts* tp) {
-  time_t sec = (int64_t)*time/1000;
-  time_t msec = (int64_t)*time%1000;
-  struct tm t;
-  gmtime_r(&sec, &t); 
-
-  tp->year = t.tm_year + 1900;
-  tp->month = t.tm_mon;
-  tp->day = t.tm_mday;
-  tp->hour = t.tm_hour;
-  tp->min = t.tm_min;
-  tp->sec = t.tm_sec;
-  tp->msec = (int)msec;
-  tp->dayofweek = t.tm_wday;
+static void d_gmtime(etime_t* t, struct timeparts* tp) {
+  tp->year = ecma_YearFromTime(*t);
+  tp->month = ecma_MonthFromTime(*t);
+  tp->day = ecma_DateFromTime(*t);
+  tp->hour = ecma_HourFromTime(*t);
+  tp->min = ecma_MinFromTime(*t);
+  tp->sec = ecma_SecFromTime(*t);
+  tp->msec = ecma_msFromTime(*t);
+  tp->dayofweek = ecma_WeekDay(*t);
 }
 
 static void d_localtime(etime_t* time, struct timeparts* tp) {
-  time_t sec = (int64_t)*time/1000;
-  time_t msec = (int64_t)*time%1000;
-  struct tm t;
-  localtime_r(&sec, &t);
-  
-  tp->year = t.tm_year + 1900;
-  tp->month = t.tm_mon;
-  tp->day = t.tm_mday;
-  tp->hour = t.tm_hour;
-  tp->min = t.tm_min;
-  tp->sec = t.tm_sec;
-  tp->msec = (int)msec;
-  tp->dayofweek = t.tm_wday;
+  etime_t local_time = ecma_LocalTime(*time);
+  d_gmtime(&local_time, tp);
 }
 
 typedef void (*fbreaktime)(etime_t* , struct timeparts* );
@@ -152,36 +354,38 @@ static const char mon_name[][4] = {
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
-static int d_tptodatestr(struct timeparts* tp, char* buf) {
+static int d_tptodatestr(struct timeparts* tp, char* buf, int addtz) {
   int use_ext;
 
   const char* ey_frm = "%s %s %02d %06d";
   const char* simpl_frm ="%s %s %02d %04d";
+  
+  (void)addtz;
   
   use_ext = (abs(tp->year) > 9999 || tp->year < 0);
   
   return sprintf(buf, use_ext? ey_frm: simpl_frm, wday_name[tp->dayofweek], mon_name[tp->month], tp->day, tp->year);
 }
 
-static int d_tptotimestr(struct timeparts* tp, char* buf) {
+static int d_tptotimestr(struct timeparts* tp, char* buf, int addtz) {
   int len;
 
   len = sprintf(buf, "%02d:%02d:%02d GMT", tp->hour, tp->min, tp->sec);
   
-  if(d_gettimezone() != 0) {
+  if(addtz && d_gettimezone() != 0) {
     len = sprintf(buf+len, "%c%02d00 (%s)", d_gettimezone() > 0? '-':'+', abs(d_gettimezone()/60), d_gettzname());
   }
   
   return (int)strlen(buf);
 }
 
-static int d_tptostr(struct timeparts* tp, char* buf) {
-  int len = d_tptodatestr(tp, buf);
+static int d_tptostr(struct timeparts* tp, char* buf, int addtz) {
+  int len = d_tptodatestr(tp, buf, addtz);
   *(buf + len) = ' ';
-  return d_tptotimestr(tp, buf + len + 1) + len + 1;
+  return d_tptotimestr(tp, buf + len + 1, addtz) + len + 1;
 }
 
-typedef int (*ftostring)(struct timeparts*, char* buf);
+typedef int (*ftostring)(struct timeparts*, char*, int);
 
 static void d_gettime(etime_t* time) {
   struct timeval tv;
@@ -206,6 +410,9 @@ static int d_argtoint(struct v7* v7, val_t* obj, etime_t* ret) {
     if(endptr != str + size) {
       *ret = INVALID_TIME;
     }
+  } else if(v7_is_object(*obj)) {
+    val_t val = i_value_of(v7, *obj);
+    return d_argtoint(v7, &val, ret);
   }
   
   return *ret <= MAX_TIME;
@@ -318,7 +525,7 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
           a.args[tpyear] += 1900; /* If y is not NaN and 0 <= ToInteger(y) <= 99, then let yr be 1900+ToInteger(y); otherwise, let yr be y. */
         }
 
-        ret_time = d_changepartoftime(0, &a, 0, d_lmktime);
+        ret_time = ecma_UTC(d_changepartoftime(0, &a, 0, d_gmktime));
       }
     }
   
@@ -326,12 +533,15 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_number(ret_time));
     return this_obj;
   } else {
-    /* according to 15.9.2.1 we should ignore all parameters in case of function-call */    
-    char buf[30];
+    /* according to 15.9.2.1 we should ignore all parameters in case of function-call */
+    struct timeparts tp;
+    char buf[50];
     int len;
     
-    d_gettime(&ret_time);    
-    len = d_timetoISOstr(&ret_time, buf, sizeof(buf));
+    d_gettime(&ret_time);
+    d_localtime(&ret_time, &tp);
+    len = d_tptostr(&tp, buf, 1);
+    
     return v7_create_string(v7, buf, len, 1);
   }
 }
@@ -355,7 +565,7 @@ static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime breatimefunc, ftostring tostringfunc) {
+static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime breatimefunc, ftostring tostringfunc, int addtz) {
   struct timeparts tp;
   int len;
   char buf[100];
@@ -366,21 +576,21 @@ static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime breatimefunc, ftost
   time = i_as_num(v7, obj);
 
   breatimefunc(&time, &tp);
-  len = tostringfunc(&tp, buf);
+  len = tostringfunc(&tp, buf, addtz);
   
   return v7_create_string(v7, buf, len, 1);
 }
 
-#define DEF_TOSTR(funcname, breaktimefunc,tostrfunc) \
+#define DEF_TOSTR(funcname, breaktimefunc,tostrfunc, addtz) \
   static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) {  \
     (void)args; \
-    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc); \
+    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc, addtz); \
   }
 
-DEF_TOSTR(UTCString, d_gmtime, d_tptostr)
-DEF_TOSTR(String, d_localtime, d_tptostr)
-DEF_TOSTR(DateString, d_localtime, d_tptodatestr)
-DEF_TOSTR(TimeString, d_localtime, d_tptotimestr)
+DEF_TOSTR(UTCString, d_gmtime, d_tptostr, 0)
+DEF_TOSTR(String, d_localtime, d_tptostr, 1)
+DEF_TOSTR(DateString, d_localtime, d_tptodatestr, 1)
+DEF_TOSTR(TimeString, d_localtime, d_tptotimestr, 1)
 
 struct d_locale {
   char locale[50];
@@ -580,7 +790,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
   v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
   v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
-  v7_set_property(v7, v7->date_prototype, "constructor", 11, 0, date);
+  set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
   v7_set_property(v7, v7->global_object, "Date", 6, 0, date);
   
   DECLARE_GET_AND_SET(Date);
@@ -592,7 +802,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   DECLARE_GET_AND_SET(Milliseconds);
   DECLARE_GET(Day);
  
-  set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset", Date_getTimezoneOffset); 
+  set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset", Date_getTimezoneOffset);
 
   set_cfunc_prop(v7, v7->date_prototype, "getTime", Date_getTime);
   set_cfunc_prop(v7, v7->date_prototype, "toISOString", Date_toISOString);

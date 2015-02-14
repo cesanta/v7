@@ -204,6 +204,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
           "if (typeof v === 'boolean') return new Boolean(v);"
           "if (typeof v === 'number') return new Number(v);"
           "if (typeof v === 'string') return new String(v);"
+          "if (typeof v === 'date') return new Date(v);"
           "}");
 
   object = v7_get(v7, v7->global_object, "Object", 6);
