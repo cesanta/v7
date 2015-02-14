@@ -4,6 +4,7 @@
  */
 
 #include "internal.h"
+#include "gc.h"
 
 enum v7_type val_type(struct v7 *v7, val_t v) {
   if (v7_is_double(v)) {
@@ -172,7 +173,7 @@ V7_PRIVATE val_t v_get_prototype(val_t obj) {
 
 V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   /* TODO(mkm): use GC heap */
-  struct v7_object *o = (struct v7_object *) malloc(sizeof(struct v7_object));
+  struct v7_object *o = new_object(v7);
   if (o == NULL) {
     return V7_NULL;
   }
@@ -218,8 +219,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
 v7_val_t v7_create_function(struct v7 *v7) {
   /* TODO(mkm): use GC heap */
-  struct v7_function *f = (struct v7_function *) malloc(
-      sizeof(struct v7_function));
+  struct v7_function *f = new_function(v7);
   val_t proto, fval = v7_function_to_value(f);
   if (f == NULL) {
     return V7_NULL;
@@ -247,7 +247,8 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   return n;
 }
 
-static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                      int as_json) {
   char *vp;
   double num;
   for (vp = v7->json_visited_stack.buf;
@@ -279,7 +280,11 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
       {
         size_t n;
         const char *str = v7_to_string(v7, &v, &n);
-        return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
+        if (as_json) {
+          return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
+        } else {
+          return v_sprintf_s(buf, size, "%.*s", (int) n, str);
+        }
       }
     case V7_TYPE_REGEXP_OBJECT:
       {
@@ -311,7 +316,7 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
             continue;
           }
           b += v_sprintf_s(b, size - (b - buf), "\"%s\":", p->name);
-          b += to_json(v7, p->value, b, size - (b - buf));
+          b += to_str(v7, p->value, b, size - (b - buf), 1);
           if (p->next) {
             b += v_sprintf_s(b, size - (b - buf), ",");
           }
@@ -327,18 +332,22 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
         char key[512];
         size_t i, len = v7_array_length(v7, v);
         mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-        b += v_sprintf_s(b, size - (b - buf), "[");
+        if (as_json) {
+          b += v_sprintf_s(b, size - (b - buf), "[");
+        }
         for (i = 0; i < len; i++) {
           /* TODO */
           v_sprintf_s(key, sizeof(key), "%lu", i);
           if ((p = v7_get_property(v, key, -1)) != NULL) {
-            b += to_json(v7, p->value, b, size - (b - buf));
+            b += to_str(v7, p->value, b, size - (b - buf), 1);
           }
           if (i != len - 1) {
             b += v_sprintf_s(b, size - (b - buf), ",");
           }
         }
-        b += v_sprintf_s(b, size - (b - buf), "]");
+        if (as_json) {
+          b += v_sprintf_s(b, size - (b - buf), "]");
+        }
         v7->json_visited_stack.len -= sizeof(v);
         return b - buf;
       }
@@ -415,12 +424,12 @@ static int to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
 }
 
 char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
-  int len = to_json(v7, v, buf, size);
+  int len = to_str(v7, v, buf, size, 1);
 
   if (len > (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
-    char *p = malloc(len + 1);
-    to_json(v7, v, p, len + 1);
+    char *p = (char *) malloc(len + 1);
+    to_str(v7, v, p, len + 1, 1);
     p[len] = '\0';
     return p;
   } else {
@@ -436,18 +445,21 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
     if (n >= size) {
       n = size - 1;
     }
-    stpncpy(buf, str, n);
+    strncpy(buf, str, n);
     buf[n] = '\0';
     return n;
   } else {
-    return to_json(v7, v, buf, size);
+    return to_str(v7, v, buf, size, 1);
   }
 }
 
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
-  /* TODO(mkm): allocate from GC pool */
-  (void) v7;
-  return (struct v7_property *) calloc(1, sizeof(struct v7_property));
+  struct v7_property *p = new_property(v7);
+  p->next = NULL;
+  p->name = NULL;
+  p->value = V7_UNDEFINED;
+  p->attributes = 0;
+  return p;
 }
 
 V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
@@ -522,7 +534,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
 }
 
-static void v7_destroy_property(struct v7_property **p) {
+V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
@@ -532,6 +544,16 @@ int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
     return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes, val);
   }
   return -1;
+}
+
+V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
+                                 val_t obj, val_t val) {
+  val_t setter = prop->value, args = v7_create_array(v7);
+  if (prop->attributes & V7_PROPERTY_GETTER) {
+    setter = v7_array_at(v7, prop->value, 1);
+  }
+  v7_set(v7, args, "0", 1, val);
+  v7_apply(v7, setter, obj, args);
 }
 
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
@@ -555,17 +577,12 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     len = strlen(name);
   }
   if (prop->name == NULL) {
-    prop->name = malloc(len + 1);
+    prop->name = (char *) malloc(len + 1);
     strncpy(prop->name, name, len);
     prop->name[len] = '\0';
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
-    val_t setter = prop->value, args = v7_create_array(v7);
-    if (prop->attributes & V7_PROPERTY_GETTER) {
-      setter = v7_array_at(v7, prop->value, 1);
-    }
-    v7_set(v7, args, "0", 1, val);
-    v7_apply(v7, setter, obj, args);
+    v7_invoke_setter(v7, prop, obj, val);
     return 0;
   }
   prop->value = val;
@@ -634,9 +651,11 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   long max = -1, k;
   char *end;
 
-  if (val_type(v7, v) != V7_TYPE_ARRAY_OBJECT) {
+  (void) v7;
+  if (!v7_is_object(v)) {
     return -1;
   }
+
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     k = strtol(p->name, &end, 10);
     if (end != p->name && k > max) {
@@ -655,7 +674,7 @@ void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
 }
 
 val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
-  if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
+  if (v7_is_object(arr)) {
     char buf[20];
     int n = v_sprintf_s(buf, sizeof(buf), "%ld", index);
     return v7_get(v7, arr, buf, n);
@@ -925,6 +944,7 @@ void v7_destroy(struct v7 *v7) {
   if (v7 != NULL) {
     mbuf_free(&v7->owned_strings);
     mbuf_free(&v7->foreign_strings);
+    mbuf_free(&v7->json_visited_stack);
     free(v7);
   }
 }

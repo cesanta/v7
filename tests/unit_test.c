@@ -29,6 +29,7 @@
 
 #include "../v7.h"
 #include "../src/internal.h"
+#include "../src/gc.h"
 
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
@@ -734,7 +735,9 @@ static const char *test_parser(void) {
     "return 1+2",
     "if (1) {return;}",
     "if (1) {return 2}",
-    "(function(){'use strict'; with({}){}})"
+    "(function(){'use strict'; with({}){}})",
+    "v = [",
+    "var v = ["
   };
   FILE *fp;
   const char *want_ast_db = "want_ast.db";
@@ -855,9 +858,19 @@ static const char *test_ecmac(void) {
   for (i = 0; next_case < db + db_len; i++ ) {
     char tail_cmd[100];
     char *current_case = next_case + 1;
+    char *chap_begin = NULL, *chap_end = NULL;
+    int chap_len = 0;
     ASSERT((next_case = strchr(current_case, '\0')) != NULL);
+    if ((chap_begin = strstr(current_case, " * @path ")) != NULL) {
+      chap_begin += 9;
+      if ((chap_end = strchr(chap_begin, '\r')) != NULL ||
+          (chap_end = strchr(chap_begin, '\n')) != NULL) {
+        chap_len = chap_end - chap_begin;
+      }
+    }
     snprintf(tail_cmd, sizeof(tail_cmd),
-             "(tail -c +%lu tests/ecmac.db|head -c %lu)",
+             "%.*s (tail -c +%lu tests/ecmac.db|head -c %lu)",
+             chap_len, chap_begin == NULL ? "" : chap_begin,
              current_case - db + 1, next_case - current_case);
 
 #if 0
@@ -881,7 +894,10 @@ static const char *test_ecmac(void) {
 
       if (v7_exec(v7, &res, driver) != V7_OK) {
         fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
+        ast_free(v7->last_ast);
+        free(v7->last_ast);
       } else {
+        struct ast *driver_ast = v7->last_ast;
         if (v7_exec(v7, &res, current_case) != V7_OK) {
           char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
           fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
@@ -898,6 +914,11 @@ static const char *test_ecmac(void) {
           exit(0);
 #endif
         }
+        ast_free(driver_ast);
+        free(driver_ast);
+
+        ast_free(v7->last_ast);
+        free(v7->last_ast);
       }
 #ifdef ECMA_FORK
     } else {
@@ -1406,9 +1427,39 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "10"));
   ASSERT(v7_exec(v7, &v, "r=0;o={get x() {return 10}, set x(v){r=v}};o.x=10;r") == V7_OK);
   ASSERT(check_value(v7, v, "10"));
+  ASSERT(v7_exec(v7, &v, "g=0;function O() {}; O.prototype = {set x(v) {g=v}};o=new O;o.x=42;[g,Object.keys(o)]") == V7_OK);
+  ASSERT(check_value(v7, v, "[42,[]]"));
 
   ASSERT(v7_exec(v7, &v, "String(new Number(42))") == V7_OK);
   ASSERT(check_value(v7, v, "\"42\""));
+
+  ASSERT(v7_exec(v7, &v, "L: for(i=0;i<10;i++){for(j=4;j<10;j++){if(i==j) break L}};i") == V7_OK);
+  ASSERT(check_value(v7, v, "4"));
+  ASSERT(v7_exec(v7, &v, "L: for(i=0;i<10;i++){M:for(j=4;j<10;j++){if(i==j) break L}};i") == V7_OK);
+  ASSERT(check_value(v7, v, "4"));
+  ASSERT(v7_exec(v7, &v, "x=0;L: for(i=0;i<10;i++){try{for(j=4;j<10;j++){if(i==j) break L}}finally{x++}};x") == V7_OK);
+  ASSERT(check_value(v7, v, "5"));
+  ASSERT(v7_exec(v7, &v, "x=0;L: for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(check_value(v7, v, "50"));
+  ASSERT(v7_exec(v7, &v, "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(check_value(v7, v, "50"));
+  ASSERT(v7_exec(v7, &v, "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(check_value(v7, v, "50"));
+  ASSERT(v7_exec(v7, &v, "L:do {i=0;continue L;}while(i>0);i") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(v7_exec(v7, &v, "i=1; L:while(i>0){i=0;continue L;};i") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+
+  ASSERT(v7_exec(v7, &v, "0 || 1") == V7_OK);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT(v7_exec(v7, &v, "0 || {}") == V7_OK);
+  ASSERT(check_value(v7, v, "{}"));
+  ASSERT(v7_exec(v7, &v, "1 && 0") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(v7_exec(v7, &v, "1 && {}") == V7_OK);
+  ASSERT(check_value(v7, v, "{}"));
+  ASSERT(v7_exec(v7, &v, "'' && {}") == V7_OK);
+  ASSERT(check_value(v7, v, "\"\""));
 
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
@@ -1478,6 +1529,58 @@ static const char *test_unescape(void) {
   return NULL;
 }
 
+static const char *test_gc(void) {
+  struct v7 *v7 = v7_create();
+  val_t v;
+
+  v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
+  gc_mark(v);
+  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  v7_destroy(v7);
+  v7 = v7_create();
+
+  v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
+  gc_mark(v7->global_object);
+  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  v7_destroy(v7);
+  v7 = v7_create();
+
+  v7_exec(v7, &v, "function f() {}; o=new f;o");
+  gc_mark(v);
+  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  v7_destroy(v7);
+  v7 = v7_create();
+
+  v7_exec(v7, &v, "function f() {}; Object.getPrototypeOf(new f)");
+  v7_gc(v7);
+  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  v7_destroy(v7);
+  v7 = v7_create();
+
+  v7_exec(v7, &v, "({a:1})");
+  v7_gc(v7);
+  ASSERT(!((uintptr_t) v7_to_object(v)->properties & 1));
+  v7_destroy(v7);
+  v7 = v7_create();
+
+  v7_exec(v7, &v, "var f;(function() {var x={a:1};f=function(){return x};return x})()");
+  v7_gc(v7);
+  /* `x` is reachable through `f`'s closure scope */
+  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  v7_destroy(v7);
+  v7 = v7_create();
+
+  v7_exec(v7, &v, "(function() {var x={a:1};var f=function(){return x};return x})()");
+  v7_gc(v7);
+  /* `f` is unreachable, hence `x` is not marked through the scope */
+  ASSERT(!((uintptr_t) v7_to_object(v)->properties & 1));
+  v7_destroy(v7);
+  v7 = v7_create();
+
+  v7_destroy(v7);
+  return NULL;
+}
+
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_unescape);
   RUN_TEST(test_to_json);
@@ -1492,6 +1595,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_interpreter);
   RUN_TEST(test_ecmac);
   RUN_TEST(test_strings);
+  RUN_TEST(test_gc);
   return NULL;
 }
 

@@ -21,10 +21,6 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #include <stddef.h>   /* For size_t */
 
 #define V7_VERSION "1.0"
@@ -45,11 +41,17 @@ typedef uint64_t v7_val_t;
 
 typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 struct v7 *v7_create(void);
 void v7_destroy(struct v7 *);
 enum v7_err v7_exec(struct v7 *, v7_val_t *, const char *str);
 enum v7_err v7_exec_file(struct v7 *, v7_val_t *, const char *path);
 enum v7_err v7_exec_with(struct v7 *, v7_val_t *, const char *str, v7_val_t);
+
+void v7_gc(struct v7 *);
 
 v7_val_t v7_create_object(struct v7 *v7);
 v7_val_t v7_create_array(struct v7 *v7);

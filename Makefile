@@ -6,6 +6,12 @@ SRC_DIR=src
 TOP_SOURCES=$(realpath $(addprefix $(SRC_DIR)/, $(SOURCES)))
 TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
 
+CLANG:=clang
+
+ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
+	CLANG:=/usr/local/bin/clang-3.5
+endif
+
 include src/sources.mk
 
 .PHONY: cpplint
@@ -37,6 +43,10 @@ all_warnings: v7.c
 v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
 	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
 #	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
+
+asan_v7:
+	@$(CLANG) -fsanitize=address -fcolor-diagnostics $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
+	@ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=symbolize=1 ./v7 $(V7_ARGS)
 
 amalgamated_v7: v7.h v7.c
 	$(CC) v7.c -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm

@@ -113,7 +113,11 @@ struct slre_env {
   struct slre_class *curr_set;
   int min_rep, max_rep;
 
+#if defined(__cplusplus)
+  ::jmp_buf jmp_buf;
+#else
   jmp_buf jmp_buf;
+#endif
 };
 
 struct slre_thread {
@@ -1082,8 +1086,9 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   struct slre_instruction *split, *jump;
   int err_code;
 
-  e.prog = SLRE_MALLOC(sizeof(struct slre_prog));
-  e.pstart = e.pend = SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+  e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
+  e.pstart = e.pend = (struct slre_node *)
+             SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -1116,7 +1121,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   }
 
   e.prog->num_captures = e.num_captures;
-  e.prog->start = e.prog->end =
+  e.prog->start = e.prog->end = (struct slre_instruction *)
       SLRE_MALLOC((re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
 
   split = re_newinst(e.prog, I_SPLIT);

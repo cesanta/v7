@@ -23,6 +23,7 @@
 # - cpplint:   run the linter
 # - lcov:      generate coverage HTML in test/lcov/index.html
 # - test_asan: run with AddressSanitizer
+# - test_msan: run with MemorySanitizer (linux only)
 # - test_valgrind: run with valgrind
 
 SRC = $(realpath $(PROG).c)
@@ -41,9 +42,8 @@ PEDANTIC=$(shell gcc --version 2>/dev/null | grep -q clang && echo -pedantic)
 
 # TODO(mkm) fix cxx issues. This file should be the same file used in fossa
 # and we should keep it in sync with subtree or something.
-#DIALECTS=cxx ansi c99 c11
-DIALECTS=ansi c99 c11
-SPECIALS=asan gcov valgrind
+DIALECTS=cxx ansi c99 c11
+SPECIALS=asan msan gcov valgrind
 
 # Each test target might require either a different compiler name
 # a compiler flag, or a wrapper to be invoked before executing the test
@@ -60,6 +60,8 @@ CMD=MallocLogFile=/dev/null
 
 CC_cxx=$(CXX)
 CFLAGS_cxx=-x c++
+# TODO(mkm): remove once v7 has #lines for amalgamated sources
+SOURCES_cxx=$(addprefix $(SRC_DIR)/, $(SOURCES))
 
 CFLAGS_ansi=$(PEDANTIC) -ansi
 CFLAGS_c99=$(PEDANTIC) -std=c99
@@ -72,9 +74,15 @@ SOURCES_gcov=$(addprefix $(SRC_DIR)/, $(SOURCES))
 # TODO(mkm): remove once v7 has #lines for amalgamated sources
 SOURCES_asan=$(addprefix $(SRC_DIR)/, $(SOURCES))
 
+# TODO(mkm): remove once v7 has #lines for amalgamated sources
+SOURCES_msan=$(addprefix $(SRC_DIR)/, $(SOURCES))
+
 CC_asan=$(CLANG)
-CFLAGS_asan=-fsanitize=address -fcolor-diagnostics -std=c99
-CMD_asan=ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=allocator_may_return_null=1,symbolize=1 $(CMD)
+CC_msan=$(CC_asan)
+CFLAGS_asan=-fsanitize=address -fcolor-diagnostics -fno-common -std=c99
+CFLAGS_msan=-fsanitize=memory -fcolor-diagnostics -fno-common -std=c99
+CMD_asan=ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=allocator_may_return_null=1,symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 $(CMD)
+CMD_msan=$(CMD_asan)
 
 CMD_valgrind=valgrind
 
@@ -131,7 +139,7 @@ cpplint:
 
 clean: clean_coverage
 	@echo -e "CLEAN\tall"
-	@rm -rf $(PROG) $(PROG)_ansi $(PROG)_c99 $(PROG)_gcov $(PROG)_asan $(PROG)_cxx $(PROG)_valgrind lcov.info *.txt *.exe *.obj *.o a.out *.pdb *.opt
+	@rm -rf $(PROG) $(PROG)_ansi $(PROG)_c99 $(PROG)_gcov $(PROG)_asan $(PROG)_msan $(PROG)_cxx $(PROG)_valgrind lcov.info *.txt *.exe *.obj *.o a.out *.pdb *.opt
 
 clean_coverage:
 	@echo -e "CLEAN\tcoverage"

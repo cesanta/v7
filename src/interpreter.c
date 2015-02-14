@@ -22,6 +22,13 @@ enum i_break {
   B_CONTINUE
 };
 
+enum jmp_type {
+  NO_JMP,
+  THROW_JMP,
+  BREAK_JMP,
+  CONTINUE_JMP
+};
+
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, enum i_break *);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
@@ -30,7 +37,7 @@ static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
 V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
-  siglongjmp(v7->jmp_buf, 1);
+  siglongjmp(v7->jmp_buf, THROW_JMP);
 }  /* LCOV_EXCL_LINE */
 
 static val_t create_exception(struct v7 *v7, const char *ex, const char *msg) {
@@ -301,31 +308,19 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return v7_create_boolean(i_bool_bin_op(
           v7, tag, i_as_num(v7, v1), i_as_num(v7, v2)));
     case AST_LOGICAL_OR:
-      {
-        double n1, n2;
-        v1 = i_eval_expr(v7, a, pos, scope);
-        n1 = i_as_num(v7, v1);
-        if (n1) {
-          ast_skip_tree(a, pos);
-          return v1;
-        }
-        v2 = i_eval_expr(v7, a, pos, scope);
-        n2 = i_as_num(v7, v2);
-        return v7_create_boolean(n1 || n2);
+      v1 = i_eval_expr(v7, a, pos, scope);
+      if (v7_is_true(v7, v1)) {
+        ast_skip_tree(a, pos);
+        return v1;
       }
+      return i_eval_expr(v7, a, pos, scope);
     case AST_LOGICAL_AND:
-      {
-        double n1, n2;
-        v1 = i_eval_expr(v7, a, pos, scope);
-        n1 = i_as_num(v7, v1);
-        if (!n1) {
-          ast_skip_tree(a, pos);
-          return v7_create_boolean(0);
-        }
-        v2 = i_eval_expr(v7, a, pos, scope);
-        n2 = i_as_num(v7, v2);
-        return v7_create_boolean(n1 && n2);
+      v1 = i_eval_expr(v7, a, pos, scope);
+      if (!v7_is_true(v7, v1)) {
+        ast_skip_tree(a, pos);
+        return v1;
       }
+      return i_eval_expr(v7, a, pos, scope);
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
       return v7_create_boolean(!(int) v7_is_true(v7, v1));
@@ -434,6 +429,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           prop->value = v1;
         } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
           /* nop */
+        } else if (prop != NULL && prop->attributes & V7_PROPERTY_SETTER) {
+          v7_invoke_setter(v7, prop, root, v1);
         } else {
           v7_set_property(v7, root, name, name_len, 0, v1);
         }
@@ -933,7 +930,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
-  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, catch, fvar;
+  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
   int saved_strict_mode = v7->strict_mode;
 
   switch (tag) {
@@ -968,6 +965,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       *pos = end;
       break;
     case AST_WHILE:
+      v7->lab_cont = 0;
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       cond = *pos;
@@ -997,6 +995,11 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       iter_end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
       ast_move_to_children(a, pos);
+      /* skip to condition if coming from a labeled continue */
+      if (v7->lab_cont) {
+        *pos = iter_end;
+        v7->lab_cont = 0;
+      }
       loop = *pos;
       for (;;) {
         res = i_eval_stmts(v7, a, pos, iter_end, scope, brk);
@@ -1024,7 +1027,15 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       iter_end = ast_get_skip(a, *pos, AST_FOR_BODY_SKIP);
       ast_move_to_children(a, pos);
       /* initializer */
-      i_eval_expr(v7, a, pos, scope);
+      if (!v7->lab_cont) {
+        i_eval_expr(v7, a, pos, scope);
+      } else {
+        ast_skip_tree(a, pos);
+        iter = *pos;
+        ast_skip_tree(a, &iter);
+        i_eval_expr(v7, a, &iter, scope);
+        v7->lab_cont = 0;
+      }
       for (;;) {
         loop = *pos;
         if (!v7_is_true(v7, i_eval_expr(v7, a, &loop, scope))) {
@@ -1166,29 +1177,64 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
         return res;
       }
+    case AST_LABEL:
+      {
+        jmp_buf old_jmp;
+        char *name;
+        size_t name_len;
+        ast_off_t saved_pos;
+        volatile enum jmp_type j;
+        memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
+        name = ast_get_inlined_data(a, *pos, &name_len);
+
+        ast_move_to_children(a, pos);
+        saved_pos = *pos;
+        /*
+         * Percolate up all exceptions and labeled breaks
+         * not matching the current label.
+         */
+     cont:
+        if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
+          res = i_eval_stmt(v7, a, pos, scope, brk);
+        } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
+                   name_len == v7->label_len &&
+                   memcmp(name, v7->label, name_len) == 0) {
+          *pos = saved_pos;
+          if (j == CONTINUE_JMP) {
+            v7->lab_cont = 1;
+            goto cont;
+          }
+          ast_skip_tree(a, pos);
+        } else {
+          siglongjmp(old_jmp, j);
+        }
+        memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+        return res;
+      }
     case AST_TRY:
       {
         int percolate = 0;
         jmp_buf old_jmp;
         char *name;
         size_t name_len;
+        volatile enum jmp_type j;
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
         end = ast_get_skip(a, *pos, AST_END_SKIP);
-        catch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+        acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
         finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
         ast_move_to_children(a, pos);
-        if (sigsetjmp(v7->jmp_buf, 0) == 0) {
-          res = i_eval_stmts(v7, a, pos, catch, scope, brk);
-        } else if (catch != finally) {
+        if ((j = (enum jmp_type)  sigsetjmp(v7->jmp_buf, 0)) == 0) {
+          res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
+        } else if (j == THROW_JMP && acatch != finally) {
           val_t catch_scope = create_object(v7, scope);
-          tag = ast_fetch_tag(a, &catch);
+          tag = ast_fetch_tag(a, &acatch);
           V7_CHECK(v7, tag == AST_IDENT);
-          name = ast_get_inlined_data(a, catch, &name_len);
+          name = ast_get_inlined_data(a, acatch, &name_len);
           v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
-          ast_move_to_children(a, &catch);
+          ast_move_to_children(a, &acatch);
           memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-          res = i_eval_stmts(v7, a, &catch, finally, catch_scope, brk);
+          res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
         } else {
           percolate = 1;
         }
@@ -1201,7 +1247,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
             *brk = fin_brk;
           }
           if (!*brk && percolate) {
-            siglongjmp(v7->jmp_buf, 1);
+            siglongjmp(v7->jmp_buf, j);
           }
         }
         *pos = end;
@@ -1238,10 +1284,18 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_CONTINUE:
       *brk = B_CONTINUE;
       return V7_UNDEFINED;
+    case AST_LABELED_BREAK:
+      V7_CHECK(v7, ast_fetch_tag(a, pos) == AST_IDENT);
+      v7->label = ast_get_inlined_data(a, *pos, &v7->label_len);
+      siglongjmp(v7->jmp_buf, BREAK_JMP);
+    case AST_LABELED_CONTINUE:
+      V7_CHECK(v7, ast_fetch_tag(a, pos) == AST_IDENT);
+      v7->label = ast_get_inlined_data(a, *pos, &v7->label_len);
+      siglongjmp(v7->jmp_buf, CONTINUE_JMP);
     case AST_THROW:
       /* TODO(mkm): store exception value */
       v7->thrown_error = i_eval_expr(v7, a, pos, scope);
-      siglongjmp(v7->jmp_buf, 1);
+      siglongjmp(v7->jmp_buf, THROW_JMP);
       break; /* unreachable */
     default:
       (*pos)--;
@@ -1305,15 +1359,17 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   val_t old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
-  jmp_buf saved_jmp_buf, saved_abort_buf;
+  jmp_buf saved_jmp_buf, saved_abort_buf, saved_label_buf;
   enum v7_err err = V7_OK;
   val_t r = V7_UNDEFINED;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&saved_abort_buf, &v7->abort_jmp_buf, sizeof(saved_abort_buf));
+  memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
 
   ast_init(a, 0);
+  v7->last_ast = a;
   if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
     r = v7->thrown_error;
     err = V7_EXEC_EXCEPTION;
@@ -1343,6 +1399,7 @@ cleanup:
   v7->this_object = old_this;
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&v7->abort_jmp_buf, &saved_abort_buf, sizeof(saved_abort_buf));
+  memcpy(&v7->label_jmp_buf, &saved_label_buf, sizeof(saved_label_buf));
 
   return err;
 }

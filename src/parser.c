@@ -359,6 +359,9 @@ enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
 
 static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
                                  int level, ast_off_t pos) {
+
+#define NONE {(enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0}
+
   struct {
     int len, left_to_right;
     struct {
@@ -366,18 +369,18 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
       enum ast_tag start_ast;
     } parts[2];
   } levels[] = {
-    {1, 0, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, {0, 0, 0}}},
-    {1, 0, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, {0, 0, 0}}},
-    {1, 1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, {0, 0, 0}}},
-    {1, 1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, {0, 0, 0}}},
-    {1, 1, {{TOK_OR, TOK_OR, AST_OR}, {0, 0, 0}}},
-    {1, 1, {{TOK_XOR, TOK_XOR, AST_XOR}, {0, 0, 0}}},
-    {1, 1, {{TOK_AND, TOK_AND, AST_AND}, {0, 0, 0}}},
-    {1, 1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, {0, 0, 0}}},
+    {1, 0, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, NONE}},
+    {1, 0, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, NONE}},
+    {1, 1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, NONE}},
+    {1, 1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, NONE}},
+    {1, 1, {{TOK_OR, TOK_OR, AST_OR}, NONE}},
+    {1, 1, {{TOK_XOR, TOK_XOR, AST_XOR}, NONE}},
+    {1, 1, {{TOK_AND, TOK_AND, AST_AND}, NONE}},
+    {1, 1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, NONE}},
     {2, 1, {{TOK_LE, TOK_GT, AST_LE}, {TOK_IN, TOK_INSTANCEOF, AST_IN}}},
-    {1, 1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, {0, 0, 0}}},
-    {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, {0, 0, 0}}},
-    {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, {0, 0, 0}}}
+    {1, 1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, NONE}},
+    {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, NONE}},
+    {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, NONE}}
   };
 
   int i;
@@ -419,7 +422,9 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
           ast_insert_node(a, pos, ast);
         }
       }
-    } while(ast++, tok++ < levels[level].parts[i].end_tok);
+    } while(ast = (enum ast_tag) (ast + 1),
+            tok < levels[level].parts[i].end_tok &&
+            (tok = (enum v7_tok) (tok + 1)));
   }
 
   return V7_OK;
@@ -535,7 +540,7 @@ static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
      */
     v7->pstate.inhibit_in = 1;
     if (ACCEPT(TOK_VAR)) {
-      parse_var(v7, a);
+      PARSE(var);
     } else {
       PARSE(expression);
     }
@@ -721,7 +726,7 @@ static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
       break;
     case TOK_VAR:
       next_tok(v7);
-      parse_var(v7, a);
+      PARSE(var);
       break;
     case TOK_IDENTIFIER:
       if (lookahead(v7) == TOK_COLON) {
