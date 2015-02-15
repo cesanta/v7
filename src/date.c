@@ -308,18 +308,6 @@ static void d_localtime(etime_t* time, struct timeparts* tp) {
 
 typedef void (*fbreaktime)(etime_t* , struct timeparts* );
 
-static int d_timeFromString(etime_t* time, const char* buf, size_t buf_size) {
-  struct tm* t = getdate(buf);
-  *time = INVALID_TIME;
-  (void)buf_size;
-  
-  if(t != NULL) {
-    *time = mktime(t) * 1000;
-  }
-  
-  return (t != NULL);
-}
-
 static int d_isnumberNAN(struct v7 *v7, val_t obj) {
   return (i_value_of(v7, obj) == V7_TAG_NAN);
 }
@@ -345,14 +333,140 @@ static int d_timetoISOstr(etime_t* time, char* buf, size_t buf_size) {
 }
 
 /* non-locale function should always return in english and 24h-format */
-static const char wday_name[][4] = {
+static const char* wday_name[] = {
   "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
 };
 
-static const char mon_name[][4] = {
+static const char* mon_name[] = {
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
+
+int d_getnumbyname(const char** arr, int arr_size, const char *str) {
+  int i;
+  for(i = 0; i < arr_size; i++) {
+    if(strncmp(arr[i], str, 3) == 0 ) {
+      return i;
+    }
+  }
+  
+  return -1;
+}
+
+int date_parse(const char* str, int* a1, int* a2, int* a3, char sep, char* rest) {
+  char frmDate[] = " %d/%d/%d%[^\0]";
+  frmDate[2] = frmDate[5] = sep;
+  return sscanf(str, frmDate, a1, a2, a3, rest);
+}
+
+#define NO_TZ 0x7FFFFFFF
+
+static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
+  int res = 0;
+  memset(tp, 0, sizeof(*tp));
+  *tz = NO_TZ;
+  
+  /* #1: trying toISOSrting() format */
+  const char* frmISOString = " %d-%02d-%02dT%02d:%02d:%02d.%03dZ";
+  res = sscanf(str, frmISOString, &tp->year, &tp->month, &tp->day, &tp->hour, &tp->min, &tp->sec, &tp->msec);
+  if(res == 7) {
+    *tz = 0;
+    return 1;
+  }
+  
+  /* #2: trying getdate() - it never works on some OS, but... */
+  struct tm* tm = getdate(str);
+  if(tm != NULL) {
+    tp->year = tm->tm_year + 1900;
+    tp->month = tm->tm_mon;
+    tp->day = tm->tm_mday;
+    tp->hour = tm->tm_hour;
+    tp->min = tm->tm_min;
+    tp->sec = tm->tm_sec;
+    
+    return 1;
+  }
+  
+  /* #3: trying toString()/toUTCString()/toDateFormat() formats */
+  char month[4];
+  const char* frmString = " %03*s %03s %02d %d %02d:%02d:%02d GMT%d";
+  res = sscanf(str, frmString, month, &tp->day, &tp->year, &tp->hour, &tp->min, &tp->sec, tz);
+  if(res ==3 || res == 6 || res == 7) {
+    if( (tp->month = d_getnumbyname(mon_name, ARRAY_SIZE(mon_name), month)) != -1) {
+      return 1;
+    }
+  }
+  
+  /* #4: trying the rest */
+  
+  /* trying date */
+  char buf1[100] = {0};
+  if(!(date_parse(str, &tp->year, &tp->day, &tp->month, '/', buf1) >= 3 ||
+       date_parse(str, &tp->day, &tp->month, &tp->year, '.', buf1) >= 3 ||
+       date_parse(str, &tp->year, &tp->month, &tp->day, '-', buf1) >= 3 ) ) {
+    return 0;
+  }
+  
+  /*  there is date, trying time; from here return 0 only on errors */
+  
+  /* trying HH:mm */
+  char buf2[100] = {0};
+  const char* frmMMhh = " %d:%d%[^\0]";
+  res = sscanf(buf1, frmMMhh, &tp->hour, &tp->min, buf2);
+  /* can't get time, but have some symbols, assuming error */
+  if(res < 2 ) {
+    return (strlen(buf2) == 0);
+  }
+  
+  /* trying seconds */
+  const char* frmss = ":%d%[^\0]";
+  res = sscanf(buf2, frmss, &tp->sec, buf1);
+  
+  /* even if we don't get seconds we gonna try to get tz */
+  char* rest = res? buf1: buf2;
+  char* buf = res? buf2: buf1;
+  
+  const char* frmtz = " GMT%d%[^\0]";
+  res = sscanf(rest, frmtz, tz, buf);
+  
+  /* return OK if we are at the end of string */
+  return (res <= 1);
+}
+
+static int d_timeFromString(etime_t* time, const char* buf, size_t buf_size) {
+  *time = INVALID_TIME;
+  
+  if(buf_size < 100) {
+    return 0;
+  }
+  
+  struct timeparts tp;
+  int tz;
+
+  if(d_parsedatestr(buf, &tp, &tz)) {
+    /* check results */
+    int valid = tp.day >=1 && tp.day <= 31;
+    valid &= tp.month >=0 && tp.month <= 11;
+    valid &= tp.hour >= 0 && tp.hour <= 23;
+    valid &= tp.min >= 0 && tp.min <= 59;
+    valid &= tp.sec >= 0 && tp.sec <= 59;
+    
+    if(tz != NO_TZ && tz > 12) {
+      tz /= 100;
+    }
+    
+    valid &= (abs(tz) <= 12 || tz == NO_TZ);
+    
+    if(valid) {
+      *time = d_gmktime(&tp);
+      
+      tz = (tz == NO_TZ)? d_gettimezone() * msPerMinute : tz * msPerHour;
+      *time += tz;
+    }
+  }
+
+  return *time != INVALID_TIME;
+}
 
 static int d_tptodatestr(struct timeparts* tp, char* buf, int addtz) {
   int use_ext;
