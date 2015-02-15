@@ -1368,10 +1368,14 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "'' && {}") == V7_OK);
   ASSERT(check_value(v7, v, "\"\""));
 
+  /* here temporarily because test_stdlib has memory violations */
+  ASSERT(v7_exec(v7, &v, "a=[2,1];a.sort();a") == V7_OK);
+  ASSERT(check_value(v7, v, "[1,2]"));
+
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
   return NULL;
-}
+} /* test_interpreter */
 
 static const char *test_strings(void) {
   val_t s = 0;

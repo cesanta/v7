@@ -84,7 +84,7 @@ static int a_partition(val_t *a, int l, int r, void *user_data) {
   int i = l, j = r + 1;
 
   for (;;) {
-    do ++i; while (a_cmp(user_data, &a[i], &pivot) <= 0 && i <= r);
+    do ++i; while (i <= r && a_cmp(user_data, &a[i], &pivot) <= 0);
     do --j; while (a_cmp(user_data, &a[j], &pivot) > 0);
     if (i >= j) break;
     t = a[i]; a[i] = a[j]; a[j] = t;
