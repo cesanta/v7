@@ -625,7 +625,6 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);
 typedef unsigned __int64 uint64_t;
 typedef unsigned int uint32_t;
 typedef unsigned char uint8_t;
-char *stpncpy(char *, const char *, size_t);
 #else
 #include <stdint.h>
 #endif
@@ -4105,11 +4104,12 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
+  size_t l;
   val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
   if (v7_is_double(arg_n)) return (long) v7_to_double(arg_n);
   if (arg_n == V7_NULL) return 0;
-  to_str(v7, arg_n, buf, sizeof(buf), 0);
-  if (isdigit(buf[0])) return strtol(buf, NULL, 10);
+  l = to_str(v7, arg_n, buf, sizeof(buf), 0);
+  if (l > 0 && isdigit(buf[0])) return strtol(buf, NULL, 10);
   return default_value;
 }
 
@@ -4163,7 +4163,10 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       }
     }
     if (j < i && n2 > 0) {
-      v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
+      char *tmp = (char *) malloc(i - j - 1);
+      memcpy(tmp, s1 + j, i - j - 1);
+      v7_array_append(v7, res, v7_create_string(v7, tmp, i - j - 1, 1));
+      free(tmp);
     }
   }
 
@@ -5068,6 +5071,8 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   return n;
 }
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json) {
   char *vp;
@@ -5076,18 +5081,26 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
        vp < v7->json_visited_stack.buf+ v7->json_visited_stack.len;
        vp += sizeof(val_t)) {
     if (* (val_t *) vp == v) {
-      return stpncpy(buf, "[Circular]", size) - buf;
+      strncpy(buf, "[Circular]", size);
+      return MIN(10, size);
     }
   }
 
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
-      return stpncpy(buf, "null", size) - buf;
+      strncpy(buf, "null", size);
+      return MIN(4, size);
     case V7_TYPE_UNDEFINED:
-      return stpncpy(buf, "undefined", size) - buf;
+      strncpy(buf, "undefined", size);
+      return MIN(9, size);
     case V7_TYPE_BOOLEAN:
-      return stpncpy(buf,
-                     v7_to_boolean(v) ? "true" : "false", size) - buf;
+      if (v7_to_boolean(v)) {
+        strncpy(buf, "true", size);
+        return MIN(4, size);
+      } else {
+        strncpy(buf, "false", size);
+        return MIN(5, size);
+      }
     case V7_TYPE_NUMBER:
       if (v == V7_TAG_NAN) {
         return v_sprintf_s(buf, size, "NaN");
@@ -5538,13 +5551,18 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len) {
   size_t n = unescape(p, len, NULL);
-  int k = calc_llen(n);           /* Calculate how many bytes length takes */
+  int k = calc_llen(n);  /* Calculate how many bytes length takes */
   mbuf_insert(m, offset, NULL, k + n);   /* Allocate  buffer */
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
   unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
-/* Create a string */
+/*
+ * Create a string.
+ *
+ * Creating a string might relocate the string mbufs, hence the `p` argument
+ * shouldn't point inside owned_strings or foreign_strings.
+ */
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
@@ -9220,6 +9238,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
   e.pstart = e.pend = (struct slre_node *)
              SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+  e.prog->flags = 0;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -9318,6 +9337,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   unsigned short thr_num = 1;
   unsigned char thr;
   size_t i, off = 0;
+  const char *base = start;
 
   /* queue initial thread */
   re_newthread(threads, pc, start, loot);
@@ -9334,7 +9354,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           return 1;
         case I_ANY:
         case I_ANYNL:
-          c = re_getrune(start, len, &off);
+          c = re_getrune(start, base + len - start, &off);
           if (!c || (pc->opcode == I_ANY && isnewline(c))) RE_NO_MATCH();
           break;
 

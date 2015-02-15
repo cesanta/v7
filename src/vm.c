@@ -247,6 +247,8 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   return n;
 }
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json) {
   char *vp;
@@ -255,18 +257,26 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
        vp < v7->json_visited_stack.buf+ v7->json_visited_stack.len;
        vp += sizeof(val_t)) {
     if (* (val_t *) vp == v) {
-      return stpncpy(buf, "[Circular]", size) - buf;
+      strncpy(buf, "[Circular]", size);
+      return MIN(10, size);
     }
   }
 
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
-      return stpncpy(buf, "null", size) - buf;
+      strncpy(buf, "null", size);
+      return MIN(4, size);
     case V7_TYPE_UNDEFINED:
-      return stpncpy(buf, "undefined", size) - buf;
+      strncpy(buf, "undefined", size);
+      return MIN(9, size);
     case V7_TYPE_BOOLEAN:
-      return stpncpy(buf,
-                     v7_to_boolean(v) ? "true" : "false", size) - buf;
+      if (v7_to_boolean(v)) {
+        strncpy(buf, "true", size);
+        return MIN(4, size);
+      } else {
+        strncpy(buf, "false", size);
+        return MIN(5, size);
+      }
     case V7_TYPE_NUMBER:
       if (v == V7_TAG_NAN) {
         return v_sprintf_s(buf, size, "NaN");
@@ -717,13 +727,18 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len) {
   size_t n = unescape(p, len, NULL);
-  int k = calc_llen(n);           /* Calculate how many bytes length takes */
+  int k = calc_llen(n);  /* Calculate how many bytes length takes */
   mbuf_insert(m, offset, NULL, k + n);   /* Allocate  buffer */
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
   unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
-/* Create a string */
+/*
+ * Create a string.
+ *
+ * Creating a string might relocate the string mbufs, hence the `p` argument
+ * shouldn't point inside owned_strings or foreign_strings.
+ */
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
