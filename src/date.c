@@ -23,7 +23,8 @@ typedef double etime_t;
 #define MAX_TIME 8640000000000000
 #define INVALID_TIME NAN
 
-/*** ecma helpers ****/
+/*** ECMA date helpers ****/
+
 #define msPerDay 86400000
 #define HoursPerDay 24
 #define MinutesPerHour 60
@@ -31,6 +32,7 @@ typedef double etime_t;
 #define msPerSecond 1000
 #define msPerMinute 60000
 #define msPerHour 3600000
+#define MonthInYear 12
 
 typedef int64_t etimeint_t;
 
@@ -38,12 +40,7 @@ static etimeint_t ecma_Day(etime_t t) {
   return floor(t/ msPerDay);
 }
 
-/*
-static etimeint_t ecma_TimeWithinDay(etime_t t) {
-  return (etimeint_t)t % msPerDay;
-}
-*/
-
+/* Leap year formula copied from ECMA 5.1 standart as is */
 static etimeint_t ecma_DaysInYear(etimeint_t y) {
   if(y % 4 != 0 ) {
     return 365;
@@ -68,34 +65,35 @@ static etimeint_t ecma_TimeFromYear(etimeint_t y) {
 
 static etimeint_t ecma_YearFromTime(etime_t t)
 {
-  etimeint_t lo = (etimeint_t) floor((t / msPerDay) / 366) + 1970;
-  etimeint_t hi = (etimeint_t) floor((t / msPerDay) / 365) + 1970;
-  etimeint_t mid;
+  etimeint_t first = (etimeint_t) floor((t / msPerDay) / 366) + 1970,
+             last = (etimeint_t) floor((t / msPerDay) / 365) + 1970, middle = 0;
   
-  if (hi < lo) {
-    etimeint_t temp = lo;
-    lo = hi;
-    hi = temp;
+  if (last < first) {
+    etimeint_t temp = first;
+    first = last;
+    last = temp;
   }
   
-  while (hi > lo) {
-    mid = (hi + lo) / 2;
-    if (ecma_TimeFromYear(mid) > t) {
-      hi = mid - 1;
+  while (last > first) {
+    middle = (last + first) / 2;
+    if (ecma_TimeFromYear(middle) > t) {
+      last = middle - 1;
     } else {
-      if (ecma_TimeFromYear(mid) <= t) {
-        etimeint_t temp = mid + 1;
-        if (ecma_TimeFromYear(temp) > t) {
-          return mid;
+      if (ecma_TimeFromYear(middle) <= t) {
+        if (ecma_TimeFromYear(middle + 1) > t) {
+          first = middle;
+          break;
         }
-        lo = mid + 1;
+        first = middle + 1;
       }
     }
   }
-  return lo;
+  
+  
+  return first;
 }
 
-static etimeint_t ecma_InLeapYear(etime_t t) {
+static int ecma_InLeapYear(etime_t t) {
   return ecma_DaysInYear(ecma_YearFromTime(t)) == 366;
 }
 
@@ -103,72 +101,51 @@ static etimeint_t ecma_DayWithinYear(etime_t t) {
   return ecma_Day(t) - ecma_DayFromYear(ecma_YearFromTime(t));
 }
 
-static etimeint_t ecma_MonthFromTime(etime_t t) {
-  etimeint_t dwy = ecma_DayWithinYear(t);
-  etimeint_t ily = ecma_InLeapYear(t);
+
+static void ecma_getfirstdays(int* days, int isleap) {
+  static int sdays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+  memcpy(days, sdays, sizeof(sdays));
+  unsigned int i;
   
-  if( dwy >= 0 && dwy < 31 ) {
-    return 0;
-  } else if( dwy >=31 && dwy < 59 + ily ) {
-    return 1;
-  } else if( dwy >= 59 + ily && dwy < 90 + ily ) {
-    return 2;
-  } else if( dwy >= 90 + ily && dwy < 120 + ily ) {
-    return 3;
-  } else if( dwy >=120 + ily && dwy < 151 + ily ) {
-    return 4;
-  } else if( dwy >= 151 + ily && dwy < 181 + ily ) {
-    return 5;
-  } else if( dwy >= 181 + ily && dwy < 212 + ily ) {
-    return 6;
-  } else if( dwy >= 212 + ily && dwy < 243 +ily ) {
-    return 7;
-  } else if( dwy >= 243 + ily && dwy < 273 + ily ) {
-    return 8;
-  } else if( dwy >= 273 + ily && dwy < 304 + ily ) {
-    return 9;
-  } else if( dwy >= 304 + ily && dwy < 334 + ily ) {
-    return 10;
-  } else if( dwy >= 334 + ily && dwy < 365 + ily ) {
-    return 11;
-  } else {
-    return -1;
+  if(isleap) {
+    for(i = 2; i < ARRAY_SIZE(sdays); i++) {
+      days[i] += 1;
+    }
   }
 }
 
+static etimeint_t ecma_MonthFromTime(etime_t t) {
+  int days[MonthInYear+1];
+  etimeint_t dwy = ecma_DayWithinYear(t);
+  int ily = ecma_InLeapYear(t);
+  
+  unsigned int i; int ret = -1;
+  
+  ecma_getfirstdays(days, ily);
+  
+  for(i = 0; i < ARRAY_SIZE(days) - 1; i++) {
+    if(dwy >= days[i] && dwy < days[i+1]) {
+      ret = i;
+      break;
+    }
+  }
+  
+  return ret;
+}
+
 static etimeint_t ecma_DateFromTime(etime_t t) {
+  int days[MonthInYear+1];
   etimeint_t mft = ecma_MonthFromTime(t);
   etimeint_t dwy = ecma_DayWithinYear(t);
-  etimeint_t ily = ecma_InLeapYear(t);
+  int ily = ecma_InLeapYear(t);
   
-  switch (mft) {
-    case 0:
-      return dwy + 1;
-    case 1:
-      return dwy - 30;
-    case 2:
-      return dwy - 58 - ily;
-    case 3:
-      return dwy - 89 - ily;
-    case 4:
-      return dwy - 119 - ily;
-    case 5:
-      return dwy - 150 - ily;
-    case 6:
-      return dwy - 180 - ily;
-    case 7:
-      return dwy - 211 - ily;
-    case 8:
-      return dwy - 242 - ily;
-    case 9:
-      return dwy - 272 - ily;
-    case 10:
-      return dwy - 303 - ily;
-    case 11:
-      return dwy - 333 - ily;
-    default:
-      return -1;
+  if(mft > 11) {
+    return -1;
   }
+  
+  ecma_getfirstdays(days, ily);
+  
+  return dwy - days[mft] + 1;
 }
 
 static etimeint_t ecma_WeekDay(etime_t t) {
@@ -219,16 +196,11 @@ static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min, etimeint_t sec,
   return ((hour * MinutesPerHour + min) * SecondsPerMinute + sec) * msPerSecond + ms;
 }
 
-static etime_t firstDayOfMonth[2][12] = {
-  {0.0, 31.0, 59.0, 90.0, 120.0, 151.0, 181.0, 212.0, 243.0, 273.0, 304.0, 334.0},
-  {0.0, 31.0, 60.0, 91.0, 121.0, 152.0, 182.0, 213.0, 244.0, 274.0, 305.0, 335.0}
-};
-
-#define DayFromMonth(m, leap) firstDayOfMonth[leap][m];
 
 static etimeint_t ecma_MakeDay(etimeint_t year, etimeint_t month, etimeint_t date)
 {
-  etimeint_t ily;
+  int days[MonthInYear+1];
+
   etimeint_t yearday;
   etimeint_t monthday;
   
@@ -236,10 +208,11 @@ static etimeint_t ecma_MakeDay(etimeint_t year, etimeint_t month, etimeint_t dat
   
   month = month % 12;
   
-  ily = (ecma_DaysInYear(year) == 366);
-  
   yearday = floor(ecma_TimeFromYear(year) / msPerDay);
-  monthday = DayFromMonth(month, ily);
+  
+  ecma_getfirstdays(days, (ecma_DaysInYear(year) == 366));
+
+  monthday = days[month];
   
   return yearday + monthday + date - 1;
 }
@@ -947,61 +920,3 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 
   tzset();
 }
-
-/*
- 
-++ 01. Date ( [ year [, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] ] ] )
-++ 02. new Date (year, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] )
-+03. new Date (value)
-++ 04. new Date ( )
-05. Date.prototype
-+06. Date.parse (string)
-++ 07. Date.UTC (year, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] )
-+ 08. Date.now ( )
-09. Date.prototype.constructor
-+10. Date.prototype.toString ( )
-+11. Date.prototype.toDateString ( )
-+12. Date.prototype.toTimeString ( )
-+13. Date.prototype.toLocaleString (
-+14. Date.prototype.toLocaleDateString ( )
-+15. Date.prototype.toLocaleTimeString ( )
-++ 16. Date.prototype.valueOf ( )
-++ 17. Date.prototype.getTime ( )
-++ 18. Date.prototype.getFullYear ( )
-++ 19. Date.prototype.getUTCFullYear ( )
-++ 20. Date.prototype.getMonth ( )
-++ 21. Date.prototype.getUTCMonth ( )
-++ 22. Date.prototype.getDate ( )
-++ 23. Date.prototype.getUTCDate ( )
-++ 24. Date.prototype.getDay ( )
-++ 25. Date.prototype.getUTCDay ( )
-++ 27. Date.prototype.getHours ( )
-++ 28. Date.prototype.getUTCHours ( )
-++ 29. Date.prototype.getMinutes ( )
-++ 30. Date.prototype.getUTCMinutes ( )
-++ 31. Date.prototype.getSeconds ( )
-++ 32. Date.prototype.getUTCSeconds ( )
-++ 33. Date.prototype.getMilliseconds ( )
-++ 34. Date.prototype.getUTCMilliseconds ( )
-++ 35. Date.prototype.getTimezoneOffset ( )
-++ 36. Date.prototype.setTime (time)
-++ 37. Date.prototype.setMilliseconds (ms)
-++ 38. Date.prototype.setUTCMilliseconds (ms)
-++ 39. Date.prototype.setSeconds (sec [, ms ] )
-++ 40. Date.prototype.setUTCSeconds (sec [, ms ] )
-++ 41. Date.prototype.setMinutes (min [, sec [, ms ] ] )
-++ 42. Date.prototype.setUTCMinutes (min [, sec [, ms ] ] )
-++ 43. Date.prototype.setHours (hour [, min [, sec [, ms ] ] ] )
-++ 44. Date.prototype.setUTCHours (hour [, min [, sec [, ms ] ] ] )
-++ 45. Date.prototype.setDate (date)
-++ 46. Date.prototype.setUTCDate (date)
-++ 47. Date.prototype.setMonth (month [, date ] )
-++ 48. Date.prototype.setUTCMonth (month [, date ] )
-++ 49. Date.prototype.setFullYear (year [, month [, date ] ] )
-++ 50. Date.prototype.setUTCFullYear (year [, month [, date ] ] )
-+51. Date.prototype.toUTCString ( )
-++ 52. Date.prototype.toISOString ( )
-++ 53. Date.prototype.toJSON ( key )
-
-*/
-
