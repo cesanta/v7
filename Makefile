@@ -45,7 +45,11 @@ v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
 #	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
 
 asan_v7:
-	@$(CLANG) -fsanitize=address -fcolor-diagnostics $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
+	@$(CLANG) -fsanitize=address -fcolor-diagnostics -fno-common $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
+	@ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 ./v7 $(V7_ARGS)
+
+msan_v7:
+	@$(CLANG) -fsanitize=memory -fcolor-diagnostics -fno-common -fsanitize-memory-track-origins $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
 	@ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=symbolize=1 ./v7 $(V7_ARGS)
 
 amalgamated_v7: v7.h v7.c

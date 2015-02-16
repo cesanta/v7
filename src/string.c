@@ -437,11 +437,12 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
+  size_t l;
   val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
   if (v7_is_double(arg_n)) return (long) v7_to_double(arg_n);
   if (arg_n == V7_NULL) return 0;
-  to_str(v7, arg_n, buf, sizeof(buf), 0);
-  if (isdigit(buf[0])) return strtol(buf, NULL, 10);
+  l = to_str(v7, arg_n, buf, sizeof(buf), 0);
+  if (l > 0 && isdigit(buf[0])) return strtol(buf, NULL, 10);
   return default_value;
 }
 
@@ -495,7 +496,10 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       }
     }
     if (j < i && n2 > 0) {
-      v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
+      char *tmp = (char *) malloc(i - j - 1);
+      memcpy(tmp, s1 + j, i - j - 1);
+      v7_array_append(v7, res, v7_create_string(v7, tmp, i - j - 1, 1));
+      free(tmp);
     }
   }
 
