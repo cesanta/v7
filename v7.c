@@ -4067,11 +4067,12 @@ static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj, val_t args) {
   return s_transform(v7, this_obj, args, toupperrune);
 }
 
-static int s_isspase(Rune c) {
+static int s_isspace(Rune c) {
   return isspacerune(c) || isnewline(c);
 }
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t res;
   val_t s = i_value_of(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
@@ -4081,13 +4082,17 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   end = len;
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
-    if (!s_isspase(r)) {
+    if (!s_isspace(r)) {
       if (state++ == 0) start = i;
       end = i + n;
     }
   }
 
-  return v7_create_string(v7, p + start, end - start, 1);
+  char *tmp = (char *) malloc(end - start);
+  memcpy(tmp, p + start, end - start);
+  res = v7_create_string(v7, tmp, end - start, 1);
+  free(tmp);
+  return res;
 }
 
 static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
