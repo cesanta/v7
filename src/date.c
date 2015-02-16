@@ -41,7 +41,7 @@ static etimeint_t ecma_Day(etime_t t) {
 }
 
 /* Leap year formula copied from ECMA 5.1 standart as is */
-static etimeint_t ecma_DaysInYear(etimeint_t y) {
+static int ecma_DaysInYear(int y) {
   if(y % 4 != 0 ) {
     return 365;
   } else if( y % 4 == 0 && y % 100 != 0 ) {
@@ -63,13 +63,13 @@ static etimeint_t ecma_TimeFromYear(etimeint_t y) {
   return msPerDay * ecma_DayFromYear(y);
 }
 
-static etimeint_t ecma_YearFromTime_s(etime_t t)
+static int ecma_YearFromTime_s(etime_t t)
 {
-  etimeint_t first = (etimeint_t) floor((t / msPerDay) / 366) + 1970,
-             last = (etimeint_t) floor((t / msPerDay) / 365) + 1970, middle = 0;
+  int first = floor((t / msPerDay) / 366) + 1970,
+             last = floor((t / msPerDay) / 365) + 1970, middle = 0;
   
   if (last < first) {
-    etimeint_t temp = first;
+    int temp = first;
     first = last;
     last = temp;
   }
@@ -98,8 +98,8 @@ static int ecma_InLeapYear(etime_t t, int year) {
   return ecma_DaysInYear(year) == 366;
 }
 
-static etimeint_t ecma_DayWithinYear(etime_t t, int year) {
-  return ecma_Day(t) - ecma_DayFromYear(year);
+static int ecma_DayWithinYear(etime_t t, int year) {
+  return (int)(ecma_Day(t) - ecma_DayFromYear(year));
 }
 
 
@@ -115,7 +115,7 @@ static void ecma_getfirstdays(int* days, int isleap) {
   }
 }
 
-static etimeint_t ecma_MonthFromTime(etime_t t, int year) {
+static int ecma_MonthFromTime(etime_t t, int year) {
   int days[MonthInYear+1];
   etimeint_t dwy = ecma_DayWithinYear(t, year);
   int ily = ecma_InLeapYear(t, year);
@@ -134,10 +134,10 @@ static etimeint_t ecma_MonthFromTime(etime_t t, int year) {
   return ret;
 }
 
-static etimeint_t ecma_DateFromTime(etime_t t, int year) {
+static int ecma_DateFromTime(etime_t t, int year) {
   int days[MonthInYear+1];
-  etimeint_t mft = ecma_MonthFromTime(t, year);
-  etimeint_t dwy = ecma_DayWithinYear(t, year);
+  int mft = ecma_MonthFromTime(t, year);
+  int dwy = ecma_DayWithinYear(t, year);
   int ily = ecma_InLeapYear(t, year);
   
   if(mft > 11) {
@@ -149,11 +149,11 @@ static etimeint_t ecma_DateFromTime(etime_t t, int year) {
   return dwy - days[mft] + 1;
 }
 
-static etimeint_t ecma_WeekDay(etime_t t) {
+static int ecma_WeekDay(etime_t t) {
   return (ecma_Day(t)+4) % 7;
 }
 
-static etimeint_t ecma_DaylightSavingTA(etime_t t) {
+static int ecma_DaylightSavingTA(etime_t t) {
   time_t time = t / 1000;
   struct tm tm;
   memset(&tm, 0, sizeof(t));
@@ -165,8 +165,8 @@ static etimeint_t ecma_DaylightSavingTA(etime_t t) {
   }
 }
 
-static etimeint_t ecma_LocalTZA() {
-  return -timezone * 1000;
+static int ecma_LocalTZA() {
+  return (int)-timezone * 1000;
 }
 
 static etimeint_t ecma_LocalTime(etime_t t) {
@@ -177,19 +177,19 @@ static etimeint_t ecma_UTC(etime_t t) {
   return t - ecma_LocalTZA() - ecma_DaylightSavingTA(t-ecma_LocalTZA());
 }
 
-static etimeint_t ecma_HourFromTime(etime_t t) {
+static int ecma_HourFromTime(etime_t t) {
   return (etimeint_t)floor(t / msPerHour) % HoursPerDay;
 }
 
-static etimeint_t ecma_MinFromTime(etime_t t) {
+static int ecma_MinFromTime(etime_t t) {
   return (etimeint_t)floor(t / msPerMinute) % MinutesPerHour;
 }
 
-static etimeint_t ecma_SecFromTime(etime_t t) {
+static int ecma_SecFromTime(etime_t t) {
   return (etimeint_t)floor(t / msPerSecond) % SecondsPerMinute;
 }
 
-static etimeint_t ecma_msFromTime(etime_t t) {
+static int ecma_msFromTime(etime_t t) {
   return (etimeint_t)t % msPerSecond;
 }
 
@@ -198,7 +198,7 @@ static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min, etimeint_t sec,
 }
 
 
-static etimeint_t ecma_MakeDay(etimeint_t year, etimeint_t month, etimeint_t date)
+static etimeint_t ecma_MakeDay(int year, int month, int date)
 {
   int days[MonthInYear+1];
 
