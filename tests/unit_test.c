@@ -370,7 +370,30 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "1999-11-05T10:20:30.400Z"));
   ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(1999,10,5,10,20,30,400)).toJSON()") == V7_OK);
   ASSERT(check_str(v7, v, "1999-11-05T10:20:30.400Z"));
-  
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015-02-15T10:42:43.629Z\")") == V7_OK);
+  ASSERT(check_num(v, 1423996963629));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015 13:01:12 GMT+0200 (EET)\")") == V7_OK);
+  ASSERT(check_num(v, 1423998072000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015 11:27:10 GMT\")") == V7_OK);
+  ASSERT(check_num(v, 1423999630000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015\")") == V7_OK);
+  ASSERT(check_num(v, 1423951200000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015/02/15\")") == V7_OK);
+  ASSERT(check_num(v, 1423951200000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015-02-15\")") == V7_OK);
+  ASSERT(check_num(v, 1423951200000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"15.02.2015\")") == V7_OK);
+  ASSERT(check_num(v, 1423951200000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015/02/15 12:30\")") == V7_OK);
+  ASSERT(check_num(v, 1423996200000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015/02/15 12:30:45\")") == V7_OK);
+  ASSERT(check_num(v, 1423996245000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015/10/15 12:30:45 GMT+200\")") == V7_OK);
+  ASSERT(check_num(v, 1444905045000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015/10/15 12:30 GMT+200\")") == V7_OK);
+  ASSERT(check_num(v, 1444905000000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015/10/15 12:30 GMT\")") == V7_OK);
+  ASSERT(check_num(v, 1444912200000));
   
 #if 0
   /* Regexp */
