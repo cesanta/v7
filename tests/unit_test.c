@@ -280,26 +280,30 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "new String('blah')") == V7_OK);
 #endif
 
+  /* Date() tests interact with external object (local date & time), so
+      if host have strange date/time setting it won't be work */
+  
 #if 0
-
   /* Date */
   tzset();
   
+#define ADJTZ(x) (x+2*3600000+timezone*1000)
+  
   ASSERT(v7_exec(v7, &v, "new Date(99,10).valueOf()") == V7_OK);
-  ASSERT(check_num(v, 941407200000));  
+  ASSERT(check_num(v, ADJTZ(941407200000)));
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5).valueOf()") == V7_OK);
-  ASSERT(check_num(v, 941752800000));
+  ASSERT(check_num(v, ADJTZ(941752800000)));
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11).valueOf()") == V7_OK);
-  ASSERT(check_num(v, 941792400000));  
+  ASSERT(check_num(v, ADJTZ(941792400000)));
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35).valueOf()") == V7_OK);
-  ASSERT(check_num(v, 941794500000));    
+  ASSERT(check_num(v, ADJTZ(941794500000)));
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45).valueOf()") == V7_OK);
-  ASSERT(check_num(v, 941794545000));    
+  ASSERT(check_num(v, ADJTZ(941794545000)));
   ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45,567).valueOf()") == V7_OK);
-  ASSERT(check_num(v, 941794545567));
+  ASSERT(check_num(v, ADJTZ(941794545567)));
   ASSERT(v7_exec(v7, &v, "var d = new Date(1999,10,5,11,35,45,567)") == V7_OK);
   ASSERT(v7_exec(v7, &v, "d.getTime()") == V7_OK);
-  ASSERT(check_num(v, 941794545567));
+  ASSERT(check_num(v, ADJTZ(941794545567)));
   ASSERT(v7_exec(v7, &v, "d.getFullYear()") == V7_OK);
   ASSERT(check_num(v, 1999));
   ASSERT(v7_exec(v7, &v, "d.getUTCFullYear()") == V7_OK);
@@ -340,19 +344,19 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 10));
   ASSERT(v7_exec(v7, &v, "var j = new Date(1999,10,5,11,35,45,567)") == V7_OK);
   ASSERT(v7_exec(v7, &v, "j.setMilliseconds(10)") == V7_OK);
-  ASSERT(check_num(v, 941794545010));
+  ASSERT(check_num(v, ADJTZ(941794545010)));
   ASSERT(v7_exec(v7, &v, "j.setUTCMilliseconds(100)") == V7_OK);
-  ASSERT(check_num(v, 941794545100));
+  ASSERT(check_num(v, ADJTZ(941794545100)));
   ASSERT(v7_exec(v7, &v, "j.setSeconds(10)") == V7_OK);
-  ASSERT(check_num(v, 941794510100));
+  ASSERT(check_num(v, ADJTZ(941794510100)));
   ASSERT(v7_exec(v7, &v, "j.setUTCSeconds(30)") == V7_OK);
-  ASSERT(check_num(v, 941794530100));
+  ASSERT(check_num(v, ADJTZ(941794530100)));
   ASSERT(v7_exec(v7, &v, "j.setMinutes(10)") == V7_OK);
-  ASSERT(check_num(v, 941793030100));
+  ASSERT(check_num(v, ADJTZ(941793030100)));
   ASSERT(v7_exec(v7, &v, "j.setUTCMinutes(30)") == V7_OK);
-  ASSERT(check_num(v, 941794230100));
+  ASSERT(check_num(v, ADJTZ(941794230100)));
   ASSERT(v7_exec(v7, &v, "j.setHours(10)") == V7_OK);
-  ASSERT(check_num(v, 941790630100));
+  ASSERT(check_num(v, ADJTZ(941790630100)));
   ASSERT(v7_exec(v7, &v, "j.setUTCHours(20)") == V7_OK);
   ASSERT(check_num(v, 941833830100));
   ASSERT(v7_exec(v7, &v, "j.setDate(15)") == V7_OK);
@@ -378,17 +382,17 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015 11:27:10 GMT\")") == V7_OK);
   ASSERT(check_num(v, 1423999630000));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015\")") == V7_OK);
-  ASSERT(check_num(v, 1423951200000));
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"02/15/2015\")") == V7_OK);
-  ASSERT(check_num(v, 1423951200000));
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"2015-02-15\")") == V7_OK);
-  ASSERT(check_num(v, 1423951200000));
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"15.02.2015\")") == V7_OK);
-  ASSERT(check_num(v, 1423951200000));
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"02/15/2015 12:30\")") == V7_OK);
-  ASSERT(check_num(v, 1423996200000));
+  ASSERT(check_num(v, ADJTZ(1423996200000)));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"02/15/2015 12:30:45\")") == V7_OK);
-  ASSERT(check_num(v, 1423996245000));
+  ASSERT(check_num(v, ADJTZ(1423996245000)));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"10/15/2015 12:30:45 GMT+200\")") == V7_OK);
   ASSERT(check_num(v, 1444905045000));
   ASSERT(v7_exec(v7, &v, "Date.parse(\"10/15/2015 12:30 GMT+200\")") == V7_OK);

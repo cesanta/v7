@@ -9129,7 +9129,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9075	PASS ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-5-5.js (tail -c +8244707 tests/ecmac.db|head -c 574)
 9076	PASS ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-5-6.js (tail -c +8245282 tests/ecmac.db|head -c 622)
 9077	FAIL ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-5-7.js (tail -c +8245905 tests/ecmac.db|head -c 964): [{"message":"Invalid array length"}]
-9078	FAIL ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-5-8.js (tail -c +8246870 tests/ecmac.db|head -c 1434): [{"message":"Invalid array length"}]
+9078	PASS ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-5-8.js (tail -c +8246870 tests/ecmac.db|head -c 1434)
 9079	FAIL ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-5-9.js (tail -c +8248305 tests/ecmac.db|head -c 497): [{"message":"value is not a function"}]
 9080	FAIL ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-7-1.js (tail -c +8248803 tests/ecmac.db|head -c 414): [{"message":"Test case returned non-true value!"}]
 9081	FAIL ch15/15.4/15.4.4/15.4.4.21/15.4.4.21-7-10.js (tail -c +8249218 tests/ecmac.db|head -c 363): [{"message":"value is not a function"}]
