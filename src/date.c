@@ -63,7 +63,7 @@ static etimeint_t ecma_TimeFromYear(etimeint_t y) {
   return msPerDay * ecma_DayFromYear(y);
 }
 
-static etimeint_t ecma_YearFromTime(etime_t t)
+static etimeint_t ecma_YearFromTime_s(etime_t t)
 {
   etimeint_t first = (etimeint_t) floor((t / msPerDay) / 366) + 1970,
              last = (etimeint_t) floor((t / msPerDay) / 365) + 1970, middle = 0;
@@ -93,19 +93,20 @@ static etimeint_t ecma_YearFromTime(etime_t t)
   return first;
 }
 
-static int ecma_InLeapYear(etime_t t) {
-  return ecma_DaysInYear(ecma_YearFromTime(t)) == 366;
+static int ecma_InLeapYear(etime_t t, int year) {
+  (void)t;
+  return ecma_DaysInYear(year) == 366;
 }
 
-static etimeint_t ecma_DayWithinYear(etime_t t) {
-  return ecma_Day(t) - ecma_DayFromYear(ecma_YearFromTime(t));
+static etimeint_t ecma_DayWithinYear(etime_t t, int year) {
+  return ecma_Day(t) - ecma_DayFromYear(year);
 }
 
 
 static void ecma_getfirstdays(int* days, int isleap) {
+  unsigned int i;
   static int sdays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
   memcpy(days, sdays, sizeof(sdays));
-  unsigned int i;
   
   if(isleap) {
     for(i = 2; i < ARRAY_SIZE(sdays); i++) {
@@ -114,10 +115,10 @@ static void ecma_getfirstdays(int* days, int isleap) {
   }
 }
 
-static etimeint_t ecma_MonthFromTime(etime_t t) {
+static etimeint_t ecma_MonthFromTime(etime_t t, int year) {
   int days[MonthInYear+1];
-  etimeint_t dwy = ecma_DayWithinYear(t);
-  int ily = ecma_InLeapYear(t);
+  etimeint_t dwy = ecma_DayWithinYear(t, year);
+  int ily = ecma_InLeapYear(t, year);
   
   unsigned int i; int ret = -1;
   
@@ -133,11 +134,11 @@ static etimeint_t ecma_MonthFromTime(etime_t t) {
   return ret;
 }
 
-static etimeint_t ecma_DateFromTime(etime_t t) {
+static etimeint_t ecma_DateFromTime(etime_t t, int year) {
   int days[MonthInYear+1];
-  etimeint_t mft = ecma_MonthFromTime(t);
-  etimeint_t dwy = ecma_DayWithinYear(t);
-  int ily = ecma_InLeapYear(t);
+  etimeint_t mft = ecma_MonthFromTime(t, year);
+  etimeint_t dwy = ecma_DayWithinYear(t, year);
+  int ily = ecma_InLeapYear(t, year);
   
   if(mft > 11) {
     return -1;
@@ -264,9 +265,9 @@ static etime_t d_gmktime(struct timeparts* tp) {
 typedef etime_t (*fmaketime)(struct timeparts* );
 
 static void d_gmtime(etime_t* t, struct timeparts* tp) {
-  tp->year = ecma_YearFromTime(*t);
-  tp->month = ecma_MonthFromTime(*t);
-  tp->day = ecma_DateFromTime(*t);
+  tp->year = ecma_YearFromTime_s(*t);
+  tp->month = ecma_MonthFromTime(*t, tp->year);
+  tp->day = ecma_DateFromTime(*t, tp->year);
   tp->hour = ecma_HourFromTime(*t);
   tp->min = ecma_MinFromTime(*t);
   tp->sec = ecma_SecFromTime(*t);
@@ -335,49 +336,56 @@ int date_parse(const char* str, int* a1, int* a2, int* a3, char sep, char* rest)
 #define NO_TZ 0x7FFFFFFF
 
 static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
+  char gmt[4];
+  char buf1[100] = {0}, buf2[100] = {0};
   int res = 0;
   memset(tp, 0, sizeof(*tp));
   *tz = NO_TZ;
   
   /* #1: trying toISOSrting() format */
-  const char* frmISOString = " %d-%02d-%02dT%02d:%02d:%02d.%03dZ";
-  res = sscanf(str, frmISOString, &tp->year, &tp->month, &tp->day, &tp->hour, &tp->min, &tp->sec, &tp->msec);
-  if(res == 7) {
-    *tz = 0;
-    return 1;
+  {
+    const char* frmISOString = " %d-%02d-%02dT%02d:%02d:%02d.%03dZ";
+    res = sscanf(str, frmISOString, &tp->year, &tp->month, &tp->day, &tp->hour, &tp->min, &tp->sec, &tp->msec);
+    if(res == 7) {
+      *tz = 0;
+      return 1;
+    }
   }
   
   /* #2: trying getdate() - it never works on some OS, but... */
-  struct tm* tm = getdate(str);
-  if(tm != NULL) {
-    tp->year = tm->tm_year + 1900;
-    tp->month = tm->tm_mon;
-    tp->day = tm->tm_mday;
-    tp->hour = tm->tm_hour;
-    tp->min = tm->tm_min;
-    tp->sec = tm->tm_sec;
+  {
+    struct tm* tm = getdate(str);
+    if(tm != NULL) {
+      tp->year = tm->tm_year + 1900;
+      tp->month = tm->tm_mon;
+      tp->day = tm->tm_mday;
+      tp->hour = tm->tm_hour;
+      tp->min = tm->tm_min;
+      tp->sec = tm->tm_sec;
     
-    return 1;
+      return 1;
+    }
   }
   
   /* #3: trying toString()/toUTCString()/toDateFormat() formats */
-  char month[4];
-  char gmt[4];
-  const char* frmString = " %03*s %03s %02d %d %02d:%02d:%02d %03s%d";
-  res = sscanf(str, frmString, month, &tp->day, &tp->year, &tp->hour, &tp->min, &tp->sec, gmt, tz);
-  if(res ==3 || res == 7 || res == 8 || res == 6) {
-    if( (tp->month = d_getnumbyname(mon_name, ARRAY_SIZE(mon_name), month)) != -1) {
-      if(res == 7 && strncmp(gmt, "GMT", 3) == 0 ) {
-        *tz = 0;
+  {
+    char month[4];
+    const char* frmString = " %03*s %03s %02d %d %02d:%02d:%02d %03s%d";
+    res = sscanf(str, frmString, month, &tp->day, &tp->year, &tp->hour, &tp->min, &tp->sec, gmt, tz);
+    if(res == 3 || (res >= 6 && res <= 8) ) {
+      if( (tp->month = d_getnumbyname(mon_name, ARRAY_SIZE(mon_name), month)) != -1) {
+        if(res == 7 && strncmp(gmt, "GMT", 3) == 0 ) {
+          *tz = 0;
+        }
+        return 1;
       }
-      return 1;
     }
   }
   
   /* #4: trying the rest */
   
   /* trying date */
-  char buf1[100] = {0};
+
   if(!(date_parse(str, &tp->year, &tp->month, &tp->day, '/', buf1) >= 3 ||
        date_parse(str, &tp->day, &tp->month, &tp->year, '.', buf1) >= 3 ||
        date_parse(str, &tp->year, &tp->month, &tp->day, '-', buf1) >= 3 ) ) {
@@ -387,27 +395,32 @@ static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
   /*  there is date, trying time; from here return 0 only on errors */
   
   /* trying HH:mm */
-  char buf2[100] = {0};
-  const char* frmMMhh = " %d:%d%[^\0]";
-  res = sscanf(buf1, frmMMhh, &tp->hour, &tp->min, buf2);
-  /* can't get time, but have some symbols, assuming error */
-  if(res < 2 ) {
-    return (strlen(buf2) == 0);
+  {
+    const char* frmMMhh = " %d:%d%[^\0]";
+    res = sscanf(buf1, frmMMhh, &tp->hour, &tp->min, buf2);
+    /* can't get time, but have some symbols, assuming error */
+    if(res < 2 ) {
+      return (strlen(buf2) == 0);
+    }
   }
   
   /* trying seconds */
-  memset(buf1, 0, sizeof(buf1));
-  const char* frmss = ":%d%[^\0]";
-  res = sscanf(buf2, frmss, &tp->sec, buf1);
+  {
+    const char* frmss = ":%d%[^\0]";
+    memset(buf1, 0, sizeof(buf1));
+    res = sscanf(buf2, frmss, &tp->sec, buf1);
+  }
   
   /* even if we don't get seconds we gonna try to get tz */
-  char* rest = res? buf1: buf2;
-  char* buf = res? buf2: buf1;
-  
-  const char* frmtz = " %03s%d%[^\0]";
-  res = sscanf(rest, frmtz, gmt, tz, buf);
-  if(res == 1 && strncmp(gmt, "GMT", 3) == 0) {
-    *tz = 0;
+  {
+    char* rest = res? buf1: buf2;
+    char* buf = res? buf2: buf1;
+    const char* frmtz = " %03s%d%[^\0]";
+    
+    res = sscanf(rest, frmtz, gmt, tz, buf);
+    if(res == 1 && strncmp(gmt, "GMT", 3) == 0) {
+      *tz = 0;
+    }
   }
 
   /* return OK if we are at the end of string */
@@ -415,6 +428,9 @@ static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
 }
 
 static int d_timeFromString(etime_t* time, const char* str, size_t buf_size) {
+  struct timeparts tp;
+  int tz;
+  
   *time = INVALID_TIME;
   
   if(buf_size > 100) {
@@ -422,13 +438,12 @@ static int d_timeFromString(etime_t* time, const char* str, size_t buf_size) {
     return 0;
   }
   
-  struct timeparts tp;
-  int tz;
-
   if(d_parsedatestr(str, &tp, &tz)) {
     /* check results */
+    int valid = 0;
+    
     tp.month--;
-    int valid = tp.day >=1 && tp.day <= 31;
+    valid = tp.day >=1 && tp.day <= 31;
     valid &= tp.month >=0 && tp.month <= 11;
     valid &= tp.hour >= 0 && tp.hour <= 23;
     valid &= tp.min >= 0 && tp.min <= 59;
