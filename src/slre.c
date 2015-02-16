@@ -1089,6 +1089,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
   e.pstart = e.pend = (struct slre_node *)
              SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+  e.prog->flags = 0;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -1187,6 +1188,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   unsigned short thr_num = 1;
   unsigned char thr;
   size_t i, off = 0;
+  const char *base = start;
 
   /* queue initial thread */
   re_newthread(threads, pc, start, loot);
@@ -1203,7 +1205,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           return 1;
         case I_ANY:
         case I_ANYNL:
-          c = re_getrune(start, len, &off);
+          c = re_getrune(start, base + len - start, &off);
           if (!c || (pc->opcode == I_ANY && isnewline(c))) RE_NO_MATCH();
           break;
 
