@@ -404,7 +404,7 @@ static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
   
   /* trying date */
 
-  if(!(date_parse(str, &tp->year, &tp->month, &tp->day, '/', buf1) >= 3 ||
+  if(!(date_parse(str, &tp->month, &tp->day, &tp->year, '/', buf1) >= 3 ||
        date_parse(str, &tp->day, &tp->month, &tp->year, '.', buf1) >= 3 ||
        date_parse(str, &tp->year, &tp->month, &tp->day, '-', buf1) >= 3 ) ) {
     return 0;
@@ -904,14 +904,21 @@ static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
 
 /****** Initialization *******/
 
+/* we should set V7_PROPERTY_DONT_ENUM for all Date props */
+/* TODO(???): check other objects */
+
+static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name, v7_cfunction_t f) {
+  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM, v7_create_cfunction(f));
+}
+
 #define DECLARE_GET(func) \
-  set_cfunc_prop(v7, v7->date_prototype, "getUTC"#func, Date_getUTC##func); \
-  set_cfunc_prop(v7, v7->date_prototype, "get"#func, Date_get##func); \
+  d_set_cfunc_prop(v7, v7->date_prototype, "getUTC"#func, Date_getUTC##func); \
+  d_set_cfunc_prop(v7, v7->date_prototype, "get"#func, Date_get##func); \
 
 #define DECLARE_GET_AND_SET(func)   \
   DECLARE_GET(func) \
-  set_cfunc_prop(v7, v7->date_prototype, "setUTC"#func, Date_setUTC##func); \
-  set_cfunc_prop(v7, v7->date_prototype, "set"#func, Date_set##func);
+  d_set_cfunc_prop(v7, v7->date_prototype, "setUTC"#func, Date_setUTC##func); \
+  d_set_cfunc_prop(v7, v7->date_prototype, "set"#func, Date_set##func);
 
 
 V7_PRIVATE void init_date(struct v7 *v7) {
@@ -920,8 +927,8 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
   v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
   v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
-  set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
-  v7_set_property(v7, v7->global_object, "Date", 6, 0, date);
+  d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
+  v7_set_property(v7, v7->global_object, "Date", 6, V7_PROPERTY_DONT_ENUM, date);
   
   DECLARE_GET_AND_SET(Date);
   DECLARE_GET_AND_SET(FullYear);
@@ -932,24 +939,24 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   DECLARE_GET_AND_SET(Milliseconds);
   DECLARE_GET(Day);
  
-  set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset", Date_getTimezoneOffset);
+  d_set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset", Date_getTimezoneOffset);
+ 
+  d_set_cfunc_prop(v7, v7->date_prototype, "getTime", Date_getTime);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toISOString", Date_toISOString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);
 
-  set_cfunc_prop(v7, v7->date_prototype, "getTime", Date_getTime);
-  set_cfunc_prop(v7, v7->date_prototype, "toISOString", Date_toISOString);
-  set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);  
-
-  set_cfunc_prop(v7, v7->date_prototype, "setTime", Date_setTime);
-  set_cfunc_prop(v7, v7->date_prototype, "now", Date_now);
-  set_cfunc_prop(v7, v7->date_prototype, "parse", Date_parse);
-  set_cfunc_prop(v7, v7->date_prototype, "UTC", Date_UTC);
-  set_cfunc_prop(v7, v7->date_prototype, "toString", Date_toString);
-  set_cfunc_prop(v7, v7->date_prototype, "toDateString", Date_toDateString);
-  set_cfunc_prop(v7, v7->date_prototype, "toTimeString", Date_toTimeString);
-  set_cfunc_prop(v7, v7->date_prototype, "toUTCString", Date_toUTCString);
-  set_cfunc_prop(v7, v7->date_prototype, "toLocaleString", Date_toLocaleString);
-  set_cfunc_prop(v7, v7->date_prototype, "toLocaleDateString", Date_toLocaleDateString);
-  set_cfunc_prop(v7, v7->date_prototype, "toLocaleTimeString", Date_toLocaleTimeString);
-  set_cfunc_prop(v7, v7->date_prototype, "toJSON", Date_toJSON);
+  d_set_cfunc_prop(v7, v7->date_prototype, "setTime", Date_setTime);
+  d_set_cfunc_prop(v7, v7->date_prototype, "now", Date_now);
+  d_set_cfunc_prop(v7, v7->date_prototype, "parse", Date_parse);
+  d_set_cfunc_prop(v7, v7->date_prototype, "UTC", Date_UTC);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toString", Date_toString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toDateString", Date_toDateString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toTimeString", Date_toTimeString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toUTCString", Date_toUTCString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toLocaleString", Date_toLocaleString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toLocaleDateString", Date_toLocaleDateString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toLocaleTimeString", Date_toLocaleTimeString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toJSON", Date_toJSON);
 
   tzset();
 }

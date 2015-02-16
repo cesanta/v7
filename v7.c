@@ -4859,6 +4859,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->cfunction_prototype)) {
         return V7_TYPE_CFUNCTION_OBJECT;
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->date_prototype)) {
+        return V7_TYPE_DATE_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -5364,7 +5367,11 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->number_prototype;
+    }else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
+        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
+      return v7->date_prototype;
     }
+    
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
@@ -5788,60 +5795,6 @@ void v7_destroy(struct v7 *v7) {
     mbuf_free(&v7->json_visited_stack);
     free(v7);
   }
-}
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-
-#define MARK(p) (* (uintptr_t *) &(p) |= 1)
-
-/* call only on already marked values */
-#define UNMARK(p) (* (uintptr_t *) &(p)) &= ~1)
-
-#define MARKED(p) ((uintptr_t) (p) & 1)
-
-V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
-  (void) v7;
-  return (struct v7_object *) malloc(sizeof(struct v7_object));
-}
-
-V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
-  (void) v7;
-  return (struct v7_property *) malloc(sizeof(struct v7_property));
-}
-
-V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
-  (void) v7;
-  return (struct v7_function *) malloc(sizeof(struct v7_function));
-}
-
-V7_PRIVATE void gc_mark(val_t v) {
-  struct v7_object *obj;
-  struct v7_property *prop;
-  struct v7_property *next;
-
-  if (!v7_is_object(v)) {
-    return;
-  }
-  obj = v7_to_object(v);
-  if (MARKED(obj->properties)) return;
-
-  for ((prop = obj->properties), MARK(obj->properties);
-       prop != NULL; prop = next) {
-    gc_mark(prop->value);
-    next = prop->next;
-    MARK(prop->next);
-  }
-
-  /* function scope pointer is aliased to the object's prototype pointer */
-  gc_mark(v7_object_to_value(obj->prototype));
-}
-
-/* Perform garbage collection */
-void v7_gc(struct v7 *v7) {
-  gc_mark(v7->global_object);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -9968,6 +9921,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
           "if (typeof v === 'boolean') return new Boolean(v);"
           "if (typeof v === 'number') return new Number(v);"
           "if (typeof v === 'string') return new String(v);"
+          "if (typeof v === 'date') return new Date(v);"
           "}");
 
   object = v7_get(v7, v7->global_object, "Object", 6);
@@ -10283,108 +10237,291 @@ int main(int argc, char *argv[]) {
 int64_t strtoll(const char *, char **, int);
 #endif
 
-/* ECMA5.1 defines "extended years", -+285,426 years from 01 January, 1970 UTC
- * As result we cannot use standart break & make time functions */
-typedef int64_t etime_t;
-#define MAX_TIME 8640000000000000
-#define INVALID_TIME (MAX_TIME+1)
-#define MINUS_ZERO (MAX_TIME+2)
+typedef double etime_t; /* double is suitable type for ECMA time */
+typedef int64_t etimeint_t; /* inernally we have to use 64-bit integer for some operations */
+#define INVALID_TIME NAN
+
+/*++++++  ECMA date & time helpers ++++++*/
+
+#define msPerDay 86400000
+#define HoursPerDay 24
+#define MinutesPerHour 60
+#define SecondsPerMinute 60
+#define msPerSecond 1000
+#define msPerMinute 60000
+#define msPerHour 3600000
+#define MonthInYear 12
+
+static etimeint_t ecma_Day(etime_t t) {
+  return floor(t/ msPerDay);
+}
+
+/* Leap year formula copied from ECMA 5.1 standart as is */
+static int ecma_DaysInYear(int y) {
+  if(y % 4 != 0 ) {
+    return 365;
+  } else if( y % 4 == 0 && y % 100 != 0 ) {
+    return 366;
+  } else if(y % 100 == 0 && y % 400 != 0) {
+    return 365;
+  } else if(y % 400 == 0) {
+    return 366;
+  } else {
+    return 365;
+  }
+}
+
+static etimeint_t ecma_DayFromYear(etimeint_t y) {
+  return 365 * (y-1970) + floor((y-1969)/4) - floor((y-1901)/100) + floor((y-1601)/400);
+}
+
+static etimeint_t ecma_TimeFromYear(etimeint_t y) {
+  return msPerDay * ecma_DayFromYear(y);
+}
+
+static int ecma_YearFromTime_s(etime_t t)
+{
+  int first = floor((t / msPerDay) / 366) + 1970,
+              last = floor((t / msPerDay) / 365) + 1970, middle = 0;
+  
+  if (last < first) {
+    int temp = first;
+    first = last;
+    last = temp;
+  }
+  
+  while (last > first) {
+    middle = (last + first) / 2;
+    if (ecma_TimeFromYear(middle) > t) {
+      last = middle - 1;
+    } else {
+      if (ecma_TimeFromYear(middle) <= t) {
+        if (ecma_TimeFromYear(middle + 1) > t) {
+          first = middle;
+          break;
+        }
+        first = middle + 1;
+      }
+    }
+  }
+  
+  return first;
+}
+
+static int ecma_InLeapYear(etime_t t, int year) {
+  (void)t;
+  return ecma_DaysInYear(year) == 366;
+}
+
+static int ecma_DayWithinYear(etime_t t, int year) {
+  return (int)(ecma_Day(t) - ecma_DayFromYear(year));
+}
+
+static void ecma_getfirstdays(int* days, int isleap) {
+  unsigned int i;
+  static int sdays[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+  memcpy(days, sdays, sizeof(sdays));
+  
+  if(isleap) {
+    for(i = 2; i < ARRAY_SIZE(sdays); i++) {
+      days[i] += 1;
+    }
+  }
+}
+
+static int ecma_MonthFromTime(etime_t t, int year) {
+  int days[MonthInYear+1];
+  etimeint_t dwy = ecma_DayWithinYear(t, year);
+  int ily = ecma_InLeapYear(t, year);
+  
+  unsigned int i; int ret = -1;
+  
+  ecma_getfirstdays(days, ily);
+  
+  for(i = 0; i < ARRAY_SIZE(days) - 1; i++) {
+    if(dwy >= days[i] && dwy < days[i+1]) {
+      ret = i;
+      break;
+    }
+  }
+  
+  return ret;
+}
+
+static int ecma_DateFromTime(etime_t t, int year) {
+  int days[MonthInYear+1];
+  int mft = ecma_MonthFromTime(t, year);
+  int dwy = ecma_DayWithinYear(t, year);
+  int ily = ecma_InLeapYear(t, year);
+  
+  if(mft > 11) {
+    return -1;
+  }
+  
+  ecma_getfirstdays(days, ily);
+  
+  return dwy - days[mft] + 1;
+}
+
+static int ecma_WeekDay(etime_t t) {
+  return (ecma_Day(t)+4) % 7;
+}
+
+static int ecma_DaylightSavingTA(etime_t t) {
+  time_t time = t / 1000;
+  struct tm tm;
+  memset(&tm, 0, sizeof(t));
+  localtime_r(&time, &tm);
+  if(tm.tm_isdst > 0) {
+    return msPerHour;
+  } else {
+    return 0;
+  }
+}
+
+static int ecma_LocalTZA() {
+  return (int)-timezone * 1000;
+}
+
+static etimeint_t ecma_LocalTime(etime_t t) {
+  return t + ecma_LocalTZA() + ecma_DaylightSavingTA(t);
+}
+
+static etimeint_t ecma_UTC(etime_t t) {
+  return t - ecma_LocalTZA() - ecma_DaylightSavingTA(t-ecma_LocalTZA());
+}
+
+static int ecma_HourFromTime(etime_t t) {
+  return (etimeint_t)floor(t / msPerHour) % HoursPerDay;
+}
+
+static int ecma_MinFromTime(etime_t t) {
+  return (etimeint_t)floor(t / msPerMinute) % MinutesPerHour;
+}
+
+static int ecma_SecFromTime(etime_t t) {
+  return (etimeint_t)floor(t / msPerSecond) % SecondsPerMinute;
+}
+
+static int ecma_msFromTime(etime_t t) {
+  return (etimeint_t)t % msPerSecond;
+}
+
+static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min, etimeint_t sec, etimeint_t ms) {
+  return ((hour * MinutesPerHour + min) * SecondsPerMinute + sec) * msPerSecond + ms;
+}
+
+static etimeint_t ecma_MakeDay(int year, int month, int date)
+{
+  int days[MonthInYear+1];
+
+  etimeint_t yday;
+  etimeint_t mday;
+  
+  year += floor(month / 12);
+  
+  month = month % 12;
+  
+  yday = floor(ecma_TimeFromYear(year) / msPerDay);
+
+  ecma_getfirstdays(days, (ecma_DaysInYear(year) == 366));
+
+  mday = days[month];
+  
+  return yday + mday + date - 1;
+}
+
+static etimeint_t ecma_MakeDate(etimeint_t day, etimeint_t time) {
+  return (day * msPerDay + time);
+}
+
+/*++++ ECMA alternatives to struct tm ++++*/
 
 struct timeparts {
-  int year; /* can be negative */
+  int year; /* can be negative, up to +-282000 */
   int month; /* 0-11 */
   int day; /* 1-31 */
   int hour; /* 0-23 */
   int min; /* 0-59 */
   int sec; /* 0-59 */
   int msec; 
-  int dayofweek;
+  int dayofweek; /* 0-6 */
 };
 
-/* TODO(alashkin): replace mktime etc with something with extyears support */
+static int d_istimeinvalid(etime_t* time) {
+  return isnan(*time);
+}
+
+/*+++ this functions is used to get current date/time & timezone */
+
+static void d_gettime(etime_t* time) {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  *time = (etime_t)tv.tv_sec * 1000 + (etime_t)tv.tv_usec / 1000;
+}
 
 static int d_gettimezone() {
   return (int)timezone/60; /* TODO(alashkin): check non-OSX */
 }
 
 static char* d_gettzname() {
-  return tzname[0];
+  return tzname[0]; /* TODO(alashkin): check non-OSX */
 }
 
 static etime_t d_mktime_impl(struct timeparts* tp) {
-  struct tm t;
-  memset(&t, 0, sizeof(t));
-  
-  t.tm_year = tp->year - 1900;
-  t.tm_mon = tp->month;
-  t.tm_mday = tp->day;
-  t.tm_hour = tp->hour;
-  t.tm_min = tp->min;
-  t.tm_sec = tp->sec;
-  
-  return (etime_t)mktime(&t)*1000 + tp->msec;
+  return ecma_MakeDate(ecma_MakeDay(tp->year, tp->month, tp->day),
+                       ecma_MakeTime(tp->hour, tp->min, tp->sec, tp->msec));
 }
 
+/*++++ libc mktime alternatives ++++*/
+
 static etime_t d_lmktime(struct timeparts* tp) {
-  return d_mktime_impl(tp);
+  return ecma_UTC(d_mktime_impl(tp));
 }
 
 static etime_t d_gmktime(struct timeparts* tp) {
-  return d_mktime_impl(tp) - d_gettimezone() * 60 * 1000;
+  return d_mktime_impl(tp);
 }
-
 
 typedef etime_t (*fmaketime)(struct timeparts* );
 
-static void d_gmtime(etime_t* time, struct timeparts* tp) {
-  time_t sec = *time/1000;
-  time_t msec = *time%1000;
-  struct tm t;
-  gmtime_r(&sec, &t); 
-
-  tp->year = t.tm_year + 1900;
-  tp->month = t.tm_mon;
-  tp->day = t.tm_mday;
-  tp->hour = t.tm_hour;
-  tp->min = t.tm_min;
-  tp->sec = t.tm_sec;
-  tp->msec = (int)msec;
-  tp->dayofweek = t.tm_wday;
+/*++++ libc gmtime & localtime alternatives ++++*/
+static void d_gmtime(etime_t* t, struct timeparts* tp) {
+  tp->year = ecma_YearFromTime_s(*t);
+  tp->month = ecma_MonthFromTime(*t, tp->year);
+  tp->day = ecma_DateFromTime(*t, tp->year);
+  tp->hour = ecma_HourFromTime(*t);
+  tp->min = ecma_MinFromTime(*t);
+  tp->sec = ecma_SecFromTime(*t);
+  tp->msec = ecma_msFromTime(*t);
+  tp->dayofweek = ecma_WeekDay(*t);
 }
 
 static void d_localtime(etime_t* time, struct timeparts* tp) {
-  time_t sec = *time/1000;
-  time_t msec = *time%1000;
-  struct tm t;
-  localtime_r(&sec, &t);
-  
-  tp->year = t.tm_year + 1900;
-  tp->month = t.tm_mon;
-  tp->day = t.tm_mday;
-  tp->hour = t.tm_hour;
-  tp->min = t.tm_min;
-  tp->sec = t.tm_sec;
-  tp->msec = (int)msec;
-  tp->dayofweek = t.tm_wday;
+  etime_t local_time = ecma_LocalTime(*time);
+  d_gmtime(&local_time, tp);
 }
 
 typedef void (*fbreaktime)(etime_t* , struct timeparts* );
 
-static int d_timeFromString(etime_t* time, const char* buf, size_t buf_size) {
-  struct tm* t = getdate(buf);
-  *time = INVALID_TIME;
-  (void)buf_size;
-  
-  if(t != NULL) {
-    *time = mktime(t) * 1000;
-  }
-  
-  return (t != NULL);
-}
+/*++++ some isXXX helpers ++++*/
 
 static int d_isnumberNAN(struct v7 *v7, val_t obj) {
   return (i_value_of(v7, obj) == V7_TAG_NAN);
 }
+
+static void d_isobjvalidforstirng(struct v7* v7, val_t obj) {
+  if(!v7_is_object(obj) || (v7_is_object(obj) && i_value_of(v7, obj) == V7_TAG_NAN)) {
+    throw_exception(v7, "TypeError", "%s", "Date is invalid (for string)");
+  }
+}
+
+static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
+  /* TODO(alashkin): verify this statement */
+  return is_prototype_of(this_obj, v7->date_prototype);
+}
+
+/*++++ from/to string helpers ++++*/
 
 static int d_timetoISOstr(etime_t* time, char* buf, size_t buf_size) {
   /* ISO format: "+XXYYYY-MM-DDTHH:mm:ss.sssZ"; */
@@ -10407,236 +10544,169 @@ static int d_timetoISOstr(etime_t* time, char* buf, size_t buf_size) {
 }
 
 /* non-locale function should always return in english and 24h-format */
-static const char wday_name[][4] = {
+static const char* wday_name[] = {
   "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
 };
 
-static const char mon_name[][4] = {
+static const char* mon_name[] = {
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
-static int d_tptodatestr(struct timeparts* tp, char* buf) {
-  int use_ext;
-
-  const char* ey_frm = "%s %s %02d %06d";
-  const char* simpl_frm ="%s %s %02d %04d";
-  
-  use_ext = (abs(tp->year) > 9999 || tp->year < 0);
-  
-  return sprintf(buf, use_ext? ey_frm: simpl_frm, wday_name[tp->dayofweek], mon_name[tp->month], tp->day, tp->year);
-}
-
-static int d_tptotimestr(struct timeparts* tp, char* buf) {
-  int len;
-
-  len = sprintf(buf, "%02d:%02d:%02d GMT", tp->hour, tp->min, tp->sec);
-  
-  if(d_gettimezone() != 0) {
-    len = sprintf(buf+len, "%c%02d00 (%s)", d_gettimezone() > 0? '-':'+', abs(d_gettimezone()/60), d_gettzname());
-  }
-  
-  return (int)strlen(buf);
-}
-
-static int d_tptostr(struct timeparts* tp, char* buf) {
-  int len = d_tptodatestr(tp, buf);
-  *(buf + len) = ' ';
-  return d_tptotimestr(tp, buf + len + 1) + len + 1;
-}
-
-typedef int (*ftostring)(struct timeparts*, char* buf);
-
-static void d_gettime(etime_t* time) {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  *time = (etime_t)tv.tv_sec * 1000 + (etime_t)tv.tv_usec / 1000;  
-}
-
-static int d_argtoint(struct v7* v7, val_t* obj, etime_t* ret) {
-  *ret = INVALID_TIME;
-  if(v7_is_double(*obj)) {
-    *ret = v7_to_double(*obj);
-  } else if(v7_is_boolean(*obj)) {
-    *ret = v7_to_boolean(*obj);
-  } else if(v7_is_string(*obj)) {
-    size_t size;
-    const char* str = v7_to_string(v7, obj, &size);
-    char* endptr;
-    *ret = strtoll(str, &endptr, 10);
-    if(endptr != str + size) {
-      *ret = INVALID_TIME;
+int d_getnumbyname(const char** arr, int arr_size, const char *str) {
+  int i;
+  for(i = 0; i < arr_size; i++) {
+    if(strncmp(arr[i], str, 3) == 0 ) {
+      return i + 1;
     }
   }
   
-  return *ret <= MAX_TIME;
+  return -1;
 }
 
-static int d_timetoint(struct v7* v7, val_t* obj, etime_t* ret) {
-  int res = d_argtoint(v7, obj, ret);
-  if(res && *ret==0 && v7_to_double(*obj) < 0) {
-    *ret = MINUS_ZERO;
+int date_parse(const char* str, int* a1, int* a2, int* a3, char sep, char* rest) {
+  char frmDate[] = " %d/%d/%d%[^\0]";
+  frmDate[3] = frmDate[6] = sep;
+  return sscanf(str, frmDate, a1, a2, a3, rest);
+}
+
+#define NO_TZ 0x7FFFFFFF
+
+/* not very smart but simple, and working according to ECMA5.1 StringToDate function */
+static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
+  char gmt[4];
+  char buf1[100] = {0}, buf2[100] = {0};
+  int res = 0;
+  memset(tp, 0, sizeof(*tp));
+  *tz = NO_TZ;
+  
+  /* #1: trying toISOSrting() format */
+  {
+    const char* frmISOString = " %d-%02d-%02dT%02d:%02d:%02d.%03dZ";
+    res = sscanf(str, frmISOString, &tp->year, &tp->month, &tp->day, &tp->hour, &tp->min, &tp->sec, &tp->msec);
+    if(res == 7) {
+      *tz = 0;
+      return 1;
+    }
   }
   
-  return res;
-}
-
-static val_t d_createnumber(etime_t* time) {
-  switch(*time){
-    case INVALID_TIME:
-      return v7_create_number(NAN);
-    case MINUS_ZERO:
-      return v7_create_number(-0.0);
-    default:
-      return v7_create_number(*time);
+  /* #2: trying getdate() - it never works on some OS, but... */
+  {
+    struct tm* tm = getdate(str);
+    if(tm != NULL) {
+      tp->year = tm->tm_year + 1900;
+      tp->month = tm->tm_mon;
+      tp->day = tm->tm_mday;
+      tp->hour = tm->tm_hour;
+      tp->min = tm->tm_min;
+      tp->sec = tm->tm_sec;
+    
+      return 1;
+    }
   }
+  
+  /* #3: trying toString()/toUTCString()/toDateFormat() formats */
+  {
+    char month[4];
+    const char* frmString = " %03*s %03s %02d %d %02d:%02d:%02d %03s%d";
+    res = sscanf(str, frmString, month, &tp->day, &tp->year, &tp->hour, &tp->min, &tp->sec, gmt, tz);
+    if(res == 3 || (res >= 6 && res <= 8) ) {
+      if( (tp->month = d_getnumbyname(mon_name, ARRAY_SIZE(mon_name), month)) != -1) {
+        if(res == 7 && strncmp(gmt, "GMT", 3) == 0 ) {
+          *tz = 0;
+        }
+        return 1;
+      }
+    }
+  }
+  
+  /* #4: trying the rest */
+  
+  /* trying date */
+
+  if(!(date_parse(str, &tp->month, &tp->day, &tp->year, '/', buf1) >= 3 ||
+       date_parse(str, &tp->day, &tp->month, &tp->year, '.', buf1) >= 3 ||
+       date_parse(str, &tp->year, &tp->month, &tp->day, '-', buf1) >= 3 ) ) {
+    return 0;
+  }
+  
+  /*  there is date, trying time; from here return 0 only on errors */
+  
+  /* trying HH:mm */
+  {
+    const char* frmMMhh = " %d:%d%[^\0]";
+    res = sscanf(buf1, frmMMhh, &tp->hour, &tp->min, buf2);
+    /* can't get time, but have some symbols, assuming error */
+    if(res < 2 ) {
+      return (strlen(buf2) == 0);
+    }
+  }
+  
+  /* trying seconds */
+  {
+    const char* frmss = ":%d%[^\0]";
+    memset(buf1, 0, sizeof(buf1));
+    res = sscanf(buf2, frmss, &tp->sec, buf1);
+  }
+  
+  /* even if we don't get seconds we gonna try to get tz */
+  {
+    char* rest = res? buf1: buf2;
+    char* buf = res? buf2: buf1;
+    const char* frmtz = " %03s%d%[^\0]";
+    
+    res = sscanf(rest, frmtz, gmt, tz, buf);
+    if(res == 1 && strncmp(gmt, "GMT", 3) == 0) {
+      *tz = 0;
+    }
+  }
+
+  /* return OK if we are at the end of string */
+  return (res <= 2);
 }
 
-struct dtimepartsarr {
-  etime_t args[7];
-};
-
-enum detimepartsarr { tpyear = 0, tpmonth , tpdate , tphours, tpminutes, tpseconds, tpmsec, tpmax };
-
-static etime_t d_changepartoftime(etime_t* current, struct dtimepartsarr* a, fbreaktime breaktimefunc, fmaketime maketimefunc) {
-  /* 0 = year, 1 = month , 2 = date , 3 = hours, 4 = minutes, 5 = seconds, 6 = ms */
+static int d_timeFromString(etime_t* time, const char* str, size_t buf_size) {
   struct timeparts tp;
-  unsigned long i;
+  int tz;
   
-  int* tp_arr[7]; /* C89 doesn't handle initialization like x = {&tp.year, &tp.month, .... } */
-  tp_arr[0] = &tp.year; tp_arr[1] = &tp.month; tp_arr[2] = &tp.day; tp_arr[3] = &tp.hour; tp_arr[4] = &tp.min; tp_arr[5] = &tp.sec; tp_arr[6] = &tp.msec;
+  *time = INVALID_TIME;
   
-  memset(&tp, 0, sizeof(tp));
-  
-  if(breaktimefunc != NULL) {
-    (breaktimefunc)(current, &tp);
+  if(buf_size > 100) {
+    /* too long for valid date string */
+    return 0;
   }
   
-  for(i = 0; i < ARRAY_SIZE(tp_arr); i++) {
-    if(a->args[i] != INVALID_TIME) {
-      *tp_arr[i] = (int)a->args[i];
-    }
-  }
-  
-  return maketimefunc(&tp);
-}
-
-
-static etime_t d_time_number_from_tp(struct v7 *v7, val_t this_obj, val_t args, int start_pos, fbreaktime breaktimefunc, fmaketime makefilefunc) {
-  etime_t ret_time = INVALID_TIME;
-  long cargs;
-  
-  if((cargs=v7_array_length(v7, args)) >= 1 && !d_isnumberNAN(v7, this_obj)) {
-    int i;
-    struct dtimepartsarr a = {{INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME}};
-    etime_t new_part = INVALID_TIME;
+  if(d_parsedatestr(str, &tp, &tz)) {
+    /* check results */
+    int valid = 0;
     
-    for(i=0; i < cargs && (i+start_pos < tpmax); i++) {
-      val_t argi = v7_array_at(v7, args, i);
-      if(!d_argtoint(v7, &argi, &new_part)) {
-        break;
-      }
-      
-      a.args[i+start_pos] = new_part;
+    tp.month--;
+    valid = tp.day >=1 && tp.day <= 31;
+    valid &= tp.month >=0 && tp.month <= 11;
+    valid &= tp.hour >= 0 && tp.hour <= 23;
+    valid &= tp.min >= 0 && tp.min <= 59;
+    valid &= tp.sec >= 0 && tp.sec <= 59;
+    
+    if(tz != NO_TZ && tz > 12) {
+      tz /= 100;
     }
     
-    if(new_part != INVALID_TIME) {
-      etime_t current_time = v7_to_double(i_value_of(v7, this_obj));
-      ret_time = d_changepartoftime(&current_time, &a, breaktimefunc, makefilefunc);
-    }
-  }
-  
-  return ret_time;
-}
-
-static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args, int start_pos, fbreaktime breaktimefunc, fmaketime makefilefunc) {
-  val_t n;
-  etime_t ret_time = d_time_number_from_tp(v7, this_obj, args, start_pos, breaktimefunc, makefilefunc);
-                                                                       
-  n = d_createnumber(&ret_time);
-  v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, n);
-                                                                       
-  return n;
-}
-
-static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  etime_t ret_time = 0;   
-  if(v7_is_object(this_obj) && this_obj != v7->global_object) {
-    long cargs = v7_array_length(v7, args);
-    if(cargs <=0 ) {
-      /* no parameters - return current date & time */
-      d_gettime(&ret_time);
-    } else if(cargs == 1) {
-      /* one parameter */
-      val_t arg = v7_array_at(v7, args, 0);
-      if(v7_is_string(arg)){ /* it could be string */
-        size_t str_size;
-        const char* str = v7_to_string(v7, &arg, &str_size);
-        d_timeFromString(&ret_time, str, str_size);
-      } else {
-        d_timetoint(v7, &arg, &ret_time);
-      }
-    } else {
-      /* 2+ paramaters - should be parts of a date */
-      struct dtimepartsarr a;
-      int i;
-      
-      memset(&a, 0, sizeof(a));
-      
-      for(i=0; i < cargs; i++) {
-        val_t val = v7_array_at(v7, args, i);
-        if(!d_argtoint(v7, &val, &a.args[i])) {
-          break;
-        }
-      }
-      
-      if(i>=cargs) {
-        if(a.args[tpdate] == 0 ) {
-          a.args[tpdate] = 1; /* If date is supplied then let dt be ToNumber(date); else let dt be 1. */
-        }
-      
-        if(a.args[tpyear] >=0 && a.args[tpyear] <=99) {
-          a.args[tpyear] += 1900; /* If y is not NaN and 0 <= ToInteger(y) <= 99, then let yr be 1900+ToInteger(y); otherwise, let yr be y. */
-        }
-
-        ret_time = d_changepartoftime(0, &a, 0, d_lmktime);
-      }
-    }
-  
-    v7_to_object(this_obj)->prototype = v7_to_object(v7->date_prototype);
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, d_createnumber(&ret_time));
-    return this_obj;
-  } else {
-    /* according to 15.9.2.1 we should ignore all parameters in case of function-call */    
-    char buf[30];
-    int len;
+    valid &= (abs(tz) <= 12 || tz == NO_TZ);
     
-    d_gettime(&ret_time);    
-    len = d_timetoISOstr(&ret_time, buf, sizeof(buf));
-    return v7_create_string(v7, buf, len, 1);
+    if(valid) {
+      *time = d_gmktime(&tp);
+      
+      tz = (tz == NO_TZ)? -d_gettimezone() * msPerMinute : tz * msPerHour;
+      *time -= tz;
+    }
   }
+
+  return *time != INVALID_TIME;
 }
 
-static void d_isobjvalidforstirng(struct v7* v7, val_t obj) {
-  if(!v7_is_object(obj) || (v7_is_object(obj) && i_value_of(v7, obj) == V7_TAG_NAN)) {
-      throw_exception(v7, "TypeError", "%s", "Date is invalid (for string)");
-  }
-}
+typedef int (*ftostring)(struct timeparts*, char*, int);
 
-static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
-  char buf[30];
-  etime_t time; int len;
-  (void)args;
-  
-  d_isobjvalidforstirng(v7, this_obj);
-  
-  time = v7_to_double(i_value_of(v7, this_obj));
-  len = d_timetoISOstr(&time, buf, sizeof(buf));
-  
-  return v7_create_string(v7, buf, len, 1);
-}
-
-static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime breatimefunc, ftostring tostringfunc) {
+static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime breatimefunc, ftostring tostringfunc, int addtz) {
   struct timeparts tp;
   int len;
   char buf[100];
@@ -10645,23 +10715,12 @@ static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime breatimefunc, ftost
   d_isobjvalidforstirng(v7, obj);
   
   time = i_as_num(v7, obj);
-
+  
   breatimefunc(&time, &tp);
-  len = tostringfunc(&tp, buf);
+  len = tostringfunc(&tp, buf, addtz);
   
   return v7_create_string(v7, buf, len, 1);
 }
-
-#define DEF_TOSTR(funcname, breaktimefunc,tostrfunc) \
-  static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) {  \
-    (void)args; \
-    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc); \
-  }
-
-DEF_TOSTR(UTCString, d_gmtime, d_tptostr)
-DEF_TOSTR(String, d_localtime, d_tptostr)
-DEF_TOSTR(DateString, d_localtime, d_tptodatestr)
-DEF_TOSTR(TimeString, d_localtime, d_tptotimestr)
 
 struct d_locale {
   char locale[50];
@@ -10686,7 +10745,7 @@ static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char* frm) {
   d_isobjvalidforstirng(v7, obj);
   
   time = i_as_num(v7, obj);
-
+  
   d_getcurrentlocale(&prev_locale);
   d_setlocale(0);
   
@@ -10700,6 +10759,234 @@ static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char* frm) {
   return v7_create_string(v7, buf, len, 1);
 }
 
+static int d_tptodatestr(struct timeparts* tp, char* buf, int addtz) {
+  int use_ext;
+
+  const char* ey_frm = "%s %s %02d %06d";
+  const char* simpl_frm ="%s %s %02d %04d";
+  
+  (void)addtz;
+  
+  use_ext = (abs(tp->year) > 9999 || tp->year < 0);
+  
+  return sprintf(buf, use_ext? ey_frm: simpl_frm, wday_name[tp->dayofweek], mon_name[tp->month], tp->day, tp->year);
+}
+
+static int d_tptotimestr(struct timeparts* tp, char* buf, int addtz) {
+  int len;
+
+  len = sprintf(buf, "%02d:%02d:%02d GMT", tp->hour, tp->min, tp->sec);
+  
+  if(addtz && d_gettimezone() != 0) {
+    len = sprintf(buf+len, "%c%02d00 (%s)", d_gettimezone() > 0? '-':'+', abs(d_gettimezone()/60), d_gettzname());
+  }
+  
+  return (int)strlen(buf);
+}
+
+static int d_tptostr(struct timeparts* tp, char* buf, int addtz) {
+  int len = d_tptodatestr(tp, buf, addtz);
+  *(buf + len) = ' ';
+  return d_tptotimestr(tp, buf + len + 1, addtz) + len + 1;
+}
+
+/*+++ converting arg to string ++++*/
+/* according ECMA 5.1 we should try to convert any type of parameter to number before goint NaN */
+
+static int d_argtoint(struct v7* v7, val_t* obj, etime_t* ret) {
+  *ret = INVALID_TIME;
+  if(v7_is_double(*obj)) {
+    *ret = trunc(v7_to_double(*obj));
+    if(isinf(*ret)) {
+      /* in case of inf we should use NaN */
+      *ret = INVALID_TIME;
+    }
+  } else if(v7_is_boolean(*obj)) {
+    /* just 0 or 1 */
+    *ret = v7_to_boolean(*obj);
+  } else if(v7_is_string(*obj)) {
+    size_t size;
+    const char* str = v7_to_string(v7, obj, &size);
+    char* endptr;
+    *ret = strtoll(str, &endptr, 10);
+    if(endptr != str + size) {
+      *ret = INVALID_TIME;
+    }
+  } else if(v7_is_object(*obj)) {
+    /* object - going under */
+    val_t val = i_value_of(v7, *obj);
+    return d_argtoint(v7, &val, ret);
+  }
+  
+  return *ret != INVALID_TIME;
+}
+
+/*+++ setXXXX & getXXXX helpers ++++*/
+static struct timeparts* d_getTP(struct v7 *v7, val_t this_obj, val_t args, struct timeparts* tp, fbreaktime breaktimefunc) {
+  etime_t time;
+  (void)args;
+  time = v7_to_double(i_value_of(v7, this_obj));
+  breaktimefunc(&time, tp);
+  return tp;
+}
+
+struct dtimepartsarr {
+  etime_t args[7];
+};
+
+enum detimepartsarr { tpyear = 0, tpmonth , tpdate , tphours, tpminutes, tpseconds, tpmsec, tpmax };
+
+static etime_t d_changepartoftime(etime_t* current, struct dtimepartsarr* a, fbreaktime breaktimefunc, fmaketime maketimefunc) {
+  /* 0 = year, 1 = month , 2 = date , 3 = hours, 4 = minutes, 5 = seconds, 6 = ms */
+  struct timeparts tp;
+  unsigned long i;
+  
+  int* tp_arr[7]; /* C89 doesn't handle initialization like x = {&tp.year, &tp.month, .... } */
+  tp_arr[0] = &tp.year; tp_arr[1] = &tp.month; tp_arr[2] = &tp.day; tp_arr[3] = &tp.hour; tp_arr[4] = &tp.min; tp_arr[5] = &tp.sec; tp_arr[6] = &tp.msec;
+  
+  memset(&tp, 0, sizeof(tp));
+  
+  if(breaktimefunc != NULL) {
+    breaktimefunc(current, &tp);
+  }
+  
+  for(i = 0; i < ARRAY_SIZE(tp_arr); i++) {
+    if(!d_istimeinvalid(&a->args[i])) {
+      *tp_arr[i] = (int)a->args[i];
+    }
+  }
+  
+  return maketimefunc(&tp);
+}
+
+static etime_t d_time_number_from_tp(struct v7 *v7, val_t this_obj, val_t args, int start_pos, fbreaktime breaktimefunc, fmaketime makefilefunc) {
+  etime_t ret_time = INVALID_TIME;
+  long cargs;
+  
+  if((cargs=v7_array_length(v7, args)) >= 1 && !d_isnumberNAN(v7, this_obj)) {
+    int i;
+    struct dtimepartsarr a = {{INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME, INVALID_TIME}};
+    etime_t new_part = INVALID_TIME;
+    
+    for(i=0; i < cargs && (i+start_pos < tpmax); i++) {
+      val_t argi = v7_array_at(v7, args, i);
+      if(!d_argtoint(v7, &argi, &new_part)) {
+        break;
+      }
+      
+      a.args[i+start_pos] = new_part;
+    }
+    
+    if(!d_istimeinvalid(&new_part)) {
+      etime_t current_time = v7_to_double(i_value_of(v7, this_obj));
+      ret_time = d_changepartoftime(&current_time, &a, breaktimefunc, makefilefunc);
+    }
+  }
+  
+  return ret_time;
+}
+
+static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args, int start_pos, fbreaktime breaktimefunc, fmaketime makefilefunc) {
+  val_t n;
+  etime_t ret_time = d_time_number_from_tp(v7, this_obj, args, start_pos, breaktimefunc, makefilefunc);
+                                                                       
+  n = v7_create_number(ret_time);
+  v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, n);
+                                                                       
+  return n;
+}
+
+/*++++++++++++++ API +++++++++++++++*/
+
+/* constructor */
+static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+  etime_t ret_time = 0;   
+  if(v7_is_object(this_obj) && this_obj != v7->global_object) {
+    long cargs = v7_array_length(v7, args);
+    if(cargs <=0 ) {
+      /* no parameters - return current date & time */
+      d_gettime(&ret_time);
+    } else if(cargs == 1) {
+      /* one parameter */
+      val_t arg = v7_array_at(v7, args, 0);
+      if(v7_is_string(arg)){ /* it could be string */
+        size_t str_size;
+        const char* str = v7_to_string(v7, &arg, &str_size);
+        d_timeFromString(&ret_time, str, str_size);
+      } else {
+        d_argtoint(v7, &arg, &ret_time);
+      }
+    } else {
+      /* 2+ paramaters - should be parts of a date */
+      struct dtimepartsarr a;
+      int i;
+      
+      memset(&a, 0, sizeof(a));
+      
+      for(i=0; i < cargs; i++) {
+        val_t val = v7_array_at(v7, args, i);
+        if(!d_argtoint(v7, &val, &a.args[i])) {
+          break;
+        }
+      }
+      
+      if(i>=cargs) {
+        if(a.args[tpdate] == 0 ) {
+          a.args[tpdate] = 1; /* If date is supplied then let dt be ToNumber(date); else let dt be 1. */
+        }
+      
+        if(a.args[tpyear] >=0 && a.args[tpyear] <=99) {
+          a.args[tpyear] += 1900; /* If y is not NaN and 0 <= ToInteger(y) <= 99, then let yr be 1900+ToInteger(y); otherwise, let yr be y. */
+        }
+
+        ret_time = ecma_UTC(d_changepartoftime(0, &a, 0, d_gmktime));
+      }
+    }
+  
+    v7_to_object(this_obj)->prototype = v7_to_object(v7->date_prototype);
+    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_number(ret_time));
+    return this_obj;
+  } else {
+    /* according to 15.9.2.1 we should ignore all parameters in case of function-call */
+    struct timeparts tp;
+    char buf[50];
+    int len;
+    
+    d_gettime(&ret_time);
+    d_localtime(&ret_time, &tp);
+    len = d_tptostr(&tp, buf, 1);
+    
+    return v7_create_string(v7, buf, len, 1);
+  }
+}
+
+/*++++ toXXXString functions ++++*/
+static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
+  char buf[30];
+  etime_t time; int len;
+  (void)args;
+  
+  d_isobjvalidforstirng(v7, this_obj);
+  
+  time = v7_to_double(i_value_of(v7, this_obj));
+  len = d_timetoISOstr(&time, buf, sizeof(buf));
+  
+  return v7_create_string(v7, buf, len, 1);
+}
+
+/* using macros to avoid copy-paste technic */
+#define DEF_TOSTR(funcname, breaktimefunc,tostrfunc, addtz) \
+  static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) {  \
+    (void)args; \
+    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc, addtz); \
+  }
+
+DEF_TOSTR(UTCString, d_gmtime, d_tptostr, 0)
+DEF_TOSTR(String, d_localtime, d_tptostr, 1)
+DEF_TOSTR(DateString, d_localtime, d_tptodatestr, 1)
+DEF_TOSTR(TimeString, d_localtime, d_tptotimestr, 1)
+
+
 #define DEF_TOLOCALESTR(funcname, frm) \
   static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) { \
     (void)args; \
@@ -10710,18 +10997,7 @@ DEF_TOLOCALESTR(LocaleString, "%c")
 DEF_TOLOCALESTR(LocaleDateString, "%x")
 DEF_TOLOCALESTR(LocaleTimeString, "%X")
 
-
-static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
-  return Date_toISOString(v7, this_obj, args);
-}
-
-static struct timeparts* d_getTP(struct v7 *v7, val_t this_obj, val_t args, struct timeparts* tp, fbreaktime breaktimefunc) {
-  etime_t time;
-  (void)args;
-  time = v7_to_double(i_value_of(v7, this_obj));
-  breaktimefunc(&time, tp);
-  return tp;
-}
+/*++++ get functions ++++*/
 
 #define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc) \
   static val_t Date_get##funcName(struct v7 *v7, val_t this_obj, val_t args) { \
@@ -10743,33 +11019,17 @@ DEF_GET_TP(Seconds, sec)
 DEF_GET_TP(Milliseconds, msec)
 DEF_GET_TP(Day, dayofweek)
 
-static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)args;
-  if(!v7_is_object(this_obj) || (v7_is_object(this_obj) && v7_to_object(this_obj)->prototype != v7_to_object(v7->date_prototype))) {
-    throw_exception(v7, "TypeError", "Date.valueOf called on non-Date object");
-}
-  
-  return Obj_valueOf(v7, this_obj, args);
-}
-
-static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
-  return Date_valueOf(v7, this_obj, args);
-}
-
-static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) { 
-  (void)args; (void)v7; (void)this_obj;
-  return v7_create_number(d_gettimezone()); 
-} 
+/*++++ set functions ++++*/
 
 static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   val_t n;
   if(v7_array_length(v7, args) >= 1) {
     val_t arg0 = v7_array_at(v7, args, 0);
-    d_timetoint(v7, &arg0, &ret_time);
+    d_argtoint(v7, &arg0, &ret_time);
   }
 
-  n = d_createnumber(&ret_time);
+  n = v7_create_number(ret_time);
   v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, n);
   return n;
 }
@@ -10791,9 +11051,28 @@ DEF_SET_TP(Date, tpdate)
 DEF_SET_TP(Month, tpmonth)
 DEF_SET_TP(FullYear, tpyear)
 
-static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
-  /* TODO(alashkin): verify this statement */
-  return is_prototype_of(this_obj, v7->date_prototype);
+/*++++ other API ++++*/
+
+static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
+  return Date_toISOString(v7, this_obj, args);
+}
+
+static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+  (void)args;
+  if(!v7_is_object(this_obj) || (v7_is_object(this_obj) && v7_to_object(this_obj)->prototype != v7_to_object(v7->date_prototype))) {
+    throw_exception(v7, "TypeError", "Date.valueOf called on non-Date object");
+  }
+  
+  return Obj_valueOf(v7, this_obj, args);
+}
+
+static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
+  return Date_valueOf(v7, this_obj, args);
+}
+
+static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
+  (void)args; (void)v7; (void)this_obj;
+  return v7_create_number(d_gettimezone());
 }
 
 static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
@@ -10806,7 +11085,7 @@ static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
 
   d_gettime(&ret_time);
   
-  return d_createnumber(&ret_time);
+  return v7_create_number(ret_time);
 }
 
 static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
@@ -10828,7 +11107,7 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
     }
   }
   
-  return d_createnumber(&ret_time);
+  return v7_create_number(ret_time);
 }
 
 static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
@@ -10840,19 +11119,26 @@ static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   }
 
   ret_time = d_time_number_from_tp(v7, this_obj, args, tpyear, 0, d_gmktime);
-  return d_createnumber(&ret_time);
+  return v7_create_number(ret_time);
 }
 
 /****** Initialization *******/
 
+/* we should set V7_PROPERTY_DONT_ENUM for all Date props */
+/* TODO(???): check other objects */
+
+static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name, v7_cfunction_t f) {
+  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM, v7_create_cfunction(f));
+}
+
 #define DECLARE_GET(func) \
-  set_cfunc_prop(v7, v7->date_prototype, "getUTC"#func, Date_getUTC##func); \
-  set_cfunc_prop(v7, v7->date_prototype, "get"#func, Date_get##func); \
+  d_set_cfunc_prop(v7, v7->date_prototype, "getUTC"#func, Date_getUTC##func); \
+  d_set_cfunc_prop(v7, v7->date_prototype, "get"#func, Date_get##func); \
 
 #define DECLARE_GET_AND_SET(func)   \
   DECLARE_GET(func) \
-  set_cfunc_prop(v7, v7->date_prototype, "setUTC"#func, Date_setUTC##func); \
-  set_cfunc_prop(v7, v7->date_prototype, "set"#func, Date_set##func);
+  d_set_cfunc_prop(v7, v7->date_prototype, "setUTC"#func, Date_setUTC##func); \
+  d_set_cfunc_prop(v7, v7->date_prototype, "set"#func, Date_set##func);
 
 
 V7_PRIVATE void init_date(struct v7 *v7) {
@@ -10861,8 +11147,8 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
   v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
   v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
-  v7_set_property(v7, v7->number_prototype, "constructor", 11, attrs, date);
-  v7_set_property(v7, v7->global_object, "Date", 6, 0, date);
+  d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
+  v7_set_property(v7, v7->global_object, "Date", 6, V7_PROPERTY_DONT_ENUM, date);
   
   DECLARE_GET_AND_SET(Date);
   DECLARE_GET_AND_SET(FullYear);
@@ -10873,82 +11159,78 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   DECLARE_GET_AND_SET(Milliseconds);
   DECLARE_GET(Day);
  
-  set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset", Date_getTimezoneOffset); 
+  d_set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset", Date_getTimezoneOffset);
+ 
+  d_set_cfunc_prop(v7, v7->date_prototype, "getTime", Date_getTime);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toISOString", Date_toISOString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);
 
-  set_cfunc_prop(v7, v7->date_prototype, "getTime", Date_getTime);
-  set_cfunc_prop(v7, v7->date_prototype, "toISOString", Date_toISOString);
-  set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);  
-
-  set_cfunc_prop(v7, v7->date_prototype, "setTime", Date_setTime);
-  set_cfunc_prop(v7, v7->date_prototype, "now", Date_now);
-  set_cfunc_prop(v7, v7->date_prototype, "parse", Date_parse);
-  set_cfunc_prop(v7, v7->date_prototype, "UTC", Date_UTC);
-  set_cfunc_prop(v7, v7->date_prototype, "toString", Date_toString);
-  set_cfunc_prop(v7, v7->date_prototype, "toDateString", Date_toDateString);
-  set_cfunc_prop(v7, v7->date_prototype, "toTimeString", Date_toTimeString);
-  set_cfunc_prop(v7, v7->date_prototype, "toUTCString", Date_toUTCString);
-  set_cfunc_prop(v7, v7->date_prototype, "toLocaleString", Date_toLocaleString);
-  set_cfunc_prop(v7, v7->date_prototype, "toLocaleDateString", Date_toLocaleDateString);
-  set_cfunc_prop(v7, v7->date_prototype, "toLocaleTimeString", Date_toLocaleTimeString);
-  set_cfunc_prop(v7, v7->date_prototype, "toJSON", Date_toJSON);
+  d_set_cfunc_prop(v7, v7->date_prototype, "setTime", Date_setTime);
+  d_set_cfunc_prop(v7, v7->date_prototype, "now", Date_now);
+  d_set_cfunc_prop(v7, v7->date_prototype, "parse", Date_parse);
+  d_set_cfunc_prop(v7, v7->date_prototype, "UTC", Date_UTC);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toString", Date_toString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toDateString", Date_toDateString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toTimeString", Date_toTimeString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toUTCString", Date_toUTCString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toLocaleString", Date_toLocaleString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toLocaleDateString", Date_toLocaleDateString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toLocaleTimeString", Date_toLocaleTimeString);
+  d_set_cfunc_prop(v7, v7->date_prototype, "toJSON", Date_toJSON);
 
   tzset();
 }
-
 /*
- 
-++ 01. Date ( [ year [, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] ] ] )
-++ 02. new Date (year, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] )
-+03. new Date (value)
-++ 04. new Date ( )
-05. Date.prototype
-+06. Date.parse (string)
-++ 07. Date.UTC (year, month [, date [, hours [, minutes [, seconds [, ms ] ] ] ] ] )
-+ 08. Date.now ( )
-09. Date.prototype.constructor
-+10. Date.prototype.toString ( )
-+11. Date.prototype.toDateString ( )
-+12. Date.prototype.toTimeString ( )
-+13. Date.prototype.toLocaleString (
-+14. Date.prototype.toLocaleDateString ( )
-+15. Date.prototype.toLocaleTimeString ( )
-++ 16. Date.prototype.valueOf ( )
-++ 17. Date.prototype.getTime ( )
-++ 18. Date.prototype.getFullYear ( )
-++ 19. Date.prototype.getUTCFullYear ( )
-++ 20. Date.prototype.getMonth ( )
-++ 21. Date.prototype.getUTCMonth ( )
-++ 22. Date.prototype.getDate ( )
-++ 23. Date.prototype.getUTCDate ( )
-++ 24. Date.prototype.getDay ( )
-++ 25. Date.prototype.getUTCDay ( )
-++ 27. Date.prototype.getHours ( )
-++ 28. Date.prototype.getUTCHours ( )
-++ 29. Date.prototype.getMinutes ( )
-++ 30. Date.prototype.getUTCMinutes ( )
-++ 31. Date.prototype.getSeconds ( )
-++ 32. Date.prototype.getUTCSeconds ( )
-++ 33. Date.prototype.getMilliseconds ( )
-++ 34. Date.prototype.getUTCMilliseconds ( )
-++ 35. Date.prototype.getTimezoneOffset ( )
-++ 36. Date.prototype.setTime (time)
-++ 37. Date.prototype.setMilliseconds (ms)
-++ 38. Date.prototype.setUTCMilliseconds (ms)
-++ 39. Date.prototype.setSeconds (sec [, ms ] )
-++ 40. Date.prototype.setUTCSeconds (sec [, ms ] )
-++ 41. Date.prototype.setMinutes (min [, sec [, ms ] ] )
-++ 42. Date.prototype.setUTCMinutes (min [, sec [, ms ] ] )
-++ 43. Date.prototype.setHours (hour [, min [, sec [, ms ] ] ] )
-++ 44. Date.prototype.setUTCHours (hour [, min [, sec [, ms ] ] ] )
-++ 45. Date.prototype.setDate (date)
-++ 46. Date.prototype.setUTCDate (date)
-++ 47. Date.prototype.setMonth (month [, date ] )
-++ 48. Date.prototype.setUTCMonth (month [, date ] )
-++ 49. Date.prototype.setFullYear (year [, month [, date ] ] )
-++ 50. Date.prototype.setUTCFullYear (year [, month [, date ] ] )
-+51. Date.prototype.toUTCString ( )
-++ 52. Date.prototype.toISOString ( )
-++ 53. Date.prototype.toJSON ( key )
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
 
-*/
 
+#define MARK(p) (* (uintptr_t *) &(p) |= 1)
+
+/* call only on already marked values */
+#define UNMARK(p) (* (uintptr_t *) &(p)) &= ~1)
+
+#define MARKED(p) ((uintptr_t) (p) & 1)
+
+V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
+  (void) v7;
+  return (struct v7_object *) malloc(sizeof(struct v7_object));
+}
+
+V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
+  (void) v7;
+  return (struct v7_property *) malloc(sizeof(struct v7_property));
+}
+
+V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
+  (void) v7;
+  return (struct v7_function *) malloc(sizeof(struct v7_function));
+}
+
+V7_PRIVATE void gc_mark(val_t v) {
+  struct v7_object *obj;
+  struct v7_property *prop;
+  struct v7_property *next;
+
+  if (!v7_is_object(v)) {
+    return;
+  }
+  obj = v7_to_object(v);
+  if (MARKED(obj->properties)) return;
+
+  for ((prop = obj->properties), MARK(obj->properties);
+       prop != NULL; prop = next) {
+    gc_mark(prop->value);
+    next = prop->next;
+    MARK(prop->next);
+  }
+
+  /* function scope pointer is aliased to the object's prototype pointer */
+  gc_mark(v7_object_to_value(obj->prototype));
+}
+
+/* Perform garbage collection */
+void v7_gc(struct v7 *v7) {
+  gc_mark(v7->global_object);
+}

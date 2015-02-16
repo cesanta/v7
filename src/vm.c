@@ -33,6 +33,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->cfunction_prototype)) {
         return V7_TYPE_CFUNCTION_OBJECT;
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->date_prototype)) {
+        return V7_TYPE_DATE_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -538,7 +541,11 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->number_prototype;
+    }else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
+        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
+      return v7->date_prototype;
     }
+    
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
