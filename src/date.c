@@ -346,7 +346,7 @@ int d_getnumbyname(const char** arr, int arr_size, const char *str) {
   int i;
   for(i = 0; i < arr_size; i++) {
     if(strncmp(arr[i], str, 3) == 0 ) {
-      return i;
+      return i + 1;
     }
   }
   
@@ -355,7 +355,7 @@ int d_getnumbyname(const char** arr, int arr_size, const char *str) {
 
 int date_parse(const char* str, int* a1, int* a2, int* a3, char sep, char* rest) {
   char frmDate[] = " %d/%d/%d%[^\0]";
-  frmDate[2] = frmDate[5] = sep;
+  frmDate[3] = frmDate[6] = sep;
   return sscanf(str, frmDate, a1, a2, a3, rest);
 }
 
@@ -389,10 +389,14 @@ static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
   
   /* #3: trying toString()/toUTCString()/toDateFormat() formats */
   char month[4];
-  const char* frmString = " %03*s %03s %02d %d %02d:%02d:%02d GMT%d";
-  res = sscanf(str, frmString, month, &tp->day, &tp->year, &tp->hour, &tp->min, &tp->sec, tz);
-  if(res ==3 || res == 6 || res == 7) {
+  char gmt[4];
+  const char* frmString = " %03*s %03s %02d %d %02d:%02d:%02d %03s%d";
+  res = sscanf(str, frmString, month, &tp->day, &tp->year, &tp->hour, &tp->min, &tp->sec, gmt, tz);
+  if(res ==3 || res == 7 || res == 8 || res == 6) {
     if( (tp->month = d_getnumbyname(mon_name, ARRAY_SIZE(mon_name), month)) != -1) {
+      if(res == 7 && strncmp(gmt, "GMT", 3) == 0 ) {
+        *tz = 0;
+      }
       return 1;
     }
   }
@@ -401,7 +405,7 @@ static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
   
   /* trying date */
   char buf1[100] = {0};
-  if(!(date_parse(str, &tp->year, &tp->day, &tp->month, '/', buf1) >= 3 ||
+  if(!(date_parse(str, &tp->year, &tp->month, &tp->day, '/', buf1) >= 3 ||
        date_parse(str, &tp->day, &tp->month, &tp->year, '.', buf1) >= 3 ||
        date_parse(str, &tp->year, &tp->month, &tp->day, '-', buf1) >= 3 ) ) {
     return 0;
@@ -419,6 +423,7 @@ static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
   }
   
   /* trying seconds */
+  memset(buf1, 0, sizeof(buf1));
   const char* frmss = ":%d%[^\0]";
   res = sscanf(buf2, frmss, &tp->sec, buf1);
   
@@ -426,25 +431,30 @@ static int d_parsedatestr(const char* str, struct timeparts* tp, int* tz) {
   char* rest = res? buf1: buf2;
   char* buf = res? buf2: buf1;
   
-  const char* frmtz = " GMT%d%[^\0]";
-  res = sscanf(rest, frmtz, tz, buf);
-  
+  const char* frmtz = " %03s%d%[^\0]";
+  res = sscanf(rest, frmtz, gmt, tz, buf);
+  if(res == 1 && strncmp(gmt, "GMT", 3) == 0) {
+    *tz = 0;
+  }
+
   /* return OK if we are at the end of string */
-  return (res <= 1);
+  return (res <= 2);
 }
 
-static int d_timeFromString(etime_t* time, const char* buf, size_t buf_size) {
+static int d_timeFromString(etime_t* time, const char* str, size_t buf_size) {
   *time = INVALID_TIME;
   
-  if(buf_size < 100) {
+  if(buf_size > 100) {
+    /* too long for valid date string */
     return 0;
   }
   
   struct timeparts tp;
   int tz;
 
-  if(d_parsedatestr(buf, &tp, &tz)) {
+  if(d_parsedatestr(str, &tp, &tz)) {
     /* check results */
+    tp.month--;
     int valid = tp.day >=1 && tp.day <= 31;
     valid &= tp.month >=0 && tp.month <= 11;
     valid &= tp.hour >= 0 && tp.hour <= 23;
@@ -460,8 +470,8 @@ static int d_timeFromString(etime_t* time, const char* buf, size_t buf_size) {
     if(valid) {
       *time = d_gmktime(&tp);
       
-      tz = (tz == NO_TZ)? d_gettimezone() * msPerMinute : tz * msPerHour;
-      *time += tz;
+      tz = (tz == NO_TZ)? -d_gettimezone() * msPerMinute : tz * msPerHour;
+      *time -= tz;
     }
   }
 
