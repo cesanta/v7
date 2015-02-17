@@ -410,6 +410,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
+  char *tmp;
 
   (void) args;
   end = len;
@@ -421,7 +422,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
     }
   }
 
-  char *tmp = (char *) malloc(end - start);
+  tmp = (char *) malloc(end - start);
   memcpy(tmp, p + start, end - start);
   res = v7_create_string(v7, tmp, end - start, 1);
   free(tmp);

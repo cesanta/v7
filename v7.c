@@ -754,22 +754,15 @@ struct v7 {
 
   int strict_mode;  /* true if currently in strict mode */
 
-#if defined(__cplusplus)
-  ::jmp_buf jmp_buf;
-  ::jmp_buf abort_jmp_buf;
-#else
-  jmp_buf jmp_buf;              /* Exception environment for v7_exec() */
-  /* Handle implementation errors that shouldn't be caught from JS */
-  jmp_buf abort_jmp_buf;
-#endif
   val_t thrown_error;
   char error_msg[60];           /* Exception message */
   int creating_exception;  /* Avoids reentrant exception creation */
-
 #if defined(__cplusplus)
+  ::jmp_buf jmp_buf;
   ::jmp_buf label_jmp_buf;
 #else
-  jmp_buf label_jmp_buf;  /* Target for non local (labeled) breaks */
+  jmp_buf jmp_buf;       /* Exception environment for v7_exec() */
+  jmp_buf label_jmp_buf; /* Target for non local (labeled) breaks */
 #endif
   char *label;            /* Inner label */
   size_t label_len;       /* Inner label length */
@@ -4077,6 +4070,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
+  char *tmp;
 
   (void) args;
   end = len;
@@ -4088,7 +4082,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
     }
   }
 
-  char *tmp = (char *) malloc(end - start);
+  tmp = (char *) malloc(end - start);
   memcpy(tmp, p + start, end - start);
   res = v7_create_string(v7, tmp, end - start, 1);
   free(tmp);
@@ -8075,22 +8069,16 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   val_t old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
-  jmp_buf saved_jmp_buf, saved_abort_buf, saved_label_buf;
+  jmp_buf saved_jmp_buf, saved_label_buf;
   enum v7_err err = V7_OK;
   val_t r = V7_UNDEFINED;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
-  memcpy(&saved_abort_buf, &v7->abort_jmp_buf, sizeof(saved_abort_buf));
   memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
 
   ast_init(a, 0);
   v7->last_ast = a;
-  if (sigsetjmp(v7->abort_jmp_buf, 0) != 0) {
-    r = v7->thrown_error;
-    err = V7_EXEC_EXCEPTION;
-    goto cleanup;
-  }
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     r = v7->thrown_error;
     err = V7_EXEC_EXCEPTION;
@@ -8114,7 +8102,6 @@ cleanup:
   }
   v7->this_object = old_this;
   memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
-  memcpy(&v7->abort_jmp_buf, &saved_abort_buf, sizeof(saved_abort_buf));
   memcpy(&v7->label_jmp_buf, &saved_label_buf, sizeof(saved_label_buf));
 
   return err;
