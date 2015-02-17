@@ -625,16 +625,19 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
 }
 
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
-                                               v7_cfunction_t f) {
+                                               v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->cfunction_prototype);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
+  v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
+                  V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
+                  v7_create_number(num_args));
   return obj;
 }
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
-                                  v7_cfunction_t f) {
+                                  v7_cfunction_t f, int num_args) {
   return v7_set_property(v7, o, name, strlen(name), 0,
-                         v7_create_cfunction_object(v7, f));
+                         v7_create_cfunction_object(v7, f, num_args));
 }
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,

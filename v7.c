@@ -954,9 +954,9 @@ V7_PRIVATE void init_number(struct v7 *v7);
 V7_PRIVATE void init_json(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
-V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t);
+V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int);
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
-                                  v7_cfunction_t f);
+                                  v7_cfunction_t f, int num_args);
 
 V7_PRIVATE val_t v_get_prototype(val_t);
 V7_PRIVATE int is_prototype_of(val_t, val_t);
@@ -3315,6 +3315,11 @@ int main(void) {
  */
 
 
+struct a_sort_data {
+  struct v7 *v7;
+  val_t sort_func;
+};
+
 static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   (void) v7;
   (void) this_obj;
@@ -3375,10 +3380,17 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static int a_cmp(void *user_data, const void *pa, const void *pb) {
-  struct v7 *v7 = (struct v7 *) user_data;
-  val_t a = * (val_t *) pa, b = * (val_t *) pb;
+  struct a_sort_data *sort_data = (struct a_sort_data *) user_data;
+  struct v7 *v7 = sort_data->v7;
+  val_t a = * (val_t *) pa, b = * (val_t *) pb, func = sort_data->sort_func;
 
-  if (v7_is_double(a) && v7_is_double(b)) {
+  if (v7_is_function(func)) {
+    val_t res, args = v7_create_array(v7);
+    v7_array_append(v7, args, a);
+    v7_array_append(v7, args, b);
+    res = v7_apply(v7, func, V7_UNDEFINED, args);
+    return (int) - v7_to_double(res);
+  } else if (v7_is_double(a) && v7_is_double(b)) {
     return v7_to_double(b) - v7_to_double(a);
   } else {
     char sa[100], sb[100];
@@ -3421,15 +3433,15 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   if (!v7_is_object(obj)) return obj;
   assert(obj != v7->global_object);
 
-  /* TODO(lsm): respect first argument, a sorting function */
-  (void) arg0;
-
   for (i = 0; i < len; i++) {
     arr[i] = v7_array_at(v7, obj, i);
   }
 
   if (sorting_func != NULL) {
-    a_qsort(arr, 0, len - 1, v7);
+    struct a_sort_data sort_data;
+    sort_data.v7 = v7;
+    sort_data.sort_func = arg0;
+    a_qsort(arr, 0, len - 1, &sort_data);
   }
 
   for (i = 0; i < len; i++) {
@@ -3454,16 +3466,13 @@ static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
-  struct v7_property *p = v7_to_object(this_obj)->properties;
+  struct v7_property *p;
   val_t res = V7_UNDEFINED;
 
   (void) v7; (void) args;
 
-  if (!is_prototype_of(this_obj, v7->array_prototype)) {
-    return res;
-  }
-
-  if (p != NULL) {
+  if (is_prototype_of(this_obj, v7->array_prototype) &&
+      (p = v7_to_object(this_obj)->properties) != NULL) {
     res = p->value;
     v7_to_object(this_obj)->properties = p->next;
   }
@@ -3471,18 +3480,71 @@ static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t res = V7_UNDEFINED;
+  size_t sep_size = 0;
+  const char *sep = NULL;
+
+  /* Get pointer to the separator string */
+  if (!v7_is_string(arg0)) {
+    /* If no separator is provided, use comma */
+    arg0 = v7_create_string(v7, ",", 1, 1);
+  }
+  sep = v7_to_string(v7, &arg0, &sep_size);
+
+  /* Do the actual join */
+  if (is_prototype_of(this_obj, v7->array_prototype)) {
+    struct mbuf m;
+    char buf[100], *p;
+    long i, n, num_elems = v7_array_length(v7, this_obj);
+
+    mbuf_init(&m, 0);
+
+    for (i = 0; i < num_elems; i++) {
+      /* Append separator */
+      if (i > 0) {
+        mbuf_append(&m, sep, sep_size);
+      }
+
+      /* Append next item from an array */
+      p = buf;
+      n = to_str(v7, v7_array_at(v7, this_obj, i), buf, sizeof(buf), 0);
+      if (n > (long) sizeof(buf)) {
+        p = (char *) malloc(n + 1);
+        to_str(v7, v7_array_at(v7, this_obj, i), p, n, 0);
+      }
+      mbuf_append(&m, p, n);
+      if (p != buf) {
+        free(p);
+      }
+    }
+
+    /* mbuf contains concatenated string now. Copy it to the result. */
+    res = v7_create_string(v7, m.buf, m.len, 1);
+    mbuf_free(&m);
+  }
+
+  return res;
+}
+
+static val_t Array_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  return Array_join(v7, this_obj, args);
+}
+
 V7_PRIVATE void init_array(struct v7 *v7) {
-  val_t ctor = v7_create_cfunction_object(v7, Array_ctor);
+  val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
   val_t length = v7_create_array(v7);
 
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
-  v7_to_object(ctor)->prototype = v7_to_object(v7->array_prototype);
 
-  set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push, 1);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort, 1);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse, 0);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop, 0);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "join", Array_join, 1);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
 
   v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
   v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
@@ -5448,16 +5510,19 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
 }
 
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
-                                               v7_cfunction_t f) {
+                                               v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->cfunction_prototype);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
+  v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
+                  V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
+                  v7_create_number(num_args));
   return obj;
 }
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
-                                  v7_cfunction_t f) {
+                                  v7_cfunction_t f, int num_args) {
   return v7_set_property(v7, o, name, strlen(name), 0,
-                         v7_create_cfunction_object(v7, f));
+                         v7_create_cfunction_object(v7, f, num_args));
 }
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
@@ -7369,6 +7434,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           case V7_TYPE_BOOLEAN:
             return v7_create_string(v7, "boolean", 7, 1);
           case V7_TYPE_FUNCTION_OBJECT:
+          case V7_TYPE_CFUNCTION_OBJECT:
           case V7_TYPE_CFUNCTION:
             return v7_create_string(v7, "function", 8, 1);
           default:
