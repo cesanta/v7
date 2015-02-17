@@ -5718,6 +5718,8 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
+  val_t res;
+  char *tmp;
   const char *p = v7_to_string(v7, &s, &n);
   if (!v7_is_string(s)) return V7_UNDEFINED;
   if (start < 0) start = n + start;
@@ -5725,7 +5727,11 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   if (start > (long) n) start = n;
   if (len < 0) len = 0;
   if (len > (long) n - start) len = n - start;
-  return v7_create_string(v7, p + start, len, 1);
+  tmp = (char *) malloc(len);
+  memcpy(tmp, p + start, len);
+  res = v7_create_string(v7, tmp, len, 1);
+  free(tmp);
+  return res;
 }
 
 /* TODO(lsm): remove this when init_stdlib() is upgraded */
