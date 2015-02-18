@@ -40,7 +40,7 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i = 0, n;
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
   val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
@@ -90,7 +90,7 @@ static val_t to_string(struct v7 *v7, val_t v) {
 }
 
 static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = i_value_of(v7, this_obj);
+  val_t res = to_string(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
 
   for (i = 0; i < num_args; i++) {
@@ -102,7 +102,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = v7_array_at(v7, args, 1);
   val_t sub, res = v7_create_number(-1);
@@ -151,7 +151,7 @@ static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   val_t res = V7_UNDEFINED;
 
   if (!v7_is_string(arg0) || !v7_is_string(s)) {
@@ -374,7 +374,7 @@ V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
 
 static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
                          Rune (*func)(Rune)) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   size_t i, n, len;
   const char *p = v7_to_string(v7, &s, &len);
   val_t res = v7_create_string(v7, p, len, 1);
@@ -406,7 +406,7 @@ static int s_isspace(Rune c) {
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res;
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
@@ -470,7 +470,7 @@ static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_array(v7);
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
   long num_elems = 0, limit = arg_long(v7, args, 1, LONG_MAX);
   size_t n1, n2, i, j;
