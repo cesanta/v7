@@ -9,6 +9,13 @@
 #include "internal.h"
 #include "vm.h"
 
+#define MARK(p) (* (uintptr_t *) &(p) |= 1)
+
+/* call only on already marked values */
+#define UNMARK(p) (* (uintptr_t *) &(p) &= ~1)
+
+#define MARKED(p) ((uintptr_t) (p) & 1)
+
 struct gc_tmp_frame {
   struct v7 *v7;
   size_t pos;
@@ -27,7 +34,7 @@ V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
 V7_PRIVATE void gc_mark(struct v7 *, val_t);
 
-V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t);
+V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, const char *);
 V7_PRIVATE void gc_arena_grow(struct gc_arena *, size_t);
 V7_PRIVATE void gc_arena_destroy(struct gc_arena *a);
 V7_PRIVATE void gc_sweep(struct gc_arena *, size_t);

@@ -1056,6 +1056,13 @@ V7_PRIVATE double i_as_num(struct v7 *, val_t);
 #define GC_H_INCLUDED
 
 
+#define MARK(p) (* (uintptr_t *) &(p) |= 1)
+
+/* call only on already marked values */
+#define UNMARK(p) (* (uintptr_t *) &(p) &= ~1)
+
+#define MARKED(p) ((uintptr_t) (p) & 1)
+
 struct gc_tmp_frame {
   struct v7 *v7;
   size_t pos;
@@ -1074,7 +1081,7 @@ V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
 V7_PRIVATE void gc_mark(struct v7 *, val_t);
 
-V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t);
+V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, const char *);
 V7_PRIVATE void gc_arena_grow(struct gc_arena *, size_t);
 V7_PRIVATE void gc_arena_destroy(struct gc_arena *a);
 V7_PRIVATE void gc_sweep(struct gc_arena *, size_t);
@@ -5867,12 +5874,12 @@ struct v7 *v7_create(void) {
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #define GC_SIZE (64 * 10)
-    v7->object_arena.name = "object";
-    gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE);
-    v7->function_arena.name = "function";
-    gc_arena_init(&v7->function_arena, sizeof(struct v7_function), GC_SIZE);
-    v7->property_arena.name = "property";
-    gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3);
+    gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE,
+                  "object");
+    gc_arena_init(&v7->function_arena, sizeof(struct v7_function), GC_SIZE,
+                  "function");
+    gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3,
+                  "property");
 
     /*
      * Ensure the first call to v7_create_value will use a null proto:
@@ -5936,13 +5943,6 @@ void v7_destroy(struct v7 *v7) {
  */
 
 
-#define MARK(p) (* (uintptr_t *) &(p) |= 1)
-
-/* call only on already marked values */
-#define UNMARK(p) (* (uintptr_t *) &(p) &= ~1)
-
-#define MARKED(p) ((uintptr_t) (p) & 1)
-
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
@@ -5981,11 +5981,13 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
 }
 
 /* Initializes a new arena. */
-V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size, size_t size) {
+V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
+                              size_t size, const char *name) {
   assert(cell_size >= sizeof(uintptr_t));
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
   a->size = size;
+  a->name = name;
   /* Avoid arena initialization cost when GC is disabled */
 #ifdef V7_ENABLE_GC
   gc_arena_grow(a, size);

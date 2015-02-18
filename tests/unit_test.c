@@ -1459,45 +1459,45 @@ static const char *test_gc_mark(void) {
 
   v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
   gc_mark(v7, v);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
   gc_mark(v7, v7->global_object);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "function f() {}; o=new f;o");
   gc_mark(v7, v);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "function f() {}; Object.getPrototypeOf(new f)");
   gc_mark(v7, v7->global_object);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "({a:1})");
   gc_mark(v7, v7->global_object);
-  ASSERT(!((uintptr_t) v7_to_object(v)->properties & 1));
+  ASSERT(!MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "var f;(function() {var x={a:1};f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `x` is reachable through `f`'s closure scope */
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "(function() {var x={a:1};var f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `f` is unreachable, hence `x` is not marked through the scope */
-  ASSERT(!((uintptr_t) v7_to_object(v)->properties & 1));
+  ASSERT(!MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
