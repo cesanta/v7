@@ -729,19 +729,25 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len) {
+  char *old_base = m->buf;
   size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);  /* Calculate how many bytes length takes */
-  mbuf_insert(m, offset, NULL, k + n);   /* Allocate  buffer */
+  mbuf_insert(m, offset, NULL, k + n);  /* Allocate  buffer */
+  /*
+   * The input string might be backed by the mbuf which might get
+   * relocated by mbuf_insert.
+   */
+  if (p >= old_base && p < (old_base + m->len - k - n)) {
+    if (p >= old_base + offset) {
+      p += k + n;
+    }
+    p += m->buf - old_base;
+  }
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
   unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
-/*
- * Create a string.
- *
- * Creating a string might relocate the string mbufs, hence the `p` argument
- * shouldn't point inside owned_strings or foreign_strings.
- */
+/* Create a string */
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;

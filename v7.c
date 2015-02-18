@@ -4127,12 +4127,10 @@ static int s_isspace(Rune c) {
 }
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res;
   val_t s = i_value_of(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
-  char *tmp;
 
   (void) args;
   end = len;
@@ -4144,11 +4142,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
     }
   }
 
-  tmp = (char *) malloc(end - start);
-  memcpy(tmp, p + start, end - start);
-  res = v7_create_string(v7, tmp, end - start, 1);
-  free(tmp);
-  return res;
+  return v7_create_string(v7, p + start, end - start, 1);
 }
 
 static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
@@ -4224,10 +4218,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       }
     }
     if (j < i && n2 > 0) {
-      char *tmp = (char *) malloc(i - j - 1);
-      memcpy(tmp, s1 + j, i - j - 1);
-      v7_array_append(v7, res, v7_create_string(v7, tmp, i - j - 1, 1));
-      free(tmp);
+      v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
     }
   }
 
@@ -5614,19 +5605,25 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len) {
+  char *old_base = m->buf;
   size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);  /* Calculate how many bytes length takes */
-  mbuf_insert(m, offset, NULL, k + n);   /* Allocate  buffer */
+  mbuf_insert(m, offset, NULL, k + n);  /* Allocate  buffer */
+  /*
+   * The input string might be backed by the mbuf which might get
+   * relocated by mbuf_insert.
+   */
+  if (p >= old_base && p < (old_base + m->len - k - n)) {
+    if (p >= old_base + offset) {
+      p += k + n;
+    }
+    p += m->buf - old_base;
+  }
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
   unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
-/*
- * Create a string.
- *
- * Creating a string might relocate the string mbufs, hence the `p` argument
- * shouldn't point inside owned_strings or foreign_strings.
- */
+/* Create a string */
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
