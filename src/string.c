@@ -405,12 +405,10 @@ static int s_isspace(Rune c) {
 }
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res;
   val_t s = to_string(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
-  char *tmp;
 
   (void) args;
   end = len;
@@ -422,11 +420,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
     }
   }
 
-  tmp = (char *) malloc(end - start);
-  memcpy(tmp, p + start, end - start);
-  res = v7_create_string(v7, tmp, end - start, 1);
-  free(tmp);
-  return res;
+  return v7_create_string(v7, p + start, end - start, 1);
 }
 
 static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
@@ -502,10 +496,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       }
     }
     if (j < i && n2 > 0) {
-      char *tmp = (char *) malloc(i - j - 1);
-      memcpy(tmp, s1 + j, i - j - 1);
-      v7_array_append(v7, res, v7_create_string(v7, tmp, i - j - 1, 1));
-      free(tmp);
+      v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
     }
   }
 

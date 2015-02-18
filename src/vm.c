@@ -196,7 +196,22 @@ v7_val_t v7_create_undefined(void) {
 }
 
 v7_val_t v7_create_array(struct v7 *v7) {
-  return create_object(v7, v7->array_prototype);
+  val_t res = create_object(v7, v7->array_prototype);
+
+#if V7_ENABLE_GC
+  struct v7_object *obj = v7_to_object(res);
+
+  if (!((char *) obj >= v7->object_arena.base &&
+        (char *) obj < (v7->object_arena.base + v7->object_arena.size *
+                        v7->object_arena.cell_size))) {
+    fprintf(stderr, "CREATED AN ARRAY WHICH DOESN'T BELONG TO THE OBJECT ARENA\n");
+  }
+
+  assert((char *) obj >= v7->object_arena.base &&
+         (char *) obj < (v7->object_arena.base + v7->object_arena.size *
+                         v7->object_arena.cell_size));
+#endif
+  return res;
 }
 
 v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
@@ -218,12 +233,15 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 }
 
 v7_val_t v7_create_function(struct v7 *v7) {
-  /* TODO(mkm): use GC heap */
   struct v7_function *f = new_function(v7);
-  val_t proto, fval = v7_function_to_value(f);
+  val_t proto = V7_UNDEFINED, fval = v7_function_to_value(f);
+  GC_TMP_FRAME(tf);
   if (f == NULL) {
     return V7_NULL;
   }
+  tmp_stack_push(&tf, &proto);
+  tmp_stack_push(&tf, &fval);
+
   f->properties = NULL;
   f->scope = NULL;
   f->attributes = 0;
@@ -595,6 +613,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     v7_invoke_setter(v7, prop, obj, val);
     return 0;
   }
+
   prop->value = val;
   prop->attributes = attributes;
   return 0;
@@ -627,6 +646,8 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                                                v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->cfunction_prototype);
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
   v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
@@ -729,19 +750,25 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
                              size_t len) {
+  char *old_base = m->buf;
   size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);  /* Calculate how many bytes length takes */
-  mbuf_insert(m, offset, NULL, k + n);   /* Allocate  buffer */
+  mbuf_insert(m, offset, NULL, k + n);  /* Allocate  buffer */
+  /*
+   * The input string might be backed by the mbuf which might get
+   * relocated by mbuf_insert.
+   */
+  if (p >= old_base && p < (old_base + m->len - k - n)) {
+    if (p >= old_base + offset) {
+      p += k + n;
+    }
+    p += m->buf - old_base;
+  }
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
   unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
-/*
- * Create a string.
- *
- * Creating a string might relocate the string mbufs, hence the `p` argument
- * shouldn't point inside owned_strings or foreign_strings.
- */
+/* Create a string */
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
@@ -914,6 +941,14 @@ struct v7 *v7_create(void) {
   }
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+#define GC_SIZE (64 * 10)
+    gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE,
+                  "object");
+    gc_arena_init(&v7->function_arena, sizeof(struct v7_function), GC_SIZE,
+                  "function");
+    gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3,
+                  "property");
+
     /*
      * Ensure the first call to v7_create_value will use a null proto:
      * {}.__proto__.__proto__ == null
@@ -961,6 +996,12 @@ void v7_destroy(struct v7 *v7) {
     mbuf_free(&v7->owned_strings);
     mbuf_free(&v7->foreign_strings);
     mbuf_free(&v7->json_visited_stack);
+    mbuf_free(&v7->tmp_stack);
+
+    gc_arena_destroy(&v7->object_arena);
+    gc_arena_destroy(&v7->function_arena);
+    gc_arena_destroy(&v7->property_arena);
+
     free(v7);
   }
 }

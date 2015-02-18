@@ -333,6 +333,8 @@ static const char *test_runtime(void) {
   val_t v;
   struct v7_property *p;
   size_t n;
+  const char *s;
+  int i;
 
   v = v7_create_null();
   ASSERT(v == V7_NULL);
@@ -424,6 +426,12 @@ static const char *test_runtime(void) {
   ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY, v7_create_number(1.0)) == 0);
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) != 0);
   ASSERT(check_value(v7, v, "{\"foo\":1}"));
+
+  v = v7_create_string(v7, "fooakbar", 8, 1);
+  for (i = 0; i < 100; i++) {
+    s = v7_to_string(v7, &v, &n);
+    v7_create_string(v7, s, 8, 1);
+  }
 
   v7_destroy(v7);
   return NULL;
@@ -725,6 +733,7 @@ static const char *test_parser(void) {
     ASSERT(parse(v7, &a, invalid[i], 0) == V7_SYNTAX_ERROR);
   }
 
+  v7_destroy(v7);
   return NULL;
 }
 
@@ -1374,6 +1383,8 @@ static const char *test_interpreter(void) {
 
   /* check execution failure caused by bad parsing */
   ASSERT(v7_exec(v7, &v, "function") == V7_SYNTAX_ERROR);
+
+  v7_destroy(v7);
   return NULL;
 } /* test_interpreter */
 
@@ -1420,6 +1431,7 @@ static const char *test_to_json(void) {
   free(p);
 #endif
 
+  v7_destroy(v7);
   return NULL;
 }
 
@@ -1440,57 +1452,93 @@ static const char *test_unescape(void) {
   return NULL;
 }
 
-static const char *test_gc(void) {
+#ifdef V7_ENABLE_GC
+static const char *test_gc_mark(void) {
   struct v7 *v7 = v7_create();
   val_t v;
 
   v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
-  gc_mark(v);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  gc_mark(v7, v);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
-  gc_mark(v7->global_object);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  gc_mark(v7, v7->global_object);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "function f() {}; o=new f;o");
-  gc_mark(v);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  gc_mark(v7, v);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "function f() {}; Object.getPrototypeOf(new f)");
-  v7_gc(v7);
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  gc_mark(v7, v7->global_object);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "({a:1})");
-  v7_gc(v7);
-  ASSERT(!((uintptr_t) v7_to_object(v)->properties & 1));
+  gc_mark(v7, v7->global_object);
+  ASSERT(!MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "var f;(function() {var x={a:1};f=function(){return x};return x})()");
-  v7_gc(v7);
+  gc_mark(v7, v7->global_object);
   /* `x` is reachable through `f`'s closure scope */
-  ASSERT((uintptr_t) v7_to_object(v)->properties & 1);
+  ASSERT(MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_exec(v7, &v, "(function() {var x={a:1};var f=function(){return x};return x})()");
-  v7_gc(v7);
+  gc_mark(v7, v7->global_object);
   /* `f` is unreachable, hence `x` is not marked through the scope */
-  ASSERT(!((uintptr_t) v7_to_object(v)->properties & 1));
+  ASSERT(!MARKED(v7_to_object(v)->properties));
   v7_destroy(v7);
   v7 = v7_create();
 
   v7_destroy(v7);
   return NULL;
 }
+
+static const char *test_gc_sweep(void) {
+  struct v7 *v7 = v7_create();
+  void *obj;
+  val_t v;
+  uint32_t alive;
+
+  v7_gc(v7);
+  alive = v7->object_arena.alive;
+  v7_exec(v7, &v, "x=({a:1})");
+  obj = v7_to_object(v);
+  v7_gc(v7);
+  ASSERT(v7->object_arena.alive > alive);
+  v7_exec(v7, &v, "x.a");
+  ASSERT(check_value(v7, v, "1"));
+
+  v7_exec(v7, &v, "x=null");
+  v7_gc(v7);
+  ASSERT(v7->object_arena.alive == alive);
+  v7_destroy(v7);
+
+  v7 = v7_create();
+  v7->property_arena.verbose = 1;
+  v7->object_arena.verbose = 1;
+  v7_gc(v7);
+  fprintf(stderr, "-- Running code which exhausts object pool while evaluating \n");
+  v7_exec(v7, &v, "for(i=0;i<9;i++)({});for(i=0;i<7;i++){x=(new Number(1))+({} && 1)};x");
+  fprintf(stderr, "-- Done\n");
+  ASSERT(check_value(v7, v, "2"));
+  v7_gc(v7);
+
+  v7_destroy(v7);
+  return NULL;
+}
+#endif
 
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_unescape);
@@ -1506,7 +1554,10 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_interpreter);
   RUN_TEST(test_ecmac);
   RUN_TEST(test_strings);
-  RUN_TEST(test_gc);
+#ifdef V7_ENABLE_GC
+  RUN_TEST(test_gc_mark);
+  RUN_TEST(test_gc_sweep);
+#endif
   return NULL;
 }
 
