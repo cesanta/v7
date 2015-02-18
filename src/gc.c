@@ -6,13 +6,6 @@
 #include "internal.h"
 #include "gc.h"
 
-#define MARK(p) (* (uintptr_t *) &(p) |= 1)
-
-/* call only on already marked values */
-#define UNMARK(p) (* (uintptr_t *) &(p) &= ~1)
-
-#define MARKED(p) ((uintptr_t) (p) & 1)
-
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
@@ -51,11 +44,13 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
 }
 
 /* Initializes a new arena. */
-V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size, size_t size) {
+V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
+                              size_t size, const char *name) {
   assert(cell_size >= sizeof(uintptr_t));
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
   a->size = size;
+  a->name = name;
   /* Avoid arena initialization cost when GC is disabled */
 #ifdef V7_ENABLE_GC
   gc_arena_grow(a, size);

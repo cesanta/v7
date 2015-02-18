@@ -942,12 +942,12 @@ struct v7 *v7_create(void) {
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #define GC_SIZE (64 * 10)
-    v7->object_arena.name = "object";
-    gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE);
-    v7->function_arena.name = "function";
-    gc_arena_init(&v7->function_arena, sizeof(struct v7_function), GC_SIZE);
-    v7->property_arena.name = "property";
-    gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3);
+    gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE,
+                  "object");
+    gc_arena_init(&v7->function_arena, sizeof(struct v7_function), GC_SIZE,
+                  "function");
+    gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3,
+                  "property");
 
     /*
      * Ensure the first call to v7_create_value will use a null proto:
