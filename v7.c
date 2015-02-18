@@ -591,6 +591,29 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char*, int);
  * All rights reserved
  */
 
+#ifndef MM_H_INCLUDED
+#define MM_H_INCLUDED
+
+
+struct gc_arena {
+  char *base;
+  size_t size;
+  char *free;  /* head of free list */
+  size_t cell_size;
+
+  uint64_t allocations;  /* cumulative counter of allocations */
+  uint32_t alive;        /* number of living cells */
+
+  int verbose;
+  const char *name; /* for debugging purposes */
+};
+
+#endif  /* GC_H_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #ifndef V7_INTERNAL_H_INCLUDED
 #define V7_INTERNAL_H_INCLUDED
 
@@ -752,6 +775,12 @@ struct v7 {
   struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
   struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
 
+  struct mbuf tmp_stack; /* Stack of val_t* elements, used as root set */
+
+  struct gc_arena object_arena;
+  struct gc_arena function_arena;
+  struct gc_arena property_arena;
+
   int strict_mode;  /* true if currently in strict mode */
 
   val_t thrown_error;
@@ -886,6 +915,7 @@ struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
   struct v7_object *prototype;
+  uintptr_t debug;
 };
 
 /*
@@ -916,6 +946,7 @@ struct v7_function {
    */
   struct v7_property *properties;
   struct v7_object *scope;    /* lexical scope of the closure */
+  uintptr_t debug;
   struct ast *ast;            /* AST, used as a byte code for execution */
   unsigned int ast_off;       /* Position of the function node in the AST */
   unsigned int attributes;    /* Function attributes */
@@ -1025,6 +1056,14 @@ V7_PRIVATE double i_as_num(struct v7 *, val_t);
 #define GC_H_INCLUDED
 
 
+struct gc_tmp_frame {
+  struct v7 *v7;
+  size_t pos;
+};
+
+#define GC_TMP_FRAME(v) __attribute__((cleanup(tmp_frame_cleanup), unused)) \
+  struct gc_tmp_frame v = new_tmp_frame(v7);
+
 #if defined(__cplusplus)
 extern "C" {
 #endif  /* __cplusplus */
@@ -1033,7 +1072,17 @@ V7_PRIVATE struct v7_object *new_object(struct v7 *);
 V7_PRIVATE struct v7_property *new_property(struct v7 *);
 V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
-V7_PRIVATE void gc_mark(val_t);
+V7_PRIVATE void gc_mark(struct v7 *, val_t);
+
+V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t);
+V7_PRIVATE void gc_arena_grow(struct gc_arena *, size_t);
+V7_PRIVATE void gc_arena_destroy(struct gc_arena *a);
+V7_PRIVATE void gc_sweep(struct gc_arena *, size_t);
+V7_PRIVATE void *gc_alloc_cell(struct v7 *, struct gc_arena *);
+
+V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *);
+V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *);
+V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
 
 #if defined(__cplusplus)
 }
@@ -5072,7 +5121,22 @@ v7_val_t v7_create_undefined(void) {
 }
 
 v7_val_t v7_create_array(struct v7 *v7) {
-  return create_object(v7, v7->array_prototype);
+  val_t res = create_object(v7, v7->array_prototype);
+
+#if V7_ENABLE_GC
+  struct v7_object *obj = v7_to_object(res);
+
+  if (!((char *) obj >= v7->object_arena.base &&
+        (char *) obj < (v7->object_arena.base + v7->object_arena.size *
+                        v7->object_arena.cell_size))) {
+    fprintf(stderr, "CREATED AN ARRAY WHICH DOESN'T BELONG TO THE OBJECT ARENA\n");
+  }
+
+  assert((char *) obj >= v7->object_arena.base &&
+         (char *) obj < (v7->object_arena.base + v7->object_arena.size *
+                         v7->object_arena.cell_size));
+#endif
+  return res;
 }
 
 v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
@@ -5094,12 +5158,15 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 }
 
 v7_val_t v7_create_function(struct v7 *v7) {
-  /* TODO(mkm): use GC heap */
   struct v7_function *f = new_function(v7);
-  val_t proto, fval = v7_function_to_value(f);
+  val_t proto = V7_UNDEFINED, fval = v7_function_to_value(f);
+  GC_TMP_FRAME(tf);
   if (f == NULL) {
     return V7_NULL;
   }
+  tmp_stack_push(&tf, &proto);
+  tmp_stack_push(&tf, &fval);
+
   f->properties = NULL;
   f->scope = NULL;
   f->attributes = 0;
@@ -5471,6 +5538,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     v7_invoke_setter(v7, prop, obj, val);
     return 0;
   }
+
   prop->value = val;
   prop->attributes = attributes;
   return 0;
@@ -5503,6 +5571,8 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                                                v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->cfunction_prototype);
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
   v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
@@ -5796,6 +5866,14 @@ struct v7 *v7_create(void) {
   }
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+#define GC_SIZE (64 * 10)
+    v7->object_arena.name = "object";
+    gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE);
+    v7->function_arena.name = "function";
+    gc_arena_init(&v7->function_arena, sizeof(struct v7_function), GC_SIZE);
+    v7->property_arena.name = "property";
+    gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3);
+
     /*
      * Ensure the first call to v7_create_value will use a null proto:
      * {}.__proto__.__proto__ == null
@@ -5843,6 +5921,12 @@ void v7_destroy(struct v7 *v7) {
     mbuf_free(&v7->owned_strings);
     mbuf_free(&v7->foreign_strings);
     mbuf_free(&v7->json_visited_stack);
+    mbuf_free(&v7->tmp_stack);
+
+    gc_arena_destroy(&v7->object_arena);
+    gc_arena_destroy(&v7->function_arena);
+    gc_arena_destroy(&v7->property_arena);
+
     free(v7);
   }
 }
@@ -5855,26 +5939,144 @@ void v7_destroy(struct v7 *v7) {
 #define MARK(p) (* (uintptr_t *) &(p) |= 1)
 
 /* call only on already marked values */
-#define UNMARK(p) (* (uintptr_t *) &(p)) &= ~1)
+#define UNMARK(p) (* (uintptr_t *) &(p) &= ~1)
 
 #define MARKED(p) ((uintptr_t) (p) & 1)
 
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
-  (void) v7;
-  return (struct v7_object *) malloc(sizeof(struct v7_object));
+  return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
 
 V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
-  (void) v7;
-  return (struct v7_property *) malloc(sizeof(struct v7_property));
+  return (struct v7_property *) gc_alloc_cell(v7, &v7->property_arena);
 }
 
 V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
-  (void) v7;
-  return (struct v7_function *) malloc(sizeof(struct v7_function));
+  return (struct v7_function *) gc_alloc_cell(v7, &v7->function_arena);
 }
 
-V7_PRIVATE void gc_mark(val_t v) {
+V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
+  struct gc_tmp_frame frame;
+  frame.v7 = v7;
+  frame.pos = v7->tmp_stack.len;
+  return frame;
+}
+
+/*
+ * TODO(mkm): make this work without GCC/CLANG extensions.
+ * It's not hard to do it, but it requires to a big diff in the
+ * interpreter which I'd like to postpone.
+ */
+V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
+  tf->v7->tmp_stack.len = tf->pos;
+}
+
+/*
+ * TODO(mkm): perhaps it's safer to keep val_t in the temporary
+ * roots stack, instead of keeping val_t*, in order to be better
+ * able to debug the relocating GC.
+ */
+V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
+  mbuf_append(&tf->v7->tmp_stack, (char *) &vp, sizeof(val_t *));
+}
+
+/* Initializes a new arena. */
+V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size, size_t size) {
+  assert(cell_size >= sizeof(uintptr_t));
+  memset(a, 0, sizeof(*a));
+  a->cell_size = cell_size;
+  a->size = size;
+  /* Avoid arena initialization cost when GC is disabled */
+#ifdef V7_ENABLE_GC
+  gc_arena_grow(a, size);
+#endif
+}
+
+V7_PRIVATE void gc_arena_destroy(struct gc_arena *a) {
+  if (a->base != NULL) {
+    free(a->base);
+  }
+}
+
+/*
+ * Grows the arena by reallocating.
+ *
+ * The caller is responsible of relocating all the pointers.
+ *
+ * TODO(mkm): An alternative is to use offsets instead of pointers or
+ * instead of growing, maintain a chain of pools, which would also
+ * have a smaller memory spike footprint, but it’s slightly more
+ * complicated, and can be implemented in a second phase.
+ */
+V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
+  size_t free_adjust = a->free ? a->free - a->base : 0;
+  size_t old_size = a->size;
+  uint32_t old_alive = a->alive;
+  a->size = new_size;
+  a->base = (char *) realloc(a->base, a->size * a->cell_size);
+  memset(a->base + old_size * a->cell_size, 0,
+         (a->size - old_size) * a->cell_size);
+  /* in case we grow preemptively */
+  a->free += free_adjust;
+  /* sweep will add the trailing zeroed memory to free list */
+  gc_sweep(a, old_size);
+  a->alive = old_alive; /* sweeping will decrement `alive` */
+}
+
+V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
+#ifndef V7_ENABLE_GC
+  (void) v7;
+  return malloc(a->cell_size);
+#else
+  char **r;
+  if (a->free == NULL) {
+    fprintf(stderr, "Exhausting arena %s, invoking GC.\n", a->name);
+    v7_gc(v7);
+    if (a->free == NULL) {
+#if 1
+      fprintf(stderr, "TODO arena grow\n");
+      abort();
+#else
+      gc_arena_grow(a, a->size * 1.50);
+      /* TODO(mkm): relocate */
+#endif
+    }
+  }
+  r = (char **) a->free;
+
+  UNMARK(*r);
+
+  a->free = * r;
+  a->allocations++;
+  a->alive++;
+
+  return (void *) r;
+#endif
+}
+
+/*
+ * Scans the arena and add all unmarked cells to the free list.
+ */
+void gc_sweep(struct gc_arena *a, size_t start) {
+  char *cur;
+  a->alive = 0;
+  a->free = NULL;
+  for (cur = a->base + (start * a->cell_size);
+       cur < (a->base + (a->size * a->cell_size));
+       cur += a->cell_size) {
+    uintptr_t it = (* (uintptr_t *) cur);
+    if (it & 1) {
+      UNMARK(*cur);
+      a->alive++;
+    } else {
+      memset(cur, 0, a->cell_size);
+      * (char **) cur = a->free;
+      a->free = cur;
+    }
+  }
+}
+
+V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   struct v7_object *obj;
   struct v7_property *prop;
   struct v7_property *next;
@@ -5887,18 +6089,61 @@ V7_PRIVATE void gc_mark(val_t v) {
 
   for ((prop = obj->properties), MARK(obj->properties);
        prop != NULL; prop = next) {
-    gc_mark(prop->value);
+    gc_mark(v7, prop->value);
     next = prop->next;
+
+    assert((char *) prop >= v7->property_arena.base &&
+           (char *) prop < (v7->property_arena.base + v7->property_arena.size *
+                            v7->property_arena.cell_size));
     MARK(prop->next);
   }
 
   /* function scope pointer is aliased to the object's prototype pointer */
-  gc_mark(v7_object_to_value(obj->prototype));
+  gc_mark(v7, v7_object_to_value(obj->prototype));
+}
+
+static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
+  if (a->verbose) {
+    fprintf(stderr, "%s: total allocations %llu, max %lu, alive %u\n", msg,
+            a->allocations, a->size, a->alive);
+  }
 }
 
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7) {
-  gc_mark(v7->global_object);
+  val_t **vp;
+
+  gc_dump_arena_stats("Before GC objects", &v7->object_arena);
+  gc_dump_arena_stats("Before GC functions", &v7->function_arena);
+  gc_dump_arena_stats("Before GC properties", &v7->property_arena);
+
+  /* TODO(mkm): paranoia? */
+  gc_mark(v7, v7->object_prototype);
+  gc_mark(v7, v7->array_prototype);
+  gc_mark(v7, v7->boolean_prototype);
+  gc_mark(v7, v7->error_prototype);
+  gc_mark(v7, v7->string_prototype);
+  gc_mark(v7, v7->number_prototype);
+  gc_mark(v7, v7->cfunction_prototype); /* possibly not reachable */
+  gc_mark(v7, v7->this_object);
+
+  gc_mark(v7, v7->object_prototype);
+  gc_mark(v7, v7->global_object);
+  gc_mark(v7, v7->this_object);
+  gc_mark(v7, v7->call_stack);
+
+  for (vp = (val_t **) v7->tmp_stack.buf;
+       (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
+    gc_mark(v7, **vp);
+  }
+
+  gc_sweep(&v7->object_arena, 0);
+  gc_sweep(&v7->function_arena, 0);
+  gc_sweep(&v7->property_arena, 0);
+
+  gc_dump_arena_stats("After GC objects", &v7->object_arena);
+  gc_dump_arena_stats("After GC functions", &v7->function_arena);
+  gc_dump_arena_stats("After GC properties", &v7->property_arena);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -6803,6 +7048,7 @@ enum jmp_type {
 
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, enum i_break *);
+static val_t i_eval_expr(struct v7 *, struct ast *, ast_off_t *, val_t);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
                          int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
@@ -6836,7 +7082,11 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
 }  /* LCOV_EXCL_LINE */
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
-  val_t f;
+  val_t f = V7_UNDEFINED;
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &v);
+  tmp_stack_push(&tf, &f);
+
   if (v7_is_object(v) &&
       (f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
     v = v7_apply(v7, f, v, v7_create_array(v7));
@@ -6845,6 +7095,9 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &v);
+
   v = i_value_of(v7, v);
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
@@ -6852,7 +7105,7 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
       size_t n;
       char buf[20], *e, *s = (char *) v7_to_string(v7, &v, &n);
       if (n == 0) {
-        return 0;
+        return 0.0;
       }
       snprintf(buf, sizeof(buf), "%.*s", (int) n, s);
       buf[sizeof(buf) - 1] = '\0';
@@ -6974,10 +7227,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
-  val_t res = V7_UNDEFINED, v1, v2;
+  val_t res = V7_UNDEFINED, v1 = V7_UNDEFINED, v2 = V7_UNDEFINED;
   double d1, d2, dv;
   int i;
-
   /*
    * TODO(mkm): put this temporary somewhere in the evaluation context
    * or use alloca.
@@ -6985,6 +7237,11 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   char buf[512];
   char *name, *p;
   size_t name_len;
+  GC_TMP_FRAME(tf);
+
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &v1);
+  tmp_stack_push(&tf, &v2);
 
   switch (tag) {
     case AST_NEGATIVE:
@@ -7118,7 +7375,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         struct v7_property *prop;
         enum ast_tag op = tag;
-        val_t lval, root = v7->global_object;
+        val_t lval = V7_UNDEFINED, root = v7->global_object;
+        tmp_stack_push(&tf, &lval);
+        tmp_stack_push(&tf, &root);
         switch ((tag = ast_fetch_tag(a, pos))) {
           case AST_IDENT:
             lval = scope;
@@ -7273,6 +7532,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
               v1 = i_eval_expr(v7, a, pos, scope);
               if ((p = v7_get_property(res, name, name_len)) && p->attributes & other) {
                 val_t arr = v7_create_array(v7);
+                tmp_stack_push(&tf, &arr);
                 v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
                 v7_set(v7, arr, tag == AST_SETTER ? "1" : "0", 1, v1);
                 p->value = arr;
@@ -7330,6 +7590,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         val_t func = v7_create_function(v7);
         ast_off_t fbody;
         struct v7_function *funcp = v7_to_function(func);
+        tmp_stack_push(&tf, &func);
         funcp->scope = v7_to_object(scope);
         funcp->ast = a;
         funcp->ast_off = *pos - 1;
@@ -7443,6 +7704,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         struct v7_property *prop;
         val_t lval = V7_NULL, root = v7->global_object;
         ast_off_t start = *pos;
+        tmp_stack_push(&tf, &lval);
+        tmp_stack_push(&tf, &root);
         switch ((tag = ast_fetch_tag(a, pos))) {
           case AST_IDENT:
             name = ast_get_inlined_data(a, *pos, &name_len);
@@ -7517,10 +7780,14 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
   ast_off_t next, fvar_end;
   char *name;
   size_t name_len;
+  val_t val = V7_UNDEFINED;
+  GC_TMP_FRAME(tf);
 
   if (fvar == start) {
     return;
   }
+
+  tmp_stack_push(&tf, &val);
 
   do {
     tag = ast_fetch_tag(a, &fvar);
@@ -7534,7 +7801,7 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
     fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
     ast_move_to_children(a, &fvar);
     while (fvar < fvar_end) {
-      val_t val = V7_UNDEFINED;
+      val = V7_UNDEFINED;
       tag = ast_fetch_tag(a, &fvar);
       V7_CHECK(v7, tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
       name = ast_get_inlined_data(a, fvar, &name_len);
@@ -7578,28 +7845,40 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
                                    val_t frame, ast_off_t body, ast_off_t end) {
   int saved_strict_mode = v7->strict_mode;
   enum i_break brk = B_RUN;
-  val_t res;
+  val_t res = V7_UNDEFINED, saved_call_stack = v7->call_stack;
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &res);
   if (func->attributes & V7_FUNCTION_STRICT) {
     v7->strict_mode = 1;
   }
+  v7->call_stack = frame; /* ensure GC knows about this call frame */
   res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
   if (brk != B_RETURN) {
     res = V7_UNDEFINED;
   }
   v7->strict_mode = saved_strict_mode;
+  v7->call_stack = saved_call_stack;
   return res;
 }
 
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, val_t this_object, int is_constructor) {
   ast_off_t end, fpos, fend, fbody;
-  val_t frame, res, v1, args = V7_UNDEFINED, old_this = v7->this_object;
+  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, v1 = V7_UNDEFINED,
+         args = V7_UNDEFINED, old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
   size_t name_len;
   char buf[20];
   int i, n;
+
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &frame);
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &v1);
+  tmp_stack_push(&tf, &args);
+  tmp_stack_push(&tf, &old_this);
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
@@ -7624,6 +7903,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   func = v7_to_function(v1);
   if (is_constructor) {
     val_t fun_proto = v7_get(v7, v1, "prototype", 9);
+    tmp_stack_push(&tf, &fun_proto);
     if (!v7_is_object(fun_proto)) {
       /* TODO(mkm): box primitive value */
       throw_exception(v7, "TypeError",
@@ -7699,12 +7979,14 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 }
 
 static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope, enum i_break *brk) {
+                           val_t scope, enum i_break *brk) {
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
   ast_off_t end, end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
   int saved_strict_mode = v7->strict_mode;
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &res);
 
   switch (tag) {
     case AST_SCRIPT: /* TODO(mkm): push up */
@@ -7839,6 +8121,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         val_t obj, key;
         ast_off_t loop;
         struct v7_property *p, *var;
+        tmp_stack_push(&tf, &obj);
+        tmp_stack_push(&tf, &key);
 
         end = ast_get_skip(a, *pos, AST_END_SKIP);
         ast_move_to_children(a, pos);
@@ -7906,9 +8190,12 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_SWITCH:
       {
         int found = 0;
-        val_t test, val;
+        val_t test = V7_UNDEFINED, val = V7_UNDEFINED;
         ast_off_t case_end, default_pos = 0;
         enum ast_tag case_tag;
+        tmp_stack_push(&tf, &test);
+        tmp_stack_push(&tf, &val);
+
         end = ast_get_skip(a, *pos, AST_END_SKIP);
         ast_move_to_children(a, pos);
         test = i_eval_expr(v7, a, pos, scope);
@@ -8001,6 +8288,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
         } else if (j == THROW_JMP && acatch != finally) {
           val_t catch_scope = create_object(v7, scope);
+          tmp_stack_push(&tf, &catch_scope);
           tag = ast_fetch_tag(a, &acatch);
           V7_CHECK(v7, tag == AST_IDENT);
           name = ast_get_inlined_data(a, acatch, &name_len);
@@ -8028,7 +8316,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
     case AST_WITH:
       {
-        val_t with_scope;
+        val_t with_scope = V7_UNDEFINED;
+        tmp_stack_push(&tf, &with_scope);
         end = ast_get_skip(a, *pos, AST_END_SKIP);
         ast_move_to_children(a, pos);
         /*
@@ -8082,11 +8371,18 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
-  val_t frame, res, arguments, saved_this = v7->this_object;
+  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, arguments = V7_UNDEFINED,
+   saved_this = v7->this_object;
   char *name;
   size_t name_len;
   char buf[20];
   int i, n;
+
+  GC_TMP_FRAME(vf);
+  tmp_stack_push(&vf, &frame);
+  tmp_stack_push(&vf, &res);
+  tmp_stack_push(&vf, &arguments);
+  tmp_stack_push(&vf, &saved_this);
 
   if (v7_is_cfunction(f)) {
     return v7_to_cfunction(f)(v7, this_object, args);

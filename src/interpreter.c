@@ -4,6 +4,7 @@
  */
 
 #include "internal.h"
+#include "gc.h"
 
 #ifdef _WIN32
 #define siglongjmp longjmp
@@ -31,6 +32,7 @@ enum jmp_type {
 
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, enum i_break *);
+static val_t i_eval_expr(struct v7 *, struct ast *, ast_off_t *, val_t);
 static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
                          int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
@@ -64,7 +66,11 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
 }  /* LCOV_EXCL_LINE */
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
-  val_t f;
+  val_t f = V7_UNDEFINED;
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &v);
+  tmp_stack_push(&tf, &f);
+
   if (v7_is_object(v) &&
       (f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
     v = v7_apply(v7, f, v, v7_create_array(v7));
@@ -73,6 +79,9 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &v);
+
   v = i_value_of(v7, v);
   if (!v7_is_double(v) && !v7_is_boolean(v)) {
     if (v7_is_string(v)) {
@@ -80,7 +89,7 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
       size_t n;
       char buf[20], *e, *s = (char *) v7_to_string(v7, &v, &n);
       if (n == 0) {
-        return 0;
+        return 0.0;
       }
       snprintf(buf, sizeof(buf), "%.*s", (int) n, s);
       buf[sizeof(buf) - 1] = '\0';
@@ -202,10 +211,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
-  val_t res = V7_UNDEFINED, v1, v2;
+  val_t res = V7_UNDEFINED, v1 = V7_UNDEFINED, v2 = V7_UNDEFINED;
   double d1, d2, dv;
   int i;
-
   /*
    * TODO(mkm): put this temporary somewhere in the evaluation context
    * or use alloca.
@@ -213,6 +221,11 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   char buf[512];
   char *name, *p;
   size_t name_len;
+  GC_TMP_FRAME(tf);
+
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &v1);
+  tmp_stack_push(&tf, &v2);
 
   switch (tag) {
     case AST_NEGATIVE:
@@ -346,7 +359,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         struct v7_property *prop;
         enum ast_tag op = tag;
-        val_t lval, root = v7->global_object;
+        val_t lval = V7_UNDEFINED, root = v7->global_object;
+        tmp_stack_push(&tf, &lval);
+        tmp_stack_push(&tf, &root);
         switch ((tag = ast_fetch_tag(a, pos))) {
           case AST_IDENT:
             lval = scope;
@@ -501,6 +516,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
               v1 = i_eval_expr(v7, a, pos, scope);
               if ((p = v7_get_property(res, name, name_len)) && p->attributes & other) {
                 val_t arr = v7_create_array(v7);
+                tmp_stack_push(&tf, &arr);
                 v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
                 v7_set(v7, arr, tag == AST_SETTER ? "1" : "0", 1, v1);
                 p->value = arr;
@@ -558,6 +574,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         val_t func = v7_create_function(v7);
         ast_off_t fbody;
         struct v7_function *funcp = v7_to_function(func);
+        tmp_stack_push(&tf, &func);
         funcp->scope = v7_to_object(scope);
         funcp->ast = a;
         funcp->ast_off = *pos - 1;
@@ -671,6 +688,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         struct v7_property *prop;
         val_t lval = V7_NULL, root = v7->global_object;
         ast_off_t start = *pos;
+        tmp_stack_push(&tf, &lval);
+        tmp_stack_push(&tf, &root);
         switch ((tag = ast_fetch_tag(a, pos))) {
           case AST_IDENT:
             name = ast_get_inlined_data(a, *pos, &name_len);
@@ -745,10 +764,14 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
   ast_off_t next, fvar_end;
   char *name;
   size_t name_len;
+  val_t val = V7_UNDEFINED;
+  GC_TMP_FRAME(tf);
 
   if (fvar == start) {
     return;
   }
+
+  tmp_stack_push(&tf, &val);
 
   do {
     tag = ast_fetch_tag(a, &fvar);
@@ -762,7 +785,7 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
     fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
     ast_move_to_children(a, &fvar);
     while (fvar < fvar_end) {
-      val_t val = V7_UNDEFINED;
+      val = V7_UNDEFINED;
       tag = ast_fetch_tag(a, &fvar);
       V7_CHECK(v7, tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
       name = ast_get_inlined_data(a, fvar, &name_len);
@@ -806,28 +829,40 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
                                    val_t frame, ast_off_t body, ast_off_t end) {
   int saved_strict_mode = v7->strict_mode;
   enum i_break brk = B_RUN;
-  val_t res;
+  val_t res = V7_UNDEFINED, saved_call_stack = v7->call_stack;
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &res);
   if (func->attributes & V7_FUNCTION_STRICT) {
     v7->strict_mode = 1;
   }
+  v7->call_stack = frame; /* ensure GC knows about this call frame */
   res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
   if (brk != B_RETURN) {
     res = V7_UNDEFINED;
   }
   v7->strict_mode = saved_strict_mode;
+  v7->call_stack = saved_call_stack;
   return res;
 }
 
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, val_t this_object, int is_constructor) {
   ast_off_t end, fpos, fend, fbody;
-  val_t frame, res, v1, args = V7_UNDEFINED, old_this = v7->this_object;
+  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, v1 = V7_UNDEFINED,
+         args = V7_UNDEFINED, old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
   size_t name_len;
   char buf[20];
   int i, n;
+
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &frame);
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &v1);
+  tmp_stack_push(&tf, &args);
+  tmp_stack_push(&tf, &old_this);
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
@@ -852,6 +887,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   func = v7_to_function(v1);
   if (is_constructor) {
     val_t fun_proto = v7_get(v7, v1, "prototype", 9);
+    tmp_stack_push(&tf, &fun_proto);
     if (!v7_is_object(fun_proto)) {
       /* TODO(mkm): box primitive value */
       throw_exception(v7, "TypeError",
@@ -927,12 +963,14 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
 }
 
 static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope, enum i_break *brk) {
+                           val_t scope, enum i_break *brk) {
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = V7_UNDEFINED;
   ast_off_t end, end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
   int saved_strict_mode = v7->strict_mode;
+  GC_TMP_FRAME(tf);
+  tmp_stack_push(&tf, &res);
 
   switch (tag) {
     case AST_SCRIPT: /* TODO(mkm): push up */
@@ -1067,6 +1105,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         val_t obj, key;
         ast_off_t loop;
         struct v7_property *p, *var;
+        tmp_stack_push(&tf, &obj);
+        tmp_stack_push(&tf, &key);
 
         end = ast_get_skip(a, *pos, AST_END_SKIP);
         ast_move_to_children(a, pos);
@@ -1134,9 +1174,12 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_SWITCH:
       {
         int found = 0;
-        val_t test, val;
+        val_t test = V7_UNDEFINED, val = V7_UNDEFINED;
         ast_off_t case_end, default_pos = 0;
         enum ast_tag case_tag;
+        tmp_stack_push(&tf, &test);
+        tmp_stack_push(&tf, &val);
+
         end = ast_get_skip(a, *pos, AST_END_SKIP);
         ast_move_to_children(a, pos);
         test = i_eval_expr(v7, a, pos, scope);
@@ -1229,6 +1272,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
         } else if (j == THROW_JMP && acatch != finally) {
           val_t catch_scope = create_object(v7, scope);
+          tmp_stack_push(&tf, &catch_scope);
           tag = ast_fetch_tag(a, &acatch);
           V7_CHECK(v7, tag == AST_IDENT);
           name = ast_get_inlined_data(a, acatch, &name_len);
@@ -1256,7 +1300,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
     case AST_WITH:
       {
-        val_t with_scope;
+        val_t with_scope = V7_UNDEFINED;
+        tmp_stack_push(&tf, &with_scope);
         end = ast_get_skip(a, *pos, AST_END_SKIP);
         ast_move_to_children(a, pos);
         /*
@@ -1310,11 +1355,18 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
-  val_t frame, res, arguments, saved_this = v7->this_object;
+  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, arguments = V7_UNDEFINED,
+   saved_this = v7->this_object;
   char *name;
   size_t name_len;
   char buf[20];
   int i, n;
+
+  GC_TMP_FRAME(vf);
+  tmp_stack_push(&vf, &frame);
+  tmp_stack_push(&vf, &res);
+  tmp_stack_push(&vf, &arguments);
+  tmp_stack_push(&vf, &saved_this);
 
   if (v7_is_cfunction(f)) {
     return v7_to_cfunction(f)(v7, this_object, args);
