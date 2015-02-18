@@ -333,6 +333,8 @@ static const char *test_runtime(void) {
   val_t v;
   struct v7_property *p;
   size_t n;
+  const char *s;
+  int i;
 
   v = v7_create_null();
   ASSERT(v == V7_NULL);
@@ -424,6 +426,12 @@ static const char *test_runtime(void) {
   ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY, v7_create_number(1.0)) == 0);
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) != 0);
   ASSERT(check_value(v7, v, "{\"foo\":1}"));
+
+  v = v7_create_string(v7, "fooakbar", 8, 1);
+  for (i = 0; i < 100; i++) {
+    s = v7_to_string(v7, &v, &n);
+    v7_create_string(v7, s, 8, 1);
+  }
 
   v7_destroy(v7);
   return NULL;
