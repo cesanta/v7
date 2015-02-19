@@ -3590,6 +3590,23 @@ static val_t Array_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return Array_join(v7, this_obj, args);
 }
 
+static val_t Array_slice(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t res = v7_create_array(v7);
+  long i, len = v7_array_length(v7, this_obj);
+  long arg0 = arg_long(v7, args, 0, 0);
+  long arg1 = arg_long(v7, args, 1, len);
+
+  if (len <= 0) return res;
+  if (arg0 < 0) arg0 = len + arg0;
+  if (arg0 < 0) arg0 = 0;
+  if (arg1 < 0) arg1 = len + arg1;
+  for (i = arg0; i < arg1 && i < len; i++) {
+    v7_array_append(v7, res, v7_array_at(v7, this_obj, i));
+  }
+
+  return res;
+}
+
 V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
   val_t length = v7_create_array(v7);
@@ -3603,6 +3620,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "join", Array_join, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 0);
 
   v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
   v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
@@ -10321,6 +10339,17 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
+  char buf[20];
+  const char *type = "Object";
+  (void) args;
+  if (is_prototype_of(this_obj, v7->array_prototype)) {
+    type = "Array";
+  }
+  snprintf(buf, sizeof(buf), "[object %s]", type);
+  return v7_create_string(v7, buf, strlen(buf), 1);
+}
+
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
@@ -10335,7 +10364,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
   v7_set(v7, v7->object_prototype, "constructor", 11, object);
 
-  v7_exec(v7, NULL, "Object.prototype.toString = function() {return '[object Object]'}");
+  set_cfunc_obj_prop(v7, v7->object_prototype, "toString", Obj_toString, 0);
 
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
