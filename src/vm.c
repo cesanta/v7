@@ -956,6 +956,7 @@ struct v7 *v7_create(void) {
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
     v7->date_prototype = v7_create_object(v7);
+    v7->function_prototype = v7_create_object(v7);
 
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property(v7, v7->global_object, "print", 5, 0,
@@ -976,6 +977,7 @@ struct v7 *v7_create(void) {
     init_number(v7);
     init_json(v7);
     init_date(v7);
+    init_function(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }

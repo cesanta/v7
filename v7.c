@@ -761,6 +761,7 @@ struct v7 {
   val_t cfunction_prototype;
   val_t this_object;
   val_t date_prototype;
+  val_t function_prototype;
 
   /*
    * Stack of execution contexts.
@@ -986,6 +987,7 @@ V7_PRIVATE void init_string(struct v7 *v7);
 V7_PRIVATE void init_number(struct v7 *v7);
 V7_PRIVATE void init_json(struct v7 *v7);
 V7_PRIVATE void init_date(struct v7 *v7);
+V7_PRIVATE void init_function(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
@@ -5914,6 +5916,7 @@ struct v7 *v7_create(void) {
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
     v7->date_prototype = v7_create_object(v7);
+    v7->function_prototype = v7_create_object(v7);
 
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property(v7, v7->global_object, "print", 5, 0,
@@ -5934,6 +5937,7 @@ struct v7 *v7_create(void) {
     init_number(v7);
     init_json(v7);
     init_date(v7);
+    init_function(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }
@@ -11640,4 +11644,54 @@ V7_PRIVATE void init_date(struct v7 *v7) {
  * TODO(alashkin): need restart on tz change???
  */
   g_tzname = tzname[0];
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+  long i, n = 0, num_args = v7_array_length(v7, args);
+  size_t size;
+  char buf[200];
+  const char *s;
+  val_t param, body, res = V7_UNDEFINED;
+
+  (void) this_obj;
+
+  if (num_args <= 0) return res;
+
+  /* TODO(lsm): Constructing function source code here. Optimize this. */
+  n += snprintf(buf + n, sizeof(buf) - n, "%s", "var ___fUn = function(");
+
+  for (i = 0; i < num_args - 1; i++) {
+    param = v7_array_at(v7, args, i);
+    if (v7_is_string(param)) {
+      s = v7_to_string(v7, &param, &size);
+      if (i > 0) {
+        n += snprintf(buf + n, sizeof(buf) - n, "%s", ",");
+      }
+      n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
+    }
+  }
+  n += snprintf(buf + n, sizeof(buf) - n, "%s", "){");
+  body = v7_array_at(v7, args, num_args - 1);
+  if (v7_is_string(body)) {
+    s = v7_to_string(v7, &body, &size);
+    n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
+  }
+  n += snprintf(buf + n, sizeof(buf) - n, "%s", "}");
+
+  if (v7_exec_with(v7, &res, buf, V7_UNDEFINED) != V7_OK) {
+    throw_exception(v7, "SyntaxError", "Invalid function body");
+  }
+
+  return res;
+}
+
+V7_PRIVATE void init_function(struct v7 *v7) {
+  val_t ctor = v7_create_cfunction_object(v7, Function_ctor, 1);
+  v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
+  v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
 }
