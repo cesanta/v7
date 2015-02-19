@@ -419,8 +419,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             res = i_eval_expr(v7, a, pos, scope);
             v1 = i_value_of(v7, v1);
             res = i_value_of(v7, res);
-            if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
-                !(v7_is_undefined(res) || v7_is_double(res) || v7_is_boolean(res))) {
+            if (!(v7_is_undefined(v1) || v7_is_double(v1) ||
+                  v7_is_boolean(v1)) ||
+                !(v7_is_undefined(res) || v7_is_double(res) ||
+                  v7_is_boolean(res))) {
               v7_stringify_value(v7, v1, buf, sizeof(buf));
               v1 = v7_create_string(v7, buf, strlen(buf), 1);
               v7_stringify_value(v7, res, buf, sizeof(buf));
@@ -506,15 +508,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           case AST_SETTER:
             {
               ast_off_t func = *pos;
-              unsigned int attr = tag == AST_GETTER ? V7_PROPERTY_GETTER : V7_PROPERTY_SETTER;
-              unsigned int other = tag == AST_GETTER ? V7_PROPERTY_SETTER : V7_PROPERTY_GETTER;
+              unsigned int attr = tag == AST_GETTER ? V7_PROPERTY_GETTER :
+                                  V7_PROPERTY_SETTER;
+              unsigned int other = tag == AST_GETTER ? V7_PROPERTY_SETTER :
+                                   V7_PROPERTY_GETTER;
               struct v7_property *p;
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
               ast_move_to_children(a, &func);
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
               name = ast_get_inlined_data(a, func, &name_len);
               v1 = i_eval_expr(v7, a, pos, scope);
-              if ((p = v7_get_property(res, name, name_len)) && p->attributes & other) {
+              if ((p = v7_get_property(res, name, name_len)) &&
+                  p->attributes & other) {
                 val_t arr = v7_create_array(v7);
                 tmp_stack_push(&tf, &arr);
                 v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
@@ -586,7 +591,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
         *pos = ast_get_skip(a, funcp->ast_off + 1, AST_END_SKIP);
         fbody = ast_get_skip(a, funcp->ast_off + 1, AST_FUNC_BODY_SKIP);
-        if (fbody < *pos && (tag = ast_fetch_tag(a, &fbody)) == AST_USE_STRICT) {
+        if (fbody < *pos &&
+            (tag = ast_fetch_tag(a, &fbody)) == AST_USE_STRICT) {
           funcp->attributes |= V7_FUNCTION_STRICT;
         }
         return func;
@@ -932,7 +938,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   /* evaluate trailing actual arguments for side effects */
-  for (;*pos < end; i++) {
+  for (; *pos < end; i++) {
     res = i_eval_expr(v7, a, pos, scope);
     if (!v7_is_undefined(args)) {
       n = snprintf(buf, sizeof(buf), "%d", i);
@@ -978,7 +984,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
       ast_move_to_children(a, pos);
       maybe_strict = *pos;
-      if (*pos < end && (tag = ast_fetch_tag(a, &maybe_strict)) == AST_USE_STRICT) {
+      if (*pos < end &&
+          (tag = ast_fetch_tag(a, &maybe_strict)) == AST_USE_STRICT) {
         v7->strict_mode = 1;
         *pos = maybe_strict;
       }
@@ -1355,8 +1362,8 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
-  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, arguments = V7_UNDEFINED,
-   saved_this = v7->this_object;
+  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, arguments = V7_UNDEFINED;
+  val_t saved_this = v7->this_object;
   char *name;
   size_t name_len;
   char buf[20];
