@@ -20,7 +20,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   n += snprintf(buf + n, sizeof(buf) - n, "%s", "var ___fUn = function(");
 
   for (i = 0; i < num_args - 1; i++) {
-    param = v7_array_at(v7, args, i);
+    param = i_value_of(v7, v7_array_at(v7, args, i));
     if (v7_is_string(param)) {
       s = v7_to_string(v7, &param, &size);
       if (i > 0) {
@@ -30,7 +30,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     }
   }
   n += snprintf(buf + n, sizeof(buf) - n, "%s", "){");
-  body = v7_array_at(v7, args, num_args - 1);
+  body = i_value_of(v7, v7_array_at(v7, args, num_args - 1));
   if (v7_is_string(body)) {
     s = v7_to_string(v7, &body, &size);
     n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
