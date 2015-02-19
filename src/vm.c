@@ -33,6 +33,9 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->cfunction_prototype)) {
         return V7_TYPE_CFUNCTION_OBJECT;
+      } else if (v7_to_object(v)->prototype ==
+                 v7_to_object(v7->date_prototype)) {
+        return V7_TYPE_DATE_OBJECT;
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
@@ -196,22 +199,7 @@ v7_val_t v7_create_undefined(void) {
 }
 
 v7_val_t v7_create_array(struct v7 *v7) {
-  val_t res = create_object(v7, v7->array_prototype);
-
-#if V7_ENABLE_GC
-  struct v7_object *obj = v7_to_object(res);
-
-  if (!((char *) obj >= v7->object_arena.base &&
-        (char *) obj < (v7->object_arena.base + v7->object_arena.size *
-                        v7->object_arena.cell_size))) {
-    fprintf(stderr, "CREATED AN ARRAY WHICH DOESN'T BELONG TO THE OBJECT ARENA\n");
-  }
-
-  assert((char *) obj >= v7->object_arena.base &&
-         (char *) obj < (v7->object_arena.base + v7->object_arena.size *
-                         v7->object_arena.cell_size));
-#endif
-  return res;
+  return create_object(v7, v7->array_prototype);
 }
 
 v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
@@ -265,7 +253,7 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   return n;
 }
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json) {
@@ -556,7 +544,11 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->number_prototype;
+    } else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
+        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
+      return v7->date_prototype;
     }
+
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
@@ -569,7 +561,8 @@ V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
 int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
   struct v7_property *p = v7_get_own_property(obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes, val);
+    return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes,
+                           val);
   }
   return -1;
 }
@@ -666,7 +659,8 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
 }
 
-V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
+V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj,
+                                   struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
   }
@@ -790,7 +784,11 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   return v7_pointer_to_value((void *) offset) | tag;
 }
 
-/* Get a pointer to string and string length */
+/*
+ * Get a pointer to string and string length.
+ *
+ * Beware that V7 strings are not null terminated!
+ */
 const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
   char *p;
@@ -961,6 +959,8 @@ struct v7 *v7_create(void) {
     v7->cfunction_prototype = v7_create_object(v7);
     v7->global_object = v7_create_object(v7);
     v7->this_object = v7->global_object;
+    v7->date_prototype = v7_create_object(v7);
+    v7->function_prototype = v7_create_object(v7);
 
     /* TODO(lsm): remove this when init_stdlib() is upgraded */
     v7_set_property(v7, v7->global_object, "print", 5, 0,
@@ -980,6 +980,8 @@ struct v7 *v7_create(void) {
     init_string(v7);
     init_number(v7);
     init_json(v7);
+    init_date(v7);
+    init_function(v7);
 
     v7->thrown_error = V7_UNDEFINED;
   }

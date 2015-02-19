@@ -35,7 +35,7 @@
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
- /* Regex flags */
+/* Regex flags */
 #define SLRE_FLAG_G 1     /* Global - match in the whole string */
 #define SLRE_FLAG_I 2     /* Ignore case */
 #define SLRE_FLAG_M 4     /* Multiline */
@@ -1080,7 +1080,7 @@ static void program_print(struct slre_prog *prog) {
 #endif
 
 int slre_compile(const char *pat, size_t pat_len, const char *flags,
-                 size_t fl_len,struct slre_prog **pr) {
+                 size_t fl_len, struct slre_prog **pr) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
@@ -1231,7 +1231,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           continue;
 
         case I_LA:
-          if (re_match(pc->par.xy.x, start + off, len - off, bol, flags, &sub)) {
+          if (re_match(pc->par.xy.x, start + off, len - off, bol, flags,
+                       &sub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
