@@ -12,6 +12,7 @@
 #include <string.h>
 #include <locale.h>
 #include <stddef.h>
+#include <alloca.h>
 
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);
@@ -341,10 +342,14 @@ int date_parse(const char *str, int *a1, int *a2, int *a3,
  * not very smart but simple, and working according
  * to ECMA5.1 StringToDate function
  */
-static int d_parsedatestr(const char *str, struct timeparts *tp, int *tz) {
+static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
+                          int *tz) {
   char gmt[4];
   char buf1[100] = {0}, buf2[100] = {0};
   int res = 0;
+  char *str = (char *) alloca(len + 1); /* scanf requires null-terminated str */
+  memcpy(str, jstr, len);
+  str[len] = '\0';
   memset(tp, 0, sizeof(*tp));
   *tz = NO_TZ;
 
@@ -436,18 +441,18 @@ static int d_parsedatestr(const char *str, struct timeparts *tp, int *tz) {
   return res <= 2;
 }
 
-static int d_timeFromString(etime_t *time, const char *str, size_t buf_size) {
+static int d_timeFromString(etime_t *time, const char *str, size_t str_len) {
   struct timeparts tp;
   int tz;
 
   *time = INVALID_TIME;
 
-  if (buf_size > 100) {
+  if (str_len > 100) {
     /* too long for valid date string */
     return 0;
   }
 
-  if (d_parsedatestr(str, &tp, &tz)) {
+  if (d_parsedatestr(str, str_len, &tp, &tz)) {
     /* check results */
     int valid = 0;
 
