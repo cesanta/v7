@@ -293,7 +293,7 @@ static const char *test_stdlib(void) {
 
   /* Date() tests interact with external object (local date & time), so
       if host have strange date/time setting it won't be work */
-  
+
 #if 0
   /* Date */
   tzset();
@@ -500,7 +500,7 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "Date.parse(\"10/15/2015 12:30 GMT\")") == V7_OK);
   ASSERT(check_num(v, 1444912200000));
 #endif
-  
+
 #if 0
   /* Regexp */
   ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/; re")) != NULL);

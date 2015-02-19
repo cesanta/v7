@@ -11731,7 +11731,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   if (num_args <= 0) return res;
 
   /* TODO(lsm): Constructing function source code here. Optimize this. */
-  n += snprintf(buf + n, sizeof(buf) - n, "%s", "var ___fUn = function(");
+  n += snprintf(buf + n, sizeof(buf) - n, "%s", "(function(");
 
   for (i = 0; i < num_args - 1; i++) {
     param = i_value_of(v7, v7_array_at(v7, args, i));
@@ -11749,7 +11749,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     s = v7_to_string(v7, &body, &size);
     n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
   }
-  n += snprintf(buf + n, sizeof(buf) - n, "%s", "}");
+  n += snprintf(buf + n, sizeof(buf) - n, "%s", "})");
 
   if (v7_exec_with(v7, &res, buf, V7_UNDEFINED) != V7_OK) {
     throw_exception(v7, "SyntaxError", "Invalid function body");
