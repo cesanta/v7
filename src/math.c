@@ -18,7 +18,8 @@ static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
 
 #define DEFINE_WRAPPER(name, func)                                          \
 V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) {   \
-  (void) this_obj; return func(v7, args, name);                             \
+  (void) this_obj;                                                      \
+  return func(v7, args, name);                                          \
 }
 
 DEFINE_WRAPPER(fabs, m_one_arg)

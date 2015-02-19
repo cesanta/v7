@@ -359,7 +359,6 @@ enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
 
 static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
                                  int level, ast_off_t pos) {
-
 #define NONE {(enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0}
 
   struct {

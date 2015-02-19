@@ -189,7 +189,8 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
-  (void) args; (void) v7;
+  (void) args;
+  (void) v7;
   if ((p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
     res = p->value;
   }
@@ -223,7 +224,6 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   v7_set(v7, v7->object_prototype, "constructor", 11, object);
 
   set_cfunc_obj_prop(v7, v7->object_prototype, "toString", Obj_toString, 0);
-
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);

@@ -10,7 +10,8 @@ static val_t to_string(struct v7 *, val_t);
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t res = v7_is_string(arg0) ? arg0 : (
-      v7_is_undefined(arg0) ? v7_create_string(v7, "", 0, 1) : to_string(v7, arg0));
+      v7_is_undefined(arg0) ? v7_create_string(v7, "", 0, 1) :
+      to_string(v7, arg0));
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
@@ -520,9 +521,11 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
   set_cfunc_prop(v7, v7->string_prototype, "trim", Str_trim);
   set_cfunc_prop(v7, v7->string_prototype, "toLowerCase", Str_toLowerCase);
-  set_cfunc_prop(v7, v7->string_prototype, "toLocaleLowerCase", Str_toLowerCase);
+  set_cfunc_prop(v7, v7->string_prototype, "toLocaleLowerCase",
+                 Str_toLowerCase);
   set_cfunc_prop(v7, v7->string_prototype, "toUpperCase", Str_toUpperCase);
-  set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase", Str_toUpperCase);
+  set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase",
+                 Str_toUpperCase);
   set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
   set_cfunc_prop(v7, v7->string_prototype, "toString", Str_toString);
