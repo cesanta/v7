@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "../v7.h"
 #include "../src/internal.h"
@@ -37,6 +38,8 @@
 #endif
 /* #define INFINITY    BLAH */
 #endif
+
+extern long timezone;
 
 #define FAIL(str, line) do {                    \
   printf("Fail on line %d: [%s]\n", line, str); \
@@ -74,7 +77,12 @@ static int check_value(struct v7 *v7, val_t v, const char *str) {
 }
 
 static int check_num(val_t v, double num) {
-  return isnan(num) ? isnan(v7_to_double(v)) : v7_to_double(v) == num;
+  int ret = isnan(num) ? isnan(v7_to_double(v)) : v7_to_double(v) == num;
+  if(!ret) {
+    printf("Num: want %f got %f\n", num, v7_to_double(v));
+  }
+
+  return ret;
 }
 
 static int check_bool(val_t v, int is_true) {
@@ -85,7 +93,11 @@ static int check_bool(val_t v, int is_true) {
 static int check_str(struct v7 *v7, val_t v, const char *str) {
   size_t n1, n2 = strlen(str);
   const char *s = v7_to_string(v7, &v, &n1);
-  return n1 == n2 && memcmp(s, str, n1) == 0;
+  int ret = (n1 == n2 && memcmp(s, str, n1) == 0);
+  if(!ret) {
+    printf("Str: want %s got %s\n", str, s);
+  }
+  return ret;
 }
 
 static int test_if_expr(struct v7 *v7, const char *expr, int result) {
@@ -279,6 +291,216 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "new String('blah')") == V7_OK);
 #endif
 
+  /* Date() tests interact with external object (local date & time), so
+      if host have strange date/time setting it won't be work */
+  
+#if 0
+  /* Date */
+  tzset();
+
+#define ADJTZ(x) (x+2*3600000+timezone*1000)
+
+#if 0
+    /* this part of tests is tz & lang depended */
+
+  ASSERT(v7_exec(v7, &v, "new Date(-999, 10, 9, 15, 40, 50, 777).toString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 -999 15:40:50 GMT+0200 (EET)"));
+  ASSERT(v7_exec(v7, &v, "new Date(999, 10, 9, 15, 40, 50, 777).toString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Sun Nov 09 999 15:40:50 GMT+0200 (EET)"));
+  ASSERT(v7_exec(v7, &v, "new Date(1999, 10, 9, 15, 40, 50, 777).toString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 1999 15:40:50 GMT+0200 (EET)"));
+  ASSERT(v7_exec(v7, &v, "new Date(-999, 10, 9, 15, 40, 50, 777).toUTCString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 -999 13:40:50 GMT"));
+  ASSERT(v7_exec(v7, &v, "new Date(999, 10, 9, 15, 40, 50, 777).toUTCString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Sun Nov 09 999 13:40:50 GMT"));
+  ASSERT(v7_exec(v7, &v, "new Date(1999, 10, 9, 15, 40, 50, 777).toUTCString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 1999 13:40:50 GMT"));
+  ASSERT(v7_exec(v7, &v, "new Date(-999, 10, 9, 15, 40, 50, 777).toDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 -999"));
+  ASSERT(v7_exec(v7, &v, "new Date(999, 10, 9, 15, 40, 50, 777).toDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Sun Nov 09 999"));
+  ASSERT(v7_exec(v7, &v, "new Date(1999, 10, 9, 15, 40, 50, 777).toDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 1999"));
+  ASSERT(v7_exec(v7, &v, "new Date(-999, 10, 9, 15, 40, 50, 777).toDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 -999"));
+  ASSERT(v7_exec(v7, &v, "new Date(999, 10, 9, 15, 40, 50, 777).toDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Sun Nov 09 999"));
+  ASSERT(v7_exec(v7, &v, "new Date(1999, 10, 9, 15, 40, 50, 777).toDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "Tue Nov 09 1999"));
+  ASSERT(v7_exec(v7, &v, "new Date(-999, 10, 9, 15, 40, 50, 777).toTimeString()") == V7_OK);
+  ASSERT(check_str(v7, v, "15:40:50 GMT+0200 (EET)"));
+  ASSERT(v7_exec(v7, &v, "new Date(999, 10, 9, 15, 40, 50, 777).toTimeString()") == V7_OK);
+  ASSERT(check_str(v7, v, "15:40:50 GMT+0200 (EET)"));
+  ASSERT(v7_exec(v7, &v, "new Date(1999, 10, 9, 15, 40, 50, 777).toTimeString()") == V7_OK);
+  ASSERT(check_str(v7, v, "15:40:50 GMT+0200 (EET)"));
+  ASSERT(v7_exec(v7, &v, "new Date(1968, 10, 9, 15, 40, 50, 777).toLocaleString()") == V7_OK);
+  ASSERT(check_str(v7, v, "воскресенье,  9 ноября 1968 г. 15:40:50"));
+  ASSERT(v7_exec(v7, &v, "new Date(-100, 10, 9, 15, 40, 50, 777).toLocaleString()") == V7_OK);
+  ASSERT(check_str(v7, v, "суббота,  9 ноября -100 г. 15:40:50"));
+  ASSERT(v7_exec(v7, &v, "new Date(2015, 10, 9, 15, 40, 50, 777).toLocaleString()") == V7_OK);
+  ASSERT(check_str(v7, v, "понедельник,  9 ноября 2015 г. 15:40:50"));
+  ASSERT(v7_exec(v7, &v, "new Date(1968, 10, 9, 15, 40, 50, 777).toLocaleDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "09.11.1968"));
+  ASSERT(v7_exec(v7, &v, "new Date(-100, 10, 9, 15, 40, 50, 777).toLocaleDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "09.11.-100"));
+  ASSERT(v7_exec(v7, &v, "new Date(2015, 10, 9, 15, 40, 50, 777).toLocaleDateString()") == V7_OK);
+  ASSERT(check_str(v7, v, "09.11.2015"));
+  ASSERT(v7_exec(v7, &v, "new Date(1968, 10, 9, 15, 40, 50, 777).toLocaleTimeString()") == V7_OK);
+  ASSERT(check_str(v7, v, "15:40:50"));
+  ASSERT(v7_exec(v7, &v, "new Date(-100, 10, 9, 15, 40, 50, 777).toLocaleTimeString()") == V7_OK);
+  ASSERT(check_str(v7, v, "15:40:50"));
+  ASSERT(v7_exec(v7, &v, "new Date(2015, 10, 9, 15, 40, 50, 777).toLocaleTimeString()") == V7_OK);
+  ASSERT(check_str(v7, v, "15:40:50"));
+
+
+#endif
+
+  ASSERT(v7_exec(v7, &v, "new Date(\"1959-12-31T23:59:59.999Z\").toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1959-12-31T23:59:59.999Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(\"1969-12-31T23:59:59.999Z\").toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1969-12-31T23:59:59.999Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(\"1979-12-31T23:59:59.999Z\").toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1979-12-31T23:59:59.999Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(\"1979-01-01T00:01:01.001Z\").toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1979-01-01T00:01:01.001Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(\"1970-01-01T00:01:01.001Z\").toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1970-01-01T00:01:01.001Z"));\
+  ASSERT(v7_exec(v7, &v, "new Date(\"959-12-31T23:59:59.999Z\").toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "959-12-31T23:59:59.999Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(\"-959-12-31T23:59:59.999Z\").toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "-000959-12-31T23:59:59.999Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(\"1970\").valueOf()") == V7_OK);
+  ASSERT(check_num(v, 1970));
+  ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(Number(1999), Number(10), 15)).toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1999-11-15T00:00:00.000Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(-1000, 10, 10)).valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(-93696998400000)));
+  ASSERT(v7_exec(v7, &v, "var d = new Date(Date.UTC(-1000, 10, 5))") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.getFullYear()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(-1000)));
+  ASSERT(v7_exec(v7, &v, "d.getDate()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(5)));
+  ASSERT(v7_exec(v7, &v, "d.getMonth()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(10)));
+  ASSERT(v7_exec(v7, &v, "d.toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "-001000-11-05T00:00:00.000Z"));
+  ASSERT(v7_exec(v7, &v, "d.setUTCMonth(9)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "-001000-10-05T00:00:00.000Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(99,10).valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941407200000)));
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5).valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941752800000)));
+  ASSERT(v7_exec(v7, &v, "new Date(\"99\",\"10\",\"5\").valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941752800000)));
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11).valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941792400000)));
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35).valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794500000)));
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45).valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794545000)));
+  ASSERT(v7_exec(v7, &v, "new Date(99,10,5,11,35,45,567).valueOf()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794545567)));
+  ASSERT(v7_exec(v7, &v, "var d = new Date(1999,10,5,11,35,45,567)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.getTime()") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794545567)));
+  ASSERT(v7_exec(v7, &v, "d.getFullYear()") == V7_OK);
+  ASSERT(check_num(v, 1999));
+  ASSERT(v7_exec(v7, &v, "d.getUTCFullYear()") == V7_OK);
+  ASSERT(check_num(v, 1999));
+  ASSERT(v7_exec(v7, &v, "d.getMonth()") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "d.getUTCMonth()") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "d.getDate()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getUTCDate()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getDay()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getUTCDay()") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "d.getHours()") == V7_OK);
+  ASSERT(check_num(v, 11));
+  ASSERT(v7_exec(v7, &v, "d.getUTCHours()") == V7_OK);
+  ASSERT(check_num(v, 11+timezone/3600));
+  ASSERT(v7_exec(v7, &v, "d.getMinutes()") == V7_OK);
+  ASSERT(check_num(v, 35));
+  ASSERT(v7_exec(v7, &v, "d.getUTCMinutes()") == V7_OK);
+  ASSERT(check_num(v, 35));
+  ASSERT(v7_exec(v7, &v, "d.getSeconds()") == V7_OK);
+  ASSERT(check_num(v, 45));
+  ASSERT(v7_exec(v7, &v, "d.getUTCSeconds()") == V7_OK);
+  ASSERT(check_num(v, 45));
+  ASSERT(v7_exec(v7, &v, "d.getMilliseconds()") == V7_OK);
+  ASSERT(check_num(v, 567));
+  ASSERT(v7_exec(v7, &v, "d.getUTCMilliseconds()") == V7_OK);
+  ASSERT(check_num(v, 567));
+  ASSERT(v7_exec(v7, &v, "d.getTimezoneOffset()") == V7_OK);
+  ASSERT(check_num(v, timezone/60));
+  ASSERT(v7_exec(v7, &v, "d.setTime(10)") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "d.valueOf()") == V7_OK);
+  ASSERT(check_num(v, 10));
+  ASSERT(v7_exec(v7, &v, "var j = new Date(1999,10,5,11,35,45,567)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "j.setMilliseconds(10)") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794545010)));
+  ASSERT(v7_exec(v7, &v, "j.setUTCMilliseconds(100)") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794545100)));
+  ASSERT(v7_exec(v7, &v, "j.setSeconds(10)") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794510100)));
+  ASSERT(v7_exec(v7, &v, "j.setUTCSeconds(30)") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794530100)));
+  ASSERT(v7_exec(v7, &v, "j.setMinutes(10)") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941793030100)));
+  ASSERT(v7_exec(v7, &v, "j.setUTCMinutes(30)") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941794230100)));
+  ASSERT(v7_exec(v7, &v, "j.setHours(10)") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(941790630100)));
+  ASSERT(v7_exec(v7, &v, "j.setUTCHours(20)") == V7_OK);
+  ASSERT(check_num(v, 941833830100));
+  ASSERT(v7_exec(v7, &v, "j.setDate(15)") == V7_OK);
+  ASSERT(check_num(v, 942697830100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCDate(20)") == V7_OK);
+  ASSERT(check_num(v, 943129830100));
+  ASSERT(v7_exec(v7, &v, "j.setMonth(10)") == V7_OK);
+  ASSERT(check_num(v, 943129830100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCMonth(11)") == V7_OK);
+  ASSERT(check_num(v, 945721830100));
+  ASSERT(v7_exec(v7, &v, "j.setFullYear(2014)") == V7_OK);
+  ASSERT(check_num(v, 1419107430100));
+  ASSERT(v7_exec(v7, &v, "j.setUTCFullYear(2015)") == V7_OK);
+  ASSERT(check_num(v, 1450643430100));
+  ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(1999,10,5,10,20,30,400)).toISOString()") == V7_OK);
+  ASSERT(check_str(v7, v, "1999-11-05T10:20:30.400Z"));
+  ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(1999,10,5,10,20,30,400)).toJSON()") == V7_OK);
+  ASSERT(check_str(v7, v, "1999-11-05T10:20:30.400Z"));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015-02-15T10:42:43.629Z\")") == V7_OK);
+  ASSERT(check_num(v, 1423996963629));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015 13:01:12 GMT+0200 (EET)\")") == V7_OK);
+  ASSERT(check_num(v, 1423998072000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015 11:27:10 GMT\")") == V7_OK);
+  ASSERT(check_num(v, 1423999630000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"Sun Feb 15 2015\")") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"02/15/2015\")") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"2015-02-15\")") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"15.02.2015\")") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(1423951200000)));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"02/15/2015 12:30\")") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(1423996200000)));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"02/15/2015 12:30:45\")") == V7_OK);
+  ASSERT(check_num(v, ADJTZ(1423996245000)));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"10/15/2015 12:30:45 GMT+200\")") == V7_OK);
+  ASSERT(check_num(v, 1444905045000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"10/15/2015 12:30 GMT+200\")") == V7_OK);
+  ASSERT(check_num(v, 1444905000000));
+  ASSERT(v7_exec(v7, &v, "Date.parse(\"10/15/2015 12:30 GMT\")") == V7_OK);
+  ASSERT(check_num(v, 1444912200000));
+#endif
+  
 #if 0
   /* Regexp */
   ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/; re")) != NULL);
@@ -850,7 +1072,7 @@ static const char *test_ecmac(void) {
     ast_dump(stdout, &a, 0);
 #endif
   }
-  printf("ECMA tests coverage: %.2lf%%\n", (double) passed / i * 100.0);
+  printf("ECMA tests coverage: %.2lf%% (%d of %d)\n", (double) passed / i * 100.0, passed, i);
 
   free(db);
   fclose(r);
