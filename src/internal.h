@@ -160,6 +160,7 @@ struct v7 {
   val_t cfunction_prototype;
   val_t this_object;
   val_t date_prototype;
+  val_t function_prototype;
 
   /*
    * Stack of execution contexts.
