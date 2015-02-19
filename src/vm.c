@@ -784,7 +784,11 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   return v7_pointer_to_value((void *) offset) | tag;
 }
 
-/* Get a pointer to string and string length */
+/*
+ * Get a pointer to string and string length.
+ *
+ * Beware that V7 strings are not null terminated!
+ */
 const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
   char *p;
