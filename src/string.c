@@ -106,29 +106,33 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   val_t s = to_string(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = v7_array_at(v7, args, 1);
-  val_t sub, res = v7_create_number(-1);
-  size_t i, n1, n2, fromIndex = v7_is_double(arg1) ? v7_to_double(arg1) : 0;
-  const char *p1, *p2;
+  val_t sub;
+  size_t i, n1, n2, fromIndex = 0;
+  double res = -1;
+  const char *p1, *p2, *end;
 
-  if (arg0 == V7_UNDEFINED) return res;
-
-  sub = to_string(v7, arg0);
-  p1 = v7_to_string(v7, &s, &n1);
-  p2 = v7_to_string(v7, &sub, &n2);
-
-  if (n2 > n1) return res;
-
-  if (last) {
-    for (i = n1 - n2; i >= fromIndex; i--) {
-      if (memcmp(p1 + i, p2, n2) == 0) return v7_create_number(i);
+  if (arg0 != V7_UNDEFINED){
+    sub = to_string(v7, arg0);
+    p1 = v7_to_string(v7, &s, &n1);
+    p2 = v7_to_string(v7, &sub, &n2);
+    
+    if (v7_array_length(v7, args) > 1) fromIndex =  v7_to_double(arg1);
+    end = p1 + n1;
+    if (fromIndex > 0) {
+      if (last)  end = utfnshift((char*)p1, fromIndex + 1);
+      else       p1 = utfnshift((char*)p1, fromIndex);
     }
-  } else {
-    for (i = fromIndex; i <= n1 - n2; i++) {
-      if (memcmp(p1 + i, p2, n2) == 0) return v7_create_number(i);
+    if (0 == n2 || end - p1 == 0) res = 0;
+    else {
+      for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char*)p1, 1))
+        if (memcmp(p1, p2, n2) == 0) {
+          res = i;
+          if (!last) break;
+        }
     }
   }
-
-  return res;
+  if (!last && res >= 0) res += fromIndex;
+  return v7_create_number(res);
 }
 
 static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
