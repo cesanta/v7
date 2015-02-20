@@ -7751,6 +7751,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                 v7_get_property(root, name, name_len)) {
               lval = root;
             }
+            if (v7->strict_mode) {
+              throw_exception(v7, "SyntaxError", "Delete in strict");
+            }
             break;
           case AST_MEMBER:
             name = ast_get_inlined_data(a, *pos, &name_len);
