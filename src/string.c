@@ -39,39 +39,37 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i = 0, n;
   val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
-  val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
+  val_t arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
 
-  if (v7_is_double(arg) && at >= 0 && at < n && v7_is_string(s)) {
+  n = utfnlen(p, n);
+  if (v7_is_double(arg) && at >= 0 && at < n) {
     Rune r = 0;
-    while (i <= n && i <= (size_t) at) {
-      i += chartorune(&r, (char *) (p + i));
-    }
-    if (i <= n) {
-      res = v7_create_number(r);
-    }
+    p = utfnshift(p, at);
+    chartorune(&r, (char *)p);
+    return r;
   }
-  return res;
+  return NAN;
+}
+
+static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+  return v7_create_number(s_charCodeAt(v7, this_obj, args));
 }
 
 static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t code = Str_charCodeAt(v7, this_obj, args);
-  val_t res;
+  double code = s_charCodeAt(v7, this_obj, args);
+  char buf[10] ={0};
+  int len = 0;
 
-  if (code != V7_TAG_NAN) {
-    char buf[10];
-    Rune r = (Rune) v7_to_double(code);
-    int len = runetochar(buf, &r);
-    res = v7_create_string(v7, buf, len, 1);
-  } else {
-    res = v7_create_string(v7, "", 0, 1);
+  if (code != NAN) {
+    Rune r = (Rune) code;
+    len = runetochar(buf, &r);
   }
-
-  return res;
+  return v7_create_string(v7, buf, len, 1);
 }
 
 static val_t to_string(struct v7 *v7, val_t v) {
@@ -155,17 +153,10 @@ static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
+  val_t arg0 = to_string(v7, v7_array_at(v7, args, 0));
   val_t s = to_string(v7, this_obj);
-  val_t res = V7_UNDEFINED;
 
-  if (!v7_is_string(arg0) || !v7_is_string(s)) {
-    throw_exception(v7, "TypeError", "%s", "string expected");
-  } else {
-    res = v7_create_boolean(s_cmp(v7, s, arg0));
-  }
-
-  return res;
+  return v7_create_number(s_cmp(v7, s, arg0));
 }
 
 static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
@@ -434,7 +425,8 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void) args;
   if (v7_is_string(s)) {
-    v7_to_string(v7, &s, &len);
+    char *p = v7_to_string(v7, &s, &len);
+    len = utfnlen(p, len);
   }
 
   return v7_create_number(len);
@@ -451,6 +443,21 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   return default_value;
 }
 
+V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
+  size_t n;
+  char *end, *p = v7_to_string(v7, &s, &n);
+  n = utfnlen(p, n);
+  if (!v7_is_string(s)) return V7_UNDEFINED;
+  if (start < 0) start = n + start;
+  if (start < 0) start = 0;
+  if (start > (long) n) start = n;
+  if (len < 0) len = 0;
+  if (len > (long) n - start) len = n - start;
+  p = utfnshift(p, start);
+  end = utfnshift(p, len);
+  return v7_create_string(v7, p, end - p, 1);
+}
+
 static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long len = arg_long(v7, args, 1, LONG_MAX);
@@ -461,10 +468,6 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long end = arg_long(v7, args, 1, LONG_MAX);
   return s_substr(v7, this_obj, start, end - start);
-}
-
-static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
-  return Str_substring(v7, this_obj, args);
 }
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
@@ -530,7 +533,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "toUpperCase", Str_toUpperCase);
   set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase",
                  Str_toUpperCase);
-  set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
+  set_cfunc_prop(v7, v7->string_prototype, "slice", Str_substring);
   set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
   set_cfunc_prop(v7, v7->string_prototype, "toString", Str_toString);
 

@@ -856,18 +856,6 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   return v7_pointer_to_value((void *) offset) | tag;
 }
 
-V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
-  size_t n;
-  const char *p = v7_to_string(v7, &s, &n);
-  if (!v7_is_string(s)) return V7_UNDEFINED;
-  if (start < 0) start = n + start;
-  if (start < 0) start = 0;
-  if (start > (long) n) start = n;
-  if (len < 0) len = 0;
-  if (len > (long) n - start) len = n - start;
-  return v7_create_string(v7, p + start, len, 1);
-}
-
 /* TODO(lsm): remove this when init_stdlib() is upgraded */
 V7_PRIVATE v7_val_t Std_print_2(struct v7 *v7, val_t this_obj, val_t args) {
   char *p, buf[1024];
