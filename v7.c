@@ -10676,7 +10676,6 @@ int main(int argc, char *argv[]) {
 #include <string.h>
 #include <locale.h>
 #include <stddef.h>
-#include <alloca.h>
 
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);
@@ -11011,7 +11010,7 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
   char gmt[4];
   char buf1[100] = {0}, buf2[100] = {0};
   int res = 0;
-  char *str = (char *) alloca(len + 1); /* scanf requires null-terminated str */
+  char str[101];
   memcpy(str, jstr, len);
   str[len] = '\0';
   memset(tp, 0, sizeof(*tp));
