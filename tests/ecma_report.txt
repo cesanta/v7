@@ -2069,7 +2069,7 @@
 2065	PASS ch11/11.6/11.6.1/S11.6.1_A2.1_T2.js (tail -c +1598918 tests/ecmac.db|head -c 439)
 2066	PASS ch11/11.6/11.6.1/S11.6.1_A2.1_T3.js (tail -c +1599358 tests/ecmac.db|head -c 439)
 2067	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T1.js (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 1{"toString":[function()]}"}]
-2068	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T2.js (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84907e+12"}]
+2068	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T2.js (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84909e+12"}]
 2069	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T3.js (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
 2070	PASS ch11/11.6/11.6.1/S11.6.1_A2.3_T1.js (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS ch11/11.6/11.6.1/S11.6.1_A2.4_T1.js (tail -c +1605816 tests/ecmac.db|head -c 464)
@@ -4537,7 +4537,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4483	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-30.js (tail -c +4799864 tests/ecmac.db|head -c 532): [{"message":"cannot read property 'value' of undefined"}]
 4484	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-31.js (tail -c +4800397 tests/ecmac.db|head -c 463): [{"message":"cannot read property 'value' of undefined"}]
 4485	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-32.js (tail -c +4800861 tests/ecmac.db|head -c 413)
-4486	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-33.js (tail -c +4801275 tests/ecmac.db|head -c 433): [{"message":"cannot read property 'value' of undefined"}]
+4486	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-33.js (tail -c +4801275 tests/ecmac.db|head -c 433)
 4487	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-34.js (tail -c +4801709 tests/ecmac.db|head -c 434)
 4488	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-35.js (tail -c +4802144 tests/ecmac.db|head -c 419)
 4489	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-2-36.js (tail -c +4802564 tests/ecmac.db|head -c 464)

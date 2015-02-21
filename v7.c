@@ -882,7 +882,7 @@ typedef uint64_t val_t;
 
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
-  char *name;               /* Property name is a zero-terminated string */
+  val_t name;               /* Property name (a string) */
   val_t value;              /* Property value */
 
   unsigned int attributes;
@@ -1006,13 +1006,15 @@ V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
-V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
-V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
+V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *, val_t,
+                                                   const char *, size_t);
+V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
+                                                    const char *name,
                                                     size_t, unsigned int attrs);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
-V7_PRIVATE struct v7_property *v7_get_property(val_t obj, const char *name,
-                                               size_t);
+V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
+                                               const char *name, size_t);
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
@@ -1026,7 +1028,7 @@ V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
  */
-V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
+V7_PRIVATE int v7_del_property(struct v7 *, val_t, const char *, size_t);
 
 /*
  * Returns the array length, or `-1` if the object is not an array
@@ -3420,8 +3422,10 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
 
     /* Remove all items with an index higher then new_len */
     for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p[0]->name, &n);
       next = &p[0]->next;
-      index = strtol(p[0]->name, NULL, 10);
+      index = strtol(s, NULL, 10);
       if (index >= new_len) {
         v7_destroy_property(p);
         *p = *next;
@@ -3509,7 +3513,7 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   for (i = 0; i < len; i++) {
     char buf[40];
     snprintf(buf, sizeof(buf), "%d", i);
-    if ((p = v7_get_own_property(obj, buf, strlen(buf))) != NULL) {
+    if ((p = v7_get_own_property(v7, obj, buf, strlen(buf))) != NULL) {
       p->value = arr[len - (i + 1)];
     }
   }
@@ -3625,8 +3629,10 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     long i;
 
     for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p[0]->name, &n);
       next = &p[0]->next;
-      i = strtol(p[0]->name, NULL, 10);
+      i = strtol(s, NULL, 10);
       if (i >= arg0 && i < arg1) {
         /* Remove items from spliced sub-array */
         v7_destroy_property(p);
@@ -3637,9 +3643,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
         char key[20];
         size_t n = snprintf(key, sizeof(key), "%ld",
                             i - (arg1 - arg0) + elems_to_insert);
-        free((*p)->name);
-        (*p)->name = (char *) malloc(n + 1);
-        strcpy((*p)->name, key);
+        p[0]->name = v7_create_string(v7, key, n, 1);
       }
     }
 
@@ -5340,10 +5344,13 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         b += v_sprintf_s(b, size - (b - buf), "{");
         for (p = v7_to_object(v)->properties;
              p && (size - (b - buf)); p = p->next) {
+          size_t n;
+          const char *s;
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
           }
-          b += v_sprintf_s(b, size - (b - buf), "\"%s\":", p->name);
+          s = v7_to_string(v7, &p->name, &n);
+          b += v_sprintf_s(b, size - (b - buf), "\"%.*s\":", (int) n, s);
           b += to_str(v7, p->value, b, size - (b - buf), 1);
           if (p->next) {
             b += v_sprintf_s(b, size - (b - buf), ",");
@@ -5366,7 +5373,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         for (i = 0; i < len; i++) {
           /* TODO */
           v_sprintf_s(key, sizeof(key), "%lu", i);
-          if ((p = v7_get_property(v, key, -1)) != NULL) {
+          if ((p = v7_get_property(v7, v, key, -1)) != NULL) {
             b += to_str(v7, p->value, b, size - (b - buf), 1);
           }
           if (i != len - 1) {
@@ -5484,45 +5491,49 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
   p->next = NULL;
-  p->name = NULL;
+  p->name = V7_UNDEFINED;
   p->value = V7_UNDEFINED;
   p->attributes = 0;
   return p;
 }
 
-V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
+V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 * v7, val_t obj,
+                                                    const char *name,
                                                     size_t len,
                                                     unsigned int attrs) {
-  struct v7_property *prop;
-  if (len == (size_t) ~0) {
-    len = strlen(name);
-  }
+  struct v7_property *p;
   if (!v7_is_object(obj)) {
     return NULL;
   }
+  if (len == (size_t) ~0) {
+    len = strlen(name);
+  }
 
-  for (prop = v7_to_object(obj)->properties; prop != NULL;
-       prop = prop->next) {
-    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0 &&
-        (attrs == 0 || (prop->attributes & attrs))) {
-      return prop;
+  for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+    size_t n;
+    const char *s = v7_to_string(v7, &p->name, &n);
+    if (n == len && strncmp(s, name, len) == 0 &&
+        (attrs == 0 || (p->attributes & attrs))) {
+      return p;
     }
   }
   return NULL;
 }
 
-V7_PRIVATE struct v7_property *v7_get_own_property(val_t obj, const char *name,
+V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
+                                                   const char *name,
                                                    size_t len) {
-  return v7_get_own_property2(obj, name, len, 0);
+  return v7_get_own_property2(v7, obj, name, len, 0);
 }
 
-struct v7_property *v7_get_property(val_t obj, const char *name, size_t len) {
+struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
+                                    size_t len) {
   if (!v7_is_object(obj)) {
     return NULL;
   }
   for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
     struct v7_property *prop;
-    if ((prop = v7_get_own_property(obj, name, len)) != NULL) {
+    if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
       return prop;
     }
   }
@@ -5563,7 +5574,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
 
     return V7_UNDEFINED;
   }
-  return v7_property_value(v7, obj, v7_get_property(v, name, name_len));
+  return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
 }
 
 V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
@@ -5571,7 +5582,7 @@ V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
 }
 
 int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
-  struct v7_property *p = v7_get_own_property(obj, name, len);
+  struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
     return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes,
                            val);
@@ -5597,7 +5608,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     return -1;
   }
 
-  prop = v7_get_own_property(obj, name, len);
+  prop = v7_get_own_property(v7, obj, name, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */
@@ -5609,10 +5620,8 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
-  if (prop->name == NULL) {
-    prop->name = (char *) malloc(len + 1);
-    strncpy(prop->name, name, len);
-    prop->name[len] = '\0';
+  if (prop->name == V7_UNDEFINED) {
+    prop->name = v7_create_string(v7, name, len, 1);
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
     v7_invoke_setter(v7, prop, obj, val);
@@ -5624,7 +5633,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   return 0;
 }
 
-int v7_del_property(val_t obj, const char *name, size_t len) {
+int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   struct v7_property *prop, *prev;
 
   if (!v7_is_object(obj)) {
@@ -5635,7 +5644,9 @@ int v7_del_property(val_t obj, const char *name, size_t len) {
   }
   for (prev = NULL, prop = v7_to_object(obj)->properties; prop != NULL;
        prev = prop, prop = prop->next) {
-    if (len == strlen(prop->name) && strncmp(prop->name, name, len) == 0) {
+    size_t n;
+    const char *s = v7_to_string(v7, &prop->name, &n);
+    if (n == len && strncmp(s, name, len) == 0) {
       if (prev) {
         prev->next = prop->next;
       } else {
@@ -5697,8 +5708,10 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   }
 
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
-    k = strtol(p->name, &end, 10);
-    if (end != p->name && k > max) {
+    size_t n;
+    const char *s = v7_to_string(v7, &p->name, &n);
+    k = strtol(s, &end, 10);
+    if (end != s && k > max) {
       max = k;
     }
   }
@@ -7491,7 +7504,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * the property is found.
          */
         v1 = V7_UNDEFINED;
-        prop = v7_get_property(lval, name, name_len);
+        prop = v7_get_property(v7, lval, name, name_len);
         if (prop != NULL) {
           v1 = prop->value;
         }
@@ -7595,7 +7608,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             ast_move_to_children(a, pos);
             v1 = i_eval_expr(v7, a, pos, scope);
             if (v7->strict_mode &&
-                v7_get_own_property(res, name, name_len) != NULL) {
+                v7_get_own_property(v7, res, name, name_len) != NULL) {
               /* Ideally this should be thrown at parse time */
               throw_exception(v7, "SyntaxError",
                               "duplicate data property in object literal "
@@ -7617,7 +7630,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
               name = ast_get_inlined_data(a, func, &name_len);
               v1 = i_eval_expr(v7, a, pos, scope);
-              if ((p = v7_get_property(res, name, name_len)) &&
+              if ((p = v7_get_property(v7, res, name, name_len)) &&
                   p->attributes & other) {
                 val_t arr = v7_create_array(v7);
                 tmp_stack_push(&tf, &arr);
@@ -7667,7 +7680,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         struct v7_property *p;
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
-        if ((p = v7_get_property(scope, name, name_len)) == NULL) {
+        if ((p = v7_get_property(v7, scope, name, name_len)) == NULL) {
           throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
                           (int) name_len, name);
         }
@@ -7725,7 +7738,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v7_stringify_value(v7, v1, buf, sizeof(buf));
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_boolean(v7_get_property(v2, buf, -1) != NULL);
+      return v7_create_boolean(v7_get_property(v7, v2, buf, -1) != NULL);
     case AST_VAR:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -7750,7 +7763,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * no new variables should be created in it. A var decl thus
          * behaves as a normal assignment at runtime.
          */
-        if ((prop = v7_get_property(scope, name, name_len)) != NULL) {
+        if ((prop = v7_get_property(v7, scope, name, name_len)) != NULL) {
           prop->value = res;
         } else {
           v7_set_property(v7, v7->global_object, name, name_len, 0, res);
@@ -7764,7 +7777,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         ast_off_t peek = *pos;
         if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
           name = ast_get_inlined_data(a, peek, &name_len);
-          if (v7_get_property(scope, name, name_len) == NULL) {
+          if (v7_get_property(v7, scope, name, name_len) == NULL) {
             ast_move_to_children(a, &peek);
             *pos = peek;
             /* TODO(mkm): use interned strings*/
@@ -7799,8 +7812,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           case AST_IDENT:
             name = ast_get_inlined_data(a, *pos, &name_len);
             ast_move_to_children(a, pos);
-            if (v7_get_property(scope, name, name_len) ==
-                v7_get_property(root, name, name_len)) {
+            if (v7_get_property(v7, scope, name, name_len) ==
+                v7_get_property(v7, root, name, name_len)) {
               lval = root;
             }
             if (v7->strict_mode) {
@@ -7824,12 +7837,12 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             return v7_create_boolean(1);
         }
 
-        prop = v7_get_property(lval, name, name_len);
+        prop = v7_get_property(v7, lval, name, name_len);
         if (prop != NULL) {
           if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
             return v7_create_boolean(0);
           }
-          v7_del_property(lval, name, name_len);
+          v7_del_property(v7, lval, name, name_len);
         }
         return v7_create_boolean(1);
       }
@@ -8246,8 +8259,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
           }
-          key = v7_create_string(v7, p->name, strlen(p->name), 1);
-          if ((var = v7_get_property(scope, name, name_len)) != NULL) {
+          key = p->name;
+          if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
             var->value = key;
           } else {
             v7_set_property(v7, v7->global_object, name, name_len, 0, key);
@@ -10241,15 +10254,14 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
  * with the iteration order if properties in `for in`
  * This will be obsoleted when arrays will have a special object type. */
 static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
-                           int i, unsigned int ignore_flags) {
+                                int i, unsigned int ignore_flags) {
   char buf[20];
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
   if (p->next) _Obj_append_reverse(v7, p->next, res, i+1, ignore_flags);
 
   snprintf(buf, sizeof(buf), "%d", i);
-  v7_set_property(v7, res, buf, -1, 0,
-                  v7_create_string(v7, p->name, strlen(p->name), 1));
+  v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
 }
 
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
@@ -10270,7 +10282,7 @@ static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
   char name_buf[512];
   int name_len;
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
-  return v7_get_own_property(obj, name_buf, name_len);
+  return v7_get_own_property(v7, obj, name_buf, name_len);
 }
 
 V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
@@ -10346,10 +10358,12 @@ V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
     throw_exception(v7, "TypeError", "object expected");
   }
   for (p = v7_to_object(descs)->properties; p; p = p->next) {
+    size_t n;
+    const char *s = v7_to_string(v7, &p->name, &n);
     if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
       continue;
     }
-    _Obj_defineProperty(v7, obj, p->name, strlen(p->name), p->value);
+    _Obj_defineProperty(v7, obj, s, n, p->value);
   }
   return obj;
 }
@@ -10395,8 +10409,8 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
 
   (void) args;
-  (void) v7;
-  if ((p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
+  p = v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
+  if (p != NULL) {
     res = p->value;
   }
 
@@ -11657,7 +11671,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
   v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
   d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
-  v7_set_property(v7, v7->global_object, "Date", 6,
+  v7_set_property(v7, v7->global_object, "Date", 4,
                   V7_PROPERTY_DONT_ENUM, date);
 
   DECLARE_GET_AND_SET(Date);

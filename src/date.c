@@ -938,7 +938,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
   v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
   d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
-  v7_set_property(v7, v7->global_object, "Date", 6,
+  v7_set_property(v7, v7->global_object, "Date", 4,
                   V7_PROPERTY_DONT_ENUM, date);
 
   DECLARE_GET_AND_SET(Date);
