@@ -481,6 +481,8 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       if (v7_is_string(arg0) && (i > 0 || n2 > 0) &&
           memcmp(s1 + i, s2, n2) == 0) {
         v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
+        s1 = v7_to_string(v7, &s, &n1);
+        s2 = v7_to_string(v7, &arg0, &n2);
         num_elems++;
         i = j = i + n2;
       } else if (v7_is_regexp(arg0)) {
@@ -489,10 +491,13 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
           struct slre_cap *cap = &loot.caps[0];
           i = cap->start - s1;
           v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
+          s1 = v7_to_string(v7, &s, &n1);
+          s2 = v7_to_string(v7, &arg0, &n2);
           num_elems++;
           i = j = cap->end - s1;
         } else {
-          i = n1 - n2 + 1;  /* No match, stop the loop */
+          i = n1 - n2;  /* No match, stop the loop */
+          break;
         }
       }
     }
