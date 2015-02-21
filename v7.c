@@ -3594,21 +3594,72 @@ static val_t Array_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return Array_join(v7, this_obj, args);
 }
 
-static val_t Array_slice(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
   val_t res = v7_create_array(v7);
   long i, len = v7_array_length(v7, this_obj);
+  long num_args = v7_array_length(v7, args);
+  long elems_to_insert = num_args > 2 ? num_args - 2 : 0;
   long arg0 = arg_long(v7, args, 0, 0);
   long arg1 = arg_long(v7, args, 1, len);
 
+  /* Bounds check */
   if (len <= 0) return res;
   if (arg0 < 0) arg0 = len + arg0;
   if (arg0 < 0) arg0 = 0;
-  if (arg1 < 0) arg1 = len + arg1;
+  if (arg0 > len) arg0 = len;
+  if (mutate) {
+    if (arg1 < 0) arg1 = 0;
+    arg1 += arg0;
+  } else if (arg1 < 0) {
+    arg1 = len + arg1;
+  }
+
+  /* Create return value - slice */
   for (i = arg0; i < arg1 && i < len; i++) {
     v7_array_append(v7, res, v7_array_at(v7, this_obj, i));
   }
 
+  /* If splicing, modify this_obj array: remove spliced sub-array */
+  if (mutate) {
+    struct v7_property **p, **next;
+    long i;
+
+    for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      next = &p[0]->next;
+      i = strtol(p[0]->name, NULL, 10);
+      if (i >= arg0 && i < arg1) {
+        /* Remove items from spliced sub-array */
+        v7_destroy_property(p);
+        *p = *next;
+        next = p;
+      } else if (i >= arg1) {
+        /* Modify indices of the elements past sub-array */
+        char key[20];
+        size_t n = snprintf(key, sizeof(key), "%ld",
+                            i - (arg1 - arg0) + elems_to_insert);
+        free((*p)->name);
+        (*p)->name = (char *) malloc(n + 1);
+        strcpy((*p)->name, key);
+      }
+    }
+
+    /* Insert optional extra elements */
+    for (i = 2; i < num_args; i++) {
+      char key[20];
+      size_t n = snprintf(key, sizeof(key), "%ld", arg0 + i - 2);
+      v7_set(v7, this_obj, key, n, v7_array_at(v7, args, i));
+    }
+  }
+
   return res;
+}
+
+static val_t Array_slice(struct v7 *v7, val_t this_obj, val_t args) {
+  return a_splice(v7, this_obj, args, 0);
+}
+
+static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
+  return a_splice(v7, this_obj, args, 1);
 }
 
 V7_PRIVATE void init_array(struct v7 *v7) {
@@ -3624,7 +3675,8 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "join", Array_join, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 0);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 2);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "splice", Array_splice, 2);
 
   v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
   v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
