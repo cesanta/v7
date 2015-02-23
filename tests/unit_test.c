@@ -594,45 +594,45 @@ static const char *test_runtime(void) {
   ASSERT(v7_to_object(v)->prototype->prototype == NULL);
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_null()) == 0);
-  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT(p->attributes == 0);
   ASSERT(p->value == V7_NULL);
   ASSERT(check_value(v7, p->value, "null"));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_undefined()) == 0);
-  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "undefined"));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
          v7_create_string(v7, "bar", 3, 1)) == 0);
-  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "\"bar\""));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
          v7_create_string(v7, "zar", 3, 1)) == 0);
-  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
+  ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "\"zar\""));
 
-  ASSERT(v7_del_property(v, "foo", ~0) == 0);
+  ASSERT(v7_del_property(v7, v, "foo", ~0) == 0);
   ASSERT(v7_to_object(v)->properties == NULL);
-  ASSERT(v7_del_property(v, "foo", -1) == -1);
+  ASSERT(v7_del_property(v7, v, "foo", -1) == -1);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
          v7_create_string(v7, "bar", 3, 1)) == 0);
   ASSERT(v7_set_property(v7, v, "bar", -1, 0,
          v7_create_string(v7, "foo", 3, 1)) == 0);
   ASSERT(v7_set_property(v7, v, "aba", -1, 0,
          v7_create_string(v7, "bab", 3, 1)) == 0);
-  ASSERT(v7_del_property(v, "foo", -1) == 0);
-  ASSERT((p = v7_get_property(v, "foo", -1)) == NULL);
-  ASSERT(v7_del_property(v, "aba", -1) == 0);
-  ASSERT((p = v7_get_property(v, "aba", -1)) == NULL);
-  ASSERT(v7_del_property(v, "bar", -1) == 0);
-  ASSERT((p = v7_get_property(v, "bar", -1)) == NULL);
+  ASSERT(v7_del_property(v7, v, "foo", -1) == 0);
+  ASSERT((p = v7_get_property(v7, v, "foo", -1)) == NULL);
+  ASSERT(v7_del_property(v7, v, "aba", -1) == 0);
+  ASSERT((p = v7_get_property(v7, v, "aba", -1)) == NULL);
+  ASSERT(v7_del_property(v7, v, "bar", -1) == 0);
+  ASSERT((p = v7_get_property(v7, v, "bar", -1)) == NULL);
 
   v = v7_create_object(v7);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_number(1.0)) == 0);
-  ASSERT((p = v7_get_property(v, "foo", -1)) != NULL);
-  ASSERT((p = v7_get_property(v, "f", -1)) == NULL);
+  ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
+  ASSERT((p = v7_get_property(v7, v, "f", -1)) == NULL);
 
   v = v7_create_object(v7);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v) == 0);
@@ -644,7 +644,7 @@ static const char *test_runtime(void) {
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) == 0);
   ASSERT(check_value(v7, v, "{\"foo\":2}"));
   ASSERT(v7_to_double(v7_get(v7, v, "foo", -1)) == 2.0);
-  ASSERT(v7_get_property(v, "foo", -1)->attributes & V7_PROPERTY_DONT_DELETE);
+  ASSERT(v7_get_property(v7, v, "foo", -1)->attributes & V7_PROPERTY_DONT_DELETE);
   ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY, v7_create_number(1.0)) == 0);
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) != 0);
   ASSERT(check_value(v7, v, "{\"foo\":1}"));
@@ -1613,24 +1613,24 @@ static const char *test_interpreter(void) {
 static const char *test_strings(void) {
   val_t s = 0;
   struct v7 *v7;
+  size_t off;
 
   v7 = v7_create();
+  off = v7->owned_strings.len;
+  ASSERT(off > 0);  /* properties names use it */
 
   s = v7_create_string(v7, "hi", 2, 1);
   ASSERT(memcmp(&s, "\x02\x68\x69\x00\x00\x00\xfa\xff", sizeof(s)) == 0);
-  ASSERT(v7->owned_strings.len == 0);
   ASSERT(v7->foreign_strings.len == 0);
 
   s = v7_create_string(v7, "longer one", 10, 1);
-  ASSERT(v7->owned_strings.len == 11);
-  ASSERT(memcmp(v7->owned_strings.buf, "\x0alonger one", 11) == 0);
-  ASSERT(memcmp(&s, "\x00\x00\x00\x00\x00\x00\xf9\xff", sizeof(s)) == 0);
+  ASSERT(v7->owned_strings.len == off + 11);
+  ASSERT(memcmp(v7->owned_strings.buf + off, "\x0alonger one", 11) == 0);
 
   s = v7_create_string(v7, "with embedded \x00 one", 19, 1);
 
-  ASSERT(v7->owned_strings.len == 31);
-  ASSERT(memcmp(&s, "\x0b\x00\x00\x00\x00\x00\xf9\xff", sizeof(s)) == 0);
-  ASSERT(memcmp(v7->owned_strings.buf, "\x0alonger one"
+  ASSERT(v7->owned_strings.len == off + 31);
+  ASSERT(memcmp(v7->owned_strings.buf + off, "\x0alonger one"
          "\x13with embedded \x00 one" , 31) == 0);
 
   v7_destroy(v7);

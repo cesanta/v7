@@ -48,8 +48,10 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
 
     /* Remove all items with an index higher then new_len */
     for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p[0]->name, &n);
       next = &p[0]->next;
-      index = strtol(p[0]->name, NULL, 10);
+      index = strtol(s, NULL, 10);
       if (index >= new_len) {
         v7_destroy_property(p);
         *p = *next;
@@ -137,7 +139,7 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   for (i = 0; i < len; i++) {
     char buf[40];
     snprintf(buf, sizeof(buf), "%d", i);
-    if ((p = v7_get_own_property(obj, buf, strlen(buf))) != NULL) {
+    if ((p = v7_get_own_property(v7, obj, buf, strlen(buf))) != NULL) {
       p->value = arr[len - (i + 1)];
     }
   }
@@ -253,8 +255,10 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     long i;
 
     for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p[0]->name, &n);
       next = &p[0]->next;
-      i = strtol(p[0]->name, NULL, 10);
+      i = strtol(s, NULL, 10);
       if (i >= arg0 && i < arg1) {
         /* Remove items from spliced sub-array */
         v7_destroy_property(p);
@@ -265,9 +269,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
         char key[20];
         size_t n = snprintf(key, sizeof(key), "%ld",
                             i - (arg1 - arg0) + elems_to_insert);
-        free((*p)->name);
-        (*p)->name = (char *) malloc(n + 1);
-        strcpy((*p)->name, key);
+        p[0]->name = v7_create_string(v7, key, n, 1);
       }
     }
 

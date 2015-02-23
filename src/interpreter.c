@@ -392,7 +392,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * the property is found.
          */
         v1 = V7_UNDEFINED;
-        prop = v7_get_property(lval, name, name_len);
+        prop = v7_get_property(v7, lval, name, name_len);
         if (prop != NULL) {
           v1 = prop->value;
         }
@@ -496,7 +496,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             ast_move_to_children(a, pos);
             v1 = i_eval_expr(v7, a, pos, scope);
             if (v7->strict_mode &&
-                v7_get_own_property(res, name, name_len) != NULL) {
+                v7_get_own_property(v7, res, name, name_len) != NULL) {
               /* Ideally this should be thrown at parse time */
               throw_exception(v7, "SyntaxError",
                               "duplicate data property in object literal "
@@ -518,7 +518,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
               V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
               name = ast_get_inlined_data(a, func, &name_len);
               v1 = i_eval_expr(v7, a, pos, scope);
-              if ((p = v7_get_property(res, name, name_len)) &&
+              if ((p = v7_get_property(v7, res, name, name_len)) &&
                   p->attributes & other) {
                 val_t arr = v7_create_array(v7);
                 tmp_stack_push(&tf, &arr);
@@ -568,7 +568,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         struct v7_property *p;
         name = ast_get_inlined_data(a, *pos, &name_len);
         ast_move_to_children(a, pos);
-        if ((p = v7_get_property(scope, name, name_len)) == NULL) {
+        if ((p = v7_get_property(v7, scope, name, name_len)) == NULL) {
           throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
                           (int) name_len, name);
         }
@@ -626,7 +626,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       v1 = i_eval_expr(v7, a, pos, scope);
       v7_stringify_value(v7, v1, buf, sizeof(buf));
       v2 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_boolean(v7_get_property(v2, buf, -1) != NULL);
+      return v7_create_boolean(v7_get_property(v7, v2, buf, -1) != NULL);
     case AST_VAR:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
@@ -651,7 +651,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * no new variables should be created in it. A var decl thus
          * behaves as a normal assignment at runtime.
          */
-        if ((prop = v7_get_property(scope, name, name_len)) != NULL) {
+        if ((prop = v7_get_property(v7, scope, name, name_len)) != NULL) {
           prop->value = res;
         } else {
           v7_set_property(v7, v7->global_object, name, name_len, 0, res);
@@ -665,7 +665,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         ast_off_t peek = *pos;
         if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
           name = ast_get_inlined_data(a, peek, &name_len);
-          if (v7_get_property(scope, name, name_len) == NULL) {
+          if (v7_get_property(v7, scope, name, name_len) == NULL) {
             ast_move_to_children(a, &peek);
             *pos = peek;
             /* TODO(mkm): use interned strings*/
@@ -700,8 +700,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           case AST_IDENT:
             name = ast_get_inlined_data(a, *pos, &name_len);
             ast_move_to_children(a, pos);
-            if (v7_get_property(scope, name, name_len) ==
-                v7_get_property(root, name, name_len)) {
+            if (v7_get_property(v7, scope, name, name_len) ==
+                v7_get_property(v7, root, name, name_len)) {
               lval = root;
             }
             if (v7->strict_mode) {
@@ -725,12 +725,12 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             return v7_create_boolean(1);
         }
 
-        prop = v7_get_property(lval, name, name_len);
+        prop = v7_get_property(v7, lval, name, name_len);
         if (prop != NULL) {
           if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
             return v7_create_boolean(0);
           }
-          v7_del_property(lval, name, name_len);
+          v7_del_property(v7, lval, name, name_len);
         }
         return v7_create_boolean(1);
       }
@@ -1147,8 +1147,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
             continue;
           }
-          key = v7_create_string(v7, p->name, strlen(p->name), 1);
-          if ((var = v7_get_property(scope, name, name_len)) != NULL) {
+          key = p->name;
+          if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
             var->value = key;
           } else {
             v7_set_property(v7, v7->global_object, name, name_len, 0, key);
