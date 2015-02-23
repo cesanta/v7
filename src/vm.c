@@ -1003,11 +1003,19 @@ val_t v7_get_global_object(struct v7 *v7) {
 }
 
 void v7_destroy(struct v7 *v7) {
+  struct ast **a;
   if (v7 != NULL) {
     mbuf_free(&v7->owned_strings);
     mbuf_free(&v7->foreign_strings);
     mbuf_free(&v7->json_visited_stack);
     mbuf_free(&v7->tmp_stack);
+
+    for (a = (struct ast **) v7->allocated_asts.buf;
+         (char *) a < v7->allocated_asts.buf + v7->allocated_asts.len; a++) {
+      ast_free(*a);
+      free(*a);
+    }
+    mbuf_free(&v7->allocated_asts);
 
     gc_arena_destroy(&v7->object_arena);
     gc_arena_destroy(&v7->function_arena);
