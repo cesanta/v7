@@ -20,4 +20,4 @@ docker:
 	docker run --rm -v $(CURDIR)/../..:/cesanta cesanta/v7_test
 
 docker_msan:
-	@docker run --rm -v $(CURDIR)/../..:/cesanta -t -i --entrypoint=/bin/bash cesanta/v7_test -c "cd /cesanta/v7; make -C tests test_msan CFLAGS_EXTRA='-DV7_ENABLE_GC' TEST_FILTER=$(TEST_FILTER)"
+	@docker run --rm -v $(CURDIR)/../..:/cesanta -t -i --entrypoint=/bin/bash cesanta/v7_test -c "cd /cesanta/v7; make -C tests test_msan TEST_FILTER=$(TEST_FILTER)"
