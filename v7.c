@@ -6073,11 +6073,11 @@ V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
   assert(cell_size >= sizeof(uintptr_t));
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
-  a->size = size;
   a->name = name;
   /* Avoid arena initialization cost when GC is disabled */
 #ifdef V7_ENABLE_GC
   gc_arena_grow(a, size);
+  assert(a->free != NULL);
 #endif
 }
 
