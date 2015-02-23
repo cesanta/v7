@@ -6088,9 +6088,11 @@ V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
   a->cell_size = cell_size;
   a->name = name;
   /* Avoid arena initialization cost when GC is disabled */
-#ifdef V7_ENABLE_GC
+#ifndef V7_DISABLE_GC
   gc_arena_grow(a, size);
   assert(a->free != NULL);
+#else
+  (void) size;
 #endif
 }
 
@@ -6126,7 +6128,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
 }
 
 V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
-#ifndef V7_ENABLE_GC
+#ifdef V7_DISABLE_GC
   (void) v7;
   return malloc(a->cell_size);
 #else
@@ -6206,8 +6208,8 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
 static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   if (a->verbose) {
-    fprintf(stderr, "%s: total allocations %llu, max %lu, alive %u\n", msg,
-            a->allocations, a->size, a->alive);
+    fprintf(stderr, "%s: total allocations %lu, max %lu, alive %u\n", msg,
+            (unsigned long) a->allocations, a->size, a->alive);
   }
 }
 

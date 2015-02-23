@@ -1674,7 +1674,7 @@ static const char *test_unescape(void) {
   return NULL;
 }
 
-#ifdef V7_ENABLE_GC
+#ifndef V7_DISABLE_GC
 static const char *test_gc_mark(void) {
   struct v7 *v7 = v7_create();
   val_t v;
@@ -1776,7 +1776,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_interpreter);
   RUN_TEST(test_ecmac);
   RUN_TEST(test_strings);
-#ifdef V7_ENABLE_GC
+#ifndef V7_DISABLE_GC
   RUN_TEST(test_gc_mark);
   RUN_TEST(test_gc_sweep);
 #endif
