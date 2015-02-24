@@ -35,11 +35,6 @@
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
-/* Regex flags */
-#define SLRE_FLAG_G 1     /* Global - match in the whole string */
-#define SLRE_FLAG_I 2     /* Ignore case */
-#define SLRE_FLAG_M 4     /* Multiline */
-
 /* Parser Information */
 struct slre_node {
   unsigned char type;

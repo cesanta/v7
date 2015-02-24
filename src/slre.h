@@ -23,6 +23,11 @@
 extern "C" {
 #endif  /* __cplusplus */
 
+/* Regex flags */
+#define SLRE_FLAG_G 1     /* Global - match in the whole string */
+#define SLRE_FLAG_I 2     /* Ignore case */
+#define SLRE_FLAG_M 4     /* Multiline */
+
 /* Describes single capture */
 struct slre_cap {
   const char *start; /* points to the beginning of the capture group */
