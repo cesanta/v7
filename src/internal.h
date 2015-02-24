@@ -156,6 +156,7 @@ struct v7 {
   val_t boolean_prototype;
   val_t error_prototype;
   val_t string_prototype;
+  val_t regexp_prototype;
   val_t number_prototype;
   val_t cfunction_prototype;
   val_t this_object;
