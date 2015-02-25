@@ -440,7 +440,9 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
   size_t l;
   val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
-  if (v7_is_double(arg_n)) return (long) v7_to_double(arg_n);
+  if (v7_is_double(arg_n) && !isnan(v7_to_double(arg_n))) {
+    return (long) v7_to_double(arg_n);
+  }
   if (arg_n == V7_NULL) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
   if (l > 0 && isdigit(buf[0])) return strtol(buf, NULL, 10);

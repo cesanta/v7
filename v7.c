@@ -4299,7 +4299,9 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
   size_t l;
   val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
-  if (v7_is_double(arg_n)) return (long) v7_to_double(arg_n);
+  if (v7_is_double(arg_n) && !isnan(v7_to_double(arg_n))) {
+    return (long) v7_to_double(arg_n);
+  }
   if (arg_n == V7_NULL) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
   if (l > 0 && isdigit(buf[0])) return strtol(buf, NULL, 10);
@@ -7463,10 +7465,14 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return i_eval_expr(v7, a, pos, scope);
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_boolean(!(int) v7_is_true(v7, v1));
+      return v7_create_boolean(!(int64_t) v7_is_true(v7, v1));
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_number(~(int) i_as_num(v7, v1));
+      d1 = i_as_num(v7, v1);
+      if (isnan(d1) || isinf(d1)) {
+        return v7_create_number(-1);
+      }
+      return v7_create_number(~(int64_t) d1);
     case AST_ASSIGN:
     case AST_REM_ASSIGN:
     case AST_MUL_ASSIGN:
@@ -11361,7 +11367,7 @@ static etime_t d_changepartoftime(const etime_t *current,
   }
 
   for (i = 0; i < ARRAY_SIZE(tp_arr); i++) {
-    if (!isnan(a->args[i])) {
+    if (!isnan(a->args[i]) && !isinf(a->args[i])) {
       *tp_arr[i] = (int)a->args[i];
     }
   }

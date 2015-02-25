@@ -336,10 +336,14 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return i_eval_expr(v7, a, pos, scope);
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_boolean(!(int) v7_is_true(v7, v1));
+      return v7_create_boolean(!(int64_t) v7_is_true(v7, v1));
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      return v7_create_number(~(int) i_as_num(v7, v1));
+      d1 = i_as_num(v7, v1);
+      if (isnan(d1) || isinf(d1)) {
+        return v7_create_number(-1);
+      }
+      return v7_create_number(~(int64_t) d1);
     case AST_ASSIGN:
     case AST_REM_ASSIGN:
     case AST_MUL_ASSIGN:
