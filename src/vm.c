@@ -1003,6 +1003,14 @@ struct v7 *v7_create(void) {
     init_function(v7);
 
     v7->thrown_error = V7_UNDEFINED;
+
+#ifndef V7_DISABLE_JS_STDLIB
+    {
+      val_t res;
+      /* Load JS part of standard library implementation */
+      v7_exec(v7, &res, find_embedded_file("src/stdlib.js", NULL));
+    }
+#endif
   }
 
   return v7;
