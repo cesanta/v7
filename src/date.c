@@ -613,7 +613,7 @@ static etime_t d_changepartoftime(const etime_t *current,
   }
 
   for (i = 0; i < ARRAY_SIZE(tp_arr); i++) {
-    if (!isnan(a->args[i])) {
+    if (!isnan(a->args[i]) && !isinf(a->args[i])) {
       *tp_arr[i] = (int)a->args[i];
     }
   }
