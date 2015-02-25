@@ -97,7 +97,9 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #else
   char **r;
   if (a->free == NULL) {
+#if 0
     fprintf(stderr, "Exhausting arena %s, invoking GC.\n", a->name);
+#endif
     v7_gc(v7);
     if (a->free == NULL) {
 #if 1

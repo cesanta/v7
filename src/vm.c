@@ -813,7 +813,11 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
     char *s = m->buf + offset;
 
     *sizep = decode_varint((uint8_t *) s, &llen);
-    p = (tag == V7_TAG_STRING_O) ? s + llen : * (char **) (s + llen);
+    if (tag == V7_TAG_STRING_O) {
+      p = s + llen;
+    } else {
+      memcpy(&p, s + llen, sizeof(p));
+    }
   }
 
   return p;

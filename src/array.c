@@ -36,11 +36,13 @@ static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
   long new_len = arg_long(v7, args, 0, -1);
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, "TypeError", "Array expected");
-  } else if (new_len < 0) {
+  } else if (new_len < 0 || (v7_is_double(arg0) && (
+      isnan(v7_to_double(arg0)) || isinf(v7_to_double(arg0))))) {
     throw_exception(v7, "RangeError", "Invalid array length");
   } else {
     struct v7_property **p, **next;
@@ -82,8 +84,6 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
     v7_array_append(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
     return (int) - v7_to_double(res);
-  } else if (v7_is_double(a) && v7_is_double(b)) {
-    return v7_to_double(b) - v7_to_double(a);
   } else {
     char sa[100], sb[100];
     to_str(v7, a, sa, sizeof(sa), 0);
