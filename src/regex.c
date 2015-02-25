@@ -21,7 +21,7 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       val_t fl = to_string(v7, v7_array_at(v7, args, 1));
       flags = v7_to_string(v7, &fl, &flags_len);
     }
-    if (slre_compile(re, re_len, flags, flags_len, &p) != SLRE_OK || p == NULL) {
+    if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK || p == NULL) {
       throw_exception(v7, "Error", "Invalid regex");
       return V7_UNDEFINED;
     } else {

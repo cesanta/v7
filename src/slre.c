@@ -93,6 +93,7 @@ struct slre_prog {
 };
 
 struct slre_env {
+  int is_regex;
   const char *src;
   const char *src_end;
   Rune curr_rune;
@@ -229,11 +230,11 @@ int nextesc(const char **p) {
   }
 }
 
-static int re_nextc(Rune *r, const char **src, const char *src_end) {
+static int re_nextc(Rune *r, const char **src, const char *src_end, int is_regex) {
   *r = 0;
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
-  if (*r == '\\') {
+  if (is_regex && *r == '\\') {
     *r = nextesc(src);
     return 1;
   }
@@ -241,7 +242,7 @@ static int re_nextc(Rune *r, const char **src, const char *src_end) {
 }
 
 static int re_nextc_env(struct slre_env *e) {
-  return re_nextc(&e->curr_rune, &e->src, e->src_end);
+  return re_nextc(&e->curr_rune, &e->src, e->src_end, e->is_regex);
 }
 
 static void re_nchset(struct slre_env *e) {
@@ -485,34 +486,38 @@ static int re_lexer(struct slre_env *e) {
     return L_CH;
   }
 
-  switch (e->curr_rune) {
-    case 0: return 0;
-    case '$':
-    case ')':
-    case '*':
-    case '+':
-    case '.':
-    case '?':
-    case '^':
-    case '|':
-      return e->curr_rune;
-    case '{':
-      return re_countrep(e);
-    case '[':
-      return re_lexset(e);
-    case '(':
-      if (e->src[0] == '?') switch (e->src[1]) {
-          case '=':
-            e->src += 2;
-            return L_LA;
-          case ':':
-            e->src += 2;
-            return L_LA_CAP;
-          case '!':
-            e->src += 2;
-            return L_LA_N;
-        }
-      return '(';
+  if (e->is_regex) {
+    switch (e->curr_rune) {
+      case 0: return 0;
+      case '$':
+      case ')':
+      case '*':
+      case '+':
+      case '.':
+      case '?':
+      case '^':
+      case '|':
+        return e->curr_rune;
+      case '{':
+        return re_countrep(e);
+      case '[':
+        return re_lexset(e);
+      case '(':
+        if (e->src[0] == '?') switch (e->src[1]) {
+            case '=':
+              e->src += 2;
+              return L_LA;
+            case ':':
+              e->src += 2;
+              return L_LA_CAP;
+            case '!':
+              e->src += 2;
+              return L_LA_N;
+          }
+        return '(';
+    }
+  } else if (e->curr_rune == 0) {
+    return 0;
   }
 
   return L_CH;
@@ -690,9 +695,9 @@ static unsigned char re_endofcat(Rune c, int is_regex) {
 
 static struct slre_node *re_parser(struct slre_env *e) {
   struct slre_node *alt = NULL, *cat, *nd;
-  if (!re_endofcat(e->lookahead, 1)) {
+  if (!re_endofcat(e->lookahead, e->is_regex)) {
     cat = re_parse_la(e);
-    while (!re_endofcat(e->lookahead, 1)) {
+    while (!re_endofcat(e->lookahead, e->is_regex)) {
       nd = cat;
       cat = re_nnode(e, P_CAT);
       cat->par.xy.x = nd;
@@ -1075,7 +1080,7 @@ static void program_print(struct slre_prog *prog) {
 #endif
 
 int slre_compile(const char *pat, size_t pat_len, const char *flags,
-                 size_t fl_len, struct slre_prog **pr) {
+                 size_t fl_len, struct slre_prog **pr, int is_regex) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
@@ -1085,6 +1090,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   e.pstart = e.pend = (struct slre_node *)
              SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
   e.prog->flags = 0;
+  if(is_regex) e.prog->flags = SLRE_FLAG_RE;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -1437,7 +1443,7 @@ int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
   struct slre_prog *prog = NULL;
   int res;
 
-  if ((res = slre_compile(re, re_len, flags, fl_len, &prog)) == SLRE_OK) {
+  if ((res = slre_compile(re, re_len, flags, fl_len, &prog, 1)) == SLRE_OK) {
     res = slre_exec(prog, str, str_len, loot);
     slre_free(prog);
   }
@@ -1492,6 +1498,7 @@ static unsigned get_flags(const char *ch) {
       case 'g': flags |= SLRE_FLAG_G; break;
       case 'i': flags |= SLRE_FLAG_I; break;
       case 'm': flags |= SLRE_FLAG_M; break;
+      case 'r': flags |= SLRE_FLAG_RE; break;
       default: return flags;
     }
     ch++;
@@ -1577,7 +1584,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s\n", "-p option is mandatory");
     exit(1);
   } else if ((err_code = slre_compile(pattern, strlen(pattern),
-             flags, strlen(flags), &pr)) != SLRE_OK) {
+             flags, strlen(flags), &pr, 1)) != SLRE_OK) {
     fprintf(stderr, "slre_compile(%s): %s\n",
             argv[0], err_code_to_str(err_code));
     exit(1);

@@ -207,7 +207,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
   struct slre_prog *p = NULL;
   struct v7_regexp *rp;
 
-  if (slre_compile(re, re_len, flags, flags_len, &p) != SLRE_OK || p == NULL) {
+  if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK || p == NULL) {
     throw_exception(v7, "Error", "Invalid regex");
     return V7_UNDEFINED;
   } else {

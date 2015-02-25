@@ -27,6 +27,7 @@ extern "C" {
 #define SLRE_FLAG_G 1     /* Global - match in the whole string */
 #define SLRE_FLAG_I 2     /* Ignore case */
 #define SLRE_FLAG_M 4     /* Multiline */
+#define SLRE_FLAG_RE 8    /* flag RegExp/String */
 
 /* Describes single capture */
 struct slre_cap {
@@ -67,7 +68,7 @@ enum slre_error {
 };
 
 int slre_compile(const char *regexp, size_t regexp_len, const char *flags,
-                 size_t flags_len, struct slre_prog **);
+                 size_t flags_len, struct slre_prog **, int is_regex);
 int slre_exec(struct slre_prog *, const char *, size_t, struct slre_loot *);
 void slre_free(struct slre_prog *prog);
 
