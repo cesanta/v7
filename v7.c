@@ -3410,11 +3410,13 @@ static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
   long new_len = arg_long(v7, args, 0, -1);
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, "TypeError", "Array expected");
-  } else if (new_len < 0) {
+  } else if (new_len < 0 || (v7_is_double(arg0) && (
+      isnan(v7_to_double(arg0)) || isinf(v7_to_double(arg0))))) {
     throw_exception(v7, "RangeError", "Invalid array length");
   } else {
     struct v7_property **p, **next;
@@ -3456,8 +3458,6 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
     v7_array_append(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
     return (int) - v7_to_double(res);
-  } else if (v7_is_double(a) && v7_is_double(b)) {
-    return v7_to_double(b) - v7_to_double(a);
   } else {
     char sa[100], sb[100];
     to_str(v7, a, sa, sizeof(sa), 0);
@@ -3964,12 +3964,22 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   val_t s = i_value_of(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
-  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t arg1 = i_value_of(v7, v7_array_at(v7, args, 1));
   val_t sub, res = v7_create_number(-1);
-  size_t i, n1, n2, fromIndex = v7_is_double(arg1) ? v7_to_double(arg1) : 0;
+  size_t i, n1, n2, fromIndex;
   const char *p1, *p2;
 
   if (arg0 == V7_UNDEFINED) return res;
+
+  if (v7_is_double(arg1)) {
+    double d = v7_to_double(arg1);
+    if (isinf(d) && d > 0) {
+      return v7_create_number(-1);
+    }
+    fromIndex = isnan(d) || isinf(d) ? 0 : d;
+  } else {
+    fromIndex = 0;
+  }
 
   sub = to_string(v7, arg0);
   p1 = v7_to_string(v7, &s, &n1);
@@ -4299,8 +4309,15 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
   size_t l;
   val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
-  if (v7_is_double(arg_n) && !isnan(v7_to_double(arg_n))) {
-    return (long) v7_to_double(arg_n);
+  double d;
+  if (v7_is_double(arg_n)) {
+    d = v7_to_double(arg_n);
+    if (isnan(d) || (isinf(d) && d < 0)) {
+      return 0;
+    } else if (isinf(d)) {
+      return LONG_MAX;
+    }
+    return (long) d;
   }
   if (arg_n == V7_NULL) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
@@ -4317,6 +4334,8 @@ static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long end = arg_long(v7, args, 1, LONG_MAX);
+  if (start < 0) start = 0;
+  if (end < 0) end = 0;
   return s_substr(v7, this_obj, start, end - start);
 }
 
@@ -5836,7 +5855,11 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
     char *s = m->buf + offset;
 
     *sizep = decode_varint((uint8_t *) s, &llen);
-    p = (tag == V7_TAG_STRING_O) ? s + llen : * (char **) (s + llen);
+    if (tag == V7_TAG_STRING_O) {
+      p = s + llen;
+    } else {
+      memcpy(&p, s + llen, sizeof(p));
+    }
   }
 
   return p;
@@ -6144,7 +6167,9 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #else
   char **r;
   if (a->free == NULL) {
+#if 0
     fprintf(stderr, "Exhausting arena %s, invoking GC.\n", a->name);
+#endif
     v7_gc(v7);
     if (a->free == NULL) {
 #if 1

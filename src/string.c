@@ -105,12 +105,22 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   val_t s = i_value_of(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
-  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t arg1 = i_value_of(v7, v7_array_at(v7, args, 1));
   val_t sub, res = v7_create_number(-1);
-  size_t i, n1, n2, fromIndex = v7_is_double(arg1) ? v7_to_double(arg1) : 0;
+  size_t i, n1, n2, fromIndex;
   const char *p1, *p2;
 
   if (arg0 == V7_UNDEFINED) return res;
+
+  if (v7_is_double(arg1)) {
+    double d = v7_to_double(arg1);
+    if (isinf(d) && d > 0) {
+      return v7_create_number(-1);
+    }
+    fromIndex = isnan(d) || isinf(d) ? 0 : d;
+  } else {
+    fromIndex = 0;
+  }
 
   sub = to_string(v7, arg0);
   p1 = v7_to_string(v7, &s, &n1);
@@ -440,8 +450,15 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
   size_t l;
   val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
-  if (v7_is_double(arg_n) && !isnan(v7_to_double(arg_n))) {
-    return (long) v7_to_double(arg_n);
+  double d;
+  if (v7_is_double(arg_n)) {
+    d = v7_to_double(arg_n);
+    if (isnan(d) || (isinf(d) && d < 0)) {
+      return 0;
+    } else if (isinf(d)) {
+      return LONG_MAX;
+    }
+    return (long) d;
   }
   if (arg_n == V7_NULL) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
@@ -458,6 +475,8 @@ static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long end = arg_long(v7, args, 1, LONG_MAX);
+  if (start < 0) start = 0;
+  if (end < 0) end = 0;
   return s_substr(v7, this_obj, start, end - start);
 }
 
