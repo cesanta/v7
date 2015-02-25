@@ -833,7 +833,13 @@ V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   if (a_len == b_len) {
     return memcmp(a_ptr, b_ptr, a_len);
   }
-  return a_len - b_len;
+  if (a_len > b_len) {
+    return 1;
+  } else if (a_len < b_len) {
+    return -1;
+  } else {
+    return 0;
+  }
 }
 
 V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
