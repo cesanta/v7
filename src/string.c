@@ -5,7 +5,7 @@
 
 #include "internal.h"
 
-static val_t to_string(struct v7 *, val_t);
+V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
@@ -72,7 +72,7 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-static val_t to_string(struct v7 *v7, val_t v) {
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
   char buf[100], *p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
   val_t res;
 
