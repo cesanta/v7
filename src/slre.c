@@ -1445,6 +1445,9 @@ int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
   return res;
 }
 
+int slre_get_flags(struct slre_prog * crp) {
+  return crp->flags;
+}
 
 #ifdef SLRE_TEST
 

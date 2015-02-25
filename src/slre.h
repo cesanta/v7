@@ -75,6 +75,7 @@ int slre_match(const char *, size_t, const char *, size_t, const char *, size_t,
                struct slre_loot *);
 int slre_replace(struct slre_loot *loot, const char *src, const char *replace,
                  struct slre_loot *dst);
+int slre_get_flags(struct slre_prog *);
 
 #ifdef __cplusplus
 }
