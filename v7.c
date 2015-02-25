@@ -7248,7 +7248,7 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
       snprintf(buf, sizeof(buf), "%.*s", (int) n, s);
       buf[sizeof(buf) - 1] = '\0';
       res = strtod(buf, &e);
-      if (e != buf + n) {
+      if (e - n != buf) {
         return NAN;
       }
       return res;
@@ -7279,13 +7279,16 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
 
 static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
                            double b) {
+  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t) (int64_t) a;
+  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t) (int64_t) b;
+
   switch (tag) {
     case AST_LSHIFT:
-      return (int) a << (int) b;
+      return (int32_t) ((uint32_t) ia << ((uint32_t) ib & 31));
     case AST_RSHIFT:
-      return (int) a >> (int) b;
+      return ia >> ((uint32_t) ib & 31);
     case AST_URSHIFT:
-      return (unsigned int) a >> (int) b;
+      return (uint32_t) ia >> ((uint32_t) ib & 31);
     case AST_OR:
       if (isnan(a)) {
         a = 0.0;
@@ -7293,11 +7296,11 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       if (isnan(b)) {
         b = 0.0;
       }
-      return (int) a | (int) b;
+      return ia | ib;
     case AST_XOR:
-      return (int) a ^ (int) b;
+      return ia ^ ib;
     case AST_AND:
-      return (int) a & (int) b;
+      return ia & ib;
     default:
       throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
       return 0;  /* LCOV_EXCL_LINE */
