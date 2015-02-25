@@ -788,11 +788,11 @@
 784	FAIL ch09/9.4/S9.4_A3_T1.js (tail -c +585931 tests/ecmac.db|head -c 1969): [{"message":"#1: var d1 = new Date(6.54321); d1.valueOf() === 6;"}]
 785	FAIL ch09/9.4/S9.4_A3_T2.js (tail -c +587901 tests/ecmac.db|head -c 1007): [{"message":"#2: var d2 = new Date(Infinity); d2.valueOf() === Number.NaN;"}]
 786	PASS ch09/9.5/S9.5_A1_T1.js (tail -c +588909 tests/ecmac.db|head -c 1629)
-787	FAIL ch09/9.5/S9.5_A2.1_T1.js (tail -c +590539 tests/ecmac.db|head -c 1325): [{"message":"#3: (-2147483649 << 0) === 2147483647. Actual: -2.14748e+09"}]
+787	PASS ch09/9.5/S9.5_A2.1_T1.js (tail -c +590539 tests/ecmac.db|head -c 1325)
 788	FAIL ch09/9.5/S9.5_A2.1_T2.js (tail -c +591865 tests/ecmac.db|head -c 600): [{"message":"#1: ~-2147483649 === ~2147483647"}]
-789	FAIL ch09/9.5/S9.5_A2.2_T1.js (tail -c +592466 tests/ecmac.db|head -c 1674): [{"message":"#3: (-2147483649 << 0) === 2147483647. Actual: -2.14748e+09"}]
+789	PASS ch09/9.5/S9.5_A2.2_T1.js (tail -c +592466 tests/ecmac.db|head -c 1674)
 790	FAIL ch09/9.5/S9.5_A2.2_T2.js (tail -c +594141 tests/ecmac.db|head -c 1298): [{"message":"#3: ~-2147483649 ==== ~2147483647)"}]
-791	FAIL ch09/9.5/S9.5_A2.3_T1.js (tail -c +595440 tests/ecmac.db|head -c 977): [{"message":"#3: (2147483649 << 0) === -2147483647. Actual: -2.14748e+09"}]
+791	PASS ch09/9.5/S9.5_A2.3_T1.js (tail -c +595440 tests/ecmac.db|head -c 977)
 792	FAIL ch09/9.5/S9.5_A2.3_T2.js (tail -c +596418 tests/ecmac.db|head -c 733): [{"message":"#2: ~2147483648 ==== ~-2147483648)"}]
 793	PASS ch09/9.5/S9.5_A3.1_T1.js (tail -c +597152 tests/ecmac.db|head -c 410)
 794	PASS ch09/9.5/S9.5_A3.1_T2.js (tail -c +597563 tests/ecmac.db|head -c 402)
@@ -2069,7 +2069,7 @@
 2065	PASS ch11/11.6/11.6.1/S11.6.1_A2.1_T2.js (tail -c +1598918 tests/ecmac.db|head -c 439)
 2066	PASS ch11/11.6/11.6.1/S11.6.1_A2.1_T3.js (tail -c +1599358 tests/ecmac.db|head -c 439)
 2067	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T1.js (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 1{"toString":[function()]}"}]
-2068	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T2.js (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84971e+12"}]
+2068	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T2.js (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.84976e+12"}]
 2069	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T3.js (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
 2070	PASS ch11/11.6/11.6.1/S11.6.1_A2.3_T1.js (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS ch11/11.6/11.6.1/S11.6.1_A2.4_T1.js (tail -c +1605816 tests/ecmac.db|head -c 464)
@@ -2156,7 +2156,7 @@
 2152	PASS ch11/11.7/11.7.1/S11.7.1_A4_T2.js (tail -c +1741049 tests/ecmac.db|head -c 53045)
 2153	PASS ch11/11.7/11.7.1/S11.7.1_A4_T3.js (tail -c +1794095 tests/ecmac.db|head -c 53010)
 2154	PASS ch11/11.7/11.7.1/S11.7.1_A4_T4.js (tail -c +1847106 tests/ecmac.db|head -c 56948)
-2155	FAIL ch11/11.7/11.7.1/S11.7.1_A5.1_T1.js (tail -c +1904055 tests/ecmac.db|head -c 1544): [{"message":"#2: 4294967296.1 << 0 === 0. Actual: -2.14748e+09"}]
+2155	PASS ch11/11.7/11.7.1/S11.7.1_A5.1_T1.js (tail -c +1904055 tests/ecmac.db|head -c 1544)
 2156	PASS ch11/11.7/11.7.1/S11.7.1_A5.2_T1.js (tail -c +1905600 tests/ecmac.db|head -c 7084)
 2157	FAIL ch11/11.7/11.7.2/S11.7.2_A1.js (tail -c +1912685 tests/ecmac.db|head -c 1455): [{"message":"#5: -4 >> 1 === -2"}]
 2158	PASS ch11/11.7/11.7.2/S11.7.2_A2.1_T1.js (tail -c +1914141 tests/ecmac.db|head -c 999)
@@ -2185,7 +2185,7 @@
 2181	PASS ch11/11.7/11.7.2/S11.7.2_A4_T2.js (tail -c +1988065 tests/ecmac.db|head -c 52078)
 2182	PASS ch11/11.7/11.7.2/S11.7.2_A4_T3.js (tail -c +2040144 tests/ecmac.db|head -c 50651)
 2183	PASS ch11/11.7/11.7.2/S11.7.2_A4_T4.js (tail -c +2090796 tests/ecmac.db|head -c 49408)
-2184	FAIL ch11/11.7/11.7.2/S11.7.2_A5.1_T1.js (tail -c +2140205 tests/ecmac.db|head -c 1544): [{"message":"#2: 4294967296.1 >> 0 === 0. Actual: -2.14748e+09"}]
+2184	PASS ch11/11.7/11.7.2/S11.7.2_A5.1_T1.js (tail -c +2140205 tests/ecmac.db|head -c 1544)
 2185	PASS ch11/11.7/11.7.2/S11.7.2_A5.2_T1.js (tail -c +2141750 tests/ecmac.db|head -c 8808)
 2186	FAIL ch11/11.7/11.7.3/S11.7.3_A1.js (tail -c +2150559 tests/ecmac.db|head -c 1637): [{"message":"#5: -4 >>> 1 === 2147483646"}]
 2187	PASS ch11/11.7/11.7.3/S11.7.3_A2.1_T1.js (tail -c +2152197 tests/ecmac.db|head -c 1095)
