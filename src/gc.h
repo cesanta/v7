@@ -6,6 +6,9 @@
 #ifndef GC_H_INCLUDED
 #define GC_H_INCLUDED
 
+/* TODO(lsm): re-enable when spurious mem bugs are hunted down */
+#define V7_DISABLE_GC
+
 #include "internal.h"
 #include "vm.h"
 
