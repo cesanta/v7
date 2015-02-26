@@ -1244,6 +1244,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         char *name;
         size_t name_len;
         ast_off_t saved_pos;
+        size_t saved_tmp_stack_pos = v7->tmp_stack.len;
         volatile enum jmp_type j;
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
         name = ast_get_inlined_data(a, *pos, &name_len);
@@ -1260,6 +1261,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
                    name_len == v7->label_len &&
                    memcmp(name, v7->label, name_len) == 0) {
+          v7->tmp_stack.len = saved_tmp_stack_pos;
           *pos = saved_pos;
           if (j == CONTINUE_JMP) {
             v7->lab_cont = 1;
@@ -1278,6 +1280,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         jmp_buf old_jmp;
         char *name;
         size_t name_len;
+        size_t saved_tmp_stack_pos = v7->tmp_stack.len;
         volatile enum jmp_type j;
         memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
@@ -1288,7 +1291,9 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         if ((j = (enum jmp_type)  sigsetjmp(v7->jmp_buf, 0)) == 0) {
           res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
         } else if (j == THROW_JMP && acatch != finally) {
-          val_t catch_scope = create_object(v7, scope);
+          val_t catch_scope;
+          v7->tmp_stack.len = saved_tmp_stack_pos;
+          catch_scope = create_object(v7, scope);
           tmp_stack_push(&tf, &catch_scope);
           tag = ast_fetch_tag(a, &acatch);
           V7_CHECK(v7, tag == AST_IDENT);
@@ -1430,6 +1435,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
   jmp_buf saved_jmp_buf, saved_label_buf;
+  size_t saved_tmp_stack_pos = v7->tmp_stack.len;
   enum v7_err err = V7_OK;
   val_t r = V7_UNDEFINED;
 
@@ -1440,6 +1446,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   ast_init(a, 0);
   mbuf_append(&v7->allocated_asts, (char *) &a, sizeof(a));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
+    v7->tmp_stack.len = saved_tmp_stack_pos;
     r = v7->thrown_error;
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
