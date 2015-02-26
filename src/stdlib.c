@@ -5,27 +5,51 @@
 
 #include "internal.h"
 
-V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
-  char *p, buf[500];
-  int i;
-  for (i = 0; i < cfa->num_args; i++) {
-    p = v7_stringify(cfa->args[i], buf, sizeof(buf));
+/* TODO(lsm): remove this when init_stdlib() is upgraded */
+V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
+  char *p, buf[1024];
+  int i, num_args = v7_array_length(v7, args);
+
+  (void) this_obj;
+  for (i = 0; i < num_args; i++) {
+    p = v7_to_json(v7, v7_array_at(v7, args, i), buf, sizeof(buf));
     printf("%s", p);
-    if (p != buf) free(p);
+    if (p != buf) {
+      free(p);
+    }
   }
   putchar('\n');
 
-  return V7_OK;
+  return v7_create_null();
 }
 
+V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
+  val_t res = V7_UNDEFINED, arg = v7_array_at(v7, args, 0);
+  (void) t;
+  if (arg != V7_UNDEFINED) {
+    char buf[100], *p;
+    p = v7_to_json(v7, arg, buf, sizeof(buf));
+    if (p[0] == '"') {
+      p[0] = p[strlen(p) - 1] = ' ';
+    }
+    if (v7_exec(v7, &res, p) != V7_OK) {
+      throw_value(v7, res);
+    }
+    if (p != buf) {
+      free(p);
+    }
+  }
+  return res;
+}
+
+#if 0
 V7_PRIVATE enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
   int exit_code = cfa->num_args > 0 ? (int)cfa->args[0]->v.num : EXIT_SUCCESS;
   exit(exit_code);
   return V7_OK;
 }
 
-V7_PRIVATE void base64_encode(const unsigned char *src, int src_len,
-                              char *dst) {
+static void base64_encode(const unsigned char *src, int src_len, char *dst) {
   V7_PRIVATE const char *b64 =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   int i, j, a, b, c;
@@ -51,7 +75,7 @@ V7_PRIVATE void base64_encode(const unsigned char *src, int src_len,
 }
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
-V7_PRIVATE unsigned char from_b64(unsigned char ch) {
+static unsigned char from_b64(unsigned char ch) {
   /* Inverse lookup map */
   V7_PRIVATE const unsigned char tab[128] = {
     255, 255, 255, 255, 255, 255, 255, 255,  /* 0 */
@@ -74,7 +98,7 @@ V7_PRIVATE unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
+static void base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
          (b = from_b64(s[1])) != 255 && (c = from_b64(s[2])) != 255 &&
@@ -91,7 +115,7 @@ V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
   *dst = 0;
 }
 
-V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
+static val_t Std_base64_decode(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_val *v = cfa->args[0], *result;
 
   result = v7_push_string(cfa->v7, NULL, 0, 0);
@@ -113,14 +137,6 @@ V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
     result->v.str.buf = (char *) malloc(result->v.str.len + 1);
     base64_encode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
                   result->v.str.buf);
-  }
-  return V7_OK;
-}
-
-V7_PRIVATE enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0];
-  if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    return do_exec(cfa->v7, "<eval>", v->v.str.buf, cfa->v7->sp);
   }
   return V7_OK;
 }
@@ -204,44 +220,65 @@ V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 #endif
-
-V7_PRIVATE void init_stdlib(void) {
-  init_object();
-  init_number();
-  init_array();
-  init_string();
-  init_regex();
-  init_function();
-  init_date();
-  init_error();
-  init_boolean();
-  init_math();
-  init_json();
-#ifndef V7_DISABLE_CRYPTO
-  init_crypto();
 #endif
 
-  SET_METHOD(s_global, "print", Std_print);
-  SET_METHOD(s_global, "exit", Std_exit);
-  SET_METHOD(s_global, "base64_encode", Std_base64_encode);
-  SET_METHOD(s_global, "base64_decode", Std_base64_decode);
-  SET_METHOD(s_global, "eval", Std_eval);
+#define STRINGIFY(x) #x
 
-  SET_RO_PROP(s_global, "Infinity", V7_TYPE_NUM, num, INFINITY);
-  SET_RO_PROP(s_global, "NaN", V7_TYPE_NUM, num, NAN);
+static void init_js_stdlib(struct v7 *v7) {
+  val_t res;
+  static const char code[] = STRINGIFY(
 
-#ifndef V7_NO_FS
-  SET_METHOD(s_global, "open", Std_open);
-  SET_METHOD(s_global, "load", Std_load);
+Array.prototype.indexOf = function(a, b) {
+  if (!b || b < 0) b = 0;
+  for (var i = b; i < this.length; i++) {
+    if (this[i] == a) {
+      return i;
+    }
+  }
+  return -1;
+}
 
-  SET_METHOD(s_file, "read", Std_read);
-  SET_METHOD(s_file, "write", Std_write);
-  SET_METHOD(s_file, "close", Std_close);
+);
 
-  v7_set_class(&s_file, V7_CLASS_OBJECT);
-  s_file.ref_count = 1;
-#endif
+  v7_exec(v7, &res, code);
+}
 
-  v7_set_class(&s_global, V7_CLASS_OBJECT);
-  s_global.ref_count = 1;
+V7_PRIVATE void init_stdlib(struct v7 *v7) {
+  /*
+   * Ensure the first call to v7_create_value will use a null proto:
+   * {}.__proto__.__proto__ == null
+   */
+  v7->object_prototype = create_object(v7, V7_NULL);
+  v7->array_prototype = v7_create_object(v7);
+  v7->boolean_prototype = v7_create_object(v7);
+  v7->string_prototype = v7_create_object(v7);
+  v7->number_prototype = v7_create_object(v7);
+  v7->cfunction_prototype = v7_create_object(v7);
+  v7->global_object = v7_create_object(v7);
+  v7->this_object = v7->global_object;
+  v7->date_prototype = v7_create_object(v7);
+  v7->function_prototype = v7_create_object(v7);
+
+  /* TODO(lsm): remove this when init_stdlib() is upgraded */
+  v7_set_property(v7, v7->global_object, "print", 5, 0,
+                  v7_create_cfunction(Std_print));
+  v7_set_property(v7, v7->global_object, "eval", 4, 0,
+                  v7_create_cfunction(Std_eval));
+  v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
+                  v7_create_number(INFINITY));
+  v7_set_property(v7, v7->global_object, "global", 6, 0,
+                  v7->global_object);
+
+  init_object(v7);
+  init_array(v7);
+  init_error(v7);
+  init_boolean(v7);
+  init_math(v7);
+  init_string(v7);
+  init_number(v7);
+  init_json(v7);
+  init_date(v7);
+  init_function(v7);
+
+  init_js_stdlib(v7);
 }
