@@ -368,10 +368,11 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
   /* trying toString()/toUTCString()/toDateFormat() formats */
   {
     char month[4];
-    const char *frmString = " %03*s %03s %02d %d %02d:%02d:%02d %03s%d";
-    res = sscanf(str, frmString, month, &tp->day, &tp->year,
+    int dowlen;
+    const char *frmString = " %*s%n %03s %02d %d %02d:%02d:%02d %03s%d";
+    res = sscanf(str, frmString, &dowlen, month, &tp->day, &tp->year,
                  &tp->hour, &tp->min, &tp->sec, gmt, tz);
-    if (res == 3 || (res >= 6 && res <= 8)) {
+    if (dowlen == 3 && (res == 3 || (res >= 6 && res <= 8))) {
       if ((tp->month = d_getnumbyname(mon_name,
                                       ARRAY_SIZE(mon_name), month)) != -1) {
         if (res == 7 && strncmp(gmt, "GMT", 3) == 0) {
