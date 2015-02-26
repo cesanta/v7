@@ -1171,7 +1171,7 @@ static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
 #define RE_NO_MATCH() \
   if (!(thr = 0)) continue
 
-static unsigned char re_match(struct slre_instruction *pc, const char *start,
+static unsigned char re_match(struct slre_instruction *pc, const char *current,
                               size_t len, const char *bol, unsigned int flags,
                               struct slre_loot *loot) {
   struct slre_thread threads[SLRE_MAX_THREADS];
@@ -1180,16 +1180,16 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   struct slre_range *p;
   unsigned short thr_num = 1;
   unsigned char thr;
-  size_t i, off = 0;
-  const char *end = start + len;
+  size_t i;
+  const char *end = current + len;
 
   /* queue initial thread */
-  re_newthread(threads, pc, start, loot);
+  re_newthread(threads, pc, current, loot);
 
   /* run threads in stack order */
   do {
     pc = threads[--thr_num].pc;
-    start = threads[thr_num].start;
+    current = threads[thr_num].start;
     sub = threads[thr_num].loot;
     for (thr = 1; thr;) {
       switch (pc->opcode) {
@@ -1198,25 +1198,25 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           return 1;
         case I_ANY:
         case I_ANYNL:
-          start += chartorune(&c, start);
-          if (!c || (pc->opcode == I_ANY && isnewline(c)) || start >= end) RE_NO_MATCH();
+          current += chartorune(&c, current);
+          if (!c || (pc->opcode == I_ANY && isnewline(c)) || current >= end) RE_NO_MATCH();
           break;
 
         case I_BOL:
-          if (start + off == bol) break;
-          if ((flags & SLRE_FLAG_M) && isnewline(start[off - 1])) break;
+          if (current == bol) break;
+          if ((flags & SLRE_FLAG_M) && isnewline(current[-1])) break;
           RE_NO_MATCH();
         case I_CH:
-          start += chartorune(&c, start);
+          current += chartorune(&c, current);
           if (c && (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
-              tolowerrune(c) == tolowerrune(pc->par.c))) && start < end) break;
+              tolowerrune(c) == tolowerrune(pc->par.c))) && current < end) break;
           RE_NO_MATCH();
         case I_EOL:
-          if (off >= len) break;
-          if ((flags & SLRE_FLAG_M) && isnewline(start[off])) break;
+          if (current >= end) break;
+          if ((flags & SLRE_FLAG_M) && isnewline(*current)) break;
           RE_NO_MATCH();
         case I_EOS:
-          if (off >= len) break;
+          if (current >= end) break;
           RE_NO_MATCH();
 
         case I_JUMP:
@@ -1224,7 +1224,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           continue;
 
         case I_LA:
-          if (re_match(pc->par.xy.x, start, end - start, bol, flags,
+          if (re_match(pc->par.xy.x, current, end - current, bol, flags,
                        &sub)) {
             pc = pc->par.xy.y.y;
             continue;
@@ -1232,7 +1232,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           RE_NO_MATCH();
         case I_LA_N:
           tmpsub = sub;
-          if (!re_match(pc->par.xy.x, start, end - start, bol, flags,
+          if (!re_match(pc->par.xy.x, current, end - current, bol, flags,
               &tmpsub)) {
             pc = pc->par.xy.y.y;
             continue;
@@ -1240,14 +1240,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           RE_NO_MATCH();
 
         case I_LBRA:
-          sub.caps[pc->par.n].start = start + off;
+          sub.caps[pc->par.n].start = current;
           break;
 
         case I_REF:
           i = sub.caps[pc->par.n].end - sub.caps[pc->par.n].start;
           if (flags & SLRE_FLAG_I) {
             int num = i;
-            const char *s = start + off, *p = sub.caps[pc->par.n].start;
+            const char *s = current, *p = sub.caps[pc->par.n].start;
             Rune rr;
             for (; num && *s && *p; num--) {
               s += chartorune(&r, s);
@@ -1255,10 +1255,10 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
               if (tolowerrune(r) != tolowerrune(rr)) break;
             }
             if (num) RE_NO_MATCH();
-          } else if (strncmp(start + off, sub.caps[pc->par.n].start, i)) {
+          } else if (strncmp(current, sub.caps[pc->par.n].start, i)) {
             RE_NO_MATCH();
           }
-          if (i > 0) off += i;
+          if (i > 0) current += i;
           break;
 
         case I_REP:
@@ -1277,13 +1277,13 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           break;
 
         case I_RBRA:
-          sub.caps[pc->par.n].end = start + off;
+          sub.caps[pc->par.n].end = current;
           break;
 
         case I_SET:
         case I_SET_N:
-          start += chartorune(&c, start);
-          if (!c || start >= end) RE_NO_MATCH();
+          current += chartorune(&c, current);
+          if (!c || current >= end) RE_NO_MATCH();
 
           i = 1;
           for (p = pc->par.cp->spans; i && p < pc->par.cp->end; p++)
@@ -1305,14 +1305,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
             fprintf(stderr, "re_match: backtrack overflow!\n");
             return 0;
           }
-          re_newthread(&threads[thr_num++], pc->par.xy.y.y, start + off, &sub);
+          re_newthread(&threads[thr_num++], pc->par.xy.y.y, current, &sub);
           pc = pc->par.xy.x;
           continue;
 
         case I_WORD:
         case I_WORD_N:
-          i = (start + off > bol && iswordchar(start[off - 1]));
-          if (iswordchar(start[off])) i = !i;
+          i = (current > bol && iswordchar(current[-1]));
+          if (iswordchar(current[0])) i = !i;
           if (pc->opcode == I_WORD_N) i = !i;
           if (i) break;
         /* RE_NO_MATCH(); */
