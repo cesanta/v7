@@ -15,9 +15,8 @@
 
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);
-#else
+#elif !defined(_WIN32)
 extern long timezone;
-extern struct tm *getdate(const char *);
 #endif
 
 typedef double etime_t; /* double is suitable type for ECMA time */
@@ -153,9 +152,12 @@ static int ecma_WeekDay(etime_t t) {
 
 static int ecma_DaylightSavingTA(etime_t t) {
   time_t time = t / 1000;
-  struct tm tm;
-  memset(&tm, 0, sizeof(t));
-  localtime_r(&time, &tm);
+  /*
+   * Win32 doesn't have locatime_r
+   * nixes don't have localtime_s
+   * as result using localtime
+   */
+  struct tm tm = *localtime(&time);
   if(tm.tm_isdst > 0) {
     return msPerHour;
   } else {
@@ -352,7 +354,7 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
   memset(tp, 0, sizeof(*tp));
   *tz = NO_TZ;
 
-  /* #1: trying toISOSrting() format */
+  /* trying toISOSrting() format */
   {
     const char *frmISOString = " %d-%02d-%02dT%02d:%02d:%02d.%03dZ";
     res = sscanf(str, frmISOString, &tp->year, &tp->month, &tp->day,
@@ -363,22 +365,7 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
     }
   }
 
-  /* #2: trying getdate() - it never works on some OS, but... */
-  {
-    struct tm *tm = getdate(str);
-    if (tm != NULL) {
-      tp->year = tm->tm_year + 1900;
-      tp->month = tm->tm_mon;
-      tp->day = tm->tm_mday;
-      tp->hour = tm->tm_hour;
-      tp->min = tm->tm_min;
-      tp->sec = tm->tm_sec;
-
-      return 1;
-    }
-  }
-
-  /* #3: trying toString()/toUTCString()/toDateFormat() formats */
+  /* trying toString()/toUTCString()/toDateFormat() formats */
   {
     char month[4];
     const char *frmString = " %03*s %03s %02d %d %02d:%02d:%02d %03s%d";
@@ -395,7 +382,7 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
     }
   }
 
-  /* #4: trying the rest */
+  /* trying the rest */
 
   /* trying date */
 
