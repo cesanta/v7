@@ -17,6 +17,7 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     struct slre_prog *p = NULL;
     struct v7_regexp *rp;
 
+  (void) this_obj;
     if(argnum > 1){
       val_t fl = to_string(v7, v7_array_at(v7, args, 1));
       flags = v7_to_string(v7, &fl, &flags_len);
@@ -88,6 +89,7 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   long lastIndex = 0;
 
+  (void) v7;
   (void) args;
   if (v7_is_regexp(this_obj)) {
     struct v7_regexp *rp = v7_to_pointer(this_obj);
@@ -118,7 +120,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
     struct v7_regexp *rp = v7_to_pointer(this_obj);
     int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
     if (rp->lastIndex < 0) rp->lastIndex = 0;
-    if (flag_g) begin = utfnshift(begin, rp->lastIndex);
+    if (flag_g) begin = utfnshift((char *)begin, rp->lastIndex);
 
     if (!slre_exec(rp->compiled_regexp, begin, len, &sub)) {
       int i;
@@ -126,7 +128,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
       
       for (i = 0; i < sub.num_captures; i++, ptok++)
         v7_array_append(v7, arr, v7_create_string(v7, ptok->start, ptok->end - ptok->start, 1));
-      if (flag_g) rp->lastIndex = utfnlen(begin, sub.caps->end - begin);
+      if (flag_g) rp->lastIndex = utfnlen((char *)begin, sub.caps->end - begin);
     } else rp->lastIndex = 0;
   }
   return arr;
