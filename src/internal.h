@@ -242,6 +242,7 @@ extern "C" {
 V7_PRIVATE void throw_value(struct v7 *, val_t);
 V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
+V7_PRIVATE const char *find_embedded_file(const char *name, size_t *size);
 
 #if defined(__cplusplus)
 }

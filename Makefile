@@ -3,8 +3,9 @@ V7_FLAGS = -I./src -I.
 CFLAGS = $(WARNS) -g -O0 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
 
 SRC_DIR=src
-TOP_SOURCES=$(realpath $(addprefix $(SRC_DIR)/, $(SOURCES)))
+TOP_SOURCES=$(addprefix $(SRC_DIR)/, $(SOURCES))
 TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
+DATA_FILES = $(SRC_DIR)/stdlib.js
 
 CLANG:=clang
 
@@ -16,11 +17,16 @@ include src/sources.mk
 
 .PHONY: cpplint
 
-all: v7 amalgamated_v7
+all: data v7 amalgamated_v7
 	@$(MAKE) -C examples
 	@$(MAKE) -C tests
 
-v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
+$(SRC_DIR)/data.c: $(SRC_DIR)/mkdata.pl $(DATA_FILES)
+	perl $(SRC_DIR)/mkdata.pl $(DATA_FILES) > $@
+
+data: $(SRC_DIR)/data.c
+
+v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile data
 	cat v7.h $(TOP_HEADERS) $(TOP_SOURCES) | sed -E "/#include .*(v7.h|`echo $(TOP_HEADERS) | sed -e 's,src/,,g' -e 's, ,|,g'`)/d" > $@
 
 v: unit_test
@@ -33,7 +39,7 @@ xrun: unit_test
 	$(CC) -W -Wall -I. -I./src src/tokenizer.c -DTEST_RUN -DV7_EXPOSE_PRIVATE -o t
 	./t
 
-run:
+run: data
 	@$(MAKE) -C tests compile test_c99
 
 all_warnings: v7.c
