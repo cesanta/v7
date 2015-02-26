@@ -1,0 +1,72 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a1969be_18a359b3",
+        "filename": "Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 1002858
+      },
+      "writtenOn": "2015-02-26T14:36:26Z",
+      "side": 1,
+      "message": "Missing dependency on `data`.\n\nWe could get away with having to depend explicitly on the `data` target,\nby depending on relative src paths.\n\nCurrently the src/data.c target is not invoked because we use realpath.\n\n\nREL_SOURCES\u003d$(addprefix $(SRC_DIR)/, $(SOURCES))\nTOP_SOURCES\u003d$(realpath $(REL_SOURCES))\n\nv7: $(TOP_HEADERS) $(REL_SOURCES) v7.h\n  $(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm",
+      "revId": "db78d2c3e7a23417ec56653f6631b9f140e92d05",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a1969be_f8a59db5",
+        "filename": "Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 1002858
+      },
+      "writtenOn": "2015-02-26T14:36:26Z",
+      "side": 1,
+      "message": "Same here",
+      "revId": "db78d2c3e7a23417ec56653f6631b9f140e92d05",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a1969be_58add19b",
+        "filename": "Makefile",
+        "patchSetId": 1
+      },
+      "lineNbr": 57,
+      "author": {
+        "id": 1002858
+      },
+      "writtenOn": "2015-02-26T14:36:26Z",
+      "side": 1,
+      "message": "And here",
+      "revId": "db78d2c3e7a23417ec56653f6631b9f140e92d05",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a1969be_58b2f1e6",
+        "filename": "src/vm.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1011,
+      "author": {
+        "id": 1002858
+      },
+      "writtenOn": "2015-02-26T14:36:26Z",
+      "side": 1,
+      "message": "An alternative approach would be to:\n\n#define STRINGIFY(src) #src\n\n v7_exec(v7, \u0026res, \n#include \"src/stdlib.js\"\n, NULL));\n\nand making sure that src/stdlib.js contains:\n\nSTRINGIFY(\n    function test() {\n        return \"ciao\\n2\";\n    }\n)\n\nMy editor\u0027s syntax highlighting still works fine even if multiple statements are enclosed in parens. I also tri\n\nPros:\n - less code\n - no generated files (less diffs)\n - less makefile code\n - strips comments, smaller executable size.\n\nCons:\n - stdlib.js is not directly executable (requires commenting out first and last line of code). Might be useful for debugging, but given that it actually defines standard functions and globals, it\u0027s unlikely that we\u0027ll execute the bulk of the file anyway \n  - strips comments :-)\n  - disallows line comments\n  - if we\u0027re generating files, we could even pass through a minifier\n  - editor support ? works for me but YMMV\n\nIMHO the pros outweigh the cons at the moment.",
+      "revId": "db78d2c3e7a23417ec56653f6631b9f140e92d05",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
