@@ -1171,14 +1171,6 @@ static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
 #define RE_NO_MATCH() \
   if (!(thr = 0)) continue
 
-Rune re_getrune(const char *s, size_t n, size_t *off) {
-  Rune r = 0;
-  if (*off < n) {
-    *off += chartorune(&r, s + *off);
-  }
-  return r;
-}
-
 static unsigned char re_match(struct slre_instruction *pc, const char *start,
                               size_t len, const char *bol, unsigned int flags,
                               struct slre_loot *loot) {
@@ -1189,7 +1181,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   unsigned short thr_num = 1;
   unsigned char thr;
   size_t i, off = 0;
-  const char *base = start;
+  const char *end = start + len;
 
   /* queue initial thread */
   re_newthread(threads, pc, start, loot);
@@ -1206,8 +1198,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           return 1;
         case I_ANY:
         case I_ANYNL:
-          c = re_getrune(start, base + len - start, &off);
-          if (!c || (pc->opcode == I_ANY && isnewline(c))) RE_NO_MATCH();
+          start += chartorune(&c, start);
+          if (!c || (pc->opcode == I_ANY && isnewline(c)) || start >= end) RE_NO_MATCH();
           break;
 
         case I_BOL:
@@ -1215,9 +1207,9 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           if ((flags & SLRE_FLAG_M) && isnewline(start[off - 1])) break;
           RE_NO_MATCH();
         case I_CH:
-          c = re_getrune(start, len, &off);
+          start += chartorune(&c, start);
           if (c && (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
-              tolowerrune(c) == tolowerrune(pc->par.c)))) break;
+              tolowerrune(c) == tolowerrune(pc->par.c))) && start < end) break;
           RE_NO_MATCH();
         case I_EOL:
           if (off >= len) break;
@@ -1232,7 +1224,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           continue;
 
         case I_LA:
-          if (re_match(pc->par.xy.x, start + off, len - off, bol, flags,
+          if (re_match(pc->par.xy.x, start, end - start, bol, flags,
                        &sub)) {
             pc = pc->par.xy.y.y;
             continue;
@@ -1240,7 +1232,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           RE_NO_MATCH();
         case I_LA_N:
           tmpsub = sub;
-          if (!re_match(pc->par.xy.x, start + off, len - off, bol, flags,
+          if (!re_match(pc->par.xy.x, start, end - start, bol, flags,
               &tmpsub)) {
             pc = pc->par.xy.y.y;
             continue;
@@ -1290,8 +1282,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
 
         case I_SET:
         case I_SET_N:
-          c = re_getrune(start, len, &off);
-          if (!c) RE_NO_MATCH();
+          start += chartorune(&c, start);
+          if (!c || start >= end) RE_NO_MATCH();
 
           i = 1;
           for (p = pc->par.cp->spans; i && p < pc->par.cp->end; p++)
