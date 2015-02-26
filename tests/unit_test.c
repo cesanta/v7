@@ -885,7 +885,7 @@ static const char *test_parser(void) {
   const char *want_ast_db = "want_ast.db";
   char got_ast[102400];
   char want_ast[102400];
-  char *next_want_ast = want_ast - 1;
+  char *next_want_ast = want_ast;
   size_t want_ast_len;
   ast_init(&a, 0);
 
@@ -899,9 +899,9 @@ static const char *test_parser(void) {
   fclose(fp);
 
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++ ) {
-    char *current_want_ast = next_want_ast + 1;
-    ASSERT((next_want_ast = strchr(current_want_ast, '\0')) != NULL);
-    want_ast_len = (size_t) (next_want_ast - current_want_ast);
+    char *current_want_ast = next_want_ast;
+    ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
+    want_ast_len = (size_t) (next_want_ast - current_want_ast - 1);
     ASSERT((fp = fopen("/tmp/got_ast", "w")) != NULL);
     ast_free(&a);
     #if 0
@@ -1726,14 +1726,13 @@ static const char *test_gc_mark(void) {
 
 static const char *test_gc_sweep(void) {
   struct v7 *v7 = v7_create();
-  void *obj;
   val_t v;
   uint32_t alive;
 
   v7_gc(v7);
   alive = v7->object_arena.alive;
   v7_exec(v7, &v, "x=({a:1})");
-  obj = v7_to_object(v);
+  v7_to_object(v);
   v7_gc(v7);
   ASSERT(v7->object_arena.alive > alive);
   v7_exec(v7, &v, "x.a");
