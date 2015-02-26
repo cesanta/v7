@@ -294,6 +294,11 @@ static const char *test_stdlib(void) {
   /* Date() tests interact with external object (local date & time), so
       if host have strange date/time setting it won't be work */
 
+  ASSERT(v7_exec(v7, &v, "Number(new Date('IncDec 01 2015 00:00:00'))") == V7_OK);
+  ASSERT(check_value(v7, v, "NaN"));
+  ASSERT(v7_exec(v7, &v, "Number(new Date('My Jul 01 2015 00:00:00'))") == V7_OK);
+  ASSERT(check_value(v7, v, "NaN"));
+
 #if 0
   /* Date */
   tzset();
