@@ -1384,6 +1384,13 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   tmp_stack_push(&vf, &res);
   tmp_stack_push(&vf, &arguments);
   tmp_stack_push(&vf, &saved_this);
+  /*
+   * Since v7_apply can be called from user code
+   * we have to treat all arguments as roots.
+   */
+  tmp_stack_push(&vf, &args);
+  tmp_stack_push(&vf, &f);
+  tmp_stack_push(&vf, &this_object);
 
   if (v7_is_cfunction(f)) {
     return v7_to_cfunction(f)(v7, this_object, args);
