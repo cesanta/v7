@@ -110,8 +110,7 @@ static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arr = V7_NULL;
-  int num_args = v7_array_length(v7, args);
-  if (v7_is_regexp(this_obj) && num_args > 0) {
+  if (v7_is_regexp(this_obj) && v7_array_length(v7, args) > 0) {
     val_t s = to_string(v7, v7_array_at(v7, args, 0));
     size_t len;
     struct slre_loot sub;
