@@ -10,7 +10,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   size_t size;
   char buf[200];
   const char *s;
-  val_t param, body, res = V7_UNDEFINED;
+  val_t param, body, res = v7_create_undefined();
 
   (void) this_obj;
 

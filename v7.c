@@ -3399,7 +3399,7 @@ static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t v = V7_UNDEFINED;
+  val_t v = v7_create_undefined();
   int i, len = v7_array_length(v7, args);
   for (i = 0; i < len; i++) {
     v = v7_array_at(v7, args, i);
@@ -3541,7 +3541,7 @@ static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
 
   (void) v7; (void) args;
 
@@ -3556,7 +3556,7 @@ static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
   size_t sep_size = 0;
   const char *sep = NULL;
 
@@ -3977,7 +3977,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   size_t i, n1, n2, fromIndex;
   const char *p1, *p2;
 
-  if (arg0 == V7_UNDEFINED) return res;
+  if (v7_is_undefined(arg0)) return res;
 
   if (v7_is_double(arg1)) {
     double d = v7_to_double(arg1);
@@ -4030,7 +4030,7 @@ static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
   val_t s = i_value_of(v7, this_obj);
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
 
   if (!v7_is_string(arg0) || !v7_is_string(s)) {
     throw_exception(v7, "TypeError", "%s", "string expected");
@@ -5062,7 +5062,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
   }
   switch (v & V7_TAG_MASK) {
     case V7_TAG_FOREIGN:
-      if (v == V7_NULL) {
+      if (v7_is_null(v)) {
         return V7_TYPE_NULL;
       }
       return V7_TYPE_FOREIGN;
@@ -5272,7 +5272,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
 v7_val_t v7_create_function(struct v7 *v7) {
   struct v7_function *f = new_function(v7);
-  val_t proto = V7_UNDEFINED, fval = v7_function_to_value(f);
+  val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
   GC_TMP_FRAME(tf);
   if (f == NULL) {
     return V7_NULL;
@@ -5527,8 +5527,8 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
   p->next = NULL;
-  p->name = V7_UNDEFINED;
-  p->value = V7_UNDEFINED;
+  p->name = v7_create_undefined();
+  p->value = v7_create_undefined();
   p->attributes = 0;
   return p;
 }
@@ -5656,7 +5656,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
-  if (prop->name == V7_UNDEFINED) {
+  if (v7_is_undefined(prop->name)) {
     prop->name = v7_create_string(v7, name, len, 1);
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
@@ -5974,7 +5974,7 @@ struct v7 *v7_create(void) {
                   "property");
 
     init_stdlib(v7);
-    v7->thrown_error = V7_UNDEFINED;
+    v7->thrown_error = v7_create_undefined();
   }
 
   return v7;
@@ -7135,7 +7135,7 @@ static val_t create_exception(struct v7 *v7, const char *ex, const char *msg) {
   char buf[40];
   val_t e;
   if (v7->creating_exception) {
-    fprintf(stderr, "Exception creation throws an exception %s: %s", ex, msg);
+    fprintf(stderr, "Exception creation throws an exception %s: %s\n", ex, msg);
     return V7_UNDEFINED;
   }
   snprintf(buf, sizeof(buf), "new %s(this)", ex);
@@ -7155,7 +7155,7 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
 }  /* LCOV_EXCL_LINE */
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
-  val_t f = V7_UNDEFINED;
+  val_t f = v7_create_undefined();
   GC_TMP_FRAME(tf);
   tmp_stack_push(&tf, &v);
   tmp_stack_push(&tf, &f);
@@ -7303,7 +7303,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
-  val_t res = V7_UNDEFINED, v1 = V7_UNDEFINED, v2 = V7_UNDEFINED;
+  val_t res = v7_create_undefined(), v1 = v7_create_undefined();
+  val_t v2 = v7_create_undefined();
   double d1, d2, dv;
   int i;
   /*
@@ -7455,7 +7456,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       {
         struct v7_property *prop;
         enum ast_tag op = tag;
-        val_t lval = V7_UNDEFINED, root = v7->global_object;
+        val_t lval = v7_create_undefined(), root = v7->global_object;
         tmp_stack_push(&tf, &lval);
         tmp_stack_push(&tf, &root);
         switch ((tag = ast_fetch_tag(a, pos))) {
@@ -7487,7 +7488,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
          * `get_property` should also return a pointer to the object where
          * the property is found.
          */
-        v1 = V7_UNDEFINED;
+        v1 = v7_create_undefined();
         prop = v7_get_property(v7, lval, name, name_len);
         if (prop != NULL) {
           v1 = prop->value;
@@ -7788,7 +7789,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_DELETE:
       {
         struct v7_property *prop;
-        val_t lval = V7_NULL, root = v7->global_object;
+        val_t lval = v7_create_null(), root = v7->global_object;
         ast_off_t start = *pos;
         tmp_stack_push(&tf, &lval);
         tmp_stack_push(&tf, &root);
@@ -7869,7 +7870,7 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
   ast_off_t next, fvar_end;
   char *name;
   size_t name_len;
-  val_t val = V7_UNDEFINED;
+  val_t val = v7_create_undefined();
   GC_TMP_FRAME(tf);
 
   if (fvar == start) {
@@ -7890,7 +7891,7 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
     fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
     ast_move_to_children(a, &fvar);
     while (fvar < fvar_end) {
-      val = V7_UNDEFINED;
+      val = v7_create_undefined();
       tag = ast_fetch_tag(a, &fvar);
       V7_CHECK(v7, tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
       name = ast_get_inlined_data(a, fvar, &name_len);
@@ -7936,7 +7937,7 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
                                    val_t frame, ast_off_t body, ast_off_t end) {
   int saved_strict_mode = v7->strict_mode;
   enum i_break brk = B_RUN;
-  val_t res = V7_UNDEFINED, saved_call_stack = v7->call_stack;
+  val_t res = v7_create_undefined(), saved_call_stack = v7->call_stack;
   GC_TMP_FRAME(tf);
   tmp_stack_push(&tf, &res);
   if (func->attributes & V7_FUNCTION_STRICT) {
@@ -7945,7 +7946,7 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
   v7->call_stack = frame; /* ensure GC knows about this call frame */
   res = i_eval_stmts(v7, func->ast, &body, end, frame, &brk);
   if (brk != B_RETURN) {
-    res = V7_UNDEFINED;
+    res = v7_create_undefined();
   }
   v7->strict_mode = saved_strict_mode;
   v7->call_stack = saved_call_stack;
@@ -7955,8 +7956,9 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
 static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope, val_t this_object, int is_constructor) {
   ast_off_t end, fpos, fend, fbody;
-  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, v1 = V7_UNDEFINED,
-         args = V7_UNDEFINED, old_this = v7->this_object;
+  val_t frame = v7_create_undefined(), res = v7_create_undefined();
+  val_t v1 = v7_create_undefined(), args = v7_create_undefined();
+  val_t old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -8032,7 +8034,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
         v7_set_property(v7, args, buf, n, 0, res);
       }
     } else {
-      res = V7_UNDEFINED;
+      res = v7_create_undefined();
     }
 
     v7_set_property(v7, frame, name, name_len, 0, res);
@@ -8062,7 +8064,7 @@ static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t,
 
 static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
                           ast_off_t end, val_t scope, enum i_break *brk) {
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
   while (*pos < end && !*brk) {
     res = i_eval_stmt(v7, a, pos, scope, brk);
   }
@@ -8073,7 +8075,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
                            val_t scope, enum i_break *brk) {
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
   ast_off_t end, end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
   int saved_strict_mode = v7->strict_mode;
   GC_TMP_FRAME(tf);
@@ -8282,7 +8284,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_SWITCH:
       {
         int found = 0;
-        val_t test = V7_UNDEFINED, val = V7_UNDEFINED;
+        val_t test = v7_create_undefined(), val = v7_create_undefined();
         ast_off_t case_end, default_pos = 0;
         enum ast_tag case_tag;
         tmp_stack_push(&tf, &test);
@@ -8413,7 +8415,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       }
     case AST_WITH:
       {
-        val_t with_scope = V7_UNDEFINED;
+        val_t with_scope = v7_create_undefined();
         tmp_stack_push(&tf, &with_scope);
         end = ast_get_skip(a, *pos, AST_END_SKIP);
         ast_move_to_children(a, pos);
@@ -8468,8 +8470,8 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
-  val_t frame = V7_UNDEFINED, res = V7_UNDEFINED, arguments = V7_UNDEFINED;
-  val_t saved_this = v7->this_object;
+  val_t frame = v7_create_undefined(), res = v7_create_undefined();
+  val_t arguments = v7_create_undefined(), saved_this = v7->this_object;
   char *name;
   size_t name_len;
   char buf[20];
@@ -8535,7 +8537,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char* src, val_t w) {
   jmp_buf saved_jmp_buf, saved_label_buf;
   size_t saved_tmp_stack_pos = v7->tmp_stack.len;
   enum v7_err err = V7_OK;
-  val_t r = V7_UNDEFINED;
+  val_t r = v7_create_undefined();
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
@@ -8581,7 +8583,7 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   char *p;
   long file_size;
   enum v7_err err = V7_EXEC_EXCEPTION;
-  *res = V7_UNDEFINED;
+  *res = v7_create_undefined();
 
   if ((fp = fopen(path, "r")) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]",
@@ -10679,7 +10681,7 @@ static void print_error(struct v7 *v7, const char *f, val_t e) {
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
   int i, show_ast = 0, binary_ast = 0;
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
 
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
@@ -10688,7 +10690,7 @@ int main(int argc, char *argv[]) {
         dump_ast(v7, argv[i + 1], binary_ast);
       } else if (v7_exec(v7, &res, argv[i + 1]) != V7_OK) {
         print_error(v7, argv[i + 1], res);
-        res = V7_UNDEFINED;
+        res = v7_create_undefined();
       }
       i++;
     } else if (strcmp(argv[i], "-t") == 0) {
@@ -10718,7 +10720,7 @@ int main(int argc, char *argv[]) {
       }
     } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {
       print_error(v7, argv[i], res);
-      res = V7_UNDEFINED;
+      res = v7_create_undefined();
     }
   }
 
@@ -11721,7 +11723,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   size_t size;
   char buf[200];
   const char *s;
-  val_t param, body, res = V7_UNDEFINED;
+  val_t param, body, res = v7_create_undefined();
 
   (void) this_obj;
 
@@ -11785,7 +11787,7 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
-  val_t res = V7_UNDEFINED, arg = v7_array_at(v7, args, 0);
+  val_t res = v7_create_undefined(), arg = v7_array_at(v7, args, 0);
   (void) t;
   if (arg != V7_UNDEFINED) {
     char buf[100], *p;
