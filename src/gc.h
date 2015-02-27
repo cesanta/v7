@@ -9,6 +9,8 @@
 #include "internal.h"
 #include "vm.h"
 
+#define V7_DISABLE_GC
+
 #define MARK(p) (* (uintptr_t *) &(p) |= 1)
 
 /* call only on already marked values */

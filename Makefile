@@ -3,7 +3,7 @@ V7_FLAGS = -I./src -I.
 CFLAGS = $(WARNS) -g -O0 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
 
 SRC_DIR=src
-TOP_SOURCES=$(realpath $(addprefix $(SRC_DIR)/, $(SOURCES)))
+TOP_SOURCES=$(addprefix $(SRC_DIR)/, $(SOURCES))
 TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
 
 CLANG:=clang
