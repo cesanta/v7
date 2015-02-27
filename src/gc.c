@@ -172,8 +172,8 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
 static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   if (a->verbose) {
-    fprintf(stderr, "%s: total allocations %lu, max %lu, alive %u\n", msg,
-            (unsigned long) a->allocations, a->size, a->alive);
+    fprintf(stderr, "%s: total allocations %lu, max %lu, alive %lu\n", msg,
+            a->allocations, a->size, a->alive);
   }
 }
 

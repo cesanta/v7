@@ -24,8 +24,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
+
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 #include "../v7.h"
 #include "../src/internal.h"
@@ -590,7 +593,8 @@ static const char *test_runtime(void) {
   ASSERT(val_type(v7, v) == V7_TYPE_STRING);
   v7_to_string(v7, &v, &n);
   ASSERT(n == 3);
-  ASSERT(check_value(v7, v, "\"foo\""));
+  s = "\"foo\"";
+  ASSERT(check_value(v7, v, s));
 
   v = v7_create_object(v7);
   ASSERT(val_type(v7, v) == V7_TYPE_GENERIC_OBJECT);
@@ -611,12 +615,14 @@ static const char *test_runtime(void) {
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
          v7_create_string(v7, "bar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
-  ASSERT(check_value(v7, p->value, "\"bar\""));
+  s = "\"bar\"";
+  ASSERT(check_value(v7, p->value, s));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
          v7_create_string(v7, "zar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
-  ASSERT(check_value(v7, p->value, "\"zar\""));
+  s = "\"zar\"";
+  ASSERT(check_value(v7, p->value, s));
 
   ASSERT(v7_del_property(v7, v, "foo", ~0) == 0);
   ASSERT(v7_to_object(v)->properties == NULL);
@@ -641,18 +647,22 @@ static const char *test_runtime(void) {
 
   v = v7_create_object(v7);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v) == 0);
-  ASSERT(check_value(v7, v, "{\"foo\":[Circular]}"));
+  s = "{\"foo\":[Circular]}";
+  ASSERT(check_value(v7, v, s));
 
   v = v7_create_object(v7);
   ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_DONT_DELETE, v7_create_number(1.0)) == 0);
-  ASSERT(check_value(v7, v, "{\"foo\":1}"));
+  s = "{\"foo\":1}";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) == 0);
-  ASSERT(check_value(v7, v, "{\"foo\":2}"));
+  s = "{\"foo\":2}";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_to_double(v7_get(v7, v, "foo", -1)) == 2.0);
   ASSERT(v7_get_property(v7, v, "foo", -1)->attributes & V7_PROPERTY_DONT_DELETE);
   ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY, v7_create_number(1.0)) == 0);
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) != 0);
-  ASSERT(check_value(v7, v, "{\"foo\":1}"));
+  s = "{\"foo\":1}";
+  ASSERT(check_value(v7, v, s));
 
   v = v7_create_string(v7, "fooakbar", 8, 1);
   for (i = 0; i < 100; i++) {
@@ -1014,7 +1024,8 @@ static const char *test_ecmac(void) {
     snprintf(tail_cmd, sizeof(tail_cmd),
              "%.*s (tail -c +%lu tests/ecmac.db|head -c %lu)",
              chap_len, chap_begin == NULL ? "" : chap_begin,
-             current_case - db + 1, next_case - current_case);
+             (unsigned long) (current_case - db + 1),
+             (unsigned long) (next_case - current_case));
 
 #if 0
     printf("-- Parsing %d: \"%s\"\n", i, current_case);
@@ -1110,6 +1121,7 @@ static const char *test_string_encoding(void) {
 static const char *test_interpreter(void) {
   struct v7 *v7 = v7_create();
   val_t v;
+  const char *s;
 
   v7_set_property(v7, v7->global_object, "x", -1, 0, v7_create_number(42.0));
 
@@ -1123,9 +1135,10 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "1+2") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
   ASSERT(v7_exec(v7, &v, "'1'+'2'") == V7_OK);
-  ASSERT(check_value(v7, v, "\"12\""));
+  s = "\"12\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "'1'+2") == V7_OK);
-  ASSERT(check_value(v7, v, "\"12\""));
+  ASSERT(check_value(v7, v, s));
 
   ASSERT(v7_exec(v7, &v, "false+1") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
@@ -1406,19 +1419,25 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "2"));
 
   ASSERT(v7_exec(v7, &v, "typeof dummyx") == V7_OK);
-  ASSERT(check_value(v7, v, "\"undefined\""));
+  s = "\"undefined\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "typeof null") == V7_OK);
-  ASSERT(check_value(v7, v, "\"object\""));
+  s = "\"object\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "typeof 1") == V7_OK);
-  ASSERT(check_value(v7, v, "\"number\""));
+  s = "\"number\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "typeof (1+2)") == V7_OK);
-  ASSERT(check_value(v7, v, "\"number\""));
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "typeof 'test'") == V7_OK);
-  ASSERT(check_value(v7, v, "\"string\""));
+  s = "\"string\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "typeof [1,2]") == V7_OK);
-  ASSERT(check_value(v7, v, "\"object\""));
+  s = "\"object\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "typeof function(){}") == V7_OK);
-  ASSERT(check_value(v7, v, "\"function\""));
+  s = "\"function\"";
+  ASSERT(check_value(v7, v, s));
 
   ASSERT(v7_exec(v7, &v, "void(1+2)") == V7_OK);
   ASSERT(check_value(v7, v, "undefined"));
@@ -1436,11 +1455,12 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "false"));
 
   ASSERT(v7_exec(v7, &v, "x=1; delete x; typeof x") == V7_OK);
-  ASSERT(check_value(v7, v, "\"undefined\""));
+  s = "\"undefined\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "x=1; (function(){x=2;delete x; return typeof x})()") == V7_OK);
-  ASSERT(check_value(v7, v, "\"undefined\""));
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "x=1; (function(){x=2;delete x})(); typeof x") == V7_OK);
-  ASSERT(check_value(v7, v, "\"undefined\""));
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "x=1; (function(){var x=2;delete x})(); x") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
   ASSERT(v7_exec(v7, &v, "o={a:1};delete o.a;o") == V7_OK);
@@ -1451,7 +1471,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "42"));
 
   ASSERT(v7_exec(v7, &v, "o={};a=[o];o.a=a;a") == V7_OK);
-  ASSERT(check_value(v7, v, "[{\"a\":[Circular]}]"));
+  s = "[{\"a\":[Circular]}]";
+  ASSERT(check_value(v7, v, s));
 
   ASSERT(v7_exec(v7, &v, "new TypeError instanceof Error") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
@@ -1474,7 +1495,8 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "(function(){try {throw new Error}catch(e){c=e}})();c instanceof Error") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
   ASSERT(v7_exec(v7, &v, "delete e;(function(){try {throw new Error}catch(e){}})();typeof e") == V7_OK);
-  ASSERT(check_value(v7, v, "\"undefined\""));
+  s = "\"undefined\"";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "x=(function(){c=1;try {throw 1}catch(e){c=0};return c})()") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
   ASSERT(v7_exec(v7, &v, "x=(function(){var c=1;try {throw 1}catch(e){c=0};return c})()") == V7_OK);
@@ -1487,17 +1509,22 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "Object.keys(new Boolean(1))") == V7_OK);
   ASSERT(check_value(v7, v, "[]"));
   ASSERT(v7_exec(v7, &v, "b={c:1};a=Object.create(b); a.d=4;Object.keys(a)") == V7_OK);
-  ASSERT(check_value(v7, v, "[\"d\"]"));
+  s = "[\"d\"]";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "Object.getOwnPropertyNames(new Boolean(1))") == V7_OK);
   ASSERT(check_value(v7, v, "[]"));
   ASSERT(v7_exec(v7, &v, "b={c:1};a=Object.create(b); a.d=4;Object.getOwnPropertyNames(a)") == V7_OK);
-  ASSERT(check_value(v7, v, "[\"d\"]"));
-  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o, \"x\", {value:2});[o.x,o]") == V7_OK);
+  ASSERT(check_value(v7, v, s));
+  s = "o={};Object.defineProperty(o, \"x\", {value:2});[o.x,o]";
+  ASSERT(v7_exec(v7, &v, s) == V7_OK);
   ASSERT(check_value(v7, v, "[2,{}]"));
   ASSERT(v7_exec(v7, &v, "o={};Object.defineProperties(o,{x:{value:2},y:{value:3,enumerable:true}});[o.x,o.y,o]") == V7_OK);
-  ASSERT(check_value(v7, v, "[2,3,{\"y\":3}]"));
-  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o, \"x\", {value:2,enumerable:true});[o.x,o]") == V7_OK);
-  ASSERT(check_value(v7, v, "[2,{\"x\":2}]"));
+  s = "[2,3,{\"y\":3}]";
+  ASSERT(check_value(v7, v, s));
+  s = "o={};Object.defineProperty(o, \"x\", {value:2,enumerable:true});[o.x,o]";
+  ASSERT(v7_exec(v7, &v, s) == V7_OK);
+  s = "[2,{\"x\":2}]";
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1});o.propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
   ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});o.propertyIsEnumerable('a')") == V7_OK);
@@ -1539,18 +1566,21 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "42"));
 
   ASSERT(v7_exec(v7, &v, "a='aa', b='bb';(function(){return a + ' ' + b;})()") == V7_OK);
-  ASSERT(check_value(v7, v, "\"aa bb\""));
+  s = "\"aa bb\"";
+  ASSERT(check_value(v7, v, s));
 
+  s = "{\"fall\":2,\"one\":1}";
   ASSERT(v7_exec(v7, &v, "o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; break; case 3: o.three=1; };o") == V7_OK);
-  ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "o={};for(i=0;i<1;i++) switch(1) {case 1: o.one=1; case 2: o.fall=2; continue; case 3: o.three=1; };o") == V7_OK);
-  ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "(function(){o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; return o; case 3: o.three=1; }})()") == V7_OK);
-  ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "o={};switch(1) {case 1: o.one=1; default: o.fall=2; break; case 3: o.three=1; };o") == V7_OK);
-  ASSERT(check_value(v7, v, "{\"fall\":2,\"one\":1}"));
+  ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "o={};switch(10) {case 1: o.one=1; case 2: o.fall=2; break; case 3: o.three=1; break; default: o.def=1};o") == V7_OK);
-  ASSERT(check_value(v7, v, "{\"def\":1}"));
+  s = "{\"def\":1}";
+  ASSERT(check_value(v7, v, s));
 
   ASSERT(v7_exec(v7, &v, "o={get x(){return 42}};o.x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
@@ -1566,7 +1596,8 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "[42,[]]"));
 
   ASSERT(v7_exec(v7, &v, "String(new Number(42))") == V7_OK);
-  ASSERT(check_value(v7, v, "\"42\""));
+  s = "\"42\"";
+  ASSERT(check_value(v7, v, s));
 
   ASSERT(v7_exec(v7, &v, "L: for(i=0;i<10;i++){for(j=4;j<10;j++){if(i==j) break L}};i") == V7_OK);
   ASSERT(check_value(v7, v, "4"));
@@ -1594,7 +1625,8 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "1 && {}") == V7_OK);
   ASSERT(check_value(v7, v, "{}"));
   ASSERT(v7_exec(v7, &v, "'' && {}") == V7_OK);
-  ASSERT(check_value(v7, v, "\"\""));
+  s = "\"\"";
+  ASSERT(check_value(v7, v, s));
 
   /* here temporarily because test_stdlib has memory violations */
   ASSERT(v7_exec(v7, &v, "a=[2,1];a.sort();a") == V7_OK);

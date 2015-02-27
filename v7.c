@@ -34,9 +34,11 @@ enum v7_err {
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
-
-/* TODO(lsm): fix this. */
+#ifdef _WIN32
+typedef unsigned __int64 uint64_t;
+#else
 #include <inttypes.h>
+#endif
 typedef uint64_t v7_val_t;
 
 typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
@@ -505,10 +507,10 @@ typedef unsigned long ast_off_t;
 
 struct ast_node_def {
   const char *name;      /* tag name, for debugging and serialization */
-  uint8_t has_varint;    /* has a varint body */
-  uint8_t has_inlined;   /* inlined data whose size is in the varint field */
-  uint8_t num_skips;     /* number of skips */
-  uint8_t num_subtrees;  /* number of fixed subtrees */
+  unsigned char has_varint;    /* has a varint body */
+  unsigned char has_inlined;   /* inlined data whose size is in the varint field */
+  unsigned char num_skips;     /* number of skips */
+  unsigned char num_subtrees;  /* number of fixed subtrees */
 };
 extern const struct ast_node_def ast_node_defs[];
 
@@ -602,8 +604,8 @@ struct gc_arena {
   char *free;  /* head of free list */
   size_t cell_size;
 
-  uint64_t allocations;  /* cumulative counter of allocations */
-  uint32_t alive;        /* number of living cells */
+  unsigned long allocations;  /* cumulative counter of allocations */
+  unsigned long alive;        /* number of living cells */
 
   int verbose;
   const char *name; /* for debugging purposes */
@@ -632,6 +634,7 @@ struct gc_arena {
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
+#include <locale.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -639,6 +642,7 @@ struct gc_arena {
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+#include <time.h>
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
@@ -646,10 +650,15 @@ struct gc_arena {
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #define __unused
-typedef unsigned __int64 uint64_t;
+typedef __int64 int64_t;
+typedef int int32_t;
 typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
+typedef unsigned long uintptr_t;
+#define __func__ ""
 #else
+#include <sys/time.h>
 #include <stdint.h>
 #endif
 
@@ -1065,7 +1074,6 @@ V7_PRIVATE double i_as_num(struct v7 *, val_t);
 #define GC_H_INCLUDED
 
 
-
 /* Disable GC on 32-bit platform for now */
 #if ULONG_MAX == 4294967295
 #define V7_DISABLE_GC
@@ -1084,8 +1092,12 @@ struct gc_cell {
   uintptr_t word;
 };
 
+#ifdef _WIN32
+#define GC_TMP_FRAME(v) struct gc_tmp_frame v = new_tmp_frame(v7);
+#else
 #define GC_TMP_FRAME(v) __attribute__((cleanup(tmp_frame_cleanup), unused)) \
   struct gc_tmp_frame v = new_tmp_frame(v7);
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
@@ -3779,6 +3791,12 @@ V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) {   \
   return func(v7, args, name);                                          \
 }
 
+#ifdef _WIN32
+static double round(double n) {
+  return n;
+}
+#endif
+
 DEFINE_WRAPPER(fabs, m_one_arg)
 DEFINE_WRAPPER(acos, m_one_arg)
 DEFINE_WRAPPER(asin, m_one_arg)
@@ -5151,7 +5169,7 @@ int v7_is_error(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
-  return ((uint64_t) p & ((1L << 48) -1));
+  return (uint64_t) p & ~V7_TAG_MASK;
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
@@ -5273,7 +5291,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 v7_val_t v7_create_function(struct v7 *v7) {
   struct v7_function *f = new_function(v7);
   val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
-  GC_TMP_FRAME(tf);
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
   if (f == NULL) {
     return V7_NULL;
   }
@@ -5288,6 +5306,7 @@ v7_val_t v7_create_function(struct v7 *v7) {
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9, V7_PROPERTY_DONT_ENUM |
                   V7_PROPERTY_DONT_DELETE, proto);
+  tmp_frame_cleanup(&tf);
   return fval;
 }
 
@@ -5698,12 +5717,13 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                                                v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->cfunction_prototype);
-  GC_TMP_FRAME(tf);
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
   v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
                   v7_create_number(num_args));
+  tmp_frame_cleanup(&tf);
   return obj;
 }
 
@@ -5842,7 +5862,8 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     embed_string(m, m->len, (char *) &p, sizeof(p));
   }
 
-  return v7_pointer_to_value((void *) offset) | tag;
+  /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
+  return (offset & ~V7_TAG_MASK) | tag;
 }
 
 /*
@@ -5924,7 +5945,8 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   memcpy(s, a_ptr, a_len);
   memcpy(s + a_len, b_ptr, b_len);
 
-  return v7_pointer_to_value((void *) offset) | tag;
+  /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
+  return (offset & ~V7_TAG_MASK) | tag;
 }
 
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
@@ -6178,8 +6200,8 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
 static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   if (a->verbose) {
-    fprintf(stderr, "%s: total allocations %lu, max %lu, alive %u\n", msg,
-            (unsigned long) a->allocations, a->size, a->alive);
+    fprintf(stderr, "%s: total allocations %lu, max %lu, alive %lu\n", msg,
+            a->allocations, a->size, a->alive);
   }
 }
 
@@ -7241,6 +7263,12 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       return 0;  /* LCOV_EXCL_LINE */
   }
 }
+
+#ifdef _WIN32
+static int signbit(double x) {
+  return x > 0;
+}
+#endif
 
 static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
                            double b) {
@@ -10739,14 +10767,6 @@ int main(int argc, char *argv[]) {
  * All rights reserved
  */
 
-#include <sys/time.h>
-#include <time.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <locale.h>
-#include <stddef.h>
 
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);
@@ -10963,10 +10983,8 @@ struct timeparts {
 
 /*+++ this functions is used to get current date/time & timezone */
 
-static void d_gettime(etime_t *time) {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  *time = (etime_t) tv.tv_sec * 1000 + (etime_t) tv.tv_usec / 1000;
+static void d_gettime(etime_t *t) {
+  *t = time(NULL);
 }
 
 static const char *d_gettzname() {

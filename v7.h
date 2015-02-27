@@ -34,9 +34,11 @@ enum v7_err {
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
-
-/* TODO(lsm): fix this. */
+#ifdef _WIN32
+typedef unsigned __int64 uint64_t;
+#else
 #include <inttypes.h>
+#endif
 typedef uint64_t v7_val_t;
 
 typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);

@@ -101,7 +101,7 @@ int v7_is_error(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
-  return ((uint64_t) p & ((1L << 48) -1));
+  return (uint64_t) p & ~V7_TAG_MASK;
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
@@ -223,7 +223,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 v7_val_t v7_create_function(struct v7 *v7) {
   struct v7_function *f = new_function(v7);
   val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
-  GC_TMP_FRAME(tf);
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
   if (f == NULL) {
     return V7_NULL;
   }
@@ -238,6 +238,7 @@ v7_val_t v7_create_function(struct v7 *v7) {
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9, V7_PROPERTY_DONT_ENUM |
                   V7_PROPERTY_DONT_DELETE, proto);
+  tmp_frame_cleanup(&tf);
   return fval;
 }
 
@@ -648,12 +649,13 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                                                v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->cfunction_prototype);
-  GC_TMP_FRAME(tf);
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
   v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
                   v7_create_number(num_args));
+  tmp_frame_cleanup(&tf);
   return obj;
 }
 
@@ -792,7 +794,8 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     embed_string(m, m->len, (char *) &p, sizeof(p));
   }
 
-  return v7_pointer_to_value((void *) offset) | tag;
+  /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
+  return (offset & ~V7_TAG_MASK) | tag;
 }
 
 /*
@@ -874,7 +877,8 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   memcpy(s, a_ptr, a_len);
   memcpy(s + a_len, b_ptr, b_len);
 
-  return v7_pointer_to_value((void *) offset) | tag;
+  /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
+  return (offset & ~V7_TAG_MASK) | tag;
 }
 
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {

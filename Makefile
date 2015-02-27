@@ -58,16 +58,9 @@ amalgamated_v7: v7.h v7.c
 m32_v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
 	$(CC) $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -m32 -lm
 
-js: v7
-	@./v7 tests/v7_basic_test.js
-	@rhino -version 130 tests/v7_basic_test.js
-
-t: v7
-	./v7 tests/run_ecma262_tests.js
-
 w: v7.c
+	wine cl v7.c /Zi -DV7_EXE -DV7_EXPOSE_PRIVATE
 	wine cl tests/unit_test.c $(TOP_SOURCES) $(V7_FLAGS) /Zi -DV7_EXPOSE_PRIVATE
-	wine unit_test.exe
 
 clean:
 	@$(MAKE) -C tests clean

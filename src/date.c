@@ -4,14 +4,6 @@
  */
 
 #include "internal.h"
-#include <sys/time.h>
-#include <time.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <locale.h>
-#include <stddef.h>
 
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);
@@ -228,10 +220,8 @@ struct timeparts {
 
 /*+++ this functions is used to get current date/time & timezone */
 
-static void d_gettime(etime_t *time) {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  *time = (etime_t) tv.tv_sec * 1000 + (etime_t) tv.tv_usec / 1000;
+static void d_gettime(etime_t *t) {
+  *t = time(NULL);
 }
 
 static const char *d_gettzname() {

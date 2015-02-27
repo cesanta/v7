@@ -14,8 +14,8 @@ struct gc_arena {
   char *free;  /* head of free list */
   size_t cell_size;
 
-  uint64_t allocations;  /* cumulative counter of allocations */
-  uint32_t alive;        /* number of living cells */
+  unsigned long allocations;  /* cumulative counter of allocations */
+  unsigned long alive;        /* number of living cells */
 
   int verbose;
   const char *name; /* for debugging purposes */
