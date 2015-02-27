@@ -292,6 +292,30 @@ static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
   return a_splice(v7, this_obj, args, 1);
 }
 
+static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t params, el, res = v7_create_array(v7);
+  struct v7_property *p;
+
+  if (v7_is_undefined(arg1)) {
+    arg1 = this_obj;
+  }
+
+  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+    size_t n;
+    const char *name = v7_to_string(v7, &p->name, &n);
+    params = v7_create_array(v7);
+    v7_array_append(v7, params, p->value);
+    v7_array_append(v7, params, p->name);
+    v7_array_append(v7, params, arg1);
+    el = v7_apply(v7, arg0, arg1, params);
+    v7_set(v7, res, name, n, el);
+  }
+
+  return res;
+}
+
 V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
   val_t length = v7_create_array(v7);
@@ -307,6 +331,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 2);
   set_cfunc_obj_prop(v7, v7->array_prototype, "splice", Array_splice, 2);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "map", Array_map, 1);
 
   v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
   v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
