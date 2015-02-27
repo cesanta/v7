@@ -9,7 +9,6 @@
 #include "internal.h"
 #include "vm.h"
 
-
 /* Disable GC on 32-bit platform for now */
 #if ULONG_MAX == 4294967295
 #define V7_DISABLE_GC
@@ -28,8 +27,12 @@ struct gc_cell {
   uintptr_t word;
 };
 
+#ifdef _WIN32
+#define GC_TMP_FRAME(v) struct gc_tmp_frame v = new_tmp_frame(v7);
+#else
 #define GC_TMP_FRAME(v) __attribute__((cleanup(tmp_frame_cleanup), unused)) \
   struct gc_tmp_frame v = new_tmp_frame(v7);
+#endif
 
 #if defined(__cplusplus)
 extern "C" {

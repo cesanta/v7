@@ -153,6 +153,12 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
+#ifdef _WIN32
+static int signbit(double x) {
+  return x > 0;
+}
+#endif
+
 static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
                            double b) {
   switch (tag) {

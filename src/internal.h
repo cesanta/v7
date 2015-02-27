@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
+#include <locale.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -28,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
+#include <time.h>
 
 #ifdef _WIN32
 #define vsnprintf _vsnprintf
@@ -35,10 +37,15 @@
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #define __unused
-typedef unsigned __int64 uint64_t;
+typedef __int64 int64_t;
+typedef int int32_t;
 typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
+typedef unsigned long uintptr_t;
+#define __func__ ""
 #else
+#include <sys/time.h>
 #include <stdint.h>
 #endif
 

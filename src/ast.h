@@ -137,10 +137,10 @@ typedef unsigned long ast_off_t;
 
 struct ast_node_def {
   const char *name;      /* tag name, for debugging and serialization */
-  uint8_t has_varint;    /* has a varint body */
-  uint8_t has_inlined;   /* inlined data whose size is in the varint field */
-  uint8_t num_skips;     /* number of skips */
-  uint8_t num_subtrees;  /* number of fixed subtrees */
+  unsigned char has_varint;    /* has a varint body */
+  unsigned char has_inlined;   /* inlined data whose size is in the varint field */
+  unsigned char num_skips;     /* number of skips */
+  unsigned char num_subtrees;  /* number of fixed subtrees */
 };
 extern const struct ast_node_def ast_node_defs[];
 

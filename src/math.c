@@ -22,6 +22,12 @@ V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) {   \
   return func(v7, args, name);                                          \
 }
 
+#ifdef _WIN32
+static double round(double n) {
+  return n;
+}
+#endif
+
 DEFINE_WRAPPER(fabs, m_one_arg)
 DEFINE_WRAPPER(acos, m_one_arg)
 DEFINE_WRAPPER(asin, m_one_arg)
