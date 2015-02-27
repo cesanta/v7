@@ -24,7 +24,7 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
-  val_t res = V7_UNDEFINED, arg = v7_array_at(v7, args, 0);
+  val_t res = v7_create_undefined(), arg = v7_array_at(v7, args, 0);
   (void) t;
   if (arg != V7_UNDEFINED) {
     char buf[100], *p;

@@ -17,7 +17,7 @@ static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t v = V7_UNDEFINED;
+  val_t v = v7_create_undefined();
   int i, len = v7_array_length(v7, args);
   for (i = 0; i < len; i++) {
     v = v7_array_at(v7, args, i);
@@ -159,7 +159,7 @@ static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
 
   (void) v7; (void) args;
 
@@ -174,7 +174,7 @@ static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
   size_t sep_size = 0;
   const char *sep = NULL;
 

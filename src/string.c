@@ -110,7 +110,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   size_t i, n1, n2, fromIndex;
   const char *p1, *p2;
 
-  if (arg0 == V7_UNDEFINED) return res;
+  if (v7_is_undefined(arg0)) return res;
 
   if (v7_is_double(arg1)) {
     double d = v7_to_double(arg1);
@@ -163,7 +163,7 @@ static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
   val_t s = i_value_of(v7, this_obj);
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
 
   if (!v7_is_string(arg0) || !v7_is_string(s)) {
     throw_exception(v7, "TypeError", "%s", "string expected");

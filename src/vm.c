@@ -12,7 +12,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
   }
   switch (v & V7_TAG_MASK) {
     case V7_TAG_FOREIGN:
-      if (v == V7_NULL) {
+      if (v7_is_null(v)) {
         return V7_TYPE_NULL;
       }
       return V7_TYPE_FOREIGN;
@@ -222,7 +222,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
 v7_val_t v7_create_function(struct v7 *v7) {
   struct v7_function *f = new_function(v7);
-  val_t proto = V7_UNDEFINED, fval = v7_function_to_value(f);
+  val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
   GC_TMP_FRAME(tf);
   if (f == NULL) {
     return V7_NULL;
@@ -477,8 +477,8 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
   p->next = NULL;
-  p->name = V7_UNDEFINED;
-  p->value = V7_UNDEFINED;
+  p->name = v7_create_undefined();
+  p->value = v7_create_undefined();
   p->attributes = 0;
   return p;
 }
@@ -606,7 +606,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
-  if (prop->name == V7_UNDEFINED) {
+  if (v7_is_undefined(prop->name)) {
     prop->name = v7_create_string(v7, name, len, 1);
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
@@ -924,7 +924,7 @@ struct v7 *v7_create(void) {
                   "property");
 
     init_stdlib(v7);
-    v7->thrown_error = V7_UNDEFINED;
+    v7->thrown_error = v7_create_undefined();
   }
 
   return v7;

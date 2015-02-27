@@ -254,7 +254,7 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "m[1]") == V7_OK);
   ASSERT(check_str(v7, v, "1234"));
   ASSERT(v7_exec(v7, &v, "m[2]") == V7_OK);
-  ASSERT(v == V7_UNDEFINED);
+  ASSERT(v7_is_undefined(v));
   ASSERT(v7_exec(v7, &v, "m = 'should match empty string at index 0'.match(/x*/)") == V7_OK);
   ASSERT(v7_exec(v7, &v, "m.length") == V7_OK);
   ASSERT(check_num(v, 1.0));
@@ -273,7 +273,7 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "m[0]") == V7_OK);
   ASSERT(check_str(v7, v, "a"));
   ASSERT(v7_exec(v7, &v, "m[1]") == V7_OK);
-  ASSERT(v == V7_UNDEFINED);
+  ASSERT(v7_is_undefined(v));
   ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(' '); m.length") == V7_OK);
   ASSERT(check_num(v, 3.0));
   ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(' ', 2); m.length") == V7_OK);
@@ -564,10 +564,10 @@ static const char *test_runtime(void) {
   int i;
 
   v = v7_create_null();
-  ASSERT(v == V7_NULL);
+  ASSERT(v7_is_null(v));
 
   v = v7_create_undefined();
-  ASSERT(v == V7_UNDEFINED);
+  ASSERT(v7_is_undefined(v));
 
   v = v7_create_number(1.0);
   ASSERT(val_type(v7, v) == V7_TYPE_NUMBER);
@@ -601,7 +601,7 @@ static const char *test_runtime(void) {
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_null()) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT(p->attributes == 0);
-  ASSERT(p->value == V7_NULL);
+  ASSERT(v7_is_null(p->value));
   ASSERT(check_value(v7, p->value, "null"));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0, v7_create_undefined()) == 0);
@@ -1465,7 +1465,7 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "({}) instanceof Object") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
 
-  ASSERT(v7_exec(v7, &v, "") == V7_OK && v == V7_UNDEFINED);
+  ASSERT(v7_exec(v7, &v, "") == V7_OK && v7_is_undefined(v));
 #if 0
   ASSERT(v7_exec(v7, &v, "x=0;a=1;o={a:2};with(o){x=a};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
@@ -1608,7 +1608,7 @@ static const char *test_interpreter(void) {
 } /* test_interpreter */
 
 static const char *test_strings(void) {
-  val_t s = 0;
+  val_t s;
   struct v7 *v7;
   size_t off;
 
