@@ -1065,18 +1065,23 @@ V7_PRIVATE double i_as_num(struct v7 *, val_t);
 #define GC_H_INCLUDED
 
 
+
+/* Disable GC on 32-bit platform for now */
+#if ULONG_MAX == 4294967295
 #define V7_DISABLE_GC
+#endif
 
-#define MARK(p) (* (uintptr_t *) &(p) |= 1)
-
-/* call only on already marked values */
-#define UNMARK(p) (* (uintptr_t *) &(p) &= ~1)
-
-#define MARKED(p) ((uintptr_t) (p) & 1)
+#define MARK(p)   (((struct gc_cell *) (p))->word |= 1)
+#define UNMARK(p) (((struct gc_cell *) (p))->word &= ~1)
+#define MARKED(p) (((struct gc_cell *) (p))->word & 1)
 
 struct gc_tmp_frame {
   struct v7 *v7;
   size_t pos;
+};
+
+struct gc_cell {
+  uintptr_t word;
 };
 
 #define GC_TMP_FRAME(v) __attribute__((cleanup(tmp_frame_cleanup), unused)) \
@@ -6114,7 +6119,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   }
   r = (char **) a->free;
 
-  UNMARK(*r);
+  UNMARK(r);
 
   a->free = * r;
   a->allocations++;
@@ -6134,9 +6139,8 @@ void gc_sweep(struct gc_arena *a, size_t start) {
   for (cur = a->base + (start * a->cell_size);
        cur < (a->base + (a->size * a->cell_size));
        cur += a->cell_size) {
-    uintptr_t it = (* (uintptr_t *) cur);
-    if (it & 1) {
-      UNMARK(*cur);
+    if (MARKED(cur)) {
+      UNMARK(cur);
       a->alive++;
     } else {
       memset(cur, 0, a->cell_size);
@@ -6155,9 +6159,9 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     return;
   }
   obj = v7_to_object(v);
-  if (MARKED(obj->properties)) return;
+  if (MARKED(obj)) return;
 
-  for ((prop = obj->properties), MARK(obj->properties);
+  for ((prop = obj->properties), MARK(obj);
        prop != NULL; prop = next) {
     gc_mark(v7, prop->value);
     next = prop->next;
@@ -6165,7 +6169,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     assert((char *) prop >= v7->property_arena.base &&
            (char *) prop < (v7->property_arena.base + v7->property_arena.size *
                             v7->property_arena.cell_size));
-    MARK(prop->next);
+    MARK(prop);
   }
 
   /* function scope pointer is aliased to the object's prototype pointer */
