@@ -4,6 +4,10 @@ general:
     - "v7.h"
     - "tests/hist_ecma_report.svg"
 
+machine:
+  pre:
+    - sudo apt-get install -y --no-install-recommends g++-multilib libc6-dev-i386
+
 test:
   pre:
     - make run

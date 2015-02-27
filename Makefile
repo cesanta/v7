@@ -55,6 +55,9 @@ msan_v7:
 amalgamated_v7: v7.h v7.c
 	$(CC) v7.c -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
 
+m32_v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
+	$(CC) $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -m32 -lm
+
 js: v7
 	@./v7 tests/v7_basic_test.js
 	@rhino -version 130 tests/v7_basic_test.js
