@@ -1326,7 +1326,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
   return 0;
 }
 
-int slre_exec(struct slre_prog *prog, const char *start, size_t len,
+int slre_exec(struct slre_prog *prog, int flag_g, const char *start, size_t len,
               struct slre_loot *loot) {
   struct slre_loot tmpsub;
   const char *st = start;
@@ -1334,7 +1334,7 @@ int slre_exec(struct slre_prog *prog, const char *start, size_t len,
   if (!loot) loot = &tmpsub;
   memset(loot, 0, sizeof(*loot));
 
-  if (!(prog->flags & SLRE_FLAG_G)) {
+  if (!flag_g) {
     loot->num_captures = prog->num_captures;
     return !re_match(prog->start, start, len, start, prog->flags, loot);
   }
@@ -1436,7 +1436,7 @@ int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
   int res;
 
   if ((res = slre_compile(re, re_len, flags, fl_len, &prog, 1)) == SLRE_OK) {
-    res = slre_exec(prog, str, str_len, loot);
+    res = slre_exec(prog, prog->flags & SLRE_FLAG_G, str, str_len, loot);
     slre_free(prog);
   }
 
@@ -1519,7 +1519,7 @@ static int process_line(struct slre_prog *pr, const char *flags,
   int i, n = cap_no == NULL ? -1 : atoi(cap_no), err_code = 0;
   struct slre_cap *cap = &loot.caps[n];
 
-  err_code = slre_exec(pr, line, strlen(line), &loot);
+  err_code = slre_exec(pr, pr->flags & SLRE_FLAG_G, line, strlen(line), &loot);
   if (err_code == SLRE_OK) {
     if (n >= 0 && n < loot.num_captures && replace != NULL) {
       struct slre_cap *cap = &loot.caps[n];

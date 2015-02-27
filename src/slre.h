@@ -69,7 +69,7 @@ enum slre_error {
 
 int slre_compile(const char *regexp, size_t regexp_len, const char *flags,
                  size_t flags_len, struct slre_prog **, int is_regex);
-int slre_exec(struct slre_prog *, const char *, size_t, struct slre_loot *);
+int slre_exec(struct slre_prog *, int, const char *, size_t, struct slre_loot *);
 void slre_free(struct slre_prog *prog);
 
 int slre_match(const char *, size_t, const char *, size_t, const char *, size_t,
