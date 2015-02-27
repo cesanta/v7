@@ -27,13 +27,6 @@ struct gc_cell {
   uintptr_t word;
 };
 
-#ifdef _WIN32
-#define GC_TMP_FRAME(v) struct gc_tmp_frame v = new_tmp_frame(v7);
-#else
-#define GC_TMP_FRAME(v) __attribute__((cleanup(tmp_frame_cleanup), unused)) \
-  struct gc_tmp_frame v = new_tmp_frame(v7);
-#endif
-
 #if defined(__cplusplus)
 extern "C" {
 #endif  /* __cplusplus */

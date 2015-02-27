@@ -225,7 +225,8 @@ v7_val_t v7_create_function(struct v7 *v7) {
   val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   if (f == NULL) {
-    return V7_NULL;
+    fval = v7_create_null();
+    goto cleanup;
   }
   tmp_stack_push(&tf, &proto);
   tmp_stack_push(&tf, &fval);
@@ -238,6 +239,7 @@ v7_val_t v7_create_function(struct v7 *v7) {
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9, V7_PROPERTY_DONT_ENUM |
                   V7_PROPERTY_DONT_DELETE, proto);
+cleanup:
   tmp_frame_cleanup(&tf);
   return fval;
 }
