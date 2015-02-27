@@ -9,18 +9,23 @@
 #include "internal.h"
 #include "vm.h"
 
+
+/* Disable GC on 32-bit platform for now */
+#if ULONG_MAX == 4294967295
 #define V7_DISABLE_GC
+#endif
 
-#define MARK(p) (* (uintptr_t *) &(p) |= 1)
-
-/* call only on already marked values */
-#define UNMARK(p) (* (uintptr_t *) &(p) &= ~1)
-
-#define MARKED(p) ((uintptr_t) (p) & 1)
+#define MARK(p)   (((struct gc_cell *) (p))->word |= 1)
+#define UNMARK(p) (((struct gc_cell *) (p))->word &= ~1)
+#define MARKED(p) (((struct gc_cell *) (p))->word & 1)
 
 struct gc_tmp_frame {
   struct v7 *v7;
   size_t pos;
+};
+
+struct gc_cell {
+  uintptr_t word;
 };
 
 #define GC_TMP_FRAME(v) __attribute__((cleanup(tmp_frame_cleanup), unused)) \
