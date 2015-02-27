@@ -47,6 +47,8 @@ typedef unsigned long uintptr_t;
 #else
 #include <sys/time.h>
 #include <stdint.h>
+#include <unistd.h>
+#include <fcntl.h>
 #endif
 
 /* Public API. Implemented in api.c */
