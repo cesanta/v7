@@ -4317,7 +4317,7 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
     d = v7_to_double(arg_n);
     if (isnan(d) || (isinf(d) && d < 0)) {
       return 0;
-    } else if (isinf(d)) {
+    } else if (d > LONG_MAX) {
       return LONG_MAX;
     }
     return (long) d;
@@ -5474,7 +5474,9 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                 b += v_sprintf_s(b, size - (b - buf), ",");
               }
             }
-            var = next - 1; /* TODO(mkm): cleanup */
+            if (next > 0) {
+              var = next - 1; /* TODO(mkm): cleanup */
+            }
           } while (next != 0);
           b += v_sprintf_s(b, size - (b - buf), "}");
         }
@@ -5924,7 +5926,7 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
   const char *p = v7_to_string(v7, &s, &n);
   if (!v7_is_string(s)) return V7_UNDEFINED;
-  if (start < 0) start = n + start;
+  if (start < 0) start = (long) n + start;
   if (start < 0) start = 0;
   if (start > (long) n) start = n;
   if (len < 0) len = 0;
@@ -7896,7 +7898,9 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
       }
       v7_set_property(v7, frame, name, name_len, 0, val);
     }
-    fvar = next - 1; /* TODO(mkm): cleanup */
+    if (next > 0) {
+      fvar = next - 1; /* TODO(mkm): cleanup */
+    }
   } while (next != 0);
 }
 
@@ -8472,7 +8476,13 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   tmp_stack_push(&vf, &res);
   tmp_stack_push(&vf, &arguments);
   tmp_stack_push(&vf, &saved_this);
+  /*
+   * Since v7_apply can be called from user code
+   * we have to treat all arguments as roots.
+   */
   tmp_stack_push(&vf, &args);
+  tmp_stack_push(&vf, &f);
+  tmp_stack_push(&vf, &this_object);
 
   if (v7_is_cfunction(f)) {
     return v7_to_cfunction(f)(v7, this_object, args);

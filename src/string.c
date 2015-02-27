@@ -455,7 +455,7 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
     d = v7_to_double(arg_n);
     if (isnan(d) || (isinf(d) && d < 0)) {
       return 0;
-    } else if (isinf(d)) {
+    } else if (d > LONG_MAX) {
       return LONG_MAX;
     }
     return (long) d;

@@ -429,7 +429,9 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                 b += v_sprintf_s(b, size - (b - buf), ",");
               }
             }
-            var = next - 1; /* TODO(mkm): cleanup */
+            if (next > 0) {
+              var = next - 1; /* TODO(mkm): cleanup */
+            }
           } while (next != 0);
           b += v_sprintf_s(b, size - (b - buf), "}");
         }
@@ -879,7 +881,7 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
   const char *p = v7_to_string(v7, &s, &n);
   if (!v7_is_string(s)) return V7_UNDEFINED;
-  if (start < 0) start = n + start;
+  if (start < 0) start = (long) n + start;
   if (start < 0) start = 0;
   if (start > (long) n) start = n;
   if (len < 0) len = 0;
