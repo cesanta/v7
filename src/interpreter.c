@@ -813,7 +813,9 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
       }
       v7_set_property(v7, frame, name, name_len, 0, val);
     }
-    fvar = next - 1; /* TODO(mkm): cleanup */
+    if (next > 0) {
+      fvar = next - 1; /* TODO(mkm): cleanup */
+    }
   } while (next != 0);
 }
 
