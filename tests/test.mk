@@ -42,7 +42,7 @@ PEDANTIC=$(shell gcc --version 2>/dev/null | grep -q clang && echo -pedantic)
 
 # TODO(mkm) fix cxx issues. This file should be the same file used in fossa
 # and we should keep it in sync with subtree or something.
-DIALECTS=cxx ansi c99 c11 m32
+DIALECTS=cxx ansi c99 c11
 SPECIALS=asan msan gcov valgrind m32
 
 # Each test target might require either a different compiler name
