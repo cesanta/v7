@@ -2840,7 +2840,7 @@ try
 2830	PASS ch12/12.6/12.6.2/S12.6.2_A4_T4.js (tail -c +3095964 tests/ecmac.db|head -c 938)
 2831	PASS ch12/12.6/12.6.2/S12.6.2_A4_T5.js (tail -c +3096903 tests/ecmac.db|head -c 494)
 2832	FAIL ch12/12.6/12.6.2/S12.6.2_A5.js (tail -c +3097398 tests/ecmac.db|head -c 1307): [{"message":"#3: __evaluated === 1. Actual:  __evaluated ===undefined"}]
-2833	FAIL ch12/12.6/12.6.2/S12.6.2_A7.js (tail -c +3098706 tests/ecmac.db|head -c 862): [{"message":"#2: The "while" statement returns (normal, V, empty)"}]
+2833	PASS ch12/12.6/12.6.2/S12.6.2_A7.js (tail -c +3098706 tests/ecmac.db|head -c 862)
 2834	FAIL ch12/12.6/12.6.2/S12.6.2_A8.js (tail -c +3099569 tests/ecmac.db|head -c 895): [{"message":"parse error at at line 1 col 99: [ while(__condition < 10) "}]
 2835	PASS ch12/12.6/12.6.2/S12.6.2_A9.js
  * @description Throwing system exception inside "while" loop
