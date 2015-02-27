@@ -441,19 +441,17 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
       (*s)++;
       return TOK_COMMA;
 
-    default:
+    default: {
       /* Handle unicode variables */
-      {
-        Rune r;
-        int n;
+      Rune r;
+      int n;
 
-        if ((n = chartorune(&r, *s)) > 1 && isalpharune(r)) {
-          ident(s);
-          return TOK_IDENTIFIER;
-        }
+      if ((n = chartorune(&r, *s)) > 1 && isalpharune(r)) {
+        ident(s);
+        return TOK_IDENTIFIER;
       }
-
       return TOK_END_OF_INPUT;
+    }
   }
 }
 

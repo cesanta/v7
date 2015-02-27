@@ -369,104 +369,103 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_PREINC:
     case AST_PREDEC:
     case AST_POSTINC:
-    case AST_POSTDEC:
-      {
-        struct v7_property *prop;
-        enum ast_tag op = tag;
-        val_t lval = v7_create_undefined(), root = v7->global_object;
-        tmp_stack_push(&tf, &lval);
-        tmp_stack_push(&tf, &root);
-        switch ((tag = ast_fetch_tag(a, pos))) {
-          case AST_IDENT:
-            lval = scope;
-            name = ast_get_inlined_data(a, *pos, &name_len);
-            ast_move_to_children(a, pos);
-            break;
-          case AST_MEMBER:
-            name = ast_get_inlined_data(a, *pos, &name_len);
-            ast_move_to_children(a, pos);
-            lval = root = i_eval_expr(v7, a, pos, scope);
-            break;
-          case AST_INDEX:
-            lval = root = i_eval_expr(v7, a, pos, scope);
-            v1 = i_eval_expr(v7, a, pos, scope);
-            name_len = v7_stringify_value(v7, v1, buf, sizeof(buf));
-            name = buf;
-            break;
-          default:
-            throw_exception(v7, "ReferenceError",
-                            "Invalid left-hand side in assignment");
-            return V7_UNDEFINED;  /* LCOV_EXCL_LINE */
-        }
-
-        /*
-         * TODO(mkm): this will incorrectly mutate an existing property in
-         * Object.prototype instead of creating a new variable in `global`.
-         * `get_property` should also return a pointer to the object where
-         * the property is found.
-         */
-        v1 = v7_create_undefined();
-        prop = v7_get_property(v7, lval, name, name_len);
-        if (prop != NULL) {
-          v1 = prop->value;
-        }
-
-        switch (op) {
-          case AST_PREINC:
-            v1 = res = v7_create_number(i_as_num(v7, v1) + 1.0);
-            break;
-          case AST_PREDEC:
-            v1 = res = v7_create_number(i_as_num(v7, v1) - 1.0);
-            break;
-          case AST_POSTINC:
-            res = i_value_of(v7, v1);
-            v1 = v7_create_number(i_as_num(v7, v1) + 1.0);
-            break;
-          case AST_POSTDEC:
-            res = i_value_of(v7, v1);
-            v1 = v7_create_number(i_as_num(v7, v1) - 1.0);
-            break;
-          case AST_ASSIGN:
-            v1 = res = i_eval_expr(v7, a, pos, scope);
-            break;
-          case AST_PLUS_ASSIGN:
-            res = i_eval_expr(v7, a, pos, scope);
-            v1 = i_value_of(v7, v1);
-            res = i_value_of(v7, res);
-            if (!(v7_is_undefined(v1) || v7_is_double(v1) ||
-                  v7_is_boolean(v1)) ||
-                !(v7_is_undefined(res) || v7_is_double(res) ||
-                  v7_is_boolean(res))) {
-              v7_stringify_value(v7, v1, buf, sizeof(buf));
-              v1 = v7_create_string(v7, buf, strlen(buf), 1);
-              v7_stringify_value(v7, res, buf, sizeof(buf));
-              res = v7_create_string(v7, buf, strlen(buf), 1);
-              v1 = res = s_concat(v7, v1, res);
-              break;
-            }
-            res = v1 = v7_create_number(i_num_bin_op(
-                v7, AST_ADD, i_as_num(v7, v1), i_as_num(v7, res)));
-            break;
-          default:
-            op = assign_op_map[op - AST_ASSIGN - 1];
-            res = i_eval_expr(v7, a, pos, scope);
-            d1 = i_as_num(v7, v1);
-            d2 = i_as_num(v7, res);
-            res = v1 = v7_create_number(i_num_bin_op(v7, op, d1, d2));
-        }
-
-        /* variables are modified where they are found in the scope chain */
-        if (prop != NULL && tag == AST_IDENT) {
-          prop->value = v1;
-        } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
-          /* nop */
-        } else if (prop != NULL && prop->attributes & V7_PROPERTY_SETTER) {
-          v7_invoke_setter(v7, prop, root, v1);
-        } else {
-          v7_set_property(v7, root, name, name_len, 0, v1);
-        }
-        return res;
+    case AST_POSTDEC: {
+      struct v7_property *prop;
+      enum ast_tag op = tag;
+      val_t lval = v7_create_undefined(), root = v7->global_object;
+      tmp_stack_push(&tf, &lval);
+      tmp_stack_push(&tf, &root);
+      switch ((tag = ast_fetch_tag(a, pos))) {
+        case AST_IDENT:
+          lval = scope;
+          name = ast_get_inlined_data(a, *pos, &name_len);
+          ast_move_to_children(a, pos);
+          break;
+        case AST_MEMBER:
+          name = ast_get_inlined_data(a, *pos, &name_len);
+          ast_move_to_children(a, pos);
+          lval = root = i_eval_expr(v7, a, pos, scope);
+          break;
+        case AST_INDEX:
+          lval = root = i_eval_expr(v7, a, pos, scope);
+          v1 = i_eval_expr(v7, a, pos, scope);
+          name_len = v7_stringify_value(v7, v1, buf, sizeof(buf));
+          name = buf;
+          break;
+        default:
+          throw_exception(v7, "ReferenceError",
+                          "Invalid left-hand side in assignment");
+          return V7_UNDEFINED;  /* LCOV_EXCL_LINE */
       }
+
+      /*
+       * TODO(mkm): this will incorrectly mutate an existing property in
+       * Object.prototype instead of creating a new variable in `global`.
+       * `get_property` should also return a pointer to the object where
+       * the property is found.
+       */
+      v1 = v7_create_undefined();
+      prop = v7_get_property(v7, lval, name, name_len);
+      if (prop != NULL) {
+        v1 = prop->value;
+      }
+
+      switch (op) {
+        case AST_PREINC:
+          v1 = res = v7_create_number(i_as_num(v7, v1) + 1.0);
+          break;
+        case AST_PREDEC:
+          v1 = res = v7_create_number(i_as_num(v7, v1) - 1.0);
+          break;
+        case AST_POSTINC:
+          res = i_value_of(v7, v1);
+          v1 = v7_create_number(i_as_num(v7, v1) + 1.0);
+          break;
+        case AST_POSTDEC:
+          res = i_value_of(v7, v1);
+          v1 = v7_create_number(i_as_num(v7, v1) - 1.0);
+          break;
+        case AST_ASSIGN:
+          v1 = res = i_eval_expr(v7, a, pos, scope);
+          break;
+        case AST_PLUS_ASSIGN:
+          res = i_eval_expr(v7, a, pos, scope);
+          v1 = i_value_of(v7, v1);
+          res = i_value_of(v7, res);
+          if (!(v7_is_undefined(v1) || v7_is_double(v1) ||
+                v7_is_boolean(v1)) ||
+              !(v7_is_undefined(res) || v7_is_double(res) ||
+                v7_is_boolean(res))) {
+            v7_stringify_value(v7, v1, buf, sizeof(buf));
+            v1 = v7_create_string(v7, buf, strlen(buf), 1);
+            v7_stringify_value(v7, res, buf, sizeof(buf));
+            res = v7_create_string(v7, buf, strlen(buf), 1);
+            v1 = res = s_concat(v7, v1, res);
+            break;
+          }
+          res = v1 = v7_create_number(i_num_bin_op(
+              v7, AST_ADD, i_as_num(v7, v1), i_as_num(v7, res)));
+          break;
+        default:
+          op = assign_op_map[op - AST_ASSIGN - 1];
+          res = i_eval_expr(v7, a, pos, scope);
+          d1 = i_as_num(v7, v1);
+          d2 = i_as_num(v7, res);
+          res = v1 = v7_create_number(i_num_bin_op(v7, op, d1, d2));
+      }
+
+      /* variables are modified where they are found in the scope chain */
+      if (prop != NULL && tag == AST_IDENT) {
+        prop->value = v1;
+      } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
+        /* nop */
+      } else if (prop != NULL && prop->attributes & V7_PROPERTY_SETTER) {
+        v7_invoke_setter(v7, prop, root, v1);
+      } else {
+        v7_set_property(v7, root, name, name_len, 0, v1);
+      }
+      return res;
+    }
     case AST_INDEX:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -519,32 +518,31 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v7_set_property(v7, res, name, name_len, 0, v1);
             break;
           case AST_GETTER:
-          case AST_SETTER:
-            {
-              ast_off_t func = *pos;
-              unsigned int attr = tag == AST_GETTER ? V7_PROPERTY_GETTER :
-                                  V7_PROPERTY_SETTER;
-              unsigned int other = tag == AST_GETTER ? V7_PROPERTY_SETTER :
-                                   V7_PROPERTY_GETTER;
-              struct v7_property *p;
-              V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
-              ast_move_to_children(a, &func);
-              V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
-              name = ast_get_inlined_data(a, func, &name_len);
-              v1 = i_eval_expr(v7, a, pos, scope);
-              if ((p = v7_get_property(v7, res, name, name_len)) &&
-                  p->attributes & other) {
-                val_t arr = v7_create_array(v7);
-                tmp_stack_push(&tf, &arr);
-                v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
-                v7_set(v7, arr, tag == AST_SETTER ? "1" : "0", 1, v1);
-                p->value = arr;
-                p->attributes |= attr;
-              } else {
-                v7_set_property(v7, res, name, name_len, attr, v1);
-              }
+          case AST_SETTER: {
+            ast_off_t func = *pos;
+            unsigned int attr = tag == AST_GETTER ? V7_PROPERTY_GETTER :
+                                V7_PROPERTY_SETTER;
+            unsigned int other = tag == AST_GETTER ? V7_PROPERTY_SETTER :
+                                 V7_PROPERTY_GETTER;
+            struct v7_property *p;
+            V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_FUNC);
+            ast_move_to_children(a, &func);
+            V7_CHECK(v7, ast_fetch_tag(a, &func) == AST_IDENT);
+            name = ast_get_inlined_data(a, func, &name_len);
+            v1 = i_eval_expr(v7, a, pos, scope);
+            if ((p = v7_get_property(v7, res, name, name_len)) &&
+                p->attributes & other) {
+              val_t arr = v7_create_array(v7);
+              tmp_stack_push(&tf, &arr);
+              v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
+              v7_set(v7, arr, tag == AST_SETTER ? "1" : "0", 1, v1);
+              p->value = arr;
+              p->attributes |= attr;
+            } else {
+              v7_set_property(v7, res, name, name_len, attr, v1);
             }
             break;
+          }
           default:
             throw_exception(v7, "InternalError",
                             "Expecting AST_(PROP|GETTER|SETTER) got %d", tag);
@@ -577,56 +575,52 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       res = v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
                              (name + name_len) - p - 1);
       return res;
-    case AST_IDENT:
-      {
-        struct v7_property *p;
+    case AST_IDENT: {
+      struct v7_property *p;
+      name = ast_get_inlined_data(a, *pos, &name_len);
+      ast_move_to_children(a, pos);
+      if ((p = v7_get_property(v7, scope, name, name_len)) == NULL) {
+        throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
+                        (int) name_len, name);
+      }
+      return v7_property_value(v7, scope, p);
+    }
+    case AST_FUNC: {
+      val_t func = v7_create_function(v7);
+      ast_off_t fbody;
+      struct v7_function *funcp = v7_to_function(func);
+      tmp_stack_push(&tf, &func);
+      funcp->scope = v7_to_object(scope);
+      funcp->ast = a;
+      funcp->ast_off = *pos - 1;
+      ast_move_to_children(a, pos);
+      tag = ast_fetch_tag(a, pos);
+      if (tag == AST_IDENT) {
         name = ast_get_inlined_data(a, *pos, &name_len);
-        ast_move_to_children(a, pos);
-        if ((p = v7_get_property(v7, scope, name, name_len)) == NULL) {
-          throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
-                          (int) name_len, name);
-        }
-        return v7_property_value(v7, scope, p);
+        v7_set_property(v7, scope, name, name_len, 0, func);
       }
-    case AST_FUNC:
-      {
-        val_t func = v7_create_function(v7);
-        ast_off_t fbody;
-        struct v7_function *funcp = v7_to_function(func);
-        tmp_stack_push(&tf, &func);
-        funcp->scope = v7_to_object(scope);
-        funcp->ast = a;
-        funcp->ast_off = *pos - 1;
-        ast_move_to_children(a, pos);
-        tag = ast_fetch_tag(a, pos);
-        if (tag == AST_IDENT) {
-          name = ast_get_inlined_data(a, *pos, &name_len);
-          v7_set_property(v7, scope, name, name_len, 0, func);
-        }
-        *pos = ast_get_skip(a, funcp->ast_off + 1, AST_END_SKIP);
-        fbody = ast_get_skip(a, funcp->ast_off + 1, AST_FUNC_BODY_SKIP);
-        if (fbody < *pos &&
-            (tag = ast_fetch_tag(a, &fbody)) == AST_USE_STRICT) {
-          funcp->attributes |= V7_FUNCTION_STRICT;
-        }
-        return func;
+      *pos = ast_get_skip(a, funcp->ast_off + 1, AST_END_SKIP);
+      fbody = ast_get_skip(a, funcp->ast_off + 1, AST_FUNC_BODY_SKIP);
+      if (fbody < *pos &&
+          (tag = ast_fetch_tag(a, &fbody)) == AST_USE_STRICT) {
+        funcp->attributes |= V7_FUNCTION_STRICT;
       }
-    case AST_CALL:
-      {
-        ast_off_t pp = *pos;
-        ast_move_to_children(a, &pp);
-        res = i_eval_call(v7, a, pos, scope, i_find_this(v7, a, pp, scope), 0);
-        return res;
+      return func;
+    }
+    case AST_CALL: {
+      ast_off_t pp = *pos;
+      ast_move_to_children(a, &pp);
+      res = i_eval_call(v7, a, pos, scope, i_find_this(v7, a, pp, scope), 0);
+      return res;
+    }
+    case AST_NEW: {
+      v1 = v7_create_object(v7);
+      res = i_eval_call(v7, a, pos, scope, v1, 1);
+      if (v7_is_undefined(res) || v7_is_null(res)) {
+        res = v1;
       }
-    case AST_NEW:
-      {
-        v1 = v7_create_object(v7);
-        res = i_eval_call(v7, a, pos, scope, v1, 1);
-        if (v7_is_undefined(res) || v7_is_null(res)) {
-          res = v1;
-        }
-        return res;
-      }
+      return res;
+    }
     case AST_COND:
       if (v7_is_true(v7, i_eval_expr(v7, a, pos, scope))) {
         res = i_eval_expr(v7, a, pos, scope);
@@ -674,80 +668,78 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       return res;
     case AST_THIS:
       return v7->this_object;
-    case AST_TYPEOF:
-      {
-        ast_off_t peek = *pos;
-        if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
-          name = ast_get_inlined_data(a, peek, &name_len);
-          if (v7_get_property(v7, scope, name, name_len) == NULL) {
-            ast_move_to_children(a, &peek);
-            *pos = peek;
-            /* TODO(mkm): use interned strings*/
-            return v7_create_string(v7, "undefined", 9, 1);
-          }
-        }
-        /* for some reason lcov doesn't mark the following lines as executing */
-        res = i_eval_expr(v7, a, pos, scope);  /* LCOV_EXCL_LINE */
-        switch (val_type(v7, res)) {           /* LCOV_EXCL_LINE */
-          case V7_TYPE_NUMBER:
-            return v7_create_string(v7, "number", 6, 1);
-          case V7_TYPE_STRING:
-            return v7_create_string(v7, "string", 6, 1);
-          case V7_TYPE_BOOLEAN:
-            return v7_create_string(v7, "boolean", 7, 1);
-          case V7_TYPE_FUNCTION_OBJECT:
-          case V7_TYPE_CFUNCTION_OBJECT:
-          case V7_TYPE_CFUNCTION:
-            return v7_create_string(v7, "function", 8, 1);
-          default:
-            return v7_create_string(v7, "object", 6, 1);
+    case AST_TYPEOF: {
+      ast_off_t peek = *pos;
+      if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
+        name = ast_get_inlined_data(a, peek, &name_len);
+        if (v7_get_property(v7, scope, name, name_len) == NULL) {
+          ast_move_to_children(a, &peek);
+          *pos = peek;
+          /* TODO(mkm): use interned strings*/
+          return v7_create_string(v7, "undefined", 9, 1);
         }
       }
-    case AST_DELETE:
-      {
-        struct v7_property *prop;
-        val_t lval = v7_create_null(), root = v7->global_object;
-        ast_off_t start = *pos;
-        tmp_stack_push(&tf, &lval);
-        tmp_stack_push(&tf, &root);
-        switch ((tag = ast_fetch_tag(a, pos))) {
-          case AST_IDENT:
-            name = ast_get_inlined_data(a, *pos, &name_len);
-            ast_move_to_children(a, pos);
-            if (v7_get_property(v7, scope, name, name_len) ==
-                v7_get_property(v7, root, name, name_len)) {
-              lval = root;
-            }
-            if (v7->strict_mode) {
-              throw_exception(v7, "SyntaxError", "Delete in strict");
-            }
-            break;
-          case AST_MEMBER:
-            name = ast_get_inlined_data(a, *pos, &name_len);
-            ast_move_to_children(a, pos);
-            lval = root = i_eval_expr(v7, a, pos, scope);
-            break;
-          case AST_INDEX:
-            lval = root = i_eval_expr(v7, a, pos, scope);
-            res = i_eval_expr(v7, a, pos, scope);
-            name_len = v7_stringify_value(v7, res, buf, sizeof(buf));
-            name = buf;
-            break;
-          default:
-            *pos = start;
-            i_eval_expr(v7, a, pos, scope);
-            return v7_create_boolean(1);
-        }
+      /* for some reason lcov doesn't mark the following lines as executing */
+      res = i_eval_expr(v7, a, pos, scope);  /* LCOV_EXCL_LINE */
+      switch (val_type(v7, res)) {           /* LCOV_EXCL_LINE */
+        case V7_TYPE_NUMBER:
+          return v7_create_string(v7, "number", 6, 1);
+        case V7_TYPE_STRING:
+          return v7_create_string(v7, "string", 6, 1);
+        case V7_TYPE_BOOLEAN:
+          return v7_create_string(v7, "boolean", 7, 1);
+        case V7_TYPE_FUNCTION_OBJECT:
+        case V7_TYPE_CFUNCTION_OBJECT:
+        case V7_TYPE_CFUNCTION:
+          return v7_create_string(v7, "function", 8, 1);
+        default:
+          return v7_create_string(v7, "object", 6, 1);
+      }
+    }
+    case AST_DELETE: {
+      struct v7_property *prop;
+      val_t lval = v7_create_null(), root = v7->global_object;
+      ast_off_t start = *pos;
+      tmp_stack_push(&tf, &lval);
+      tmp_stack_push(&tf, &root);
+      switch ((tag = ast_fetch_tag(a, pos))) {
+        case AST_IDENT:
+          name = ast_get_inlined_data(a, *pos, &name_len);
+          ast_move_to_children(a, pos);
+          if (v7_get_property(v7, scope, name, name_len) ==
+              v7_get_property(v7, root, name, name_len)) {
+            lval = root;
+          }
+          if (v7->strict_mode) {
+            throw_exception(v7, "SyntaxError", "Delete in strict");
+          }
+          break;
+        case AST_MEMBER:
+          name = ast_get_inlined_data(a, *pos, &name_len);
+          ast_move_to_children(a, pos);
+          lval = root = i_eval_expr(v7, a, pos, scope);
+          break;
+        case AST_INDEX:
+          lval = root = i_eval_expr(v7, a, pos, scope);
+          res = i_eval_expr(v7, a, pos, scope);
+          name_len = v7_stringify_value(v7, res, buf, sizeof(buf));
+          name = buf;
+          break;
+        default:
+          *pos = start;
+          i_eval_expr(v7, a, pos, scope);
+          return v7_create_boolean(1);
+      }
 
-        prop = v7_get_property(v7, lval, name, name_len);
-        if (prop != NULL) {
-          if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
-            return v7_create_boolean(0);
-          }
-          v7_del_property(v7, lval, name, name_len);
+      prop = v7_get_property(v7, lval, name, name_len);
+      if (prop != NULL) {
+        if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
+          return v7_create_boolean(0);
         }
-        return v7_create_boolean(1);
+        v7_del_property(v7, lval, name, name_len);
       }
+      return v7_create_boolean(1);
+    }
     case AST_INSTANCEOF:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
@@ -1125,70 +1117,69 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         }
         i_eval_expr(v7, a, &iter, scope);
       }
-    case AST_FOR_IN:
-      {
-        char *name;
-        size_t name_len;
-        val_t obj, key;
-        ast_off_t loop;
-        struct v7_property *p, *var;
-        tmp_stack_push(&tf, &obj);
-        tmp_stack_push(&tf, &key);
+    case AST_FOR_IN: {
+      char *name;
+      size_t name_len;
+      val_t obj, key;
+      ast_off_t loop;
+      struct v7_property *p, *var;
+      tmp_stack_push(&tf, &obj);
+      tmp_stack_push(&tf, &key);
 
-        end = ast_get_skip(a, *pos, AST_END_SKIP);
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      tag = ast_fetch_tag(a, pos);
+      /* TODO(mkm) accept any l-value */
+      if (tag == AST_VAR) {
         ast_move_to_children(a, pos);
         tag = ast_fetch_tag(a, pos);
-        /* TODO(mkm) accept any l-value */
-        if (tag == AST_VAR) {
-          ast_move_to_children(a, pos);
-          tag = ast_fetch_tag(a, pos);
-          V7_CHECK(v7, tag == AST_VAR_DECL);
-          name = ast_get_inlined_data(a, *pos, &name_len);
-          ast_move_to_children(a, pos);
-          ast_skip_tree(a, pos);
-        } else {
-          V7_CHECK(v7, tag == AST_IDENT);
-          name = ast_get_inlined_data(a, *pos, &name_len);
-          ast_move_to_children(a, pos);
-        }
-
-        obj = i_eval_expr(v7, a, pos, scope);
-        if (!v7_is_object(obj)) {
-          *pos = end;
-          return V7_UNDEFINED;
-        }
+        V7_CHECK(v7, tag == AST_VAR_DECL);
+        name = ast_get_inlined_data(a, *pos, &name_len);
+        ast_move_to_children(a, pos);
         ast_skip_tree(a, pos);
-        loop = *pos;
-
-        for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
-          if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
-            continue;
-          }
-          key = p->name;
-          if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
-            var->value = key;
-          } else {
-            v7_set_property(v7, v7->global_object, name, name_len, 0, key);
-          }
-
-          /* for some reason lcov doesn't mark the following lines executing */
-          res = i_eval_stmts(v7, a, pos, end, scope, brk); /* LCOV_EXCL_LINE */
-          switch (*brk) {  /* LCOV_EXCL_LINE */
-            case B_RUN:
-              break;
-            case B_CONTINUE:
-              *brk = B_RUN;
-              break;
-            case B_BREAK:
-              *brk = B_RUN; /* fall through */
-            case B_RETURN:
-              *pos = end;
-              return res;
-          }
-        }
-        *pos = end;
-        return res;
+      } else {
+        V7_CHECK(v7, tag == AST_IDENT);
+        name = ast_get_inlined_data(a, *pos, &name_len);
+        ast_move_to_children(a, pos);
       }
+
+      obj = i_eval_expr(v7, a, pos, scope);
+      if (!v7_is_object(obj)) {
+        *pos = end;
+        return V7_UNDEFINED;
+      }
+      ast_skip_tree(a, pos);
+      loop = *pos;
+
+      for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
+        if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
+          continue;
+        }
+        key = p->name;
+        if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
+          var->value = key;
+        } else {
+          v7_set_property(v7, v7->global_object, name, name_len, 0, key);
+        }
+
+        /* for some reason lcov doesn't mark the following lines executing */
+        res = i_eval_stmts(v7, a, pos, end, scope, brk); /* LCOV_EXCL_LINE */
+        switch (*brk) {  /* LCOV_EXCL_LINE */
+          case B_RUN:
+            break;
+          case B_CONTINUE:
+            *brk = B_RUN;
+            break;
+          case B_BREAK:
+            *brk = B_RUN; /* fall through */
+          case B_RETURN:
+            *pos = end;
+            return res;
+        }
+      }
+      *pos = end;
+      return res;
+    }
     case AST_DEFAULT:
       /* handle fallthroughs */
       ast_move_to_children(a, pos);
@@ -1198,157 +1189,153 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       ast_skip_tree(a, pos);
       break;
-    case AST_SWITCH:
-      {
-        int found = 0;
-        val_t test = v7_create_undefined(), val = v7_create_undefined();
-        ast_off_t case_end, default_pos = 0;
-        enum ast_tag case_tag;
-        tmp_stack_push(&tf, &test);
-        tmp_stack_push(&tf, &val);
+    case AST_SWITCH: {
+      int found = 0;
+      val_t test = v7_create_undefined(), val = v7_create_undefined();
+      ast_off_t case_end, default_pos = 0;
+      enum ast_tag case_tag;
+      tmp_stack_push(&tf, &test);
+      tmp_stack_push(&tf, &val);
 
-        end = ast_get_skip(a, *pos, AST_END_SKIP);
-        ast_move_to_children(a, pos);
-        test = i_eval_expr(v7, a, pos, scope);
-        while (*pos < end) {
-          switch(case_tag = ast_fetch_tag(a, pos)) {
-            default:
-              throw_exception(v7, "InternalError", /* LCOV_EXCL_LINE */
-                              "invalid ast node %d", case_tag);
-            case AST_DEFAULT:
-              default_pos = *pos;
-              *pos = ast_get_skip(a, *pos, AST_END_SKIP);
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      test = i_eval_expr(v7, a, pos, scope);
+      while (*pos < end) {
+        switch(case_tag = ast_fetch_tag(a, pos)) {
+          default:
+            throw_exception(v7, "InternalError", /* LCOV_EXCL_LINE */
+                            "invalid ast node %d", case_tag);
+          case AST_DEFAULT:
+            default_pos = *pos;
+            *pos = ast_get_skip(a, *pos, AST_END_SKIP);
+            break;
+          case AST_CASE:
+            case_end = ast_get_skip(a, *pos, AST_END_SKIP);
+            ast_move_to_children(a, pos);
+            val = i_eval_expr(v7, a, pos, scope);
+            /* TODO(mkm): factor out equality check from eval_expr */
+            if (test != val || val == V7_TAG_NAN) {
+              *pos = case_end;
               break;
-            case AST_CASE:
-              case_end = ast_get_skip(a, *pos, AST_END_SKIP);
-              ast_move_to_children(a, pos);
-              val = i_eval_expr(v7, a, pos, scope);
-              /* TODO(mkm): factor out equality check from eval_expr */
-              if (test != val || val == V7_TAG_NAN) {
-                *pos = case_end;
-                break;
-              }
-              res = i_eval_stmts(v7, a, pos, end, scope,
-                                 brk);
-              if (*brk == B_BREAK) {
-                *brk = B_RUN;
-              }
-              *pos = end;
-              found = 1;
-              break;
-          }
+            }
+            res = i_eval_stmts(v7, a, pos, end, scope,
+                               brk);
+            if (*brk == B_BREAK) {
+              *brk = B_RUN;
+            }
+            *pos = end;
+            found = 1;
+            break;
         }
-
-        if (!found && default_pos != 0) {
-          ast_move_to_children(a, &default_pos);
-          res = i_eval_stmts(v7, a, &default_pos, end, scope, brk);
-          if (*brk == B_BREAK) {
-            *brk = B_RUN;
-          }
-        }
-        return res;
       }
-    case AST_LABEL:
-      {
-        jmp_buf old_jmp;
-        char *name;
-        size_t name_len;
-        ast_off_t saved_pos;
-        size_t saved_tmp_stack_pos = v7->tmp_stack.len;
-        volatile enum jmp_type j;
-        memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
-        name = ast_get_inlined_data(a, *pos, &name_len);
 
-        ast_move_to_children(a, pos);
-        saved_pos = *pos;
-        /*
-         * Percolate up all exceptions and labeled breaks
-         * not matching the current label.
-         */
+      if (!found && default_pos != 0) {
+        ast_move_to_children(a, &default_pos);
+        res = i_eval_stmts(v7, a, &default_pos, end, scope, brk);
+        if (*brk == B_BREAK) {
+          *brk = B_RUN;
+        }
+      }
+      return res;
+    }
+    case AST_LABEL: {
+      jmp_buf old_jmp;
+      char *name;
+      size_t name_len;
+      ast_off_t saved_pos;
+      size_t saved_tmp_stack_pos = v7->tmp_stack.len;
+      volatile enum jmp_type j;
+      memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
+      name = ast_get_inlined_data(a, *pos, &name_len);
+
+      ast_move_to_children(a, pos);
+      saved_pos = *pos;
+      /*
+       * Percolate up all exceptions and labeled breaks
+       * not matching the current label.
+       */
      cont:
-        if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
-          res = i_eval_stmt(v7, a, pos, scope, brk);
-        } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
-                   name_len == v7->label_len &&
-                   memcmp(name, v7->label, name_len) == 0) {
-          v7->tmp_stack.len = saved_tmp_stack_pos;
-          *pos = saved_pos;
-          if (j == CONTINUE_JMP) {
-            v7->lab_cont = 1;
-            goto cont;
-          }
-          ast_skip_tree(a, pos);
-        } else {
-          siglongjmp(old_jmp, j);
+      if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
+        res = i_eval_stmt(v7, a, pos, scope, brk);
+      } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
+                 name_len == v7->label_len &&
+                 memcmp(name, v7->label, name_len) == 0) {
+        v7->tmp_stack.len = saved_tmp_stack_pos;
+        *pos = saved_pos;
+        if (j == CONTINUE_JMP) {
+          v7->lab_cont = 1;
+          goto cont;
         }
-        memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-        return res;
+        ast_skip_tree(a, pos);
+      } else {
+        siglongjmp(old_jmp, j);
       }
-    case AST_TRY:
-      {
-        int percolate = 0;
-        jmp_buf old_jmp;
-        char *name;
-        size_t name_len;
-        size_t saved_tmp_stack_pos = v7->tmp_stack.len;
-        volatile enum jmp_type j;
-        memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
+      memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+      return res;
+    }
+    case AST_TRY: {
+      int percolate = 0;
+      jmp_buf old_jmp;
+      char *name;
+      size_t name_len;
+      size_t saved_tmp_stack_pos = v7->tmp_stack.len;
+      volatile enum jmp_type j;
+      memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
-        end = ast_get_skip(a, *pos, AST_END_SKIP);
-        acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
-        finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
-        ast_move_to_children(a, pos);
-        if ((j = (enum jmp_type)  sigsetjmp(v7->jmp_buf, 0)) == 0) {
-          res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
-        } else if (j == THROW_JMP && acatch != finally) {
-          val_t catch_scope;
-          v7->tmp_stack.len = saved_tmp_stack_pos;
-          catch_scope = create_object(v7, scope);
-          tmp_stack_push(&tf, &catch_scope);
-          tag = ast_fetch_tag(a, &acatch);
-          V7_CHECK(v7, tag == AST_IDENT);
-          name = ast_get_inlined_data(a, acatch, &name_len);
-          v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
-          ast_move_to_children(a, &acatch);
-          memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-          res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
-        } else {
-          percolate = 1;
-        }
-
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
+      finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
+      ast_move_to_children(a, pos);
+      if ((j = (enum jmp_type)  sigsetjmp(v7->jmp_buf, 0)) == 0) {
+        res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
+      } else if (j == THROW_JMP && acatch != finally) {
+        val_t catch_scope;
+        v7->tmp_stack.len = saved_tmp_stack_pos;
+        catch_scope = create_object(v7, scope);
+        tmp_stack_push(&tf, &catch_scope);
+        tag = ast_fetch_tag(a, &acatch);
+        V7_CHECK(v7, tag == AST_IDENT);
+        name = ast_get_inlined_data(a, acatch, &name_len);
+        v7_set_property(v7, catch_scope, name, name_len, 0, v7->thrown_error);
+        ast_move_to_children(a, &acatch);
         memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
-        if (finally != end) {
-          enum i_break fin_brk = B_RUN;
-          res = i_eval_stmts(v7, a, &finally, end, scope, &fin_brk);
-          if (fin_brk != B_RUN) {
-            *brk = fin_brk;
-          }
-          if (!*brk && percolate) {
-            siglongjmp(v7->jmp_buf, j);
-          }
-        }
-        *pos = end;
-        return res;
+        res = i_eval_stmts(v7, a, &acatch, finally, catch_scope, brk);
+      } else {
+        percolate = 1;
       }
-    case AST_WITH:
-      {
-        val_t with_scope = v7_create_undefined();
-        tmp_stack_push(&tf, &with_scope);
-        end = ast_get_skip(a, *pos, AST_END_SKIP);
-        ast_move_to_children(a, pos);
-        /*
-         * TODO(mkm) make an actual scope chain. Possibly by mutating
-         * the with expression and adding the 'outer environment
-         * reference' hidden property.
-         */
-        with_scope = i_eval_expr(v7, a, pos, scope);
-        if (!v7_is_object(with_scope)) {
-          throw_exception(v7, "InternalError",
-                          "with statement is not really implemented yet");
+
+      memcpy(v7->jmp_buf, old_jmp, sizeof(old_jmp));
+      if (finally != end) {
+        enum i_break fin_brk = B_RUN;
+        res = i_eval_stmts(v7, a, &finally, end, scope, &fin_brk);
+        if (fin_brk != B_RUN) {
+          *brk = fin_brk;
         }
-        i_eval_stmts(v7, a, pos, end, with_scope, brk);
-        break;
+        if (!*brk && percolate) {
+          siglongjmp(v7->jmp_buf, j);
+        }
       }
+      *pos = end;
+      return res;
+    }
+    case AST_WITH: {
+      val_t with_scope = v7_create_undefined();
+      tmp_stack_push(&tf, &with_scope);
+      end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      /*
+       * TODO(mkm) make an actual scope chain. Possibly by mutating
+       * the with expression and adding the 'outer environment
+       * reference' hidden property.
+       */
+      with_scope = i_eval_expr(v7, a, pos, scope);
+      if (!v7_is_object(with_scope)) {
+        throw_exception(v7, "InternalError",
+                        "with statement is not really implemented yet");
+      }
+      i_eval_stmts(v7, a, pos, end, with_scope, brk);
+      break;
+    }
     case AST_VALUE_RETURN:
       res = i_eval_expr(v7, a, pos, scope);
       *brk = B_RETURN;
