@@ -229,8 +229,8 @@ static val_t Std_open(struct v7 *v7, val_t this_obj, val_t args) {
 
 static void init_js_stdlib(struct v7 *v7) {
   val_t res;
-  static const char code[] = STRINGIFY(
 
+  v7_exec(v7, &res, STRINGIFY(
 Array.prototype.indexOf = function(a, b) {
   if (!b || b < 0) b = 0;
   for (var i = b; i < this.length; i++) {
@@ -239,11 +239,18 @@ Array.prototype.indexOf = function(a, b) {
     }
   }
   return -1;
-}
+};
 
-);
-
-  v7_exec(v7, &res, code);
+Array.prototype.lastIndexOf = function(a, b) {
+  if (!b || b < 0 || b >= this.length) b = this.length - 1;
+  for (var i = b; i >= 0; i--) {
+    if (this[i] == a) {
+      return i;
+    }
+  }
+  return -1;
+};
+));
 }
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
