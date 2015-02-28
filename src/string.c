@@ -209,7 +209,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       struct slre_loot sub;
       struct slre_cap *ptok = sub.caps;
       int i;
-      if (slre_exec(prog, 0, s, end - s, &sub)) break;
+      if (slre_exec(prog, 0, s, end, &sub)) break;
       if (arr == V7_NULL) arr = v7_create_array(v7);
       s = ptok->end;
       i = 0;
@@ -223,107 +223,110 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   return arr;
 }
 
-#if 0
-V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *result = v7_push_new_object(v7);
-  const char *out_str;
-  uint8_t own = 1;
-  size_t out_len;
-  int old_sp = v7->sp;
+static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
+  const char *s;
+  size_t s_len;
+  val_t out_str_o;
+  this_obj = to_string(v7, this_obj);
+  s = v7_to_string(v7, &this_obj, &s_len);
 
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  out_str = cfa->this_obj->v.str.buf;
-  out_len = cfa->this_obj->v.str.len;
-  if (cfa->num_args > 1) {
-    const char *const str_end =
-        cfa->this_obj->v.str.buf + cfa->this_obj->v.str.len;
-    char *p = cfa->this_obj->v.str.buf;
+  if (v7_array_length(v7, args) > 1) {
+    const char *const str_end = s + s_len;
+    char *p = (char *)s;
     uint32_t out_sub_num = 0;
-    struct v7_val *re = cfa->args[0], *str_func = cfa->args[1], *arr = NULL;
+    val_t ro = v7_array_at(v7, args, 0), str_func = v7_array_at(v7, args, 1),
+          arr = V7_NULL;
+    struct slre_prog *prog = NULL;
     struct slre_cap out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
     struct slre_loot loot;
-    TRY(check_str_re_conv(v7, &re, 1));
-    TRY(regex_check_prog(re));
-    if (v7_is_class(str_func, V7_CLASS_FUNCTION)) {
-      arr = v7_push_new_object(v7);
-      v7_set_class(arr, V7_CLASS_ARRAY);
-      TRY(v7_push(v7, str_func));
-    } else
-      TRY(check_str_re_conv(v7, &str_func, 0));
+    int flag_g = 0;
 
-    out_len = 0;
+    if (!v7_is_regexp(ro)) {
+      const char *str;
+      size_t str_len;
+      ro = to_string(v7, ro);
+      str = v7_to_string(v7, &ro, &str_len);
+      if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
+          prog == NULL) {
+        throw_exception(v7, "Error", "Invalid String");
+        return V7_UNDEFINED;
+      }
+    } else {
+      struct v7_regexp *rp = v7_to_pointer(ro);
+      prog = rp->compiled_regexp;
+      flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
+    }
+
+    if (v7_is_function(str_func))
+      arr = v7_create_array(v7);
+    else
+      str_func = to_string(v7, str_func);
+
     do {
       int i;
-      if (slre_exec(re->v.str.prog, re->fl.fl.re_flags, p, &loot)) break;
+      if (slre_exec(prog, 0, p, str_end, &loot)) break;
       if (p != loot.caps->start) {
         ptok->start = p;
         ptok->end = loot.caps->start;
         ptok++;
-        out_len += loot.caps->start - p;
         out_sub_num++;
       }
 
-      if (NULL != arr) { /* replace function */
-        int old_sp = v7->sp;
-        struct v7_val *rez_str;
+      if (arr != V7_NULL) { /* replace function */
+        const char *rez_str;
+        size_t rez_len;
+
         for (i = 0; i < loot.num_captures; i++)
-          TRY(push_string(v7, loot.caps[i].start,
-                          loot.caps[i].end - loot.caps[i].start, 1));
-        TRY(push_number(v7, utfnlen(p, loot.caps[0].start - p)));
-        TRY(v7_push(v7, cfa->this_obj));
-        rez_str = v7_call(v7, cfa->this_obj, loot.num_captures + 2);
-        TRY(check_str_re_conv(v7, &rez_str, 0));
-        if (rez_str->v.str.len) {
-          ptok->start = rez_str->v.str.buf;
-          ptok->end = rez_str->v.str.buf + rez_str->v.str.len;
+          v7_array_append(
+              v7, arr,
+              v7_create_string(v7, loot.caps[i].start,
+                               loot.caps[i].end - loot.caps[i].start, 1));
+        v7_array_append(v7, arr, v7_create_number(utfnlen(
+                                     (char *)s, loot.caps[0].start - s)));
+        v7_array_append(v7, arr, this_obj);
+        out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
+        rez_str = v7_to_string(v7, &out_str_o, &rez_len);
+        if (rez_len) {
+          ptok->start = rez_str;
+          ptok->end = rez_str + rez_len;
           ptok++;
-          out_len += rez_str->v.str.len;
           out_sub_num++;
-          v7_append(v7, arr, rez_str);
         }
-        TRY(inc_stack(v7, old_sp - v7->sp));
       } else { /* replace string */
         struct slre_loot newsub;
-        slre_replace(&loot, cfa->this_obj->v.str.buf, str_func->v.str.buf,
-                     &newsub);
+        size_t f_len;
+        const char *f_str = v7_to_string(v7, &str_func, &f_len);
+        slre_replace(&loot, s, s_len, f_str, f_len, &newsub);
         for (i = 0; i < newsub.num_captures; i++) {
           ptok->start = newsub.caps[i].start;
           ptok->end = newsub.caps[i].end;
           ptok++;
-          out_len += newsub.caps[i].end - newsub.caps[i].start;
           out_sub_num++;
         }
       }
-      p = (char *) loot.caps->end;
-    } while ((re->fl.fl.re_flags & SLRE_FLAG_G) && p < str_end);
+      p = (char *)loot.caps[0].end;
+    } while (flag_g && p < str_end);
     if (p < str_end) {
       ptok->start = p;
       ptok->end = str_end;
       ptok++;
-      out_len += str_end - p;
       out_sub_num++;
     }
-    out_str = malloc(out_len + 1);
-    CHECK(out_str, V7_OUT_OF_MEMORY);
+    out_str_o = v7_create_string(v7, NULL, 0, 1);
     ptok = out_sub;
-    p = (char *) out_str;
     do {
       size_t ln = ptok->end - ptok->start;
-      memcpy(p, ptok->start, ln);
+      out_str_o =
+          s_concat(v7, out_str_o, v7_create_string(v7, ptok->start, ln, 1));
       p += ln;
       ptok++;
     } while (--out_sub_num);
     *p = '\0';
-    own = 0;
+
+    return out_str_o;
   }
-  TRY(inc_stack(v7, old_sp - v7->sp));
-  v7_init_str(result, out_str, out_len, own);
-  result->fl.fl.str_alloc = 1;
-  return V7_OK;
-#undef v7
+  return v7_create_string(v7, s, s_len, 1);
 }
-#endif
 
 static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
   long utf_shift = -1;
@@ -349,7 +352,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
     so = to_string(v7, this_obj);
     s = v7_to_string(v7, &so, &s_len);
 
-    if (!slre_exec(prog, 0, s, s_len, &sub))
+    if (!slre_exec(prog, 0, s, s + s_len, &sub))
       utf_shift =
           utfnlen((char *)s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else
@@ -489,47 +492,59 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_array(v7);
-  val_t s = to_string(v7, this_obj);
-  val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
-  long num_elems = 0, limit = arg_long(v7, args, 1, LONG_MAX);
-  size_t n1, n2, i, j;
-  const char *s1 = v7_to_string(v7, &s, &n1);
+  const char *s, *s_end;
+  size_t s_len;
+  long num_args = v7_array_length(v7, args);
+  struct slre_prog *prog = NULL;
+  this_obj = to_string(v7, this_obj);
+  s = v7_to_string(v7, &this_obj, &s_len);
+  s_end = s + s_len;
 
-  if (v7_is_string(arg0) || v7_is_regexp(arg0)) {
-    const char *s2 = v7_to_string(v7, &arg0, &n2);
-    struct v7_regexp *rp = (struct v7_regexp *)v7_to_pointer(arg0);
+  if (num_args == 0 || s_len == 0) {
+    v7_array_append(v7, res, v7_create_string(v7, s, s_len, 1));
+  } else {
+    val_t ro = v7_array_at(v7, args, 0);
+    long len, elem = 0, limit = arg_long(v7, args, 1, LONG_MAX);
+    size_t shift = 0;
     struct slre_loot loot;
-
-    for (i = j = 0; n2 <= n1 && i <= (n1 - n2); i++) {
-      if (num_elems >= limit) break;
-      if (v7_is_string(arg0) && (i > 0 || n2 > 0) &&
-          memcmp(s1 + i, s2, n2) == 0) {
-        v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
-        s1 = v7_to_string(v7, &s, &n1);
-        s2 = v7_to_string(v7, &arg0, &n2);
-        num_elems++;
-        i = j = i + n2;
-      } else if (v7_is_regexp(arg0)) {
-        if (slre_exec(rp->compiled_regexp,
-                      slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G, s1 + i,
-                      n1 - i, &loot) == SLRE_OK) {
-          /* TODO(lsm): fix this */
-          struct slre_cap *cap = &loot.caps[0];
-          i = cap->start - s1;
-          v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
-          s1 = v7_to_string(v7, &s, &n1);
-          s2 = v7_to_string(v7, &arg0, &n2);
-          num_elems++;
-          i = j = cap->end - s1;
-        } else {
-          i = n1 - n2; /* No match, stop the loop */
-          break;
-        }
+    if (!v7_is_regexp(ro)) {
+      const char *str;
+      size_t str_len;
+      ro = to_string(v7, ro);
+      str = v7_to_string(v7, &ro, &str_len);
+      if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
+          prog == NULL) {
+        throw_exception(v7, "Error", "Invalid String");
+        return V7_UNDEFINED;
       }
+    } else {
+      struct v7_regexp *rp = v7_to_pointer(ro);
+      prog = rp->compiled_regexp;
     }
-    if (j < i && n2 > 0) {
-      v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
+    for (; elem < limit && shift < s_len; elem++) {
+      val_t tmp_s;
+      int i;
+      if (slre_exec(prog, 0, s + shift, s_end, &loot)) break;
+      if (loot.caps[0].end - loot.caps[0].start == 0) {
+        tmp_s = v7_create_string(v7, s + shift, 1, 1);
+        shift++;
+      } else {
+        tmp_s =
+            v7_create_string(v7, s + shift, loot.caps[0].start - s - shift, 1);
+        shift = loot.caps[0].end - s;
+      }
+      v7_array_append(v7, res, tmp_s);
+
+      for (i = 1; i < loot.num_captures; i++)
+        v7_array_append(
+            v7, res,
+            (loot.caps[i].start != NULL)
+                ? v7_create_string(v7, loot.caps[i].start,
+                                   loot.caps[i].end - loot.caps[i].start, 1)
+                : V7_UNDEFINED);
     }
+    len = s_len - shift;
+    v7_array_append(v7, res, v7_create_string(v7, s + shift, len, 1));
   }
 
   return res;
@@ -551,6 +566,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "lastIndexOf", Str_lastIndexOf);
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
   set_cfunc_prop(v7, v7->string_prototype, "match", Str_match);
+  set_cfunc_prop(v7, v7->string_prototype, "replace", Str_replace);
   set_cfunc_prop(v7, v7->string_prototype, "search", Str_search);
   set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "trim", Str_trim);
@@ -565,7 +581,4 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));
-#if 0
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "replace", Str_replace);
-#endif
 }

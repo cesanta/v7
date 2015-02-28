@@ -39,7 +39,7 @@
 struct slre_node {
   unsigned char type;
   union {
-    Rune c;             /* character */
+    Rune c;                /* character */
     struct slre_class *cp; /* class pointer */
     struct {
       struct slre_node *x;
@@ -70,8 +70,8 @@ struct slre_instruction {
   unsigned char opcode;
   union {
     unsigned char n;
-    Rune c;                 /* character */
-    struct slre_class *cp;  /* class pointer */
+    Rune c;                /* character */
+    struct slre_class *cp; /* class pointer */
     struct {
       struct slre_instruction *x;
       union {
@@ -123,42 +123,42 @@ struct slre_thread {
 };
 
 enum slre_opcode {
-  I_END = 10,  /* Terminate: match found */
+  I_END = 10, /* Terminate: match found */
   I_ANY,
-  P_ANY = I_ANY,  /* Any character except newline, . */
-  I_ANYNL,        /* Any character including newline, . */
+  P_ANY = I_ANY, /* Any character except newline, . */
+  I_ANYNL,       /* Any character including newline, . */
   I_BOL,
-  P_BOL = I_BOL,  /* Beginning of line, ^ */
+  P_BOL = I_BOL, /* Beginning of line, ^ */
   I_CH,
   P_CH = I_CH,
   I_EOL,
-  P_EOL = I_EOL,  /* End of line, $ */
+  P_EOL = I_EOL, /* End of line, $ */
   I_EOS,
-  P_EOS = I_EOS,  /* End of string, \0 */
+  P_EOS = I_EOS, /* End of string, \0 */
   I_JUMP,
   I_LA,
   P_LA = I_LA,
   I_LA_N,
   P_LA_N = I_LA_N,
   I_LBRA,
-  P_BRA = I_LBRA,  /* Left bracket, ( */
+  P_BRA = I_LBRA, /* Left bracket, ( */
   I_REF,
   P_REF = I_REF,
   I_REP,
   P_REP = I_REP,
   I_REP_INI,
-  I_RBRA,  /* Right bracket, ) */
+  I_RBRA, /* Right bracket, ) */
   I_SET,
-  P_SET = I_SET,  /* Character set, [] */
+  P_SET = I_SET, /* Character set, [] */
   I_SET_N,
-  P_SET_N = I_SET_N,  /* Negated character set, [] */
+  P_SET_N = I_SET_N, /* Negated character set, [] */
   I_SPLIT,
   I_WORD,
   P_WORD = I_WORD,
   I_WORD_N,
   P_WORD_N = I_WORD_N,
-  P_ALT,  /* Alternation, | */
-  P_CAT,  /* Concatentation, implicit operator */
+  P_ALT, /* Alternation, | */
+  P_CAT, /* Concatentation, implicit operator */
   L_CH = 256,
   L_COUNT,  /* {M,N} */
   L_EOS,    /* End of string, \0 */
@@ -193,7 +193,7 @@ static int hex(int c) {
 }
 
 int nextesc(const char **p) {
-  const unsigned char *s = (unsigned char *) (*p)++;
+  const unsigned char *s = (unsigned char *)(*p)++;
   switch (*s) {
     case 0:
       return -SLRE_UNTERM_ESC_SEQ;
@@ -213,8 +213,8 @@ int nextesc(const char **p) {
     case '\\':
       return '\\';
     case 'u':
-      if (isxdigit(s[1]) && isxdigit(s[2]) &&
-          isxdigit(s[3]) && isxdigit(s[4])) {
+      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
+          isxdigit(s[4])) {
         (*p) += 4;
         return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
       }
@@ -230,7 +230,8 @@ int nextesc(const char **p) {
   }
 }
 
-static int re_nextc(Rune *r, const char **src, const char *src_end, int is_regex) {
+static int re_nextc(Rune *r, const char **src, const char *src_end,
+                    int is_regex) {
   *r = 0;
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
@@ -390,12 +391,12 @@ static enum slre_opcode re_lexset(struct slre_env *e) {
       }
       switch (e->curr_rune) {
         default:
-        /* case '-':
-        case '\\':
-        case '.':
-        case '/':
-        case ']':
-        case '|': */
+          /* case '-':
+          case '\\':
+          case '.':
+          case '/':
+          case ']':
+          case '|': */
           break;
         case '0':
           e->curr_rune = 0;
@@ -488,7 +489,8 @@ static int re_lexer(struct slre_env *e) {
 
   if (e->is_regex) {
     switch (e->curr_rune) {
-      case 0: return 0;
+      case 0:
+        return 0;
       case '$':
       case ')':
       case '*':
@@ -914,11 +916,13 @@ static void print_set(struct slre_class *cp) {
   struct slre_range *p;
   for (p = cp->spans; p < cp->end; p++) {
     printf("%s", p == cp->spans ? "'" : ",'");
-    printf(p->s >= 32 && p->s < 127 ? "%c" :
-           (p->s < 256 ? "\\x%02X" : "\\u%04X"), p->s);
+    printf(
+        p->s >= 32 && p->s < 127 ? "%c" : (p->s < 256 ? "\\x%02X" : "\\u%04X"),
+        p->s);
     if (p->s != p->e) {
-      printf(p->e >= 32 && p->e < 127 ? "-%c" :
-             (p->e < 256 ? "-\\x%02X" : "-\\u%04X"), p->e);
+      printf(p->e >= 32 && p->e < 127 ? "-%c"
+                                      : (p->e < 256 ? "-\\x%02X" : "-\\u%04X"),
+             p->e);
     }
     printf("'");
   }
@@ -956,8 +960,8 @@ static void node_print(struct slre_node *nd) {
       printf("}");
       break;
     case P_CH:
-      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" :
-             "'\\u%04X'", nd->par.c);
+      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" : "'\\u%04X'",
+             nd->par.c);
       break;
     case P_EOL:
       printf("$");
@@ -1003,7 +1007,7 @@ static void node_print(struct slre_node *nd) {
 static void program_print(struct slre_prog *prog) {
   struct slre_instruction *inst;
   for (inst = prog->start; inst < prog->end; ++inst) {
-    printf("%3ld: ", inst - prog->start);
+    printf("%3d: ", inst - prog->start);
     switch (inst->opcode) {
       case I_END:
         puts("end");
@@ -1018,8 +1022,9 @@ static void program_print(struct slre_prog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" :
-               "'\\u%04X'\n", inst->par.c);
+        printf(
+            inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n",
+            inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -1028,14 +1033,14 @@ static void program_print(struct slre_prog *prog) {
         puts("\\0");
         break;
       case I_JUMP:
-        printf("-->%ld\n", inst->par.xy.x - prog->start);
+        printf("-->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %ld %ld\n", inst->par.xy.x - prog->start,
+        printf("la %d %d\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %ld %ld\n", inst->par.xy.x - prog->start,
+        printf("la_n %d %d\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
@@ -1045,14 +1050,14 @@ static void program_print(struct slre_prog *prog) {
         printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%ld | -->%ld\n", inst->par.xy.x - prog->start,
+        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
         printf("\\%d\n", inst->par.n);
         break;
       case I_REP:
-        printf("repeat -->%ld\n", inst->par.xy.x - prog->start);
+        printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
         printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
@@ -1086,11 +1091,11 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   struct slre_instruction *split, *jump;
   int err_code;
 
-  e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
-  e.pstart = e.pend = (struct slre_node *)
-             SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+  e.prog = (struct slre_prog *)SLRE_MALLOC(sizeof(struct slre_prog));
+  e.pstart = e.pend =
+      (struct slre_node *)SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
   e.prog->flags = 0;
-  if(is_regex) e.prog->flags = SLRE_FLAG_RE;
+  if (is_regex) e.prog->flags = SLRE_FLAG_RE;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -1100,9 +1105,15 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
 
   while (fl_len--) {
     switch (flags[fl_len]) {
-      case 'g': e.prog->flags |= SLRE_FLAG_G; break;
-      case 'i': e.prog->flags |= SLRE_FLAG_I; break;
-      case 'm': e.prog->flags |= SLRE_FLAG_M; break;
+      case 'g':
+        e.prog->flags |= SLRE_FLAG_G;
+        break;
+      case 'i':
+        e.prog->flags |= SLRE_FLAG_I;
+        break;
+      case 'm':
+        e.prog->flags |= SLRE_FLAG_M;
+        break;
     }
   }
 
@@ -1123,8 +1134,8 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   }
 
   e.prog->num_captures = e.num_captures;
-  e.prog->start = e.prog->end = (struct slre_instruction *)
-      SLRE_MALLOC((re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
+  e.prog->start = e.prog->end = (struct slre_instruction *)SLRE_MALLOC(
+      (re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
 
   split = re_newinst(e.prog, I_SPLIT);
   split->par.xy.x = split + 3;
@@ -1172,16 +1183,15 @@ static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
   if (!(thr = 0)) continue
 
 static unsigned char re_match(struct slre_instruction *pc, const char *current,
-                              size_t len, const char *bol, unsigned int flags,
-                              struct slre_loot *loot) {
-  struct slre_thread threads[SLRE_MAX_THREADS];
+                              const char *end, const char *bol,
+                              unsigned int flags, struct slre_loot *loot) {
   struct slre_loot sub, tmpsub;
   Rune c, r;
   struct slre_range *p;
   unsigned short thr_num = 1;
   unsigned char thr;
   size_t i;
-  const char *end = current + len;
+  struct slre_thread threads[SLRE_MAX_THREADS];
 
   /* queue initial thread */
   re_newthread(threads, pc, current, loot);
@@ -1198,18 +1208,24 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
           return 1;
         case I_ANY:
         case I_ANYNL:
-          current += chartorune(&c, current);
-          if (!c || (pc->opcode == I_ANY && isnewline(c)) || current >= end) RE_NO_MATCH();
-          break;
+          if (current < end) {
+            current += chartorune(&c, current);
+            if (c && !(pc->opcode == I_ANY && isnewline(c))) break;
+          }
+          RE_NO_MATCH();
 
         case I_BOL:
           if (current == bol) break;
           if ((flags & SLRE_FLAG_M) && isnewline(current[-1])) break;
           RE_NO_MATCH();
         case I_CH:
-          current += chartorune(&c, current);
-          if (c && (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
-              tolowerrune(c) == tolowerrune(pc->par.c))) && current < end) break;
+          if (current < end) {
+            current += chartorune(&c, current);
+            if (c &&
+                (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
+                                    tolowerrune(c) == tolowerrune(pc->par.c))))
+              break;
+          }
           RE_NO_MATCH();
         case I_EOL:
           if (current >= end) break;
@@ -1224,16 +1240,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
           continue;
 
         case I_LA:
-          if (re_match(pc->par.xy.x, current, end - current, bol, flags,
-                       &sub)) {
+          if (re_match(pc->par.xy.x, current, end, bol, flags, &sub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
           RE_NO_MATCH();
         case I_LA_N:
           tmpsub = sub;
-          if (!re_match(pc->par.xy.x, current, end - current, bol, flags,
-              &tmpsub)) {
+          if (!re_match(pc->par.xy.x, current, end, bol, flags, &tmpsub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
@@ -1326,8 +1340,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
   return 0;
 }
 
-int slre_exec(struct slre_prog *prog, int flag_g, const char *start, size_t len,
-              struct slre_loot *loot) {
+int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
+              const char *end, struct slre_loot *loot) {
   struct slre_loot tmpsub;
   const char *st = start;
 
@@ -1336,10 +1350,10 @@ int slre_exec(struct slre_prog *prog, int flag_g, const char *start, size_t len,
 
   if (!flag_g) {
     loot->num_captures = prog->num_captures;
-    return !re_match(prog->start, start, len, start, prog->flags, loot);
+    return !re_match(prog->start, start, end, start, prog->flags, loot);
   }
 
-  while (re_match(prog->start, st, len, start, prog->flags, &tmpsub)) {
+  while (re_match(prog->start, st, end, start, prog->flags, &tmpsub)) {
     unsigned int i;
     st = tmpsub.caps[0].end;
     for (i = 0; i < prog->num_captures; i++) {
@@ -1353,18 +1367,19 @@ int slre_exec(struct slre_prog *prog, int flag_g, const char *start, size_t len,
   return !loot->num_captures;
 }
 
-#if 0
-int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
-                 struct slre_loot *dstsub) {
+int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
+                 const char *rstr, size_t rstr_len, struct slre_loot *dstsub) {
   int size = 0, n;
   Rune curr_rune;
+  const char *const rstr_end = rstr + rstr_len;
 
   memset(dstsub, 0, sizeof(*dstsub));
-  while (!(n = re_nextc(&curr_rune, &rstr)) && curr_rune) {
+  while (rstr < rstr_end && !(n = re_nextc(&curr_rune, &rstr, rstr_end, 1)) &&
+         curr_rune) {
     int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
-      n = re_nextc(&curr_rune, &rstr);
+      n = re_nextc(&curr_rune, &rstr, rstr_end, 1);
       if (n < 0) return n;
       switch (curr_rune) {
         case '&':
@@ -1384,7 +1399,7 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
         case '9': {
           int sbn = dec(curr_rune);
           if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
-            n = re_nextc(&curr_rune, &rstr);
+            n = re_nextc(&curr_rune, &rstr, rstr_end, 1);
             if (n < 0) return n;
             sz = dec(curr_rune);
             sbn = sbn * 10 + sz;
@@ -1402,7 +1417,7 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
           dstsub->caps[dstsub->num_captures++].end = loot->caps[0].start;
           break;
         case '\'':
-          sz = strlen(loot->caps[0].end);
+          sz = src + src_len - loot->caps[0].end;
           size += sz;
           dstsub->caps[dstsub->num_captures].start = loot->caps[0].end;
           dstsub->caps[dstsub->num_captures++].end = loot->caps[0].end + sz;
@@ -1428,7 +1443,6 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
   }
   return size;
 }
-#endif
 
 int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
                const char *str, size_t str_len, struct slre_loot *loot) {
@@ -1436,16 +1450,14 @@ int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
   int res;
 
   if ((res = slre_compile(re, re_len, flags, fl_len, &prog, 1)) == SLRE_OK) {
-    res = slre_exec(prog, prog->flags & SLRE_FLAG_G, str, str_len, loot);
+    res = slre_exec(prog, prog->flags & SLRE_FLAG_G, str, str + str_len, loot);
     slre_free(prog);
   }
 
   return res;
 }
 
-int slre_get_flags(struct slre_prog * crp) {
-  return crp->flags;
-}
+int slre_get_flags(struct slre_prog *crp) { return crp->flags; }
 
 #ifdef SLRE_TEST
 
@@ -1453,31 +1465,23 @@ int slre_get_flags(struct slre_prog * crp) {
 
 static const char *err_code_to_str(int err_code) {
   static const char *ar[] = {
-    "no error",
-    "invalid decimal digit",
-    "invalid hex digit",
-    "invalid escape character",
-    "invalid unterminated escape sequence",
-    "syntax error",
-    "unmatched left parenthesis",
-    "unmatched right parenthesis",
-    "numeric overflow",
-    "infinite loop empty string",
-    "too many charsets",
-    "invalid charset range",
-    "charset is too large",
-    "malformed charset",
-    "invalid back reference",
-    "too many captures",
-    "invalid quantifier",
-    "bad character after $"
-  };
+      "no error",                             "invalid decimal digit",
+      "invalid hex digit",                    "invalid escape character",
+      "invalid unterminated escape sequence", "syntax error",
+      "unmatched left parenthesis",           "unmatched right parenthesis",
+      "numeric overflow",                     "infinite loop empty string",
+      "too many charsets",                    "invalid charset range",
+      "charset is too large",                 "malformed charset",
+      "invalid back reference",               "too many captures",
+      "invalid quantifier",                   "bad character after $"};
 
-  typedef char static_assertion_err_codes_out_of_sync[2 *
-    !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -1];
+  typedef char static_assertion_err_codes_out_of_sync
+      [2 * !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -
+       1];
 
-  return err_code >= 0 && err_code < (int) (sizeof(ar) / sizeof(ar[0])) ?
-    ar[err_code] : "invalid error code";
+  return err_code >= 0 && err_code < (int)(sizeof(ar) / sizeof(ar[0]))
+             ? ar[err_code]
+             : "invalid error code";
 }
 
 #define RE_TEST_STR_SIZE 2000
@@ -1487,11 +1491,20 @@ static unsigned get_flags(const char *ch) {
 
   while (*ch != '\0') {
     switch (*ch) {
-      case 'g': flags |= SLRE_FLAG_G; break;
-      case 'i': flags |= SLRE_FLAG_I; break;
-      case 'm': flags |= SLRE_FLAG_M; break;
-      case 'r': flags |= SLRE_FLAG_RE; break;
-      default: return flags;
+      case 'g':
+        flags |= SLRE_FLAG_G;
+        break;
+      case 'i':
+        flags |= SLRE_FLAG_I;
+        break;
+      case 'm':
+        flags |= SLRE_FLAG_M;
+        break;
+      case 'r':
+        flags |= SLRE_FLAG_RE;
+        break;
+      default:
+        return flags;
     }
     ch++;
   }
@@ -1519,22 +1532,23 @@ static int process_line(struct slre_prog *pr, const char *flags,
   int i, n = cap_no == NULL ? -1 : atoi(cap_no), err_code = 0;
   struct slre_cap *cap = &loot.caps[n];
 
-  err_code = slre_exec(pr, pr->flags & SLRE_FLAG_G, line, strlen(line), &loot);
+  err_code =
+      slre_exec(pr, pr->flags & SLRE_FLAG_G, line, line + strlen(line), &loot);
   if (err_code == SLRE_OK) {
     if (n >= 0 && n < loot.num_captures && replace != NULL) {
       struct slre_cap *cap = &loot.caps[n];
-      printf("%.*s", (int) (cap->start - line), line);
+      printf("%.*s", (int)(cap->start - line), line);
       printf("%s", replace);
-      printf("%.*s", (int) ((line + strlen(line)) - cap->end), cap->end);
+      printf("%.*s", (int)((line + strlen(line)) - cap->end), cap->end);
     } else if (n >= 0 && n < loot.num_captures) {
-      printf("%.*s\n", (int) (cap->end - cap->start), cap->start);
+      printf("%.*s\n", (int)(cap->end - cap->start), cap->start);
     }
 
     if (verbose != NULL) {
       fprintf(stderr, "%s\n", "Captures:");
       for (i = 0; i < loot.num_captures; i++) {
         fprintf(stderr, "%d [%.*s]\n", i,
-                (int) (loot.caps[i].end - loot.caps[i].start),
+                (int)(loot.caps[i].end - loot.caps[i].start),
                 loot.caps[i].start);
       }
     }
@@ -1575,10 +1589,10 @@ int main(int argc, char **argv) {
   if (pattern == NULL) {
     fprintf(stderr, "%s\n", "-p option is mandatory");
     exit(1);
-  } else if ((err_code = slre_compile(pattern, strlen(pattern),
-             flags, strlen(flags), &pr, 1)) != SLRE_OK) {
-    fprintf(stderr, "slre_compile(%s): %s\n",
-            argv[0], err_code_to_str(err_code));
+  } else if ((err_code = slre_compile(pattern, strlen(pattern), flags,
+                                      strlen(flags), &pr, 1)) != SLRE_OK) {
+    fprintf(stderr, "slre_compile(%s): %s\n", argv[0],
+            err_code_to_str(err_code));
     exit(1);
   } else if (str != NULL) {
     err_code = process_line(pr, flags, str, cap_no, replace, verbose);
@@ -1592,12 +1606,12 @@ int main(int argc, char **argv) {
       /* Return success if at least one line matches */
       err_code = 1;
       while (fgets(line, sizeof(line), fp) != NULL) {
-        if (process_line(pr, flags, line, cap_no, replace,
-            verbose) == SLRE_OK) {
+        if (process_line(pr, flags, line, cap_no, replace, verbose) ==
+            SLRE_OK) {
           err_code = 0;
         }
       }
-      fclose(fp);   /* If fp == stdin, it is safe to close, too */
+      fclose(fp); /* If fp == stdin, it is safe to close, too */
     }
   } else {
     fprintf(stderr, "%s\n", "Please specify one of -s or -f options");
@@ -1607,4 +1621,4 @@ int main(int argc, char **argv) {
 
   return err_code;
 }
-#endif  /* SLRE_TEST */
+#endif /* SLRE_TEST */

@@ -121,7 +121,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
     if (rp->lastIndex < 0) rp->lastIndex = 0;
     if (flag_g) begin = utfnshift((char *)begin, rp->lastIndex);
 
-    if (!slre_exec(rp->compiled_regexp, 0, begin, len, &sub)) {
+    if (!slre_exec(rp->compiled_regexp, 0, begin, begin + len, &sub)) {
       int i;
       arr = v7_create_array(v7);
 
