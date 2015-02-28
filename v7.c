@@ -3712,8 +3712,9 @@ static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
   res = v7_create_array(v7);
   for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
     size_t n;
-    const char *name = v7_to_string(v7, &p->name, &n);
+    const char *name;
     el = a_prep2(v7, arg0, p->value, p->name, arg1);
+    name = v7_to_string(v7, &p->name, &n);
     v7_set(v7, res, name, n, el);
   }
 
@@ -3754,6 +3755,22 @@ static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0, arg1, el, res;
+  struct v7_property *p;
+
+  a_prep1(v7, this_obj, args, &arg0, &arg1);
+  res = v7_create_array(v7);
+  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+    el = a_prep2(v7, arg0, p->value, p->name, arg1);
+    if (v7_is_true(v7, el)) {
+      v7_array_append(v7, res, p->value);
+    }
+  }
+
+  return res;
+}
+
 V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
   val_t length = v7_create_array(v7);
@@ -3772,6 +3789,7 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "map", Array_map, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "every", Array_every, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "some", Array_some, 1);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "filter", Array_filter, 1);
 
   v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
   v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
