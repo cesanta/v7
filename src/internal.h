@@ -31,7 +31,7 @@
 #include <setjmp.h>
 #include <time.h>
 
-#ifdef _WIN32
+#ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)

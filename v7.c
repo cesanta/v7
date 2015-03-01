@@ -34,7 +34,11 @@ enum v7_err {
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
-#ifdef _WIN32
+#if defined(_MSC_VER) && _MSC_VER <= 1200
+#define V7_WINDOWS
+#endif
+
+#ifdef V7_WINDOWS
 typedef unsigned __int64 uint64_t;
 #else
 #include <inttypes.h>
@@ -644,7 +648,7 @@ struct gc_arena {
 #include <setjmp.h>
 #include <time.h>
 
-#ifdef _WIN32
+#ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)
@@ -3871,7 +3875,7 @@ V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) {   \
   return func(v7, args, name);                                          \
 }
 
-#ifdef _WIN32
+#ifdef V7_WINDOWS
 static double round(double n) {
   return n;
 }
@@ -5249,7 +5253,7 @@ int v7_is_error(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
-  return (uint64_t) p & ~V7_TAG_MASK;
+  return ((uint64_t) (uintptr_t) p) & ~V7_TAG_MASK;
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
@@ -7345,7 +7349,7 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
-#ifdef _WIN32
+#ifdef V7_WINDOWS
 static int signbit(double x) {
   return x > 0;
 }

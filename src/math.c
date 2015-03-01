@@ -22,7 +22,7 @@ V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) {   \
   return func(v7, args, name);                                          \
 }
 
-#ifdef _WIN32
+#ifdef V7_WINDOWS
 static double round(double n) {
   return n;
 }
