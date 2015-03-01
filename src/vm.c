@@ -780,13 +780,13 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
 
-  /* if (len <= 5) {
+  if (len <= 5) {
     char *s = GET_VAL_NAN_PAYLOAD(offset) + 1;
     offset = 0;
     memcpy(s, p, len);
     s[-1] = len;
     tag = V7_TAG_STRING_I;
-  } else */ if (own) {
+  } else if (own) {
     if(embed_string(m, m->len, p, len) < 0) throw_exception(v7, "Error", "Sintax error");
     tag = V7_TAG_STRING_O;
   } else {
@@ -846,13 +846,13 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   b_ptr = v7_to_string(v7, &b, &b_len);
 
   /* Create a new string which is a concatenation a + b */
-  // if (a_len + b_len <= 5) {
-    // offset = 0;
-    // /* TODO(mkm): make it work on big endian too */
-    // s = ((char *) &offset) + 1;
-    // s[-1] = a_len + b_len;
-    // tag = V7_TAG_STRING_I;
-  // } else {
+  if (a_len + b_len <= 5) {
+    offset = 0;
+    /* TODO(mkm): make it work on big endian too */
+    s = ((char *) &offset) + 1;
+    s[-1] = a_len + b_len;
+    tag = V7_TAG_STRING_I;
+  } else {
     int llen = calc_llen(a_len + b_len);
     mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen);
     /* all pointers might have been relocated */
@@ -862,7 +862,7 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
     a_ptr = v7_to_string(v7, &a, &a_len);
     b_ptr = v7_to_string(v7, &b, &b_len);
     tag = V7_TAG_STRING_O;
-  // }
+  }
   memcpy(s, a_ptr, a_len);
   memcpy(s + a_len, b_ptr, b_len);
 
