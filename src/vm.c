@@ -845,10 +845,11 @@ V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
 }
 
 V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
-  size_t a_len, b_len, offset = v7->owned_strings.len;
+  size_t a_len, b_len;
   const char *a_ptr, *b_ptr;
   char *s = NULL;
   uint64_t tag = V7_TAG_STRING_F;
+  val_t offset = v7->owned_strings.len;
 
   a_ptr = v7_to_string(v7, &a, &a_len);
   b_ptr = v7_to_string(v7, &b, &b_len);
@@ -857,7 +858,7 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   if (a_len + b_len <= 5) {
     offset = 0;
     /* TODO(mkm): make it work on big endian too */
-    s = ((char *) &offset) + 1;
+    s = GET_VAL_NAN_PAYLOAD(offset) + 1;
     s[-1] = a_len + b_len;
     tag = V7_TAG_STRING_I;
   } else {
