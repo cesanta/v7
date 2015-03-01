@@ -250,6 +250,13 @@ Array.prototype.lastIndexOf = function(a, b) {
   }
   return -1;
 };
+
+Array.prototype.pop = function() {
+  var i = this.length - 1;
+  var r = this[i];
+  delete this[i];
+  return r;
+};
 ));
 }
 

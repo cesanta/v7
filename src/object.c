@@ -32,30 +32,26 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 
-/* Hack to ensure that the iteration order of the keys array is consistent
- * with the iteration order if properties in `for in`
- * This will be obsoleted when arrays will have a special object type. */
-static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
-                                int i, unsigned int ignore_flags) {
-  char buf[20];
-  while (p && p->attributes & ignore_flags) p = p->next;
-  if (p == NULL) return;
-  if (p->next) _Obj_append_reverse(v7, p->next, res, i+1, ignore_flags);
-
-  snprintf(buf, sizeof(buf), "%d", i);
-  v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
-}
-
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
                           unsigned int ignore_flags) {
   val_t obj = v7_array_at(v7, args, 0);
   val_t res = v7_create_array(v7);
+  struct v7_property *p;
+  char buf[20];
+  int i = 0;
+
   if (!v7_is_object(obj)) {
     throw_exception(v7, "TypeError",
                     "Object.keys called on non-object");
   }
 
-  _Obj_append_reverse(v7, v7_to_object(obj)->properties, res, 0, ignore_flags);
+  for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+    if (p->attributes & ignore_flags) continue;
+    snprintf(buf, sizeof(buf), "%d", i);
+    i++;
+    v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
+  }
+
   return res;
 }
 

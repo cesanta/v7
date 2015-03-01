@@ -609,7 +609,7 @@
 608	PASS ch08/8.12/8.12.4/8.14.4-8-b_1.js (tail -c +391312 tests/ecmac.db|head -c 467)
 609	FAIL ch08/8.12/8.12.4/8.14.4-8-b_2.js (tail -c +391780 tests/ecmac.db|head -c 582): [{"message":"Test case returned non-true value!"}]
 610	FAIL ch08/8.12/8.12.4/S8.12.4_A1.js (tail -c +392363 tests/ecmac.db|head -c 389): [{"message":"#1: __e = Math.E; Math.E = 1; Math.E === __e. Actual: 1"}]
-611	FAIL ch08/8.12/8.12.5/8.12.5-3-b_1.js (tail -c +392753 tests/ecmac.db|head -c 1185): [{"message":"cannot read property 'configurable' of undefined"}]
+611	FAIL ch08/8.12/8.12.5/8.12.5-3-b_1.js (tail -c +392753 tests/ecmac.db|head -c 1185): [{"message":"cannot read property 'value' of undefined"}]
 612	FAIL ch08/8.12/8.12.5/8.12.5-3-b_2.js (tail -c +393939 tests/ecmac.db|head -c 1195): [{"message":"Test case returned non-true value!"}]
 613	FAIL ch08/8.12/8.12.5/8.12.5-5-b_1.js (tail -c +395135 tests/ecmac.db|head -c 1065): [{"message":"Test case returned non-true value!"}]
 614	PASS ch08/8.12/8.12.5/S8.12.5_A1.js (tail -c +396201 tests/ecmac.db|head -c 1409)
@@ -917,11 +917,11 @@
 913	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T4.js (tail -c +703973 tests/ecmac.db|head -c 405)
 914	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T1.js (tail -c +704379 tests/ecmac.db|head -c 527): [{"message":"#1: 'Infinity' have attribute DontEnum"}]
 915	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T2.js (tail -c +704907 tests/ecmac.db|head -c 1106): [{"message":"#1: 'eval' have attribute DontEnum"}]
-916	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T3.js (tail -c +706014 tests/ecmac.db|head -c 1605): [{"message":"#1: 'Function' have attribute DontEnum"}]
+916	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T3.js (tail -c +706014 tests/ecmac.db|head -c 1605): [{"message":"#1: 'property 'Object' have attribute DontEnum"}]
 917	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T4.js (tail -c +707620 tests/ecmac.db|head -c 348): [{"message":"#1: 'Math' have attribute DontEnum"}]
 918	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T1.js (tail -c +707969 tests/ecmac.db|head -c 578): [{"message":"#1: 'Infinity' have attribute DontEnum"}]
 919	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T2.js (tail -c +708548 tests/ecmac.db|head -c 1181): [{"message":"#1: 'eval' have attribute DontEnum"}]
-920	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T3.js (tail -c +709730 tests/ecmac.db|head -c 1705): [{"message":"#1: 'Function' have attribute DontEnum"}]
+920	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T3.js (tail -c +709730 tests/ecmac.db|head -c 1705): [{"message":"#1: 'property 'Object' have attribute DontEnum"}]
 921	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T4.js (tail -c +711436 tests/ecmac.db|head -c 391): [{"message":"#1: 'Math' have attribute DontEnum"}]
 922	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T1.js (tail -c +711828 tests/ecmac.db|head -c 619): [{"message":"parse error at at line 4 col 11: [    $ERROR(]"}]
 923	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T2.js (tail -c +712448 tests/ecmac.db|head -c 1282): [{"message":"parse error at at line 4 col 11: [    $ERROR(]"}]
@@ -954,17 +954,17 @@
 950	PASS ch10/10.4/10.4.2/S10.4.2_A1.1_T7.js (tail -c +729394 tests/ecmac.db|head -c 539)
 951	PASS ch10/10.4/10.4.2/S10.4.2_A1.1_T8.js (tail -c +729934 tests/ecmac.db|head -c 544)
 952	PASS ch10/10.4/10.4.2/S10.4.2_A1.1_T9.js (tail -c +730479 tests/ecmac.db|head -c 535)
-953	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T1.js (tail -c +731015 tests/ecmac.db|head -c 589)
-954	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T10.js (tail -c +731605 tests/ecmac.db|head -c 599)
-955	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T11.js (tail -c +732205 tests/ecmac.db|head -c 610)
-956	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T2.js (tail -c +732816 tests/ecmac.db|head -c 597)
-957	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T3.js (tail -c +733414 tests/ecmac.db|head -c 600)
-958	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T4.js (tail -c +734015 tests/ecmac.db|head -c 591)
-959	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T5.js (tail -c +734607 tests/ecmac.db|head -c 601)
-960	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T6.js (tail -c +735209 tests/ecmac.db|head -c 603)
-961	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T7.js (tail -c +735813 tests/ecmac.db|head -c 598)
-962	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T8.js (tail -c +736412 tests/ecmac.db|head -c 602)
-963	PASS ch10/10.4/10.4.2/S10.4.2_A1.2_T9.js (tail -c +737015 tests/ecmac.db|head -c 593)
+953	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T1.js (tail -c +731015 tests/ecmac.db|head -c 589): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+954	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T10.js (tail -c +731605 tests/ecmac.db|head -c 599): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+955	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T11.js (tail -c +732205 tests/ecmac.db|head -c 610): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+956	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T2.js (tail -c +732816 tests/ecmac.db|head -c 597): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+957	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T3.js (tail -c +733414 tests/ecmac.db|head -c 600): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+958	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T4.js (tail -c +734015 tests/ecmac.db|head -c 591): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+959	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T5.js (tail -c +734607 tests/ecmac.db|head -c 601): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+960	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T6.js (tail -c +735209 tests/ecmac.db|head -c 603): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+961	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T7.js (tail -c +735813 tests/ecmac.db|head -c 598): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+962	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T8.js (tail -c +736412 tests/ecmac.db|head -c 602): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
+963	FAIL ch10/10.4/10.4.2/S10.4.2_A1.2_T9.js (tail -c +737015 tests/ecmac.db|head -c 593): [{"message":"#1: scope chain must contain same objects in the same order as the calling context"}]
 964	FAIL ch10/10.4/10.4.3/10.4.3-1-1-s.js (tail -c +737609 tests/ecmac.db|head -c 462): [{"message":"value is not a function"}]
 965	FAIL ch10/10.4/10.4.3/10.4.3-1-10-s.js (tail -c +738072 tests/ecmac.db|head -c 393): [{"message":"Test case returned non-true value!"}]
 966	FAIL ch10/10.4/10.4.3/10.4.3-1-100-s.js (tail -c +738466 tests/ecmac.db|head -c 465): [{"message":"value is not a function"}]
@@ -1165,7 +1165,7 @@
 1161	FAIL ch10/10.4/10.4.3/10.4.3-1-99-s.js (tail -c +825671 tests/ecmac.db|head -c 455): [{"message":"value is not a function"}]
 1162	FAIL ch10/10.4/10.4.3/10.4.3-1-99gs.js (tail -c +826127 tests/ecmac.db|head -c 465): [{"message":"value is not a function"}]
 1163	FAIL ch10/10.4/10.4.3/10.4.3-1-9gs.js (tail -c +826593 tests/ecmac.db|head -c 385): ["'this' had incorrect value!"]
-1164	FAIL ch10/10.4/10.4.3/S10.4.3_A1.js (tail -c +826979 tests/ecmac.db|head -c 359): [{"message":"#1: "this" leaked as: {"that":[Circular],"runTestCase":[function runTestCase(testcase)],"ConstructDate":[function ConstructDate(year,month,date,hours,minutes,seconds,ms){var r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,retVal}],"TimeClip":[function TimeClip(time)],"MakeDate":[function MakeDate(day,time)],"MakeDay":[function MakeDay(year,month,date){var result5,result6,sign,t,y,leap,m}],"MakeTime":[function MakeTime(hour,min,sec,ms)],"msFromTime":[function msFromTime(t)],"SecFromTime":[function SecFromTime(t)],"MinFromTime":[function MinF"}]
+1164	FAIL ch10/10.4/10.4.3/S10.4.3_A1.js (tail -c +826979 tests/ecmac.db|head -c 359): [{"message":"#1: "this" leaked as: {"print":cfunc_0x10d02f3d0,"eval":cfunc_0x10d02f530,"exit":cfunc_0x10d02f9b0,"base64_encode":cfunc_0x10d02f9f0,"base64_decode":cfunc_0x10d02fa30,"load":cfunc_0x10d02fa70,"File":{"open":cfunc_0x10d02fb00,"close":cfunc_0x10d02fbf0,"read":cfunc_0x10d02fc60,"write":cfunc_0x10d02fdb0},"Infinity":Infinity,"global":[Circular],"Object":[function Object(v)],"Array":Function cfunc_0x10d00d700,"Error":[function Error(m)],"TypeError":[function TypeError(m)],"SyntaxError":[function SyntaxError(m)],"ReferenceError":[fun"}]
 1165	FAIL ch10/10.5/10.5-1-s.js (tail -c +827339 tests/ecmac.db|head -c 484): [{"message":"Test case returned non-true value!"}]
 1166	FAIL ch10/10.5/10.5-7-b-1-s.js (tail -c +827824 tests/ecmac.db|head -c 490): [{"message":"Test case returned non-true value!"}]
 1167	PASS ch10/10.5/10.5-7-b-2-s.js (tail -c +828315 tests/ecmac.db|head -c 450)
@@ -2069,7 +2069,7 @@
 2065	PASS ch11/11.6/11.6.1/S11.6.1_A2.1_T2.js (tail -c +1598918 tests/ecmac.db|head -c 439)
 2066	PASS ch11/11.6/11.6.1/S11.6.1_A2.1_T3.js (tail -c +1599358 tests/ecmac.db|head -c 439)
 2067	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T1.js (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 1{"toString":[function()]}"}]
-2068	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T2.js (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.85029e+09"}]
+2068	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T2.js (tail -c +1602750 tests/ecmac.db|head -c 1064): [{"message":"#1: var date = new Date(); date + date === date.toString() + date.toString(). Actual: 2.85047e+09"}]
 2069	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T3.js (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
 2070	PASS ch11/11.6/11.6.1/S11.6.1_A2.3_T1.js (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS ch11/11.6/11.6.1/S11.6.1_A2.4_T1.js (tail -c +1605816 tests/ecmac.db|head -c 464)
@@ -4431,20 +4431,20 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4377	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-5.js (tail -c +4743306 tests/ecmac.db|head -c 387): [{"message":"value is not a function"}]
 4378	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-6.js (tail -c +4743694 tests/ecmac.db|head -c 387): [{"message":"value is not a function"}]
 4379	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-7.js (tail -c +4744082 tests/ecmac.db|head -c 751)
-4380	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-8.js (tail -c +4744834 tests/ecmac.db|head -c 904): [{"message":"Test case returned non-true value!"}]
-4381	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-1.js (tail -c +4745739 tests/ecmac.db|head -c 437): [{"message":"Test case returned non-true value!"}]
+4380	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-8.js (tail -c +4744834 tests/ecmac.db|head -c 904)
+4381	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-1.js (tail -c +4745739 tests/ecmac.db|head -c 437)
 4382	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-2.js (tail -c +4746177 tests/ecmac.db|head -c 438)
-4383	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-3.js (tail -c +4746616 tests/ecmac.db|head -c 436): [{"message":"Test case returned non-true value!"}]
-4384	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-4.js (tail -c +4747053 tests/ecmac.db|head -c 1032): [{"message":"Test case returned non-true value!"}]
+4383	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-3.js (tail -c +4746616 tests/ecmac.db|head -c 436)
+4384	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-4.js (tail -c +4747053 tests/ecmac.db|head -c 1032)
 4385	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-5.js (tail -c +4748086 tests/ecmac.db|head -c 494)
 4386	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-6.js (tail -c +4748581 tests/ecmac.db|head -c 377)
 4387	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-7.js (tail -c +4748959 tests/ecmac.db|head -c 782)
-4388	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-4-1.js (tail -c +4749742 tests/ecmac.db|head -c 775): [{"message":"Test case returned non-true value!"}]
+4388	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-4-1.js (tail -c +4749742 tests/ecmac.db|head -c 775)
 4389	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-1.js (tail -c +4750518 tests/ecmac.db|head -c 560)
 4390	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-10.js (tail -c +4751079 tests/ecmac.db|head -c 984)
-4391	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-11.js (tail -c +4752064 tests/ecmac.db|head -c 673): [{"message":"Test case returned non-true value!"}]
+4391	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-11.js (tail -c +4752064 tests/ecmac.db|head -c 673)
 4392	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-12.js (tail -c +4752738 tests/ecmac.db|head -c 801)
-4393	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-13.js (tail -c +4753540 tests/ecmac.db|head -c 1049): [{"message":"Test case returned non-true value!"}]
+4393	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-13.js (tail -c +4753540 tests/ecmac.db|head -c 1049)
 4394	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-14.js (tail -c +4754590 tests/ecmac.db|head -c 758)
 4395	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-15.js (tail -c +4755349 tests/ecmac.db|head -c 763)
 4396	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-5-16.js (tail -c +4756113 tests/ecmac.db|head -c 935)
@@ -8088,10 +8088,10 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8034	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-5-6.js (tail -c +7532034 tests/ecmac.db|head -c 464)
 8035	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-5-7.js (tail -c +7532499 tests/ecmac.db|head -c 489)
 8036	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-5-9.js (tail -c +7532989 tests/ecmac.db|head -c 544)
-8037	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-1.js (tail -c +7533534 tests/ecmac.db|head -c 542): [{"message":"Test case returned non-true value!"}]
-8038	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-2.js (tail -c +7534077 tests/ecmac.db|head -c 522): [{"message":"Test case returned non-true value!"}]
+8037	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-1.js (tail -c +7533534 tests/ecmac.db|head -c 542)
+8038	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-2.js (tail -c +7534077 tests/ecmac.db|head -c 522)
 8039	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-3.js (tail -c +7534600 tests/ecmac.db|head -c 524)
-8040	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-4.js (tail -c +7535125 tests/ecmac.db|head -c 531): [{"message":"Test case returned non-true value!"}]
+8040	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-4.js (tail -c +7535125 tests/ecmac.db|head -c 531)
 8041	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-5.js (tail -c +7535657 tests/ecmac.db|head -c 554): [{"message":"Test case returned non-true value!"}]
 8042	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-6.js (tail -c +7536212 tests/ecmac.db|head -c 639): [{"message":"Test case returned non-true value!"}]
 8043	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-7.js (tail -c +7536852 tests/ecmac.db|head -c 706): [{"message":"Test case returned non-true value!"}]
@@ -8145,7 +8145,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8091	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-i-9.js (tail -c +7578157 tests/ecmac.db|head -c 782): [{"message":"value is not a function"}]
 8092	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-1.js (tail -c +7578940 tests/ecmac.db|head -c 470)
 8093	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-10.js (tail -c +7579411 tests/ecmac.db|head -c 472)
-8094	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-11.js (tail -c +7579884 tests/ecmac.db|head -c 506): [{"message":"cannot read property '1' of undefined"}]
+8094	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-11.js (tail -c +7579884 tests/ecmac.db|head -c 506): [{"message":"cannot read property '0' of undefined"}]
 8095	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-12.js (tail -c +7580391 tests/ecmac.db|head -c 506)
 8096	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-13.js (tail -c +7580898 tests/ecmac.db|head -c 520): [{"message":"cannot read property 'undefined' of undefined"}]
 8097	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-16.js (tail -c +7581419 tests/ecmac.db|head -c 624): [{"message":"value is not a function"}]
@@ -8157,7 +8157,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8103	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-21.js (tail -c +7585031 tests/ecmac.db|head -c 711): [{"message":"value is not a function"}]
 8104	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-22.js (tail -c +7585743 tests/ecmac.db|head -c 716): [{"message":"value is not a function"}]
 8105	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-23.js (tail -c +7586460 tests/ecmac.db|head -c 570): [{"message":"value is not a function"}]
-8106	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-3.js (tail -c +7587031 tests/ecmac.db|head -c 566): [{"message":"Test case returned non-true value!"}]
+8106	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-3.js (tail -c +7587031 tests/ecmac.db|head -c 566)
 8107	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-4.js (tail -c +7587598 tests/ecmac.db|head -c 681): [{"message":"Test case returned non-true value!"}]
 8108	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-5.js (tail -c +7588280 tests/ecmac.db|head -c 1204): [{"message":"Test case returned non-true value!"}]
 8109	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-7-c-ii-6.js (tail -c +7589485 tests/ecmac.db|head -c 698): [{"message":"value is not a function"}]
@@ -8304,11 +8304,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8250	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-5-7.js (tail -c +7675598 tests/ecmac.db|head -c 412)
 8251	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-5-9.js (tail -c +7676011 tests/ecmac.db|head -c 469)
 8252	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-1.js (tail -c +7676481 tests/ecmac.db|head -c 543)
-8253	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-2.js (tail -c +7677025 tests/ecmac.db|head -c 519): [{"message":"Test case returned non-true value!"}]
+8253	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-2.js (tail -c +7677025 tests/ecmac.db|head -c 519)
 8254	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-3.js (tail -c +7677545 tests/ecmac.db|head -c 524)
-8255	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-4.js (tail -c +7678070 tests/ecmac.db|head -c 526): [{"message":"Test case returned non-true value!"}]
+8255	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-4.js (tail -c +7678070 tests/ecmac.db|head -c 526)
 8256	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-5.js (tail -c +7678597 tests/ecmac.db|head -c 548): [{"message":"Test case returned non-true value!"}]
-8257	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-6.js (tail -c +7679146 tests/ecmac.db|head -c 632)
+8257	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-6.js (tail -c +7679146 tests/ecmac.db|head -c 632): [{"message":"Test case returned non-true value!"}]
 8258	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-8.js (tail -c +7679779 tests/ecmac.db|head -c 550): [{"message":"value is not a function"}]
 8259	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-9.js (tail -c +7680330 tests/ecmac.db|head -c 751): [{"message":"value is not a function"}]
 8260	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-b-1.js (tail -c +7681082 tests/ecmac.db|head -c 525): [{"message":"Test case returned non-true value!"}]
@@ -8371,7 +8371,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8317	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-21.js (tail -c +7727174 tests/ecmac.db|head -c 808): [{"message":"value is not a function"}]
 8318	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-22.js (tail -c +7727983 tests/ecmac.db|head -c 813): [{"message":"value is not a function"}]
 8319	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-23.js (tail -c +7728797 tests/ecmac.db|head -c 504): [{"message":"value is not a function"}]
-8320	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-3.js (tail -c +7729302 tests/ecmac.db|head -c 555): [{"message":"Test case returned non-true value!"}]
+8320	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-3.js (tail -c +7729302 tests/ecmac.db|head -c 555)
 8321	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-4.js (tail -c +7729858 tests/ecmac.db|head -c 681): [{"message":"Test case returned non-true value!"}]
 8322	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-5.js (tail -c +7730540 tests/ecmac.db|head -c 1128): [{"message":"Test case returned non-true value!"}]
 8323	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-7-c-ii-6.js (tail -c +7731669 tests/ecmac.db|head -c 572): [{"message":"value is not a function"}]
@@ -8706,12 +8706,12 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8652	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-5-9.js (tail -c +7944140 tests/ecmac.db|head -c 517)
 8653	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-6-1.js (tail -c +7944658 tests/ecmac.db|head -c 389): [{"message":"value is not a function"}]
 8654	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-6-2.js (tail -c +7945048 tests/ecmac.db|head -c 361)
-8655	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-1.js (tail -c +7945410 tests/ecmac.db|head -c 517)
-8656	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-2.js (tail -c +7945928 tests/ecmac.db|head -c 562): [{"message":"Test case returned non-true value!"}]
+8655	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-1.js (tail -c +7945410 tests/ecmac.db|head -c 517): [{"message":"Test case returned non-true value!"}]
+8656	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-2.js (tail -c +7945928 tests/ecmac.db|head -c 562)
 8657	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-3.js (tail -c +7946491 tests/ecmac.db|head -c 565): [{"message":"Test case returned non-true value!"}]
 8658	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-4.js (tail -c +7947057 tests/ecmac.db|head -c 579): [{"message":"Test case returned non-true value!"}]
 8659	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-5.js (tail -c +7947637 tests/ecmac.db|head -c 590): [{"message":"Test case returned non-true value!"}]
-8660	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-6.js (tail -c +7948228 tests/ecmac.db|head -c 651)
+8660	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-6.js (tail -c +7948228 tests/ecmac.db|head -c 651): [{"message":"Test case returned non-true value!"}]
 8661	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-7.js (tail -c +7948880 tests/ecmac.db|head -c 656)
 8662	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-8.js (tail -c +7949537 tests/ecmac.db|head -c 622): [{"message":"value is not a function"}]
 8663	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-8-9.js (tail -c +7950160 tests/ecmac.db|head -c 814): [{"message":"Test case returned non-true value!"}]
@@ -8829,7 +8829,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8775	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-8.js (tail -c +8044905 tests/ecmac.db|head -c 499): [{"message":"value is not a function"}]
 8776	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-9.js (tail -c +8045405 tests/ecmac.db|head -c 606): [{"message":"value is not a function"}]
 8777	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-10-1.js (tail -c +8046012 tests/ecmac.db|head -c 557)
-8778	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-10-2.js (tail -c +8046570 tests/ecmac.db|head -c 626): [{"message":"Test case returned non-true value!"}]
+8778	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-10-2.js (tail -c +8046570 tests/ecmac.db|head -c 626)
 8779	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-10-3.js (tail -c +8047197 tests/ecmac.db|head -c 507): [{"message":"value is not a function"}]
 8780	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-10-4.js (tail -c +8047705 tests/ecmac.db|head -c 503): [{"message":"Test case returned non-true value!"}]
 8781	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-2-1.js (tail -c +8048209 tests/ecmac.db|head -c 612): [{"message":"value is not a function"}]
@@ -8926,9 +8926,9 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8872	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-6-7.js (tail -c +8106182 tests/ecmac.db|head -c 947): [{"message":"Invalid array length"}]
 8873	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-6-8.js (tail -c +8107130 tests/ecmac.db|head -c 1416): [{"message":"Invalid array length"}]
 8874	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-1.js (tail -c +8108547 tests/ecmac.db|head -c 562): [{"message":"Test case returned non-true value!"}]
-8875	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-2.js (tail -c +8109110 tests/ecmac.db|head -c 617): [{"message":"Test case returned non-true value!"}]
-8876	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-3.js (tail -c +8109728 tests/ecmac.db|head -c 641): [{"message":"Test case returned non-true value!"}]
-8877	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-4.js (tail -c +8110370 tests/ecmac.db|head -c 510): [{"message":"Test case returned non-true value!"}]
+8875	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-2.js (tail -c +8109110 tests/ecmac.db|head -c 617)
+8876	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-3.js (tail -c +8109728 tests/ecmac.db|head -c 641)
+8877	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-4.js (tail -c +8110370 tests/ecmac.db|head -c 510)
 8878	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-5.js (tail -c +8110881 tests/ecmac.db|head -c 543): [{"message":"Test case returned non-true value!"}]
 8879	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-6.js (tail -c +8111425 tests/ecmac.db|head -c 737): [{"message":"Test case returned non-true value!"}]
 8880	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-7.js (tail -c +8112163 tests/ecmac.db|head -c 683): [{"message":"Test case returned non-true value!"}]
@@ -9006,7 +9006,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 8952	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-1-4.js (tail -c +8169099 tests/ecmac.db|head -c 717): [{"message":"value is not a function"}]
 8953	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-1-5.js (tail -c +8169817 tests/ecmac.db|head -c 729): [{"message":"Test case returned non-true value!"}]
 8954	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-1-6.js (tail -c +8170547 tests/ecmac.db|head -c 1277): [{"message":"Test case returned non-true value!"}]
-8955	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-1.js (tail -c +8171825 tests/ecmac.db|head -c 769): [{"message":"Test case returned non-true value!"}]
+8955	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-1.js (tail -c +8171825 tests/ecmac.db|head -c 769)
 8956	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-10.js (tail -c +8172595 tests/ecmac.db|head -c 491)
 8957	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-11.js (tail -c +8173087 tests/ecmac.db|head -c 490)
 8958	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-9-c-iii-12.js (tail -c +8173578 tests/ecmac.db|head -c 492)
@@ -9605,18 +9605,18 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9551	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A2_T1.js (tail -c +8642875 tests/ecmac.db|head -c 1658): [{"message":"#2: var obj = {}; obj.pop = Array.prototype.pop; obj.pop(); obj.length === 0. Actual: undefined"}]
 9552	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A2_T2.js (tail -c +8644534 tests/ecmac.db|head -c 3004): [{"message":"#2: var obj = {}; obj.length = NaN; obj.pop = Array.prototype.pop; obj.pop(); obj.length === 0. Actual: NaN"}]
 9553	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A2_T3.js (tail -c +8647539 tests/ecmac.db|head -c 1162): [{"message":"#2: var obj = {}; obj.length = 2.5; obj.pop = Array.prototype.pop; obj.pop(); obj.length === 1. Actual: 2.5"}]
-9554	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A2_T4.js (tail -c +8648702 tests/ecmac.db|head -c 3463): [{"message":"#1: obj[0] = -1; obj.length = {valueOf: function() {return 1}}  obj.pop() === -1. Actual: undefined"}]
-9555	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A3_T1.js (tail -c +8652166 tests/ecmac.db|head -c 1203): [{"message":"#2: var obj = {}; obj.pop = Array.prototype.pop; obj[0] = "x"; obj[4294967295] = "y"; obj.length = 4294967296; obj.pop(); obj.length === 0. Actual: 4.29497e+09"}]
-9556	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A3_T2.js (tail -c +8653370 tests/ecmac.db|head -c 1201): [{"message":"#1: var obj = {}; obj.pop = Array.prototype.pop; obj[0] = "x"; obj[4294967296] = "y"; obj.length = 4294967297; obj.pop() === "x". Actual: undefined"}]
+9554	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A2_T4.js (tail -c +8648702 tests/ecmac.db|head -c 3463): [{"message":"#8.2: obj[0] = -1; obj.length = {valueOf: function() {return {}}, toString: function() {return {}}}  obj.pop() throw TypeError. Actual: {"message":"#8.1: obj[0] = -1; obj.length = {valueOf: function() {return {}}, toString: function() {return {}}}  obj.pop() throw TypeError. Actual: undefined"}"}]
+9555	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A3_T1.js (tail -c +8652166 tests/ecmac.db|head -c 1203): [{"message":"#1: var obj = {}; obj.pop = Array.prototype.pop; obj[0] = "x"; obj[4294967295] = "y"; obj.length = 4294967296; obj.pop() === unedfined. Actual: y"}]
+9556	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A3_T2.js (tail -c +8653370 tests/ecmac.db|head -c 1201): [{"message":"#1: var obj = {}; obj.pop = Array.prototype.pop; obj[0] = "x"; obj[4294967296] = "y"; obj.length = 4294967297; obj.pop() === "x". Actual: y"}]
 9557	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A3_T3.js (tail -c +8654572 tests/ecmac.db|head -c 916): [{"message":"#1: var obj = {}; obj.pop = Array.prototype.pop; obj[4294967294] = "x"; obj.length = -1; obj.pop() === "x". Actual: undefined"}]
 9558	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A4_T1.js (tail -c +8655489 tests/ecmac.db|head -c 1624): [{"message":"#1: Array.prototype[1] = 1; x = [0]; x.length = 2; x.pop() === 1. Actual: undefined"}]
-9559	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A4_T2.js (tail -c +8657114 tests/ecmac.db|head -c 1662): [{"message":"#3: Object.prototype[1] = -1; Object.prototype.length = 2; Object.prototype.pop = Array.prototype.pop; x = {0:0,1:1}; x.pop() === 1. Actual: undefined"}]
+9559	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A4_T2.js (tail -c +8657114 tests/ecmac.db|head -c 1662): [{"message":"#6: Object.prototype[1] = -1; Object.prototype.length = 2; Object.prototype.pop = Array.prototype.pop; x = {0:0,1:1}; x.pop(); x.length === 1. Actual: 2"}]
 9560	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.1.js (tail -c +8658777 tests/ecmac.db|head -c 713)
-9561	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.2.js (tail -c +8659491 tests/ecmac.db|head -c 888)
-9562	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.3.js (tail -c +8660380 tests/ecmac.db|head -c 549)
-9563	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.4.js (tail -c +8660930 tests/ecmac.db|head -c 339)
+9561	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.2.js (tail -c +8659491 tests/ecmac.db|head -c 888): [{"message":"#1: Array.prototype.pop.hasOwnProperty('length') === true. Actual: false"}]
+9562	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.3.js (tail -c +8660380 tests/ecmac.db|head -c 549): [{"message":"#1: x = Array.prototype.pop.length; Array.prototype.pop.length = Infinity; Array.prototype.pop.length === x. Actual: Infinity"}]
+9563	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.4.js (tail -c +8660930 tests/ecmac.db|head -c 339): [{"message":"#1: Array.prototype.pop.length === 0. Actual: undefined"}]
 9564	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.5.js (tail -c +8661270 tests/ecmac.db|head -c 647)
-9565	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.6.js (tail -c +8661918 tests/ecmac.db|head -c 406)
+9565	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.6.js (tail -c +8661918 tests/ecmac.db|head -c 406): [{"message":"#1: Array.prototype.pop.prototype === undefined. Actual: {}"}]
 9566	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.7.js (tail -c +8662325 tests/ecmac.db|head -c 584): [{"message":"#1.2: new Array.prototype.pop() throw TypeError. Actual: {"message":"#1.1: new Array.prototype.pop() throw TypeError. Actual: {}"}"}]
 9567	FAIL ch15/15.4/15.4.4/15.4.4.7/S15.4.4.7_A1_T1.js (tail -c +8662910 tests/ecmac.db|head -c 1287): [{"message":"#3: x = new Array(); x.push(1); x.push() === 1. Actual: undefined"}]
 9568	FAIL ch15/15.4/15.4.4/15.4.4.7/S15.4.4.7_A1_T2.js (tail -c +8664198 tests/ecmac.db|head -c 1833): [{"message":"#2: x = []; x[0] = 0; x.push(true, Number.POSITIVE_INFINITY, "NaN", "1", -1) === 6. Actual: -1"}]
@@ -9712,7 +9712,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9658	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T6.js (tail -c +8798892 tests/ecmac.db|head -c 915): [{"message":"#2: __str = String(eval()); __str === "undefined". Actual: __str ==="}]
 9659	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T7.js (tail -c +8799808 tests/ecmac.db|head -c 892): [{"message":"#2: __str = String({}); __str === "[object Object]". Actual: __str ==={}"}]
 9660	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T8.js (tail -c +8800701 tests/ecmac.db|head -c 1191): [{"message":"#2: Array.prototype.toString=function(){return "__ARRAY__";}; __str = String(new Array); __str === "__ARRAY__". Actual: __str ===[]"}]
-9661	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T9.js (tail -c +8801893 tests/ecmac.db|head -c 967): [{"message":"#2: toString=function(){return "__THIS__";}; __str = String(this); __str === "__THIS__". Actual: __str ==={"__str":undefined,"toString":[function()],"runTestCase":[function runTestCase(testcase)],"Construc"}]
+9661	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T9.js (tail -c +8801893 tests/ecmac.db|head -c 967): [{"message":"#2: toString=function(){return "__THIS__";}; __str = String(this); __str === "__THIS__". Actual: __str ==={"print":cfunc_0x10d02f3d0,"eval":cfunc_0x10d02f530,"exit":cfunc_0x10d02f9b0,"base64_encode":cfunc_"}]
 9662	PASS ch15/15.5/15.5.1/S15.5.1.1_A2_T1.js (tail -c +8802861 tests/ecmac.db|head -c 810)
 9663	PASS ch15/15.5/15.5.2/S15.5.2.1_A1_T1.js (tail -c +8803672 tests/ecmac.db|head -c 1618)
 9664	FAIL ch15/15.5/15.5.2/S15.5.2.1_A1_T10.js (tail -c +8805291 tests/ecmac.db|head -c 1595): [{"message":"#2: __str = new String(__obj); __str =="tostr". Actual: __str =={}"}]
