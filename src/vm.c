@@ -734,7 +734,6 @@ V7_PRIVATE long unescape(const char *s, size_t len, char *to) {
           break;
         case 2:
           switch (r) {
-            case '\\':
             case '\'':
             case '"':
               break;
@@ -772,7 +771,7 @@ V7_PRIVATE long embed_string(struct mbuf *m, size_t offset, const char *p,
     p += m->buf - old_base;
   }
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
-  unescape(p, len, m->buf + offset + k);  /* Write string */
+  return unescape(p, len, m->buf + offset + k);  /* Write string */
 }
 
 /* Create a string */
@@ -787,11 +786,11 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     s[-1] = len;
     tag = V7_TAG_STRING_I;
   } else */ if (own) {
-    if(embed_string(m, m->len, p, len) < 0) throw_exception(v7, "Error", "Sintax error");
+    if(embed_string(m, m->len, p, len) < 0) throw_exception(v7, "Error", "Syntax error");
     tag = V7_TAG_STRING_O;
   } else {
     /* TODO(mkm): this doesn't set correctly the foreign string length */
-    if(embed_string(m, m->len, (char *) &p, sizeof(p)) < 0) throw_exception(v7, "Error", "Sintax error");
+    if(embed_string(m, m->len, (char *) &p, sizeof(p)) < 0) throw_exception(v7, "Error", "Syntax error");
   }
 
   return v7_pointer_to_value((void *) offset) | tag;

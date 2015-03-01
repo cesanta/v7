@@ -201,22 +201,25 @@ int nextesc(Rune *r, const char **p) {
     case 'c':
       *r = **p & 31;
       ++*p;
-      return 0;
+      break;
     case 'f':
       *r = '\f';
-      return 0;
+      break;
     case 'n':
       *r = '\n';
-      return 0;
+      break;
     case 'r':
       *r = '\r';
-      return 0;
+      break;
     case 't':
       *r = '\t';
-      return 0;
+      break;
     case 'v':
       *r = '\v';
-      return 0;
+      break;
+    case '\\':
+      *r = '\\';
+      break;
     case 'u':
       if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
           isxdigit(s[4])) {
@@ -226,7 +229,7 @@ int nextesc(Rune *r, const char **p) {
           *r = '0';
           return 1;
         }
-        return 0;
+        break;
       }
       return -SLRE_INVALID_HEX_DIGIT;
     case 'x':
@@ -237,11 +240,13 @@ int nextesc(Rune *r, const char **p) {
           *r = '0';
           return 1;
         }
-        return 0;
+        break;
       }
       return -SLRE_INVALID_HEX_DIGIT;
+    default:
+      return 2;
   }
-  return 2;
+  return 0;
 }
 
 static int re_nextc(Rune *r, const char **src, const char *src_end,
