@@ -157,21 +157,6 @@ static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
   return a_sort(v7, this_obj, args, NULL);
 }
 
-static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
-  struct v7_property *p;
-  val_t res = v7_create_undefined();
-
-  (void) v7; (void) args;
-
-  if (is_prototype_of(this_obj, v7->array_prototype) &&
-      (p = v7_to_object(this_obj)->properties) != NULL) {
-    res = p->value;
-    v7_to_object(this_obj)->properties = p->next;
-  }
-
-  return res;
-}
-
 static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t res = v7_create_undefined();
@@ -385,7 +370,6 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse, 0);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "join", Array_join, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 2);

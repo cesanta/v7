@@ -594,11 +594,19 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
 
   prop = v7_get_own_property(v7, obj, name, len);
   if (prop == NULL) {
+    struct v7_property **head = &v7_to_object(obj)->properties;
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */
     }
-    prop->next = v7_to_object(obj)->properties;
-    v7_to_object(obj)->properties = prop;
+    /*
+     * Add new property to the end of list to make property iteration work
+     * in the same order as properties were added/defined.
+     */
+    while (*head != NULL) {
+      head = &head[0]->next;
+    }
+    prop->next = *head;
+    *head = prop;
   }
 
   if (len == (size_t) ~0) {

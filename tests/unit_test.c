@@ -1569,7 +1569,7 @@ static const char *test_interpreter(void) {
   s = "\"aa bb\"";
   ASSERT(check_value(v7, v, s));
 
-  s = "{\"fall\":2,\"one\":1}";
+  s = "{\"one\":1,\"fall\":2}";
   ASSERT(v7_exec(v7, &v, "o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; break; case 3: o.three=1; };o") == V7_OK);
   ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "o={};for(i=0;i<1;i++) switch(1) {case 1: o.one=1; case 2: o.fall=2; continue; case 3: o.three=1; };o") == V7_OK);

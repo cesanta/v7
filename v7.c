@@ -3544,21 +3544,6 @@ static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
   return a_sort(v7, this_obj, args, NULL);
 }
 
-static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
-  struct v7_property *p;
-  val_t res = v7_create_undefined();
-
-  (void) v7; (void) args;
-
-  if (is_prototype_of(this_obj, v7->array_prototype) &&
-      (p = v7_to_object(this_obj)->properties) != NULL) {
-    res = p->value;
-    v7_to_object(this_obj)->properties = p->next;
-  }
-
-  return res;
-}
-
 static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t res = v7_create_undefined();
@@ -3772,7 +3757,6 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse, 0);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "join", Array_join, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 2);
@@ -5742,11 +5726,19 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
 
   prop = v7_get_own_property(v7, obj, name, len);
   if (prop == NULL) {
+    struct v7_property **head = &v7_to_object(obj)->properties;
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */
     }
-    prop->next = v7_to_object(obj)->properties;
-    v7_to_object(obj)->properties = prop;
+    /*
+     * Add new property to the end of list to make property iteration work
+     * in the same order as properties were added/defined.
+     */
+    while (*head != NULL) {
+      head = &head[0]->next;
+    }
+    prop->next = *head;
+    *head = prop;
   }
 
   if (len == (size_t) ~0) {
@@ -10418,30 +10410,26 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(is_prototype_of(obj, proto));
 }
 
-/* Hack to ensure that the iteration order of the keys array is consistent
- * with the iteration order if properties in `for in`
- * This will be obsoleted when arrays will have a special object type. */
-static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
-                                int i, unsigned int ignore_flags) {
-  char buf[20];
-  while (p && p->attributes & ignore_flags) p = p->next;
-  if (p == NULL) return;
-  if (p->next) _Obj_append_reverse(v7, p->next, res, i+1, ignore_flags);
-
-  snprintf(buf, sizeof(buf), "%d", i);
-  v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
-}
-
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
                           unsigned int ignore_flags) {
   val_t obj = v7_array_at(v7, args, 0);
   val_t res = v7_create_array(v7);
+  struct v7_property *p;
+  char buf[20];
+  int i = 0;
+
   if (!v7_is_object(obj)) {
     throw_exception(v7, "TypeError",
                     "Object.keys called on non-object");
   }
 
-  _Obj_append_reverse(v7, v7_to_object(obj)->properties, res, 0, ignore_flags);
+  for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+    if (p->attributes & ignore_flags) continue;
+    snprintf(buf, sizeof(buf), "%d", i);
+    i++;
+    v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
+  }
+
   return res;
 }
 
@@ -12168,6 +12156,13 @@ Array.prototype.lastIndexOf = function(a, b) {
     }
   }
   return -1;
+};
+
+Array.prototype.pop = function() {
+  var i = this.length - 1;
+  var r = this[i];
+  delete this[i];
+  return r;
 };
 ));
 }
