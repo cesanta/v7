@@ -192,42 +192,56 @@ static int hex(int c) {
   return -SLRE_INVALID_HEX_DIGIT;
 }
 
-int nextesc(const char **p) {
-  const unsigned char *s = (unsigned char *)(*p)++;
-  switch (*s) {
+int nextesc(Rune *r, const char **p) {
+  const char *s = *p;
+  *p += chartorune(r, *p);
+  switch (*r) {
     case 0:
       return -SLRE_UNTERM_ESC_SEQ;
     case 'c':
+      *r = **p & 31;
       ++*p;
-      return *s & 31;
+      return 0;
     case 'f':
-      return '\f';
+      *r = '\f';
+      return 0;
     case 'n':
-      return '\n';
+      *r = '\n';
+      return 0;
     case 'r':
-      return '\r';
+      *r = '\r';
+      return 0;
     case 't':
-      return '\t';
+      *r = '\t';
+      return 0;
     case 'v':
-      return '\v';
-    case '\\':
-      return '\\';
+      *r = '\v';
+      return 0;
     case 'u':
       if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
           isxdigit(s[4])) {
         (*p) += 4;
-        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
+        *r = hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
+        if (!*r) {
+          *r = '0';
+          return 1;
+        }
+        return 0;
       }
       return -SLRE_INVALID_HEX_DIGIT;
     case 'x':
       if (isxdigit(s[1]) && isxdigit(s[2])) {
         (*p) += 2;
-        return (hex(s[1]) << 4) | hex(s[2]);
+        *r = (hex(s[1]) << 4) | hex(s[2]);
+        if (!*r) {
+          *r = '0';
+          return 1;
+        }
+        return 0;
       }
       return -SLRE_INVALID_HEX_DIGIT;
-    default:
-      return -SLRE_INVALID_ESC_CHAR;
   }
+  return 2;
 }
 
 static int re_nextc(Rune *r, const char **src, const char *src_end,
@@ -236,7 +250,7 @@ static int re_nextc(Rune *r, const char **src, const char *src_end,
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
   if (is_regex && *r == '\\') {
-    *r = nextesc(src);
+    nextesc(r, src);
     return 1;
   }
   return 0;
