@@ -274,6 +274,11 @@ static void init_js_stdlib(struct v7 *v7) {
       var i = this.length - 1;
       return this.splice(i, 1)[0];
     };));
+
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.shift = function() {
+      return this.splice(0, 1)[0];
+    };));
 }
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {

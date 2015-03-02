@@ -72,22 +72,6 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
-  char buf[100], *p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
-  val_t res;
-
-  if (p[0] == '"') {
-    p[strlen(p) - 1] = '\0';
-    p++;
-  }
-  res = v7_create_string(v7, p, strlen(p), 1);
-  if (p != buf && p != buf + 1) {
-    free(p);
-  }
-
-  return res;
-}
-
 static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = to_string(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
@@ -560,9 +544,9 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_cfunction(String_ctor);
-  v7_set_property(v7, v7->global_object, "String", 6, 0, str);
-  v7_set(v7, v7->string_prototype, "constructor", 11, str);
+  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
+  v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
+                  str);
 
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);

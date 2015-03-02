@@ -35,7 +35,7 @@ Project Status:
 - Standard library: TODO
 - ECMA tests: correctly parsing, execution TODO
 
-Estimated beta release date: March 2015.
+Estimated beta release date: May 2015.
 
 ## Example: call C/C++ function `foo()` from JavaScript
 

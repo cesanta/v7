@@ -844,10 +844,8 @@ static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
-
-  if (!d_iscalledasfunction(v7, this_obj)) {
-    throw_exception(v7, "TypeError", "Date.now() called on object");
-  }
+  (void) v7;
+  (void) this_obj;
 
   d_gettime(&ret_time);
 
@@ -909,15 +907,9 @@ static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   d_set_cfunc_prop(v7, v7->date_prototype, "set"#func, Date_set##func);
 
 V7_PRIVATE void init_date(struct v7 *v7) {
-  val_t date = create_object(v7, v7->date_prototype);
-  val_t ctor = v7_create_cfunction(Date_ctor);
-  unsigned int attrs = V7_PROPERTY_READ_ONLY |
-                       V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
-  v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
-  v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
-  d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
-  v7_set_property(v7, v7->global_object, "Date", 4,
-                  V7_PROPERTY_DONT_ENUM, date);
+  val_t date = v7_create_cfunction_ctor(v7, v7->date_prototype, Date_ctor, 7);
+  v7_set_property(v7, v7->global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
+                  date);
 
   DECLARE_GET_AND_SET(Date);
   DECLARE_GET_AND_SET(FullYear);
@@ -928,6 +920,10 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   DECLARE_GET_AND_SET(Milliseconds);
   DECLARE_GET(Day);
 
+  d_set_cfunc_prop(v7, date, "now", Date_now);
+  d_set_cfunc_prop(v7, date, "parse", Date_parse);
+  d_set_cfunc_prop(v7, date, "UTC", Date_UTC);
+
   d_set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset",
                    Date_getTimezoneOffset);
 
@@ -936,9 +932,6 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   d_set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);
 
   d_set_cfunc_prop(v7, v7->date_prototype, "setTime", Date_setTime);
-  d_set_cfunc_prop(v7, v7->date_prototype, "now", Date_now);
-  d_set_cfunc_prop(v7, v7->date_prototype, "parse", Date_parse);
-  d_set_cfunc_prop(v7, v7->date_prototype, "UTC", Date_UTC);
   d_set_cfunc_prop(v7, v7->date_prototype, "toString", Date_toString);
   d_set_cfunc_prop(v7, v7->date_prototype, "toDateString", Date_toDateString);
   d_set_cfunc_prop(v7, v7->date_prototype, "toTimeString", Date_toTimeString);

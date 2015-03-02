@@ -294,7 +294,11 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       return v_sprintf_s(buf, size, "/%.*s/%.*s", (int)n1, s1, (int)n2, s2);
     }
     case V7_TYPE_CFUNCTION:
+#ifdef V7_UNIT_TEST
+      return v_sprintf_s(buf, size, "cfunc_xxxxxx", v7_to_pointer(v));
+#else
       return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
+#endif
     case V7_TYPE_CFUNCTION_OBJECT:
       v = i_value_of(v7, v);
       return v_sprintf_s(buf, size, "Function cfunc_%p", v7_to_pointer(v));
@@ -518,28 +522,6 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     throw_exception(v7, "TypeError", "cannot read property '%.*s' of undefined",
                     (int)name_len, name);
   } else if (v7_is_cfunction(obj)) {
-    /*
-     * TODO(mkm): until cfunctions can have properties
-     * let's treat special constructors specially.
-     * Slow path acceptable here.
-     */
-    if (obj == v7_get(v7, v7->global_object, "Boolean", 7) && name_len == 9 &&
-        strncmp(name, "prototype", name_len) == 0) {
-      return v7->boolean_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "String", 7) &&
-               name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->string_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "RegExp", 7) &&
-               name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->regexp_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
-               name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->number_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
-               name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->date_prototype;
-    }
-
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
@@ -637,6 +619,15 @@ V7_PRIVATE v7_val_t
       v7_create_number(num_args));
   tmp_frame_cleanup(&tf);
   return obj;
+}
+
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
+                                             v7_cfunction_t f, int num_args) {
+  val_t res = v7_create_cfunction_object(v7, f, num_args);
+  v7_set_property(v7, res, "prototype", 9, V7_PROPERTY_DONT_ENUM |
+                  V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, proto);
+  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
+  return res;
 }
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
@@ -776,6 +767,26 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
   return (offset & ~V7_TAG_MASK) | tag;
+}
+
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
+  char buf[100], *p;
+  val_t res;
+  if (v7_is_string(v)) {
+    return v;
+  }
+
+  p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
+  if (p[0] == '"') {
+    p[strlen(p) - 1] = '\0';
+    p++;
+  }
+  res = v7_create_string(v7, p, strlen(p), 1);
+  if (p != buf && p != buf + 1) {
+    free(p);
+  }
+
+  return res;
 }
 
 /*

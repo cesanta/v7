@@ -119,7 +119,7 @@ compile:
 # HACK: cannot have two underscores
 $(PROG)-%: Makefile $(SRC) $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES))
 	@echo -e "CC\t$(PROG)_$*"
-	$(or $(CC_$*), $(CC)) $(CFLAGS_$*) $(SRC) $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES)) -o $(PROG)_$* $(CFLAGS) $(LDFLAGS)
+	$(or $(CC_$*), $(CC)) $(CFLAGS_$*) $(SRC) $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES)) -o $(PROG)_$* $(CFLAGS) $(LDFLAGS) -DV7_UNIT_TEST
 
 $(ALL_TESTS): test_%: Makefile $(PROG)-%
 	@echo -e "RUN\t$(PROG)_$* $(TEST_FILTER)"

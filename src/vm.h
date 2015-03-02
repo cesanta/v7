@@ -144,6 +144,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7);
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
                                                int);
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t,
+                                             int);
+
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 
@@ -198,6 +201,8 @@ V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
+/* TODO(mkm): rename after regexp merge */
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);

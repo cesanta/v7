@@ -1008,6 +1008,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7);
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
                                                int);
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t,
+                                             int);
+
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 
@@ -1062,6 +1065,8 @@ V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
+/* TODO(mkm): rename after regexp merge */
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
@@ -3829,9 +3834,8 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
-  val_t boolean = v7_create_cfunction(Boolean_ctor);
-  v7_set_property(v7, v7->global_object, "Boolean", 7, 0, boolean);
-  v7_set(v7, v7->boolean_prototype, "constructor", 11, boolean);
+  val_t ctor = v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor, 1);
+  v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
   set_cfunc_prop(v7, v7->boolean_prototype, "toString", Boolean_toString);
@@ -3958,8 +3962,6 @@ V7_PRIVATE void init_math(struct v7 *v7) {
  */
 
 
-static val_t to_string(struct v7 *, val_t);
-
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t res = v7_is_string(arg0) ? arg0 : (
@@ -3994,7 +3996,7 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i = 0, n;
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
   val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
@@ -4027,24 +4029,8 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t to_string(struct v7 *v7, val_t v) {
-  char buf[100], *p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
-  val_t res;
-
-  if (p[0] == '"') {
-    p[strlen(p) - 1] = '\0';
-    p++;
-  }
-  res = v7_create_string(v7, p, strlen(p), 1);
-  if (p != buf && p != buf + 1) {
-    free(p);
-  }
-
-  return res;
-}
-
 static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = i_value_of(v7, this_obj);
+  val_t res = to_string(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
 
   for (i = 0; i < num_args; i++) {
@@ -4056,7 +4042,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = i_value_of(v7, v7_array_at(v7, args, 1));
   val_t sub, res = v7_create_number(-1);
@@ -4338,7 +4324,7 @@ V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
 
 static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
                          Rune (*func)(Rune)) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   size_t i, n, len;
   const char *p = v7_to_string(v7, &s, &len);
   val_t res = v7_create_string(v7, p, len, 1);
@@ -4369,7 +4355,7 @@ static int s_isspace(Rune c) {
 }
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
@@ -4439,7 +4425,7 @@ static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_array(v7);
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
   long num_elems = 0, limit = arg_long(v7, args, 1, LONG_MAX);
   size_t n1, n2, i, j;
@@ -4484,9 +4470,9 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_cfunction(String_ctor);
-  v7_set_property(v7, v7->global_object, "String", 6, 0, str);
-  v7_set(v7, v7->string_prototype, "constructor", 11, str);
+  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
+  v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
+                  str);
 
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);
@@ -5448,7 +5434,11 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
     }
     case V7_TYPE_CFUNCTION:
+#ifdef V7_UNIT_TEST
+      return v_sprintf_s(buf, size, "cfunc_xxxxxx", v7_to_pointer(v));
+#else
       return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
+#endif
     case V7_TYPE_CFUNCTION_OBJECT:
       v = i_value_of(v7, v);
       return v_sprintf_s(buf, size, "Function cfunc_%p", v7_to_pointer(v));
@@ -5673,25 +5663,6 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
                     "cannot read property '%.*s' of undefined",
                     (int) name_len, name);
   } else if (v7_is_cfunction(obj)) {
-    /*
-     * TODO(mkm): until cfunctions can have properties
-     * let's treat special constructors specially.
-     * Slow path acceptable here.
-     */
-    if (obj == v7_get(v7, v7->global_object, "Boolean", 7) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->boolean_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "String", 7) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->string_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->number_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->date_prototype;
-    }
-
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
@@ -5790,6 +5761,15 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                   v7_create_number(num_args));
   tmp_frame_cleanup(&tf);
   return obj;
+}
+
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
+                                             v7_cfunction_t f, int num_args) {
+  val_t res = v7_create_cfunction_object(v7, f, num_args);
+  v7_set_property(v7, res, "prototype", 9, V7_PROPERTY_DONT_ENUM |
+                  V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, proto);
+  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
+  return res;
 }
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
@@ -5931,6 +5911,26 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   return (offset & ~V7_TAG_MASK) | tag;
 }
 
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
+  char buf[100], *p;
+  val_t res;
+  if (v7_is_string(v)) {
+    return v;
+  }
+
+  p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
+  if (p[0] == '"') {
+    p[strlen(p) - 1] = '\0';
+    p++;
+  }
+  res = v7_create_string(v7, p, strlen(p), 1);
+  if (p != buf && p != buf + 1) {
+    free(p);
+  }
+
+  return res;
+}
+
 /*
  * Get a pointer to string and string length.
  *
@@ -6017,7 +6017,9 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
-  const char *p = v7_to_string(v7, &s, &n);
+  const char *p;
+  s = to_string(v7, s);
+  p = v7_to_string(v7, &s, &n);
   if (!v7_is_string(s)) return V7_UNDEFINED;
   if (start < 0) start = (long) n + start;
   if (start < 0) start = 0;
@@ -10725,14 +10727,10 @@ static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_number(struct v7 *v7) {
-  val_t num = create_object(v7, v7->number_prototype);
-  val_t ctor = v7_create_cfunction(Number_ctor);
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
                        V7_PROPERTY_DONT_DELETE;
-  v7_set_property(v7, num, "", 0, V7_PROPERTY_HIDDEN, ctor);
-  v7_set_property(v7, num, "prototype", 9, attrs, v7->number_prototype);
-  v7_set_property(v7, v7->number_prototype, "constructor", 11, attrs, num);
-  v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
+  val_t num = v7_create_cfunction_ctor(v7, v7->number_prototype, Number_ctor, 1);
+  v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM, num);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
@@ -11737,10 +11735,8 @@ static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
-
-  if (!d_iscalledasfunction(v7, this_obj)) {
-    throw_exception(v7, "TypeError", "Date.now() called on object");
-  }
+  (void) v7;
+  (void) this_obj;
 
   d_gettime(&ret_time);
 
@@ -11802,15 +11798,9 @@ static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   d_set_cfunc_prop(v7, v7->date_prototype, "set"#func, Date_set##func);
 
 V7_PRIVATE void init_date(struct v7 *v7) {
-  val_t date = create_object(v7, v7->date_prototype);
-  val_t ctor = v7_create_cfunction(Date_ctor);
-  unsigned int attrs = V7_PROPERTY_READ_ONLY |
-                       V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
-  v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
-  v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
-  d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
-  v7_set_property(v7, v7->global_object, "Date", 4,
-                  V7_PROPERTY_DONT_ENUM, date);
+  val_t date = v7_create_cfunction_ctor(v7, v7->date_prototype, Date_ctor, 7);
+  v7_set_property(v7, v7->global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
+                  date);
 
   DECLARE_GET_AND_SET(Date);
   DECLARE_GET_AND_SET(FullYear);
@@ -11821,6 +11811,10 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   DECLARE_GET_AND_SET(Milliseconds);
   DECLARE_GET(Day);
 
+  d_set_cfunc_prop(v7, date, "now", Date_now);
+  d_set_cfunc_prop(v7, date, "parse", Date_parse);
+  d_set_cfunc_prop(v7, date, "UTC", Date_UTC);
+
   d_set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset",
                    Date_getTimezoneOffset);
 
@@ -11829,9 +11823,6 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   d_set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);
 
   d_set_cfunc_prop(v7, v7->date_prototype, "setTime", Date_setTime);
-  d_set_cfunc_prop(v7, v7->date_prototype, "now", Date_now);
-  d_set_cfunc_prop(v7, v7->date_prototype, "parse", Date_parse);
-  d_set_cfunc_prop(v7, v7->date_prototype, "UTC", Date_UTC);
   d_set_cfunc_prop(v7, v7->date_prototype, "toString", Date_toString);
   d_set_cfunc_prop(v7, v7->date_prototype, "toDateString", Date_toDateString);
   d_set_cfunc_prop(v7, v7->date_prototype, "toTimeString", Date_toTimeString);
@@ -12211,6 +12202,11 @@ static void init_js_stdlib(struct v7 *v7) {
     Array.prototype.pop = function() {
       var i = this.length - 1;
       return this.splice(i, 1)[0];
+    };));
+
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.shift = function() {
+      return this.splice(0, 1)[0];
     };));
 }
 
