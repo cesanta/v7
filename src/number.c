@@ -81,14 +81,10 @@ static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_number(struct v7 *v7) {
-  val_t num = create_object(v7, v7->number_prototype);
-  val_t ctor = v7_create_cfunction(Number_ctor);
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
                        V7_PROPERTY_DONT_DELETE;
-  v7_set_property(v7, num, "", 0, V7_PROPERTY_HIDDEN, ctor);
-  v7_set_property(v7, num, "prototype", 9, attrs, v7->number_prototype);
-  v7_set_property(v7, v7->number_prototype, "constructor", 11, attrs, num);
-  v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
+  val_t num = v7_create_cfunction_ctor(v7, v7->number_prototype, Number_ctor, 1);
+  v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM, num);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);

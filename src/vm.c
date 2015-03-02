@@ -540,25 +540,6 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
                     "cannot read property '%.*s' of undefined",
                     (int) name_len, name);
   } else if (v7_is_cfunction(obj)) {
-    /*
-     * TODO(mkm): until cfunctions can have properties
-     * let's treat special constructors specially.
-     * Slow path acceptable here.
-     */
-    if (obj == v7_get(v7, v7->global_object, "Boolean", 7) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->boolean_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "String", 6) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->string_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Number", 6) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->number_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Date", 4) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->date_prototype;
-    }
-
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
@@ -657,6 +638,15 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                   v7_create_number(num_args));
   tmp_frame_cleanup(&tf);
   return obj;
+}
+
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
+                                             v7_cfunction_t f, int num_args) {
+  val_t res = v7_create_cfunction_object(v7, f, num_args);
+  v7_set_property(v7, res, "prototype", 9, V7_PROPERTY_DONT_ENUM |
+                  V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, proto);
+  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
+  return res;
 }
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
