@@ -143,6 +143,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7);
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
                                                int);
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t,
+                                             int);
+
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 

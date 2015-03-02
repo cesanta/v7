@@ -1008,6 +1008,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7);
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
                                                int);
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t,
+                                             int);
+
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 
@@ -3831,9 +3834,8 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
-  val_t boolean = v7_create_cfunction(Boolean_ctor);
-  v7_set_property(v7, v7->global_object, "Boolean", 7, 0, boolean);
-  v7_set(v7, v7->boolean_prototype, "constructor", 11, boolean);
+  val_t ctor = v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor, 1);
+  v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
   set_cfunc_prop(v7, v7->boolean_prototype, "toString", Boolean_toString);
@@ -4468,9 +4470,9 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_cfunction(String_ctor);
-  v7_set_property(v7, v7->global_object, "String", 6, 0, str);
-  v7_set(v7, v7->string_prototype, "constructor", 11, str);
+  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
+  v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
+                  str);
 
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);
@@ -5660,25 +5662,6 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
                     "cannot read property '%.*s' of undefined",
                     (int) name_len, name);
   } else if (v7_is_cfunction(obj)) {
-    /*
-     * TODO(mkm): until cfunctions can have properties
-     * let's treat special constructors specially.
-     * Slow path acceptable here.
-     */
-    if (obj == v7_get(v7, v7->global_object, "Boolean", 7) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->boolean_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "String", 6) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->string_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Number", 6) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->number_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Date", 4) &&
-        name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
-      return v7->date_prototype;
-    }
-
     return V7_UNDEFINED;
   }
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
@@ -5777,6 +5760,15 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                   v7_create_number(num_args));
   tmp_frame_cleanup(&tf);
   return obj;
+}
+
+V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
+                                             v7_cfunction_t f, int num_args) {
+  val_t res = v7_create_cfunction_object(v7, f, num_args);
+  v7_set_property(v7, res, "prototype", 9, V7_PROPERTY_DONT_ENUM |
+                  V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, proto);
+  v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
+  return res;
 }
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
@@ -10734,14 +10726,10 @@ static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_number(struct v7 *v7) {
-  val_t num = create_object(v7, v7->number_prototype);
-  val_t ctor = v7_create_cfunction(Number_ctor);
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
                        V7_PROPERTY_DONT_DELETE;
-  v7_set_property(v7, num, "", 0, V7_PROPERTY_HIDDEN, ctor);
-  v7_set_property(v7, num, "prototype", 9, attrs, v7->number_prototype);
-  v7_set_property(v7, v7->number_prototype, "constructor", 11, attrs, num);
-  v7_set_property(v7, v7->global_object, "Number", 6, 0, num);
+  val_t num = v7_create_cfunction_ctor(v7, v7->number_prototype, Number_ctor, 1);
+  v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM, num);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
@@ -11746,10 +11734,8 @@ static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
-
-  if (!d_iscalledasfunction(v7, this_obj)) {
-    throw_exception(v7, "TypeError", "Date.now() called on object");
-  }
+  (void) v7;
+  (void) this_obj;
 
   d_gettime(&ret_time);
 
@@ -11811,15 +11797,9 @@ static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   d_set_cfunc_prop(v7, v7->date_prototype, "set"#func, Date_set##func);
 
 V7_PRIVATE void init_date(struct v7 *v7) {
-  val_t date = create_object(v7, v7->date_prototype);
-  val_t ctor = v7_create_cfunction(Date_ctor);
-  unsigned int attrs = V7_PROPERTY_READ_ONLY |
-                       V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
-  v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
-  v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
-  d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
-  v7_set_property(v7, v7->global_object, "Date", 4,
-                  V7_PROPERTY_DONT_ENUM, date);
+  val_t date = v7_create_cfunction_ctor(v7, v7->date_prototype, Date_ctor, 7);
+  v7_set_property(v7, v7->global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
+                  date);
 
   DECLARE_GET_AND_SET(Date);
   DECLARE_GET_AND_SET(FullYear);
@@ -11830,6 +11810,10 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   DECLARE_GET_AND_SET(Milliseconds);
   DECLARE_GET(Day);
 
+  d_set_cfunc_prop(v7, date, "now", Date_now);
+  d_set_cfunc_prop(v7, date, "parse", Date_parse);
+  d_set_cfunc_prop(v7, date, "UTC", Date_UTC);
+
   d_set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset",
                    Date_getTimezoneOffset);
 
@@ -11838,9 +11822,6 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   d_set_cfunc_prop(v7, v7->date_prototype, "valueOf", Date_valueOf);
 
   d_set_cfunc_prop(v7, v7->date_prototype, "setTime", Date_setTime);
-  d_set_cfunc_prop(v7, v7->date_prototype, "now", Date_now);
-  d_set_cfunc_prop(v7, v7->date_prototype, "parse", Date_parse);
-  d_set_cfunc_prop(v7, v7->date_prototype, "UTC", Date_UTC);
   d_set_cfunc_prop(v7, v7->date_prototype, "toString", Date_toString);
   d_set_cfunc_prop(v7, v7->date_prototype, "toDateString", Date_toDateString);
   d_set_cfunc_prop(v7, v7->date_prototype, "toTimeString", Date_toTimeString);
