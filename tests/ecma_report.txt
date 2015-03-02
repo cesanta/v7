@@ -1758,9 +1758,9 @@
 1754	PASS ch11/11.2/11.2.3/S11.2.3_A4_T4.js (tail -c +1337533 tests/ecmac.db|head -c 463)
 1755	PASS ch11/11.2/11.2.3/S11.2.3_A4_T5.js (tail -c +1337997 tests/ecmac.db|head -c 462)
 1756	PASS ch11/11.2/11.2.4/S11.2.4_A1.1_T1.js (tail -c +1338460 tests/ecmac.db|head -c 537)
-1757	FAIL ch11/11.2/11.2.4/S11.2.4_A1.1_T2.js (tail -c +1338998 tests/ecmac.db|head -c 685): [{"message":"#3: function f_arg(x,y) {return arguments;} f_arg.length === 2. Actual: undefined"}]
+1757	PASS ch11/11.2/11.2.4/S11.2.4_A1.1_T2.js (tail -c +1338998 tests/ecmac.db|head -c 685)
 1758	PASS ch11/11.2/11.2.4/S11.2.4_A1.2_T1.js (tail -c +1339684 tests/ecmac.db|head -c 1045)
-1759	FAIL ch11/11.2/11.2.4/S11.2.4_A1.2_T2.js (tail -c +1340730 tests/ecmac.db|head -c 1176): [{"message":"#6: f_arg = function(x,y) {return arguments;} f_arg.length === 2. Actual: undefined"}]
+1759	PASS ch11/11.2/11.2.4/S11.2.4_A1.2_T2.js (tail -c +1340730 tests/ecmac.db|head -c 1176)
 1760	PASS ch11/11.2/11.2.4/S11.2.4_A1.4_T1.js (tail -c +1341907 tests/ecmac.db|head -c 492)
 1761	PASS ch11/11.2/11.2.4/S11.2.4_A1.4_T2.js (tail -c +1342400 tests/ecmac.db|head -c 763)
 1762	PASS ch11/11.2/11.2.4/S11.2.4_A1.4_T3.js (tail -c +1343164 tests/ecmac.db|head -c 642)
@@ -3142,7 +3142,7 @@ function FACTORY()
 3121	PASS ch13/13.2/S13.2_A1_T2.js (tail -c +3353420 tests/ecmac.db|head -c 539)
 3122	PASS ch13/13.2/S13.2_A2_T1.js (tail -c +3353960 tests/ecmac.db|head -c 602)
 3123	PASS ch13/13.2/S13.2_A2_T2.js (tail -c +3354563 tests/ecmac.db|head -c 667)
-3124	FAIL ch13/13.2/S13.2_A3.js (tail -c +3355231 tests/ecmac.db|head -c 947): [{"message":"#1: __func.length === 0. Actual: __func.length ===undefined"}]
+3124	PASS ch13/13.2/S13.2_A3.js (tail -c +3355231 tests/ecmac.db|head -c 947)
 3125	PASS ch13/13.2/S13.2_A4_T1.js (tail -c +3356179 tests/ecmac.db|head -c 1777)
 3126	PASS ch13/13.2/S13.2_A4_T2.js (tail -c +3357957 tests/ecmac.db|head -c 1789)
 3127	FAIL ch13/13.2/S13.2_A5.js (tail -c +3359747 tests/ecmac.db|head -c 931): [{"message":"#1: Function.prototype.isPrototypeOf(__func)"}]
@@ -9614,7 +9614,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9560	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.1.js (tail -c +8658777 tests/ecmac.db|head -c 713)
 9561	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.2.js (tail -c +8659491 tests/ecmac.db|head -c 888): [{"message":"#1: Array.prototype.pop.hasOwnProperty('length') === true. Actual: false"}]
 9562	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.3.js (tail -c +8660380 tests/ecmac.db|head -c 549): [{"message":"#1: x = Array.prototype.pop.length; Array.prototype.pop.length = Infinity; Array.prototype.pop.length === x. Actual: Infinity"}]
-9563	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.4.js (tail -c +8660930 tests/ecmac.db|head -c 339): [{"message":"#1: Array.prototype.pop.length === 0. Actual: undefined"}]
+9563	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.4.js (tail -c +8660930 tests/ecmac.db|head -c 339)
 9564	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.5.js (tail -c +8661270 tests/ecmac.db|head -c 647)
 9565	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.6.js (tail -c +8661918 tests/ecmac.db|head -c 406): [{"message":"#1: Array.prototype.pop.prototype === undefined. Actual: {}"}]
 9566	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.7.js (tail -c +8662325 tests/ecmac.db|head -c 584)
