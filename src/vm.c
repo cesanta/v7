@@ -42,6 +42,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_STRING_I:
     case V7_TAG_STRING_O:
     case V7_TAG_STRING_F:
+    case V7_TAG_STRING_5:
       return V7_TYPE_STRING;
     case V7_TAG_BOOLEAN:
       return V7_TYPE_BOOLEAN;
@@ -72,7 +73,8 @@ int v7_is_function(val_t v) {
 
 int v7_is_string(val_t v) {
   uint64_t t = v & V7_TAG_MASK;
-  return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O;
+  return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F ||
+    t == V7_TAG_STRING_O || t == V7_TAG_STRING_5;
 }
 
 int v7_is_boolean(val_t v) {
@@ -751,23 +753,22 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t len) {
+                             size_t len, int zero_term) {
   char *old_base = m->buf;
+  int p_backed_by_mbuf = p >= old_base && p < old_base + m->len;
   size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);  /* Calculate how many bytes length takes */
-  mbuf_insert(m, offset, NULL, k + n);  /* Allocate  buffer */
-  /*
-   * The input string might be backed by the mbuf which might get
-   * relocated by mbuf_insert.
-   */
-  if (p >= old_base && p < (old_base + m->len - k - n)) {
-    if (p >= old_base + offset) {
-      p += k + n;
-    }
+  size_t tot_len = k + n + zero_term;
+  mbuf_insert(m, offset, NULL, tot_len);  /* Allocate  buffer */
+  /* Fixup p if it was relocated by mbuf_insert() above */
+  if (p_backed_by_mbuf) {
     p += m->buf - old_base;
   }
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
   unescape(p, len, m->buf + offset + k);  /* Write string */
+  if (zero_term) {
+    m->buf[offset + tot_len - 1] = '\0';
+  }
 }
 
 /* Create a string */
@@ -775,18 +776,23 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
 
-  if (len <= 5) {
+  if (len <= 4) {
     char *s = GET_VAL_NAN_PAYLOAD(offset) + 1;
     offset = 0;
     memcpy(s, p, len);
     s[-1] = len;
     tag = V7_TAG_STRING_I;
+  } else if (len == 5) {
+    char *s = GET_VAL_NAN_PAYLOAD(offset);
+    offset = 0;
+    memcpy(s, p, len);
+    tag = V7_TAG_STRING_5;
   } else if (own) {
-    embed_string(m, m->len, p, len);
+    embed_string(m, m->len, p, len, 1);
     tag = V7_TAG_STRING_O;
   } else {
     /* TODO(mkm): this doesn't set correctly the foreign string length */
-    embed_string(m, m->len, (char *) &p, sizeof(p));
+    embed_string(m, m->len, (char *) &p, sizeof(p), 0);
   }
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
@@ -826,6 +832,9 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   if (tag == V7_TAG_STRING_I) {
     p = GET_VAL_NAN_PAYLOAD(*v) + 1;
     *sizep = p[-1];
+  } else if (tag == V7_TAG_STRING_5) {
+    p = GET_VAL_NAN_PAYLOAD(*v);
+    *sizep = 5;
   } else {
     struct mbuf *m = (tag == V7_TAG_STRING_O) ?
       &v7->owned_strings : &v7->foreign_strings;
@@ -873,15 +882,20 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   b_ptr = v7_to_string(v7, &b, &b_len);
 
   /* Create a new string which is a concatenation a + b */
-  if (a_len + b_len <= 5) {
+  if (a_len + b_len <= 4) {
     offset = 0;
     /* TODO(mkm): make it work on big endian too */
     s = GET_VAL_NAN_PAYLOAD(offset) + 1;
     s[-1] = a_len + b_len;
     tag = V7_TAG_STRING_I;
+  } else if (a_len + b_len == 5) {
+    offset = 0;
+    /* TODO(mkm): make it work on big endian too */
+    s = GET_VAL_NAN_PAYLOAD(offset);
+    tag = V7_TAG_STRING_5;
   } else {
     int llen = calc_llen(a_len + b_len);
-    mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen);
+    mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen + 1);
     /* all pointers might have been relocated */
     s = v7->owned_strings.buf + offset;
     encode_varint(a_len + b_len, (unsigned char *) s);  /* Write length */
@@ -892,6 +906,8 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   }
   memcpy(s, a_ptr, a_len);
   memcpy(s + a_len, b_ptr, b_len);
+  /* Inlined strings are already 0-terminated, but still, why not. */
+  s[a_len + b_len] = '\0';
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
   return (offset & ~V7_TAG_MASK) | tag;
