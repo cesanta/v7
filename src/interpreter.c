@@ -156,7 +156,7 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
-#ifdef _WIN32
+#ifdef V7_WINDOWS
 static int signbit(double x) {
   return x > 0;
 }

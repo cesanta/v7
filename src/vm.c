@@ -101,7 +101,7 @@ int v7_is_error(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
-  return (uint64_t) p & ~V7_TAG_MASK;
+  return ((uint64_t) (uintptr_t) p) & ~V7_TAG_MASK;
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
