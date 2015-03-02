@@ -11908,10 +11908,37 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
+  struct v7_function *func = v7_to_function(this_obj);
+  ast_off_t body, start, pos = func->ast_off;
+  struct ast *a = func->ast;
+  int argn = 0;
+
+  (void) args;
+
+  V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
+  start = pos - 1;
+  body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);
+
+  ast_move_to_children(a, &pos);
+  if (ast_fetch_tag(a, &pos) == AST_IDENT) {
+    ast_move_to_children(a, &pos);
+  }
+  while (pos < body) {
+    V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_IDENT);
+    ast_move_to_children(a, &pos);
+    argn++;
+  }
+
+  return v7_create_number(argn);
+}
+
 V7_PRIVATE void init_function(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Function_ctor, 1);
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
+  v7_set_property(v7, v7->function_prototype, "length", 6, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Function_length));
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -12184,7 +12211,7 @@ static void init_js_stdlib(struct v7 *v7) {
     };));
 
   v7_exec(v7, &res, STRINGIFY(
-    Array.prototype.pop = function(a, b) {
+    Array.prototype.pop = function() {
       var i = this.length - 1;
       return this.splice(i, 1)[0];
     };));

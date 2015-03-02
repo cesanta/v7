@@ -270,7 +270,7 @@ static void init_js_stdlib(struct v7 *v7) {
     };));
 
   v7_exec(v7, &res, STRINGIFY(
-    Array.prototype.pop = function(a, b) {
+    Array.prototype.pop = function() {
       var i = this.length - 1;
       return this.splice(i, 1)[0];
     };));
