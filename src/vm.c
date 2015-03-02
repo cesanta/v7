@@ -97,7 +97,7 @@ int v7_is_cfunction(val_t v) {
 
 /* A convenience function to check exec result */
 int v7_is_error(struct v7 *v7, val_t v) {
-  return is_prototype_of(v, v7->error_prototype);
+  return is_prototype_of(v7, v, v7->error_prototype);
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
@@ -170,7 +170,10 @@ double v7_to_double(val_t v) {
   return * (double *) &v;
 }
 
-V7_PRIVATE val_t v_get_prototype(val_t obj) {
+V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
+  if (v7_is_function(obj)) {
+    return v7->function_prototype;
+  }
   return v7_object_to_value(v7_to_object(obj)->prototype);
 }
 
@@ -515,7 +518,7 @@ struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
+  for (; obj != V7_NULL; obj = v_get_prototype(v7, obj)) {
     struct v7_property *prop;
     if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
       return prop;
@@ -891,10 +894,14 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   return v7_create_string(v7, p + start, len, 1);
 }
 
-V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
+V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   struct v7_object *obj, *proto;
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
+  }
+  if (v7_is_function(o)) {
+    return p == v7->function_prototype ||
+        is_prototype_of(v7, v7->function_prototype, p);
   }
   proto = v7_to_object(p);
   for (obj = v7_to_object(o); obj; obj = obj->prototype) {

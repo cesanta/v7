@@ -12,7 +12,7 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, "TypeError",
                     "Object.getPrototypeOf called on non-object");
   }
-  return v7_object_to_value(v7_to_object(arg)->prototype);
+  return v_get_prototype(v7, arg);
 }
 
 V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
@@ -29,7 +29,7 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_at(v7, args, 0);
   val_t proto = v7_array_at(v7, args, 1);
   (void) this_obj;
-  return v7_create_boolean(is_prototype_of(obj, proto));
+  return v7_create_boolean(is_prototype_of(v7, obj, proto));
 }
 
 /* Hack to ensure that the iteration order of the keys array is consistent
@@ -203,7 +203,7 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
   (void) args;
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     type = "Array";
   }
   snprintf(buf, sizeof(buf), "[object %s]", type);

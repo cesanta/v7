@@ -1011,8 +1011,8 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 
-V7_PRIVATE val_t v_get_prototype(val_t);
-V7_PRIVATE int is_prototype_of(val_t, val_t);
+V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
+V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
@@ -3420,7 +3420,7 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   long len = 0;
   (void) args;
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
   }
   return v7_create_number(len);
@@ -3562,7 +3562,7 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   sep = v7_to_string(v7, &arg0, &sep_size);
 
   /* Do the actual join */
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     struct mbuf m;
     char buf[100], *p;
     long i, n, num_elems = v7_array_length(v7, this_obj);
@@ -3819,7 +3819,7 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_boolean(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->boolean_prototype))) {
+        is_prototype_of(v7, this_obj, v7->boolean_prototype))) {
     throw_exception(v7, "TypeError",
                     "Boolean.toString called on non-boolean object");
   }
@@ -4136,7 +4136,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_string(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->string_prototype))) {
+        is_prototype_of(v7, this_obj, v7->string_prototype))) {
     throw_exception(v7, "TypeError",
                     "String.toString called on non-string object");
   }
@@ -5233,7 +5233,7 @@ int v7_is_cfunction(val_t v) {
 
 /* A convenience function to check exec result */
 int v7_is_error(struct v7 *v7, val_t v) {
-  return is_prototype_of(v, v7->error_prototype);
+  return is_prototype_of(v7, v, v7->error_prototype);
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
@@ -5306,7 +5306,10 @@ double v7_to_double(val_t v) {
   return * (double *) &v;
 }
 
-V7_PRIVATE val_t v_get_prototype(val_t obj) {
+V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
+  if (v7_is_function(obj)) {
+    return v7->function_prototype;
+  }
   return v7_object_to_value(v7_to_object(obj)->prototype);
 }
 
@@ -5651,7 +5654,7 @@ struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
+  for (; obj != V7_NULL; obj = v_get_prototype(v7, obj)) {
     struct v7_property *prop;
     if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
       return prop;
@@ -6027,10 +6030,14 @@ V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   return v7_create_string(v7, p + start, len, 1);
 }
 
-V7_PRIVATE int is_prototype_of(val_t o, val_t p) {
+V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   struct v7_object *obj, *proto;
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
+  }
+  if (v7_is_function(o)) {
+    return p == v7->function_prototype ||
+        is_prototype_of(v7, v7->function_prototype, p);
   }
   proto = v7_to_object(p);
   for (obj = v7_to_object(o); obj; obj = obj->prototype) {
@@ -7971,7 +7978,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         throw_exception(v7, "TypeError",
                         "Expecting a function in instanceof check");
       }
-      res = v7_create_boolean(is_prototype_of(v1,
+      res = v7_create_boolean(is_prototype_of(v7, v1,
                                               v7_get(v7, v2, "prototype", 9)));
       break;
     case AST_VOID:
@@ -10386,7 +10393,7 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, "TypeError",
                     "Object.getPrototypeOf called on non-object");
   }
-  return v7_object_to_value(v7_to_object(arg)->prototype);
+  return v_get_prototype(v7, arg);
 }
 
 V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
@@ -10403,7 +10410,7 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_at(v7, args, 0);
   val_t proto = v7_array_at(v7, args, 1);
   (void) this_obj;
-  return v7_create_boolean(is_prototype_of(obj, proto));
+  return v7_create_boolean(is_prototype_of(v7, obj, proto));
 }
 
 /* Hack to ensure that the iteration order of the keys array is consistent
@@ -10577,7 +10584,7 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
   (void) args;
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     type = "Array";
   }
   snprintf(buf, sizeof(buf), "[object %s]", type);
@@ -10704,7 +10711,7 @@ static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_double(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->number_prototype))) {
+        is_prototype_of(v7, this_obj, v7->number_prototype))) {
     throw_exception(v7, "TypeError",
                     "Number.toString called on non-number object");
   }
@@ -11164,7 +11171,7 @@ static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
 
 static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
   /* TODO(alashkin): verify this statement */
-  return is_prototype_of(this_obj, v7->date_prototype);
+  return is_prototype_of(v7, this_obj, v7->date_prototype);
 }
 
 /*++++ from/to string helpers ++++*/

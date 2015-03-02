@@ -275,7 +275,7 @@ static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
 
 static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
   /* TODO(alashkin): verify this statement */
-  return is_prototype_of(this_obj, v7->date_prototype);
+  return is_prototype_of(v7, this_obj, v7->date_prototype);
 }
 
 /*++++ from/to string helpers ++++*/
