@@ -67,8 +67,6 @@ enum slre_error {
   SLRE_BAD_CHAR_AFTER_USD
 };
 
-int nextesc(Rune *r, const char **src);
-
 int slre_compile(const char *regexp, size_t regexp_len, const char *flags,
                  size_t flags_len, struct slre_prog **, int is_regex);
 int slre_exec(struct slre_prog *prog, int flag_g, const char *start,

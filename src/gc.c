@@ -49,11 +49,13 @@ V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
   assert(cell_size >= sizeof(uintptr_t));
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
-  a->size = size;
   a->name = name;
   /* Avoid arena initialization cost when GC is disabled */
-#ifdef V7_ENABLE_GC
+#ifndef V7_DISABLE_GC
   gc_arena_grow(a, size);
+  assert(a->free != NULL);
+#else
+  (void) size;
 #endif
 }
 
@@ -89,13 +91,15 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
 }
 
 V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
-#ifndef V7_ENABLE_GC
+#ifdef V7_DISABLE_GC
   (void) v7;
   return malloc(a->cell_size);
 #else
   char **r;
   if (a->free == NULL) {
+#if 0
     fprintf(stderr, "Exhausting arena %s, invoking GC.\n", a->name);
+#endif
     v7_gc(v7);
     if (a->free == NULL) {
 #if 1
@@ -109,7 +113,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   }
   r = (char **) a->free;
 
-  UNMARK(*r);
+  UNMARK(r);
 
   a->free = * r;
   a->allocations++;
@@ -129,9 +133,8 @@ void gc_sweep(struct gc_arena *a, size_t start) {
   for (cur = a->base + (start * a->cell_size);
        cur < (a->base + (a->size * a->cell_size));
        cur += a->cell_size) {
-    uintptr_t it = (* (uintptr_t *) cur);
-    if (it & 1) {
-      UNMARK(*cur);
+    if (MARKED(cur)) {
+      UNMARK(cur);
       a->alive++;
     } else {
       memset(cur, 0, a->cell_size);
@@ -150,9 +153,9 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     return;
   }
   obj = v7_to_object(v);
-  if (MARKED(obj->properties)) return;
+  if (MARKED(obj)) return;
 
-  for ((prop = obj->properties), MARK(obj->properties);
+  for ((prop = obj->properties), MARK(obj);
        prop != NULL; prop = next) {
     gc_mark(v7, prop->value);
     next = prop->next;
@@ -160,7 +163,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     assert((char *) prop >= v7->property_arena.base &&
            (char *) prop < (v7->property_arena.base + v7->property_arena.size *
                             v7->property_arena.cell_size));
-    MARK(prop->next);
+    MARK(prop);
   }
 
   /* function scope pointer is aliased to the object's prototype pointer */
@@ -169,7 +172,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
 static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   if (a->verbose) {
-    fprintf(stderr, "%s: total allocations %llu, max %lu, alive %u\n", msg,
+    fprintf(stderr, "%s: total allocations %lu, max %lu, alive %lu\n", msg,
             a->allocations, a->size, a->alive);
   }
 }

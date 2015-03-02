@@ -60,7 +60,7 @@ static void print_error(struct v7 *v7, const char *f, val_t e) {
 int main(int argc, char *argv[]) {
   struct v7 *v7 = v7_create();
   int i, show_ast = 0, binary_ast = 0;
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
 
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         dump_ast(v7, argv[i + 1], binary_ast);
       } else if (v7_exec(v7, &res, argv[i + 1]) != V7_OK) {
         print_error(v7, argv[i + 1], res);
-        res = V7_UNDEFINED;
+        res = v7_create_undefined();
       }
       i++;
     } else if (strcmp(argv[i], "-t") == 0) {
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
       }
     } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {
       print_error(v7, argv[i], res);
-      res = V7_UNDEFINED;
+      res = v7_create_undefined();
     }
   }
 

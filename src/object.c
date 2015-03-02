@@ -12,7 +12,7 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, "TypeError",
                     "Object.getPrototypeOf called on non-object");
   }
-  return v7_object_to_value(v7_to_object(arg)->prototype);
+  return v_get_prototype(v7, arg);
 }
 
 V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
@@ -29,22 +29,21 @@ V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_at(v7, args, 0);
   val_t proto = v7_array_at(v7, args, 1);
   (void) this_obj;
-  return v7_create_boolean(is_prototype_of(obj, proto));
+  return v7_create_boolean(is_prototype_of(v7, obj, proto));
 }
 
 /* Hack to ensure that the iteration order of the keys array is consistent
  * with the iteration order if properties in `for in`
  * This will be obsoleted when arrays will have a special object type. */
 static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
-                           int i, unsigned int ignore_flags) {
+                                int i, unsigned int ignore_flags) {
   char buf[20];
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
   if (p->next) _Obj_append_reverse(v7, p->next, res, i+1, ignore_flags);
 
   snprintf(buf, sizeof(buf), "%d", i);
-  v7_set_property(v7, res, buf, -1, 0,
-                  v7_create_string(v7, p->name, strlen(p->name), 1));
+  v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
 }
 
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
@@ -65,7 +64,7 @@ static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
   char name_buf[512];
   int name_len;
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
-  return v7_get_own_property(obj, name_buf, name_len);
+  return v7_get_own_property(v7, obj, name_buf, name_len);
 }
 
 V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
@@ -141,10 +140,12 @@ V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
     throw_exception(v7, "TypeError", "object expected");
   }
   for (p = v7_to_object(descs)->properties; p; p = p->next) {
+    size_t n;
+    const char *s = v7_to_string(v7, &p->name, &n);
     if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
       continue;
     }
-    _Obj_defineProperty(v7, obj, p->name, strlen(p->name), p->value);
+    _Obj_defineProperty(v7, obj, s, n, p->value);
   }
   return obj;
 }
@@ -190,8 +191,8 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
 
   (void) args;
-  (void) v7;
-  if ((p = v7_get_own_property2(this_obj, "", 0, V7_PROPERTY_HIDDEN)) != NULL) {
+  p = v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
+  if (p != NULL) {
     res = p->value;
   }
 
@@ -202,7 +203,7 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
   (void) args;
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     type = "Array";
   }
   snprintf(buf, sizeof(buf), "[object %s]", type);

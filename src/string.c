@@ -171,7 +171,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_string(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->string_prototype))) {
+        is_prototype_of(v7, this_obj, v7->string_prototype))) {
     throw_exception(v7, "TypeError",
                     "String.toString called on non-string object");
   }
@@ -456,7 +456,16 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
   size_t l;
   val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
-  if (v7_is_double(arg_n)) return (long)v7_to_double(arg_n);
+  double d;
+  if (v7_is_double(arg_n)) {
+    d = v7_to_double(arg_n);
+    if (isnan(d) || (isinf(d) && d < 0)) {
+      return 0;
+    } else if (d > LONG_MAX) {
+      return LONG_MAX;
+    }
+    return (long)d;
+  }
   if (arg_n == V7_NULL) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
   if (l > 0 && isdigit(buf[0])) return strtol(buf, NULL, 10);

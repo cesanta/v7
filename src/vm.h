@@ -32,7 +32,7 @@ typedef uint64_t val_t;
 
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
-  char *name;               /* Property name is a zero-terminated string */
+  val_t name;               /* Property name (a string) */
   val_t value;              /* Property value */
 
   unsigned int attributes;
@@ -139,6 +139,7 @@ V7_PRIVATE void init_number(struct v7 *v7);
 V7_PRIVATE void init_json(struct v7 *v7);
 V7_PRIVATE void init_date(struct v7 *v7);
 V7_PRIVATE void init_function(struct v7 *v7);
+V7_PRIVATE void init_stdlib(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
@@ -146,8 +147,8 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 
-V7_PRIVATE val_t v_get_prototype(val_t);
-V7_PRIVATE int is_prototype_of(val_t, val_t);
+V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
+V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
@@ -157,13 +158,15 @@ V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
-V7_PRIVATE struct v7_property *v7_get_own_property(val_t, const char *, size_t);
-V7_PRIVATE struct v7_property *v7_get_own_property2(val_t obj, const char *name,
+V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *, val_t,
+                                                   const char *, size_t);
+V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
+                                                    const char *name,
                                                     size_t, unsigned int attrs);
 
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
-V7_PRIVATE struct v7_property *v7_get_property(val_t obj, const char *name,
-                                               size_t);
+V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
+                                               const char *name, size_t);
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
@@ -177,7 +180,7 @@ V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
  */
-V7_PRIVATE int v7_del_property(val_t, const char *, size_t);
+V7_PRIVATE int v7_del_property(struct v7 *, val_t, const char *, size_t);
 
 /*
  * Returns the array length, or `-1` if the object is not an array
@@ -194,7 +197,7 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
-V7_PRIVATE long embed_string(struct mbuf *m, size_t off, const char *p, size_t);
+V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);

@@ -192,77 +192,56 @@ static int hex(int c) {
   return -SLRE_INVALID_HEX_DIGIT;
 }
 
-int nextesc(Rune *r, const char **p) {
-  const char *s = *p;
-  *p += chartorune(r, *p);
-  switch (*r) {
+int nextesc(const char **p) {
+  const unsigned char *s = (unsigned char *)(*p)++;
+  switch (*s) {
     case 0:
       return -SLRE_UNTERM_ESC_SEQ;
     case 'c':
-      *r = **p & 31;
       ++*p;
-      break;
+      return *s & 31;
     case 'f':
-      *r = '\f';
-      break;
+      return '\f';
     case 'n':
-      *r = '\n';
-      break;
+      return '\n';
     case 'r':
-      *r = '\r';
-      break;
+      return '\r';
     case 't':
-      *r = '\t';
-      break;
+      return '\t';
     case 'v':
-      *r = '\v';
-      break;
+      return '\v';
     case '\\':
-      *r = '\\';
-      break;
+      return '\\';
     case 'u':
       if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
           isxdigit(s[4])) {
         (*p) += 4;
-        *r = hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        break;
+        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
       }
       return -SLRE_INVALID_HEX_DIGIT;
     case 'x':
       if (isxdigit(s[1]) && isxdigit(s[2])) {
         (*p) += 2;
-        *r = (hex(s[1]) << 4) | hex(s[2]);
-        if (!*r) {
-          *r = '0';
-          return 1;
-        }
-        break;
+        return (hex(s[1]) << 4) | hex(s[2]);
       }
       return -SLRE_INVALID_HEX_DIGIT;
     default:
-      return 2;
+      return -SLRE_INVALID_ESC_CHAR;
   }
-  return 0;
 }
 
-static int re_nextc(Rune *r, const char **src, const char *src_end,
-                    int is_regex) {
+static int re_nextc(Rune *r, const char **src, const char *src_end) {
   *r = 0;
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
-  if (is_regex && *r == '\\') {
-    nextesc(r, src);
+  if (*r == '\\') {
+    *r = nextesc(src);
     return 1;
   }
   return 0;
 }
-
 static int re_nextc_env(struct slre_env *e) {
-  return re_nextc(&e->curr_rune, &e->src, e->src_end, e->is_regex);
+  return re_nextc(&e->curr_rune, &e->src, e->src_end);
 }
 
 static void re_nchset(struct slre_env *e) {
@@ -1393,12 +1372,12 @@ int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
   const char *const rstr_end = rstr + rstr_len;
 
   memset(dstsub, 0, sizeof(*dstsub));
-  while (rstr < rstr_end && !(n = re_nextc(&curr_rune, &rstr, rstr_end, 1)) &&
+  while (rstr < rstr_end && !(n = re_nextc(&curr_rune, &rstr, rstr_end)) &&
          curr_rune) {
     int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
-      n = re_nextc(&curr_rune, &rstr, rstr_end, 1);
+      n = re_nextc(&curr_rune, &rstr, rstr_end);
       if (n < 0) return n;
       switch (curr_rune) {
         case '&':
@@ -1418,7 +1397,7 @@ int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
         case '9': {
           int sbn = dec(curr_rune);
           if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
-            n = re_nextc(&curr_rune, &rstr, rstr_end, 1);
+            n = re_nextc(&curr_rune, &rstr, rstr_end);
             if (n < 0) return n;
             sz = dec(curr_rune);
             sbn = sbn * 10 + sz;

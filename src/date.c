@@ -4,20 +4,11 @@
  */
 
 #include "internal.h"
-#include <sys/time.h>
-#include <time.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <locale.h>
-#include <stddef.h>
 
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);
-#else
+#elif !defined(_WIN32)
 extern long timezone;
-extern struct tm *getdate(const char *);
 #endif
 
 typedef double etime_t; /* double is suitable type for ECMA time */
@@ -153,9 +144,12 @@ static int ecma_WeekDay(etime_t t) {
 
 static int ecma_DaylightSavingTA(etime_t t) {
   time_t time = t / 1000;
-  struct tm tm;
-  memset(&tm, 0, sizeof(t));
-  localtime_r(&time, &tm);
+  /*
+   * Win32 doesn't have locatime_r
+   * nixes don't have localtime_s
+   * as result using localtime
+   */
+  struct tm tm = *localtime(&time);
   if(tm.tm_isdst > 0) {
     return msPerHour;
   } else {
@@ -226,10 +220,8 @@ struct timeparts {
 
 /*+++ this functions is used to get current date/time & timezone */
 
-static void d_gettime(etime_t *time) {
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  *time = (etime_t) tv.tv_sec * 1000 + (etime_t) tv.tv_usec / 1000;
+static void d_gettime(etime_t *t) {
+  *t = time(NULL);
 }
 
 static const char *d_gettzname() {
@@ -283,7 +275,7 @@ static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
 
 static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
   /* TODO(alashkin): verify this statement */
-  return is_prototype_of(this_obj, v7->date_prototype);
+  return is_prototype_of(v7, this_obj, v7->date_prototype);
 }
 
 /*++++ from/to string helpers ++++*/
@@ -352,7 +344,7 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
   memset(tp, 0, sizeof(*tp));
   *tz = NO_TZ;
 
-  /* #1: trying toISOSrting() format */
+  /* trying toISOSrting() format */
   {
     const char *frmISOString = " %d-%02d-%02dT%02d:%02d:%02d.%03dZ";
     res = sscanf(str, frmISOString, &tp->year, &tp->month, &tp->day,
@@ -363,28 +355,14 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
     }
   }
 
-  /* #2: trying getdate() - it never works on some OS, but... */
-  {
-    struct tm *tm = getdate(str);
-    if (tm != NULL) {
-      tp->year = tm->tm_year + 1900;
-      tp->month = tm->tm_mon;
-      tp->day = tm->tm_mday;
-      tp->hour = tm->tm_hour;
-      tp->min = tm->tm_min;
-      tp->sec = tm->tm_sec;
-
-      return 1;
-    }
-  }
-
-  /* #3: trying toString()/toUTCString()/toDateFormat() formats */
+  /* trying toString()/toUTCString()/toDateFormat() formats */
   {
     char month[4];
-    const char *frmString = " %03*s %03s %02d %d %02d:%02d:%02d %03s%d";
-    res = sscanf(str, frmString, month, &tp->day, &tp->year,
+    int dowlen;
+    const char *frmString = " %*s%n %03s %02d %d %02d:%02d:%02d %03s%d";
+    res = sscanf(str, frmString, &dowlen, month, &tp->day, &tp->year,
                  &tp->hour, &tp->min, &tp->sec, gmt, tz);
-    if (res == 3 || (res >= 6 && res <= 8)) {
+    if (dowlen == 3 && (res == 3 || (res >= 6 && res <= 8))) {
       if ((tp->month = d_getnumbyname(mon_name,
                                       ARRAY_SIZE(mon_name), month)) != -1) {
         if (res == 7 && strncmp(gmt, "GMT", 3) == 0) {
@@ -395,7 +373,7 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
     }
   }
 
-  /* #4: trying the rest */
+  /* trying the rest */
 
   /* trying date */
 
@@ -613,7 +591,7 @@ static etime_t d_changepartoftime(const etime_t *current,
   }
 
   for (i = 0; i < ARRAY_SIZE(tp_arr); i++) {
-    if (!isnan(a->args[i])) {
+    if (!isnan(a->args[i]) && !isinf(a->args[i])) {
       *tp_arr[i] = (int)a->args[i];
     }
   }
@@ -938,7 +916,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   v7_set_property(v7, date, "", 0, V7_PROPERTY_HIDDEN, ctor);
   v7_set_property(v7, date, "prototype", 9, attrs, v7->date_prototype);
   d_set_cfunc_prop(v7, v7->date_prototype, "constructor", Date_ctor);
-  v7_set_property(v7, v7->global_object, "Date", 6,
+  v7_set_property(v7, v7->global_object, "Date", 4,
                   V7_PROPERTY_DONT_ENUM, date);
 
   DECLARE_GET_AND_SET(Date);

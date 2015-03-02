@@ -17,7 +17,7 @@ static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t v = V7_UNDEFINED;
+  val_t v = v7_create_undefined();
   int i, len = v7_array_length(v7, args);
   for (i = 0; i < len; i++) {
     v = v7_array_at(v7, args, i);
@@ -29,18 +29,20 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   long len = 0;
   (void) args;
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
   }
   return v7_create_number(len);
 }
 
 static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
   long new_len = arg_long(v7, args, 0, -1);
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, "TypeError", "Array expected");
-  } else if (new_len < 0) {
+  } else if (new_len < 0 || (v7_is_double(arg0) && (
+      isnan(v7_to_double(arg0)) || isinf(v7_to_double(arg0))))) {
     throw_exception(v7, "RangeError", "Invalid array length");
   } else {
     struct v7_property **p, **next;
@@ -48,8 +50,10 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
 
     /* Remove all items with an index higher then new_len */
     for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p[0]->name, &n);
       next = &p[0]->next;
-      index = strtol(p[0]->name, NULL, 10);
+      index = strtol(s, NULL, 10);
       if (index >= new_len) {
         v7_destroy_property(p);
         *p = *next;
@@ -80,8 +84,6 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
     v7_array_append(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
     return (int) - v7_to_double(res);
-  } else if (v7_is_double(a) && v7_is_double(b)) {
-    return v7_to_double(b) - v7_to_double(a);
   } else {
     char sa[100], sb[100];
     to_str(v7, a, sa, sizeof(sa), 0);
@@ -137,7 +139,7 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   for (i = 0; i < len; i++) {
     char buf[40];
     snprintf(buf, sizeof(buf), "%d", i);
-    if ((p = v7_get_own_property(obj, buf, strlen(buf))) != NULL) {
+    if ((p = v7_get_own_property(v7, obj, buf, strlen(buf))) != NULL) {
       p->value = arr[len - (i + 1)];
     }
   }
@@ -155,24 +157,9 @@ static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
   return a_sort(v7, this_obj, args, NULL);
 }
 
-static val_t Array_pop(struct v7 *v7, val_t this_obj, val_t args) {
-  struct v7_property *p;
-  val_t res = V7_UNDEFINED;
-
-  (void) v7; (void) args;
-
-  if (is_prototype_of(this_obj, v7->array_prototype) &&
-      (p = v7_to_object(this_obj)->properties) != NULL) {
-    res = p->value;
-    v7_to_object(this_obj)->properties = p->next;
-  }
-
-  return res;
-}
-
 static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  val_t res = V7_UNDEFINED;
+  val_t res = v7_create_undefined();
   size_t sep_size = 0;
   const char *sep = NULL;
 
@@ -184,7 +171,7 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   sep = v7_to_string(v7, &arg0, &sep_size);
 
   /* Do the actual join */
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     struct mbuf m;
     char buf[100], *p;
     long i, n, num_elems = v7_array_length(v7, this_obj);
@@ -253,8 +240,10 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     long i;
 
     for (p = &v7_to_object(this_obj)->properties; *p != NULL; p = next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p[0]->name, &n);
       next = &p[0]->next;
-      i = strtol(p[0]->name, NULL, 10);
+      i = strtol(s, NULL, 10);
       if (i >= arg0 && i < arg1) {
         /* Remove items from spliced sub-array */
         v7_destroy_property(p);
@@ -265,9 +254,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
         char key[20];
         size_t n = snprintf(key, sizeof(key), "%ld",
                             i - (arg1 - arg0) + elems_to_insert);
-        free((*p)->name);
-        (*p)->name = (char *) malloc(n + 1);
-        strcpy((*p)->name, key);
+        p[0]->name = v7_create_string(v7, key, n, 1);
       }
     }
 
@@ -290,6 +277,89 @@ static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
   return a_splice(v7, this_obj, args, 1);
 }
 
+static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
+  *a0 = v7_array_at(v7, args, 0);
+  *a1 = v7_array_at(v7, args, 1);
+  if (v7_is_undefined(*a1)) {
+    *a1 = t;
+  }
+}
+
+static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
+  val_t params = v7_create_array(v7);
+  v7_array_append(v7, params, v);
+  v7_array_append(v7, params, n);
+  v7_array_append(v7, params, t);
+  return v7_apply(v7, a, t, params);
+}
+
+static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0, arg1, el, res;
+  struct v7_property *p;
+
+  a_prep1(v7, this_obj, args, &arg0, &arg1);
+  res = v7_create_array(v7);
+  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+    size_t n;
+    const char *name;
+    el = a_prep2(v7, arg0, p->value, p->name, arg1);
+    name = v7_to_string(v7, &p->name, &n);
+    v7_set(v7, res, name, n, el);
+  }
+
+  return res;
+}
+
+static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0, arg1, el, res;
+  struct v7_property *p;
+
+  a_prep1(v7, this_obj, args, &arg0, &arg1);
+  res = v7_create_boolean(1);
+  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+    el = a_prep2(v7, arg0, p->value, p->name, arg1);
+    if (!v7_is_true(v7, el)) {
+      res = v7_create_boolean(0);
+      break;
+    }
+  }
+
+  return res;
+}
+
+static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0, arg1, el, res;
+  struct v7_property *p;
+
+  a_prep1(v7, this_obj, args, &arg0, &arg1);
+  res = v7_create_boolean(0);
+  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+    el = a_prep2(v7, arg0, p->value, p->name, arg1);
+    if (v7_is_true(v7, el)) {
+      res = v7_create_boolean(1);
+      break;
+    }
+  }
+
+  return res;
+}
+
+static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0, arg1, el, res;
+  struct v7_property *p;
+
+  a_prep1(v7, this_obj, args, &arg0, &arg1);
+  res = v7_create_array(v7);
+  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+    el = a_prep2(v7, arg0, p->value, p->name, arg1);
+    if (v7_is_true(v7, el)) {
+      v7_array_append(v7, res, p->value);
+    }
+  }
+
+  return res;
+}
+
 V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
   val_t length = v7_create_array(v7);
@@ -300,11 +370,14 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse, 0);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "pop", Array_pop, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "join", Array_join, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
   set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 2);
   set_cfunc_obj_prop(v7, v7->array_prototype, "splice", Array_splice, 2);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "map", Array_map, 1);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "every", Array_every, 1);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "some", Array_some, 1);
+  set_cfunc_obj_prop(v7, v7->array_prototype, "filter", Array_filter, 1);
 
   v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
   v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));

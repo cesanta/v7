@@ -5,27 +5,51 @@
 
 #include "internal.h"
 
-V7_PRIVATE enum v7_err Std_print(struct v7_c_func_arg *cfa) {
-  char *p, buf[500];
-  int i;
-  for (i = 0; i < cfa->num_args; i++) {
-    p = v7_stringify(cfa->args[i], buf, sizeof(buf));
+/* TODO(lsm): remove this when init_stdlib() is upgraded */
+V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
+  char *p, buf[1024];
+  int i, num_args = v7_array_length(v7, args);
+
+  (void) this_obj;
+  for (i = 0; i < num_args; i++) {
+    p = v7_to_json(v7, v7_array_at(v7, args, i), buf, sizeof(buf));
     printf("%s", p);
-    if (p != buf) free(p);
+    if (p != buf) {
+      free(p);
+    }
   }
   putchar('\n');
 
-  return V7_OK;
+  return v7_create_null();
 }
 
-V7_PRIVATE enum v7_err Std_exit(struct v7_c_func_arg *cfa) {
-  int exit_code = cfa->num_args > 0 ? (int)cfa->args[0]->v.num : EXIT_SUCCESS;
+V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
+  val_t res = v7_create_undefined(), arg = v7_array_at(v7, args, 0);
+  (void) t;
+  if (arg != V7_UNDEFINED) {
+    char buf[100], *p;
+    p = v7_to_json(v7, arg, buf, sizeof(buf));
+    if (p[0] == '"') {
+      p[0] = p[strlen(p) - 1] = ' ';
+    }
+    if (v7_exec(v7, &res, p) != V7_OK) {
+      throw_value(v7, res);
+    }
+    if (p != buf) {
+      free(p);
+    }
+  }
+  return res;
+}
+
+static val_t Std_exit(struct v7 *v7, val_t t, val_t args) {
+  int exit_code = arg_long(v7, args, 0, 0);
+  (void) t;
   exit(exit_code);
-  return V7_OK;
+  return v7_create_undefined();
 }
 
-V7_PRIVATE void base64_encode(const unsigned char *src, int src_len,
-                              char *dst) {
+static void base64_encode(const unsigned char *src, int src_len, char *dst) {
   V7_PRIVATE const char *b64 =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   int i, j, a, b, c;
@@ -51,7 +75,7 @@ V7_PRIVATE void base64_encode(const unsigned char *src, int src_len,
 }
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
-V7_PRIVATE unsigned char from_b64(unsigned char ch) {
+static unsigned char from_b64(unsigned char ch) {
   /* Inverse lookup map */
   V7_PRIVATE const unsigned char tab[128] = {
     255, 255, 255, 255, 255, 255, 255, 255,  /* 0 */
@@ -74,7 +98,7 @@ V7_PRIVATE unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
+static void base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
          (b = from_b64(s[1])) != 255 && (c = from_b64(s[2])) != 255 &&
@@ -91,157 +115,218 @@ V7_PRIVATE void base64_decode(const unsigned char *s, int len, char *dst) {
   *dst = 0;
 }
 
-V7_PRIVATE enum v7_err Std_base64_decode(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0], *result;
+static val_t b64_transform(struct v7 *v7, val_t this_obj, val_t args,
+                           void (func)(const unsigned char *, int, char *),
+                           double mult) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t res = v7_create_undefined();
 
-  result = v7_push_string(cfa->v7, NULL, 0, 0);
-  if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    result->v.str.len = v->v.str.len * 3 / 4 + 1;
-    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
-    base64_decode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
-                  result->v.str.buf);
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *s = v7_to_string(v7, &arg0, &n);
+    char *buf = (char *) malloc(n * mult + 2);
+    if (buf != NULL) {
+      func((const unsigned char *) s, (int) n, buf);
+      res = v7_create_string(v7, buf, strlen(buf), 1);
+      free(buf);
+    }
   }
-  return V7_OK;
+
+  return res;
 }
 
-V7_PRIVATE enum v7_err Std_base64_encode(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0], *result;
-
-  result = v7_push_string(cfa->v7, NULL, 0, 0);
-  if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    result->v.str.len = v->v.str.len * 3 / 2 + 1;
-    result->v.str.buf = (char *) malloc(result->v.str.len + 1);
-    base64_encode((const unsigned char *) v->v.str.buf, (int) v->v.str.len,
-                  result->v.str.buf);
-  }
-  return V7_OK;
+static val_t Std_base64_decode(struct v7 *v7, val_t this_obj, val_t args) {
+  return b64_transform(v7, this_obj, args, base64_decode, 0.75);
 }
 
-V7_PRIVATE enum v7_err Std_eval(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0];
-  if (cfa->num_args == 1 && v->type == V7_TYPE_STR && v->v.str.len > 0) {
-    return do_exec(cfa->v7, "<eval>", v->v.str.buf, cfa->v7->sp);
-  }
-  return V7_OK;
+static val_t Std_base64_encode(struct v7 *v7, val_t this_obj, val_t args) {
+  return b64_transform(v7, this_obj, args, base64_encode, 1.5);
 }
 
 #ifndef V7_NO_FS
-V7_PRIVATE enum v7_err Std_load(struct v7_c_func_arg *cfa) {
-  int i;
-  struct v7_val *obj = v7_push_new_object(cfa->v7);
+static val_t Std_load(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t res = v7_create_undefined();
 
-  /* Push new object as a context for the loading new module */
-  obj->next = cfa->v7->ctx;
-  cfa->v7->ctx = obj;
-
-  for (i = 0; i < cfa->num_args; i++) {
-    if (v7_type(cfa->args[i]) != V7_TYPE_STR) return V7_TYPE_ERROR;
-    if (!v7_exec_file(cfa->v7, cfa->args[i]->v.str.buf)) return V7_ERROR;
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *s = v7_to_string(v7, &arg0, &n);
+    v7_exec_file(v7, &res, s);
   }
 
-  /* Pop context, and return it */
-  cfa->v7->ctx = obj->next;
-  v7_push_val(cfa->v7, obj);
-
-  return V7_OK;
+  return res;
 }
 
-V7_PRIVATE enum v7_err Std_read(struct v7_c_func_arg *cfa) {
-  struct v7_val *v;
+/*
+ * File interface: a wrapper around open(), close(), read(), write().
+ * File.open(path, flags) -> fd.
+ * File.close(fd) -> undefined
+ * File.read(fd) -> string (empty string on EOF)
+ * File.write(fd, str) -> num_bytes_written
+ */
+static val_t Std_read(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
   char buf[2048];
   size_t n;
 
-  if ((v = v7_get(cfa->this_obj, "fp")) != NULL &&
-      (n = fread(buf, 1, sizeof(buf), (FILE *)(unsigned long) v->v.num)) > 0) {
-    v7_push_string(cfa->v7, buf, n, 1);
-  } else {
-    v7_make_and_push(cfa->v7, V7_TYPE_NULL);
-  }
-  return V7_OK;
-}
-
-V7_PRIVATE enum v7_err Std_write(struct v7_c_func_arg *cfa) {
-  struct v7_val *v = cfa->args[0], *result;
-  size_t n, i;
-
-  result = v7_push_number(cfa->v7, 0);
-  if ((v = v7_get(cfa->this_obj, "fp")) != NULL) {
-    for (i = 0; (int)i < cfa->num_args; i++) {
-      if (is_string(cfa->args[i]) &&
-          (n = fwrite(cfa->args[i]->v.str.buf, 1, cfa->args[i]->v.str.len,
-                      (FILE *)(unsigned long) v->v.num)) > 0) {
-        result->v.num += n;
-      }
+  (void) this_obj;
+  if (v7_is_double(arg0)) {
+    int fd = v7_to_double(arg0);
+    n = read(fd, buf, sizeof(buf));
+    if (n > 0) {
+      return v7_create_string(v7, buf, n, 1);
     }
   }
-  return V7_OK;
+
+  return v7_create_string(v7, "", 0, 1);
 }
 
-V7_PRIVATE enum v7_err Std_close(struct v7_c_func_arg *cfa) {
-  struct v7_val *v;
-  int ok = 0;
-  if ((v = v7_get(cfa->this_obj, "fp")) != NULL &&
-      fclose((FILE *)(unsigned long) v->v.num) == 0) {
-    ok = 1;
+static val_t Std_write(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg1 = v7_array_at(v7, args, 1);
+  size_t n = 0, n2;
+
+  (void) this_obj;
+  if (v7_is_double(arg0) && v7_is_string(arg1)) {
+    const char *s = v7_to_string(v7, &arg1, &n2);
+    int fd = v7_to_double(arg0);
+    n = write(fd, s, n2);
   }
-  v7_push_bool(cfa->v7, ok);
-  return V7_OK;
+
+  return v7_create_number(n);
 }
 
-V7_PRIVATE enum v7_err Std_open(struct v7_c_func_arg *cfa) {
-  struct v7_val *v1 = cfa->args[0], *v2 = cfa->args[1], *result = NULL;
-  FILE *fp;
-
-  if (cfa->num_args == 2 && is_string(v1) && is_string(v2) &&
-      (fp = fopen(v1->v.str.buf, v2->v.str.buf)) != NULL) {
-    result = v7_push_new_object(cfa->v7);
-    result->proto = &s_file;
-    v7_setv(cfa->v7, result, V7_TYPE_STR, V7_TYPE_NUM, "fp", 2, 0,
-            (double)(unsigned long) fp);  /* after v7_set_class ! */
-  } else {
-    v7_make_and_push(cfa->v7, V7_TYPE_NULL);
+static val_t Std_close(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  (void) this_obj;
+  if (v7_is_double(arg0)) {
+    close((int) v7_to_double(arg0));
   }
-  return V7_OK;
+  return v7_create_undefined();
+}
+
+static val_t Std_open(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t res = v7_create_undefined();
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n1;
+    const char *s = v7_to_string(v7, &arg0, &n1);
+    int flags = v7_is_double(arg1) ? (int) v7_to_double(arg1) : 0;
+    int fd = open(s, flags);
+    res = v7_create_number(fd);
+  }
+
+  return res;
 }
 #endif
 
-V7_PRIVATE void init_stdlib(void) {
-  init_object();
-  init_number();
-  init_array();
-  init_string();
-  init_regex();
-  init_function();
-  init_date();
-  init_error();
-  init_boolean();
-  init_math();
-  init_json();
-#ifndef V7_DISABLE_CRYPTO
-  init_crypto();
-#endif
+#define STRINGIFY(x) #x
 
-  SET_METHOD(s_global, "print", Std_print);
-  SET_METHOD(s_global, "exit", Std_exit);
-  SET_METHOD(s_global, "base64_encode", Std_base64_encode);
-  SET_METHOD(s_global, "base64_decode", Std_base64_decode);
-  SET_METHOD(s_global, "eval", Std_eval);
+static void init_js_stdlib(struct v7 *v7) {
+  val_t res;
 
-  SET_RO_PROP(s_global, "Infinity", V7_TYPE_NUM, num, INFINITY);
-  SET_RO_PROP(s_global, "NaN", V7_TYPE_NUM, num, NAN);
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.indexOf = function(a, b) {
+      if (!b || b < 0) b = 0;
+      for (var i = b; i < this.length; i++) {
+        if (this[i] === a) {
+          return i;
+        }
+      }
+      return -1;
+    };));
+
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.lastIndexOf = function(a, b) {
+      if (!b || b < 0 || b >= this.length) b = this.length - 1;
+      for (var i = b; i >= 0; i--) {
+        if (this[i] === a) {
+          return i;
+        }
+      }
+      return -1;
+    };));
+
+    v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.reduce = function(a, b) {
+      var f = 0;
+      if (typeof(a) != 'function') {
+        throw new TypeError(a + ' is not a function');
+      }
+      for (var k in this) {
+        if (f == 0 && b === undefined) {
+          b = this[k];
+          f = 1;
+        } else {
+          b = a(b, this[k], k, this);
+        }
+      }
+      return b;
+    };));
+
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.pop = function() {
+      var i = this.length - 1;
+      return this.splice(i, 1)[0];
+    };));
+}
+
+V7_PRIVATE void init_stdlib(struct v7 *v7) {
+  /*
+   * Ensure the first call to v7_create_value will use a null proto:
+   * {}.__proto__.__proto__ == null
+   */
+  v7->object_prototype = create_object(v7, V7_NULL);
+  v7->array_prototype = v7_create_object(v7);
+  v7->boolean_prototype = v7_create_object(v7);
+  v7->string_prototype = v7_create_object(v7);
+  v7->regexp_prototype = v7_create_object(v7);
+  v7->number_prototype = v7_create_object(v7);
+  v7->cfunction_prototype = v7_create_object(v7);
+  v7->global_object = v7_create_object(v7);
+  v7->this_object = v7->global_object;
+  v7->date_prototype = v7_create_object(v7);
+  v7->function_prototype = v7_create_object(v7);
+
+  set_cfunc_prop(v7, v7->global_object, "print", Std_print);
+  set_cfunc_prop(v7, v7->global_object, "eval", Std_eval);
+  set_cfunc_prop(v7, v7->global_object, "exit", Std_exit);
+  set_cfunc_prop(v7, v7->global_object, "base64_encode", Std_base64_encode);
+  set_cfunc_prop(v7, v7->global_object, "base64_decode", Std_base64_decode);
 
 #ifndef V7_NO_FS
-  SET_METHOD(s_global, "open", Std_open);
-  SET_METHOD(s_global, "load", Std_load);
-
-  SET_METHOD(s_file, "read", Std_read);
-  SET_METHOD(s_file, "write", Std_write);
-  SET_METHOD(s_file, "close", Std_close);
-
-  v7_set_class(&s_file, V7_CLASS_OBJECT);
-  s_file.ref_count = 1;
+  /* TODO(lsm): move to a File object */
+  set_cfunc_prop(v7, v7->global_object, "load", Std_load);
+  {
+    val_t file_obj = v7_create_object(v7);
+    v7_set_property(v7, v7->global_object, "File", 4, 0, file_obj);
+    set_cfunc_prop(v7, file_obj, "open", Std_open);
+    set_cfunc_prop(v7, file_obj, "close", Std_close);
+    set_cfunc_prop(v7, file_obj, "read", Std_read);
+    set_cfunc_prop(v7, file_obj, "write", Std_write);
+  }
 #endif
 
-  v7_set_class(&s_global, V7_CLASS_OBJECT);
-  s_global.ref_count = 1;
+  v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
+                  v7_create_number(INFINITY));
+  v7_set_property(v7, v7->global_object, "global", 6, 0, v7->global_object);
+
+  init_object(v7);
+  init_array(v7);
+  init_error(v7);
+  init_boolean(v7);
+  init_math(v7);
+  init_string(v7);
+  init_regex(v7);
+  init_number(v7);
+  init_json(v7);
+  init_date(v7);
+  init_function(v7);
+
+  init_js_stdlib(v7);
 }

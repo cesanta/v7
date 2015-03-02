@@ -43,7 +43,7 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_boolean(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->boolean_prototype))) {
+        is_prototype_of(v7, this_obj, v7->boolean_prototype))) {
     throw_exception(v7, "TypeError",
                     "Boolean.toString called on non-boolean object");
   }
