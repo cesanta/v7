@@ -9692,7 +9692,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9638	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A2_T1.js (tail -c +8768885 tests/ecmac.db|head -c 778)
 9639	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T1.js (tail -c +8769664 tests/ecmac.db|head -c 810)
 9640	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T2.js (tail -c +8770475 tests/ecmac.db|head -c 1508)
-9641	FAIL ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T3.js (tail -c +8771984 tests/ecmac.db|head -c 795): [{"message":"#1: x = []; x.length = 4294967295; x.length === 4294967295"}]
+9641	FAIL ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T3.js (tail -c +8771984 tests/ecmac.db|head -c 795): [{"message":"#2.2: x = []; x.length = 4294967296 throw RangeError. Actual: {"message":"#2.1: x = []; x.length = 4294967296 throw RangeError. Actual: x.length === 4.29497e+09"}"}]
 9642	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T4.js (tail -c +8772780 tests/ecmac.db|head -c 1074)
 9643	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T1.js (tail -c +8773855 tests/ecmac.db|head -c 922): [{"message":"#2: __str = String(function(){}()); __str === "undefined". Actual: __str ==="}]
 9644	PASS ch15/15.5/15.5.1/S15.5.1.1_A1_T10.js (tail -c +8774778 tests/ecmac.db|head -c 1477)
@@ -9905,7 +9905,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9848	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A3_T1.js (tail -c +8991340 tests/ecmac.db|head -c 718): [{"message":"#1: __instance = new Object(); __instance.slice = String.prototype.slice; __instance.slice(0,8) === "[object ". Actual: {"slice""}]
 9849	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A3_T2.js (tail -c +8992059 tests/ecmac.db|head -c 839): [{"message":"#1: __instance = new Object(); __instance.slice = String.prototype.slice; __instance.slice(8,__instance.toString().length) === "Object]". Actual: :cfunc_"}]
 9850	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A3_T3.js (tail -c +8992899 tests/ecmac.db|head -c 873): [{"message":"#1: __instance = function(){}; __instance.slice = String.prototype.slice; __instance.slice(-Infinity,8).slice(1,Infinity) === "unction". Actual: "slice""}]
-9851	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A3_T4.js (tail -c +8993773 tests/ecmac.db|head -c 870): [{"message":"#1: __instance.slice(0,100) === "undefined". Actual: {"slice":cfunc_0x1027a5050,"value":undefined}"}]
+9851	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A3_T4.js (tail -c +8993773 tests/ecmac.db|head -c 870): [{"message":"#1: __instance.slice(0,100) === "undefined". Actual: {"slice":cfunc_xxxxxx,"value":undefined}"}]
 9852	PASS ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A6.js (tail -c +8994644 tests/ecmac.db|head -c 573)
 9853	PASS ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A7.js (tail -c +8995218 tests/ecmac.db|head -c 477)
 9854	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A8.js (tail -c +8995696 tests/ecmac.db|head -c 1372): [{"message":"value is not a function"}]
@@ -10058,7 +10058,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10000	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A10.js (tail -c +9221675 tests/ecmac.db|head -c 1254): [{"message":"value is not a function"}]
 10001	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A11.js (tail -c +9222930 tests/ecmac.db|head -c 956): [{"message":"value is not a function"}]
 10002	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T1.js (tail -c +9223887 tests/ecmac.db|head -c 706)
-10003	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T10.js (tail -c +9224594 tests/ecmac.db|head -c 744): [{"message":"#1: var __obj = {toString:function(){return "AB";}}; __obj.toLowerCase = String.prototype.toLowerCase; __obj.toLowerCase() ==="ab". Actual: {"tolowercase":cfunc_0x1027a4fd0,"tostring":[function()]}"}]
+10003	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T10.js (tail -c +9224594 tests/ecmac.db|head -c 744): [{"message":"#1: var __obj = {toString:function(){return "AB";}}; __obj.toLowerCase = String.prototype.toLowerCase; __obj.toLowerCase() ==="ab". Actual: {"tolowercase":cfunc_xxxxxx,"tostring":[function()]}"}]
 10004	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T11.js (tail -c +9225339 tests/ecmac.db|head -c 770): [{"message":"#1.1: Exception === "intostr". Actual: {"message":"#1: "var x = __obj.toLowerCase()" lead to throwing exception"}"}]
 10005	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T12.js (tail -c +9226110 tests/ecmac.db|head -c 811)
 10006	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T13.js (tail -c +9226922 tests/ecmac.db|head -c 1236)
@@ -10079,7 +10079,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10021	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A10.js (tail -c +9241813 tests/ecmac.db|head -c 1322): [{"message":"value is not a function"}]
 10022	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A11.js (tail -c +9243136 tests/ecmac.db|head -c 1004): [{"message":"value is not a function"}]
 10023	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T1.js (tail -c +9244141 tests/ecmac.db|head -c 754)
-10024	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T10.js (tail -c +9244896 tests/ecmac.db|head -c 797): [{"message":"#1: var __obj = {toString:function(){return "AB";}}; __obj.toLocaleLowerCase = String.prototype.toLocaleLowerCase; __obj.toLocaleLowerCase() ==="ab". Actual: {"tolocalelowercase":cfunc_0x1027a4fd0,"tostring":[function()]}"}]
+10024	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T10.js (tail -c +9244896 tests/ecmac.db|head -c 797): [{"message":"#1: var __obj = {toString:function(){return "AB";}}; __obj.toLocaleLowerCase = String.prototype.toLocaleLowerCase; __obj.toLocaleLowerCase() ==="ab". Actual: {"tolocalelowercase":cfunc_xxxxxx,"tostring":[function()]}"}]
 10025	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T11.js (tail -c +9245694 tests/ecmac.db|head -c 806): [{"message":"#1.1: Exception === "intostr". Actual: {"message":"#1: "var x = __obj.toLocaleLowerCase()" lead to throwing exception"}"}]
 10026	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T12.js (tail -c +9246501 tests/ecmac.db|head -c 847)
 10027	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T13.js (tail -c +9247349 tests/ecmac.db|head -c 1320)
@@ -10100,7 +10100,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10042	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A10.js (tail -c +9262979 tests/ecmac.db|head -c 1254): [{"message":"value is not a function"}]
 10043	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A11.js (tail -c +9264234 tests/ecmac.db|head -c 956): [{"message":"value is not a function"}]
 10044	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T1.js (tail -c +9265191 tests/ecmac.db|head -c 706)
-10045	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T10.js (tail -c +9265898 tests/ecmac.db|head -c 743): [{"message":"#1: var __obj = {toString:function(){return "Ab";}}; __obj.toUpperCase = String.prototype.toUpperCase; __obj.toUpperCase() ==="AB". Actual: {"TOUPPERCASE":CFUNC_0X1027A5010,"TOSTRING":[FUNCTION()]}"}]
+10045	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T10.js (tail -c +9265898 tests/ecmac.db|head -c 743): [{"message":"#1: var __obj = {toString:function(){return "Ab";}}; __obj.toUpperCase = String.prototype.toUpperCase; __obj.toUpperCase() ==="AB". Actual: {"TOUPPERCASE":CFUNC_XXXXXX,"TOSTRING":[FUNCTION()]}"}]
 10046	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T11.js (tail -c +9266642 tests/ecmac.db|head -c 769): [{"message":"#1.1: Exception === "intostr". Actual: {"message":"#1: "var x = __obj.toUpperCase()" lead to throwing exception"}"}]
 10047	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T12.js (tail -c +9267412 tests/ecmac.db|head -c 810)
 10048	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T13.js (tail -c +9268223 tests/ecmac.db|head -c 1236)
@@ -10121,7 +10121,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10063	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A10.js (tail -c +9283111 tests/ecmac.db|head -c 1326): [{"message":"value is not a function"}]
 10064	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A11.js (tail -c +9284438 tests/ecmac.db|head -c 1004): [{"message":"value is not a function"}]
 10065	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T1.js (tail -c +9285443 tests/ecmac.db|head -c 754)
-10066	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T10.js (tail -c +9286198 tests/ecmac.db|head -c 797): [{"message":"#1: var __obj = {toString:function(){return "Ab";}}; __obj.toLocaleUpperCase = String.prototype.toLocaleUpperCase; __obj.toLocaleUpperCase() ==="AB". Actual: {"TOLOCALEUPPERCASE":CFUNC_0X1027A5010,"TOSTRING":[FUNCTION()]}"}]
+10066	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T10.js (tail -c +9286198 tests/ecmac.db|head -c 797): [{"message":"#1: var __obj = {toString:function(){return "Ab";}}; __obj.toLocaleUpperCase = String.prototype.toLocaleUpperCase; __obj.toLocaleUpperCase() ==="AB". Actual: {"TOLOCALEUPPERCASE":CFUNC_XXXXXX,"TOSTRING":[FUNCTION()]}"}]
 10067	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T11.js (tail -c +9286996 tests/ecmac.db|head -c 803): [{"message":"#1.1: Exception === "intostr". Actual: {"message":"#1: "var x = __obj.toLocaleUpperCase()" lead to throwing exception"}"}]
 10068	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T12.js (tail -c +9287800 tests/ecmac.db|head -c 846)
 10069	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T13.js (tail -c +9288647 tests/ecmac.db|head -c 1319)
@@ -10320,7 +10320,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10261	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A1_T9.js (tail -c +9396053 tests/ecmac.db|head -c 721)
 10262	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A2.js (tail -c +9396775 tests/ecmac.db|head -c 1180)
 10263	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A3.js (tail -c +9397956 tests/ecmac.db|head -c 712)
-10264	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A4_T1.js (tail -c +9398669 tests/ecmac.db|head -c 833): [{"message":"#1: var x; __instance = {toString:function(){return "one"}}; __instance.concat = String.prototype.concat;  __instance.concat("two",x) === "onetwoundefined". Actual: {"concat":cfunc_0x1027a4b10,"toString":[function()]}twoundefined"}]
+10264	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A4_T1.js (tail -c +9398669 tests/ecmac.db|head -c 833): [{"message":"#1: var x; __instance = {toString:function(){return "one"}}; __instance.concat = String.prototype.concat;  __instance.concat("two",x) === "onetwoundefined". Actual: {"concat":cfunc_xxxxxx,"toString":[function()]}twoundefined"}]
 10265	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A4_T2.js (tail -c +9399503 tests/ecmac.db|head -c 943): [{"message":"#1: e === "intostring". Actual: {"message":"value is not a function"}"}]
 10266	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A6.js (tail -c +9400447 tests/ecmac.db|head -c 577)
 10267	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A7.js
