@@ -849,7 +849,7 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
     if (next == fvar) {
       next = 0;
     }
-    V7_CHECK(v7, next < 65535);
+    V7_CHECK(v7, next < 1024 * 128);
 
     fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
     ast_move_to_children(a, &fvar);

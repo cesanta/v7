@@ -8042,7 +8042,7 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
     if (next == fvar) {
       next = 0;
     }
-    V7_CHECK(v7, next < 65535);
+    V7_CHECK(v7, next < 1024 * 128);
 
     fvar_end = ast_get_skip(a, fvar, AST_END_SKIP);
     ast_move_to_children(a, &fvar);
@@ -12174,6 +12174,23 @@ Array.prototype.lastIndexOf = function(a, b) {
   return -1;
 };
 ));
+
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.reduce = function(a, b) {
+      var f = 0;
+      if (typeof(a) != 'function') {
+        throw new TypeError(a + ' is not a function');
+      }
+      for (var k in this) {
+        if (f == 0 && b === undefined) {
+          b = this[k];
+          f = 1;
+        } else {
+          b = a(b, this[k], k, this);
+        }
+      }
+      return b;
+    };));
 }
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
