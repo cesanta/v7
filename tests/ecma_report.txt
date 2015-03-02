@@ -10384,7 +10384,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 10324	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A8.js (tail -c +9451214 tests/ecmac.db|head -c 1490): [{"message":"value is not a function"}]
 10325	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A9.js (tail -c +9452705 tests/ecmac.db|head -c 1410): [{"message":"value is not a function"}]
 10326	FAIL  (tail -c +9454116 tests/ecmac.db|head -c 814): [{"message":"string expected"}]
-10327	FAIL  (tail -c +9454931 tests/ecmac.db|head -c 2076): [{"message":"String.prototype.localeCompare considers ö (111776776) ≠ ö (246246)."}]
+10327	FAIL  (tail -c +9454931 tests/ecmac.db|head -c 2076): [{"message":"String.prototype.localeCompare considers ö (đݶݶ) ≠ ö (ɆɆ)."}]
 10328	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A10.js (tail -c +9457008 tests/ecmac.db|head -c 1277): [{"message":"value is not a function"}]
 10329	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A11.js (tail -c +9458286 tests/ecmac.db|head -c 970): [{"message":"value is not a function"}]
 10330	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A1_T1.js (tail -c +9459257 tests/ecmac.db|head -c 926): [{"message":"#1: var str1 = new String("h"); var str2 = new String ("h"); str1.localeCompare(str2)===0. Actual: false"}]
