@@ -548,13 +548,13 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     if (obj == v7_get(v7, v7->global_object, "Boolean", 7) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->boolean_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "String", 7) &&
+    } else if (obj == v7_get(v7, v7->global_object, "String", 6) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->string_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
+    } else if (obj == v7_get(v7, v7->global_object, "Number", 6) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->number_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
+    } else if (obj == v7_get(v7, v7->global_object, "Date", 4) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->date_prototype;
     }
@@ -798,6 +798,26 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   return (offset & ~V7_TAG_MASK) | tag;
 }
 
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
+  char buf[100], *p;
+  val_t res;
+  if (v7_is_string(v)) {
+    return v;
+  }
+
+  p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
+  if (p[0] == '"') {
+    p[strlen(p) - 1] = '\0';
+    p++;
+  }
+  res = v7_create_string(v7, p, strlen(p), 1);
+  if (p != buf && p != buf + 1) {
+    free(p);
+  }
+
+  return res;
+}
+
 /*
  * Get a pointer to string and string length.
  *
@@ -884,7 +904,9 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
-  const char *p = v7_to_string(v7, &s, &n);
+  const char *p;
+  s = to_string(v7, s);
+  p = v7_to_string(v7, &s, &n);
   if (!v7_is_string(s)) return V7_UNDEFINED;
   if (start < 0) start = (long) n + start;
   if (start < 0) start = 0;
