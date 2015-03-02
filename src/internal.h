@@ -160,14 +160,14 @@ enum v7_type {
 
 struct v7 {
   val_t global_object;
+  val_t this_object;
+
   val_t object_prototype;
   val_t array_prototype;
   val_t boolean_prototype;
   val_t error_prototype;
   val_t string_prototype;
   val_t number_prototype;
-  val_t cfunction_prototype;
-  val_t this_object;
   val_t date_prototype;
   val_t function_prototype;
 
