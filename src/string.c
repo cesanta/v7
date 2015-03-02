@@ -183,7 +183,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_string(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->string_prototype))) {
+        is_prototype_of(v7, this_obj, v7->string_prototype))) {
     throw_exception(v7, "TypeError",
                     "String.toString called on non-string object");
   }

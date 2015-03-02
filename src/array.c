@@ -29,7 +29,7 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   long len = 0;
   (void) args;
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
   }
   return v7_create_number(len);
@@ -171,7 +171,7 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   sep = v7_to_string(v7, &arg0, &sep_size);
 
   /* Do the actual join */
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     struct mbuf m;
     char buf[100], *p;
     long i, n, num_elems = v7_array_length(v7, this_obj);

@@ -64,7 +64,7 @@ static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_double(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->number_prototype))) {
+        is_prototype_of(v7, this_obj, v7->number_prototype))) {
     throw_exception(v7, "TypeError",
                     "Number.toString called on non-number object");
   }

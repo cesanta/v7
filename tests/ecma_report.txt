@@ -2384,7 +2384,7 @@
 2380	FAIL ch11/11.8/11.8.6/S11.8.6_A5_T2.js (tail -c +2545356 tests/ecmac.db|head -c 921): [{"message":"#3: TypeError is subclass of Error from instanceof operator poit of view"}]
 2381	PASS ch11/11.8/11.8.6/S11.8.6_A6_T1.js (tail -c +2546278 tests/ecmac.db|head -c 660)
 2382	PASS ch11/11.8/11.8.6/S11.8.6_A6_T2.js (tail -c +2546939 tests/ecmac.db|head -c 481)
-2383	FAIL ch11/11.8/11.8.6/S11.8.6_A6_T3.js (tail -c +2547421 tests/ecmac.db|head -c 736): [{"message":"#2 function MyFunct(){return 0}; MyFunct instanceof Function === true"}]
+2383	PASS ch11/11.8/11.8.6/S11.8.6_A6_T3.js (tail -c +2547421 tests/ecmac.db|head -c 736)
 2384	PASS ch11/11.8/11.8.6/S11.8.6_A6_T4.js (tail -c +2548158 tests/ecmac.db|head -c 1319)
 2385	PASS ch11/11.8/11.8.6/S11.8.6_A7_T1.js (tail -c +2549478 tests/ecmac.db|head -c 613)
 2386	FAIL ch11/11.8/11.8.6/S11.8.6_A7_T2.js (tail -c +2550092 tests/ecmac.db|head -c 610): [{"message":"#2: If instanceof returns true then GetValue(RelationalExpression) was constructed with ShiftExpression"}]
@@ -4476,17 +4476,17 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4422	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-1.js (tail -c +4774594 tests/ecmac.db|head -c 402)
 4423	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-1.js (tail -c +4774997 tests/ecmac.db|head -c 363): [{"message":"Object.getPrototypeOf called on non-object"}]
 4424	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-10.js (tail -c +4775361 tests/ecmac.db|head -c 362): [{"message":"[RegExp] is not defined"}]
-4425	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-11.js (tail -c +4775724 tests/ecmac.db|head -c 360): [{"message":"Test case returned non-true value!"}]
+4425	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-11.js (tail -c +4775724 tests/ecmac.db|head -c 360)
 4426	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-12.js (tail -c +4776085 tests/ecmac.db|head -c 368): [{"message":"[EvalError] is not defined"}]
-4427	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-13.js (tail -c +4776454 tests/ecmac.db|head -c 370): [{"message":"Test case returned non-true value!"}]
-4428	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-14.js (tail -c +4776825 tests/ecmac.db|head -c 378): [{"message":"Test case returned non-true value!"}]
-4429	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-15.js (tail -c +4777204 tests/ecmac.db|head -c 372): [{"message":"Test case returned non-true value!"}]
-4430	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-16.js (tail -c +4777577 tests/ecmac.db|head -c 368): [{"message":"Test case returned non-true value!"}]
+4427	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-13.js (tail -c +4776454 tests/ecmac.db|head -c 370)
+4428	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-14.js (tail -c +4776825 tests/ecmac.db|head -c 378)
+4429	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-15.js (tail -c +4777204 tests/ecmac.db|head -c 372)
+4430	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-16.js (tail -c +4777577 tests/ecmac.db|head -c 368)
 4431	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-17.js (tail -c +4777946 tests/ecmac.db|head -c 366): [{"message":"[URIError] is not defined"}]
 4432	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-18.js (tail -c +4778313 tests/ecmac.db|head -c 356)
 4433	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-19.js (tail -c +4778670 tests/ecmac.db|head -c 376)
 4434	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-2.js (tail -c +4779047 tests/ecmac.db|head -c 609): [{"message":"Test case returned non-true value!"}]
-4435	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-20.js (tail -c +4779657 tests/ecmac.db|head -c 433): [{"message":"Test case returned non-true value!"}]
+4435	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-20.js (tail -c +4779657 tests/ecmac.db|head -c 433)
 4436	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-21.js (tail -c +4780091 tests/ecmac.db|head -c 382)
 4437	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-22.js (tail -c +4780474 tests/ecmac.db|head -c 391): [{"message":"Test case returned non-true value!"}]
 4438	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-23.js (tail -c +4780866 tests/ecmac.db|head -c 393)
@@ -4495,7 +4495,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4441	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-26.js (tail -c +4782030 tests/ecmac.db|head -c 386): [{"message":"[RegExp] is not defined"}]
 4442	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-27.js (tail -c +4782417 tests/ecmac.db|head -c 383)
 4443	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-28.js (tail -c +4782801 tests/ecmac.db|head -c 464): [{"message":"Test case returned non-true value!"}]
-4444	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-3.js (tail -c +4783266 tests/ecmac.db|head -c 361): [{"message":"Test case returned non-true value!"}]
+4444	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-3.js (tail -c +4783266 tests/ecmac.db|head -c 361)
 4445	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-30.js (tail -c +4783628 tests/ecmac.db|head -c 418): [{"message":"Test case returned non-true value!"}]
 4446	PASS ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-31.js (tail -c +4784047 tests/ecmac.db|head -c 310)
 4447	FAIL ch15/15.2/15.2.3/15.2.3.2/15.2.3.2-2-4.js (tail -c +4784358 tests/ecmac.db|head -c 365): [{"message":"Test case returned non-true value!"}]
@@ -7053,7 +7053,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 6999	PASS ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A7.js (tail -c +6785182 tests/ecmac.db|head -c 486)
 7000	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A8.js (tail -c +6785669 tests/ecmac.db|head -c 870): [{"message":"value is not a function"}]
 7001	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A9.js (tail -c +6786540 tests/ecmac.db|head -c 659): [{"message":"value is not a function"}]
-7002	FAIL ch15/15.3/S15.3.1_A1_T1.js (tail -c +6787200 tests/ecmac.db|head -c 761): [{"message":"#1: f instanceof Function"}]
+7002	PASS ch15/15.3/S15.3.1_A1_T1.js (tail -c +6787200 tests/ecmac.db|head -c 761)
 7003	PASS ch15/15.3/S15.3_A1.js (tail -c +6787962 tests/ecmac.db|head -c 319)
 7004	FAIL ch15/15.3/S15.3_A2_T1.js (tail -c +6788282 tests/ecmac.db|head -c 511): [{"message":"#1: function body must be valid"}]
 7005	FAIL ch15/15.3/S15.3_A2_T2.js (tail -c +6788794 tests/ecmac.db|head -c 511): [{"message":"#1: function body must be valid"}]
@@ -7075,11 +7075,11 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 7021	FAIL ch15/15.3/15.3.2/S15.3.2.1_A1_T6.js (tail -c +6804504 tests/ecmac.db|head -c 1292): [{"message":"#2: When the Function constructor is called with one argument then body be that argument and creates a new Function object as specified in 13.2"}]
 7022	FAIL ch15/15.3/15.3.2/S15.3.2.1_A1_T7.js (tail -c +6805797 tests/ecmac.db|head -c 1304): [{"message":"#2: When the Function constructor is called with one argument then body be that argument and creates a new Function object as specified in 13.2"}]
 7023	PASS ch15/15.3/15.3.2/S15.3.2.1_A1_T8.js (tail -c +6807102 tests/ecmac.db|head -c 1110)
-7024	FAIL ch15/15.3/15.3.2/S15.3.2.1_A1_T9.js (tail -c +6808213 tests/ecmac.db|head -c 1213): [{"message":"#3: When the Function constructor is called with one argument then body be that argument and the following steps are taken..."}]
-7025	FAIL ch15/15.3/15.3.2/S15.3.2.1_A2_T1.js (tail -c +6809427 tests/ecmac.db|head -c 776): [{"message":"#2: It is permissible but not necessary to have one argument for each formal parameter to be specified"}]
-7026	FAIL ch15/15.3/15.3.2/S15.3.2.1_A2_T2.js (tail -c +6810204 tests/ecmac.db|head -c 784): [{"message":"#2: It is permissible but not necessary to have one argument for each formal parameter to be specified"}]
-7027	FAIL ch15/15.3/15.3.2/S15.3.2.1_A2_T3.js (tail -c +6810989 tests/ecmac.db|head -c 779): [{"message":"#2: It is permissible but not necessary to have one argument for each formal parameter to be specified"}]
-7028	FAIL ch15/15.3/15.3.2/S15.3.2.1_A2_T4.js (tail -c +6811769 tests/ecmac.db|head -c 827): [{"message":"#2: It is permissible but not necessary to have one argument for each formal parameter to be specified"}]
+7024	PASS ch15/15.3/15.3.2/S15.3.2.1_A1_T9.js (tail -c +6808213 tests/ecmac.db|head -c 1213)
+7025	PASS ch15/15.3/15.3.2/S15.3.2.1_A2_T1.js (tail -c +6809427 tests/ecmac.db|head -c 776)
+7026	PASS ch15/15.3/15.3.2/S15.3.2.1_A2_T2.js (tail -c +6810204 tests/ecmac.db|head -c 784)
+7027	PASS ch15/15.3/15.3.2/S15.3.2.1_A2_T3.js (tail -c +6810989 tests/ecmac.db|head -c 779)
+7028	FAIL ch15/15.3/15.3.2/S15.3.2.1_A2_T4.js (tail -c +6811769 tests/ecmac.db|head -c 827): [{"message":"[arg1] is not defined"}]
 7029	FAIL ch15/15.3/15.3.2/S15.3.2.1_A2_T5.js (tail -c +6812597 tests/ecmac.db|head -c 839): [{"message":"#1: test failed"}]
 7030	FAIL ch15/15.3/15.3.2/S15.3.2.1_A2_T6.js (tail -c +6813437 tests/ecmac.db|head -c 846): [{"message":"#1: test failed"}]
 7031	FAIL ch15/15.3/15.3.2/S15.3.2.1_A3_T1.js (tail -c +6814284 tests/ecmac.db|head -c 1219): [{"message":"#1.1: i) Let Result(i) be the first argument; ii) Let P be ToString(Result(i))"}]

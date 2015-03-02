@@ -146,8 +146,8 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t,
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 
-V7_PRIVATE val_t v_get_prototype(val_t);
-V7_PRIVATE int is_prototype_of(val_t, val_t);
+V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
+V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))

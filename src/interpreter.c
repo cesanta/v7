@@ -794,7 +794,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         throw_exception(v7, "TypeError",
                         "Expecting a function in instanceof check");
       }
-      res = v7_create_boolean(is_prototype_of(v1,
+      res = v7_create_boolean(is_prototype_of(v7, v1,
                                               v7_get(v7, v2, "prototype", 9)));
       break;
     case AST_VOID:
