@@ -5437,7 +5437,11 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
     }
     case V7_TYPE_CFUNCTION:
+#ifdef V7_UNIT_TEST
+      return v_sprintf_s(buf, size, "cfunc_xxxxxx", v7_to_pointer(v));
+#else
       return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
+#endif
     case V7_TYPE_CFUNCTION_OBJECT:
       v = i_value_of(v7, v);
       return v_sprintf_s(buf, size, "Function cfunc_%p", v7_to_pointer(v));
