@@ -456,21 +456,6 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   return default_value;
 }
 
-V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
-  size_t n;
-  const char *end, *p = v7_to_string(v7, &s, &n);
-  n = utfnlen((char *)p, n);
-  if (!v7_is_string(s)) return V7_UNDEFINED;
-  if (start < 0) start = n + start;
-  if (start < 0) start = 0;
-  if (start > (long)n) start = n;
-  if (len < 0) len = 0;
-  if (len > (long)n - start) len = n - start;
-  p = utfnshift((char *)p, start);
-  end = utfnshift((char *)p, len);
-  return v7_create_string(v7, p, end - p, 1);
-}
-
 static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long len = arg_long(v7, args, 1, LONG_MAX);
