@@ -192,7 +192,7 @@ void v7_gc(struct v7 *v7) {
   gc_mark(v7, v7->error_prototype);
   gc_mark(v7, v7->string_prototype);
   gc_mark(v7, v7->number_prototype);
-  gc_mark(v7, v7->cfunction_prototype); /* possibly not reachable */
+  gc_mark(v7, v7->function_prototype); /* possibly not reachable */
   gc_mark(v7, v7->this_object);
 
   gc_mark(v7, v7->object_prototype);

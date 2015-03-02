@@ -31,7 +31,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
                  v7_to_object(v7->number_prototype)) {
         return V7_TYPE_NUMBER_OBJECT;
       } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->cfunction_prototype)) {
+                 v7_to_object(v7->function_prototype)) {
         return V7_TYPE_CFUNCTION_OBJECT;
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->date_prototype)) {
@@ -633,7 +633,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
 
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                                                v7_cfunction_t f, int num_args) {
-  val_t obj = create_object(v7, v7->cfunction_prototype);
+  val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
@@ -655,7 +655,7 @@ V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
                                   v7_cfunction_t f, int num_args) {
-  return v7_set_property(v7, o, name, strlen(name), 0,
+  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction_object(v7, f, num_args));
 }
 
