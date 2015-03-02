@@ -231,28 +231,28 @@ static void init_js_stdlib(struct v7 *v7) {
   val_t res;
 
   v7_exec(v7, &res, STRINGIFY(
-Array.prototype.indexOf = function(a, b) {
-  if (!b || b < 0) b = 0;
-  for (var i = b; i < this.length; i++) {
-    if (this[i] == a) {
-      return i;
-    }
-  }
-  return -1;
-};
-
-Array.prototype.lastIndexOf = function(a, b) {
-  if (!b || b < 0 || b >= this.length) b = this.length - 1;
-  for (var i = b; i >= 0; i--) {
-    if (this[i] == a) {
-      return i;
-    }
-  }
-  return -1;
-};
-));
+    Array.prototype.indexOf = function(a, b) {
+      if (!b || b < 0) b = 0;
+      for (var i = b; i < this.length; i++) {
+        if (this[i] === a) {
+          return i;
+        }
+      }
+      return -1;
+    };));
 
   v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.lastIndexOf = function(a, b) {
+      if (!b || b < 0 || b >= this.length) b = this.length - 1;
+      for (var i = b; i >= 0; i--) {
+        if (this[i] === a) {
+          return i;
+        }
+      }
+      return -1;
+    };));
+
+    v7_exec(v7, &res, STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
       if (typeof(a) != 'function') {
@@ -267,6 +267,12 @@ Array.prototype.lastIndexOf = function(a, b) {
         }
       }
       return b;
+    };));
+
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.pop = function(a, b) {
+      var i = this.length - 1;
+      return this.splice(i, 1)[0];
     };));
 }
 
