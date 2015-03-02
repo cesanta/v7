@@ -1062,6 +1062,8 @@ V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
+/* TODO(mkm): rename after regexp merge */
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
@@ -3958,8 +3960,6 @@ V7_PRIVATE void init_math(struct v7 *v7) {
  */
 
 
-static val_t to_string(struct v7 *, val_t);
-
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t res = v7_is_string(arg0) ? arg0 : (
@@ -3994,7 +3994,7 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t i = 0, n;
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
   val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
@@ -4027,24 +4027,8 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t to_string(struct v7 *v7, val_t v) {
-  char buf[100], *p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
-  val_t res;
-
-  if (p[0] == '"') {
-    p[strlen(p) - 1] = '\0';
-    p++;
-  }
-  res = v7_create_string(v7, p, strlen(p), 1);
-  if (p != buf && p != buf + 1) {
-    free(p);
-  }
-
-  return res;
-}
-
 static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = i_value_of(v7, this_obj);
+  val_t res = to_string(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
 
   for (i = 0; i < num_args; i++) {
@@ -4056,7 +4040,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = i_value_of(v7, v7_array_at(v7, args, 1));
   val_t sub, res = v7_create_number(-1);
@@ -4338,7 +4322,7 @@ V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
 
 static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
                          Rune (*func)(Rune)) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   size_t i, n, len;
   const char *p = v7_to_string(v7, &s, &len);
   val_t res = v7_create_string(v7, p, len, 1);
@@ -4369,7 +4353,7 @@ static int s_isspace(Rune c) {
 }
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
@@ -4439,7 +4423,7 @@ static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_array(v7);
-  val_t s = i_value_of(v7, this_obj);
+  val_t s = to_string(v7, this_obj);
   val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
   long num_elems = 0, limit = arg_long(v7, args, 1, LONG_MAX);
   size_t n1, n2, i, j;
@@ -5684,13 +5668,13 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     if (obj == v7_get(v7, v7->global_object, "Boolean", 7) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->boolean_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "String", 7) &&
+    } else if (obj == v7_get(v7, v7->global_object, "String", 6) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->string_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Number", 7) &&
+    } else if (obj == v7_get(v7, v7->global_object, "Number", 6) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->number_prototype;
-    } else if (obj == v7_get(v7, v7->global_object, "Date", 7) &&
+    } else if (obj == v7_get(v7, v7->global_object, "Date", 4) &&
         name_len == 9 && strncmp(name, "prototype", name_len) == 0) {
       return v7->date_prototype;
     }
@@ -5934,6 +5918,26 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   return (offset & ~V7_TAG_MASK) | tag;
 }
 
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
+  char buf[100], *p;
+  val_t res;
+  if (v7_is_string(v)) {
+    return v;
+  }
+
+  p = v7_to_json(v7, i_value_of(v7, v), buf, sizeof(buf));
+  if (p[0] == '"') {
+    p[strlen(p) - 1] = '\0';
+    p++;
+  }
+  res = v7_create_string(v7, p, strlen(p), 1);
+  if (p != buf && p != buf + 1) {
+    free(p);
+  }
+
+  return res;
+}
+
 /*
  * Get a pointer to string and string length.
  *
@@ -6020,7 +6024,9 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 
 V7_PRIVATE val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
-  const char *p = v7_to_string(v7, &s, &n);
+  const char *p;
+  s = to_string(v7, s);
+  p = v7_to_string(v7, &s, &n);
   if (!v7_is_string(s)) return V7_UNDEFINED;
   if (start < 0) start = (long) n + start;
   if (start < 0) start = 0;

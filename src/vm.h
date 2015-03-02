@@ -197,6 +197,8 @@ V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
+/* TODO(mkm): rename after regexp merge */
+V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
