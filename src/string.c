@@ -218,8 +218,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
     const char *const str_end = s + s_len;
     char *p = (char *)s;
     uint32_t out_sub_num = 0;
-    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0)), str_func =i_value_of(v7,  v7_array_at(v7, args, 1)),
-          arr = V7_NULL;
+    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0)), str_func = i_value_of(v7, v7_array_at(v7, args, 1));
     struct slre_prog *prog = NULL;
     struct slre_cap out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
     struct slre_loot loot;
@@ -241,9 +240,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
     }
 
-    if (v7_is_function(str_func))
-      arr = v7_create_array(v7);
-    else
+    if (!v7_is_function(str_func))
       str_func = to_string(v7, str_func);
 
     do {
@@ -256,9 +253,10 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
         out_sub_num++;
       }
 
-      if (arr != V7_NULL) { /* replace function */
+      if (v7_is_function(str_func)) { /* replace function */
         const char *rez_str;
         size_t rez_len;
+        val_t arr = v7_create_array(v7);
 
         for (i = 0; i < loot.num_captures; i++)
           v7_array_append(
