@@ -87,7 +87,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   val_t s = to_string(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
-  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t arg1 = i_value_of(v7, v7_array_at(v7, args, 1));
   val_t sub;
   size_t i, n1, n2, fromIndex = 0;
   double res = -1;
@@ -169,7 +169,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   if (v7_array_length(v7, args) > 0) {
     size_t s_len;
     struct slre_prog *prog = NULL;
-    val_t so, ro = v7_array_at(v7, args, 0);
+    val_t so, ro = i_value_of(v7, v7_array_at(v7, args, 0));
     const char *s, *end;
     int flag_g;
     if (!v7_is_regexp(ro)) {
@@ -218,7 +218,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
     const char *const str_end = s + s_len;
     char *p = (char *)s;
     uint32_t out_sub_num = 0;
-    val_t ro = v7_array_at(v7, args, 0), str_func = v7_array_at(v7, args, 1),
+    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0)), str_func =i_value_of(v7,  v7_array_at(v7, args, 1)),
           arr = V7_NULL;
     struct slre_prog *prog = NULL;
     struct slre_cap out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
@@ -319,7 +319,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
     size_t s_len;
     struct slre_prog *prog = NULL;
     struct slre_loot sub;
-    val_t so, ro = v7_array_at(v7, args, 0);
+    val_t so, ro = i_value_of(v7, v7_array_at(v7, args, 0));
     const char *s;
     if (!v7_is_regexp(ro)) {
       so = to_string(v7, ro);
@@ -481,7 +481,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   if (num_args == 0 || s_len == 0) {
     v7_array_append(v7, res, v7_create_string(v7, s, s_len, 1));
   } else {
-    val_t ro = v7_array_at(v7, args, 0);
+    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0));
     long len, elem = 0, limit = arg_long(v7, args, 1, LONG_MAX);
     size_t shift = 0;
     struct slre_loot loot;
