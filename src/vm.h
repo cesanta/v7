@@ -22,10 +22,11 @@ typedef uint64_t val_t;
 #define V7_TAG_STRING_5  ((uint64_t) 0xFFF9 << 48)  /* Inlined string len 5 */
 #define V7_TAG_STRING_O  ((uint64_t) 0xFFF8 << 48)  /* Owned string */
 #define V7_TAG_STRING_F  ((uint64_t) 0xFFF7 << 48)  /* Foreign string */
-#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF6 << 48)  /* JavaScript function */
-#define V7_TAG_CFUNCTION ((uint64_t) 0xFFF5 << 48)  /* C function */
-#define V7_TAG_GETSETTER ((uint64_t) 0xFFF4 << 48)  /* getter+setter */
-#define V7_TAG_REGEXP    ((uint64_t) 0xFFF3 << 48)  /* Regex */
+#define V7_TAG_STRING_C  ((uint64_t) 0xFFF6 << 48)  /* String chunk */
+#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF5 << 48)  /* JavaScript function */
+#define V7_TAG_CFUNCTION ((uint64_t) 0xFFF4 << 48)  /* C function */
+#define V7_TAG_GETSETTER ((uint64_t) 0xFFF3 << 48)  /* getter+setter */
+#define V7_TAG_REGEXP    ((uint64_t) 0xFFF2 << 48)  /* Regex */
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
