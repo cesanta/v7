@@ -4654,7 +4654,7 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 4600	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-177.js (tail -c +4865806 tests/ecmac.db|head -c 520)
 4601	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-178.js (tail -c +4866327 tests/ecmac.db|head -c 686)
 4602	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-179.js (tail -c +4867014 tests/ecmac.db|head -c 697): [{"message":"Test case returned non-true value!"}]
-4603	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-18.js (tail -c +4867712 tests/ecmac.db|head -c 552): [{"message":"Test case returned non-true value!"}]
+4603	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-18.js (tail -c +4867712 tests/ecmac.db|head -c 552)
 4604	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-180.js (tail -c +4868265 tests/ecmac.db|head -c 699): [{"message":"cannot read property 'writable' of undefined"}]
 4605	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-182.js (tail -c +4868965 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
 4606	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-183.js (tail -c +4869573 tests/ecmac.db|head -c 471)

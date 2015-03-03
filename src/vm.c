@@ -178,7 +178,6 @@ V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
 }
 
 V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
-  /* TODO(mkm): use GC heap */
   struct v7_object *o = new_object(v7);
   if (o == NULL) {
     return V7_NULL;
@@ -364,7 +363,6 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         b += v_sprintf_s(b, size - (b - buf), "[");
       }
       for (i = 0; i < len; i++) {
-        /* TODO */
         v_sprintf_s(key, sizeof(key), "%lu", i);
         if ((p = v7_get_property(v7, v, key, -1)) != NULL) {
           b += to_str(v7, p->value, b, size - (b - buf), 1);

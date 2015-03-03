@@ -1054,7 +1054,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   tmp_stack_push(&tf, &res);
 
   switch (tag) {
-    case AST_SCRIPT: /* TODO(mkm): push up */
+    case AST_SCRIPT:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
       ast_move_to_children(a, pos);
@@ -1423,7 +1423,6 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       siglongjmp(v7->jmp_buf, CONTINUE_JMP);
       break; /* unreachable */
     case AST_THROW:
-      /* TODO(mkm): store exception value */
       v7->thrown_error = i_eval_expr(v7, a, pos, scope);
       siglongjmp(v7->jmp_buf, THROW_JMP);
       break; /* unreachable */

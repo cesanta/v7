@@ -1364,8 +1364,7 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "(function(){i=0;do{if(i==5)return i}while(++i)})()") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
 
-  /* TODO(mkm): check for reference error being thrown */
-  /* ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y})(40,2,(function(){return fail})())") == V7_OK); */
+  ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y})(40,2,(function(){return fail})())") == V7_EXEC_EXCEPTION);
 
   ASSERT(v7_exec(v7, &v, "x=42; (function(){return x})()") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
@@ -1777,12 +1776,8 @@ static const char *test_gc_sweep(void) {
   v7_destroy(v7);
 
   v7 = v7_create();
-  v7->property_arena.verbose = 1;
-  v7->object_arena.verbose = 1;
   v7_gc(v7);
-  fprintf(stderr, "-- Running code which exhausts object pool while evaluating \n");
   v7_exec(v7, &v, "for(i=0;i<9;i++)({});for(i=0;i<7;i++){x=(new Number(1))+({} && 1)};x");
-  fprintf(stderr, "-- Done\n");
   ASSERT(check_value(v7, v, "2"));
   v7_gc(v7);
 
