@@ -235,7 +235,18 @@ static int re_nextc(Rune *r, const char **src, const char *src_end) {
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
   if (*r == '\\') {
-    *r = nextesc(src);
+    const char *tmp_s = *src;
+    int i = nextesc(src);
+    switch(i){
+      case -SLRE_INVALID_ESC_CHAR:
+        *r = '\\';
+        *src = tmp_s;
+        *src += chartorune(r, *src);
+        break;
+      case -SLRE_INVALID_HEX_DIGIT:
+      default:
+        *r = i;
+    }
     return 1;
   }
   return 0;
@@ -1294,8 +1305,9 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
 
         case I_SET:
         case I_SET_N:
+          if (current >= end) RE_NO_MATCH();
           current += chartorune(&c, current);
-          if (!c || current >= end) RE_NO_MATCH();
+          if (!c) RE_NO_MATCH();
 
           i = 1;
           for (p = pc->par.cp->spans; i && p < pc->par.cp->end; p++)

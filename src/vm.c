@@ -746,7 +746,21 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
           s++, r = '\n';
           break;
         default:
-          r = nextesc(&s);
+        {
+          const char *tmp_s = s;
+          int i = nextesc(&s);
+          switch(i){
+            case -SLRE_INVALID_ESC_CHAR:
+              r = '\\';
+              s = tmp_s;
+              n += runetochar(to == NULL ? tmp : to + n, &r);
+              s += chartorune(&r, s);
+              break;
+            case -SLRE_INVALID_HEX_DIGIT:
+            default:
+              r = i;
+          }
+        }
       }
     }
     n += runetochar(to == NULL ? tmp : to + n, &r);
