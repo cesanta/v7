@@ -298,7 +298,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (isinf(num)) {
         return v_sprintf_s(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
       }
-      return v_sprintf_s(buf, size, "%lg", num);
+      return v_sprintf_s(buf, size, "%g", num);
     case V7_TYPE_STRING: {
       size_t n;
       const char *str = v7_to_string(v7, &v, &n);
