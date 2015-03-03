@@ -767,14 +767,14 @@ enum v7_type {
 
 struct v7 {
   val_t global_object;
+  val_t this_object;
+
   val_t object_prototype;
   val_t array_prototype;
   val_t boolean_prototype;
   val_t error_prototype;
   val_t string_prototype;
   val_t number_prototype;
-  val_t cfunction_prototype;
-  val_t this_object;
   val_t date_prototype;
   val_t function_prototype;
 
@@ -5153,7 +5153,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
                  v7_to_object(v7->number_prototype)) {
         return V7_TYPE_NUMBER_OBJECT;
       } else if (v7_to_object(v)->prototype ==
-                 v7_to_object(v7->cfunction_prototype)) {
+                 v7_to_object(v7->function_prototype)) {
         return V7_TYPE_CFUNCTION_OBJECT;
       } else if (v7_to_object(v)->prototype ==
                  v7_to_object(v7->date_prototype)) {
@@ -5752,7 +5752,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
 
 V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
                                                v7_cfunction_t f, int num_args) {
-  val_t obj = create_object(v7, v7->cfunction_prototype);
+  val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
@@ -5774,7 +5774,7 @@ V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
                                   v7_cfunction_t f, int num_args) {
-  return v7_set_property(v7, o, name, strlen(name), 0,
+  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction_object(v7, f, num_args));
 }
 
@@ -6292,7 +6292,7 @@ void v7_gc(struct v7 *v7) {
   gc_mark(v7, v7->error_prototype);
   gc_mark(v7, v7->string_prototype);
   gc_mark(v7, v7->number_prototype);
-  gc_mark(v7, v7->cfunction_prototype); /* possibly not reachable */
+  gc_mark(v7, v7->function_prototype); /* possibly not reachable */
   gc_mark(v7, v7->this_object);
 
   gc_mark(v7, v7->object_prototype);
@@ -11921,10 +11921,18 @@ static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(argn);
 }
 
+static val_t Function_apply(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t f = i_value_of(v7, this_obj);
+  val_t this_arg = v7_array_at(v7, args, 0);
+  val_t func_args = v7_array_at(v7, args, 1);
+  return v7_apply(v7, f, this_arg, func_args);
+}
+
 V7_PRIVATE void init_function(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Function_ctor, 1);
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
+  set_cfunc_obj_prop(v7, v7->function_prototype, "apply", Function_apply, 1);
   v7_set_property(v7, v7->function_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Function_length));
 }
@@ -12181,7 +12189,7 @@ static void init_js_stdlib(struct v7 *v7) {
       return -1;
     };));
 
-    v7_exec(v7, &res, STRINGIFY(
+  v7_exec(v7, &res, STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
       if (typeof(a) != 'function') {
@@ -12220,7 +12228,6 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->boolean_prototype = v7_create_object(v7);
   v7->string_prototype = v7_create_object(v7);
   v7->number_prototype = v7_create_object(v7);
-  v7->cfunction_prototype = v7_create_object(v7);
   v7->global_object = v7_create_object(v7);
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);

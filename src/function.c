@@ -69,10 +69,18 @@ static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(argn);
 }
 
+static val_t Function_apply(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t f = i_value_of(v7, this_obj);
+  val_t this_arg = v7_array_at(v7, args, 0);
+  val_t func_args = v7_array_at(v7, args, 1);
+  return v7_apply(v7, f, this_arg, func_args);
+}
+
 V7_PRIVATE void init_function(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Function_ctor, 1);
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
+  set_cfunc_obj_prop(v7, v7->function_prototype, "apply", Function_apply, 1);
   v7_set_property(v7, v7->function_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Function_length));
 }

@@ -252,7 +252,7 @@ static void init_js_stdlib(struct v7 *v7) {
       return -1;
     };));
 
-    v7_exec(v7, &res, STRINGIFY(
+  v7_exec(v7, &res, STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
       if (typeof(a) != 'function') {
@@ -292,7 +292,6 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->string_prototype = v7_create_object(v7);
   v7->regexp_prototype = v7_create_object(v7);
   v7->number_prototype = v7_create_object(v7);
-  v7->cfunction_prototype = v7_create_object(v7);
   v7->global_object = v7_create_object(v7);
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);
