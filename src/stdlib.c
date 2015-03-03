@@ -5,7 +5,6 @@
 
 #include "internal.h"
 
-/* TODO(lsm): remove this when init_stdlib() is upgraded */
 V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);

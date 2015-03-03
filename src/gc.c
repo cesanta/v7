@@ -25,11 +25,6 @@ V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
   return frame;
 }
 
-/*
- * TODO(mkm): make this work without GCC/CLANG extensions.
- * It's not hard to do it, but it requires to a big diff in the
- * interpreter which I'd like to postpone.
- */
 V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
   tf->v7->tmp_stack.len = tf->pos;
 }

@@ -387,7 +387,6 @@ V7_PRIVATE size_t mbuf_append(struct mbuf *, const char *, size_t);
 extern "C" {
 #endif  /* __cplusplus */
 
-/* TODO(mkm): reorder */
 enum ast_tag {
   AST_NOP,
   AST_SCRIPT,
@@ -510,9 +509,9 @@ struct ast {
 typedef unsigned long ast_off_t;
 
 struct ast_node_def {
-  const char *name;      /* tag name, for debugging and serialization */
+  const char *name;            /* tag name, for debugging and serialization */
   unsigned char has_varint;    /* has a varint body */
-  unsigned char has_inlined;   /* inlined data whose size is in the varint field */
+  unsigned char has_inlined;   /* inlined data whose size is in varint field */
   unsigned char num_skips;     /* number of skips */
   unsigned char num_subtrees;  /* number of fixed subtrees */
 };
@@ -3844,7 +3843,8 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
-  val_t ctor = v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor, 1);
+  val_t ctor = v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor,
+                                        1);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
@@ -4494,7 +4494,8 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
+  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor,
+                                       1);
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
                   str);
 
@@ -5322,7 +5323,6 @@ V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
 }
 
 V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
-  /* TODO(mkm): use GC heap */
   struct v7_object *o = new_object(v7);
   if (o == NULL) {
     return V7_NULL;
@@ -5513,7 +5513,6 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         b += v_sprintf_s(b, size - (b - buf), "[");
       }
       for (i = 0; i < len; i++) {
-        /* TODO */
         v_sprintf_s(key, sizeof(key), "%lu", i);
         if ((p = v7_get_property(v7, v, key, -1)) != NULL) {
           b += to_str(v7, p->value, b, size - (b - buf), 1);
@@ -6174,11 +6173,6 @@ V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
   return frame;
 }
 
-/*
- * TODO(mkm): make this work without GCC/CLANG extensions.
- * It's not hard to do it, but it requires to a big diff in the
- * interpreter which I'd like to postpone.
- */
 V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
   tf->v7->tmp_stack.len = tf->pos;
 }
@@ -7102,8 +7096,6 @@ static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
       PARSE(expression);
       break;
   }
-
-  /* TODO(mkm): labels */
 
   TRY(end_of_statement(v7));
   ACCEPT(TOK_SEMICOLON);  /* swallow optional semicolon */
@@ -8286,7 +8278,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   tmp_stack_push(&tf, &res);
 
   switch (tag) {
-    case AST_SCRIPT: /* TODO(mkm): push up */
+    case AST_SCRIPT:
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       fvar = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
       ast_move_to_children(a, pos);
@@ -8655,7 +8647,6 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       siglongjmp(v7->jmp_buf, CONTINUE_JMP);
       break; /* unreachable */
     case AST_THROW:
-      /* TODO(mkm): store exception value */
       v7->thrown_error = i_eval_expr(v7, a, pos, scope);
       siglongjmp(v7->jmp_buf, THROW_JMP);
       break; /* unreachable */
@@ -10802,8 +10793,10 @@ static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_number(struct v7 *v7) {
   unsigned int attrs = V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
                        V7_PROPERTY_DONT_DELETE;
-  val_t num = v7_create_cfunction_ctor(v7, v7->number_prototype, Number_ctor, 1);
-  v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM, num);
+  val_t num = v7_create_cfunction_ctor(v7, v7->number_prototype, Number_ctor,
+                                       1);
+  v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM,
+                  num);
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
@@ -12015,7 +12008,6 @@ V7_PRIVATE void init_function(struct v7 *v7) {
  */
 
 
-/* TODO(lsm): remove this when init_stdlib() is upgraded */
 V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
