@@ -125,6 +125,9 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   char name_buf[512];
   int name_len;
   (void) this_obj;
+  if (!v7_is_object(obj)) {
+    throw_exception(v7, "TypeError", "object expected");
+  }
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
@@ -228,7 +231,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);
-  set_cfunc_prop(v7, object, "defineProperty", Obj_defineProperty);
+  set_cfunc_obj_prop(v7, object, "defineProperty", Obj_defineProperty, 3);
   set_cfunc_prop(v7, object, "defineProperties", Obj_defineProperties);
   set_cfunc_prop(v7, object, "create", Obj_create);
   set_cfunc_prop(v7, object, "keys", Obj_keys);
