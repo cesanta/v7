@@ -740,8 +740,6 @@ static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
       break;
   }
 
-  /* TODO(mkm): labels */
-
   TRY(end_of_statement(v7));
   ACCEPT(TOK_SEMICOLON);  /* swallow optional semicolon */
   return V7_OK;

@@ -513,7 +513,8 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
+  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor,
+                                       1);
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
                   str);
 

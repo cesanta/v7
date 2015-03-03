@@ -53,7 +53,8 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_boolean(struct v7 *v7) {
-  val_t ctor = v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor, 1);
+  val_t ctor = v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor,
+                                        1);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
 
   set_cfunc_prop(v7, v7->boolean_prototype, "valueOf", Boolean_valueOf);
