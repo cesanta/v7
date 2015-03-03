@@ -1037,7 +1037,8 @@ static const char *test_ecmac(void) {
     if ((child = fork()) == 0) {
 #endif
       if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
-          i == 1255 || i == 2649 || i == 2068
+          i == 1255 || i == 2649 || i == 2068 ||
+          i == 7445 || i == 7446 || i == 3400     /* slow Number */
 #ifndef ECMA_SLOW
           || i == 3348 || i == 3349 || i == 3401
 #endif

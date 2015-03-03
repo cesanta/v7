@@ -774,6 +774,7 @@ struct v7 {
   val_t boolean_prototype;
   val_t error_prototype;
   val_t string_prototype;
+  val_t regexp_prototype;
   val_t number_prototype;
   val_t date_prototype;
   val_t function_prototype;
@@ -973,8 +974,8 @@ struct v7_function {
 
 struct v7_regexp {
   val_t regexp_string;
-  val_t flags_string;
   struct slre_prog *compiled_regexp;
+  long lastIndex;
 };
 
 #if defined(__cplusplus)
@@ -999,6 +1000,7 @@ V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
 V7_PRIVATE void init_math(struct v7 *v7);
 V7_PRIVATE void init_string(struct v7 *v7);
+V7_PRIVATE void init_regex(struct v7 *v7);
 V7_PRIVATE void init_number(struct v7 *v7);
 V7_PRIVATE void init_json(struct v7 *v7);
 V7_PRIVATE void init_date(struct v7 *v7);
@@ -1014,8 +1016,8 @@ V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t,
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
 
-V7_PRIVATE val_t v_get_prototype(val_t);
-V7_PRIVATE int is_prototype_of(val_t, val_t);
+V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
+V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
@@ -1151,7 +1153,13 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
 
 #ifdef __cplusplus
 extern "C" {
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
+
+/* Regex flags */
+#define SLRE_FLAG_G 1  /* Global - match in the whole string */
+#define SLRE_FLAG_I 2  /* Ignore case */
+#define SLRE_FLAG_M 4  /* Multiline */
+#define SLRE_FLAG_RE 8 /* flag RegExp/String */
 
 /* Describes single capture */
 struct slre_cap {
@@ -1192,20 +1200,22 @@ enum slre_error {
 };
 
 int slre_compile(const char *regexp, size_t regexp_len, const char *flags,
-                 size_t flags_len, struct slre_prog **);
-int slre_exec(struct slre_prog *, const char *, size_t, struct slre_loot *);
+                 size_t flags_len, struct slre_prog **, int is_regex);
+int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
+              const char *end, struct slre_loot *loot);
 void slre_free(struct slre_prog *prog);
 
 int slre_match(const char *, size_t, const char *, size_t, const char *, size_t,
                struct slre_loot *);
-int slre_replace(struct slre_loot *loot, const char *src, const char *replace,
-                 struct slre_loot *dst);
+int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
+                 const char *replace, size_t rep_len, struct slre_loot *dst);
+int slre_get_flags(struct slre_prog *);
 
 #ifdef __cplusplus
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#endif  /* SLRE_HEADER_INCLUDED */
+#endif /* SLRE_HEADER_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -3425,7 +3435,7 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   long len = 0;
   (void) args;
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
   }
   return v7_create_number(len);
@@ -3567,7 +3577,7 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   sep = v7_to_string(v7, &arg0, &sep_size);
 
   /* Do the actual join */
-  if (is_prototype_of(this_obj, v7->array_prototype)) {
+  if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     struct mbuf m;
     char buf[100], *p;
     long i, n, num_elems = v7_array_length(v7, this_obj);
@@ -3824,7 +3834,7 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_boolean(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->boolean_prototype))) {
+        is_prototype_of(v7, this_obj, v7->boolean_prototype))) {
     throw_exception(v7, "TypeError",
                     "Boolean.toString called on non-boolean object");
   }
@@ -3962,11 +3972,13 @@ V7_PRIVATE void init_math(struct v7 *v7) {
  */
 
 
+V7_PRIVATE val_t to_string(struct v7 *, val_t);
+
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_at(v7, args, 0);
-  val_t res = v7_is_string(arg0) ? arg0 : (
-      v7_is_undefined(arg0) ? v7_create_string(v7, "", 0, 1) :
-      to_string(v7, arg0));
+  val_t res = v7_is_string(arg0) ? arg0 : (v7_is_undefined(arg0)
+                                               ? v7_create_string(v7, "", 0, 1)
+                                               : to_string(v7, arg0));
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
@@ -3979,13 +3991,13 @@ static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   int i, num_args = v7_array_length(v7, args);
-  val_t res = v7_create_string(v7, "", 0, 1);   /* Empty string */
+  val_t res = v7_create_string(v7, "", 0, 1); /* Empty string */
 
-  (void) this_obj;
+  (void)this_obj;
   for (i = 0; i < num_args; i++) {
     char buf[10];
     val_t arg = v7_array_at(v7, args, i);
-    Rune r = (Rune) v7_to_double(arg);
+    Rune r = (Rune)v7_to_double(arg);
     int n = runetochar(buf, &r);
     val_t s = v7_create_string(v7, buf, n, 1);
     res = s_concat(v7, res, s);
@@ -3994,39 +4006,37 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
-  size_t i = 0, n;
+static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+  size_t n;
   val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
-  val_t res = v7_create_number(NAN), arg = v7_array_at(v7, args, 0);
+  val_t arg = v7_array_at(v7, args, 0);
   double at = v7_to_double(arg);
 
-  if (v7_is_double(arg) && at >= 0 && at < n && v7_is_string(s)) {
+  n = utfnlen((char *)p, n);
+  if (v7_is_double(arg) && at >= 0 && at < n) {
     Rune r = 0;
-    while (i <= n && i <= (size_t) at) {
-      i += chartorune(&r, (char *) (p + i));
-    }
-    if (i <= n) {
-      res = v7_create_number(r);
-    }
+    p = utfnshift((char *)p, at);
+    chartorune(&r, (char *)p);
+    return r;
   }
-  return res;
+  return NAN;
+}
+
+static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+  return v7_create_number(s_charCodeAt(v7, this_obj, args));
 }
 
 static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t code = Str_charCodeAt(v7, this_obj, args);
-  val_t res;
+  double code = s_charCodeAt(v7, this_obj, args);
+  char buf[10] = {0};
+  int len = 0;
 
-  if (code != V7_TAG_NAN) {
-    char buf[10];
-    Rune r = (Rune) v7_to_double(code);
-    int len = runetochar(buf, &r);
-    res = v7_create_string(v7, buf, len, 1);
-  } else {
-    res = v7_create_string(v7, "", 0, 1);
+  if (code != NAN) {
+    Rune r = (Rune)code;
+    len = runetochar(buf, &r);
   }
-
-  return res;
+  return v7_create_string(v7, buf, len, 1);
 }
 
 static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
@@ -4045,46 +4055,43 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   val_t s = to_string(v7, this_obj);
   val_t arg0 = v7_array_at(v7, args, 0);
   val_t arg1 = i_value_of(v7, v7_array_at(v7, args, 1));
-  val_t sub, res = v7_create_number(-1);
-  size_t i, n1, n2, fromIndex;
-  const char *p1, *p2;
+  val_t sub;
+  size_t i, n1, n2, fromIndex = 0;
+  double res = -1;
+  const char *p1, *p2, *end;
 
-  if (v7_is_undefined(arg0)) return res;
+  if (arg0 != V7_UNDEFINED) {
+    sub = to_string(v7, arg0);
+    p1 = v7_to_string(v7, &s, &n1);
+    p2 = v7_to_string(v7, &sub, &n2);
 
-  if (v7_is_double(arg1)) {
-    double d = v7_to_double(arg1);
-    if (isinf(d) && d > 0) {
-      return v7_create_number(-1);
+    if (v7_array_length(v7, args) > 1) fromIndex = v7_to_double(arg1);
+    end = p1 + n1;
+    if (fromIndex > 0) {
+      if (last)
+        end = utfnshift((char *)p1, fromIndex + 1);
+      else
+        p1 = utfnshift((char *)p1, fromIndex);
     }
-    fromIndex = isnan(d) || isinf(d) ? 0 : d;
-  } else {
-    fromIndex = 0;
-  }
-
-  sub = to_string(v7, arg0);
-  p1 = v7_to_string(v7, &s, &n1);
-  p2 = v7_to_string(v7, &sub, &n2);
-
-  if (n2 > n1) return res;
-
-  if (last) {
-    for (i = n1 - n2; i >= fromIndex; i--) {
-      if (memcmp(p1 + i, p2, n2) == 0) return v7_create_number(i);
-    }
-  } else {
-    for (i = fromIndex; i <= n1 - n2; i++) {
-      if (memcmp(p1 + i, p2, n2) == 0) return v7_create_number(i);
+    if (0 == n2 || end - p1 == 0)
+      res = 0;
+    else {
+      for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *)p1, 1))
+        if (memcmp(p1, p2, n2) == 0) {
+          res = i;
+          if (!last) break;
+        }
     }
   }
-
-  return res;
+  if (!last && res >= 0) res += fromIndex;
+  return v7_create_number(res);
 }
 
 static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_string(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
-       v7->string_prototype)) {
+           v7->string_prototype)) {
     throw_exception(v7, "TypeError",
                     "String.valueOf called on non-string object");
   }
@@ -4100,21 +4107,14 @@ static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
-  val_t s = i_value_of(v7, this_obj);
-  val_t res = v7_create_undefined();
+  val_t arg0 = to_string(v7, v7_array_at(v7, args, 0));
+  val_t s = to_string(v7, this_obj);
 
-  if (!v7_is_string(arg0) || !v7_is_string(s)) {
-    throw_exception(v7, "TypeError", "%s", "string expected");
-  } else {
-    res = v7_create_boolean(s_cmp(v7, s, arg0));
-  }
-
-  return res;
+  return v7_create_number(s_cmp(v7, s, arg0));
 }
 
 static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
-  (void) args;
+  (void)args;
 
   if (this_obj == v7->string_prototype) {
     return v7_create_string(v7, "false", 5, 1);
@@ -4122,7 +4122,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (!v7_is_string(this_obj) &&
       !(v7_is_object(this_obj) &&
-        is_prototype_of(this_obj, v7->string_prototype))) {
+        is_prototype_of(v7, this_obj, v7->string_prototype))) {
     throw_exception(v7, "TypeError",
                     "String.toString called on non-string object");
   }
@@ -4130,197 +4130,214 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return to_string(v7, i_value_of(v7, this_obj));
 }
 
-#if 0
-V7_PRIVATE enum v7_err Str_match(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0];
-  struct slre_loot sub;
-  struct v7_val *arr = NULL;
-  unsigned long shift = 0;
+static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arr = V7_NULL;
 
-  if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-    TRY(check_str_re_conv(v7, &arg, 1));
-    TRY(regex_check_prog(arg));
-    do {
-      if (!slre_exec(arg->v.str.prog, arg->fl.fl.re_flags,
-          cfa->this_obj->v.str.buf + shift, &sub)) {
-        struct slre_cap *ptok = sub.caps;
-        int i;
-        if (NULL == arr) {
-          arr = v7_push_new_object(v7);
-          v7_set_class(arr, V7_CLASS_ARRAY);
-        }
-        shift = ptok->end - cfa->this_obj->v.str.buf;
-        for (i = 0; i < sub.num_captures; i++, ptok++)
-          v7_append(v7, arr, v7_mkv(v7, V7_TYPE_STR, ptok->start,
-                                  ptok->end - ptok->start, 1));
+  if (v7_array_length(v7, args) > 0) {
+    size_t s_len;
+    struct slre_prog *prog = NULL;
+    val_t so, ro = i_value_of(v7, v7_array_at(v7, args, 0));
+    const char *s, *end;
+    int flag_g;
+    if (!v7_is_regexp(ro)) {
+      so = to_string(v7, ro);
+      s = v7_to_string(v7, &so, &s_len);
+      if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
+          prog == NULL) {
+        throw_exception(v7, "Error", "Invalid String");
+        return V7_UNDEFINED;
       }
-    } while ((arg->fl.fl.re_flags & SLRE_FLAG_G) &&
-             shift < cfa->this_obj->v.str.len);
+    } else {
+      struct v7_regexp *rp = v7_to_pointer(ro);
+      prog = rp->compiled_regexp;
+    }
+    flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
+    so = to_string(v7, this_obj);
+    s = v7_to_string(v7, &so, &s_len);
+    end = s + s_len;
+
+    do {
+      struct slre_loot sub;
+      struct slre_cap *ptok = sub.caps;
+      int i;
+      if (slre_exec(prog, 0, s, end, &sub)) break;
+      if (arr == V7_NULL) arr = v7_create_array(v7);
+      s = ptok->end;
+      i = 0;
+      do {
+        v7_array_append(v7, arr, v7_create_string(v7, ptok->start,
+                                                  ptok->end - ptok->start, 1));
+        ptok++;
+      } while (!flag_g && ++i < sub.num_captures);
+    } while (flag_g && s < end);
   }
-  if (arr == NULL) TRY(v7_make_and_push(v7, V7_TYPE_NULL));
-  return V7_OK;
-#undef v7
+  return arr;
 }
 
-V7_PRIVATE enum v7_err Str_replace(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *result = v7_push_new_object(v7);
-  const char *out_str;
-  uint8_t own = 1;
-  size_t out_len;
-  int old_sp = v7->sp;
+static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
+  const char *s;
+  size_t s_len;
+  val_t out_str_o;
+  this_obj = to_string(v7, this_obj);
+  s = v7_to_string(v7, &this_obj, &s_len);
 
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  out_str = cfa->this_obj->v.str.buf;
-  out_len = cfa->this_obj->v.str.len;
-  if (cfa->num_args > 1) {
-    const char *const str_end =
-        cfa->this_obj->v.str.buf + cfa->this_obj->v.str.len;
-    char *p = cfa->this_obj->v.str.buf;
+  if (v7_array_length(v7, args) > 1) {
+    const char *const str_end = s + s_len;
+    char *p = (char *)s;
     uint32_t out_sub_num = 0;
-    struct v7_val *re = cfa->args[0], *str_func = cfa->args[1], *arr = NULL;
+    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0)), str_func = i_value_of(v7, v7_array_at(v7, args, 1));
+    struct slre_prog *prog = NULL;
     struct slre_cap out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
     struct slre_loot loot;
-    TRY(check_str_re_conv(v7, &re, 1));
-    TRY(regex_check_prog(re));
-    if (v7_is_class(str_func, V7_CLASS_FUNCTION)) {
-      arr = v7_push_new_object(v7);
-      v7_set_class(arr, V7_CLASS_ARRAY);
-      TRY(v7_push(v7, str_func));
-    } else
-      TRY(check_str_re_conv(v7, &str_func, 0));
+    int flag_g = 0;
 
-    out_len = 0;
+    if (!v7_is_regexp(ro)) {
+      const char *str;
+      size_t str_len;
+      ro = to_string(v7, ro);
+      str = v7_to_string(v7, &ro, &str_len);
+      if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
+          prog == NULL) {
+        throw_exception(v7, "Error", "Invalid String");
+        return V7_UNDEFINED;
+      }
+    } else {
+      struct v7_regexp *rp = v7_to_pointer(ro);
+      prog = rp->compiled_regexp;
+      flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
+    }
+
+    if (!v7_is_function(str_func))
+      str_func = to_string(v7, str_func);
+
     do {
       int i;
-      if (slre_exec(re->v.str.prog, re->fl.fl.re_flags, p, &loot)) break;
+      if (slre_exec(prog, 0, p, str_end, &loot)) break;
       if (p != loot.caps->start) {
         ptok->start = p;
         ptok->end = loot.caps->start;
         ptok++;
-        out_len += loot.caps->start - p;
         out_sub_num++;
       }
 
-      if (NULL != arr) { /* replace function */
-        int old_sp = v7->sp;
-        struct v7_val *rez_str;
+      if (v7_is_function(str_func)) { /* replace function */
+        const char *rez_str;
+        size_t rez_len;
+        val_t arr = v7_create_array(v7);
+
         for (i = 0; i < loot.num_captures; i++)
-          TRY(push_string(v7, loot.caps[i].start,
-                          loot.caps[i].end - loot.caps[i].start, 1));
-        TRY(push_number(v7, utfnlen(p, loot.caps[0].start - p)));
-        TRY(v7_push(v7, cfa->this_obj));
-        rez_str = v7_call(v7, cfa->this_obj, loot.num_captures + 2);
-        TRY(check_str_re_conv(v7, &rez_str, 0));
-        if (rez_str->v.str.len) {
-          ptok->start = rez_str->v.str.buf;
-          ptok->end = rez_str->v.str.buf + rez_str->v.str.len;
+          v7_array_append(
+              v7, arr,
+              v7_create_string(v7, loot.caps[i].start,
+                               loot.caps[i].end - loot.caps[i].start, 1));
+        v7_array_append(v7, arr, v7_create_number(utfnlen(
+                                     (char *)s, loot.caps[0].start - s)));
+        v7_array_append(v7, arr, this_obj);
+        out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
+        rez_str = v7_to_string(v7, &out_str_o, &rez_len);
+        if (rez_len) {
+          ptok->start = rez_str;
+          ptok->end = rez_str + rez_len;
           ptok++;
-          out_len += rez_str->v.str.len;
           out_sub_num++;
-          v7_append(v7, arr, rez_str);
         }
-        TRY(inc_stack(v7, old_sp - v7->sp));
       } else { /* replace string */
         struct slre_loot newsub;
-        slre_replace(&loot, cfa->this_obj->v.str.buf, str_func->v.str.buf,
-                     &newsub);
+        size_t f_len;
+        const char *f_str = v7_to_string(v7, &str_func, &f_len);
+        slre_replace(&loot, s, s_len, f_str, f_len, &newsub);
         for (i = 0; i < newsub.num_captures; i++) {
           ptok->start = newsub.caps[i].start;
           ptok->end = newsub.caps[i].end;
           ptok++;
-          out_len += newsub.caps[i].end - newsub.caps[i].start;
           out_sub_num++;
         }
       }
-      p = (char *) loot.caps->end;
-    } while ((re->fl.fl.re_flags & SLRE_FLAG_G) && p < str_end);
+      p = (char *)loot.caps[0].end;
+    } while (flag_g && p < str_end);
     if (p < str_end) {
       ptok->start = p;
       ptok->end = str_end;
       ptok++;
-      out_len += str_end - p;
       out_sub_num++;
     }
-    out_str = malloc(out_len + 1);
-    CHECK(out_str, V7_OUT_OF_MEMORY);
+    out_str_o = v7_create_string(v7, NULL, 0, 1);
     ptok = out_sub;
-    p = (char *) out_str;
     do {
       size_t ln = ptok->end - ptok->start;
-      memcpy(p, ptok->start, ln);
+      out_str_o =
+          s_concat(v7, out_str_o, v7_create_string(v7, ptok->start, ln, 1));
       p += ln;
       ptok++;
     } while (--out_sub_num);
     *p = '\0';
-    own = 0;
+
+    return out_str_o;
   }
-  TRY(inc_stack(v7, old_sp - v7->sp));
-  v7_init_str(result, out_str, out_len, own);
-  result->fl.fl.str_alloc = 1;
-  return V7_OK;
-#undef v7
+  return v7_create_string(v7, s, s_len, 1);
 }
 
-V7_PRIVATE enum v7_err Str_search(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  struct v7_val *arg = cfa->args[0];
-  struct slre_loot sub;
-  int shift = -1, utf_shift = -1;
+static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
+  long utf_shift = -1;
 
-  if (cfa->num_args > 0) {
-    TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-    TRY(check_str_re_conv(v7, &arg, 1));
-    TRY(regex_check_prog(arg));
-    if (!slre_exec(arg->v.str.prog, arg->fl.fl.re_flags,
-        cfa->this_obj->v.str.buf, &sub)) {
-      shift = sub.caps[0].start - cfa->this_obj->v.str.buf;
+  if (v7_array_length(v7, args) > 0) {
+    size_t s_len;
+    struct slre_prog *prog = NULL;
+    struct slre_loot sub;
+    val_t so, ro = i_value_of(v7, v7_array_at(v7, args, 0));
+    const char *s;
+    if (!v7_is_regexp(ro)) {
+      so = to_string(v7, ro);
+      s = v7_to_string(v7, &so, &s_len);
+      if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
+          prog == NULL) {
+        throw_exception(v7, "Error", "Invalid String");
+        return V7_UNDEFINED;
+      }
+    } else {
+      struct v7_regexp *rp = v7_to_pointer(ro);
+      prog = rp->compiled_regexp;
     }
+    so = to_string(v7, this_obj);
+    s = v7_to_string(v7, &so, &s_len);
+
+    if (!slre_exec(prog, 0, s, s + s_len, &sub))
+      utf_shift =
+          utfnlen((char *)s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else
     utf_shift = 0;
-  if (shift >= 0) /* calc shift for UTF-8 */
-    utf_shift = utfnlen(cfa->this_obj->v.str.buf, shift);
-  TRY(push_number(v7, utf_shift));
-  return V7_OK;
-#undef v7
+  return v7_create_number(utf_shift);
 }
 
-V7_PRIVATE enum v7_err Str_slice(struct v7_c_func_arg *cfa) {
-#define v7 (cfa->v7) /* Needed for TRY() macro below */
-  char *begin, *end;
-  long from = 0, to = 0, len;
+static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
+  long from = 0, to = 0;
+  size_t len;
+  val_t so = to_string(v7, this_obj);
+  const char *begin = v7_to_string(v7, &so, &len), *end;
+  int num_args = v7_array_length(v7, args);
 
-  TRY(check_str_re_conv(v7, &cfa->this_obj, 0));
-  to = len = utfnlen(cfa->this_obj->v.str.buf, cfa->this_obj->v.str.len);
-  begin = cfa->this_obj->v.str.buf;
-  end = begin + cfa->this_obj->v.str.len;
-  if (cfa->num_args > 0) {
-    from = _conv_to_int(v7, cfa->args[0]);
+  to = len = utfnlen((char *)begin, len);
+  if (num_args > 0) {
+    from = arg_long(v7, args, 0, 0);
     if (from < 0) {
       from += len;
       if (from < 0) from = 0;
-    } else if (from > len)
+    } else if ((size_t)from > len)
       from = len;
-    if (cfa->num_args > 1) {
-      to = _conv_to_int(v7, cfa->args[1]);
+    if (num_args > 1) {
+      to = arg_long(v7, args, 1, 0);
       if (to < 0) {
         to += len;
         if (to < 0) to = 0;
-      } else if (to > len)
+      } else if ((size_t)to > len)
         to = len;
     }
   }
   if (from > to) to = from;
-  end = utfnshift(begin, to);
-  begin = utfnshift(begin, from);
-  TRY(v7_make_and_push(v7, V7_TYPE_STR));
-  v7_init_str(v7_top_val(v7), begin, end - begin, 1);
-  return V7_OK;
-#undef v7
+  end = utfnshift((char *)begin, to);
+  begin = utfnshift((char *)begin, from);
+  return v7_create_string(v7, begin, end - begin, 1);
 }
-#endif
 
 static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
                          Rune (*func)(Rune)) {
@@ -4330,13 +4347,13 @@ static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
   val_t res = v7_create_string(v7, p, len, 1);
   Rune r;
 
-  (void) args;
+  (void)args;
 
   p = v7_to_string(v7, &res, &len);
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
     r = func(r);
-    runetochar((char *) p + i, &r);
+    runetochar((char *)p + i, &r);
   }
 
   return res;
@@ -4350,9 +4367,7 @@ static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj, val_t args) {
   return s_transform(v7, this_obj, args, toupperrune);
 }
 
-static int s_isspace(Rune c) {
-  return isspacerune(c) || isnewline(c);
-}
+static int s_isspace(Rune c) { return isspacerune(c) || isnewline(c); }
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   val_t s = to_string(v7, this_obj);
@@ -4360,7 +4375,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
 
-  (void) args;
+  (void)args;
   end = len;
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
@@ -4377,9 +4392,10 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   size_t len = 0;
   val_t s = i_value_of(v7, this_obj);
 
-  (void) args;
+  (void)args;
   if (v7_is_string(s)) {
-    v7_to_string(v7, &s, &len);
+    const char *p = v7_to_string(v7, &s, &len);
+    len = utfnlen((char *)p, len);
   }
 
   return v7_create_number(len);
@@ -4397,7 +4413,7 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
     } else if (d > LONG_MAX) {
       return LONG_MAX;
     }
-    return (long) d;
+    return (long)d;
   }
   if (arg_n == V7_NULL) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
@@ -4414,56 +4430,64 @@ static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long end = arg_long(v7, args, 1, LONG_MAX);
-  if (start < 0) start = 0;
-  if (end < 0) end = 0;
   return s_substr(v7, this_obj, start, end - start);
-}
-
-static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
-  return Str_substring(v7, this_obj, args);
 }
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_array(v7);
-  val_t s = to_string(v7, this_obj);
-  val_t arg0 = i_value_of(v7, v7_array_at(v7, args, 0));
-  long num_elems = 0, limit = arg_long(v7, args, 1, LONG_MAX);
-  size_t n1, n2, i, j;
-  const char *s1 = v7_to_string(v7, &s, &n1);
+  const char *s, *s_end;
+  size_t s_len;
+  long num_args = v7_array_length(v7, args);
+  struct slre_prog *prog = NULL;
+  this_obj = to_string(v7, this_obj);
+  s = v7_to_string(v7, &this_obj, &s_len);
+  s_end = s + s_len;
 
-  if (v7_is_string(arg0) || v7_is_regexp(arg0)) {
-    const char *s2 = v7_to_string(v7, &arg0, &n2);
-    struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(arg0);
+  if (num_args == 0 || s_len == 0) {
+    v7_array_append(v7, res, v7_create_string(v7, s, s_len, 1));
+  } else {
+    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0));
+    long len, elem = 0, limit = arg_long(v7, args, 1, LONG_MAX);
+    size_t shift = 0;
     struct slre_loot loot;
-
-    for (i = j = 0; n2 <= n1 && i <= (n1 - n2); i++) {
-      if (num_elems >= limit) break;
-      if (v7_is_string(arg0) && (i > 0 || n2 > 0) &&
-          memcmp(s1 + i, s2, n2) == 0) {
-        v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
-        s1 = v7_to_string(v7, &s, &n1);
-        s2 = v7_to_string(v7, &arg0, &n2);
-        num_elems++;
-        i = j = i + n2;
-      } else if (v7_is_regexp(arg0)) {
-        if (slre_exec(rp->compiled_regexp, s1 + i, n1 - i, &loot) == SLRE_OK) {
-          /* TODO(lsm): fix this */
-          struct slre_cap *cap = &loot.caps[0];
-          i = cap->start - s1;
-          v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
-          s1 = v7_to_string(v7, &s, &n1);
-          s2 = v7_to_string(v7, &arg0, &n2);
-          num_elems++;
-          i = j = cap->end - s1;
-        } else {
-          i = n1 - n2;  /* No match, stop the loop */
-          break;
-        }
+    if (!v7_is_regexp(ro)) {
+      const char *str;
+      size_t str_len;
+      ro = to_string(v7, ro);
+      str = v7_to_string(v7, &ro, &str_len);
+      if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
+          prog == NULL) {
+        throw_exception(v7, "Error", "Invalid String");
+        return V7_UNDEFINED;
       }
+    } else {
+      struct v7_regexp *rp = v7_to_pointer(ro);
+      prog = rp->compiled_regexp;
     }
-    if (j < i && n2 > 0) {
-      v7_array_append(v7, res, v7_create_string(v7, s1 + j, i - j, 1));
+    for (; elem < limit && shift < s_len; elem++) {
+      val_t tmp_s;
+      int i;
+      if (slre_exec(prog, 0, s + shift, s_end, &loot)) break;
+      if (loot.caps[0].end - loot.caps[0].start == 0) {
+        tmp_s = v7_create_string(v7, s + shift, 1, 1);
+        shift++;
+      } else {
+        tmp_s =
+            v7_create_string(v7, s + shift, loot.caps[0].start - s - shift, 1);
+        shift = loot.caps[0].end - s;
+      }
+      v7_array_append(v7, res, tmp_s);
+
+      for (i = 1; i < loot.num_captures; i++)
+        v7_array_append(
+            v7, res,
+            (loot.caps[i].start != NULL)
+                ? v7_create_string(v7, loot.caps[i].start,
+                                   loot.caps[i].end - loot.caps[i].start, 1)
+                : V7_UNDEFINED);
     }
+    len = s_len - shift;
+    v7_array_append(v7, res, v7_create_string(v7, s + shift, len, 1));
   }
 
   return res;
@@ -4484,6 +4508,10 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
   set_cfunc_prop(v7, v7->string_prototype, "lastIndexOf", Str_lastIndexOf);
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
+  set_cfunc_prop(v7, v7->string_prototype, "match", Str_match);
+  set_cfunc_prop(v7, v7->string_prototype, "replace", Str_replace);
+  set_cfunc_prop(v7, v7->string_prototype, "search", Str_search);
+  set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "trim", Str_trim);
   set_cfunc_prop(v7, v7->string_prototype, "toLowerCase", Str_toLowerCase);
   set_cfunc_prop(v7, v7->string_prototype, "toLocaleLowerCase",
@@ -4491,17 +4519,11 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "toUpperCase", Str_toUpperCase);
   set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase",
                  Str_toUpperCase);
-  set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
   set_cfunc_prop(v7, v7->string_prototype, "toString", Str_toString);
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));
-#if 0
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "match", Str_match);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "replace", Str_replace);
-  SET_METHOD(s_prototypes[V7_CLASS_STRING], "search", Str_search);
-#endif
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -5219,7 +5241,7 @@ int v7_is_cfunction(val_t v) {
 
 /* A convenience function to check exec result */
 int v7_is_error(struct v7 *v7, val_t v) {
-  return is_prototype_of(v, v7->error_prototype);
+  return is_prototype_of(v7, v, v7->error_prototype);
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
@@ -5292,7 +5314,10 @@ double v7_to_double(val_t v) {
   return * (double *) &v;
 }
 
-V7_PRIVATE val_t v_get_prototype(val_t obj) {
+V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
+  if (v7_is_function(obj)) {
+    return v7->function_prototype;
+  }
   return v7_object_to_value(v7_to_object(obj)->prototype);
 }
 
@@ -5329,14 +5354,15 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
   struct slre_prog *p = NULL;
   struct v7_regexp *rp;
 
-  if (slre_compile(re, re_len, flags, flags_len, &p) != SLRE_OK || p == NULL) {
+  if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
+      p == NULL) {
     throw_exception(v7, "Error", "Invalid regex");
     return V7_UNDEFINED;
   } else {
-    rp = (struct v7_regexp *) malloc(sizeof(*rp));
+    rp = (struct v7_regexp *)malloc(sizeof(*rp));
     rp->regexp_string = v7_create_string(v7, re, re_len, 1);
-    rp->flags_string = v7_create_string(v7, flags, flags_len, 1);
     rp->compiled_regexp = p;
+    rp->lastIndex = 0;
 
     return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
   }
@@ -5416,7 +5442,10 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (isinf(num)) {
         return v_sprintf_s(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
       }
-      return v_sprintf_s(buf, size, "%lg", num);
+      {
+        const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
+        return v_sprintf_s(buf, size, fmt, num);
+      }
     case V7_TYPE_STRING: {
       size_t n;
       const char *str = v7_to_string(v7, &v, &n);
@@ -5427,11 +5456,15 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       }
     }
     case V7_TYPE_REGEXP_OBJECT: {
-      size_t n1, n2;
-      struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(v);
+      size_t n1, n2 = 0;
+      char s2[3] = {0};
+      struct v7_regexp *rp = (struct v7_regexp *)v7_to_pointer(v);
       const char *s1 = v7_to_string(v7, &rp->regexp_string, &n1);
-      const char *s2 = v7_to_string(v7, &rp->flags_string, &n2);
-      return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
+      int flags = slre_get_flags(rp->compiled_regexp);
+      if (flags & SLRE_FLAG_G) s2[n2++] = 'g';
+      if (flags & SLRE_FLAG_I) s2[n2++] = 'i';
+      if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
+      return v_sprintf_s(buf, size, "/%.*s/%.*s", (int)n1, s1, (int)n2, s2);
     }
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
@@ -5641,7 +5674,7 @@ struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  for (; obj != V7_NULL; obj = v_get_prototype(obj)) {
+  for (; obj != V7_NULL; obj = v_get_prototype(v7, obj)) {
     struct v7_property *prop;
     if ((prop = v7_get_own_property(v7, obj, name, len)) != NULL) {
       return prop;
@@ -5654,6 +5687,8 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   val_t v = obj;
   if (v7_is_string(obj)) {
     v = v7->string_prototype;
+  } else if (v7_is_regexp(obj)) {
+    v = v7->regexp_prototype;
   } else if (v7_is_double(obj)) {
     v = v7->number_prototype;
   } else if (v7_is_boolean(obj)) {
@@ -5858,7 +5893,21 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
           s++, r = '\n';
           break;
         default:
-          r = nextesc(&s);
+        {
+          const char *tmp_s = s;
+          int i = nextesc(&s);
+          switch(i){
+            case -SLRE_INVALID_ESC_CHAR:
+              r = '\\';
+              s = tmp_s;
+              n += runetochar(to == NULL ? tmp : to + n, &r);
+              s += chartorune(&r, s);
+              break;
+            case -SLRE_INVALID_HEX_DIGIT:
+            default:
+              r = i;
+          }
+        }
       }
     }
     n += runetochar(to == NULL ? tmp : to + n, &r);
@@ -8803,16 +8852,11 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
-/* Regex flags */
-#define SLRE_FLAG_G 1     /* Global - match in the whole string */
-#define SLRE_FLAG_I 2     /* Ignore case */
-#define SLRE_FLAG_M 4     /* Multiline */
-
 /* Parser Information */
 struct slre_node {
   unsigned char type;
   union {
-    Rune c;             /* character */
+    Rune c;                /* character */
     struct slre_class *cp; /* class pointer */
     struct {
       struct slre_node *x;
@@ -8843,8 +8887,8 @@ struct slre_instruction {
   unsigned char opcode;
   union {
     unsigned char n;
-    Rune c;                 /* character */
-    struct slre_class *cp;  /* class pointer */
+    Rune c;                /* character */
+    struct slre_class *cp; /* class pointer */
     struct {
       struct slre_instruction *x;
       union {
@@ -8866,6 +8910,7 @@ struct slre_prog {
 };
 
 struct slre_env {
+  int is_regex;
   const char *src;
   const char *src_end;
   Rune curr_rune;
@@ -8895,42 +8940,42 @@ struct slre_thread {
 };
 
 enum slre_opcode {
-  I_END = 10,  /* Terminate: match found */
+  I_END = 10, /* Terminate: match found */
   I_ANY,
-  P_ANY = I_ANY,  /* Any character except newline, . */
-  I_ANYNL,        /* Any character including newline, . */
+  P_ANY = I_ANY, /* Any character except newline, . */
+  I_ANYNL,       /* Any character including newline, . */
   I_BOL,
-  P_BOL = I_BOL,  /* Beginning of line, ^ */
+  P_BOL = I_BOL, /* Beginning of line, ^ */
   I_CH,
   P_CH = I_CH,
   I_EOL,
-  P_EOL = I_EOL,  /* End of line, $ */
+  P_EOL = I_EOL, /* End of line, $ */
   I_EOS,
-  P_EOS = I_EOS,  /* End of string, \0 */
+  P_EOS = I_EOS, /* End of string, \0 */
   I_JUMP,
   I_LA,
   P_LA = I_LA,
   I_LA_N,
   P_LA_N = I_LA_N,
   I_LBRA,
-  P_BRA = I_LBRA,  /* Left bracket, ( */
+  P_BRA = I_LBRA, /* Left bracket, ( */
   I_REF,
   P_REF = I_REF,
   I_REP,
   P_REP = I_REP,
   I_REP_INI,
-  I_RBRA,  /* Right bracket, ) */
+  I_RBRA, /* Right bracket, ) */
   I_SET,
-  P_SET = I_SET,  /* Character set, [] */
+  P_SET = I_SET, /* Character set, [] */
   I_SET_N,
-  P_SET_N = I_SET_N,  /* Negated character set, [] */
+  P_SET_N = I_SET_N, /* Negated character set, [] */
   I_SPLIT,
   I_WORD,
   P_WORD = I_WORD,
   I_WORD_N,
   P_WORD_N = I_WORD_N,
-  P_ALT,  /* Alternation, | */
-  P_CAT,  /* Concatentation, implicit operator */
+  P_ALT, /* Alternation, | */
+  P_CAT, /* Concatentation, implicit operator */
   L_CH = 256,
   L_COUNT,  /* {M,N} */
   L_EOS,    /* End of string, \0 */
@@ -8965,7 +9010,7 @@ static int hex(int c) {
 }
 
 int nextesc(const char **p) {
-  const unsigned char *s = (unsigned char *) (*p)++;
+  const unsigned char *s = (unsigned char *)(*p)++;
   switch (*s) {
     case 0:
       return -SLRE_UNTERM_ESC_SEQ;
@@ -8985,8 +9030,8 @@ int nextesc(const char **p) {
     case '\\':
       return '\\';
     case 'u':
-      if (isxdigit(s[1]) && isxdigit(s[2]) &&
-          isxdigit(s[3]) && isxdigit(s[4])) {
+      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
+          isxdigit(s[4])) {
         (*p) += 4;
         return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
       }
@@ -9007,12 +9052,22 @@ static int re_nextc(Rune *r, const char **src, const char *src_end) {
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
   if (*r == '\\') {
-    *r = nextesc(src);
+    const char *tmp_s = *src;
+    int i = nextesc(src);
+    switch(i){
+      case -SLRE_INVALID_ESC_CHAR:
+        *r = '\\';
+        *src = tmp_s;
+        *src += chartorune(r, *src);
+        break;
+      case -SLRE_INVALID_HEX_DIGIT:
+      default:
+        *r = i;
+    }
     return 1;
   }
   return 0;
 }
-
 static int re_nextc_env(struct slre_env *e) {
   return re_nextc(&e->curr_rune, &e->src, e->src_end);
 }
@@ -9162,12 +9217,12 @@ static enum slre_opcode re_lexset(struct slre_env *e) {
       }
       switch (e->curr_rune) {
         default:
-        /* case '-':
-        case '\\':
-        case '.':
-        case '/':
-        case ']':
-        case '|': */
+          /* case '-':
+          case '\\':
+          case '.':
+          case '/':
+          case ']':
+          case '|': */
           break;
         case '0':
           e->curr_rune = 0;
@@ -9258,34 +9313,39 @@ static int re_lexer(struct slre_env *e) {
     return L_CH;
   }
 
-  switch (e->curr_rune) {
-    case 0: return 0;
-    case '$':
-    case ')':
-    case '*':
-    case '+':
-    case '.':
-    case '?':
-    case '^':
-    case '|':
-      return e->curr_rune;
-    case '{':
-      return re_countrep(e);
-    case '[':
-      return re_lexset(e);
-    case '(':
-      if (e->src[0] == '?') switch (e->src[1]) {
-          case '=':
-            e->src += 2;
-            return L_LA;
-          case ':':
-            e->src += 2;
-            return L_LA_CAP;
-          case '!':
-            e->src += 2;
-            return L_LA_N;
-        }
-      return '(';
+  if (e->is_regex) {
+    switch (e->curr_rune) {
+      case 0:
+        return 0;
+      case '$':
+      case ')':
+      case '*':
+      case '+':
+      case '.':
+      case '?':
+      case '^':
+      case '|':
+        return e->curr_rune;
+      case '{':
+        return re_countrep(e);
+      case '[':
+        return re_lexset(e);
+      case '(':
+        if (e->src[0] == '?') switch (e->src[1]) {
+            case '=':
+              e->src += 2;
+              return L_LA;
+            case ':':
+              e->src += 2;
+              return L_LA_CAP;
+            case '!':
+              e->src += 2;
+              return L_LA_N;
+          }
+        return '(';
+    }
+  } else if (e->curr_rune == 0) {
+    return 0;
   }
 
   return L_CH;
@@ -9463,9 +9523,9 @@ static unsigned char re_endofcat(Rune c, int is_regex) {
 
 static struct slre_node *re_parser(struct slre_env *e) {
   struct slre_node *alt = NULL, *cat, *nd;
-  if (!re_endofcat(e->lookahead, 1)) {
+  if (!re_endofcat(e->lookahead, e->is_regex)) {
     cat = re_parse_la(e);
-    while (!re_endofcat(e->lookahead, 1)) {
+    while (!re_endofcat(e->lookahead, e->is_regex)) {
       nd = cat;
       cat = re_nnode(e, P_CAT);
       cat->par.xy.x = nd;
@@ -9682,11 +9742,13 @@ static void print_set(struct slre_class *cp) {
   struct slre_range *p;
   for (p = cp->spans; p < cp->end; p++) {
     printf("%s", p == cp->spans ? "'" : ",'");
-    printf(p->s >= 32 && p->s < 127 ? "%c" :
-           (p->s < 256 ? "\\x%02X" : "\\u%04X"), p->s);
+    printf(
+        p->s >= 32 && p->s < 127 ? "%c" : (p->s < 256 ? "\\x%02X" : "\\u%04X"),
+        p->s);
     if (p->s != p->e) {
-      printf(p->e >= 32 && p->e < 127 ? "-%c" :
-             (p->e < 256 ? "-\\x%02X" : "-\\u%04X"), p->e);
+      printf(p->e >= 32 && p->e < 127 ? "-%c"
+                                      : (p->e < 256 ? "-\\x%02X" : "-\\u%04X"),
+             p->e);
     }
     printf("'");
   }
@@ -9724,8 +9786,8 @@ static void node_print(struct slre_node *nd) {
       printf("}");
       break;
     case P_CH:
-      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" :
-             "'\\u%04X'", nd->par.c);
+      printf(nd->par.c >= 32 && nd->par.c < 127 ? "'%c'" : "'\\u%04X'",
+             nd->par.c);
       break;
     case P_EOL:
       printf("$");
@@ -9771,7 +9833,7 @@ static void node_print(struct slre_node *nd) {
 static void program_print(struct slre_prog *prog) {
   struct slre_instruction *inst;
   for (inst = prog->start; inst < prog->end; ++inst) {
-    printf("%3ld: ", inst - prog->start);
+    printf("%3d: ", inst - prog->start);
     switch (inst->opcode) {
       case I_END:
         puts("end");
@@ -9786,8 +9848,9 @@ static void program_print(struct slre_prog *prog) {
         puts("^");
         break;
       case I_CH:
-        printf(inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" :
-               "'\\u%04X'\n", inst->par.c);
+        printf(
+            inst->par.c >= 32 && inst->par.c < 127 ? "'%c'\n" : "'\\u%04X'\n",
+            inst->par.c);
         break;
       case I_EOL:
         puts("$");
@@ -9796,14 +9859,14 @@ static void program_print(struct slre_prog *prog) {
         puts("\\0");
         break;
       case I_JUMP:
-        printf("-->%ld\n", inst->par.xy.x - prog->start);
+        printf("-->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_LA:
-        printf("la %ld %ld\n", inst->par.xy.x - prog->start,
+        printf("la %d %d\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_LA_N:
-        printf("la_n %ld %ld\n", inst->par.xy.x - prog->start,
+        printf("la_n %d %d\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_LBRA:
@@ -9813,14 +9876,14 @@ static void program_print(struct slre_prog *prog) {
         printf(") %d\n", inst->par.n);
         break;
       case I_SPLIT:
-        printf("-->%ld | -->%ld\n", inst->par.xy.x - prog->start,
+        printf("-->%d | -->%d\n", inst->par.xy.x - prog->start,
                inst->par.xy.y.y - prog->start);
         break;
       case I_REF:
         printf("\\%d\n", inst->par.n);
         break;
       case I_REP:
-        printf("repeat -->%ld\n", inst->par.xy.x - prog->start);
+        printf("repeat -->%d\n", inst->par.xy.x - prog->start);
         break;
       case I_REP_INI:
         printf("init_rep %d %d\n", inst->par.xy.y.rp.min,
@@ -9848,16 +9911,17 @@ static void program_print(struct slre_prog *prog) {
 #endif
 
 int slre_compile(const char *pat, size_t pat_len, const char *flags,
-                 size_t fl_len, struct slre_prog **pr) {
+                 size_t fl_len, struct slre_prog **pr, int is_regex) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
   int err_code;
 
-  e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
-  e.pstart = e.pend = (struct slre_node *)
-             SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+  e.prog = (struct slre_prog *)SLRE_MALLOC(sizeof(struct slre_prog));
+  e.pstart = e.pend =
+      (struct slre_node *)SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
   e.prog->flags = 0;
+  if (is_regex) e.prog->flags = SLRE_FLAG_RE;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
@@ -9867,9 +9931,15 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
 
   while (fl_len--) {
     switch (flags[fl_len]) {
-      case 'g': e.prog->flags |= SLRE_FLAG_G; break;
-      case 'i': e.prog->flags |= SLRE_FLAG_I; break;
-      case 'm': e.prog->flags |= SLRE_FLAG_M; break;
+      case 'g':
+        e.prog->flags |= SLRE_FLAG_G;
+        break;
+      case 'i':
+        e.prog->flags |= SLRE_FLAG_I;
+        break;
+      case 'm':
+        e.prog->flags |= SLRE_FLAG_M;
+        break;
     }
   }
 
@@ -9890,8 +9960,8 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   }
 
   e.prog->num_captures = e.num_captures;
-  e.prog->start = e.prog->end = (struct slre_instruction *)
-      SLRE_MALLOC((re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
+  e.prog->start = e.prog->end = (struct slre_instruction *)SLRE_MALLOC(
+      (re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
 
   split = re_newinst(e.prog, I_SPLIT);
   split->par.xy.x = split + 3;
@@ -9938,33 +10008,24 @@ static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
 #define RE_NO_MATCH() \
   if (!(thr = 0)) continue
 
-Rune re_getrune(const char *s, size_t n, size_t *off) {
-  Rune r = 0;
-  if (*off < n) {
-    *off += chartorune(&r, s + *off);
-  }
-  return r;
-}
-
-static unsigned char re_match(struct slre_instruction *pc, const char *start,
-                              size_t len, const char *bol, unsigned int flags,
-                              struct slre_loot *loot) {
-  struct slre_thread threads[SLRE_MAX_THREADS];
+static unsigned char re_match(struct slre_instruction *pc, const char *current,
+                              const char *end, const char *bol,
+                              unsigned int flags, struct slre_loot *loot) {
   struct slre_loot sub, tmpsub;
   Rune c, r;
   struct slre_range *p;
   unsigned short thr_num = 1;
   unsigned char thr;
-  size_t i, off = 0;
-  const char *base = start;
+  size_t i;
+  struct slre_thread threads[SLRE_MAX_THREADS];
 
   /* queue initial thread */
-  re_newthread(threads, pc, start, loot);
+  re_newthread(threads, pc, current, loot);
 
   /* run threads in stack order */
   do {
     pc = threads[--thr_num].pc;
-    start = threads[thr_num].start;
+    current = threads[thr_num].start;
     sub = threads[thr_num].loot;
     for (thr = 1; thr;) {
       switch (pc->opcode) {
@@ -9973,25 +10034,31 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           return 1;
         case I_ANY:
         case I_ANYNL:
-          c = re_getrune(start, base + len - start, &off);
-          if (!c || (pc->opcode == I_ANY && isnewline(c))) RE_NO_MATCH();
-          break;
+          if (current < end) {
+            current += chartorune(&c, current);
+            if (c && !(pc->opcode == I_ANY && isnewline(c))) break;
+          }
+          RE_NO_MATCH();
 
         case I_BOL:
-          if (start + off == bol) break;
-          if ((flags & SLRE_FLAG_M) && isnewline(start[off - 1])) break;
+          if (current == bol) break;
+          if ((flags & SLRE_FLAG_M) && isnewline(current[-1])) break;
           RE_NO_MATCH();
         case I_CH:
-          c = re_getrune(start, len, &off);
-          if (c && (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
-              tolowerrune(c) == tolowerrune(pc->par.c)))) break;
+          if (current < end) {
+            current += chartorune(&c, current);
+            if (c &&
+                (c == pc->par.c || ((flags & SLRE_FLAG_I) &&
+                                    tolowerrune(c) == tolowerrune(pc->par.c))))
+              break;
+          }
           RE_NO_MATCH();
         case I_EOL:
-          if (off >= len) break;
-          if ((flags & SLRE_FLAG_M) && isnewline(start[off])) break;
+          if (current >= end) break;
+          if ((flags & SLRE_FLAG_M) && isnewline(*current)) break;
           RE_NO_MATCH();
         case I_EOS:
-          if (off >= len) break;
+          if (current >= end) break;
           RE_NO_MATCH();
 
         case I_JUMP:
@@ -9999,30 +10066,28 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           continue;
 
         case I_LA:
-          if (re_match(pc->par.xy.x, start + off, len - off, bol, flags,
-                       &sub)) {
+          if (re_match(pc->par.xy.x, current, end, bol, flags, &sub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
           RE_NO_MATCH();
         case I_LA_N:
           tmpsub = sub;
-          if (!re_match(pc->par.xy.x, start + off, len - off, bol, flags,
-              &tmpsub)) {
+          if (!re_match(pc->par.xy.x, current, end, bol, flags, &tmpsub)) {
             pc = pc->par.xy.y.y;
             continue;
           }
           RE_NO_MATCH();
 
         case I_LBRA:
-          sub.caps[pc->par.n].start = start + off;
+          sub.caps[pc->par.n].start = current;
           break;
 
         case I_REF:
           i = sub.caps[pc->par.n].end - sub.caps[pc->par.n].start;
           if (flags & SLRE_FLAG_I) {
             int num = i;
-            const char *s = start + off, *p = sub.caps[pc->par.n].start;
+            const char *s = current, *p = sub.caps[pc->par.n].start;
             Rune rr;
             for (; num && *s && *p; num--) {
               s += chartorune(&r, s);
@@ -10030,10 +10095,10 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
               if (tolowerrune(r) != tolowerrune(rr)) break;
             }
             if (num) RE_NO_MATCH();
-          } else if (strncmp(start + off, sub.caps[pc->par.n].start, i)) {
+          } else if (strncmp(current, sub.caps[pc->par.n].start, i)) {
             RE_NO_MATCH();
           }
-          if (i > 0) off += i;
+          if (i > 0) current += i;
           break;
 
         case I_REP:
@@ -10052,12 +10117,13 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
           break;
 
         case I_RBRA:
-          sub.caps[pc->par.n].end = start + off;
+          sub.caps[pc->par.n].end = current;
           break;
 
         case I_SET:
         case I_SET_N:
-          c = re_getrune(start, len, &off);
+          if (current >= end) RE_NO_MATCH();
+          current += chartorune(&c, current);
           if (!c) RE_NO_MATCH();
 
           i = 1;
@@ -10080,14 +10146,14 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
             fprintf(stderr, "re_match: backtrack overflow!\n");
             return 0;
           }
-          re_newthread(&threads[thr_num++], pc->par.xy.y.y, start + off, &sub);
+          re_newthread(&threads[thr_num++], pc->par.xy.y.y, current, &sub);
           pc = pc->par.xy.x;
           continue;
 
         case I_WORD:
         case I_WORD_N:
-          i = (start + off > bol && iswordchar(start[off - 1]));
-          if (iswordchar(start[off])) i = !i;
+          i = (current > bol && iswordchar(current[-1]));
+          if (iswordchar(current[0])) i = !i;
           if (pc->opcode == I_WORD_N) i = !i;
           if (i) break;
         /* RE_NO_MATCH(); */
@@ -10101,20 +10167,20 @@ static unsigned char re_match(struct slre_instruction *pc, const char *start,
   return 0;
 }
 
-int slre_exec(struct slre_prog *prog, const char *start, size_t len,
-              struct slre_loot *loot) {
+int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
+              const char *end, struct slre_loot *loot) {
   struct slre_loot tmpsub;
   const char *st = start;
 
   if (!loot) loot = &tmpsub;
   memset(loot, 0, sizeof(*loot));
 
-  if (!(prog->flags & SLRE_FLAG_G)) {
+  if (!flag_g) {
     loot->num_captures = prog->num_captures;
-    return !re_match(prog->start, start, len, start, prog->flags, loot);
+    return !re_match(prog->start, start, end, start, prog->flags, loot);
   }
 
-  while (re_match(prog->start, st, len, start, prog->flags, &tmpsub)) {
+  while (re_match(prog->start, st, end, start, prog->flags, &tmpsub)) {
     unsigned int i;
     st = tmpsub.caps[0].end;
     for (i = 0; i < prog->num_captures; i++) {
@@ -10128,18 +10194,19 @@ int slre_exec(struct slre_prog *prog, const char *start, size_t len,
   return !loot->num_captures;
 }
 
-#if 0
-int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
-                 struct slre_loot *dstsub) {
+int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
+                 const char *rstr, size_t rstr_len, struct slre_loot *dstsub) {
   int size = 0, n;
   Rune curr_rune;
+  const char *const rstr_end = rstr + rstr_len;
 
   memset(dstsub, 0, sizeof(*dstsub));
-  while (!(n = re_nextc(&curr_rune, &rstr)) && curr_rune) {
+  while (rstr < rstr_end && !(n = re_nextc(&curr_rune, &rstr, rstr_end)) &&
+         curr_rune) {
     int sz;
     if (n < 0) return n;
     if (curr_rune == '$') {
-      n = re_nextc(&curr_rune, &rstr);
+      n = re_nextc(&curr_rune, &rstr, rstr_end);
       if (n < 0) return n;
       switch (curr_rune) {
         case '&':
@@ -10159,7 +10226,7 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
         case '9': {
           int sbn = dec(curr_rune);
           if (0 == sbn && rstr[0] && isdigitrune(rstr[0])) {
-            n = re_nextc(&curr_rune, &rstr);
+            n = re_nextc(&curr_rune, &rstr, rstr_end);
             if (n < 0) return n;
             sz = dec(curr_rune);
             sbn = sbn * 10 + sz;
@@ -10177,7 +10244,7 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
           dstsub->caps[dstsub->num_captures++].end = loot->caps[0].start;
           break;
         case '\'':
-          sz = strlen(loot->caps[0].end);
+          sz = src + src_len - loot->caps[0].end;
           size += sz;
           dstsub->caps[dstsub->num_captures].start = loot->caps[0].end;
           dstsub->caps[dstsub->num_captures++].end = loot->caps[0].end + sz;
@@ -10203,21 +10270,21 @@ int slre_replace(struct slre_loot *loot, const char *src, const char *rstr,
   }
   return size;
 }
-#endif
 
 int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
                const char *str, size_t str_len, struct slre_loot *loot) {
   struct slre_prog *prog = NULL;
   int res;
 
-  if ((res = slre_compile(re, re_len, flags, fl_len, &prog)) == SLRE_OK) {
-    res = slre_exec(prog, str, str_len, loot);
+  if ((res = slre_compile(re, re_len, flags, fl_len, &prog, 1)) == SLRE_OK) {
+    res = slre_exec(prog, prog->flags & SLRE_FLAG_G, str, str + str_len, loot);
     slre_free(prog);
   }
 
   return res;
 }
 
+int slre_get_flags(struct slre_prog *crp) { return crp->flags; }
 
 #ifdef SLRE_TEST
 
@@ -10225,31 +10292,23 @@ int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
 
 static const char *err_code_to_str(int err_code) {
   static const char *ar[] = {
-    "no error",
-    "invalid decimal digit",
-    "invalid hex digit",
-    "invalid escape character",
-    "invalid unterminated escape sequence",
-    "syntax error",
-    "unmatched left parenthesis",
-    "unmatched right parenthesis",
-    "numeric overflow",
-    "infinite loop empty string",
-    "too many charsets",
-    "invalid charset range",
-    "charset is too large",
-    "malformed charset",
-    "invalid back reference",
-    "too many captures",
-    "invalid quantifier",
-    "bad character after $"
-  };
+      "no error",                             "invalid decimal digit",
+      "invalid hex digit",                    "invalid escape character",
+      "invalid unterminated escape sequence", "syntax error",
+      "unmatched left parenthesis",           "unmatched right parenthesis",
+      "numeric overflow",                     "infinite loop empty string",
+      "too many charsets",                    "invalid charset range",
+      "charset is too large",                 "malformed charset",
+      "invalid back reference",               "too many captures",
+      "invalid quantifier",                   "bad character after $"};
 
-  typedef char static_assertion_err_codes_out_of_sync[2 *
-    !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -1];
+  typedef char static_assertion_err_codes_out_of_sync
+      [2 * !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -
+       1];
 
-  return err_code >= 0 && err_code < (int) (sizeof(ar) / sizeof(ar[0])) ?
-    ar[err_code] : "invalid error code";
+  return err_code >= 0 && err_code < (int)(sizeof(ar) / sizeof(ar[0]))
+             ? ar[err_code]
+             : "invalid error code";
 }
 
 #define RE_TEST_STR_SIZE 2000
@@ -10259,10 +10318,20 @@ static unsigned get_flags(const char *ch) {
 
   while (*ch != '\0') {
     switch (*ch) {
-      case 'g': flags |= SLRE_FLAG_G; break;
-      case 'i': flags |= SLRE_FLAG_I; break;
-      case 'm': flags |= SLRE_FLAG_M; break;
-      default: return flags;
+      case 'g':
+        flags |= SLRE_FLAG_G;
+        break;
+      case 'i':
+        flags |= SLRE_FLAG_I;
+        break;
+      case 'm':
+        flags |= SLRE_FLAG_M;
+        break;
+      case 'r':
+        flags |= SLRE_FLAG_RE;
+        break;
+      default:
+        return flags;
     }
     ch++;
   }
@@ -10290,22 +10359,23 @@ static int process_line(struct slre_prog *pr, const char *flags,
   int i, n = cap_no == NULL ? -1 : atoi(cap_no), err_code = 0;
   struct slre_cap *cap = &loot.caps[n];
 
-  err_code = slre_exec(pr, line, strlen(line), &loot);
+  err_code =
+      slre_exec(pr, pr->flags & SLRE_FLAG_G, line, line + strlen(line), &loot);
   if (err_code == SLRE_OK) {
     if (n >= 0 && n < loot.num_captures && replace != NULL) {
       struct slre_cap *cap = &loot.caps[n];
-      printf("%.*s", (int) (cap->start - line), line);
+      printf("%.*s", (int)(cap->start - line), line);
       printf("%s", replace);
-      printf("%.*s", (int) ((line + strlen(line)) - cap->end), cap->end);
+      printf("%.*s", (int)((line + strlen(line)) - cap->end), cap->end);
     } else if (n >= 0 && n < loot.num_captures) {
-      printf("%.*s\n", (int) (cap->end - cap->start), cap->start);
+      printf("%.*s\n", (int)(cap->end - cap->start), cap->start);
     }
 
     if (verbose != NULL) {
       fprintf(stderr, "%s\n", "Captures:");
       for (i = 0; i < loot.num_captures; i++) {
         fprintf(stderr, "%d [%.*s]\n", i,
-                (int) (loot.caps[i].end - loot.caps[i].start),
+                (int)(loot.caps[i].end - loot.caps[i].start),
                 loot.caps[i].start);
       }
     }
@@ -10346,10 +10416,10 @@ int main(int argc, char **argv) {
   if (pattern == NULL) {
     fprintf(stderr, "%s\n", "-p option is mandatory");
     exit(1);
-  } else if ((err_code = slre_compile(pattern, strlen(pattern),
-             flags, strlen(flags), &pr)) != SLRE_OK) {
-    fprintf(stderr, "slre_compile(%s): %s\n",
-            argv[0], err_code_to_str(err_code));
+  } else if ((err_code = slre_compile(pattern, strlen(pattern), flags,
+                                      strlen(flags), &pr, 1)) != SLRE_OK) {
+    fprintf(stderr, "slre_compile(%s): %s\n", argv[0],
+            err_code_to_str(err_code));
     exit(1);
   } else if (str != NULL) {
     err_code = process_line(pr, flags, str, cap_no, replace, verbose);
@@ -10363,12 +10433,12 @@ int main(int argc, char **argv) {
       /* Return success if at least one line matches */
       err_code = 1;
       while (fgets(line, sizeof(line), fp) != NULL) {
-        if (process_line(pr, flags, line, cap_no, replace,
-            verbose) == SLRE_OK) {
+        if (process_line(pr, flags, line, cap_no, replace, verbose) ==
+            SLRE_OK) {
           err_code = 0;
         }
       }
-      fclose(fp);   /* If fp == stdin, it is safe to close, too */
+      fclose(fp); /* If fp == stdin, it is safe to close, too */
     }
   } else {
     fprintf(stderr, "%s\n", "Please specify one of -s or -f options");
@@ -10378,7 +10448,7 @@ int main(int argc, char **argv) {
 
   return err_code;
 }
-#endif  /* SLRE_TEST */
+#endif /* SLRE_TEST */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -10505,6 +10575,9 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   char name_buf[512];
   int name_len;
   (void) this_obj;
+  if (!v7_is_object(obj)) {
+    throw_exception(v7, "TypeError", "object expected");
+  }
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
@@ -10608,7 +10681,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);
-  set_cfunc_prop(v7, object, "defineProperty", Obj_defineProperty);
+  set_cfunc_obj_prop(v7, object, "defineProperty", Obj_defineProperty, 3);
   set_cfunc_prop(v7, object, "defineProperties", Obj_defineProperties);
   set_cfunc_prop(v7, object, "create", Obj_create);
   set_cfunc_prop(v7, object, "keys", Obj_keys);
@@ -12227,6 +12300,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->array_prototype = v7_create_object(v7);
   v7->boolean_prototype = v7_create_object(v7);
   v7->string_prototype = v7_create_object(v7);
+  v7->regexp_prototype = v7_create_object(v7);
   v7->number_prototype = v7_create_object(v7);
   v7->global_object = v7_create_object(v7);
   v7->this_object = v7->global_object;
@@ -12262,10 +12336,175 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_boolean(v7);
   init_math(v7);
   init_string(v7);
+  init_regex(v7);
   init_number(v7);
   init_json(v7);
   init_date(v7);
   init_function(v7);
 
   init_js_stdlib(v7);
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+V7_PRIVATE val_t to_string(struct v7 *, val_t);
+
+static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+  long argnum = v7_array_length(v7, args);
+  if (argnum > 0) {
+    val_t ro = to_string(v7, v7_array_at(v7, args, 0));
+    size_t re_len, flags_len = 0;
+    const char *re = v7_to_string(v7, &ro, &re_len), *flags = NULL;
+    struct slre_prog *p = NULL;
+    struct v7_regexp *rp;
+
+    (void)this_obj;
+    if (argnum > 1) {
+      val_t fl = to_string(v7, v7_array_at(v7, args, 1));
+      flags = v7_to_string(v7, &fl, &flags_len);
+    }
+    if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
+        p == NULL) {
+      throw_exception(v7, "Error", "Invalid regex");
+      return V7_UNDEFINED;
+    } else {
+      rp = (struct v7_regexp *)malloc(sizeof(*rp));
+      rp->regexp_string = v7_create_string(v7, re, re_len, 1);
+      rp->compiled_regexp = p;
+      rp->lastIndex = 0;
+
+      return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
+    }
+  }
+  return v7_create_regexp(v7, "(?:)", 4, NULL, 0);
+}
+
+static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
+  int flags = 0;
+  val_t r = i_value_of(v7, this_obj);
+
+  (void)args;
+  if (v7_is_regexp(r)) {
+    struct v7_regexp *rp = v7_to_pointer(r);
+    flags = slre_get_flags(rp->compiled_regexp);
+  }
+  return v7_create_boolean(flags & SLRE_FLAG_G);
+}
+
+static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
+  int flags = 0;
+  val_t r = i_value_of(v7, this_obj);
+
+  (void)args;
+  if (v7_is_regexp(r)) {
+    struct v7_regexp *rp = v7_to_pointer(r);
+    flags = slre_get_flags(rp->compiled_regexp);
+  }
+  return v7_create_boolean(flags & SLRE_FLAG_I);
+}
+
+static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
+  int flags = 0;
+  val_t r = i_value_of(v7, this_obj);
+
+  (void)args;
+  if (v7_is_regexp(r)) {
+    struct v7_regexp *rp = v7_to_pointer(r);
+    flags = slre_get_flags(rp->compiled_regexp);
+  }
+  return v7_create_boolean(flags & SLRE_FLAG_M);
+}
+
+static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t r = i_value_of(v7, this_obj);
+  const char *buf = 0;
+  size_t len = 0;
+
+  (void)args;
+  if (v7_is_regexp(r)) {
+    struct v7_regexp *rp = v7_to_pointer(r);
+    buf = v7_to_string(v7, &rp->regexp_string, &len);
+  }
+  return v7_create_string(v7, buf, len, 1);
+}
+
+static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
+  long lastIndex = 0;
+
+  (void)v7;
+  (void)args;
+  if (v7_is_regexp(this_obj)) {
+    struct v7_regexp *rp = v7_to_pointer(this_obj);
+    lastIndex = rp->lastIndex;
+  }
+  return v7_create_number(lastIndex);
+}
+
+static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
+  long lastIndex = 0;
+
+  if (v7_is_regexp(this_obj)) {
+    struct v7_regexp *rp = v7_to_pointer(this_obj);
+    rp->lastIndex = lastIndex = arg_long(v7, args, 0, 0);
+  }
+  return v7_create_number(lastIndex);
+}
+
+static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arr = V7_NULL;
+  if (v7_is_regexp(this_obj) && v7_array_length(v7, args) > 0) {
+    val_t s = to_string(v7, v7_array_at(v7, args, 0));
+    size_t len;
+    struct slre_loot sub;
+    struct slre_cap *ptok = sub.caps;
+    const char *begin = v7_to_string(v7, &s, &len);
+    struct v7_regexp *rp = v7_to_pointer(this_obj);
+    int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
+    if (rp->lastIndex < 0) rp->lastIndex = 0;
+    if (flag_g) begin = utfnshift((char *)begin, rp->lastIndex);
+
+    if (!slre_exec(rp->compiled_regexp, 0, begin, begin + len, &sub)) {
+      int i;
+      arr = v7_create_array(v7);
+
+      for (i = 0; i < sub.num_captures; i++, ptok++)
+        v7_array_append(v7, arr, v7_create_string(v7, ptok->start,
+                                                  ptok->end - ptok->start, 1));
+      if (flag_g) rp->lastIndex = utfnlen((char *)begin, sub.caps->end - begin);
+    } else
+      rp->lastIndex = 0;
+  }
+  return arr;
+}
+
+static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
+  return v7_create_boolean(Regex_exec(v7, this_obj, args) != V7_NULL);
+}
+
+V7_PRIVATE void init_regex(struct v7 *v7) {
+  val_t ctor = v7_create_cfunction(Regex_ctor);
+  val_t lastIndex = v7_create_array(v7);
+
+  v7_set_property(v7, v7->global_object, "RegExp", 6, 0, ctor);
+  v7_set(v7, v7->regexp_prototype, "constructor", 11, ctor);
+
+  set_cfunc_prop(v7, v7->regexp_prototype, "exec", Regex_exec);
+  set_cfunc_prop(v7, v7->regexp_prototype, "test", Regex_test);
+
+  v7_set_property(v7, v7->regexp_prototype, "global", 6, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Regex_global));
+  v7_set_property(v7, v7->regexp_prototype, "ignoreCase", 10,
+                  V7_PROPERTY_GETTER, v7_create_cfunction(Regex_ignoreCase));
+  v7_set_property(v7, v7->regexp_prototype, "multiline", 9, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Regex_multiline));
+  v7_set_property(v7, v7->regexp_prototype, "source", 6, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Regex_source));
+
+  v7_set(v7, lastIndex, "0", 1, v7_create_cfunction(Regex_get_lastIndex));
+  v7_set(v7, lastIndex, "1", 1, v7_create_cfunction(Regex_set_lastIndex));
+  v7_set_property(v7, v7->regexp_prototype, "lastIndex", 9,
+                  V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, lastIndex);
 }
