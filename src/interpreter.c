@@ -1019,7 +1019,12 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (!v7_is_undefined(args)) {
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
+             args);
+#else
     v7_set(v7, frame, "arguments", 9, args);
+#endif
   }
 
   v7->this_object = this_object;
@@ -1492,7 +1497,12 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   }
 
   if (!v7_is_undefined(arguments)) {
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
+             arguments);
+#else
     v7_set(v7, frame, "arguments", 9, arguments);
+#endif
   }
 
   v7->this_object = this_object;

@@ -629,6 +629,12 @@ struct gc_arena {
 #define V7_NO_FS
 #endif
 
+/*
+ * DO NOT SUBMIT: remove this when adding support
+ * for predefined strings as roots
+ */
+#define V7_DISABLE_PREDEFINED_STRINGS
+
 #define _POSIX_C_SOURCE 200809L
 
 #include <sys/stat.h>
@@ -763,6 +769,15 @@ enum v7_type {
   V7_NUM_TYPES
 };
 
+enum cached_strings {
+  PREDEFINED_STR_LENGTH,
+  PREDEFINED_STR_PROTOTYPE,
+  PREDEFINED_STR_CONSTRUCTOR,
+  PREDEFINED_STR_ARGUMENTS,
+
+  PREDEFINED_STR_MAX
+};
+
 
 struct v7 {
   val_t global_object;
@@ -828,6 +843,11 @@ struct v7 {
 
   /* TODO(mkm): remove when AST are GC-ed */
   struct mbuf allocated_asts;
+
+  val_t predefined_strings[PREDEFINED_STR_MAX];
+
+  /* TODO(mkm): remove when finishing debugging compacting GC */
+  val_t number_object;
 };
 
 #ifndef ARRAY_SIZE
@@ -883,13 +903,15 @@ typedef uint64_t val_t;
 #define V7_TAG_UNDEFINED ((uint64_t) 0xFFFD << 48)
 #define V7_TAG_BOOLEAN   ((uint64_t) 0xFFFC << 48)
 #define V7_TAG_NAN       ((uint64_t) 0xFFFB << 48)
-#define V7_TAG_STRING_I  ((uint64_t) 0xFFFA << 48)  /* Inlined string */
-#define V7_TAG_STRING_O  ((uint64_t) 0xFFF9 << 48)  /* Owned string */
-#define V7_TAG_STRING_F  ((uint64_t) 0xFFF8 << 48)  /* Foreign string */
-#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF7 << 48)  /* JavaScript function */
-#define V7_TAG_CFUNCTION ((uint64_t) 0xFFF6 << 48)  /* C function */
-#define V7_TAG_GETSETTER ((uint64_t) 0xFFF5 << 48)  /* getter+setter */
-#define V7_TAG_REGEXP    ((uint64_t) 0xFFF4 << 48)  /* Regex */
+#define V7_TAG_STRING_I  ((uint64_t) 0xFFFA << 48)  /* Inlined string len < 5 */
+#define V7_TAG_STRING_5  ((uint64_t) 0xFFF9 << 48)  /* Inlined string len 5 */
+#define V7_TAG_STRING_O  ((uint64_t) 0xFFF8 << 48)  /* Owned string */
+#define V7_TAG_STRING_F  ((uint64_t) 0xFFF7 << 48)  /* Foreign string */
+#define V7_TAG_STRING_C  ((uint64_t) 0xFFF6 << 48)  /* String chunk */
+#define V7_TAG_FUNCTION  ((uint64_t) 0xFFF5 << 48)  /* JavaScript function */
+#define V7_TAG_CFUNCTION ((uint64_t) 0xFFF4 << 48)  /* C function */
+#define V7_TAG_GETSETTER ((uint64_t) 0xFFF3 << 48)  /* getter+setter */
+#define V7_TAG_REGEXP    ((uint64_t) 0xFFF2 << 48)  /* Regex */
 #define V7_TAG_MASK      ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -1037,6 +1059,9 @@ V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
                                                const char *name, size_t);
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
+V7_PRIVATE int v7_set_v(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
+V7_PRIVATE int v7_set_property_v(struct v7 *, v7_val_t obj, v7_val_t name,
+                                 unsigned int attributes, v7_val_t val);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);
@@ -1065,7 +1090,7 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
 V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
-V7_PRIVATE void embed_string(struct mbuf *m, size_t off, const char *p, size_t);
+V7_PRIVATE void embed_string(struct mbuf *, size_t, const char *, size_t, int);
 /* TODO(mkm): rename after regexp merge */
 V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 
@@ -5012,7 +5037,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
 V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
                                      const char *name, size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_add_node(a, tag), name, len);
+  embed_string(&a->mbuf, ast_add_node(a, tag), name, len, 0);
 }
 
 /* Helper to add a node with inlined data. */
@@ -5020,7 +5045,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                         enum ast_tag tag, const char *name,
                                         size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len);
+  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len, 0);
 }
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
@@ -5183,6 +5208,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_STRING_I:
     case V7_TAG_STRING_O:
     case V7_TAG_STRING_F:
+    case V7_TAG_STRING_5:
       return V7_TYPE_STRING;
     case V7_TAG_BOOLEAN:
       return V7_TYPE_BOOLEAN;
@@ -5213,7 +5239,8 @@ int v7_is_function(val_t v) {
 
 int v7_is_string(val_t v) {
   uint64_t t = v & V7_TAG_MASK;
-  return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O;
+  return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F ||
+    t == V7_TAG_STRING_O || t == V7_TAG_STRING_5;
 }
 
 int v7_is_boolean(val_t v) {
@@ -5380,9 +5407,19 @@ v7_val_t v7_create_function(struct v7 *v7) {
   f->attributes = 0;
   /* TODO(mkm): lazily create these properties on first access */
   proto = v7_create_object(v7);
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  v7_set_property_v(v7, proto,
+                    v7->predefined_strings[PREDEFINED_STR_CONSTRUCTOR],
+                    V7_PROPERTY_DONT_ENUM, fval);
+  v7_set_property_v(v7, fval,
+                    v7->predefined_strings[PREDEFINED_STR_PROTOTYPE],
+                    V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE, proto);
+#else
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9, V7_PROPERTY_DONT_ENUM |
                   V7_PROPERTY_DONT_DELETE, proto);
+#endif
+
 cleanup:
   tmp_frame_cleanup(&tf);
   return fval;
@@ -5702,6 +5739,17 @@ V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
+int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
+  size_t len;
+  const char *n = v7_to_string(v7, &name, &len);
+  struct v7_property *p = v7_get_own_property(v7, obj, n, len);
+  if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
+    return v7_set_property_v(v7, obj, name, p == NULL ? 0 : p->attributes,
+                           val);
+  }
+  return -1;
+}
+
 int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
   struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
@@ -5721,15 +5769,17 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_apply(v7, setter, obj, args);
 }
 
-int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
+int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
                     unsigned int attributes, v7_val_t val) {
   struct v7_property *prop;
+  size_t len;
+  const char *n = v7_to_string(v7, &name, &len);
 
   if (!v7_is_object(obj)) {
     return -1;
   }
 
-  prop = v7_get_own_property(v7, obj, name, len);
+  prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */
@@ -5738,11 +5788,8 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     v7_to_object(obj)->properties = prop;
   }
 
-  if (len == (size_t) ~0) {
-    len = strlen(name);
-  }
   if (v7_is_undefined(prop->name)) {
-    prop->name = v7_create_string(v7, name, len, 1);
+    prop->name = name;
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
     v7_invoke_setter(v7, prop, obj, val);
@@ -5752,6 +5799,17 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   prop->value = val;
   prop->attributes = attributes;
   return 0;
+}
+
+int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
+                    unsigned int attributes, v7_val_t val) {
+  val_t n;
+  if (len == (size_t) ~0) {
+    len = strlen(name);
+  }
+
+  n = v7_create_string(v7, name, len, 1);
+  return v7_set_property_v(v7, obj, n, attributes, val);
 }
 
 int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
@@ -5786,9 +5844,16 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  v7_set_property_v(v7, obj, v7->predefined_strings[PREDEFINED_STR_LENGTH],
+                    V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
+                    V7_PROPERTY_DONT_DELETE,
+                    v7_create_number(num_args));
+#else
   v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
                   v7_create_number(num_args));
+#endif
   tmp_frame_cleanup(&tf);
   return obj;
 }
@@ -5796,9 +5861,21 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
 V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
                                              v7_cfunction_t f, int num_args) {
   val_t res = v7_create_cfunction_object(v7, f, num_args);
+
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  v7_set_property_v(v7, res,
+                    v7->predefined_strings[PREDEFINED_STR_PROTOTYPE],
+                    V7_PROPERTY_DONT_ENUM | V7_PROPERTY_READ_ONLY |
+                    V7_PROPERTY_DONT_DELETE, proto);
+
+  v7_set_property_v(v7, proto,
+                    v7->predefined_strings[PREDEFINED_STR_CONSTRUCTOR],
+                    V7_PROPERTY_DONT_ENUM, res);
+#else
   v7_set_property(v7, res, "prototype", 9, V7_PROPERTY_DONT_ENUM |
                   V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, proto);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
+#endif
   return res;
 }
 
@@ -5913,23 +5990,22 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t len) {
+                             size_t len, int zero_term) {
   char *old_base = m->buf;
+  int p_backed_by_mbuf = p >= old_base && p < old_base + m->len;
   size_t n = unescape(p, len, NULL);
   int k = calc_llen(n);  /* Calculate how many bytes length takes */
-  mbuf_insert(m, offset, NULL, k + n);  /* Allocate  buffer */
-  /*
-   * The input string might be backed by the mbuf which might get
-   * relocated by mbuf_insert.
-   */
-  if (p >= old_base && p < (old_base + m->len - k - n)) {
-    if (p >= old_base + offset) {
-      p += k + n;
-    }
+  size_t tot_len = k + n + zero_term;
+  mbuf_insert(m, offset, NULL, tot_len);  /* Allocate  buffer */
+  /* Fixup p if it was relocated by mbuf_insert() above */
+  if (p_backed_by_mbuf) {
     p += m->buf - old_base;
   }
   encode_varint(n, (unsigned char *) m->buf + offset);  /* Write length */
   unescape(p, len, m->buf + offset + k);  /* Write string */
+  if (zero_term) {
+    m->buf[offset + tot_len - 1] = '\0';
+  }
 }
 
 /* Create a string */
@@ -5937,18 +6013,23 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
 
-  if (len <= 5) {
+  if (len <= 4) {
     char *s = GET_VAL_NAN_PAYLOAD(offset) + 1;
     offset = 0;
     memcpy(s, p, len);
     s[-1] = len;
     tag = V7_TAG_STRING_I;
+  } else if (len == 5) {
+    char *s = GET_VAL_NAN_PAYLOAD(offset);
+    offset = 0;
+    memcpy(s, p, len);
+    tag = V7_TAG_STRING_5;
   } else if (own) {
-    embed_string(m, m->len, p, len);
+    embed_string(m, m->len, p, len, 1);
     tag = V7_TAG_STRING_O;
   } else {
     /* TODO(mkm): this doesn't set correctly the foreign string length */
-    embed_string(m, m->len, (char *) &p, sizeof(p));
+    embed_string(m, m->len, (char *) &p, sizeof(p), 0);
   }
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
@@ -5988,6 +6069,9 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   if (tag == V7_TAG_STRING_I) {
     p = GET_VAL_NAN_PAYLOAD(*v) + 1;
     *sizep = p[-1];
+  } else if (tag == V7_TAG_STRING_5) {
+    p = GET_VAL_NAN_PAYLOAD(*v);
+    *sizep = 5;
   } else {
     struct mbuf *m = (tag == V7_TAG_STRING_O) ?
       &v7->owned_strings : &v7->foreign_strings;
@@ -6035,15 +6119,20 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   b_ptr = v7_to_string(v7, &b, &b_len);
 
   /* Create a new string which is a concatenation a + b */
-  if (a_len + b_len <= 5) {
+  if (a_len + b_len <= 4) {
     offset = 0;
     /* TODO(mkm): make it work on big endian too */
     s = GET_VAL_NAN_PAYLOAD(offset) + 1;
     s[-1] = a_len + b_len;
     tag = V7_TAG_STRING_I;
+  } else if (a_len + b_len == 5) {
+    offset = 0;
+    /* TODO(mkm): make it work on big endian too */
+    s = GET_VAL_NAN_PAYLOAD(offset);
+    tag = V7_TAG_STRING_5;
   } else {
     int llen = calc_llen(a_len + b_len);
-    mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen);
+    mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen + 1);
     /* all pointers might have been relocated */
     s = v7->owned_strings.buf + offset;
     encode_varint(a_len + b_len, (unsigned char *) s);  /* Write length */
@@ -6054,6 +6143,8 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   }
   memcpy(s, a_ptr, a_len);
   memcpy(s + a_len, b_ptr, b_len);
+  /* Inlined strings are already 0-terminated, but still, why not. */
+  s[a_len + b_len] = '\0';
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
   return (offset & ~V7_TAG_MASK) | tag;
@@ -6101,6 +6192,8 @@ int v7_is_true(struct v7 *v7, val_t v) {
 
 struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
+  val_t *p;
+  char z = 0;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #define GC_SIZE (64 * 10)
@@ -6110,6 +6203,18 @@ struct v7 *v7_create(void) {
                   "function");
     gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3,
                   "property");
+
+    /*
+     * The compacting GC exploits the null terminator of the previous
+     * string as marker.
+     */
+    mbuf_append(&v7->owned_strings, &z, 1);
+
+    p = v7->predefined_strings;
+    p[PREDEFINED_STR_LENGTH] = v7_create_string(v7, "length", 6, 1);
+    p[PREDEFINED_STR_PROTOTYPE] = v7_create_string(v7, "prototype", 9, 1);
+    p[PREDEFINED_STR_CONSTRUCTOR] = v7_create_string(v7, "constructor", 11, 1);
+    p[PREDEFINED_STR_ARGUMENTS] = v7_create_string(v7, "arguments", 9, 1);
 
     init_stdlib(v7);
     v7->thrown_error = v7_create_undefined();
@@ -6149,6 +6254,10 @@ void v7_destroy(struct v7 *v7) {
  * All rights reserved
  */
 
+
+#ifdef V7_ENABLE_COMPACTING_GC
+void gc_mark_string(struct v7 *, val_t *);
+#endif
 
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
@@ -6296,7 +6405,13 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
   for ((prop = obj->properties), MARK(obj);
        prop != NULL; prop = next) {
+
+#ifdef V7_ENABLE_COMPACTING_GC
+    gc_mark_string(v7, &prop->value);
+    gc_mark_string(v7, &prop->name);
+#endif
     gc_mark(v7, prop->value);
+
     next = prop->next;
 
     assert((char *) prop >= v7->property_arena.base &&
@@ -6316,6 +6431,146 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   }
 }
 
+#ifdef V7_ENABLE_COMPACTING_GC
+
+uint64_t gc_string_val_to_offset(val_t v) {
+  return ((uint64_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
+}
+
+val_t gc_string_val_from_offset(uint64_t s) {
+  return s | V7_TAG_STRING_O;
+}
+
+/* Mark a string value */
+void gc_mark_string(struct v7 *v7, val_t *v) {
+  val_t h, tmp = 0;
+  char *s;
+
+  if ((((*v & V7_TAG_MASK) != V7_TAG_STRING_O) &&
+       (*v & V7_TAG_MASK) != V7_TAG_STRING_C)) {
+    return;
+  }
+
+  /*
+   * If a value points to an unmarked string we shall:
+   *  1. save the first 6 bytes of the string
+   *     since we need to be able to distinguish real values from
+   *     the saved first 6 bytes of the string, we need to tag the chunk
+   *     as V7_TAG_STRING_C
+   *  2. encode value's address (v) into the first bytes of the string.
+   *     the first byte is set to 0 to serve as a mark.
+   *     The remaining 6 bytes are taken from v's least significant bytes.
+   *  3. put the saved 8 bytes (tag + chunk) back into the value.
+   *
+   * If a value points to an already marked string we shall:
+   *  1. save the first 6 bytes of the string, which contain
+   *     (0, <6 bytes of a pointer to a val_t>), hence we have to skip the first byte
+   *     We tag the value pointer as a V7_TAG_FOREIGN so that it won't be followed
+   *     during recursive mark.
+   *
+   *  ... the rest is the same
+   *
+   *  Note: 64-bit pointers can be represented with 48-bits
+   */
+
+  s = v7->owned_strings.buf + gc_string_val_to_offset(*v);
+  if (s[-1] == '\0') {
+    memcpy(&tmp, s, sizeof(val_t) - 2);
+    tmp |= V7_TAG_STRING_C;
+  } else {
+    memcpy(&tmp, s, sizeof(val_t) - 2);
+    tmp |= V7_TAG_FOREIGN;
+  }
+
+  h = (val_t) v;
+  s[-1] = 1;
+  memcpy(s, &h, sizeof(val_t) - 2);
+  memcpy(v, &tmp, sizeof(val_t));
+}
+
+void gc_compact_strings(struct v7 *v7) {
+  char *p = v7->owned_strings.buf + 1;
+  uint64_t h, next, head = 1;
+  int len, llen;
+
+  while (p < v7->owned_strings.buf + v7->owned_strings.len) {
+    if (p[-1] == '\1') {
+      /* relocate and update ptrs */
+      h = 0;
+      memcpy(&h, p, sizeof(h) - 2);
+
+      /*
+       * relocate pointers until we find the tail.
+       * The tail is marked with V7_TAG_STRING_C,
+       * while val_t link pointers are tagged with V7_TAG_FOREIGN
+       */
+      for (; (h & V7_TAG_MASK) != V7_TAG_STRING_C ; h = next) {
+        h &= ~V7_TAG_MASK;
+        memcpy(&next, (char *) h, sizeof(h));
+
+        * (val_t *) h = gc_string_val_from_offset(head);
+      }
+      h &= ~V7_TAG_MASK;
+
+      /*
+       * the tail contains the first 6 bytes we stole from
+       * the actual string.
+       */
+      len = decode_varint((unsigned char *) &h, &llen);
+      len += llen + 1;
+
+      /*
+       * restore the saved 6 bytes
+       * TODO(mkm): think about endianness
+       */
+      memcpy(p, &h, sizeof(val_t) - 2);
+
+      /*
+       * and relocate the string data by packing it to the left.
+       */
+      memmove(v7->owned_strings.buf + head, p, len);
+      v7->owned_strings.buf[head - 1] = 0x0;
+      p += len;
+      head += len;
+    } else {
+      len = decode_varint((unsigned char *) p, &llen);
+      len += llen + 1;
+
+      p += len;
+    }
+  }
+
+  v7->owned_strings.len = head;
+}
+
+void gc_dump_owned_strings(struct v7 *v7) {
+  size_t i;
+#if 0
+  for (i = 0; i < v7->owned_strings.len; i++) {
+    printf("%02x ", (uint8_t) v7->owned_strings.buf[i]);
+  }
+  printf("\n");
+  for (i = 0; i < v7->owned_strings.len; i++) {
+    if (isprint(v7->owned_strings.buf[i])) {
+      printf(" %c ", v7->owned_strings.buf[i]);
+    } else {
+      printf(" . ");
+    }
+  }
+#else
+    for (i = 0; i < v7->owned_strings.len; i++) {
+    if (isprint(v7->owned_strings.buf[i])) {
+      printf("%c", v7->owned_strings.buf[i]);
+    } else {
+      printf(".");
+    }
+  }
+#endif
+  printf("\n");
+}
+
+#endif
+
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7) {
   val_t **vp;
@@ -6323,6 +6578,13 @@ void v7_gc(struct v7 *v7) {
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
   gc_dump_arena_stats("Before GC properties", &v7->property_arena);
+
+#if 0
+#ifdef V7_ENABLE_COMPACTING_GC
+  printf("DUMP BEFORE\n");
+  gc_dump_owned_strings(v7);
+#endif
+#endif
 
   /* TODO(mkm): paranoia? */
   gc_mark(v7, v7->object_prototype);
@@ -6343,6 +6605,18 @@ void v7_gc(struct v7 *v7) {
        (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
     gc_mark(v7, **vp);
   }
+
+#ifdef V7_ENABLE_COMPACTING_GC
+#if 0
+  printf("Owned string mbuf len was %lu\n", v7->owned_strings.len);
+#endif
+  gc_compact_strings(v7);
+#if 0
+  printf("DUMP AFTER\n");
+  gc_dump_owned_strings(v7);
+  printf("Owned string mbuf len is %lu\n", v7->owned_strings.len);
+#endif
+#endif
 
   gc_sweep(&v7->object_arena, 0);
   gc_sweep(&v7->function_arena, 0);
@@ -8239,7 +8513,12 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (!v7_is_undefined(args)) {
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
+             args);
+#else
     v7_set(v7, frame, "arguments", 9, args);
+#endif
   }
 
   v7->this_object = this_object;
@@ -8712,7 +8991,12 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   }
 
   if (!v7_is_undefined(arguments)) {
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
+             arguments);
+#else
     v7_set(v7, frame, "arguments", 9, arguments);
+#endif
   }
 
   v7->this_object = this_object;
@@ -10793,6 +11077,7 @@ V7_PRIVATE void init_number(struct v7 *v7) {
                                        1);
   v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM,
                   num);
+  v7->number_object = num;
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
