@@ -1651,16 +1651,24 @@ static const char *test_strings(void) {
   s = v7_create_string(v7, "hi", 2, 1);
   ASSERT(memcmp(&s, "\x02\x68\x69\x00\x00\x00\xfa\xff", sizeof(s)) == 0);
   ASSERT(v7->foreign_strings.len == 0);
+  ASSERT(v7->owned_strings.len == off);
+
+  /* Make sure strings with length 5 & 6 are nan-packed */
+  s = v7_create_string(v7, "length", 4, 1);
+  ASSERT(v7->owned_strings.len == off);
+  s = v7_create_string(v7, "length", 5, 1);
+  ASSERT(v7->owned_strings.len == off);
+  ASSERT(memcmp(&s, "\x6c\x65\x6e\x67\x74\x00\xf9\xff", sizeof(s)) == 0);
 
   s = v7_create_string(v7, "longer one", 10, 1);
-  ASSERT(v7->owned_strings.len == off + 11);
-  ASSERT(memcmp(v7->owned_strings.buf + off, "\x0alonger one", 11) == 0);
+  ASSERT(v7->owned_strings.len == off + 12);
+  ASSERT(memcmp(v7->owned_strings.buf + off, "\x0alonger one\x00", 12) == 0);
 
   s = v7_create_string(v7, "with embedded \x00 one", 19, 1);
 
-  ASSERT(v7->owned_strings.len == off + 31);
-  ASSERT(memcmp(v7->owned_strings.buf + off, "\x0alonger one"
-         "\x13with embedded \x00 one" , 31) == 0);
+  ASSERT(v7->owned_strings.len == off + 33);
+  ASSERT(memcmp(v7->owned_strings.buf + off, "\x0alonger one\x00"
+         "\x13with embedded \x00 one\x00" , 33) == 0);
 
   v7_destroy(v7);
 
@@ -1798,8 +1806,8 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);
   RUN_TEST(test_interpreter);
-  RUN_TEST(test_ecmac);
   RUN_TEST(test_strings);
+  RUN_TEST(test_ecmac);
 #ifndef V7_DISABLE_GC
   RUN_TEST(test_gc_mark);
   RUN_TEST(test_gc_sweep);

@@ -489,7 +489,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
 V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
                                      const char *name, size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_add_node(a, tag), name, len);
+  embed_string(&a->mbuf, ast_add_node(a, tag), name, len, 0);
 }
 
 /* Helper to add a node with inlined data. */
@@ -497,7 +497,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
                                         enum ast_tag tag, const char *name,
                                         size_t len) {
   assert(ast_node_defs[tag].has_inlined);
-  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len);
+  embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len, 0);
 }
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
