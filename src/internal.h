@@ -156,6 +156,15 @@ enum v7_type {
   V7_NUM_TYPES
 };
 
+enum cached_strings {
+  PREDEFINED_STR_LENGTH,
+  PREDEFINED_STR_PROTOTYPE,
+  PREDEFINED_STR_CONSTRUCTOR,
+  PREDEFINED_STR_ARGUMENTS,
+
+  PREDEFINED_STR_MAX
+};
+
 #include "vm.h"
 
 struct v7 {
@@ -221,6 +230,8 @@ struct v7 {
 
   /* TODO(mkm): remove when AST are GC-ed */
   struct mbuf allocated_asts;
+
+  val_t predefined_strings[PREDEFINED_STR_MAX];
 };
 
 #ifndef ARRAY_SIZE

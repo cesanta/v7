@@ -763,6 +763,15 @@ enum v7_type {
   V7_NUM_TYPES
 };
 
+enum cached_strings {
+  PREDEFINED_STR_LENGTH,
+  PREDEFINED_STR_PROTOTYPE,
+  PREDEFINED_STR_CONSTRUCTOR,
+  PREDEFINED_STR_ARGUMENTS,
+
+  PREDEFINED_STR_MAX
+};
+
 
 struct v7 {
   val_t global_object;
@@ -827,6 +836,8 @@ struct v7 {
 
   /* TODO(mkm): remove when AST are GC-ed */
   struct mbuf allocated_asts;
+
+  val_t predefined_strings[PREDEFINED_STR_MAX];
 };
 
 #ifndef ARRAY_SIZE
@@ -1036,6 +1047,9 @@ V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
                                                const char *name, size_t);
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
+V7_PRIVATE int v7_set_v(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
+V7_PRIVATE int v7_set_property_v(struct v7 *, v7_val_t obj, v7_val_t name,
+                                 unsigned int attributes, v7_val_t val);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);
@@ -5364,9 +5378,19 @@ v7_val_t v7_create_function(struct v7 *v7) {
   f->attributes = 0;
   /* TODO(mkm): lazily create these properties on first access */
   proto = v7_create_object(v7);
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  v7_set_property_v(v7, proto,
+                    v7->predefined_strings[PREDEFINED_STR_CONSTRUCTOR],
+                    V7_PROPERTY_DONT_ENUM, fval);
+  v7_set_property_v(v7, fval,
+                    v7->predefined_strings[PREDEFINED_STR_PROTOTYPE],
+                    V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE, proto);
+#else
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9, V7_PROPERTY_DONT_ENUM |
                   V7_PROPERTY_DONT_DELETE, proto);
+#endif
+
 cleanup:
   tmp_frame_cleanup(&tf);
   return fval;
@@ -5680,6 +5704,17 @@ V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
+int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
+  size_t len;
+  const char *n = v7_to_string(v7, &name, &len);
+  struct v7_property *p = v7_get_own_property(v7, obj, n, len);
+  if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
+    return v7_set_property_v(v7, obj, name, p == NULL ? 0 : p->attributes,
+                           val);
+  }
+  return -1;
+}
+
 int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
   struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
@@ -5699,15 +5734,17 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_apply(v7, setter, obj, args);
 }
 
-int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
+int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
                     unsigned int attributes, v7_val_t val) {
   struct v7_property *prop;
+  size_t len;
+  const char *n = v7_to_string(v7, &name, &len);
 
   if (!v7_is_object(obj)) {
     return -1;
   }
 
-  prop = v7_get_own_property(v7, obj, name, len);
+  prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
       return -1;  /* LCOV_EXCL_LINE */
@@ -5716,11 +5753,8 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
     v7_to_object(obj)->properties = prop;
   }
 
-  if (len == (size_t) ~0) {
-    len = strlen(name);
-  }
   if (v7_is_undefined(prop->name)) {
-    prop->name = v7_create_string(v7, name, len, 1);
+    prop->name = name;
   }
   if (prop->attributes & V7_PROPERTY_SETTER) {
     v7_invoke_setter(v7, prop, obj, val);
@@ -5730,6 +5764,17 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   prop->value = val;
   prop->attributes = attributes;
   return 0;
+}
+
+int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
+                    unsigned int attributes, v7_val_t val) {
+  val_t n;
+  if (len == (size_t) ~0) {
+    len = strlen(name);
+  }
+
+  n = v7_create_string(v7, name, len, 1);
+  return v7_set_property_v(v7, obj, n, attributes, val);
 }
 
 int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
@@ -5764,9 +5809,16 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  v7_set_property_v(v7, obj, v7->predefined_strings[PREDEFINED_STR_LENGTH],
+                    V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM |
+                    V7_PROPERTY_DONT_DELETE,
+                    v7_create_number(num_args));
+#else
   v7_set_property(v7, obj, "length", 6, V7_PROPERTY_READ_ONLY |
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
                   v7_create_number(num_args));
+#endif
   tmp_frame_cleanup(&tf);
   return obj;
 }
@@ -5774,9 +5826,21 @@ V7_PRIVATE v7_val_t v7_create_cfunction_object(struct v7 *v7,
 V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
                                              v7_cfunction_t f, int num_args) {
   val_t res = v7_create_cfunction_object(v7, f, num_args);
+
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  v7_set_property_v(v7, res,
+                    v7->predefined_strings[PREDEFINED_STR_PROTOTYPE],
+                    V7_PROPERTY_DONT_ENUM | V7_PROPERTY_READ_ONLY |
+                    V7_PROPERTY_DONT_DELETE, proto);
+
+  v7_set_property_v(v7, proto,
+                    v7->predefined_strings[PREDEFINED_STR_CONSTRUCTOR],
+                    V7_PROPERTY_DONT_ENUM, res);
+#else
   v7_set_property(v7, res, "prototype", 9, V7_PROPERTY_DONT_ENUM |
                   V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE, proto);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
+#endif
   return res;
 }
 
@@ -6079,6 +6143,7 @@ int v7_is_true(struct v7 *v7, val_t v) {
 
 struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
+  val_t *p;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #define GC_SIZE (64 * 10)
@@ -6088,6 +6153,12 @@ struct v7 *v7_create(void) {
                   "function");
     gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3,
                   "property");
+
+    p = v7->predefined_strings;
+    p[PREDEFINED_STR_LENGTH] = v7_create_string(v7, "length", 6, 1);
+    p[PREDEFINED_STR_PROTOTYPE] = v7_create_string(v7, "prototype", 9, 1);
+    p[PREDEFINED_STR_CONSTRUCTOR] = v7_create_string(v7, "constructor", 11, 1);
+    p[PREDEFINED_STR_ARGUMENTS] = v7_create_string(v7, "arguments", 9, 1);
 
     init_stdlib(v7);
     v7->thrown_error = v7_create_undefined();
@@ -8217,7 +8288,12 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (!v7_is_undefined(args)) {
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
+             args);
+#else
     v7_set(v7, frame, "arguments", 9, args);
+#endif
   }
 
   v7->this_object = this_object;
@@ -8690,7 +8766,12 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   }
 
   if (!v7_is_undefined(arguments)) {
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
+             arguments);
+#else
     v7_set(v7, frame, "arguments", 9, arguments);
+#endif
   }
 
   v7->this_object = this_object;
