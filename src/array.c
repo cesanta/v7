@@ -27,7 +27,7 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
-  long len = 0;
+  uint32_t len = 0;
   (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
