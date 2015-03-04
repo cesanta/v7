@@ -1006,6 +1006,7 @@ int v7_is_true(struct v7 *v7, val_t v) {
 struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
   val_t *p;
+  char z = 0;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #define GC_SIZE (64 * 10)
@@ -1015,6 +1016,12 @@ struct v7 *v7_create(void) {
                   "function");
     gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3,
                   "property");
+
+    /*
+     * The compacting GC exploits the null terminator of the previous
+     * string as marker.
+     */
+    mbuf_append(&v7->owned_strings, &z, 1);
 
     p = v7->predefined_strings;
     p[PREDEFINED_STR_LENGTH] = v7_create_string(v7, "length", 6, 1);

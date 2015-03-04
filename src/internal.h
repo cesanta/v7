@@ -13,6 +13,12 @@
 #define V7_NO_FS
 #endif
 
+/*
+ * DO NOT SUBMIT: remove this when adding support
+ * for predefined strings as roots
+ */
+#define V7_DISABLE_PREDEFINED_STRINGS
+
 #define _POSIX_C_SOURCE 200809L
 
 #include <sys/stat.h>
@@ -232,6 +238,9 @@ struct v7 {
   struct mbuf allocated_asts;
 
   val_t predefined_strings[PREDEFINED_STR_MAX];
+
+  /* TODO(mkm): remove when finishing debugging compacting GC */
+  val_t number_object;
 };
 
 #ifndef ARRAY_SIZE

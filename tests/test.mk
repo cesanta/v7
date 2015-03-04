@@ -114,7 +114,7 @@ ifneq ($(V), 1)
 endif
 
 compile:
-	@make -j8 $(foreach p,$(DIALECTS),$(PROG)-$(p)) CFLAGS_EXTRA=-fsyntax-only LDFLAGS=
+	@make -j8 $(foreach p,$(DIALECTS),$(PROG)-$(p)) CFLAGS_EXTRA="-fsyntax-only $(CFLAGS_EXTRA)" LDFLAGS=
 
 # HACK: cannot have two underscores
 $(PROG)-%: Makefile $(SRC) $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES))
