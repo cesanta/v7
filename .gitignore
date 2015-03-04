@@ -15,9 +15,10 @@ test_suite
 *.session
 *.watch
 *.win
+*.proj
 *.workspace
-_amalgamate.v7.js
-_amalgamate.unit_test.js
+v7.amalgamate.v7.js
+v7.amalgamate.unit_test.js
 test.html
 test.js
 tst.js

@@ -108,8 +108,8 @@ struct v7_function {
 
 struct v7_regexp {
   val_t regexp_string;
-  val_t flags_string;
   struct slre_prog *compiled_regexp;
+  long lastIndex;
 };
 
 #if defined(__cplusplus)
@@ -134,6 +134,7 @@ V7_PRIVATE void init_error(struct v7 *v7);
 V7_PRIVATE void init_boolean(struct v7 *v7);
 V7_PRIVATE void init_math(struct v7 *v7);
 V7_PRIVATE void init_string(struct v7 *v7);
+V7_PRIVATE void init_regex(struct v7 *v7);
 V7_PRIVATE void init_number(struct v7 *v7);
 V7_PRIVATE void init_json(struct v7 *v7);
 V7_PRIVATE void init_date(struct v7 *v7);
