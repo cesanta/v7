@@ -568,7 +568,7 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
                                  val_t obj, val_t val) {
   val_t setter = prop->value, args = v7_create_array(v7);
   if (prop->attributes & V7_PROPERTY_GETTER) {
-    setter = v7_array_at(v7, prop->value, 1);
+    setter = v7_array_get(v7, prop->value, 1);
   }
   v7_set(v7, args, "0", 1, val);
   v7_apply(v7, setter, obj, args);
@@ -706,14 +706,14 @@ V7_PRIVATE val_t
   if (p->attributes & V7_PROPERTY_GETTER) {
     val_t getter = p->value;
     if (p->attributes & V7_PROPERTY_SETTER) {
-      getter = v7_array_at(v7, p->value, 0);
+      getter = v7_array_get(v7, p->value, 0);
     }
     return v7_apply(v7, getter, obj, V7_UNDEFINED);
   }
   return p->value;
 }
 
-V7_PRIVATE unsigned long v7_array_length(struct v7 *v7, val_t v) {
+unsigned long v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
   unsigned long key, len = 0;
   char *end;
@@ -735,18 +735,24 @@ V7_PRIVATE unsigned long v7_array_length(struct v7 *v7, val_t v) {
   return len;
 }
 
-void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
-  if (val_type(v7, arr) == V7_TYPE_ARRAY_OBJECT) {
-    char buf[20];
-    int n = v_sprintf_s(buf, sizeof(buf), "%ld", v7_array_length(v7, arr));
-    v7_set_property(v7, arr, buf, n, 0, v);
-  }
-}
-
-val_t v7_array_at(struct v7 *v7, val_t arr, long index) {
+int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
+  int res = -1;
   if (v7_is_object(arr)) {
     char buf[20];
-    int n = v_sprintf_s(buf, sizeof(buf), "%ld", index);
+    int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
+    res = v7_set(v7, arr, buf, n, v);
+  }
+  return res;
+}
+
+int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
+  return v7_array_set(v7, arr, v7_array_length(v7, arr), v);
+}
+
+val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
+  if (v7_is_object(arr)) {
+    char buf[20];
+    int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
     return v7_get(v7, arr, buf, n);
   } else {
     return V7_UNDEFINED;

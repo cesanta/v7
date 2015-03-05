@@ -11,7 +11,7 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void) this_obj;
   for (i = 0; i < num_args; i++) {
-    p = v7_to_json(v7, v7_array_at(v7, args, i), buf, sizeof(buf));
+    p = v7_to_json(v7, v7_array_get(v7, args, i), buf, sizeof(buf));
     printf("%s", p);
     if (p != buf) {
       free(p);
@@ -23,7 +23,7 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
-  val_t res = v7_create_undefined(), arg = v7_array_at(v7, args, 0);
+  val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
   (void) t;
   if (arg != V7_UNDEFINED) {
     char buf[100], *p;
@@ -117,7 +117,7 @@ static void base64_decode(const unsigned char *s, int len, char *dst) {
 static val_t b64_transform(struct v7 *v7, val_t this_obj, val_t args,
                            void (func)(const unsigned char *, int, char *),
                            double mult) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   val_t res = v7_create_undefined();
 
   (void) this_obj;
@@ -145,7 +145,7 @@ static val_t Std_base64_encode(struct v7 *v7, val_t this_obj, val_t args) {
 
 #ifndef V7_NO_FS
 static val_t Std_load(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   val_t res = v7_create_undefined();
 
   (void) this_obj;
@@ -166,7 +166,7 @@ static val_t Std_load(struct v7 *v7, val_t this_obj, val_t args) {
  * File.write(fd, str) -> num_bytes_written
  */
 static val_t Std_read(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   char buf[2048];
   size_t n;
 
@@ -183,8 +183,8 @@ static val_t Std_read(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Std_write(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
-  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t arg0 = v7_array_get(v7, args, 0);
+  val_t arg1 = v7_array_get(v7, args, 1);
   size_t n = 0, n2;
 
   (void) this_obj;
@@ -198,7 +198,7 @@ static val_t Std_write(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Std_close(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (v7_is_double(arg0)) {
     close((int) v7_to_double(arg0));
@@ -207,8 +207,8 @@ static val_t Std_close(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Std_open(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
-  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t arg0 = v7_array_get(v7, args, 0);
+  val_t arg1 = v7_array_get(v7, args, 1);
   val_t res = v7_create_undefined();
 
   (void) this_obj;

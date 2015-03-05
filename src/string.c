@@ -8,10 +8,15 @@
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
-  val_t res = v7_is_string(arg0) ? arg0 : (v7_is_undefined(arg0)
-                                               ? v7_create_string(v7, "", 0, 1)
-                                               : to_string(v7, arg0));
+  val_t res, arg0 = v7_array_get(v7, args, 0);
+
+  if (v7_is_string(arg0)) {
+    res = arg0;
+  } else if (v7_is_undefined(arg0)) {
+    res = v7_create_string(v7, "", 0, 1);
+  } else {
+    res = to_string(v7, arg0);
+  }
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
@@ -29,7 +34,7 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   (void)this_obj;
   for (i = 0; i < num_args; i++) {
     char buf[10];
-    val_t arg = v7_array_at(v7, args, i);
+    val_t arg = v7_array_get(v7, args, i);
     Rune r = (Rune)v7_to_double(arg);
     int n = runetochar(buf, &r);
     val_t s = v7_create_string(v7, buf, n, 1);
@@ -43,7 +48,7 @@ static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t n;
   val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
-  val_t arg = v7_array_at(v7, args, 0);
+  val_t arg = v7_array_get(v7, args, 0);
   double at = v7_to_double(arg);
 
   n = utfnlen((char *)p, n);
@@ -77,7 +82,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
   int i, num_args = v7_array_length(v7, args);
 
   for (i = 0; i < num_args; i++) {
-    val_t str = to_string(v7, v7_array_at(v7, args, i));
+    val_t str = to_string(v7, v7_array_get(v7, args, i));
     res = s_concat(v7, res, str);
   }
 
@@ -85,7 +90,7 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   size_t fromIndex = 0;
   double res = -1;
 
@@ -99,7 +104,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
 
     if (n2 <= n1) {
       if (v7_array_length(v7, args) > 1)
-        fromIndex = v7_to_double(i_value_of(v7, v7_array_at(v7, args, 1)));
+        fromIndex = v7_to_double(i_value_of(v7, v7_array_get(v7, args, 1)));
       end = p1 + n1;
       n1 = utfnlen((char *)p1, n1);
       if (fromIndex > 0) {
@@ -146,9 +151,8 @@ static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = to_string(v7, v7_array_at(v7, args, 0));
+  val_t arg0 = to_string(v7, v7_array_get(v7, args, 0));
   val_t s = to_string(v7, this_obj);
-
   return v7_create_number(s_cmp(v7, s, arg0));
 }
 
@@ -175,7 +179,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   if (v7_array_length(v7, args) > 0) {
     size_t s_len;
     struct slre_prog *prog = NULL;
-    val_t so, ro = i_value_of(v7, v7_array_at(v7, args, 0));
+    val_t so, ro = i_value_of(v7, v7_array_get(v7, args, 0));
     const char *s, *end;
     int flag_g;
     if (!v7_is_regexp(ro)) {
@@ -203,7 +207,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       s = ptok->end;
       i = 0;
       do {
-        v7_array_append(v7, arr, v7_create_string(v7, ptok->start,
+        v7_array_push(v7, arr, v7_create_string(v7, ptok->start,
                                                   ptok->end - ptok->start, 1));
         ptok++;
       } while (!flag_g && ++i < sub.num_captures);
@@ -225,8 +229,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
     const char *const str_end = s + s_len;
     char *p = (char *)s;
     uint32_t out_sub_num = 0;
-    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0)),
-          str_func = i_value_of(v7, v7_array_at(v7, args, 1));
+    val_t ro = i_value_of(v7, v7_array_get(v7, args, 0)),
+          str_func = i_value_of(v7, v7_array_get(v7, args, 1));
     struct slre_prog *prog = NULL;
     struct slre_cap out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
     struct slre_loot loot;
@@ -265,13 +269,13 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
         val_t arr = v7_create_array(v7);
 
         for (i = 0; i < loot.num_captures; i++)
-          v7_array_append(
+          v7_array_push(
               v7, arr,
               v7_create_string(v7, loot.caps[i].start,
                                loot.caps[i].end - loot.caps[i].start, 1));
-        v7_array_append(v7, arr, v7_create_number(utfnlen(
+        v7_array_push(v7, arr, v7_create_number(utfnlen(
                                      (char *)s, loot.caps[0].start - s)));
-        v7_array_append(v7, arr, this_obj);
+        v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
         if (rez_len) {
@@ -329,7 +333,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
     size_t s_len;
     struct slre_prog *prog = NULL;
     struct slre_loot sub;
-    val_t so, ro = i_value_of(v7, v7_array_at(v7, args, 0));
+    val_t so, ro = i_value_of(v7, v7_array_get(v7, args, 0));
     const char *s;
     if (!v7_is_regexp(ro)) {
       so = to_string(v7, ro);
@@ -448,7 +452,7 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
   char buf[40];
   size_t l;
-  val_t arg_n = i_value_of(v7, v7_array_at(v7, args, n));
+  val_t arg_n = i_value_of(v7, v7_array_get(v7, args, n));
   double d;
   if (v7_is_double(arg_n)) {
     d = v7_to_double(arg_n);
@@ -516,9 +520,9 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   s_end = s + s_len;
 
   if (num_args == 0 || s_len == 0) {
-    v7_array_append(v7, res, v7_create_string(v7, s, s_len, 1));
+    v7_array_push(v7, res, v7_create_string(v7, s, s_len, 1));
   } else {
-    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0));
+    val_t ro = i_value_of(v7, v7_array_get(v7, args, 0));
     long len, elem = 0, limit = arg_long(v7, args, 1, LONG_MAX);
     size_t shift = 0;
     struct slre_loot loot;
@@ -547,18 +551,17 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
             v7_create_string(v7, s + shift, loot.caps[0].start - s - shift, 1);
         shift = loot.caps[0].end - s;
       }
-      v7_array_append(v7, res, tmp_s);
+      v7_array_push(v7, res, tmp_s);
 
       for (i = 1; i < loot.num_captures; i++)
-        v7_array_append(
-            v7, res,
-            (loot.caps[i].start != NULL)
-                ? v7_create_string(v7, loot.caps[i].start,
-                                   loot.caps[i].end - loot.caps[i].start, 1)
-                : v7_create_undefined());
+        v7_array_push(v7, res, (loot.caps[i].start != NULL) ?
+                      v7_create_string(v7, loot.caps[i].start,
+                                       loot.caps[i].end -
+                                       loot.caps[i].start, 1) :
+                      v7_create_undefined());
     }
     len = s_len - shift;
-    v7_array_append(v7, res, v7_create_string(v7, s + shift, len, 1));
+    v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));
   }
 
   return res;

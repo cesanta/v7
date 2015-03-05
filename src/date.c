@@ -615,7 +615,7 @@ static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj, val_t args,
     etime_t new_part = INVALID_TIME;
 
     for (i = 0; i < cargs && (i+start_pos < tpmax); i++) {
-      new_part = i_as_num(v7, v7_array_at(v7, args, i));
+      new_part = i_as_num(v7, v7_array_get(v7, args, i));
       if (isnan(new_part)) {
         break;
       }
@@ -658,7 +658,7 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       d_gettime(&ret_time);
     } else if (cargs == 1) {
       /* one parameter */
-      val_t arg = v7_array_at(v7, args, 0);
+      val_t arg = v7_array_get(v7, args, 0);
       if (v7_is_string(arg)) {  /* it could be string */
         size_t str_size;
         const char *str = v7_to_string(v7, &arg, &str_size);
@@ -679,7 +679,7 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       memset(&a, 0, sizeof(a));
 
       for (i = 0; i < cargs; i++) {
-        a.args[i] = i_as_num(v7, v7_array_at(v7, args, i));
+        a.args[i] = i_as_num(v7, v7_array_get(v7, args, i));
         if (isnan(a.args[i])) {
           break;
         }
@@ -791,7 +791,7 @@ static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   val_t n;
   if (v7_array_length(v7, args) >= 1) {
-    ret_time = i_as_num(v7, v7_array_at(v7, args, 0));
+    ret_time = i_as_num(v7, v7_array_get(v7, args, 0));
   }
 
   n = v7_create_number(ret_time);
@@ -861,7 +861,7 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
   }
 
   if (v7_array_length(v7, args) >= 1) {
-    val_t arg0 = v7_array_at(v7, args, 0);
+    val_t arg0 = v7_array_get(v7, args, 0);
     if (v7_is_string(arg0)) {
       size_t size;
       const char *time_str = v7_to_string(v7, &arg0, &size);

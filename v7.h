@@ -91,9 +91,12 @@ v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
 int v7_set(struct v7 *v7, v7_val_t obj, const char *, size_t, v7_val_t val);
 char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);
 int v7_is_true(struct v7 *v7, v7_val_t v);
-void v7_array_append(struct v7 *, v7_val_t arr, v7_val_t v);
-v7_val_t v7_array_at(struct v7 *, v7_val_t arr, long index);
 v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
+
+unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
+int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
+int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
+v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 
 #ifdef __cplusplus
 }

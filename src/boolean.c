@@ -8,7 +8,7 @@
 V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t v = v7_create_boolean(0);   /* false by default */
 
-  if (v7_is_true(v7, v7_array_at(v7, args, 0))) {
+  if (v7_is_true(v7, v7_array_get(v7, args, 0))) {
     v = v7_create_boolean(1);
   }
 

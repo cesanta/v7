@@ -165,7 +165,7 @@ static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void) this_obj;
   for (i = 0; i < v7_array_length(v7, args); i++) {
-    sum += v7_to_double(v7_array_at(v7, args, i));
+    sum += v7_to_double(v7_array_get(v7, args, i));
   }
   return v7_create_number(sum);
 }

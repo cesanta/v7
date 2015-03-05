@@ -1482,7 +1482,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
     V7_CHECK(v7, tag == AST_IDENT);
     name = ast_get_inlined_data(func->ast, pos, &name_len);
     ast_move_to_children(func->ast, &pos);
-    res = v7_array_at(v7, args, i);
+    res = v7_array_get(v7, args, i);
     v7_set_property(v7, frame, name, name_len, 0, res);
     if (!v7_is_undefined(arguments)) {
       n = snprintf(buf, sizeof(buf), "%d", i);
