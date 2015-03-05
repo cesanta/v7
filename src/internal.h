@@ -182,6 +182,7 @@ struct v7 {
   val_t boolean_prototype;
   val_t error_prototype;
   val_t string_prototype;
+  val_t regexp_prototype;
   val_t number_prototype;
   val_t date_prototype;
   val_t function_prototype;

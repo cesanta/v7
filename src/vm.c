@@ -211,14 +211,15 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
   struct slre_prog *p = NULL;
   struct v7_regexp *rp;
 
-  if (slre_compile(re, re_len, flags, flags_len, &p) != SLRE_OK || p == NULL) {
+  if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
+      p == NULL) {
     throw_exception(v7, "Error", "Invalid regex");
     return V7_UNDEFINED;
   } else {
-    rp = (struct v7_regexp *) malloc(sizeof(*rp));
+    rp = (struct v7_regexp *)malloc(sizeof(*rp));
     rp->regexp_string = v7_create_string(v7, re, re_len, 1);
-    rp->flags_string = v7_create_string(v7, flags, flags_len, 1);
     rp->compiled_regexp = p;
+    rp->lastIndex = 0;
 
     return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
   }
@@ -309,7 +310,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         return v_sprintf_s(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
       }
       {
-        const char *fmt = num > 1e10 ? "%.21lg" : "%.10lg";
+        const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
         return v_sprintf_s(buf, size, fmt, num);
       }
     case V7_TYPE_STRING: {
@@ -322,11 +323,15 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       }
     }
     case V7_TYPE_REGEXP_OBJECT: {
-      size_t n1, n2;
-      struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(v);
+      size_t n1, n2 = 0;
+      char s2[3] = {0};
+      struct v7_regexp *rp = (struct v7_regexp *)v7_to_pointer(v);
       const char *s1 = v7_to_string(v7, &rp->regexp_string, &n1);
-      const char *s2 = v7_to_string(v7, &rp->flags_string, &n2);
-      return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
+      int flags = slre_get_flags(rp->compiled_regexp);
+      if (flags & SLRE_FLAG_G) s2[n2++] = 'g';
+      if (flags & SLRE_FLAG_I) s2[n2++] = 'i';
+      if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
+      return v_sprintf_s(buf, size, "/%.*s/%.*s", (int)n1, s1, (int)n2, s2);
     }
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
@@ -548,6 +553,8 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   val_t v = obj;
   if (v7_is_string(obj)) {
     v = v7->string_prototype;
+  } else if (v7_is_regexp(obj)) {
+    v = v7->regexp_prototype;
   } else if (v7_is_double(obj)) {
     v = v7->number_prototype;
   } else if (v7_is_boolean(obj)) {
@@ -792,7 +799,21 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
           s++, r = '\n';
           break;
         default:
-          r = nextesc(&s);
+        {
+          const char *tmp_s = s;
+          int i = nextesc(&s);
+          switch(i){
+            case -SLRE_INVALID_ESC_CHAR:
+              r = '\\';
+              s = tmp_s;
+              n += runetochar(to == NULL ? tmp : to + n, &r);
+              s += chartorune(&r, s);
+              break;
+            case -SLRE_INVALID_HEX_DIGIT:
+            default:
+              r = i;
+          }
+        }
       }
     }
     n += runetochar(to == NULL ? tmp : to + n, &r);
