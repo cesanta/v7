@@ -9684,15 +9684,15 @@ d-G]/.exec("a") throw SyntaxError. Actual: {"message":"[RegExp] is not defined"}
 9630	FAIL ch15/15.4/15.4.5/15.4.5.1/S15.4.5.1_A1.2_T3.js (tail -c +8759574 tests/ecmac.db|head -c 808): [{"message":"#1: Array.prototype[2] = 2; x = [0,1]; x.length = 3; x.hasOwnProperty('2') === false. Actual: true"}]
 9631	FAIL ch15/15.4/15.4.5/15.4.5.1/S15.4.5.1_A1.3_T1.js (tail -c +8760383 tests/ecmac.db|head -c 1183): [{"message":"Invalid array length"}]
 9632	FAIL ch15/15.4/15.4.5/15.4.5.1/S15.4.5.1_A1.3_T2.js (tail -c +8761567 tests/ecmac.db|head -c 3045): [{"message":"Invalid array length"}]
-9633	FAIL ch15/15.4/15.4.5/15.4.5.1/S15.4.5.1_A2.1_T1.js (tail -c +8764613 tests/ecmac.db|head -c 1061): [{"message":"#1.1: x = []; x[4294967295] = 1; x.length === 0. Actual: 42949672960"}]
+9633	FAIL ch15/15.4/15.4.5/15.4.5.1/S15.4.5.1_A2.1_T1.js (tail -c +8764613 tests/ecmac.db|head -c 1061): [{"message":"#1.1: x = []; x[4294967295] = 1; x.length === 0. Actual: 4294967296"}]
 9634	FAIL ch15/15.4/15.4.5/15.4.5.1/S15.4.5.1_A2.2_T1.js (tail -c +8765675 tests/ecmac.db|head -c 726): [{"message":"#1: x = Array(100); x[0] = 1; x.length === 100. Actual: 1"}]
 9635	PASS ch15/15.4/15.4.5/15.4.5.1/S15.4.5.1_A2.3_T1.js (tail -c +8766402 tests/ecmac.db|head -c 600)
 9636	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A1_T1.js (tail -c +8767003 tests/ecmac.db|head -c 1149)
-9637	FAIL ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A1_T2.js (tail -c +8768153 tests/ecmac.db|head -c 731): [{"message":"#1: x = []; x[4294967295] = 1; x.length === 0. Actual: 42949672958"}]
+9637	FAIL ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A1_T2.js (tail -c +8768153 tests/ecmac.db|head -c 731): [{"message":"#1: x = []; x[4294967295] = 1; x.length === 0. Actual: 4294967296"}]
 9638	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A2_T1.js (tail -c +8768885 tests/ecmac.db|head -c 778)
 9639	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T1.js (tail -c +8769664 tests/ecmac.db|head -c 810)
 9640	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T2.js (tail -c +8770475 tests/ecmac.db|head -c 1508)
-9641	FAIL ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T3.js (tail -c +8771984 tests/ecmac.db|head -c 795): [{"message":"#1: x = []; x.length = 4294967295; x.length === 4294967295"}]
+9641	FAIL ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T3.js (tail -c +8771984 tests/ecmac.db|head -c 795): [{"message":"#2.2: x = []; x.length = 4294967296 throw RangeError. Actual: {"message":"#2.1: x = []; x.length = 4294967296 throw RangeError. Actual: x.length === 4294967296"}"}]
 9642	PASS ch15/15.4/15.4.5/15.4.5.2/S15.4.5.2_A3_T4.js (tail -c +8772780 tests/ecmac.db|head -c 1074)
 9643	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T1.js (tail -c +8773855 tests/ecmac.db|head -c 922): [{"message":"#2: __str = String(function(){}()); __str === "undefined". Actual: __str ==="}]
 9644	PASS ch15/15.5/15.5.1/S15.5.1.1_A1_T10.js (tail -c +8774778 tests/ecmac.db|head -c 1477)

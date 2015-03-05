@@ -6,6 +6,10 @@
 #include "internal.h"
 #include "gc.h"
 
+#ifdef V7_ENABLE_COMPACTING_GC
+void gc_mark_string(struct v7 *, val_t *);
+#endif
+
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
@@ -152,7 +156,13 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
   for ((prop = obj->properties), MARK(obj);
        prop != NULL; prop = next) {
+
+#ifdef V7_ENABLE_COMPACTING_GC
+    gc_mark_string(v7, &prop->value);
+    gc_mark_string(v7, &prop->name);
+#endif
     gc_mark(v7, prop->value);
+
     next = prop->next;
 
     assert((char *) prop >= v7->property_arena.base &&
@@ -172,6 +182,146 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   }
 }
 
+#ifdef V7_ENABLE_COMPACTING_GC
+
+uint64_t gc_string_val_to_offset(val_t v) {
+  return ((uint64_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
+}
+
+val_t gc_string_val_from_offset(uint64_t s) {
+  return s | V7_TAG_STRING_O;
+}
+
+/* Mark a string value */
+void gc_mark_string(struct v7 *v7, val_t *v) {
+  val_t h, tmp = 0;
+  char *s;
+
+  if ((((*v & V7_TAG_MASK) != V7_TAG_STRING_O) &&
+       (*v & V7_TAG_MASK) != V7_TAG_STRING_C)) {
+    return;
+  }
+
+  /*
+   * If a value points to an unmarked string we shall:
+   *  1. save the first 6 bytes of the string
+   *     since we need to be able to distinguish real values from
+   *     the saved first 6 bytes of the string, we need to tag the chunk
+   *     as V7_TAG_STRING_C
+   *  2. encode value's address (v) into the first bytes of the string.
+   *     the first byte is set to 0 to serve as a mark.
+   *     The remaining 6 bytes are taken from v's least significant bytes.
+   *  3. put the saved 8 bytes (tag + chunk) back into the value.
+   *
+   * If a value points to an already marked string we shall:
+   *  1. save the first 6 bytes of the string, which contain
+   *     (0, <6 bytes of a pointer to a val_t>), hence we have to skip the first byte
+   *     We tag the value pointer as a V7_TAG_FOREIGN so that it won't be followed
+   *     during recursive mark.
+   *
+   *  ... the rest is the same
+   *
+   *  Note: 64-bit pointers can be represented with 48-bits
+   */
+
+  s = v7->owned_strings.buf + gc_string_val_to_offset(*v);
+  if (s[-1] == '\0') {
+    memcpy(&tmp, s, sizeof(val_t) - 2);
+    tmp |= V7_TAG_STRING_C;
+  } else {
+    memcpy(&tmp, s, sizeof(val_t) - 2);
+    tmp |= V7_TAG_FOREIGN;
+  }
+
+  h = (val_t) v;
+  s[-1] = 1;
+  memcpy(s, &h, sizeof(val_t) - 2);
+  memcpy(v, &tmp, sizeof(val_t));
+}
+
+void gc_compact_strings(struct v7 *v7) {
+  char *p = v7->owned_strings.buf + 1;
+  uint64_t h, next, head = 1;
+  int len, llen;
+
+  while (p < v7->owned_strings.buf + v7->owned_strings.len) {
+    if (p[-1] == '\1') {
+      /* relocate and update ptrs */
+      h = 0;
+      memcpy(&h, p, sizeof(h) - 2);
+
+      /*
+       * relocate pointers until we find the tail.
+       * The tail is marked with V7_TAG_STRING_C,
+       * while val_t link pointers are tagged with V7_TAG_FOREIGN
+       */
+      for (; (h & V7_TAG_MASK) != V7_TAG_STRING_C ; h = next) {
+        h &= ~V7_TAG_MASK;
+        memcpy(&next, (char *) h, sizeof(h));
+
+        * (val_t *) h = gc_string_val_from_offset(head);
+      }
+      h &= ~V7_TAG_MASK;
+
+      /*
+       * the tail contains the first 6 bytes we stole from
+       * the actual string.
+       */
+      len = decode_varint((unsigned char *) &h, &llen);
+      len += llen + 1;
+
+      /*
+       * restore the saved 6 bytes
+       * TODO(mkm): think about endianness
+       */
+      memcpy(p, &h, sizeof(val_t) - 2);
+
+      /*
+       * and relocate the string data by packing it to the left.
+       */
+      memmove(v7->owned_strings.buf + head, p, len);
+      v7->owned_strings.buf[head - 1] = 0x0;
+      p += len;
+      head += len;
+    } else {
+      len = decode_varint((unsigned char *) p, &llen);
+      len += llen + 1;
+
+      p += len;
+    }
+  }
+
+  v7->owned_strings.len = head;
+}
+
+void gc_dump_owned_strings(struct v7 *v7) {
+  size_t i;
+#if 0
+  for (i = 0; i < v7->owned_strings.len; i++) {
+    printf("%02x ", (uint8_t) v7->owned_strings.buf[i]);
+  }
+  printf("\n");
+  for (i = 0; i < v7->owned_strings.len; i++) {
+    if (isprint(v7->owned_strings.buf[i])) {
+      printf(" %c ", v7->owned_strings.buf[i]);
+    } else {
+      printf(" . ");
+    }
+  }
+#else
+    for (i = 0; i < v7->owned_strings.len; i++) {
+    if (isprint(v7->owned_strings.buf[i])) {
+      printf("%c", v7->owned_strings.buf[i]);
+    } else {
+      printf(".");
+    }
+  }
+#endif
+  printf("\n");
+}
+
+#endif
+
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7) {
   val_t **vp;
@@ -179,6 +329,13 @@ void v7_gc(struct v7 *v7) {
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
   gc_dump_arena_stats("Before GC properties", &v7->property_arena);
+
+#if 0
+#ifdef V7_ENABLE_COMPACTING_GC
+  printf("DUMP BEFORE\n");
+  gc_dump_owned_strings(v7);
+#endif
+#endif
 
   /* TODO(mkm): paranoia? */
   gc_mark(v7, v7->object_prototype);
@@ -199,6 +356,18 @@ void v7_gc(struct v7 *v7) {
        (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
     gc_mark(v7, **vp);
   }
+
+#ifdef V7_ENABLE_COMPACTING_GC
+#if 0
+  printf("Owned string mbuf len was %lu\n", v7->owned_strings.len);
+#endif
+  gc_compact_strings(v7);
+#if 0
+  printf("DUMP AFTER\n");
+  gc_dump_owned_strings(v7);
+  printf("Owned string mbuf len is %lu\n", v7->owned_strings.len);
+#endif
+#endif
 
   gc_sweep(&v7->object_arena, 0);
   gc_sweep(&v7->function_arena, 0);
