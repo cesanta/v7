@@ -1078,7 +1078,7 @@ V7_PRIVATE int v7_del_property(struct v7 *, val_t, const char *, size_t);
 /*
  * Returns the array length, or `-1` if the object is not an array
  */
-V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
+V7_PRIVATE unsigned long v7_array_length(struct v7 *v7, val_t);
 V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value);
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json);
@@ -5905,25 +5905,26 @@ V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj,
   return p->value;
 }
 
-V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
+V7_PRIVATE unsigned long v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
-  long max = -1, k;
+  unsigned long key, len = 0;
   char *end;
 
-  (void) v7;
   if (!v7_is_object(v)) {
-    return -1;
+    return 0;
   }
 
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     size_t n;
     const char *s = v7_to_string(v7, &p->name, &n);
-    k = strtol(s, &end, 10);
-    if (end != s && k > max) {
-      max = k;
+    key = strtoul(s, &end, 10);
+    /* Array length could not be more then 2^32 */
+    if (end > s && *end == '\0' && key >= len && key < 4294967295L) {
+      len = key + 1;
     }
   }
-  return max + 1;
+
+  return len;
 }
 
 void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
@@ -12561,6 +12562,17 @@ static void init_js_stdlib(struct v7 *v7) {
     Array.prototype.shift = function() {
       return this.splice(0, 1)[0];
     };));
+
+  /* TODO(lsm): re-enable in a separate PR */
+#if 0
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.unshift = function() {
+      var a = new Array(0, 0);
+      Array.prototype.push.apply(a, arguments);
+      Array.prototype.splice.apply(this, a);
+      return this.length;
+    };));
+#endif
 }
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {

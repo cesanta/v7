@@ -161,7 +161,7 @@ static const char *test_closure(void) {
 
 static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
   double sum = 0;
-  int i;
+  unsigned long i;
 
   (void) this_obj;
   for (i = 0; i < v7_array_length(v7, args); i++) {

@@ -278,6 +278,17 @@ static void init_js_stdlib(struct v7 *v7) {
     Array.prototype.shift = function() {
       return this.splice(0, 1)[0];
     };));
+
+  /* TODO(lsm): re-enable in a separate PR */
+#if 0
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.unshift = function() {
+      var a = new Array(0, 0);
+      Array.prototype.push.apply(a, arguments);
+      Array.prototype.splice.apply(this, a);
+      return this.length;
+    };));
+#endif
 }
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
