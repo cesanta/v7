@@ -1076,7 +1076,7 @@ V7_PRIVATE int v7_del_property(struct v7 *, val_t, const char *, size_t);
 /*
  * Returns the array length, or `-1` if the object is not an array
  */
-V7_PRIVATE long v7_array_length(struct v7 *v7, val_t);
+V7_PRIVATE uint32_t v7_array_length(struct v7 *v7, val_t);
 V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value);
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json);
@@ -3447,7 +3447,7 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
-  long len = 0;
+  uint32_t len = 0;
   (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
@@ -5880,10 +5880,11 @@ V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj,
   return p->value;
 }
 
-V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
+V7_PRIVATE uint32_t v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
-  long max = -1, k;
-  char *end;
+  uint32_t max = 0;
+  uint64_t k;
+  int res;
 
   (void) v7;
   if (!v7_is_object(v)) {
@@ -5893,12 +5894,12 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     size_t n;
     const char *s = v7_to_string(v7, &p->name, &n);
-    k = strtol(s, &end, 10);
-    if (end != s && k > max) {
-      max = k;
+    res = sscanf(s, "%llu", &k);
+    if (res != 0 && k >= max) {
+      max = k + 1;
     }
   }
-  return max + 1;
+  return max;
 }
 
 void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {

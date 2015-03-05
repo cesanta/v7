@@ -732,10 +732,11 @@ V7_PRIVATE val_t v7_property_value(struct v7 *v7, val_t obj,
   return p->value;
 }
 
-V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
+V7_PRIVATE uint32_t v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
-  long max = -1, k;
-  char *end;
+  uint32_t max = 0;
+  uint64_t k;
+  int res;
 
   (void) v7;
   if (!v7_is_object(v)) {
@@ -745,12 +746,12 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     size_t n;
     const char *s = v7_to_string(v7, &p->name, &n);
-    k = strtol(s, &end, 10);
-    if (end != s && k > max) {
-      max = k;
+    res = sscanf(s, "%llu", &k);
+    if (res != 0 && k >= max) {
+      max = k + 1;
     }
   }
-  return max + 1;
+  return max;
 }
 
 void v7_array_append(struct v7 *v7, v7_val_t arr, v7_val_t v) {
