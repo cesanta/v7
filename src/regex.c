@@ -43,7 +43,7 @@ static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void)args;
   if (v7_is_regexp(r))
-    flags = slre_get_flags(((struct v7_regexp *)v7_to_pointer(r))->compiled_regexp);
+    flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_G);
 }
@@ -54,7 +54,7 @@ static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void)args;
   if (v7_is_regexp(r))
-    flags = slre_get_flags(((struct v7_regexp *)v7_to_pointer(r))->compiled_regexp);
+    flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_I);
 }
@@ -65,7 +65,7 @@ static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void)args;
   if (v7_is_regexp(r))
-    flags = slre_get_flags(((struct v7_regexp *)v7_to_pointer(r))->compiled_regexp);
+    flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_M);
 }
@@ -77,7 +77,7 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void)args;
   if (v7_is_regexp(r))
-    buf = v7_to_string(v7, &((struct v7_regexp *)v7_to_pointer(r))->regexp_string, &len);
+    buf = v7_to_string(v7, &v7_to_regexp(r)->regexp_string, &len);
 
   return v7_create_string(v7, buf, len, 1);
 }
@@ -88,7 +88,7 @@ static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   (void)v7;
   (void)args;
   if (v7_is_regexp(this_obj))
-    lastIndex = ((struct v7_regexp *)v7_to_pointer(this_obj))->lastIndex;
+    lastIndex = v7_to_regexp(this_obj)->lastIndex;
 
   return v7_create_number(lastIndex);
 }
@@ -97,7 +97,7 @@ static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   long lastIndex = 0;
 
   if (v7_is_regexp(this_obj))
-    ((struct v7_regexp *)v7_to_pointer(this_obj))->lastIndex = lastIndex = arg_long(v7, args, 0, 0);
+    v7_to_regexp(this_obj)->lastIndex = lastIndex = arg_long(v7, args, 0, 0);
 
   return v7_create_number(lastIndex);
 }
@@ -110,7 +110,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
     struct slre_loot sub;
     struct slre_cap *ptok = sub.caps;
     const char *begin = v7_to_string(v7, &s, &len);
-    struct v7_regexp *rp = (struct v7_regexp *)v7_to_pointer(this_obj);
+    struct v7_regexp *rp = v7_to_regexp(this_obj);
     int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
     if (rp->lastIndex < 0) rp->lastIndex = 0;
     if (flag_g) begin = utfnshift((char *)begin, rp->lastIndex);

@@ -234,7 +234,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
         return v7_create_undefined();
       }
     } else {
-      prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
+      prog = v7_to_regexp(ro)->compiled_regexp;
       flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
     }
 
@@ -327,7 +327,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
         return v7_create_undefined();
       }
     } else
-      prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
+      prog = v7_to_regexp(ro)->compiled_regexp;
 
     so = to_string(v7, this_obj);
     s = v7_to_string(v7, &so, &s_len);
@@ -492,7 +492,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
         return v7_create_undefined();
       }
     } else
-      prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
+      prog = v7_to_regexp(ro)->compiled_regexp;
 
     for (; elem < limit && shift < s_len; elem++) {
       val_t tmp_s;
