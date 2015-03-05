@@ -103,7 +103,7 @@ static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arr = V7_NULL;
+  val_t arr = v7_create_null();
   if (v7_is_regexp(this_obj) && v7_array_length(v7, args) > 0) {
     val_t s = to_string(v7, v7_array_at(v7, args, 0));
     size_t len;
@@ -130,7 +130,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
-  return v7_create_boolean(Regex_exec(v7, this_obj, args) != V7_NULL);
+  return v7_create_boolean(!v7_is_null(Regex_exec(v7, this_obj, args)));
 }
 
 V7_PRIVATE void init_regex(struct v7 *v7) {

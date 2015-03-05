@@ -93,7 +93,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   double res = -1;
   const char *p1, *p2, *end;
 
-  if (arg0 != V7_UNDEFINED) {
+  if (!v7_is_undefined(arg0)) {
     sub = to_string(v7, arg0);
     p1 = v7_to_string(v7, &s, &n1);
     p2 = v7_to_string(v7, &sub, &n2);
@@ -164,7 +164,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arr = V7_NULL;
+  val_t arr = v7_create_null();
 
   if (v7_array_length(v7, args) > 0) {
     size_t s_len;
@@ -193,7 +193,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       struct slre_cap *ptok = sub.caps;
       int i;
       if (slre_exec(prog, 0, s, end, &sub)) break;
-      if (arr == V7_NULL) arr = v7_create_array(v7);
+      if (v7_is_null(arr)) arr = v7_create_array(v7);
       s = ptok->end;
       i = 0;
       do {
@@ -446,7 +446,7 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
     }
     return (long)d;
   }
-  if (arg_n == V7_NULL) return 0;
+  if (v7_is_null(arg_n)) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
   if (l > 0 && isdigit(buf[0])) return strtol(buf, NULL, 10);
   return default_value;
