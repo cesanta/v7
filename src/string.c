@@ -217,7 +217,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
     const char *const str_end = s + s_len;
     char *p = (char *)s;
     uint32_t out_sub_num = 0;
-    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0)), str_func = i_value_of(v7, v7_array_at(v7, args, 1));
+    val_t ro = i_value_of(v7, v7_array_at(v7, args, 0)),
+          str_func = i_value_of(v7, v7_array_at(v7, args, 1));
     struct slre_prog *prog = NULL;
     struct slre_cap out_sub[V7_RE_MAX_REPL_SUB], *ptok = out_sub;
     struct slre_loot loot;
@@ -238,8 +239,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
     }
 
-    if (!v7_is_function(str_func))
-      str_func = to_string(v7, str_func);
+    if (!v7_is_function(str_func)) str_func = to_string(v7, str_func);
 
     do {
       int i;
@@ -524,8 +524,8 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_string(struct v7 *v7) {
-  val_t str = v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor,
-                                       1);
+  val_t str =
+      v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
                   str);
 

@@ -237,7 +237,7 @@ static int re_nextc(Rune *r, const char **src, const char *src_end) {
   if (*r == '\\') {
     const char *tmp_s = *src;
     int i = nextesc(src);
-    switch(i){
+    switch (i) {
       case -SLRE_INVALID_ESC_CHAR:
         *r = '\\';
         *src = tmp_s;

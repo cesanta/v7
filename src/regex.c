@@ -42,8 +42,7 @@ static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
 
   (void)args;
-  if (v7_is_regexp(r))
-    flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_G);
 }
@@ -53,8 +52,7 @@ static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
 
   (void)args;
-  if (v7_is_regexp(r))
-    flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_I);
 }
@@ -64,8 +62,7 @@ static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
 
   (void)args;
-  if (v7_is_regexp(r))
-    flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_M);
 }
@@ -87,8 +84,7 @@ static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void)v7;
   (void)args;
-  if (v7_is_regexp(this_obj))
-    lastIndex = v7_to_regexp(this_obj)->lastIndex;
+  if (v7_is_regexp(this_obj)) lastIndex = v7_to_regexp(this_obj)->lastIndex;
 
   return v7_create_number(lastIndex);
 }
@@ -134,8 +130,8 @@ static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_regex(struct v7 *v7) {
-  val_t ctor = v7_create_cfunction_ctor(v7, v7->regexp_prototype, Regex_ctor,
-                                       1);
+  val_t ctor =
+      v7_create_cfunction_ctor(v7, v7->regexp_prototype, Regex_ctor, 1);
   val_t lastIndex = v7_create_array(v7);
 
   v7_set_property(v7, v7->global_object, "RegExp", 6, V7_PROPERTY_DONT_ENUM,
