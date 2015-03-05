@@ -213,7 +213,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
   this_obj = to_string(v7, this_obj);
   s = v7_to_string(v7, &this_obj, &s_len);
 
-  if (v7_array_length(v7, args) > 1) {
+  if (s_len != 0 && v7_array_length(v7, args) > 1) {
     const char *const str_end = s + s_len;
     char *p = (char *)s;
     uint32_t out_sub_num = 0;
@@ -305,7 +305,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
 
     return out_str_o;
   }
-  return v7_create_string(v7, s, s_len, 1);
+  /* return v7_create_string(v7, s, s_len, 1); */
+  return this_obj;
 }
 
 static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
