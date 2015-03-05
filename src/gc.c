@@ -197,8 +197,8 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   val_t h, tmp = 0;
   char *s;
 
-  if ((((*v & V7_TAG_MASK) != V7_TAG_STRING_O) &&
-       (*v & V7_TAG_MASK) != V7_TAG_STRING_C)) {
+  if (((*v & V7_TAG_MASK) != V7_TAG_STRING_O) &&
+      (*v & V7_TAG_MASK) != V7_TAG_STRING_C) {
     return;
   }
 
@@ -214,10 +214,9 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *  3. put the saved 8 bytes (tag + chunk) back into the value.
    *
    * If a value points to an already marked string we shall:
-   *  1. save the first 6 bytes of the string, which contain
-   *     (0, <6 bytes of a pointer to a val_t>), hence we have to skip the first byte
-   *     We tag the value pointer as a V7_TAG_FOREIGN so that it won't be followed
-   *     during recursive mark.
+   *     (0, <6 bytes of a pointer to a val_t>), hence we have to skip
+   *     the first byte. We tag the value pointer as a V7_TAG_FOREIGN
+   *     so that it won't be followed during recursive mark.
    *
    *  ... the rest is the same
    *
@@ -226,17 +225,17 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
 
   s = v7->owned_strings.buf + gc_string_val_to_offset(*v);
   if (s[-1] == '\0') {
-    memcpy(&tmp, s, sizeof(val_t) - 2);
+    memcpy(&tmp, s, sizeof(tmp) - 2);
     tmp |= V7_TAG_STRING_C;
   } else {
-    memcpy(&tmp, s, sizeof(val_t) - 2);
+    memcpy(&tmp, s, sizeof(tmp) - 2);
     tmp |= V7_TAG_FOREIGN;
   }
 
   h = (val_t) v;
   s[-1] = 1;
-  memcpy(s, &h, sizeof(val_t) - 2);
-  memcpy(v, &tmp, sizeof(val_t));
+  memcpy(s, &h, sizeof(h) - 2);
+  memcpy(v, &tmp, sizeof(tmp));
 }
 
 void gc_compact_strings(struct v7 *v7) {
@@ -274,7 +273,7 @@ void gc_compact_strings(struct v7 *v7) {
        * restore the saved 6 bytes
        * TODO(mkm): think about endianness
        */
-      memcpy(p, &h, sizeof(val_t) - 2);
+      memcpy(p, &h, sizeof(h) - 2);
 
       /*
        * and relocate the string data by packing it to the left.
