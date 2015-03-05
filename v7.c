@@ -5885,7 +5885,6 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
   long max = -1, k;
   char *end;
 
-  (void) v7;
   if (!v7_is_object(v)) {
     return -1;
   }
@@ -5894,10 +5893,12 @@ V7_PRIVATE long v7_array_length(struct v7 *v7, val_t v) {
     size_t n;
     const char *s = v7_to_string(v7, &p->name, &n);
     k = strtol(s, &end, 10);
-    if (end != s && k > max) {
+    /* Array length could not be more then 2^32 */
+    if (end > s && k > max && k < 4294967295L) {
       max = k;
     }
   }
+
   return max + 1;
 }
 
@@ -12501,6 +12502,17 @@ static void init_js_stdlib(struct v7 *v7) {
     Array.prototype.shift = function() {
       return this.splice(0, 1)[0];
     };));
+
+  /* TODO(lsm): re-enable in a separate PR */
+#if 0
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.unshift = function() {
+      var a = new Array(0, 0);
+      Array.prototype.push.apply(a, arguments);
+      Array.prototype.splice.apply(this, a);
+      return this.length;
+    };));
+#endif
 }
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
