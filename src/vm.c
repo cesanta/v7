@@ -85,6 +85,10 @@ int v7_is_regexp(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_REGEXP;
 }
 
+V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t v) {
+  return v7_to_pointer(v);
+}
+
 int v7_is_null(val_t v) {
   return v == V7_NULL;
 }
