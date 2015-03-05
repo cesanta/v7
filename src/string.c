@@ -178,7 +178,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "Error", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else
       prog = v7_to_regexp(ro)->compiled_regexp;
@@ -231,7 +231,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "Error", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else {
       prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
@@ -324,7 +324,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "Error", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else
       prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
@@ -489,7 +489,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "Error", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else
       prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
@@ -514,7 +514,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
             (loot.caps[i].start != NULL)
                 ? v7_create_string(v7, loot.caps[i].start,
                                    loot.caps[i].end - loot.caps[i].start, 1)
-                : V7_UNDEFINED);
+                : v7_create_undefined());
     }
     len = s_len - shift;
     v7_array_append(v7, res, v7_create_string(v7, s + shift, len, 1));
