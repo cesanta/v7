@@ -134,11 +134,12 @@ static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_regex(struct v7 *v7) {
-  val_t ctor = v7_create_cfunction(Regex_ctor);
+  val_t ctor = v7_create_cfunction_ctor(v7, v7->regexp_prototype, Regex_ctor,
+                                       1);
   val_t lastIndex = v7_create_array(v7);
 
-  v7_set_property(v7, v7->global_object, "RegExp", 6, 0, ctor);
-  v7_set(v7, v7->regexp_prototype, "constructor", 11, ctor);
+  v7_set_property(v7, v7->global_object, "RegExp", 6, V7_PROPERTY_DONT_ENUM,
+                  ctor);
 
   set_cfunc_prop(v7, v7->regexp_prototype, "exec", Regex_exec);
   set_cfunc_prop(v7, v7->regexp_prototype, "test", Regex_test);
