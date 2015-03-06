@@ -4101,6 +4101,8 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
         else
           p1 = utfnshift((char *)p1, fromIndex);
       }
+      if (last && fromIndex == 0) ;
+      else {
       if (0 == n2 || end - p1 == 0)
         res = 0;
       else {
@@ -4109,6 +4111,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
             res = i;
             if (!last) break;
           }
+      }
       }
     }
   }
