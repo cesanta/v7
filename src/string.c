@@ -99,9 +99,9 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
     p2 = v7_to_string(v7, &sub, &n2);
 
     if (n2 <= n1) {
-      if (v7_array_length(v7, args) > 1) fromIndex = v7_to_double(arg1);
       end = p1 + n1;
       n1 = utfnlen((char *)p1, n1);
+      fromIndex = (v7_array_length(v7, args) > 1) ? v7_to_double(arg1) : n1;
       if (fromIndex > 0) {
         if (fromIndex > n1) fromIndex = n1;
         if (last)
@@ -109,17 +109,16 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
         else
           p1 = utfnshift((char *)p1, fromIndex);
       }
-      if (last && fromIndex == 0) ;
-      else {
-      if (0 == n2 || end - p1 == 0)
-        res = 0;
-      else {
-        for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *)p1, 1))
-          if (memcmp(p1, p2, n2) == 0) {
-            res = i;
-            if (!last) break;
-          }
-      }
+      if (!last || fromIndex != 0) {
+        if (0 == n2 || end - p1 == 0)
+          res = 0;
+        else {
+          for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *)p1, 1))
+            if (memcmp(p1, p2, n2) == 0) {
+              res = i;
+              if (!last) break;
+            }
+        }
       }
     }
   }
