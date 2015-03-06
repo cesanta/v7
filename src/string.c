@@ -168,7 +168,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arr = V7_NULL;
+  val_t arr = v7_create_null();
 
   if (v7_array_length(v7, args) > 0) {
     size_t s_len;
@@ -182,10 +182,10 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "TypeError", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else
-      prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
+      prog = v7_to_regexp(ro)->compiled_regexp;
 
     flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
     so = to_string(v7, this_obj);
@@ -236,10 +236,10 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "TypeError", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else {
-      prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
+      prog = v7_to_regexp(ro)->compiled_regexp;
       flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
     }
 
@@ -328,10 +328,10 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "TypeError", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else
-      prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
+      prog = v7_to_regexp(ro)->compiled_regexp;
 
     so = to_string(v7, this_obj);
     s = v7_to_string(v7, &so, &s_len);
@@ -521,10 +521,10 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
         throw_exception(v7, "TypeError", "Invalid String");
-        return V7_UNDEFINED;
+        return v7_create_undefined();
       }
     } else
-      prog = ((struct v7_regexp *)v7_to_pointer(ro))->compiled_regexp;
+      prog = v7_to_regexp(ro)->compiled_regexp;
 
     for (; elem < limit && shift < s_len; elem++) {
       val_t tmp_s;
@@ -546,7 +546,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
             (loot.caps[i].start != NULL)
                 ? v7_create_string(v7, loot.caps[i].start,
                                    loot.caps[i].end - loot.caps[i].start, 1)
-                : V7_UNDEFINED);
+                : v7_create_undefined());
     }
     len = s_len - shift;
     v7_array_append(v7, res, v7_create_string(v7, s + shift, len, 1));

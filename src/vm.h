@@ -123,6 +123,7 @@ enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
+V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t);
 val_t v7_object_to_value(struct v7_object *);
 val_t v7_function_to_value(struct v7_function *);
 
