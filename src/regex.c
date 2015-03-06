@@ -23,8 +23,8 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     }
     if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
         p == NULL) {
-      throw_exception(v7, "Error", "Invalid regex");
-      return v7_create_undefined();
+      throw_exception(v7, "TypeError", "Invalid regex");
+      return V7_UNDEFINED;
     } else {
       rp = (struct v7_regexp *)malloc(sizeof(*rp));
       rp->regexp_string = v7_create_string(v7, re, re_len, 1);
@@ -42,7 +42,8 @@ static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
 
   (void)args;
-  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(r))
+    flags = slre_get_flags(((struct v7_regexp *)v7_to_pointer(r))->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_G);
 }
@@ -52,7 +53,8 @@ static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
 
   (void)args;
-  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(r))
+    flags = slre_get_flags(((struct v7_regexp *)v7_to_pointer(r))->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_I);
 }
@@ -62,7 +64,8 @@ static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
 
   (void)args;
-  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(r))
+    flags = slre_get_flags(((struct v7_regexp *)v7_to_pointer(r))->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_M);
 }
@@ -74,7 +77,7 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void)args;
   if (v7_is_regexp(r))
-    buf = v7_to_string(v7, &v7_to_regexp(r)->regexp_string, &len);
+    buf = v7_to_string(v7, &((struct v7_regexp *)v7_to_pointer(r))->regexp_string, &len);
 
   return v7_create_string(v7, buf, len, 1);
 }
@@ -84,7 +87,8 @@ static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void)v7;
   (void)args;
-  if (v7_is_regexp(this_obj)) lastIndex = v7_to_regexp(this_obj)->lastIndex;
+  if (v7_is_regexp(this_obj))
+    lastIndex = ((struct v7_regexp *)v7_to_pointer(this_obj))->lastIndex;
 
   return v7_create_number(lastIndex);
 }
@@ -93,20 +97,20 @@ static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   long lastIndex = 0;
 
   if (v7_is_regexp(this_obj))
-    v7_to_regexp(this_obj)->lastIndex = lastIndex = arg_long(v7, args, 0, 0);
+    ((struct v7_regexp *)v7_to_pointer(this_obj))->lastIndex = lastIndex = arg_long(v7, args, 0, 0);
 
   return v7_create_number(lastIndex);
 }
 
 static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arr = v7_create_null();
+  val_t arr = V7_NULL;
   if (v7_is_regexp(this_obj) && v7_array_length(v7, args) > 0) {
     val_t s = to_string(v7, v7_array_at(v7, args, 0));
     size_t len;
     struct slre_loot sub;
     struct slre_cap *ptok = sub.caps;
     const char *begin = v7_to_string(v7, &s, &len);
-    struct v7_regexp *rp = v7_to_regexp(this_obj);
+    struct v7_regexp *rp = (struct v7_regexp *)v7_to_pointer(this_obj);
     int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
     if (rp->lastIndex < 0) rp->lastIndex = 0;
     if (flag_g) begin = utfnshift((char *)begin, rp->lastIndex);
@@ -126,16 +130,15 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
-  return v7_create_boolean(!v7_is_null(Regex_exec(v7, this_obj, args)));
+  return v7_create_boolean(Regex_exec(v7, this_obj, args) != V7_NULL);
 }
 
 V7_PRIVATE void init_regex(struct v7 *v7) {
-  val_t ctor =
-      v7_create_cfunction_ctor(v7, v7->regexp_prototype, Regex_ctor, 1);
+  val_t ctor = v7_create_cfunction(Regex_ctor);
   val_t lastIndex = v7_create_array(v7);
 
-  v7_set_property(v7, v7->global_object, "RegExp", 6, V7_PROPERTY_DONT_ENUM,
-                  ctor);
+  v7_set_property(v7, v7->global_object, "RegExp", 6, 0, ctor);
+  v7_set(v7, v7->regexp_prototype, "constructor", 11, ctor);
 
   set_cfunc_prop(v7, v7->regexp_prototype, "exec", Regex_exec);
   set_cfunc_prop(v7, v7->regexp_prototype, "test", Regex_test);

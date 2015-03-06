@@ -123,7 +123,6 @@ enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
-V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t);
 val_t v7_object_to_value(struct v7_object *);
 val_t v7_function_to_value(struct v7_function *);
 
@@ -205,7 +204,6 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
-V7_PRIVATE val_t s_substr(struct v7 *, val_t, long, long);
 V7_PRIVATE void embed_string(struct mbuf *, size_t, const char *, size_t, int);
 /* TODO(mkm): rename after regexp merge */
 V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
