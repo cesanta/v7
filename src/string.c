@@ -92,16 +92,16 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   if (!v7_is_undefined(arg0)) {
     const char *p1, *p2, *end;
     size_t i, n1, n2;
-    val_t arg1 = i_value_of(v7, v7_array_at(v7, args, 1));
     val_t sub = to_string(v7, arg0);
     this_obj = to_string(v7, this_obj);
     p1 = v7_to_string(v7, &this_obj, &n1);
     p2 = v7_to_string(v7, &sub, &n2);
 
     if (n2 <= n1) {
+      if (v7_array_length(v7, args) > 1)
+        fromIndex = v7_to_double(i_value_of(v7, v7_array_at(v7, args, 1)));
       end = p1 + n1;
       n1 = utfnlen((char *)p1, n1);
-      fromIndex = (v7_array_length(v7, args) > 1) ? v7_to_double(arg1) : n1;
       if (fromIndex > 0) {
         if (fromIndex > n1) fromIndex = n1;
         if (last)
