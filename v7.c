@@ -4555,9 +4555,9 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
                   str);
 
+  set_cfunc_prop(v7, str, "fromCharCode", Str_fromCharCode);
   set_cfunc_prop(v7, v7->string_prototype, "charCodeAt", Str_charCodeAt);
   set_cfunc_prop(v7, v7->string_prototype, "charAt", Str_charAt);
-  set_cfunc_prop(v7, v7->string_prototype, "fromCharCode", Str_fromCharCode);
   set_cfunc_prop(v7, v7->string_prototype, "concat", Str_concat);
   set_cfunc_prop(v7, v7->string_prototype, "indexOf", Str_indexOf);
   set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
