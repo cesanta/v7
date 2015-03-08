@@ -37,6 +37,9 @@
 #include <setjmp.h>
 #include <time.h>
 
+/* Public API. Implemented in api.c */
+#include "../v7.h"
+
 #ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
@@ -56,9 +59,6 @@ typedef unsigned long uintptr_t;
 #include <unistd.h>
 #include <fcntl.h>
 #endif
-
-/* Public API. Implemented in api.c */
-#include "../v7.h"
 
 /* Private API */
 #include "utf.h"
