@@ -658,8 +658,10 @@ struct gc_arena {
 #ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
+#if defined(_MSC_VER) && _MSC_VER <= 1200
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
+#endif
 #define __unused
 typedef __int64 int64_t;
 typedef int int32_t;
@@ -3888,7 +3890,7 @@ V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) {   \
   return func(v7, args, name);                                          \
 }
 
-#ifdef V7_WINDOWS
+#if defined(_MSC_VER) && _MSC_VER <= 1200
 static double round(double n) {
   return n;
 }

@@ -43,8 +43,10 @@
 #ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
+#if defined(_MSC_VER) && _MSC_VER <= 1200
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
+#endif
 #define __unused
 typedef __int64 int64_t;
 typedef int int32_t;
