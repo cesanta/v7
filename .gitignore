@@ -16,6 +16,8 @@ test_suite
 *.watch
 *.win
 *.workspace
+*.obj
+*.pdb
 _amalgamate.v7.js
 _amalgamate.unit_test.js
 test.html

@@ -34,7 +34,7 @@ enum v7_err {
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
-#if defined(_MSC_VER) && _MSC_VER <= 1200
+#if defined(_WIN32) || (defined(_MSC_VER) && _MSC_VER <= 1200)
 #define V7_WINDOWS
 #endif
 
@@ -653,6 +653,8 @@ struct gc_arena {
 #include <setjmp.h>
 #include <time.h>
 
+/* Public API. Implemented in api.c */
+
 #ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
@@ -672,8 +674,6 @@ typedef unsigned long uintptr_t;
 #include <unistd.h>
 #include <fcntl.h>
 #endif
-
-/* Public API. Implemented in api.c */
 
 /* Private API */
 
