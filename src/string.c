@@ -135,11 +135,11 @@ static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
-  return s_index_of(v7, this_obj, args, 0);
+  return s_index_of(v7, this_obj, args, 1);
 }
 
 static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
-  return s_index_of(v7, this_obj, args, 1);
+  return s_index_of(v7, this_obj, args, 0);
 }
 
 static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
