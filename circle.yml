@@ -12,5 +12,6 @@ machine:
 test:
   pre:
     - make run
+    - make -C tests coverage
   post:
     - tests/update_hist_ecma_report.sh
