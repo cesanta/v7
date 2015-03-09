@@ -12,9 +12,9 @@ amalgamated_v7
 *.watch
 *.win
 *.workspace
+*.obj
+*.pdb
 Debug
 Release
-test_suite
 v7.amalgamate.js
 TAGS
-src/data.c
