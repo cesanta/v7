@@ -294,33 +294,41 @@ static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
 }
 
 static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res;
+  val_t arg0, arg1, el, res = v7_create_undefined();
   struct v7_property *p;
 
-  a_prep1(v7, this_obj, args, &arg0, &arg1);
-  res = v7_create_array(v7);
-  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-    size_t n;
-    const char *name;
-    el = a_prep2(v7, arg0, p->value, p->name, arg1);
-    name = v7_to_string(v7, &p->name, &n);
-    v7_set(v7, res, name, n, el);
+  if (!v7_is_object(this_obj)) {
+    throw_exception(v7, "TypeError", "Array expected");
+  } else {
+    a_prep1(v7, this_obj, args, &arg0, &arg1);
+    res = v7_create_array(v7);
+    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+      size_t n;
+      const char *name;
+      el = a_prep2(v7, arg0, p->value, p->name, arg1);
+      name = v7_to_string(v7, &p->name, &n);
+      v7_set(v7, res, name, n, el);
+    }
   }
 
   return res;
 }
 
 static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res;
+  val_t arg0, arg1, el, res = v7_create_undefined();
   struct v7_property *p;
 
-  a_prep1(v7, this_obj, args, &arg0, &arg1);
-  res = v7_create_boolean(1);
-  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-    el = a_prep2(v7, arg0, p->value, p->name, arg1);
-    if (!v7_is_true(v7, el)) {
-      res = v7_create_boolean(0);
-      break;
+  if (!v7_is_object(this_obj)) {
+    throw_exception(v7, "TypeError", "Array expected");
+  } else {
+    a_prep1(v7, this_obj, args, &arg0, &arg1);
+    res = v7_create_boolean(1);
+    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+      el = a_prep2(v7, arg0, p->value, p->name, arg1);
+      if (!v7_is_true(v7, el)) {
+        res = v7_create_boolean(0);
+        break;
+      }
     }
   }
 
@@ -328,16 +336,20 @@ static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res;
+  val_t arg0, arg1, el, res = v7_create_undefined();
   struct v7_property *p;
 
-  a_prep1(v7, this_obj, args, &arg0, &arg1);
-  res = v7_create_boolean(0);
-  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-    el = a_prep2(v7, arg0, p->value, p->name, arg1);
-    if (v7_is_true(v7, el)) {
-      res = v7_create_boolean(1);
-      break;
+  if (!v7_is_object(this_obj)) {
+    throw_exception(v7, "TypeError", "Array expected");
+  } else {
+    a_prep1(v7, this_obj, args, &arg0, &arg1);
+    res = v7_create_boolean(0);
+    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+      el = a_prep2(v7, arg0, p->value, p->name, arg1);
+      if (v7_is_true(v7, el)) {
+        res = v7_create_boolean(1);
+        break;
+      }
     }
   }
 
@@ -345,15 +357,19 @@ static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res;
+  val_t arg0, arg1, el, res = v7_create_undefined();
   struct v7_property *p;
 
-  a_prep1(v7, this_obj, args, &arg0, &arg1);
-  res = v7_create_array(v7);
-  for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-    el = a_prep2(v7, arg0, p->value, p->name, arg1);
-    if (v7_is_true(v7, el)) {
-      v7_array_push(v7, res, p->value);
+  if (!v7_is_object(this_obj)) {
+    throw_exception(v7, "TypeError", "Array expected");
+  } else {
+    a_prep1(v7, this_obj, args, &arg0, &arg1);
+    res = v7_create_array(v7);
+    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
+      el = a_prep2(v7, arg0, p->value, p->name, arg1);
+      if (v7_is_true(v7, el)) {
+        v7_array_push(v7, res, p->value);
+      }
     }
   }
 

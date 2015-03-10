@@ -7726,7 +7726,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7627	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-4-7.js (tail -c +7277810 tests/ecmac.db|head -c 791): [{"message":"value is not a function"}]
 7628	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-4-8.js (tail -c +7278602 tests/ecmac.db|head -c 1264): [{"message":"value is not a function"}]
 7629	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-4-9.js (tail -c +7279867 tests/ecmac.db|head -c 430): [{"message":"value is not a function"}]
-7630	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-1.js (tail -c +7280298 tests/ecmac.db|head -c 430): [{"message":"Test case returned non-true value!"}]
+7630	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-1.js (tail -c +7280298 tests/ecmac.db|head -c 430)
 7631	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-10.js (tail -c +7280729 tests/ecmac.db|head -c 448)
 7632	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-11.js (tail -c +7281178 tests/ecmac.db|head -c 450): [{"message":"Test case returned non-true value!"}]
 7633	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-12.js (tail -c +7281629 tests/ecmac.db|head -c 442)
@@ -7735,15 +7735,15 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7636	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-15.js (tail -c +7282786 tests/ecmac.db|head -c 405): [{"message":"Test case returned non-true value!"}]
 7637	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-16.js (tail -c +7283192 tests/ecmac.db|head -c 444)
 7638	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-17.js (tail -c +7283637 tests/ecmac.db|head -c 346)
-7639	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-18.js (tail -c +7283984 tests/ecmac.db|head -c 474): [{"message":"Test case returned non-true value!"}]
-7640	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-19.js (tail -c +7284459 tests/ecmac.db|head -c 471): [{"message":"Test case returned non-true value!"}]
+7639	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-18.js (tail -c +7283984 tests/ecmac.db|head -c 474)
+7640	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-19.js (tail -c +7284459 tests/ecmac.db|head -c 471)
 7641	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-2.js (tail -c +7284931 tests/ecmac.db|head -c 496): [{"message":"Test case returned non-true value!"}]
 7642	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-20.js (tail -c +7285428 tests/ecmac.db|head -c 494): [{"message":"Test case returned non-true value!"}]
-7643	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-21.js (tail -c +7285923 tests/ecmac.db|head -c 828): [{"message":"Test case returned non-true value!"}]
-7644	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-22.js (tail -c +7286752 tests/ecmac.db|head -c 481): [{"message":"Test case returned non-true value!"}]
+7643	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-21.js (tail -c +7285923 tests/ecmac.db|head -c 828)
+7644	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-22.js (tail -c +7286752 tests/ecmac.db|head -c 481)
 7645	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-23.js (tail -c +7287234 tests/ecmac.db|head -c 828): [{"message":"Test case returned non-true value!"}]
 7646	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-24.js (tail -c +7288063 tests/ecmac.db|head -c 915): [{"message":"Test case returned non-true value!"}]
-7647	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-25.js (tail -c +7288979 tests/ecmac.db|head -c 898): [{"message":"Test case returned non-true value!"}]
+7647	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-25.js (tail -c +7288979 tests/ecmac.db|head -c 898)
 7648	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-26.js (tail -c +7289878 tests/ecmac.db|head -c 1099): [{"message":"Test case returned non-true value!"}]
 7649	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-27.js (tail -c +7290978 tests/ecmac.db|head -c 1258): [{"message":"Test case returned non-true value!"}]
 7650	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-5-28.js (tail -c +7292237 tests/ecmac.db|head -c 717)
@@ -7779,7 +7779,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7680	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-6.js (tail -c +7306792 tests/ecmac.db|head -c 487)
 7681	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-7.js (tail -c +7307280 tests/ecmac.db|head -c 404)
 7682	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-8.js (tail -c +7307685 tests/ecmac.db|head -c 432)
-7683	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-9.js (tail -c +7308118 tests/ecmac.db|head -c 890)
+7683	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-9.js (tail -c +7308118 tests/ecmac.db|head -c 890): [{"message":"Test case returned non-true value!"}]
 7684	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-a-1.js (tail -c +7309009 tests/ecmac.db|head -c 579): [{"message":"value is not a function"}]
 7685	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-a-10.js (tail -c +7309589 tests/ecmac.db|head -c 875)
 7686	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-a-11.js (tail -c +7310465 tests/ecmac.db|head -c 788): [{"message":"value is not a function"}]
@@ -7799,7 +7799,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7700	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-a-7.js (tail -c +7320364 tests/ecmac.db|head -c 804): [{"message":"value is not a function"}]
 7701	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-a-8.js (tail -c +7321169 tests/ecmac.db|head -c 761): [{"message":"Test case returned non-true value!"}]
 7702	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-a-9.js (tail -c +7321931 tests/ecmac.db|head -c 915): [{"message":"value is not a function"}]
-7703	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-1.js (tail -c +7322847 tests/ecmac.db|head -c 329): [{"message":"Test case returned non-true value!"}]
+7703	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-1.js (tail -c +7322847 tests/ecmac.db|head -c 329)
 7704	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-1.js (tail -c +7323177 tests/ecmac.db|head -c 535): [{"message":"value is not a function"}]
 7705	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-10.js (tail -c +7323713 tests/ecmac.db|head -c 1019): [{"message":"value is not a function"}]
 7706	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-11.js (tail -c +7324733 tests/ecmac.db|head -c 730)
@@ -7808,7 +7808,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7709	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-14.js (tail -c +7327141 tests/ecmac.db|head -c 947): [{"message":"value is not a function"}]
 7710	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-15.js (tail -c +7328089 tests/ecmac.db|head -c 1221)
 7711	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-16.js (tail -c +7329311 tests/ecmac.db|head -c 1320): [{"message":"value is not a function"}]
-7712	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-17.js (tail -c +7330632 tests/ecmac.db|head -c 517)
+7712	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-17.js (tail -c +7330632 tests/ecmac.db|head -c 517): [{"message":"Test case returned non-true value!"}]
 7713	FAIL ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-18.js (tail -c +7331150 tests/ecmac.db|head -c 562): [{"message":"value is not a function"}]
 7714	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-19.js (tail -c +7331713 tests/ecmac.db|head -c 857)
 7715	PASS ch15/15.4/15.4.4/15.4.4.14/15.4.4.14-9-b-i-2.js (tail -c +7332571 tests/ecmac.db|head -c 462)
@@ -7918,7 +7918,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7819	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-4-8.js (tail -c +7392597 tests/ecmac.db|head -c 1272): [{"message":"value is not a function"}]
 7820	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-4-9.js (tail -c +7393870 tests/ecmac.db|head -c 438): [{"message":"value is not a function"}]
 7821	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-1.js (tail -c +7394309 tests/ecmac.db|head -c 449): [{"message":"Test case returned non-true value!"}]
-7822	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-10.js (tail -c +7394759 tests/ecmac.db|head -c 470): [{"message":"Test case returned non-true value!"}]
+7822	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-10.js (tail -c +7394759 tests/ecmac.db|head -c 470)
 7823	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-11.js (tail -c +7395230 tests/ecmac.db|head -c 472): [{"message":"Test case returned non-true value!"}]
 7824	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-12.js (tail -c +7395703 tests/ecmac.db|head -c 470)
 7825	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-13.js (tail -c +7396174 tests/ecmac.db|head -c 353): [{"message":"Test case returned non-true value!"}]
@@ -7926,30 +7926,30 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7827	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-15.js (tail -c +7397077 tests/ecmac.db|head -c 421): [{"message":"Test case returned non-true value!"}]
 7828	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-16.js (tail -c +7397499 tests/ecmac.db|head -c 472)
 7829	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-17.js (tail -c +7397972 tests/ecmac.db|head -c 355): [{"message":"Test case returned non-true value!"}]
-7830	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-18.js (tail -c +7398328 tests/ecmac.db|head -c 498): [{"message":"Test case returned non-true value!"}]
-7831	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-19.js (tail -c +7398827 tests/ecmac.db|head -c 497): [{"message":"Test case returned non-true value!"}]
-7832	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-2.js (tail -c +7399325 tests/ecmac.db|head -c 514): [{"message":"Test case returned non-true value!"}]
-7833	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-20.js (tail -c +7399840 tests/ecmac.db|head -c 520): [{"message":"Test case returned non-true value!"}]
+7830	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-18.js (tail -c +7398328 tests/ecmac.db|head -c 498)
+7831	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-19.js (tail -c +7398827 tests/ecmac.db|head -c 497)
+7832	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-2.js (tail -c +7399325 tests/ecmac.db|head -c 514)
+7833	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-20.js (tail -c +7399840 tests/ecmac.db|head -c 520)
 7834	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-21.js (tail -c +7400361 tests/ecmac.db|head -c 989): [{"message":"Test case returned non-true value!"}]
-7835	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-22.js (tail -c +7401351 tests/ecmac.db|head -c 642): [{"message":"Test case returned non-true value!"}]
+7835	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-22.js (tail -c +7401351 tests/ecmac.db|head -c 642)
 7836	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-23.js (tail -c +7401994 tests/ecmac.db|head -c 836): [{"message":"Test case returned non-true value!"}]
 7837	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-24.js (tail -c +7402831 tests/ecmac.db|head -c 927): [{"message":"Test case returned non-true value!"}]
-7838	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-25.js (tail -c +7403759 tests/ecmac.db|head -c 905): [{"message":"Test case returned non-true value!"}]
+7838	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-25.js (tail -c +7403759 tests/ecmac.db|head -c 905)
 7839	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-26.js (tail -c +7404665 tests/ecmac.db|head -c 1107): [{"message":"Test case returned non-true value!"}]
 7840	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-27.js (tail -c +7405773 tests/ecmac.db|head -c 1268): [{"message":"Test case returned non-true value!"}]
 7841	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-28.js (tail -c +7407042 tests/ecmac.db|head -c 725)
 7842	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-29.js (tail -c +7407768 tests/ecmac.db|head -c 929): [{"message":"Test case returned non-true value!"}]
-7843	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-3.js (tail -c +7408698 tests/ecmac.db|head -c 444): [{"message":"Test case returned non-true value!"}]
+7843	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-3.js (tail -c +7408698 tests/ecmac.db|head -c 444)
 7844	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-30.js (tail -c +7409143 tests/ecmac.db|head -c 1048)
-7845	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-31.js (tail -c +7410192 tests/ecmac.db|head -c 498): [{"message":"Test case returned non-true value!"}]
+7845	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-31.js (tail -c +7410192 tests/ecmac.db|head -c 498)
 7846	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-32.js (tail -c +7410691 tests/ecmac.db|head -c 502): [{"message":"Test case returned non-true value!"}]
 7847	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-33.js (tail -c +7411194 tests/ecmac.db|head -c 613)
 7848	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-4.js (tail -c +7411808 tests/ecmac.db|head -c 500): [{"message":"Test case returned non-true value!"}]
-7849	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-5.js (tail -c +7412309 tests/ecmac.db|head -c 404): [{"message":"Test case returned non-true value!"}]
+7849	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-5.js (tail -c +7412309 tests/ecmac.db|head -c 404)
 7850	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-6.js (tail -c +7412714 tests/ecmac.db|head -c 549)
-7851	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-7.js (tail -c +7413264 tests/ecmac.db|head -c 466): [{"message":"Test case returned non-true value!"}]
-7852	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-8.js (tail -c +7413731 tests/ecmac.db|head -c 395): [{"message":"Test case returned non-true value!"}]
-7853	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-9.js (tail -c +7414127 tests/ecmac.db|head -c 395): [{"message":"Test case returned non-true value!"}]
+7851	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-7.js (tail -c +7413264 tests/ecmac.db|head -c 466)
+7852	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-8.js (tail -c +7413731 tests/ecmac.db|head -c 395)
+7853	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-5-9.js (tail -c +7414127 tests/ecmac.db|head -c 395)
 7854	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-6-1.js (tail -c +7414523 tests/ecmac.db|head -c 400)
 7855	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-6-2.js (tail -c +7414924 tests/ecmac.db|head -c 349)
 7856	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-6-3.js (tail -c +7415274 tests/ecmac.db|head -c 339)
@@ -7990,7 +7990,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7891	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-a-7.js (tail -c +7436095 tests/ecmac.db|head -c 813): [{"message":"value is not a function"}]
 7892	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-a-8.js (tail -c +7436909 tests/ecmac.db|head -c 770): [{"message":"Test case returned non-true value!"}]
 7893	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-a-9.js (tail -c +7437680 tests/ecmac.db|head -c 932): [{"message":"value is not a function"}]
-7894	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-1.js (tail -c +7438613 tests/ecmac.db|head -c 334): [{"message":"Test case returned non-true value!"}]
+7894	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-1.js (tail -c +7438613 tests/ecmac.db|head -c 334)
 7895	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-1.js (tail -c +7438948 tests/ecmac.db|head -c 555): [{"message":"value is not a function"}]
 7896	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-10.js (tail -c +7439504 tests/ecmac.db|head -c 1035): [{"message":"value is not a function"}]
 7897	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-11.js (tail -c +7440540 tests/ecmac.db|head -c 739)
@@ -7999,7 +7999,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 7900	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-14.js (tail -c +7442973 tests/ecmac.db|head -c 955): [{"message":"value is not a function"}]
 7901	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-15.js (tail -c +7443929 tests/ecmac.db|head -c 1235)
 7902	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-16.js (tail -c +7445165 tests/ecmac.db|head -c 1336): [{"message":"value is not a function"}]
-7903	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-17.js (tail -c +7446502 tests/ecmac.db|head -c 525)
+7903	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-17.js (tail -c +7446502 tests/ecmac.db|head -c 525): [{"message":"Test case returned non-true value!"}]
 7904	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-18.js (tail -c +7447028 tests/ecmac.db|head -c 570): [{"message":"value is not a function"}]
 7905	FAIL ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-19.js (tail -c +7447599 tests/ecmac.db|head -c 950): [{"message":"value is not a function"}]
 7906	PASS ch15/15.4/15.4.4/15.4.4.15/15.4.4.15-8-b-i-2.js (tail -c +7448550 tests/ecmac.db|head -c 478)
