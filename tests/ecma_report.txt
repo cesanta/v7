@@ -3521,28 +3521,28 @@ err
 3470	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A5.6.js (tail -c +3760574 tests/ecmac.db|head -c 408): [{"message":"[encodeURIComponent] is not defined"}]
 3471	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A5.7.js (tail -c +3760983 tests/ecmac.db|head -c 586): [{"message":"#1.2: new encodeURIComponent() throw TypeError. Actual: {"message":"[encodeURIComponent] is not defined"}"}]
 3472	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A6_T1.js (tail -c +3761570 tests/ecmac.db|head -c 3515): [{"message":"[encodeURIComponent] is not defined"}]
-3473	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T1.js (tail -c +3765086 tests/ecmac.db|head -c 459): [{"message":"#1.2: new RegExp("a**") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3474	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T10.js (tail -c +3765546 tests/ecmac.db|head -c 461): [{"message":"#1.2: new RegExp("++a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3475	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T11.js (tail -c +3766008 tests/ecmac.db|head -c 457): [{"message":"#1.2: new RegExp("?a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3476	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T12.js (tail -c +3766466 tests/ecmac.db|head -c 461): [{"message":"#1.2: new RegExp("??a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3477	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T13.js (tail -c +3766928 tests/ecmac.db|head -c 481): [{"message":"#1.2: new RegExp("x{1}{1,}") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3478	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T14.js (tail -c +3767410 tests/ecmac.db|head -c 485): [{"message":"#1.2: new RegExp("x{1,2}{1}") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3479	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T15.js (tail -c +3767896 tests/ecmac.db|head -c 481): [{"message":"#1.2: new RegExp("x{1,}{1}") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3480	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T16.js (tail -c +3768378 tests/ecmac.db|head -c 489): [{"message":"#1.2: new RegExp("x{0,1}{1,}") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3481	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T2.js (tail -c +3768868 tests/ecmac.db|head -c 464): [{"message":"#1.2: new RegExp("a***") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3482	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T3.js (tail -c +3769333 tests/ecmac.db|head -c 460): [{"message":"#1.2: new RegExp("a++") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3483	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T4.js (tail -c +3769794 tests/ecmac.db|head -c 464): [{"message":"#1.2: new RegExp("a+++") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3484	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T5.js (tail -c +3770259 tests/ecmac.db|head -c 464): [{"message":"#1.2: new RegExp("a???") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3485	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T6.js (tail -c +3770724 tests/ecmac.db|head -c 468): [{"message":"#1.2: new RegExp("a????") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3486	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T7.js (tail -c +3771193 tests/ecmac.db|head -c 456): [{"message":"#1.2: new RegExp("*a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3487	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T8.js (tail -c +3771650 tests/ecmac.db|head -c 460): [{"message":"#1.2: new RegExp("**a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3488	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T9.js (tail -c +3772111 tests/ecmac.db|head -c 456): [{"message":"#1.2: new RegExp("+a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
+3473	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T1.js (tail -c +3765086 tests/ecmac.db|head -c 459): [{"message":"#1.2: new RegExp("a**") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("a**") throw SyntaxError. Actual: /a**/"}"}]
+3474	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T10.js (tail -c +3765546 tests/ecmac.db|head -c 461): [{"message":"#1.2: new RegExp("++a") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("++a") throw SyntaxError. Actual: /++a/"}"}]
+3475	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T11.js (tail -c +3766008 tests/ecmac.db|head -c 457): [{"message":"#1.2: new RegExp("?a") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("?a") throw SyntaxError. Actual: /?a/"}"}]
+3476	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T12.js (tail -c +3766466 tests/ecmac.db|head -c 461): [{"message":"#1.2: new RegExp("??a") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("??a") throw SyntaxError. Actual: /??a/"}"}]
+3477	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T13.js (tail -c +3766928 tests/ecmac.db|head -c 481): [{"message":"#1.2: new RegExp("x{1}{1,}") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("x{1}{1,}") throw SyntaxError. Actual: /x{1}{1,}/"}"}]
+3478	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T14.js (tail -c +3767410 tests/ecmac.db|head -c 485): [{"message":"#1.2: new RegExp("x{1,2}{1}") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("x{1,2}{1}") throw SyntaxError. Actual: /x{1,2}{1}/"}"}]
+3479	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T15.js (tail -c +3767896 tests/ecmac.db|head -c 481): [{"message":"#1.2: new RegExp("x{1,}{1}") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("x{1,}{1}") throw SyntaxError. Actual: /x{1,}{1}/"}"}]
+3480	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T16.js (tail -c +3768378 tests/ecmac.db|head -c 489): [{"message":"#1.2: new RegExp("x{0,1}{1,}") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("x{0,1}{1,}") throw SyntaxError. Actual: /x{0,1}{1,}/"}"}]
+3481	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T2.js (tail -c +3768868 tests/ecmac.db|head -c 464): [{"message":"#1.2: new RegExp("a***") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("a***") throw SyntaxError. Actual: /a***/"}"}]
+3482	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T3.js (tail -c +3769333 tests/ecmac.db|head -c 460): [{"message":"#1.2: new RegExp("a++") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("a++") throw SyntaxError. Actual: /a++/"}"}]
+3483	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T4.js (tail -c +3769794 tests/ecmac.db|head -c 464): [{"message":"#1.2: new RegExp("a+++") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("a+++") throw SyntaxError. Actual: /a+++/"}"}]
+3484	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T5.js (tail -c +3770259 tests/ecmac.db|head -c 464): [{"message":"#1.2: new RegExp("a???") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("a???") throw SyntaxError. Actual: /a???/"}"}]
+3485	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T6.js (tail -c +3770724 tests/ecmac.db|head -c 468): [{"message":"#1.2: new RegExp("a????") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("a????") throw SyntaxError. Actual: /a????/"}"}]
+3486	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T7.js (tail -c +3771193 tests/ecmac.db|head -c 456): [{"message":"#1.2: new RegExp("*a") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("*a") throw SyntaxError. Actual: /*a/"}"}]
+3487	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T8.js (tail -c +3771650 tests/ecmac.db|head -c 460): [{"message":"#1.2: new RegExp("**a") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("**a") throw SyntaxError. Actual: /**a/"}"}]
+3488	FAIL ch15/15.10/15.10.1/S15.10.1_A1_T9.js (tail -c +3772111 tests/ecmac.db|head -c 456): [{"message":"#1.2: new RegExp("+a") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("+a") throw SyntaxError. Actual: /+a/"}"}]
 3489	FAIL ch15/15.10/15.10.2/15.10.2.15-3-1.js (tail -c +3772568 tests/ecmac.db|head -c 473): [{"message":"Test case returned non-true value!"}]
 3490	FAIL ch15/15.10/15.10.2/15.10.2.15-3-2.js (tail -c +3773042 tests/ecmac.db|head -c 473): [{"message":"Test case returned non-true value!"}]
 3491	FAIL ch15/15.10/15.10.2/15.10.2.15-6-1.js (tail -c +3773516 tests/ecmac.db|head -c 516): [{"message":"Test case returned non-true value!"}]
 3492	FAIL ch15/15.10/15.10.2/15.10.2.2-1.js (tail -c +3774033 tests/ecmac.db|head -c 420): [{"message":"Test case returned non-true value!"}]
 3493	FAIL ch15/15.10/15.10.2/15.10.2.5-3-1.js (tail -c +3774454 tests/ecmac.db|head -c 456): [{"message":"Test case returned non-true value!"}]
-3494	FAIL ch15/15.10/15.10.2/S15.10.2_A1_T1.js (tail -c +3774911 tests/ecmac.db|head -c 3461): [{"message":"#7: XML Shallow Parsing with Regular Expression: [A-Za-z_:]|[^"}]
+3494	PASS ch15/15.10/15.10.2/S15.10.2_A1_T1.js (tail -c +3774911 tests/ecmac.db|head -c 3461)
 3495	PASS ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A1.1_T1.js (tail -c +3778373 tests/ecmac.db|head -c 701)
 3496	PASS ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A1.2_T1.js (tail -c +3779075 tests/ecmac.db|head -c 701)
 3497	PASS ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A1.3_T1.js (tail -c +3779777 tests/ecmac.db|head -c 701)
@@ -3629,49 +3629,51 @@ aba"); __executed.length === 1. Actual: undefined"}]
 3570	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A3_T2.js (tail -c +4017054 tests/ecmac.db|head -c 1279): [{"message":"#1: __executed = /c[\b]{3}d/.exec("abc\b\b\bdef"); __executed.length === 1. Actual: undefined"}]
 3571	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A3_T3.js (tail -c +4018334 tests/ecmac.db|head -c 1252): [{"message":"#1: __executed = /[^\[\b\]]+/.exec("abc\bdef"); __executed.length === 1. Actual: undefined"}]
 3572	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A3_T4.js (tail -c +4019587 tests/ecmac.db|head -c 1237): [{"message":"#1: __executed = /[^\[\b\]]+/.exec("abcdef"); __executed.length === 1. Actual: undefined"}]
-3573	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T1.js (tail -c +4020825 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-ac-e]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
+3573	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T1.js (tail -c +4020825 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-ac-e]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-ac-e]/.exec("a") throw SyntaxError. Actual: null"}"}]
 3574	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T10.js (tail -c +4021568 tests/ecmac.db|head -c 746): [{"message":"#1.2: /[\10b-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3575	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T11.js (tail -c +4022315 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[\bd-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3576	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T12.js (tail -c +4023058 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[\Bd-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3577	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T13.js (tail -c +4023801 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[	d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
+3575	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T11.js (tail -c +4022315 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[\bd-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\bd-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3576	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T12.js (tail -c +4023058 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[\Bd-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\Bd-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3577	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T13.js (tail -c +4023801 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[	d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[	d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
 3578	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T14.js (tail -c +4024544 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[
-d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3579	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T15.js (tail -c +4025287 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3580	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T16.js (tail -c +4026030 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3581	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T17.js (tail -c +4026773 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3582	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T18.js (tail -c +4027516 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[001d-G]/.exec("1") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3583	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T19.js (tail -c +4028275 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[{"message":"Invalid regex"}"}]
-3584	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T2.js (tail -c +4029034 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[a-dc-b]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3585	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T20.js (tail -c +4029777 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[ad-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3586	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T21.js (tail -c +4030536 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[\ad-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3587	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T22.js (tail -c +4031279 tests/ecmac.db|head -c 743): [{"message":"#1.2: /[c-eb-a]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3588	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T23.js (tail -c +4032023 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\d]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3589	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T24.js (tail -c +4032766 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\D]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3590	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T25.js (tail -c +4033509 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\s]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3591	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T26.js (tail -c +4034252 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\S]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3592	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T27.js (tail -c +4034995 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\w]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3593	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T28.js (tail -c +4035738 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\W]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3594	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T29.js (tail -c +4036481 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\0]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3595	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T3.js (tail -c +4037224 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\db-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
+d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[
+d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3579	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T15.js (tail -c +4025287 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3580	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T16.js (tail -c +4026030 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3581	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T17.js (tail -c +4026773 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3582	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T18.js (tail -c +4027516 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[001d-G]/.exec("1") throw SyntaxError. Actual: {"message":"#1.1: /[001d-G]/.exec("1") throw SyntaxError. Actual: null"}"}]
+3583	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T19.js (tail -c +4028275 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[{"message":"#1.1: /[null"}"}]
+3584	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T2.js (tail -c +4029034 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[a-dc-b]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[a-dc-b]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3585	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T20.js (tail -c +4029777 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[ad-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[ad-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3586	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T21.js (tail -c +4030536 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[\ad-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\ad-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3587	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T22.js (tail -c +4031279 tests/ecmac.db|head -c 743): [{"message":"#1.2: /[c-eb-a]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[c-eb-a]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3588	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T23.js (tail -c +4032023 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\d]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-G\d]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3589	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T24.js (tail -c +4032766 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\D]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-G\D]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3590	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T25.js (tail -c +4033509 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\s]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-G\s]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3591	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T26.js (tail -c +4034252 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\S]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-G\S]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3592	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T27.js (tail -c +4034995 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\w]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-G\w]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3593	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T28.js (tail -c +4035738 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\W]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-G\W]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3594	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T29.js (tail -c +4036481 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[b-G\0]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[b-G\0]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3595	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T3.js (tail -c +4037224 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\db-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\db-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
 3596	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T30.js (tail -c +4037966 tests/ecmac.db|head -c 746): [{"message":"#1.2: /[b-G\10]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3597	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T31.js (tail -c +4038713 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G\b]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3598	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T32.js (tail -c +4039456 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G\B]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3599	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T33.js (tail -c +4040199 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G	]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
+3597	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T31.js (tail -c +4038713 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G\b]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G\b]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3598	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T32.js (tail -c +4039456 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G\B]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G\B]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3599	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T33.js (tail -c +4040199 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G	]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G	]/.exec("a") throw SyntaxError. Actual: null"}"}]
 3600	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T34.js (tail -c +4040942 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G
-]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3601	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T35.js (tail -c +4041685 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3602	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T36.js (tail -c +4042428 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3603	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T37.js (tail -c +4043171 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3604	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T38.js (tail -c +4043914 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[d-G001]/.exec("1") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3605	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T39.js (tail -c +4044673 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[d-G{"message":"Invalid regex"}"}]
-3606	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T4.js (tail -c +4045432 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\Db-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3607	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T40.js (tail -c +4046174 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[d-Ga]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3608	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T41.js (tail -c +4046933 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G\a]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3609	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T5.js (tail -c +4047676 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\sb-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3610	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T6.js (tail -c +4048418 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\Sb-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3611	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T7.js (tail -c +4049160 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\wb-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3612	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T8.js (tail -c +4049902 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\Wb-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3613	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T9.js (tail -c +4050644 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\0b-G]/.exec("a") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
+]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G
+]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3601	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T35.js (tail -c +4041685 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3602	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T36.js (tail -c +4042428 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3603	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T37.js (tail -c +4043171 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3604	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T38.js (tail -c +4043914 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[d-G001]/.exec("1") throw SyntaxError. Actual: {"message":"#1.1: /[d-G001]/.exec("1") throw SyntaxError. Actual: null"}"}]
+3605	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T39.js (tail -c +4044673 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[d-G{"message":"#1.1: /[d-Gnull"}"}]
+3606	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T4.js (tail -c +4045432 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\Db-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\Db-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3607	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T40.js (tail -c +4046174 tests/ecmac.db|head -c 758): [{"message":"#1.2: /[d-Ga]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-Ga]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3608	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T41.js (tail -c +4046933 tests/ecmac.db|head -c 742): [{"message":"#1.2: /[d-G\a]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[d-G\a]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3609	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T5.js (tail -c +4047676 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\sb-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\sb-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3610	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T6.js (tail -c +4048418 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\Sb-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\Sb-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3611	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T7.js (tail -c +4049160 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\wb-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\wb-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3612	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T8.js (tail -c +4049902 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\Wb-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\Wb-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
+3613	FAIL ch15/15.10/15.10.2/15.10.2.15/S15.10.2.15_A1_T9.js (tail -c +4050644 tests/ecmac.db|head -c 741): [{"message":"#1.2: /[\0b-G]/.exec("a") throw SyntaxError. Actual: {"message":"#1.1: /[\0b-G]/.exec("a") throw SyntaxError. Actual: null"}"}]
 3614	FAIL ch15/15.10/15.10.2/15.10.2.3/S15.10.2.3_A1_T1.js (tail -c +4051386 tests/ecmac.db|head -c 1381): [{"message":"#1: __executed = /a|ab/.exec("abc"); __executed.length === 1. Actual: undefined"}]
 3615	FAIL ch15/15.10/15.10.2/15.10.2.3/S15.10.2.3_A1_T10.js (tail -c +4052768 tests/ecmac.db|head -c 1485): [{"message":"#1: __executed = /(?:ab|cd)+|ef/i.exec("AEKeFCDab"); __executed.length === 1. Actual: undefined"}]
 3616	FAIL ch15/15.10/15.10.2/15.10.2.3/S15.10.2.3_A1_T11.js (tail -c +4054254 tests/ecmac.db|head -c 1507): [{"message":"#1: __executed = /11111|111/.exec("1111111111111111"); __executed.length === 1. Actual: undefined"}]
@@ -3859,10 +3861,11 @@ evils"); __executed.length === 1. Actual: undefined"}]
 3768	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T12.js (tail -c +4242936 tests/ecmac.db|head -c 1616): [{"message":"#1: __executed = /(a(b(c)))(d(e(f)))/.exec("xabcdefg"); __executed.length === 7. Actual: undefined"}]
 3769	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T13.js (tail -c +4244553 tests/ecmac.db|head -c 1680): [{"message":"Invalid regex"}]
 3770	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T14.js (tail -c +4246234 tests/ecmac.db|head -c 1547): [{"message":"Invalid regex"}]
-3771	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T15.js (tail -c +4247782 tests/ecmac.db|head -c 1991): [{"message":"Invalid regex"}]
-3772	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T16.js (tail -c +4249774 tests/ecmac.db|head -c 1937): [{"message":"Invalid regex"}]
-3773	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T17.js (tail -c +4251712 tests/ecmac.db|head -c 1935): [{"message":"Invalid regex"}]
-3774	PASS ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T18.js (tail -c +4253648 tests/ecmac.db|head -c 1127)
+3771	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T15.js (tail -c +4247782 tests/ecmac.db|head -c 1991): [{"message":"#1: __re = new RegExp(__pattern); __executed = __re.exec(__strOriginal); __executed.length === 201. Actual: undefined"}]
+3772	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T16.js (tail -c +4249774 tests/ecmac.db|head -c 1937): [{"message":"#1: __re = new RegExp(__pattern); __executed = __re.exec(__strOriginal); __executed.length === 1. Actual: undefined"}]
+3773	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T17.js (tail -c +4251712 tests/ecmac.db|head -c 1935): [{"message":"#1: __executed = /<body.*>((.*
+?)*?)<\/body>/i.exec(__html); __executed.length === 3. Actual: undefined"}]
+3774	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T18.js (tail -c +4253648 tests/ecmac.db|head -c 1127): [{"message":"#1: __replaced = "To sign up click |here|https:www.xxxx.org/subscribe.htm|".replace(/(\|)([\w-ÿ ]*)(\|)([\/a-z][\w:\/\.]*\.[a-z]{3,4})(\|)/ig, '<a href="$4">$2</a>'); __replaced === To sign up click <a href="https:www.xxxx.org/subscribe.htm">here</a>. Actual: To sign up click |here|https:www.xxxx.org/subscribe.htm|"}]
 3775	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T19.js (tail -c +4254776 tests/ecmac.db|head -c 1869): [{"message":"#1: __executed = /([\S]+([ 	]+[\S]+)*)[ 	]*=[ 	]*[\S]+/.exec("Course_Creator = Test"); __executed.length === 3. Actual: undefined"}]
 3776	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T2.js (tail -c +4256646 tests/ecmac.db|head -c 1917): [{"message":"#1: __executed = /([Jj]ava([Ss]cript)?)\sis\s(fun\w*)/.exec("Developing with Java is fun, try it"); __executed.length === 4. Actual: undefined"}]
 3777	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T20.js (tail -c +4258564 tests/ecmac.db|head -c 1515): [{"message":"#1: __executed = /^(A)?(A.*)$/.exec("AAA"); __executed.length === 3. Actual: undefined"}]
@@ -3911,7 +3914,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 3819	FAIL ch15/15.10/15.10.3/S15.10.3.1_A2_T1.js (tail -c +4318156 tests/ecmac.db|head -c 714): [{"message":"#1.2: RegExp(new RegExp("\d"), "1")) throw TypeError. Actual: {"message":"#1.1: RegExp(new RegExp("\d"), "1")) throw TypeError. Actual: //\d//"}"}]
 3820	FAIL ch15/15.10/15.10.3/S15.10.3.1_A2_T2.js (tail -c +4318871 tests/ecmac.db|head -c 736): [{"message":"#1.2: var x = 1; RegExp(/[a-b]?/, x) throw TypeError. Actual: {"message":"#1.1: var x = 1; RegExp(/[a-b]?/, x) throw TypeError. Actual: //[a-b]?//"}"}]
 3821	PASS ch15/15.10/15.10.3/S15.10.3.1_A3_T1.js (tail -c +4319608 tests/ecmac.db|head -c 759)
-3822	FAIL ch15/15.10/15.10.3/S15.10.3.1_A3_T2.js (tail -c +4320368 tests/ecmac.db|head -c 872): [{"message":"Invalid regex"}]
+3822	FAIL ch15/15.10/15.10.3/S15.10.3.1_A3_T2.js (tail -c +4320368 tests/ecmac.db|head -c 872): [{"message":"#2: __instance = RegExp({toString:function(){return "[a-c]*";}}, "gm"); __instance.source === "[a-c]*". Actual: {"toString":[function()]}"}]
 3823	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T1.js (tail -c +4321241 tests/ecmac.db|head -c 1161): [{"message":"#1: __pattern = /./i; __re = new RegExp(__pattern); __re.source === __pattern.source. Actual: /./i"}]
 3824	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T2.js (tail -c +4322403 tests/ecmac.db|head -c 1250): [{"message":"#1: __pattern = /	/m; _re = new RegExp(__pattern, x); var x; __re.source === __pattern.source. Actual: /	/m"}]
 3825	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T3.js (tail -c +4323654 tests/ecmac.db|head -c 1233): [{"message":"#1: __pattern = /[a-b]/g; __re = new RegExp(__pattern, void 0); __re.source === __pattern.source. Actual: /[a-b]/g"}]
@@ -3942,20 +3945,20 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 3850	FAIL ch15/15.10/15.10.4/S15.10.4.1_A7_T2.js (tail -c +4342099 tests/ecmac.db|head -c 588): [{"message":"#1: __re = new RegExp(); RegExp.prototype.isPrototypeOf(__re) === true. Actual: false"}]
 3851	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T1.js (tail -c +4342688 tests/ecmac.db|head -c 962)
 3852	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T10.js (tail -c +4343651 tests/ecmac.db|head -c 956)
-3853	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T11.js (tail -c +4344608 tests/ecmac.db|head -c 1060): [{"message":"Invalid regex"}]
+3853	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T11.js (tail -c +4344608 tests/ecmac.db|head -c 1060)
 3854	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T12.js (tail -c +4345669 tests/ecmac.db|head -c 684)
 3855	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T13.js (tail -c +4346354 tests/ecmac.db|head -c 598): [{"message":"#1.2: new RegExp("1", {toString:function(){throw "intostr";}}) throw "intostr". Actual: {"message":"#1.1: new RegExp("1", {toString:function(){throw "intostr";}}) throw "intostr". Actual: /1/gi"}"}]
 3856	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T2.js (tail -c +4346953 tests/ecmac.db|head -c 1092)
-3857	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T3.js (tail -c +4348046 tests/ecmac.db|head -c 1202): [{"message":"Invalid regex"}]
+3857	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T3.js (tail -c +4348046 tests/ecmac.db|head -c 1202)
 3858	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T4.js (tail -c +4349249 tests/ecmac.db|head -c 1351)
 3859	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T5.js (tail -c +4350601 tests/ecmac.db|head -c 1265): [{"message":"#1: __re = new RegExp(new Object("abc{1}"), {toString:function(){return ""; __re.ignoreCase === false. Actual: true"}]
-3860	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T6.js (tail -c +4351867 tests/ecmac.db|head -c 597): [{"message":"#1.2: new RegExp({toString:function(){throw "intostr";}}, "i") throw "intostr". Actual: {"message":"Invalid regex"}"}]
+3860	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T6.js (tail -c +4351867 tests/ecmac.db|head -c 597): [{"message":"#1.2: new RegExp({toString:function(){throw "intostr";}}, "i") throw "intostr". Actual: {"message":"#1.1: new RegExp({toString:function(){throw "intostr";}}, "i") throw "intostr". Actual: /{"toString":[function()]}/i"}"}]
 3861	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T7.js (tail -c +4352465 tests/ecmac.db|head -c 646)
-3862	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T8.js (tail -c +4353112 tests/ecmac.db|head -c 613): [{"message":"#1.2: new RegExp({toString:function(){throw "intostr";}}, "error") throw "intostr". Actual: {"message":"Invalid regex"}"}]
+3862	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T8.js (tail -c +4353112 tests/ecmac.db|head -c 613): [{"message":"#1.2: new RegExp({toString:function(){throw "intostr";}}, "error") throw "intostr". Actual: {"message":"#1.1: new RegExp({toString:function(){throw "intostr";}}, "error") throw "intostr". Actual: /{"toString":[function()]}/"}"}]
 3863	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T9.js (tail -c +4353726 tests/ecmac.db|head -c 1029)
-3864	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T1.js (tail -c +4354756 tests/ecmac.db|head -c 474): [{"message":"#1.2: new RegExp("??") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3865	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T2.js (tail -c +4355231 tests/ecmac.db|head -c 486): [{"message":"#1.2: new RegExp("[{-z]") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
-3866	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T3.js (tail -c +4355718 tests/ecmac.db|head -c 490): [{"message":"#1.2: new RegExp("[a--z]") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
+3864	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T1.js (tail -c +4354756 tests/ecmac.db|head -c 474): [{"message":"#1.2: new RegExp("??") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("??") throw SyntaxError. Actual: /??/"}"}]
+3865	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T2.js (tail -c +4355231 tests/ecmac.db|head -c 486): [{"message":"#1.2: new RegExp("[{-z]") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("[{-z]") throw SyntaxError. Actual: /[{-z]/"}"}]
+3866	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T3.js (tail -c +4355718 tests/ecmac.db|head -c 490): [{"message":"#1.2: new RegExp("[a--z]") throw SyntaxError. Actual: {"message":"#1.1: new RegExp("[a--z]") throw SyntaxError. Actual: /[a--z]/"}"}]
 3867	FAIL ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-1.js (tail -c +4356209 tests/ecmac.db|head -c 572): [{"message":"Test case returned non-true value!"}]
 3868	FAIL ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-2.js (tail -c +4356782 tests/ecmac.db|head -c 507): [{"message":"Test case returned non-true value!"}]
 3869	FAIL ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-3.js (tail -c +4357290 tests/ecmac.db|head -c 508): [{"message":"Test case returned non-true value!"}]
@@ -3994,7 +3997,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 3902	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T4.js (tail -c +4389077 tests/ecmac.db|head -c 1783): [{"message":"#0: __executed = /a[a-z]{2,4}?/.exec({toString:function(){return "abcdefghi"}}); (__executed instanceof Array) === true"}]
 3903	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T5.js (tail -c +4390861 tests/ecmac.db|head -c 2046): [{"message":"#0: __executed = /(aa|aabaac|ba|b|c)*/.exec({toString:function(){return {};}, valueOf:function(){return "aabaac";}}); (__executed instanceof Array) === true"}]
 3904	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T6.js (tail -c +4392908 tests/ecmac.db|head -c 1830): [{"message":"#0: __executed = /(z)((a+)?(b+)?(c))*/.exec((function(){return "zaacbbbcac"})()); (__executed instanceof Array) === true"}]
-3905	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T7.js (tail -c +4394739 tests/ecmac.db|head -c 762): [{"message":"#1.2: /[a-z]/.exec({toString:function(){throw "intostr"}}) throw "intostr". Actual: {"message":"#1.1: /[a-z]/.exec({toString:function(){throw "intostr"}}) throw "intostr". Actual: ["t"]"}"}]
+3905	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T7.js (tail -c +4394739 tests/ecmac.db|head -c 762): [{"message":"#1.2: /[a-z]/.exec({toString:function(){throw "intostr"}}) throw "intostr". Actual: {"message":"#1.1: /[a-z]/.exec({toString:function(){throw "intostr"}}) throw "intostr". Actual: null"}"}]
 3906	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T8.js (tail -c +4395502 tests/ecmac.db|head -c 831)
 3907	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T9.js (tail -c +4396334 tests/ecmac.db|head -c 627)
 3908	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A2_T1.js (tail -c +4396962 tests/ecmac.db|head -c 757): [{"message":"#1.2: __instance = new Object; __instance.exec = RegExp.prototype.exec. Actual: {"message":"#1.1: __instance = new Object; __instance.exec = RegExp.prototype.exec; __instance.exec("message to investigate"). Actual: null"}"}]
@@ -4007,28 +4010,28 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 3915	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A2_T7.js (tail -c +4402428 tests/ecmac.db|head -c 786): [{"message":"#1.2: __instance = false; Object.prototype.exec = RegExp.prototype.exec; __instance.exec("message to investigate"). Actual: {"message":"#1.1: __instance = false; Object.prototype.exec = RegExp.prototype.exec; __instance.exec("message to investigate"). Actual: null"}"}]
 3916	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A2_T8.js (tail -c +4403215 tests/ecmac.db|head -c 778): [{"message":"#1.2: __instance = "."; Object.prototype.exec = RegExp.prototype.exec; __instance.exec("message to investigate"). Actual: {"message":"#1.1: __instance = "."; Object.prototype.exec = RegExp.prototype.exec; __instance.exec("message to investigate"). Actual: null"}"}]
 3917	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A2_T9.js (tail -c +4403994 tests/ecmac.db|head -c 778): [{"message":"#1.2: __instance = 1.0; Object.prototype.exec = RegExp.prototype.exec; __instance.exec("message to investigate"). Actual: {"message":"#1.1: __instance = 1.0; Object.prototype.exec = RegExp.prototype.exec; __instance.exec("message to investigate"). Actual: null"}"}]
-3918	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T1.js (tail -c +4404773 tests/ecmac.db|head -c 1150)
+3918	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T1.js (tail -c +4404773 tests/ecmac.db|head -c 1150): [{"message":"#1: __executed = /(?:ab|cd)\d?/g.exec("ab  cd2  ab34  cd"); __matched.length === 4.Actual: 0"}]
 3919	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T2.js (tail -c +4405924 tests/ecmac.db|head -c 8558): [{"message":"#1: __re = /[Nn]evermore/g; __executed = __re.exec(__the__raven)0"}]
 3920	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T3.js (tail -c +4414483 tests/ecmac.db|head -c 8587): [{"message":"#1: __re = /[Nn]?evermore/g; __executed = __re.exec(__the__raven)0"}]
 3921	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T4.js (tail -c +4423071 tests/ecmac.db|head -c 8649): [{"message":"#1: __re = /([Nn]?ever|([Nn]othing\s{1,}))more/g; __executed = __re.exec(__the__raven)0"}]
-3922	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T5.js (tail -c +4431721 tests/ecmac.db|head -c 1086)
-3923	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T6.js (tail -c +4432808 tests/ecmac.db|head -c 1094)
-3924	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T7.js (tail -c +4433903 tests/ecmac.db|head -c 1139)
-3925	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T1.js (tail -c +4435043 tests/ecmac.db|head -c 2698): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3926	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T10.js (tail -c +4437742 tests/ecmac.db|head -c 2955): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3927	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T11.js (tail -c +4440698 tests/ecmac.db|head -c 2030): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3928	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T12.js (tail -c +4442729 tests/ecmac.db|head -c 3147): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3929	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T2.js (tail -c +4445877 tests/ecmac.db|head -c 2739): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3930	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T3.js (tail -c +4448617 tests/ecmac.db|head -c 2721): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3931	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T4.js (tail -c +4451339 tests/ecmac.db|head -c 2709): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3932	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T5.js (tail -c +4454049 tests/ecmac.db|head -c 2757): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3933	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T6.js (tail -c +4456807 tests/ecmac.db|head -c 2911): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3934	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T7.js (tail -c +4459719 tests/ecmac.db|head -c 2927): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3935	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T8.js (tail -c +4462647 tests/ecmac.db|head -c 2902): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3936	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T9.js (tail -c +4465550 tests/ecmac.db|head -c 2929): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.index === 2. Actual: undefined"}]
-3937	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A5_T1.js (tail -c +4468480 tests/ecmac.db|head -c 1931): [{"message":"#2: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aac1dz2233a1bz12nm444ab42"); __executed.index === 21. Actual: undefined"}]
-3938	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A5_T2.js (tail -c +4470412 tests/ecmac.db|head -c 811): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __re.lastIndex=100; __executed = __re.exec("aacd22 "); __executed === true"}]
-3939	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A5_T3.js (tail -c +4471224 tests/ecmac.db|head -c 1308): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __re.lastIndex=-1; __executed = __re.test("aacd22 "); __executed === true"}]
+3922	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T5.js (tail -c +4431721 tests/ecmac.db|head -c 1086): [{"message":"#1: __executed = /\d+/g.exec("123 456 789"); __matched.length === 3.Actual: 0"}]
+3923	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T6.js (tail -c +4432808 tests/ecmac.db|head -c 1094): [{"message":"#1: __executed = /(\d+)/g.exec("123 456 789"); __matched.length === 3.Actual: 0"}]
+3924	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A3_T7.js (tail -c +4433903 tests/ecmac.db|head -c 1139): [{"message":"#1: __executed = /\d+/.exec("123 456 789"); __matched.length === 10.Actual: 0"}]
+3925	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T1.js (tail -c +4435043 tests/ecmac.db|head -c 2698): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3926	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T10.js (tail -c +4437742 tests/ecmac.db|head -c 2955): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3927	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T11.js (tail -c +4440698 tests/ecmac.db|head -c 2030): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3928	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T12.js (tail -c +4442729 tests/ecmac.db|head -c 3147): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3929	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T2.js (tail -c +4445877 tests/ecmac.db|head -c 2739): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3930	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T3.js (tail -c +4448617 tests/ecmac.db|head -c 2721): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3931	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T4.js (tail -c +4451339 tests/ecmac.db|head -c 2709): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3932	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T5.js (tail -c +4454049 tests/ecmac.db|head -c 2757): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3933	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T6.js (tail -c +4456807 tests/ecmac.db|head -c 2911): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3934	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T7.js (tail -c +4459719 tests/ecmac.db|head -c 2927): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3935	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T8.js (tail -c +4462647 tests/ecmac.db|head -c 2902): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3936	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A4_T9.js (tail -c +4465550 tests/ecmac.db|head -c 2929): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aacd2233ab12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3937	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A5_T1.js (tail -c +4468480 tests/ecmac.db|head -c 1931): [{"message":"#1: __re = /(?:ab|cd)\d?/g; __executed = __re.exec("aac1dz2233a1bz12nm444ab42"); __executed.length === 1. Actual: undefined"}]
+3938	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A5_T2.js (tail -c +4470412 tests/ecmac.db|head -c 811)
+3939	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A5_T3.js (tail -c +4471224 tests/ecmac.db|head -c 1308)
 3940	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A6.js (tail -c +4472533 tests/ecmac.db|head -c 412)
 3941	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A7.js (tail -c +4472946 tests/ecmac.db|head -c 575): [{"message":"#1.2: __FACTORY = RegExp.prototype.exec throw TypeError. Actual: {"message":"#1.1: __FACTORY = RegExp.prototype.exec throw TypeError. Actual: {}"}"}]
 3942	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A8.js (tail -c +4473522 tests/ecmac.db|head -c 837): [{"message":"value is not a function"}]
@@ -4053,7 +4056,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 3961	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T4.js (tail -c +4483910 tests/ecmac.db|head -c 618)
 3962	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T5.js (tail -c +4484529 tests/ecmac.db|head -c 727)
 3963	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T6.js (tail -c +4485257 tests/ecmac.db|head -c 623)
-3964	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T7.js (tail -c +4485881 tests/ecmac.db|head -c 618): [{"message":"#1.2: /[a-z]/.test({toString:function(){throw "intostr";}}) throw "intostr". Actual: {"message":"#1.1: /[a-z]/.test({toString:function(){throw "intostr";}}) throw "intostr". Actual: true"}"}]
+3964	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T7.js (tail -c +4485881 tests/ecmac.db|head -c 618): [{"message":"#1.2: /[a-z]/.test({toString:function(){throw "intostr";}}) throw "intostr". Actual: {"message":"#1.1: /[a-z]/.test({toString:function(){throw "intostr";}}) throw "intostr". Actual: false"}"}]
 3965	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T8.js (tail -c +4486500 tests/ecmac.db|head -c 686)
 3966	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T9.js (tail -c +4487187 tests/ecmac.db|head -c 523)
 3967	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A2_T1.js (tail -c +4487711 tests/ecmac.db|head -c 750): [{"message":"#1.2: __instance = new Object; __instance.test = RegExp.prototype.test. Actual: {"message":"#1.1: __instance = new Object; __instance.test = RegExp.prototype.test; __instance.test("message to investigate"). Actual: false"}"}]
@@ -9818,7 +9821,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 9721	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T14.js (tail -c +8871033 tests/ecmac.db|head -c 693)
 9722	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T2.js (tail -c +8871727 tests/ecmac.db|head -c 778)
 9723	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T3.js (tail -c +8872506 tests/ecmac.db|head -c 812): [{"message":"value is not a function"}]
-9724	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T4.js (tail -c +8873319 tests/ecmac.db|head -c 1808): [{"message":"#1: __matched = "".match(); __expected = RegExp().exec(""); __matched.length === __expected.length. Actual: undefined"}]
+9724	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T4.js (tail -c +8873319 tests/ecmac.db|head -c 1808)
 9725	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T5.js (tail -c +8875128 tests/ecmac.db|head -c 701)
 9726	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T6.js (tail -c +8875830 tests/ecmac.db|head -c 2017)
 9727	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T7.js (tail -c +8877848 tests/ecmac.db|head -c 2041)
@@ -9832,14 +9835,14 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 9735	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T14.js (tail -c +8891113 tests/ecmac.db|head -c 1110): [{"message":"#1: __string.match(__re).length=== __matches.length. Actual: undefined"}]
 9736	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T15.js (tail -c +8892224 tests/ecmac.db|head -c 1129): [{"message":"#1: __string.match(__re).length=== __matches.length. Actual: undefined"}]
 9737	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T16.js (tail -c +8893354 tests/ecmac.db|head -c 1133): [{"message":"#1: __string.match(__re).length=== __matches.length. Actual: undefined"}]
-9738	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T17.js (tail -c +8894488 tests/ecmac.db|head -c 1535): [{"message":"#3: __num.match(__re).index ===1. Actual: undefined"}]
-9739	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T18.js (tail -c +8896024 tests/ecmac.db|head -c 1595): [{"message":"#3: __num.match(__re).index ===1. Actual: undefined"}]
+9738	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T17.js (tail -c +8894488 tests/ecmac.db|head -c 1535): [{"message":"#1: __num.match(__re)[0]=== "02". Actual: undefined"}]
+9739	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T18.js (tail -c +8896024 tests/ecmac.db|head -c 1595): [{"message":"#1: __num.match(__re)[0]=== "02". Actual: undefined"}]
 9740	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T2.js (tail -c +8897620 tests/ecmac.db|head -c 1049)
-9741	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T3.js (tail -c +8898670 tests/ecmac.db|head -c 1160)
-9742	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T4.js (tail -c +8899831 tests/ecmac.db|head -c 1118)
-9743	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T5.js (tail -c +8900950 tests/ecmac.db|head -c 1082)
-9744	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T6.js (tail -c +8902033 tests/ecmac.db|head -c 2783): [{"message":"#3: __string = "Boston, Mass. 02134"; __string.match(/([\d]{5})([-\ ]?[\d]{4})?$/)[2]=== void 0. Actual: "}]
-9745	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T7.js (tail -c +8904817 tests/ecmac.db|head -c 1168)
+9741	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T3.js (tail -c +8898670 tests/ecmac.db|head -c 1160): [{"message":"#1: __string = "123456abcde7890"; __string.match(/\d{1}/g).length=== 10. Actual: undefined"}]
+9742	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T4.js (tail -c +8899831 tests/ecmac.db|head -c 1118): [{"message":"#1: __string = "123456abcde7890"; __string.match(/\d{2}/g).length=== 5. Actual: undefined"}]
+9743	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T5.js (tail -c +8900950 tests/ecmac.db|head -c 1082): [{"message":"#1: __string = "123456abcde7890"; __string.match(/\D{2}/g).length=== 2. Actual: undefined"}]
+9744	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T6.js (tail -c +8902033 tests/ecmac.db|head -c 2783): [{"message":"#1: __string = "Boston, Mass. 02134"; __string.match(/([\d]{5})([-\ ]?[\d]{4})?$/)[0]=== "02134". Actual: undefined"}]
+9745	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T7.js (tail -c +8904817 tests/ecmac.db|head -c 1168): [{"message":"#1: __string = "Boston, Mass. 02134"; __string.match(/([\d]{5})([-\ ]?[\d]{4})?$/g).length=== 1. Actual: undefined"}]
 9746	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T8.js (tail -c +8905986 tests/ecmac.db|head -c 1772): [{"message":"#1: __string = "Boston, MA 02134"; __re = /([\d]{5})([-\ ]?[\d]{4})?$/; __string.match(__re).length=== 3. Actual: undefined"}]
 9747	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T9.js (tail -c +8907759 tests/ecmac.db|head -c 1820): [{"message":"#1: __string = "Boston, MA 02134"; __re = /([\d]{5})([-\ ]?[\d]{4})?$/; __string.match(__re).length=== 3. Actual: undefined"}]
 9748	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A6.js (tail -c +8909580 tests/ecmac.db|head -c 573)
@@ -9857,7 +9860,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 9759	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T12.js (tail -c +8919428 tests/ecmac.db|head -c 1096): [{"message":"[$ERROR] is not defined"}]
 9760	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T13.js (tail -c +8920525 tests/ecmac.db|head -c 1031): [{"message":"#1.1: Exception === "inreplaceValue". Actual: {"message":"#1: var x = "ABBABABAB1BBAA".replace(__obj,__obj2) lead to throwing exception"}"}]
 9761	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T14.js (tail -c +8921557 tests/ecmac.db|head -c 737)
-9762	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T15.js (tail -c +8922295 tests/ecmac.db|head -c 863)
+9762	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T15.js (tail -c +8922295 tests/ecmac.db|head -c 863): [{"message":"#1.1: Exception is instance of TypeError. Actual: {"message":"#1.0: x = __instance.replace(__obj, 1) === "1100.0017001" lead to throwing exception"}"}]
 9763	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T16.js (tail -c +8923159 tests/ecmac.db|head -c 959): [{"message":"#1.1: Exception is instance of TypeError. Actual: {"message":"#1.0: x = __instance.replace(__obj, 1) === "1100.007z7001" lead to throwing exception"}"}]
 9764	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T17.js (tail -c +8924119 tests/ecmac.db|head -c 769): [{"message":"#1: var x; var __re = new RegExp(x,"g"); __instance = String("asdf"); __str = "1"; __instance.replace(__re, __str) === "1a1s1d1f1". Actual: asdf"}]
 9765	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T2.js (tail -c +8924889 tests/ecmac.db|head -c 833)
@@ -9877,14 +9880,14 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 9779	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A2_T7.js (tail -c +8936918 tests/ecmac.db|head -c 905)
 9780	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A2_T8.js (tail -c +8937824 tests/ecmac.db|head -c 907)
 9781	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A2_T9.js (tail -c +8938732 tests/ecmac.db|head -c 929)
-9782	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T1.js (tail -c +8939662 tests/ecmac.db|head -c 646)
-9783	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T2.js (tail -c +8940309 tests/ecmac.db|head -c 656)
-9784	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T3.js (tail -c +8940966 tests/ecmac.db|head -c 664)
-9785	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T1.js (tail -c +8941631 tests/ecmac.db|head -c 852): [{"message":"#1: var __str = "abc12 def34"; var __pattern = /([a-z]+)([0-9]+)/; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc def34'. Actual: "}]
-9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = "abc12 def34"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: "}]
-9787	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T3.js (tail -c +8943340 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = "aBc12 def34"; var __pattern = /([a-z]+)([0-9]+)/i; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc def34'. Actual: "}]
-9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = "aBc12 dEf34"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: "}]
-9789	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A5_T1.js (tail -c +8945055 tests/ecmac.db|head -c 795)
+9782	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T1.js (tail -c +8939662 tests/ecmac.db|head -c 646): [{"message":"#1: var __str = 'uid=31'; var __re = /(uid=)(\d+)/; __str.replace(__re, "$11" + 15)==='uid=115'. Actual: uid=31"}]
+9783	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T2.js (tail -c +8940309 tests/ecmac.db|head -c 656): [{"message":"#1: var __str = 'uid=31'; var __re = /(uid=)(\d+)/; __str.replace(__re, "$11" + '15')==='uid=115'. Actual: uid=31"}]
+9784	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T3.js (tail -c +8940966 tests/ecmac.db|head -c 664): [{"message":"#1: var __str = 'uid=31'; var __re = /(uid=)(\d+)/; __str.replace(__re, "$11" + 'A15')==='uid=1A15' . Actual: uid=31"}]
+9785	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T1.js (tail -c +8941631 tests/ecmac.db|head -c 852): [{"message":"#1: var __str = "abc12 def34"; var __pattern = /([a-z]+)([0-9]+)/; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc def34'. Actual: abc12 def34"}]
+9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = "abc12 def34"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: abc12 def34"}]
+9787	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T3.js (tail -c +8943340 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = "aBc12 def34"; var __pattern = /([a-z]+)([0-9]+)/i; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc def34'. Actual: aBc12 def34"}]
+9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = "aBc12 dEf34"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: aBc12 dEf34"}]
+9789	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A5_T1.js (tail -c +8945055 tests/ecmac.db|head -c 795): [{"message":"Invalid regex"}]
 9790	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A6.js (tail -c +8945851 tests/ecmac.db|head -c 584)
 9791	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A7.js
  * @description Checking if creating the String.prototy: [{"message":"#1: __FACTORY = String.prototype.replace; "__instance = new __FACTORY" lead to throwing exception"}]
@@ -9958,10 +9961,10 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 9859	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T10.js (tail -c +9002288 tests/ecmac.db|head -c 2552): [{"message":"with statement is not really implemented yet"}]
 9860	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T11.js (tail -c +9004841 tests/ecmac.db|head -c 1231): [{"message":"with statement is not really implemented yet"}]
 9861	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T12.js (tail -c +9006073 tests/ecmac.db|head -c 1234): [{"message":"[$ERROR] is not defined"}]
-9862	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T13.js (tail -c +9007308 tests/ecmac.db|head -c 3228): [{"message":"Invalid String"}]
+9862	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T13.js (tail -c +9007308 tests/ecmac.db|head -c 3228): [{"message":"#2: var __obj = {toString:function(){return "u0042u0042";}}; var __obj2 = {valueOf:function(){return {};},toString:function(){return "2";}}; __split = "ABBu0041BABABu0042cc^^u0042Bvv%%Bu0042xxx".split(__obj, __obj2); __split.constructor === Array. Actual: [function Object(v)]"}]
 9863	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T14.js (tail -c +9010537 tests/ecmac.db|head -c 1243): [{"message":"[$ERROR] is not defined"}]
 9864	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T15.js (tail -c +9011781 tests/ecmac.db|head -c 1446): [{"message":"#1.1: Exception === "intointeger". Actual: intostr"}]
-9865	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T16.js (tail -c +9013228 tests/ecmac.db|head -c 919)
+9865	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T16.js (tail -c +9013228 tests/ecmac.db|head -c 919): [{"message":"#1.1: Exception is instance of TypeError. Actual: {"message":"#1: "__split = 6776767677.006771122677555.split(__obj)" lead to throwing exception"}"}]
 9866	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T17.js (tail -c +9014148 tests/ecmac.db|head -c 3334): [{"message":"#2: var __re = /u0037u0037/g; Number.prototype.split=String.prototype.split; __split = 6776767677.006771122677555.split(__re); __split.constructor === Array. Actual: [function Object(v)]"}]
 9867	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T18.js (tail -c +9017483 tests/ecmac.db|head -c 2266): [{"message":"#2: var __re =  new RegExp("00"); Number.prototype.split=String.prototype.split; __split = 6776767677.006771122677555.split(__re, eval(""1"")); __split.constructor === Array. Actual: [function Object(v)]"}]
 9868	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T2.js (tail -c +9019750 tests/ecmac.db|head -c 1917): [{"message":"#2: __instance = new Boolean; __instance.split = String.prototype.split; __split = __instance.split("A"!=="u0041", function(){return 0;}(),null); __split.constructor === Array. Actual: [function Object(v)]"}]
@@ -11184,7 +11187,7 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11066	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-16.js (tail -c +10078357 tests/ecmac.db|head -c 596)
 11067	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-2.js (tail -c +10078954 tests/ecmac.db|head -c 335): [{"message":"Test case returned non-true value!"}]
 11068	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-3.js (tail -c +10079290 tests/ecmac.db|head -c 326)
-11069	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-4.js (tail -c +10079617 tests/ecmac.db|head -c 535): [{"message":"Test case returned non-true value!"}]
+11069	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-4.js (tail -c +10079617 tests/ecmac.db|head -c 535)
 11070	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-5.js (tail -c +10080153 tests/ecmac.db|head -c 383): [{"message":"Test case returned non-true value!"}]
 11071	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483)
 11072	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463)

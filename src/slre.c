@@ -1102,6 +1102,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   struct slre_instruction *split, *jump;
   int err_code;
 
+  e.is_regex = 0;
   e.prog = (struct slre_prog *)SLRE_MALLOC(sizeof(struct slre_prog));
   e.pstart = e.pend =
       (struct slre_node *)SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
