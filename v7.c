@@ -12179,14 +12179,13 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_function *func = v7_to_function(this_obj);
-  ast_off_t body, start, pos = func->ast_off;
+  ast_off_t body, pos = func->ast_off;
   struct ast *a = func->ast;
   int argn = 0;
 
   (void) args;
 
   V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
-  start = pos - 1;
   body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);
 
   ast_move_to_children(a, &pos);
