@@ -11534,7 +11534,7 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
     const char *frmString = " %*s%n %03s %02d %d %02d:%02d:%02d %03s%d";
     res = sscanf(str, frmString, &dowlen, month, &tp->day, &tp->year,
                  &tp->hour, &tp->min, &tp->sec, gmt, tz);
-    if (dowlen == 3 && (res == 3 || (res >= 6 && res <= 8))) {
+    if ((res == 3 || (res >= 6 && res <= 8)) && dowlen == 3) {
       if ((tp->month = d_getnumbyname(mon_name,
                                       ARRAY_SIZE(mon_name), month)) != -1) {
         if (res == 7 && strncmp(gmt, "GMT", 3) == 0) {
