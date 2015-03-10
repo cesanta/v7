@@ -9414,7 +9414,8 @@ static void re_ex_num_overfl(struct slre_env *e) {
 
 static enum slre_opcode re_countrep(struct slre_env *e) {
   e->min_rep = 0;
-  while (!re_endofcount(e->curr_rune = *e->src++))
+  while (e->src < e->src_end &&
+         !re_endofcount(e->curr_rune = *e->src++))
     e->min_rep = e->min_rep * 10 + re_dec_digit(e, e->curr_rune);
   if (e->min_rep >= SLRE_MAX_REP) re_ex_num_overfl(e);
 
@@ -9423,7 +9424,8 @@ static enum slre_opcode re_countrep(struct slre_env *e) {
     return L_COUNT;
   }
   e->max_rep = 0;
-  while ((e->curr_rune = *e->src++) != '}')
+  while (e->src < e->src_end &&
+         (e->curr_rune = *e->src++) != '}')
     e->max_rep = e->max_rep * 10 + re_dec_digit(e, e->curr_rune);
   if (!e->max_rep) {
     e->max_rep = SLRE_MAX_REP;
