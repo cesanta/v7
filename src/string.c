@@ -216,6 +216,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
   const char *s;
   size_t s_len;
   val_t out_str_o;
+  char *old_owned_mbuf_base = v7->owned_strings.buf;
+  char *old_owned_mbuf_end = v7->owned_strings.buf + v7->owned_strings.len;
   this_obj = to_string(v7, this_obj);
   s = v7_to_string(v7, &this_obj, &s_len);
 
@@ -302,12 +304,17 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
     ptok = out_sub;
     do {
       size_t ln = ptok->end - ptok->start;
+      const char *ps = ptok->start;
+      if (ptok->start >= old_owned_mbuf_base &&
+          ptok->start < old_owned_mbuf_end) {
+        ps += v7->owned_strings.buf - old_owned_mbuf_base;
+      }
       out_str_o =
-          s_concat(v7, out_str_o, v7_create_string(v7, ptok->start, ln, 1));
+          s_concat(v7, out_str_o, v7_create_string(v7, ps,
+                                                   ln, 1));
       p += ln;
       ptok++;
     } while (--out_sub_num);
-    *p = '\0';
 
     return out_str_o;
   }
