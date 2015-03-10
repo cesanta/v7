@@ -7594,12 +7594,6 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
     case AST_URSHIFT:
       return (uint32_t) ia >> ((uint32_t) ib & 31);
     case AST_OR:
-      if (isnan(a)) {
-        a = 0.0;
-      }
-      if (isnan(b)) {
-        b = 0.0;
-      }
       return ia | ib;
     case AST_XOR:
       return ia ^ ib;

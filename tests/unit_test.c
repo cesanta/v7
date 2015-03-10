@@ -1616,6 +1616,13 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "i=1; L:while(i>0){i=0;continue L;};i") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
 
+  ASSERT(v7_exec(v7, &v, "1 | NaN") == V7_OK);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT(v7_exec(v7, &v, "NaN | 1") == V7_OK);
+  ASSERT(check_value(v7, v, "1"));
+  ASSERT(v7_exec(v7, &v, "NaN | NaN") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+
   ASSERT(v7_exec(v7, &v, "0 || 1") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
   ASSERT(v7_exec(v7, &v, "0 || {}") == V7_OK);
