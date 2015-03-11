@@ -234,6 +234,18 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 5.0));
   ASSERT(v7_exec(v7, &v, "'hi there'.indexOf('e', 6)") == V7_OK);
   ASSERT(check_num(v, 7.0));
+  ASSERT(v7_exec(v7, &v, "'hi there'.indexOf('e', NaN)") == V7_OK);
+  ASSERT(check_num(v, 5.0));
+  ASSERT(v7_exec(v7, &v, "'hi there'.indexOf('e', -Infinity)") == V7_OK);
+  ASSERT(check_num(v, 5.0));
+  ASSERT(v7_exec(v7, &v, "'hi there'.indexOf('e', Infinity)") == V7_OK);
+  ASSERT(check_num(v, -1.0));
+  ASSERT(v7_exec(v7, &v, "'hi there'.indexOf('e', 8)") == V7_OK);
+  ASSERT(check_num(v, -1.0));
+  ASSERT(v7_exec(v7, &v, "'aabb'.indexOf('a', false)") == V7_OK);
+  ASSERT(check_num(v, 0.0));
+  ASSERT(v7_exec(v7, &v, "'aabb'.indexOf('a', true)") == V7_OK);
+  ASSERT(check_num(v, 1.0));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(3, 2)") == V7_OK);
   ASSERT(check_str(v7, v, "th"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substring(3, 5)") == V7_OK);

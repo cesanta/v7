@@ -10374,7 +10374,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 10269	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A9.js (tail -c +9402982 tests/ecmac.db|head -c 1357): [{"message":"value is not a function"}]
 10270	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A10.js (tail -c +9404340 tests/ecmac.db|head -c 1206): [{"message":"value is not a function"}]
 10271	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A11.js (tail -c +9405547 tests/ecmac.db|head -c 924): [{"message":"value is not a function"}]
-10272	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T1.js (tail -c +9406472 tests/ecmac.db|head -c 729): [{"message":"#1: __instance = new Object(true); __instance.indexOf = String.prototype.indexOf;  __instance.indexOf(true, false) === 0. Actual: 4"}]
+10272	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T1.js (tail -c +9406472 tests/ecmac.db|head -c 729)
 10273	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T10.js (tail -c +9407202 tests/ecmac.db|head -c 862): [{"message":"with statement is not really implemented yet"}]
 10274	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T11.js (tail -c +9408065 tests/ecmac.db|head -c 869): [{"message":"#1: __instance = new Date(0); __instance.indexOf = String.prototype.indexOf;  (__instance.getTimezoneOffset()>0 ? __instance.indexOf('31') : __instance.indexOf('01')) === 8. Actual: -1"}]
 10275	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T12.js (tail -c +9408935 tests/ecmac.db|head -c 1005)
@@ -10389,9 +10389,9 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 10284	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A2_T2.js (tail -c +9415775 tests/ecmac.db|head -c 571)
 10285	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A2_T3.js (tail -c +9416347 tests/ecmac.db|head -c 575)
 10286	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A2_T4.js (tail -c +9416923 tests/ecmac.db|head -c 579)
-10287	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A3_T1.js (tail -c +9417503 tests/ecmac.db|head -c 615): [{"message":"#1: "$$abcdabcd".indexOf("ab",NaN)===2. Actual: 10"}]
-10288	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A3_T2.js (tail -c +9418119 tests/ecmac.db|head -c 665): [{"message":"#1: "$$abcdabcd".indexOf("ab",eval(""-99""))===2. Actual: 10"}]
-10289	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A3_T3.js (tail -c +9418785 tests/ecmac.db|head -c 730): [{"message":"#1: "$$abcdabcd".indexOf("ab", function(){return -Infinity;}())===2. Actual: 10"}]
+10287	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A3_T1.js (tail -c +9417503 tests/ecmac.db|head -c 615)
+10288	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A3_T2.js (tail -c +9418119 tests/ecmac.db|head -c 665)
+10289	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A3_T3.js (tail -c +9418785 tests/ecmac.db|head -c 730)
 10290	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A4_T1.js (tail -c +9419516 tests/ecmac.db|head -c 1049): [{"message":"with statement is not really implemented yet"}]
 10291	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A4_T2.js (tail -c +9420566 tests/ecmac.db|head -c 1038): [{"message":"[$ERROR] is not defined"}]
 10292	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A4_T3.js (tail -c +9421605 tests/ecmac.db|head -c 984): [{"message":"#1: var __obj = {toString:function(){return "AB";}}; var __obj2 = {valueOf:function(){return {};},toString:function(){return "1";}}; "ABBABABAB".indexOf(__obj, __obj2)===3. Actual: -1"}]
@@ -10409,7 +10409,7 @@ line 2"; __executed = /.+/.exec(__string); __executed.length === 1. Actual: unde
 10304	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A9.js (tail -c +9432995 tests/ecmac.db|head -c 1368): [{"message":"value is not a function"}]
 10305	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A10.js (tail -c +9434364 tests/ecmac.db|head -c 1252): [{"message":"value is not a function"}]
 10306	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A11.js (tail -c +9435617 tests/ecmac.db|head -c 954): [{"message":"value is not a function"}]
-10307	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T1.js (tail -c +9436572 tests/ecmac.db|head -c 760)
+10307	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T1.js (tail -c +9436572 tests/ecmac.db|head -c 760): [{"message":"#1: __instance = new Object(true); __instance.lastIndexOf = String.prototype.lastIndexOf;  __instance.lastIndexOf(true, false) === 0. Actual: -1"}]
 10308	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T10.js (tail -c +9437333 tests/ecmac.db|head -c 872): [{"message":"with statement is not really implemented yet"}]
 10309	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T12.js (tail -c +9438206 tests/ecmac.db|head -c 1031)
 10310	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T2.js (tail -c +9439238 tests/ecmac.db|head -c 879): [{"message":"#1: __instance = new Boolean; __instance.lastIndexOf = String.prototype.lastIndexOf;  __instance.lastIndexOf("A"!=="A", function(){return 0;}(),null) === 0. Actual: -1"}]
