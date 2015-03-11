@@ -1,10 +1,6 @@
 v7
 amalgamated_v7
 *.dSYM
-unit_test
-Debug
-Release
-test_suite
 *.exe
 *.bat
 *.cmd
@@ -18,11 +14,7 @@ test_suite
 *.workspace
 *.obj
 *.pdb
-_amalgamate.v7.js
-_amalgamate.unit_test.js
-test.html
-test.js
-tst.js
-unit_test.js
+Debug
+Release
+v7.amalgamate.js
 TAGS
-src/data.c
