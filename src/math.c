@@ -6,13 +6,13 @@
 #include "internal.h"
 
 static val_t m_one_arg(struct v7 *v7, val_t args, double (*f)(double)) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   return v7_create_number(f(v7_to_double(arg0)));
 }
 
 static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
-  val_t arg0 = v7_array_at(v7, args, 0);
-  val_t arg1 = v7_array_at(v7, args, 1);
+  val_t arg0 = v7_array_get(v7, args, 0);
+  val_t arg1 = v7_array_get(v7, args, 1);
   return v7_create_number(f(v7_to_double(arg0), v7_to_double(arg1)));
 }
 
@@ -62,7 +62,7 @@ static val_t min_max(struct v7 *v7, val_t args, int is_min) {
   int i, len = v7_array_length(v7, args);
 
   for (i = 0; i < len; i++) {
-    double v = v7_to_double(v7_array_at(v7, args, i));
+    double v = v7_to_double(v7_array_get(v7, args, i));
     if (isnan(res) || (is_min && v < res) || (!is_min && v > res)) {
       res = v;
     }

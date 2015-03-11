@@ -6,7 +6,7 @@
 #include "internal.h"
 
 static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   char buf[100], *p = v7_to_json(v7, arg0, buf, sizeof(buf));
   val_t res = v7_create_string(v7, p, strlen(p), 1);
   (void) this_obj;

@@ -6,7 +6,7 @@
 #include "internal.h"
 
 V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg = v7_array_at(v7, args, 0);
+  val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError",
@@ -16,7 +16,7 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t proto = v7_array_at(v7, args, 0);
+  val_t proto = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
     throw_exception(v7, "TypeError",
@@ -26,8 +26,8 @@ V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t obj = v7_array_at(v7, args, 0);
-  val_t proto = v7_array_at(v7, args, 1);
+  val_t obj = v7_array_get(v7, args, 0);
+  val_t proto = v7_array_get(v7, args, 1);
   (void) this_obj;
   return v7_create_boolean(is_prototype_of(v7, obj, proto));
 }
@@ -48,7 +48,7 @@ static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
 
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
                           unsigned int ignore_flags) {
-  val_t obj = v7_array_at(v7, args, 0);
+  val_t obj = v7_array_get(v7, args, 0);
   val_t res = v7_create_array(v7);
   if (!v7_is_object(obj)) {
     throw_exception(v7, "TypeError",
@@ -81,8 +81,8 @@ V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
 V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
                                               val_t args) {
   struct v7_property *prop;
-  val_t obj = v7_array_at(v7, args, 0);
-  val_t name = v7_array_at(v7, args, 1);
+  val_t obj = v7_array_get(v7, args, 0);
+  val_t name = v7_array_get(v7, args, 1);
   val_t desc;
   (void) this_obj;
   if ((prop = _Obj_getOwnProperty(v7, obj, name)) == NULL) {
@@ -119,9 +119,9 @@ V7_PRIVATE val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
 }
 
 V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t obj = v7_array_at(v7, args, 0);
-  val_t name = v7_array_at(v7, args, 1);
-  val_t desc = v7_array_at(v7, args, 2);
+  val_t obj = v7_array_get(v7, args, 0);
+  val_t name = v7_array_get(v7, args, 1);
+  val_t desc = v7_array_get(v7, args, 2);
   char name_buf[512];
   int name_len;
   (void) this_obj;
@@ -135,8 +135,8 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
                                       val_t args) {
   struct v7_property *p;
-  val_t obj = v7_array_at(v7, args, 0);
-  val_t descs = v7_array_at(v7, args, 1);
+  val_t obj = v7_array_get(v7, args, 0);
+  val_t descs = v7_array_get(v7, args, 1);
   (void) this_obj;
 
   if (!v7_is_object(descs)) {
@@ -156,7 +156,7 @@ V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
 V7_PRIVATE val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
                                           val_t args) {
   struct v7_property *prop;
-  val_t name = v7_array_at(v7, args, 0);
+  val_t name = v7_array_get(v7, args, 0);
   if ((prop = _Obj_getOwnProperty(v7, this_obj, name)) == NULL) {
     return v7_create_boolean(0);
   }
@@ -165,7 +165,7 @@ V7_PRIVATE val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
 }
 
 V7_PRIVATE val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t name = v7_array_at(v7, args, 0);
+  val_t name = v7_array_get(v7, args, 0);
   return v7_create_boolean(_Obj_getOwnProperty(v7, this_obj, name) != NULL);
 }
 

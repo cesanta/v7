@@ -20,8 +20,8 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   val_t v = v7_create_undefined();
   int i, len = v7_array_length(v7, args);
   for (i = 0; i < len; i++) {
-    v = v7_array_at(v7, args, i);
-    v7_array_append(v7, this_obj, v);
+    v = v7_array_get(v7, args, i);
+    v7_array_push(v7, this_obj, v);
   }
   return v;
 }
@@ -36,7 +36,7 @@ static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   long new_len = arg_long(v7, args, 0, -1);
 
   if (!v7_is_object(this_obj)) {
@@ -80,8 +80,8 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
 
   if (v7_is_function(func)) {
     val_t res, args = v7_create_array(v7);
-    v7_array_append(v7, args, a);
-    v7_array_append(v7, args, b);
+    v7_array_push(v7, args, a);
+    v7_array_push(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
     return (int) - v7_to_double(res);
   } else {
@@ -119,14 +119,14 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
                     int (*sorting_func)(void *, const void *, const void *)) {
   int i = 0, len = v7_array_length(v7, obj);
   val_t *arr = (val_t *) malloc(len * sizeof(arr[0]));
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   struct v7_property *p;
 
   if (!v7_is_object(obj)) return obj;
   assert(obj != v7->global_object);
 
   for (i = 0; i < len; i++) {
-    arr[i] = v7_array_at(v7, obj, i);
+    arr[i] = v7_array_get(v7, obj, i);
   }
 
   if (sorting_func != NULL) {
@@ -158,7 +158,7 @@ static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_at(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0);
   val_t res = v7_create_undefined();
   size_t sep_size = 0;
   const char *sep = NULL;
@@ -186,10 +186,10 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
 
       /* Append next item from an array */
       p = buf;
-      n = to_str(v7, v7_array_at(v7, this_obj, i), buf, sizeof(buf), 0);
+      n = to_str(v7, v7_array_get(v7, this_obj, i), buf, sizeof(buf), 0);
       if (n > (long) sizeof(buf)) {
         p = (char *) malloc(n + 1);
-        to_str(v7, v7_array_at(v7, this_obj, i), p, n, 0);
+        to_str(v7, v7_array_get(v7, this_obj, i), p, n, 0);
       }
       mbuf_append(&m, p, n);
       if (p != buf) {
@@ -231,7 +231,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
 
   /* Create return value - slice */
   for (i = arg0; i < arg1 && i < len; i++) {
-    v7_array_append(v7, res, v7_array_at(v7, this_obj, i));
+    v7_array_push(v7, res, v7_array_get(v7, this_obj, i));
   }
 
   /* If splicing, modify this_obj array: remove spliced sub-array */
@@ -262,7 +262,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     for (i = 2; i < num_args; i++) {
       char key[20];
       size_t n = snprintf(key, sizeof(key), "%ld", arg0 + i - 2);
-      v7_set(v7, this_obj, key, n, v7_array_at(v7, args, i));
+      v7_set(v7, this_obj, key, n, v7_array_get(v7, args, i));
     }
   }
 
@@ -278,8 +278,8 @@ static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
-  *a0 = v7_array_at(v7, args, 0);
-  *a1 = v7_array_at(v7, args, 1);
+  *a0 = v7_array_get(v7, args, 0);
+  *a1 = v7_array_get(v7, args, 1);
   if (v7_is_undefined(*a1)) {
     *a1 = t;
   }
@@ -287,9 +287,9 @@ static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
 
 static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
   val_t params = v7_create_array(v7);
-  v7_array_append(v7, params, v);
-  v7_array_append(v7, params, n);
-  v7_array_append(v7, params, t);
+  v7_array_push(v7, params, v);
+  v7_array_push(v7, params, n);
+  v7_array_push(v7, params, t);
   return v7_apply(v7, a, t, params);
 }
 
@@ -353,7 +353,7 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
     el = a_prep2(v7, arg0, p->value, p->name, arg1);
     if (v7_is_true(v7, el)) {
-      v7_array_append(v7, res, p->value);
+      v7_array_push(v7, res, p->value);
     }
   }
 
