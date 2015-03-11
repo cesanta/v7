@@ -230,25 +230,19 @@ static void init_js_stdlib(struct v7 *v7) {
   val_t res;
 
   v7_exec(v7, &res, STRINGIFY(
-    Array.prototype.indexOf = function(a, b) {
+    Array.prototype.indexOf = function(a, x) {
+      var i; var r = -1; var b = +x;
       if (!b || b < 0) b = 0;
-      for (var i = b; i < this.length; i++) {
-        if (this[i] === a) {
-          return i;
-        }
-      }
-      return -1;
+      for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = +i;
+      return r;
     };));
 
   v7_exec(v7, &res, STRINGIFY(
-    Array.prototype.lastIndexOf = function(a, b) {
-      if (!b || b < 0 || b >= this.length) b = this.length - 1;
-      for (var i = b; i >= 0; i--) {
-        if (this[i] === a) {
-          return i;
-        }
-      }
-      return -1;
+    Array.prototype.lastIndexOf = function(a, x) {
+      var i; var r = -1; var b = +x;
+      if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
+      for (i in this) if (i <= b && (r < 0 || i > r) && this[i] === a) r = +i;
+      return r;
     };));
 
   v7_exec(v7, &res, STRINGIFY(
@@ -278,6 +272,14 @@ static void init_js_stdlib(struct v7 *v7) {
     Array.prototype.shift = function() {
       return this.splice(0, 1)[0];
     };));
+
+#if 0
+  v7_exec(v7, &res, STRINGIFY(
+    Function.prototype.call = function() {
+      var thisObj = arguments.splice(0, 1)[0];
+      return this.apply(thisObj, arguments);
+    };));
+    #endif
 
   /* TODO(lsm): re-enable in a separate PR */
 #if 0
@@ -319,10 +321,10 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   {
     val_t file_obj = v7_create_object(v7);
     v7_set_property(v7, v7->global_object, "File", 4, 0, file_obj);
-    set_cfunc_prop(v7, file_obj, "open", Std_open);
-    set_cfunc_prop(v7, file_obj, "close", Std_close);
-    set_cfunc_prop(v7, file_obj, "read", Std_read);
-    set_cfunc_prop(v7, file_obj, "write", Std_write);
+    set_cfunc_obj_prop(v7, file_obj, "open", Std_open, 2);
+    set_cfunc_obj_prop(v7, file_obj, "close", Std_close, 1);
+    set_cfunc_obj_prop(v7, file_obj, "read", Std_read, 0);
+    set_cfunc_obj_prop(v7, file_obj, "write", Std_write, 1);
   }
 #endif
 
