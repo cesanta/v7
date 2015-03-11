@@ -273,13 +273,11 @@ static void init_js_stdlib(struct v7 *v7) {
       return this.splice(0, 1)[0];
     };));
 
-#if 0
   v7_exec(v7, &res, STRINGIFY(
     Function.prototype.call = function() {
-      var thisObj = arguments.splice(0, 1)[0];
-      return this.apply(thisObj, arguments);
+      var t = arguments.splice(0, 1)[0];
+      return this.apply(t, arguments);
     };));
-    #endif
 
   /* TODO(lsm): re-enable in a separate PR */
 #if 0

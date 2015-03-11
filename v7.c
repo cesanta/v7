@@ -12534,18 +12534,18 @@ static void init_js_stdlib(struct v7 *v7) {
   val_t res;
 
   v7_exec(v7, &res, STRINGIFY(
-    Array.prototype.indexOf = function(a, b) {
-      var i; var r = -1;
+    Array.prototype.indexOf = function(a, x) {
+      var i; var r = -1; var b = +x;
       if (!b || b < 0) b = 0;
-      for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = i;
+      for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = +i;
       return r;
     };));
 
   v7_exec(v7, &res, STRINGIFY(
-    Array.prototype.lastIndexOf = function(a, b) {
-      var i; var r = -1;
-      if (!b || b < 0 || b >= this.length) b = this.length - 1;
-      for (i in this) if (i < b && (r < 0 || i < r) && this[i] === a) r = i;
+    Array.prototype.lastIndexOf = function(a, x) {
+      var i; var r = -1; var b = +x;
+      if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
+      for (i in this) if (i <= b && (r < 0 || i > r) && this[i] === a) r = +i;
       return r;
     };));
 
@@ -12579,8 +12579,8 @@ static void init_js_stdlib(struct v7 *v7) {
 
   v7_exec(v7, &res, STRINGIFY(
     Function.prototype.call = function() {
-      var thisObj = arguments.splice(0, 1)[0];
-      return this.apply(thisObj, arguments);
+      var t = arguments.splice(0, 1)[0];
+      return this.apply(t, arguments);
     };));
 
   /* TODO(lsm): re-enable in a separate PR */
