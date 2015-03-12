@@ -35,7 +35,8 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   for (i = 0; i < num_args; i++) {
     char buf[10];
     val_t arg = v7_array_get(v7, args, i);
-    Rune r = (Rune)v7_to_double(arg);
+    double d = v7_to_double(arg);
+    Rune r = (Rune)((int32_t)(isnan(d) || isinf(d) ? 0 : d) & 0xffff);
     int n = runetochar(buf, &r);
     val_t s = v7_create_string(v7, buf, n, 1);
     res = s_concat(v7, res, s);
@@ -103,12 +104,19 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
     p2 = v7_to_string(v7, &sub, &n2);
 
     if (n2 <= n1) {
-      if (v7_array_length(v7, args) > 1)
-        fromIndex = v7_to_double(i_value_of(v7, v7_array_get(v7, args, 1)));
       end = p1 + n1;
       n1 = utfnlen((char *)p1, n1);
+      if (v7_array_length(v7, args) > 1) {
+        double d = i_as_num(v7, v7_array_get(v7, args, 1));
+        if (isnan(d) || d < 0) {
+          d = 0.0;
+        } else if(isinf(d)) {
+          d = n1;
+        }
+        fromIndex = d;
+      }
       if (fromIndex > 0) {
-        if (fromIndex > n1) fromIndex = n1;
+        if (fromIndex >= n1) return v7_create_number(-1);
         if (last)
           end = utfnshift((char *)p1, fromIndex + 1);
         else
