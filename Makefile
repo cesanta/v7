@@ -12,7 +12,10 @@ CLANG_FORMAT:=clang-format
 
 ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
 	CLANG:=/usr/local/bin/clang-3.5
-	CLANG_FORMAT:=/usr/local/bin/clang-format-3.5
+	# clang-format-3.5 build from sources doesn't
+	# produce exactly the same thing as brew install clang-format
+	# which is built from the apple fork of 3.5svn
+	# LANG_FORMAT:=/usr/local/bin/clang-format-3.5
 endif
 
 include src/sources.mk
@@ -81,7 +84,7 @@ difftest:
 	rm $$TMP
 
 format:
-	@/usr/bin/find src -name "*.[ch]" | grep -v utf.c | grep -v crypto.c | xargs $(CLANG_FORMAT) -i
+	@/usr/bin/find src -name "*.[ch]" | grep -v utf.c | grep -v crypto.c | grep -v js_stdlib.c | xargs $(CLANG_FORMAT) -i
 	@$(CLANG_FORMAT) -i tests/unit_test.c
 
 cpplint:

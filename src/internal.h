@@ -273,6 +273,8 @@ V7_PRIVATE void throw_value(struct v7 *, val_t);
 V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
 V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
+V7_PRIVATE void init_js_stdlib(struct v7 *);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
