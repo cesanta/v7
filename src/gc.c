@@ -11,15 +11,15 @@ void gc_mark_string(struct v7 *, val_t *);
 #endif
 
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
-  return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
+  return (struct v7_object *)gc_alloc_cell(v7, &v7->object_arena);
 }
 
 V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
-  return (struct v7_property *) gc_alloc_cell(v7, &v7->property_arena);
+  return (struct v7_property *)gc_alloc_cell(v7, &v7->property_arena);
 }
 
 V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
-  return (struct v7_function *) gc_alloc_cell(v7, &v7->function_arena);
+  return (struct v7_function *)gc_alloc_cell(v7, &v7->function_arena);
 }
 
 V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
@@ -39,22 +39,22 @@ V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
  * able to debug the relocating GC.
  */
 V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
-  mbuf_append(&tf->v7->tmp_stack, (char *) &vp, sizeof(val_t *));
+  mbuf_append(&tf->v7->tmp_stack, (char *)&vp, sizeof(val_t *));
 }
 
 /* Initializes a new arena. */
-V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size,
-                              size_t size, const char *name) {
+V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size, size_t size,
+                              const char *name) {
   assert(cell_size >= sizeof(uintptr_t));
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
   a->name = name;
-  /* Avoid arena initialization cost when GC is disabled */
+/* Avoid arena initialization cost when GC is disabled */
 #ifndef V7_DISABLE_GC
   gc_arena_grow(a, size);
   assert(a->free != NULL);
 #else
-  (void) size;
+  (void)size;
 #endif
 }
 
@@ -79,7 +79,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
   size_t old_size = a->size;
   uint32_t old_alive = a->alive;
   a->size = new_size;
-  a->base = (char *) realloc(a->base, a->size * a->cell_size);
+  a->base = (char *)realloc(a->base, a->size * a->cell_size);
   memset(a->base + old_size * a->cell_size, 0,
          (a->size - old_size) * a->cell_size);
   /* in case we grow preemptively */
@@ -91,7 +91,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
 
 V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #ifdef V7_DISABLE_GC
-  (void) v7;
+  (void)v7;
   return malloc(a->cell_size);
 #else
   char **r;
@@ -106,19 +106,19 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
       abort();
 #else
       gc_arena_grow(a, a->size * 1.50);
-      /* TODO(mkm): relocate */
+/* TODO(mkm): relocate */
 #endif
     }
   }
-  r = (char **) a->free;
+  r = (char **)a->free;
 
   UNMARK(r);
 
-  a->free = * r;
+  a->free = *r;
   a->allocations++;
   a->alive++;
 
-  return (void *) r;
+  return (void *)r;
 #endif
 }
 
@@ -130,14 +130,13 @@ void gc_sweep(struct gc_arena *a, size_t start) {
   a->alive = 0;
   a->free = NULL;
   for (cur = a->base + (start * a->cell_size);
-       cur < (a->base + (a->size * a->cell_size));
-       cur += a->cell_size) {
+       cur < (a->base + (a->size * a->cell_size)); cur += a->cell_size) {
     if (MARKED(cur)) {
       UNMARK(cur);
       a->alive++;
     } else {
       memset(cur, 0, a->cell_size);
-      * (char **) cur = a->free;
+      *(char **)cur = a->free;
       a->free = cur;
     }
   }
@@ -154,9 +153,7 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   obj = v7_to_object(v);
   if (MARKED(obj)) return;
 
-  for ((prop = obj->properties), MARK(obj);
-       prop != NULL; prop = next) {
-
+  for ((prop = obj->properties), MARK(obj); prop != NULL; prop = next) {
 #ifdef V7_ENABLE_COMPACTING_GC
     gc_mark_string(v7, &prop->value);
     gc_mark_string(v7, &prop->name);
@@ -165,9 +162,10 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
     next = prop->next;
 
-    assert((char *) prop >= v7->property_arena.base &&
-           (char *) prop < (v7->property_arena.base + v7->property_arena.size *
-                            v7->property_arena.cell_size));
+    assert((char *)prop >= v7->property_arena.base &&
+           (char *)prop <
+               (v7->property_arena.base +
+                v7->property_arena.size * v7->property_arena.cell_size));
     MARK(prop);
   }
 
@@ -185,7 +183,7 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 #ifdef V7_ENABLE_COMPACTING_GC
 
 uint64_t gc_string_val_to_offset(val_t v) {
-  return ((uint64_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
+  return ((uint64_t)v7_to_pointer(v)) & ~V7_TAG_MASK;
 }
 
 val_t gc_string_val_from_offset(uint64_t s) {
@@ -232,7 +230,7 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
     tmp |= V7_TAG_FOREIGN;
   }
 
-  h = (val_t) v;
+  h = (val_t)v;
   s[-1] = 1;
   memcpy(s, &h, sizeof(h) - 2);
   memcpy(v, &tmp, sizeof(tmp));
@@ -254,11 +252,11 @@ void gc_compact_strings(struct v7 *v7) {
        * The tail is marked with V7_TAG_STRING_C,
        * while val_t link pointers are tagged with V7_TAG_FOREIGN
        */
-      for (; (h & V7_TAG_MASK) != V7_TAG_STRING_C ; h = next) {
+      for (; (h & V7_TAG_MASK) != V7_TAG_STRING_C; h = next) {
         h &= ~V7_TAG_MASK;
-        memcpy(&next, (char *) h, sizeof(h));
+        memcpy(&next, (char *)h, sizeof(h));
 
-        * (val_t *) h = gc_string_val_from_offset(head);
+        *(val_t *)h = gc_string_val_from_offset(head);
       }
       h &= ~V7_TAG_MASK;
 
@@ -266,7 +264,7 @@ void gc_compact_strings(struct v7 *v7) {
        * the tail contains the first 6 bytes we stole from
        * the actual string.
        */
-      len = decode_varint((unsigned char *) &h, &llen);
+      len = decode_varint((unsigned char *)&h, &llen);
       len += llen + 1;
 
       /*
@@ -283,7 +281,7 @@ void gc_compact_strings(struct v7 *v7) {
       p += len;
       head += len;
     } else {
-      len = decode_varint((unsigned char *) p, &llen);
+      len = decode_varint((unsigned char *)p, &llen);
       len += llen + 1;
 
       p += len;
@@ -308,7 +306,7 @@ void gc_dump_owned_strings(struct v7 *v7) {
     }
   }
 #else
-    for (i = 0; i < v7->owned_strings.len; i++) {
+  for (i = 0; i < v7->owned_strings.len; i++) {
     if (isprint(v7->owned_strings.buf[i])) {
       printf("%c", v7->owned_strings.buf[i]);
     } else {
@@ -351,8 +349,8 @@ void v7_gc(struct v7 *v7) {
   gc_mark(v7, v7->this_object);
   gc_mark(v7, v7->call_stack);
 
-  for (vp = (val_t **) v7->tmp_stack.buf;
-       (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
+  for (vp = (val_t **)v7->tmp_stack.buf;
+       (char *)vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
     gc_mark(v7, **vp);
   }
 

@@ -17,10 +17,10 @@ static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
 }
 
 #define DEFINE_WRAPPER(name, func)                                          \
-V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) {   \
-  (void) this_obj;                                                      \
-  return func(v7, args, name);                                          \
-}
+  V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) { \
+    (void) this_obj;                                                        \
+    return func(v7, args, name);                                            \
+  }
 
 #ifdef V7_WINDOWS
 static double round(double n) {
@@ -48,13 +48,13 @@ V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
   static int srand_called = 0;
 
   if (!srand_called) {
-    srand((unsigned)(unsigned long) v7);
+    srand((unsigned)(unsigned long)v7);
     srand_called++;
   }
 
-  (void) this_obj;
-  (void) args;
-  return v7_create_number((double) rand() / RAND_MAX);
+  (void)this_obj;
+  (void)args;
+  return v7_create_number((double)rand() / RAND_MAX);
 }
 
 static val_t min_max(struct v7 *v7, val_t args, int is_min) {
@@ -72,12 +72,12 @@ static val_t min_max(struct v7 *v7, val_t args, int is_min) {
 }
 
 V7_PRIVATE val_t Math_min(struct v7 *v7, val_t this_obj, val_t args) {
-  (void) this_obj;
+  (void)this_obj;
   return min_max(v7, args, 1);
 }
 
 V7_PRIVATE val_t Math_max(struct v7 *v7, val_t this_obj, val_t args) {
-  (void) this_obj;
+  (void)this_obj;
   return min_max(v7, args, 0);
 }
 

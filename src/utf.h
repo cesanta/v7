@@ -8,60 +8,60 @@
 
 #if defined(__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 typedef unsigned char uchar;
 
-typedef unsigned short Rune;  /* 16 bits */
+typedef unsigned short Rune; /* 16 bits */
 
-#define nelem(a) (sizeof(a)/sizeof(a)[0])
+#define nelem(a) (sizeof(a) / sizeof(a)[0])
 
 enum {
-  UTFmax    = 3,     /* maximum bytes per rune */
-  Runesync  = 0x80,  /* cannot represent part of a UTF sequence (<) */
-  Runeself  = 0x80,  /* rune and UTF sequences are the same (<) */
-  Runeerror = 0xFFFD /* decoding error in UTF */
+  UTFmax = 3,               /* maximum bytes per rune */
+  Runesync = 0x80,          /* cannot represent part of a UTF sequence (<) */
+  Runeself = 0x80,          /* rune and UTF sequences are the same (<) */
+  Runeerror = 0xFFFD        /* decoding error in UTF */
   /* Runemax    = 0xFFFC */ /* maximum rune value */
 };
 
 /* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
-int   chartorune(Rune *rune, const char *str);
-int   fullrune(char *str, int n);
-int   isdigitrune(Rune c);
-int   isnewline(Rune c);
-int   iswordchar(Rune c);
-int   isalpharune(Rune c);
-int   islowerrune(Rune c);
-int   isspacerune(Rune c);
-int   istitlerune(Rune c);
-int   isupperrune(Rune c);
-int   runelen(Rune c);
-int   runenlen(Rune *r, int nrune);
-Rune* runestrcat(Rune *s1, Rune *s2);
-Rune* runestrchr(Rune *s, Rune c);
-int   runestrcmp(Rune *s1, Rune *s2);
-Rune* runestrcpy(Rune *s1, Rune *s2);
-Rune* runestrdup(Rune *s);
-Rune* runestrecpy(Rune *s1, Rune *es1, Rune *s2);
-long  runestrlen(Rune *s);
-Rune* runestrncat(Rune *s1, Rune *s2, long n);
-int   runestrncmp(Rune *s1, Rune *s2, long n);
-Rune* runestrncpy(Rune *s1, Rune *s2, long n);
-Rune* runestrrchr(Rune *s, Rune c);
-Rune* runestrstr(Rune *s1, Rune *s2);
-int   runetochar(char *str, Rune *rune);
-Rune  tolowerrune(Rune c);
-Rune  totitlerune(Rune c);
-Rune  toupperrune(Rune c);
-char* utfecpy(char *to, char *e, char *from);
-int   utflen(char *s);
-int   utfnlen(char *s, long m);
-char* utfnshift(char *s, long m);
-char* utfrrune(char *s, long c);
-char* utfrune(char *s, long c);
-char* utfutf(char *s1, char *s2);
+int chartorune(Rune *rune, const char *str);
+int fullrune(char *str, int n);
+int isdigitrune(Rune c);
+int isnewline(Rune c);
+int iswordchar(Rune c);
+int isalpharune(Rune c);
+int islowerrune(Rune c);
+int isspacerune(Rune c);
+int istitlerune(Rune c);
+int isupperrune(Rune c);
+int runelen(Rune c);
+int runenlen(Rune *r, int nrune);
+Rune *runestrcat(Rune *s1, Rune *s2);
+Rune *runestrchr(Rune *s, Rune c);
+int runestrcmp(Rune *s1, Rune *s2);
+Rune *runestrcpy(Rune *s1, Rune *s2);
+Rune *runestrdup(Rune *s);
+Rune *runestrecpy(Rune *s1, Rune *es1, Rune *s2);
+long runestrlen(Rune *s);
+Rune *runestrncat(Rune *s1, Rune *s2, long n);
+int runestrncmp(Rune *s1, Rune *s2, long n);
+Rune *runestrncpy(Rune *s1, Rune *s2, long n);
+Rune *runestrrchr(Rune *s, Rune c);
+Rune *runestrstr(Rune *s1, Rune *s2);
+int runetochar(char *str, Rune *rune);
+Rune tolowerrune(Rune c);
+Rune totitlerune(Rune c);
+Rune toupperrune(Rune c);
+char *utfecpy(char *to, char *e, char *from);
+int utflen(char *s);
+int utfnlen(char *s, long m);
+char *utfnshift(char *s, long m);
+char *utfrrune(char *s, long c);
+char *utfrune(char *s, long c);
+char *utfutf(char *s1, char *s2);
 
 #if defined(__cplusplus)
 }
-#endif  /* __cplusplus */
-#endif  /* _UTF_H_ */
+#endif /* __cplusplus */
+#endif /* _UTF_H_ */

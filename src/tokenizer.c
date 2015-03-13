@@ -10,22 +10,23 @@ struct v7_vec {
   const char *p;
   int len;
 };
-#define V7_VEC(str) { (str), sizeof(str) - 1 }
+#define V7_VEC(str) \
+  { (str), sizeof(str) - 1 }
 
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
  * for function get_tok() for rationale for that.
  */
 static struct v7_vec s_keywords[] = {
-    V7_VEC("break"),      V7_VEC("case"),      V7_VEC("catch"),
-    V7_VEC("continue"),   V7_VEC("debugger"),  V7_VEC("default"),
-    V7_VEC("delete"),     V7_VEC("do"),        V7_VEC("else"),
-    V7_VEC("false"),      V7_VEC("finally"),   V7_VEC("for"),
-    V7_VEC("function"),   V7_VEC("if"),        V7_VEC("in"),
-    V7_VEC("instanceof"), V7_VEC("new"),       V7_VEC("null"),
-    V7_VEC("return"),     V7_VEC("switch"),    V7_VEC("this"),
-    V7_VEC("throw"),      V7_VEC("true"),      V7_VEC("try"),
-    V7_VEC("typeof"),     V7_VEC("var"),       V7_VEC("void"),
+    V7_VEC("break"),      V7_VEC("case"),     V7_VEC("catch"),
+    V7_VEC("continue"),   V7_VEC("debugger"), V7_VEC("default"),
+    V7_VEC("delete"),     V7_VEC("do"),       V7_VEC("else"),
+    V7_VEC("false"),      V7_VEC("finally"),  V7_VEC("for"),
+    V7_VEC("function"),   V7_VEC("if"),       V7_VEC("in"),
+    V7_VEC("instanceof"), V7_VEC("new"),      V7_VEC("null"),
+    V7_VEC("return"),     V7_VEC("switch"),   V7_VEC("this"),
+    V7_VEC("throw"),      V7_VEC("true"),     V7_VEC("try"),
+    V7_VEC("typeof"),     V7_VEC("var"),      V7_VEC("void"),
     V7_VEC("while"),      V7_VEC("with")};
 
 V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
@@ -40,9 +41,9 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
-  while (s != p && *s != '\0' && (isspace((unsigned char) *s) || *s == '/')) {
+  while (s != p && *s != '\0' && (isspace((unsigned char)*s) || *s == '/')) {
     p = s;
-    while (*s != '\0' && isspace((unsigned char) *s)) {
+    while (*s != '\0' && isspace((unsigned char)*s)) {
       if (*s == '\n') num_lines++;
       s++;
     }
@@ -65,7 +66,7 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
 
 /* Advance `s` pointer to the end of identifier  */
 static void ident(const char **s) {
-  const unsigned char *p = (unsigned char *) *s;
+  const unsigned char *p = (unsigned char *)*s;
   int n;
   Rune r;
 
@@ -77,7 +78,7 @@ static void ident(const char **s) {
                isxdigit(p[3]) && isxdigit(p[4]) && isxdigit(p[5])) {
       /* Unicode escape, \uXXXX . Could be used like "var \u0078 = 1;" */
       p += 6;
-    } else if ((n = chartorune(&r, (char *) p)) > 1 && isalpharune(r)) {
+    } else if ((n = chartorune(&r, (char *)p)) > 1 && isalpharune(r)) {
       /* Unicode alphanumeric character */
       p += n;
     } else {
@@ -85,7 +86,7 @@ static void ident(const char **s) {
     }
   }
 
-  *s = (char *) p;
+  *s = (char *)p;
 }
 
 static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
@@ -136,7 +137,7 @@ static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
 }
 
 static void parse_number(const char *s, const char **end, double *num) {
-  *num = strtod(s, (char **) end);
+  *num = strtod(s, (char **)end);
 }
 
 static enum v7_tok parse_str_literal(const char **p) {
@@ -171,7 +172,6 @@ static enum v7_tok parse_str_literal(const char **p) {
     return TOK_END_OF_INPUT;
   }
 }
-
 
 /*
  * This function is the heart of the tokenizer.
@@ -286,7 +286,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
     case 'X':
     case 'Y':
     case 'Z':
-    case '\\':    /* Identifier may start with unicode escape sequence */
+    case '\\': /* Identifier may start with unicode escape sequence */
       ident(s);
       return TOK_IDENTIFIER;
 
@@ -342,7 +342,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
             if (*p == '\\') {
               /* Skip escape sequence */
               p++;
-            } else  if (*p == '/')  {
+            } else if (*p == '/') {
               /* This is a closing slash */
               p++;
               /* Skip regex flags */

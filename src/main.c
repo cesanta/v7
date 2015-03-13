@@ -24,7 +24,7 @@ static char *read_file(const char *path, size_t *size) {
   char *data = NULL;
   if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
     *size = st.st_size;
-    data = (char *) malloc(*size + 1);
+    data = (char *)malloc(*size + 1);
     if (data != NULL) {
       fread(data, 1, *size, fp);
       data[*size] = '\0';

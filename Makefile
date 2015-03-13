@@ -7,9 +7,12 @@ TOP_SOURCES=$(addprefix $(SRC_DIR)/, $(SOURCES))
 TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
 
 CLANG:=clang
+# installable with: `brew info clang-format`
+CLANG_FORMAT:=clang-format
 
 ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
 	CLANG:=/usr/local/bin/clang-3.5
+	CLANG_FORMAT:=/usr/local/bin/clang-format-3.5
 endif
 
 include src/sources.mk
@@ -21,7 +24,8 @@ all: v7 amalgamated_v7
 	@$(MAKE) -C tests
 
 v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
-	cat v7.h $(TOP_HEADERS) $(TOP_SOURCES) | sed -E "/#include .*(v7.h|`echo $(TOP_HEADERS) | sed -e 's,src/,,g' -e 's, ,|,g'`)/d" > $@
+	@echo "AMALGAMATING\tv7.c"
+	@cat v7.h $(TOP_HEADERS) $(TOP_SOURCES) | sed -E "/#include .*(v7.h|`echo $(TOP_HEADERS) | sed -e 's,src/,,g' -e 's, ,|,g'`)/d" > $@
 
 v: unit_test
 	valgrind -q --leak-check=full --show-reachable=yes \
@@ -72,9 +76,13 @@ setup-hooks:
 
 difftest:
 	@TMP=`mktemp -t checkout-diff.XXXXXX`; \
-	git diff v7.c  >$$TMP ; \
+	git diff  >$$TMP ; \
 	if [ -s "$$TMP" ]; then echo found diffs in checkout:; git status -s;  exit 1; fi; \
 	rm $$TMP
+
+format:
+	@/usr/bin/find src -name "*.[ch]" | grep -v utf.c | grep -v crypto.c | xargs $(CLANG_FORMAT) -i
+	@$(CLANG_FORMAT) -i tests/unit_test.c
 
 cpplint:
 	@$(MAKE) -C tests cpplint

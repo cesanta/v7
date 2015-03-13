@@ -125,7 +125,7 @@ enum v7_tok {
 
 #if defined(__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 V7_PRIVATE int skip_to_next_tok(const char **ptr);
 V7_PRIVATE enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);
@@ -133,6 +133,6 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 
 #if defined(__cplusplus)
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#endif  /* V7_TOKENIZER_H_INCLUDED */
+#endif /* V7_TOKENIZER_H_INCLUDED */

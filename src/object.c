@@ -7,7 +7,7 @@
 
 V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
-  (void) this_obj;
+  (void)this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError",
                     "Object.getPrototypeOf called on non-object");
@@ -17,7 +17,7 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t proto = v7_array_get(v7, args, 0);
-  (void) this_obj;
+  (void)this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
     throw_exception(v7, "TypeError",
                     "Object prototype may only be an Object or null");
@@ -28,7 +28,7 @@ V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t proto = v7_array_get(v7, args, 1);
-  (void) this_obj;
+  (void)this_obj;
   return v7_create_boolean(is_prototype_of(v7, obj, proto));
 }
 
@@ -40,7 +40,7 @@ static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
   char buf[20];
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
-  if (p->next) _Obj_append_reverse(v7, p->next, res, i+1, ignore_flags);
+  if (p->next) _Obj_append_reverse(v7, p->next, res, i + 1, ignore_flags);
 
   snprintf(buf, sizeof(buf), "%d", i);
   v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
@@ -51,8 +51,7 @@ static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
   val_t obj = v7_array_get(v7, args, 0);
   val_t res = v7_create_array(v7);
   if (!v7_is_object(obj)) {
-    throw_exception(v7, "TypeError",
-                    "Object.keys called on non-object");
+    throw_exception(v7, "TypeError", "Object.keys called on non-object");
   }
 
   _Obj_append_reverse(v7, v7_to_object(obj)->properties, res, 0, ignore_flags);
@@ -68,34 +67,38 @@ static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
 }
 
 V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
-  (void) this_obj;
+  (void)this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
-V7_PRIVATE val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
-                                         val_t args) {
-  (void) this_obj;
+V7_PRIVATE val_t
+    Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj, val_t args) {
+  (void)this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
-V7_PRIVATE val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
-                                              val_t args) {
+V7_PRIVATE val_t
+    Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *prop;
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
   val_t desc;
-  (void) this_obj;
+  (void)this_obj;
   if ((prop = _Obj_getOwnProperty(v7, obj, name)) == NULL) {
     return V7_UNDEFINED;
   }
   desc = v7_create_object(v7);
   v7_set_property(v7, desc, "value", 5, 0, prop->value);
-  v7_set_property(v7, desc, "writable", 8, 0, v7_create_boolean(
-      !(prop->attributes & V7_PROPERTY_READ_ONLY)));
-  v7_set_property(v7, desc, "enumerable", 10, 0, v7_create_boolean(
-      !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM))));
-  v7_set_property(v7, desc, "configurable", 12, 0, v7_create_boolean(
-      !(prop->attributes & V7_PROPERTY_DONT_DELETE)));
+  v7_set_property(
+      v7, desc, "writable", 8, 0,
+      v7_create_boolean(!(prop->attributes & V7_PROPERTY_READ_ONLY)));
+  v7_set_property(
+      v7, desc, "enumerable", 10, 0,
+      v7_create_boolean(
+          !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM))));
+  v7_set_property(
+      v7, desc, "configurable", 12, 0,
+      v7_create_boolean(!(prop->attributes & V7_PROPERTY_DONT_DELETE)));
 
   return desc;
 }
@@ -107,7 +110,7 @@ V7_PRIVATE val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
   if (!v7_is_true(v7, v7_get(v7, desc, "enumerable", 10))) {
     flags |= V7_PROPERTY_DONT_ENUM;
   }
-  if (!v7_is_true(v7, v7_get(v7, desc, "writable",  8))) {
+  if (!v7_is_true(v7, v7_get(v7, desc, "writable", 8))) {
     flags |= V7_PROPERTY_READ_ONLY;
   }
   if (!v7_is_true(v7, v7_get(v7, desc, "configurable", 12))) {
@@ -124,7 +127,7 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t desc = v7_array_get(v7, args, 2);
   char name_buf[512];
   int name_len;
-  (void) this_obj;
+  (void)this_obj;
   if (!v7_is_object(obj)) {
     throw_exception(v7, "TypeError", "object expected");
   }
@@ -132,12 +135,12 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
 
-V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+V7_PRIVATE val_t
+    Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
   val_t obj = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
-  (void) this_obj;
+  (void)this_obj;
 
   if (!v7_is_object(descs)) {
     throw_exception(v7, "TypeError", "object expected");
@@ -153,15 +156,15 @@ V7_PRIVATE val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
   return obj;
 }
 
-V7_PRIVATE val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
-                                          val_t args) {
+V7_PRIVATE val_t
+    Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *prop;
   val_t name = v7_array_get(v7, args, 0);
   if ((prop = _Obj_getOwnProperty(v7, this_obj, name)) == NULL) {
     return v7_create_boolean(0);
   }
-  return v7_create_boolean(!(prop->attributes &
-                             (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
+  return v7_create_boolean(
+      !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
 }
 
 V7_PRIVATE val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj, val_t args) {
@@ -193,7 +196,7 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
-  (void) args;
+  (void)args;
   p = v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
   if (p != NULL) {
     res = p->value;
@@ -205,7 +208,7 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
-  (void) args;
+  (void)args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     type = "Array";
   }
@@ -216,7 +219,8 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
-  v7_exec(v7, &v, "function Object(v) {"
+  v7_exec(v7, &v,
+          "function Object(v) {"
           "if (typeof v === 'boolean') return new Boolean(v);"
           "if (typeof v === 'number') return new Number(v);"
           "if (typeof v === 'string') return new String(v);"
