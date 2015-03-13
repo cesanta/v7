@@ -332,8 +332,7 @@ static void re_ex_num_overfl(struct slre_env *e) {
 
 static enum slre_opcode re_countrep(struct slre_env *e) {
   e->min_rep = 0;
-  while (e->src < e->src_end &&
-         !re_endofcount(e->curr_rune = *e->src++))
+  while (e->src < e->src_end && !re_endofcount(e->curr_rune = *e->src++))
     e->min_rep = e->min_rep * 10 + re_dec_digit(e, e->curr_rune);
   if (e->min_rep >= SLRE_MAX_REP) re_ex_num_overfl(e);
 
@@ -342,8 +341,7 @@ static enum slre_opcode re_countrep(struct slre_env *e) {
     return L_COUNT;
   }
   e->max_rep = 0;
-  while (e->src < e->src_end &&
-         (e->curr_rune = *e->src++) != '}')
+  while (e->src < e->src_end && (e->curr_rune = *e->src++) != '}')
     e->max_rep = e->max_rep * 10 + re_dec_digit(e, e->curr_rune);
   if (!e->max_rep) {
     e->max_rep = SLRE_MAX_REP;
@@ -1470,7 +1468,9 @@ int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
   return res;
 }
 
-int slre_get_flags(struct slre_prog *crp) { return crp->flags; }
+int slre_get_flags(struct slre_prog *crp) {
+  return crp->flags;
+}
 
 #ifdef SLRE_TEST
 
@@ -1478,15 +1478,14 @@ int slre_get_flags(struct slre_prog *crp) { return crp->flags; }
 
 static const char *err_code_to_str(int err_code) {
   static const char *ar[] = {
-      "no error",                             "invalid decimal digit",
-      "invalid hex digit",                    "invalid escape character",
-      "invalid unterminated escape sequence", "syntax error",
-      "unmatched left parenthesis",           "unmatched right parenthesis",
-      "numeric overflow",                     "infinite loop empty string",
-      "too many charsets",                    "invalid charset range",
-      "charset is too large",                 "malformed charset",
-      "invalid back reference",               "too many captures",
-      "invalid quantifier",                   "bad character after $"};
+      "no error", "invalid decimal digit", "invalid hex digit",
+      "invalid escape character", "invalid unterminated escape sequence",
+      "syntax error", "unmatched left parenthesis",
+      "unmatched right parenthesis", "numeric overflow",
+      "infinite loop empty string", "too many charsets",
+      "invalid charset range", "charset is too large", "malformed charset",
+      "invalid back reference", "too many captures", "invalid quantifier",
+      "bad character after $"};
 
   typedef char static_assertion_err_codes_out_of_sync
       [2 * !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -

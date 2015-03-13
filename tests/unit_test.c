@@ -37,37 +37,39 @@
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
 #ifndef NAN
-#define NAN         atof("NAN")
+#define NAN atof("NAN")
 #endif
 /* #define INFINITY    BLAH */
 #endif
 
 extern long timezone;
 
-#define FAIL(str, line) do {                    \
-  printf("Fail on line %d: [%s]\n", line, str); \
-  exit(1);                                      \
-  return str;                                   \
-} while (0)
+#define FAIL(str, line)                           \
+  do {                                            \
+    printf("Fail on line %d: [%s]\n", line, str); \
+    exit(1);                                      \
+    return str;                                   \
+  } while (0)
 
-#define ASSERT(expr) do {                       \
-  static_num_tests++;                           \
-  if (!(expr)) FAIL(#expr, __LINE__);           \
-} while (0)
+#define ASSERT(expr)                    \
+  do {                                  \
+    static_num_tests++;                 \
+    if (!(expr)) FAIL(#expr, __LINE__); \
+  } while (0)
 
-#define RUN_TEST(test) do {                 \
-  const char *msg = NULL;                   \
-  if (strstr(# test, filter)) msg = test(); \
-  if (msg) return msg;                      \
-} while (0)
+#define RUN_TEST(test)                       \
+  do {                                       \
+    const char *msg = NULL;                  \
+    if (strstr(#test, filter)) msg = test(); \
+    if (msg) return msg;                     \
+  } while (0)
 
 #ifdef _WIN32
 #define isnan(x) _isnan(x)
 #endif
 
-
 static int static_num_tests = 0;
-int STOP = 0;  /* For xcode breakpoints conditions */
+int STOP = 0; /* For xcode breakpoints conditions */
 
 static int check_value(struct v7 *v7, val_t v, const char *str) {
   char buf[2048];
@@ -81,7 +83,7 @@ static int check_value(struct v7 *v7, val_t v, const char *str) {
 
 static int check_num(val_t v, double num) {
   int ret = isnan(num) ? isnan(v7_to_double(v)) : v7_to_double(v) == num;
-  if(!ret) {
+  if (!ret) {
     printf("Num: want %f got %f\n", num, v7_to_double(v));
   }
 
@@ -97,7 +99,7 @@ static int check_str(struct v7 *v7, val_t v, const char *str) {
   size_t n1, n2 = strlen(str);
   const char *s = v7_to_string(v7, &v, &n1);
   int ret = (n1 == n2 && memcmp(s, str, n1) == 0);
-  if(!ret) {
+  if (!ret) {
     printf("Str: want %s got %s\n", str, s);
   }
   return ret;
@@ -105,8 +107,7 @@ static int check_str(struct v7 *v7, val_t v, const char *str) {
 
 static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   val_t v;
-  if (v7_exec(v7, &v, expr) != V7_OK)
-    return 0;
+  if (v7_exec(v7, &v, expr) != V7_OK) return 0;
   return result == (v7_is_true(v7, v) ? 1 : 0);
 }
 
@@ -147,7 +148,8 @@ static const char *test_closure(void) {
   val_t v;
   struct v7 *v7 = v7_create();
 
-  ASSERT(v7_exec(v7, &v, "function a(x){return function(y){return x*y}}") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "function a(x){return function(y){return x*y}}") ==
+         V7_OK);
   ASSERT(v7_exec(v7, &v, "var f1 = a(5);") == V7_OK);
   ASSERT(v7_exec(v7, &v, "var f2 = a(7);") == V7_OK);
   ASSERT(v7_exec(v7, &v, "f1(3);") == V7_OK);
@@ -163,7 +165,7 @@ static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
   double sum = 0;
   unsigned long i;
 
-  (void) this_obj;
+  (void)this_obj;
   for (i = 0; i < v7_array_length(v7, args); i++) {
     sum += v7_to_double(v7_array_get(v7, args, i));
   }
@@ -175,7 +177,7 @@ static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
 
   ASSERT(v7_set_property(v7, v7_get_global_object(v7), "adder", 5, 0,
-         v7_create_cfunction(adder)) == 0);
+                         v7_create_cfunction(adder)) == 0);
   ASSERT(v7_exec(v7, &v, "adder(1, 2, 3 + 4);") == V7_OK);
   ASSERT(check_value(v7, v, "10"));
   v7_destroy(v7);
@@ -202,7 +204,7 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "Math.sqrt(144)") == V7_OK);
   ASSERT(check_value(v7, v, "12"));
 
-  /* Number */
+/* Number */
 #ifndef _WIN32
   ASSERT(v7_exec(v7, &v, "Math.PI") == V7_OK);
   ASSERT(check_num(v, M_PI));
@@ -309,16 +311,18 @@ static const char *test_stdlib(void) {
   /* Date() tests interact with external object (local date & time), so
       if host have strange date/time setting it won't be work */
 
-  ASSERT(v7_exec(v7, &v, "Number(new Date('IncDec 01 2015 00:00:00'))") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "Number(new Date('IncDec 01 2015 00:00:00'))") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "NaN"));
-  ASSERT(v7_exec(v7, &v, "Number(new Date('My Jul 01 2015 00:00:00'))") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "Number(new Date('My Jul 01 2015 00:00:00'))") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "NaN"));
 
 #if 0
   /* Date */
   tzset();
 
-#define ADJTZ(x) (x+2*3600000+timezone*1000)
+#define ADJTZ(x) (x + 2 * 3600000 + timezone * 1000)
 
 #if 0
     /* this part of tests is tz & lang depended */
@@ -371,7 +375,6 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "15:40:50"));
   ASSERT(v7_exec(v7, &v, "new Date(2015, 10, 9, 15, 40, 50, 777).toLocaleTimeString()") == V7_OK);
   ASSERT(check_str(v7, v, "15:40:50"));
-
 
 #endif
 
@@ -536,9 +539,9 @@ static const char *test_stdlib(void) {
 
 static const char *test_tokenizer(void) {
   static const char *str =
-    "1.23e-15 'fo\\'\\'o\\x25\n\\'' /\\s+/ $_12foo{}(),[].:;== === != !== "
-    "= %= *= /= ^= += -= |= &= <<= >>= >>>= & || + - ++ -- "
-    "&&|?~%*/^ <= < >= > << >> >>> !";
+      "1.23e-15 'fo\\'\\'o\\x25\n\\'' /\\s+/ $_12foo{}(),[].:;== === != !== "
+      "= %= *= /= ^= += -= |= &= <<= >>= >>>= & || + - ++ -- "
+      "&&|?~%*/^ <= < >= > << >> >>> !";
   enum v7_tok tok = TOK_END_OF_INPUT;
   double num;
   const char *p = str;
@@ -547,8 +550,8 @@ static const char *test_tokenizer(void) {
   skip_to_next_tok(&p);
 
   /* Make sure divisions are parsed correctly - set previous token */
-  while ((tok = get_tok(&p, &num, i > TOK_REGEX_LITERAL ? TOK_NUMBER: tok))
-         != TOK_END_OF_INPUT) {
+  while ((tok = get_tok(&p, &num, i > TOK_REGEX_LITERAL ? TOK_NUMBER : tok)) !=
+         TOK_END_OF_INPUT) {
     skip_to_next_tok(&p);
     ASSERT(tok == i);
     i++;
@@ -625,13 +628,13 @@ static const char *test_runtime(void) {
   ASSERT(check_value(v7, p->value, "undefined"));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
-         v7_create_string(v7, "bar", 3, 1)) == 0);
+                         v7_create_string(v7, "bar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   s = "\"bar\"";
   ASSERT(check_value(v7, p->value, s));
 
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
-         v7_create_string(v7, "zar", 3, 1)) == 0);
+                         v7_create_string(v7, "zar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   s = "\"zar\"";
   ASSERT(check_value(v7, p->value, s));
@@ -640,11 +643,11 @@ static const char *test_runtime(void) {
   ASSERT(v7_to_object(v)->properties == NULL);
   ASSERT(v7_del_property(v7, v, "foo", -1) == -1);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
-         v7_create_string(v7, "bar", 3, 1)) == 0);
+                         v7_create_string(v7, "bar", 3, 1)) == 0);
   ASSERT(v7_set_property(v7, v, "bar", -1, 0,
-         v7_create_string(v7, "foo", 3, 1)) == 0);
+                         v7_create_string(v7, "foo", 3, 1)) == 0);
   ASSERT(v7_set_property(v7, v, "aba", -1, 0,
-         v7_create_string(v7, "bab", 3, 1)) == 0);
+                         v7_create_string(v7, "bab", 3, 1)) == 0);
   ASSERT(v7_del_property(v7, v, "foo", -1) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) == NULL);
   ASSERT(v7_del_property(v7, v, "aba", -1) == 0);
@@ -663,15 +666,18 @@ static const char *test_runtime(void) {
   ASSERT(check_value(v7, v, s));
 
   v = v7_create_object(v7);
-  ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_DONT_DELETE, v7_create_number(1.0)) == 0);
+  ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_DONT_DELETE,
+                         v7_create_number(1.0)) == 0);
   s = "{\"foo\":1}";
   ASSERT(check_value(v7, v, s));
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) == 0);
   s = "{\"foo\":2}";
   ASSERT(check_value(v7, v, s));
   ASSERT(v7_to_double(v7_get(v7, v, "foo", -1)) == 2.0);
-  ASSERT(v7_get_property(v7, v, "foo", -1)->attributes & V7_PROPERTY_DONT_DELETE);
-  ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY, v7_create_number(1.0)) == 0);
+  ASSERT(v7_get_property(v7, v, "foo", -1)->attributes &
+         V7_PROPERTY_DONT_DELETE);
+  ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY,
+                         v7_create_number(1.0)) == 0);
   ASSERT(v7_set(v7, v, "foo", -1, v7_create_number(2.0)) != 0);
   s = "{\"foo\":1}";
   ASSERT(check_value(v7, v, s));
@@ -691,218 +697,77 @@ static const char *test_parser(void) {
   struct ast a;
   struct v7 *v7 = v7_create();
   const char *cases[] = {
-    "1",
-    "true",
-    "false",
-    "null",
-    "undefined",
-    "1+2",
-    "1-2",
-    "1*2",
-    "1/2",
-    "1%2",
-    "1/-2",
-    "(1 + 2) * x + 3",
-    "1 + (2, 3) * 4, 5",
-    "(a=1 + 2) + 3",
-    "1 ? 2 : 3",
-    "1 ? 2 : 3 ? 4 : 5",
-    "1 ? 2 : (3 ? 4 : 5)",
-    "1 || 2 + 2",
-    "1 && 2 || 3 && 4 + 5",
-    "1|2 && 3|3",
-    "1^2|3^4",
-    "1&2^2&4|5&6",
-    "1==2&3",
-    "1<2",
-    "1<=2",
-    "1>=2",
-    "1>2",
-    "1==1<2",
-    "a instanceof b",
-    "1 in b",
-    "1!=2&3",
-    "1!==2&3",
-    "1===2",
-    "1<<2",
-    "1>>2",
-    "1>>>2",
-    "1<<2<3",
-    "1/2/2",
-    "(1/2)/2",
-    "1 + + 1",
-    "1- -2",
-    "!1",
-    "~0",
-    "void x()",
-    "delete x",
-    "typeof x",
-    "++x",
-    "--i",
-    "x++",
-    "i--",
-    "a.b",
-    "a.b.c",
-    "a[0]",
-    "a[0].b",
-    "a[0][1]",
-    "a[b[0].c]",
-    "a()",
-    "a(0)",
-    "a(0, 1)",
-    "a(0, (1, 2))",
-    "1 + a(0, (1, 2)) + 2",
-    "new x",
-    "new x(0, 1)",
-    "new x.y(0, 1)",
-    "new x.y",
-    "1;",
-    "1;2;",
-    "1;2",
-    "1\nx",
-    "p()\np()\np();p()",
-    ";1",
-    "if (1) 2",
-    "if (1) 2; else 3",
-    "if (1) {2;3}",
-    "if (1) {2;3}; 4",
-    "if (1) {2;3} else {4;5}",
-    "while (1);",
-    "while(1) {}",
-    "while (1) 2;",
-    "while (1) {2;3}",
-    "for (i = 0; i < 3; i++) i++",
-    "for (i=0; i<3;) i++",
-    "for (i=0;;) i++",
-    "for (;i<3;) i++",
-    "for (;;) i++",
-    "debugger",
-    "while(1) break",
-    "while(1) break loop",
-    "while(1) continue",
-    "while(1) continue loop",
-    "function f() {return}",
-    "function f() {return 1+2}",
-    "function f() {if (1) {return;}}",
-    "function f() {if (1) {return 2}}",
-    "throw 1+2",
-    "try { 1 }",
-    "try { 1 } catch (e) { 2 }",
-    "try {1} finally {3}",
-    "try {1} catch (e) {2} finally {3}",
-    "var x",
-    "var x, y",
-    "var x=1, y",
-    "var y, x=y=1",
-    "function x(a) {return a}",
-    "function x() {return 1}",
-    "[1,2,3]",
-    "[1+2,3+4,5+6]",
-    "[1,[2,[[3]]]]",
-    "({a: 1})",
-    "({a: 1, b: 2})",
-    "({})",
-    "(function(a) { return a + 1 })",
-    "(function f(a) { return a + 1 })",
-    "(function f() { return; 1;})",
-    "function f() {while (1) {return;2}}",
-    "switch(a) {case 1: break;}",
-    "switch(a) {case 1: p(); break;}",
-    "switch(a) {case 1: a; case 2: b; c;}",
-    "switch(a) {case 1: a; b; default: c;}",
-    "switch(a) {case 1: p(); break; break; }",
-    "switch(a) {case 1: break; case 2: 1; case 3:}",
-    "switch(a) {case 1: break; case 2: 1; case 3: default: break}",
-    "switch(a) {case 1: break; case 3: default: break; case 2: 1}",
-    "for (var i = 0; i < 3; i++) i++",
-    "for (var i=0, j=i; i < 3; i++, j++) i++",
-    "a%=1",
-    "a*=1",
-    "a/=1",
-    "a+=1",
-    "a-=1",
-    "a|=1",
-    "a&=1",
-    "a<<=1",
-    "a>>2",
-    "a>>=1",
-    "a>>>=1",
-    "a=b=c+=1",
-    "a=(b=(c+=1))",
-    "\"foo\"",
-    "var undefined = 1",
-    "undefined",
-    "{var x=1;2;}",
-    "({get a() { return 1 }})",
-    "({set a(b) { this.x = b }})",
-    "({get a() { return 1 }, set b(c) { this.x = c }, d: 0})",
-    "({get: function() {return 42;}})",
-    "Object.defineProperty(o, \"foo\", {get: function() {return 42;}});",
-    "({a: 0, \"b\": 1})",
-    "({a: 0, 42: 1})",
-    "({a: 0, 42.99: 1})",
-    "({a: 0, })",
-    "({true: 0, null: 1, undefined: 2, this: 3})",
-    "[]",
-    "[,2]",
-    "[,]",
-    "[,2]",
-    "[,,,1,2]",
-    "delete z",
-    "delete (1+2)",
-    "delete (delete z)",
-    "delete delete z",
-    "+ + + 2",
-    "throw 'ex'",
-    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {}; break}",
-    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break}",
-    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break; default: 1; break;}",
-    "try {1} catch(e){}\n1",
-    "try {1} catch(e){} 1",
-    "switch(v) {case 0: break;} 1",
-    "switch(a) {case 1: break; case 3: default: break; case 2: 1; default: 2}",
-    "do { i-- } while (i > 0)",
-    "if (false) 1; 1;",
-    "while(true) 1; 1;",
-    "while(true) {} 1;",
-    "do {} while(false) 1;",
-    "with (a) 1; 2;",
-    "with (a) {1} 2;",
-    "for(var i in a) {1}",
-    "for(i in a) {1}",
-    "!function(){function d(){}var x}();",
-    "({get a() { function d(){} return 1 }})",
-    "({set a(v) { function d(a){} d(v) }})",
-    "{function d(){}var x}",
-    "try{function d(){}var x}catch(e){function d(){}var x}finally{function d(){}var x}",
-    "{} {}",
-    "if(1){function d(){}var x}",
-    "if(1){} else {function d(){}var x}",
-    "var \\u0076, _\\u0077, a\\u0078b, жабоскрипт;",
-    "a.in + b.for",
-    "var x = { null: 5, else: 4 }",
-    "lab: x=1",
-    "'use strict';0;'use strict';",
-    "'use strict';if(0){'use strict';}",
-    "(function(){'use strict';0;'use strict';})()"
-  };
+      "1", "true", "false", "null", "undefined", "1+2", "1-2", "1*2", "1/2",
+      "1%2", "1/-2", "(1 + 2) * x + 3", "1 + (2, 3) * 4, 5", "(a=1 + 2) + 3",
+      "1 ? 2 : 3", "1 ? 2 : 3 ? 4 : 5", "1 ? 2 : (3 ? 4 : 5)", "1 || 2 + 2",
+      "1 && 2 || 3 && 4 + 5", "1|2 && 3|3", "1^2|3^4", "1&2^2&4|5&6", "1==2&3",
+      "1<2", "1<=2", "1>=2", "1>2", "1==1<2", "a instanceof b", "1 in b",
+      "1!=2&3", "1!==2&3", "1===2", "1<<2", "1>>2", "1>>>2", "1<<2<3", "1/2/2",
+      "(1/2)/2", "1 + + 1", "1- -2", "!1", "~0", "void x()", "delete x",
+      "typeof x", "++x", "--i", "x++", "i--", "a.b", "a.b.c", "a[0]", "a[0].b",
+      "a[0][1]", "a[b[0].c]", "a()", "a(0)", "a(0, 1)", "a(0, (1, 2))",
+      "1 + a(0, (1, 2)) + 2", "new x", "new x(0, 1)", "new x.y(0, 1)",
+      "new x.y", "1;", "1;2;", "1;2", "1\nx", "p()\np()\np();p()", ";1",
+      "if (1) 2", "if (1) 2; else 3", "if (1) {2;3}", "if (1) {2;3}; 4",
+      "if (1) {2;3} else {4;5}", "while (1);", "while(1) {}", "while (1) 2;",
+      "while (1) {2;3}", "for (i = 0; i < 3; i++) i++", "for (i=0; i<3;) i++",
+      "for (i=0;;) i++", "for (;i<3;) i++", "for (;;) i++", "debugger",
+      "while(1) break", "while(1) break loop", "while(1) continue",
+      "while(1) continue loop", "function f() {return}",
+      "function f() {return 1+2}", "function f() {if (1) {return;}}",
+      "function f() {if (1) {return 2}}", "throw 1+2", "try { 1 }",
+      "try { 1 } catch (e) { 2 }", "try {1} finally {3}",
+      "try {1} catch (e) {2} finally {3}", "var x", "var x, y", "var x=1, y",
+      "var y, x=y=1", "function x(a) {return a}", "function x() {return 1}",
+      "[1,2,3]", "[1+2,3+4,5+6]", "[1,[2,[[3]]]]", "({a: 1})", "({a: 1, b: 2})",
+      "({})", "(function(a) { return a + 1 })",
+      "(function f(a) { return a + 1 })", "(function f() { return; 1;})",
+      "function f() {while (1) {return;2}}", "switch(a) {case 1: break;}",
+      "switch(a) {case 1: p(); break;}", "switch(a) {case 1: a; case 2: b; c;}",
+      "switch(a) {case 1: a; b; default: c;}",
+      "switch(a) {case 1: p(); break; break; }",
+      "switch(a) {case 1: break; case 2: 1; case 3:}",
+      "switch(a) {case 1: break; case 2: 1; case 3: default: break}",
+      "switch(a) {case 1: break; case 3: default: break; case 2: 1}",
+      "for (var i = 0; i < 3; i++) i++",
+      "for (var i=0, j=i; i < 3; i++, j++) i++", "a%=1", "a*=1", "a/=1", "a+=1",
+      "a-=1", "a|=1", "a&=1", "a<<=1", "a>>2", "a>>=1", "a>>>=1", "a=b=c+=1",
+      "a=(b=(c+=1))", "\"foo\"", "var undefined = 1", "undefined",
+      "{var x=1;2;}", "({get a() { return 1 }})", "({set a(b) { this.x = b }})",
+      "({get a() { return 1 }, set b(c) { this.x = c }, d: 0})",
+      "({get: function() {return 42;}})",
+      "Object.defineProperty(o, \"foo\", {get: function() {return 42;}});",
+      "({a: 0, \"b\": 1})", "({a: 0, 42: 1})", "({a: 0, 42.99: 1})",
+      "({a: 0, })", "({true: 0, null: 1, undefined: 2, this: 3})", "[]", "[,2]",
+      "[,]", "[,2]", "[,,,1,2]", "delete z", "delete (1+2)",
+      "delete (delete z)", "delete delete z", "+ + + 2", "throw 'ex'",
+      "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {}; break}",
+      "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break}",
+      "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break; "
+      "default: 1; break;}",
+      "try {1} catch(e){}\n1", "try {1} catch(e){} 1",
+      "switch(v) {case 0: break;} 1",
+      "switch(a) {case 1: break; case 3: default: break; case 2: 1; default: "
+      "2}",
+      "do { i-- } while (i > 0)", "if (false) 1; 1;", "while(true) 1; 1;",
+      "while(true) {} 1;", "do {} while(false) 1;", "with (a) 1; 2;",
+      "with (a) {1} 2;", "for(var i in a) {1}", "for(i in a) {1}",
+      "!function(){function d(){}var x}();",
+      "({get a() { function d(){} return 1 }})",
+      "({set a(v) { function d(a){} d(v) }})", "{function d(){}var x}",
+      "try{function d(){}var x}catch(e){function d(){}var x}finally{function "
+      "d(){}var x}",
+      "{} {}", "if(1){function d(){}var x}",
+      "if(1){} else {function d(){}var x}",
+      "var \\u0076, _\\u0077, a\\u0078b, жабоскрипт;", "a.in + b.for",
+      "var x = { null: 5, else: 4 }", "lab: x=1",
+      "'use strict';0;'use strict';", "'use strict';if(0){'use strict';}",
+      "(function(){'use strict';0;'use strict';})()"};
   const char *invalid[] = {
-    "function(a) { return 1 }",
-    "i\n++",
-    "{a: 1, b: 2}",
-    "({, a: 0})",
-    "break",
-    "break loop",
-    "continue",
-    "continue loop",
-    "return",
-    "return 1+2",
-    "if (1) {return;}",
-    "if (1) {return 2}",
-    "(function(){'use strict'; with({}){}})",
-    "v = [",
-    "var v = ["
-  };
+      "function(a) { return 1 }", "i\n++", "{a: 1, b: 2}", "({, a: 0})",
+      "break", "break loop", "continue", "continue loop", "return",
+      "return 1+2", "if (1) {return;}", "if (1) {return 2}",
+      "(function(){'use strict'; with({}){}})", "v = [", "var v = ["};
   FILE *fp;
   const char *want_ast_db = "want_ast.db";
   char got_ast[102400];
@@ -911,7 +776,7 @@ static const char *test_parser(void) {
   size_t want_ast_len;
   ast_init(&a, 0);
 
-  /* Save with `make save_want_ast` */
+/* Save with `make save_want_ast` */
 #ifndef SAVE_AST
 
   ASSERT((fp = fopen(want_ast_db, "r")) != NULL);
@@ -920,15 +785,15 @@ static const char *test_parser(void) {
   ASSERT(feof(fp));
   fclose(fp);
 
-  for (i = 0; i < (int) ARRAY_SIZE(cases); i++ ) {
+  for (i = 0; i < (int)ARRAY_SIZE(cases); i++) {
     char *current_want_ast = next_want_ast;
     ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
-    want_ast_len = (size_t) (next_want_ast - current_want_ast - 1);
+    want_ast_len = (size_t)(next_want_ast - current_want_ast - 1);
     ASSERT((fp = fopen("/tmp/got_ast", "w")) != NULL);
     ast_free(&a);
-    #if 0
+#if 0
       printf("-- Parsing \"%s\"\n", cases[i]);
-    #endif
+#endif
     ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
 
 #ifdef VERBOSE_AST
@@ -960,11 +825,11 @@ static const char *test_parser(void) {
 
 #else /* SAVE_AST */
 
-  (void) got_ast;
-  (void) next_want_ast;
-  (void) want_ast_len;
+  (void)got_ast;
+  (void)next_want_ast;
+  (void)want_ast_len;
   ASSERT((fp = fopen(want_ast_db, "w")) != NULL);
-  for (i = 0; i < (int) ARRAY_SIZE(cases); i++ ) {
+  for (i = 0; i < (int)ARRAY_SIZE(cases); i++) {
     ast_free(&a);
     ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
     ast_dump(fp, &a, 0);
@@ -974,7 +839,7 @@ static const char *test_parser(void) {
 
 #endif /* SAVE_AST */
 
-  for (i = 0; i < (int) ARRAY_SIZE(invalid); i++ ) {
+  for (i = 0; i < (int)ARRAY_SIZE(invalid); i++) {
     ast_free(&a);
 #if 0
     printf("-- Parsing \"%s\"\n", invalid[i]);
@@ -992,7 +857,7 @@ static char *read_file(const char *path, size_t *size) {
   char *data = NULL;
   if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
     *size = st.st_size;
-    data = (char *) malloc(*size + 1);
+    data = (char *)malloc(*size + 1);
     if (data != NULL) {
       fread(data, 1, *size, fp);
       data[*size] = '\0';
@@ -1020,7 +885,7 @@ static const char *test_ecmac(void) {
 
   ast_init(&a, 0);
 
-  for (i = 0; next_case < db + db_len; i++ ) {
+  for (i = 0; next_case < db + db_len; i++) {
     char tail_cmd[100];
     char *current_case = next_case + 1;
     char *chap_begin = NULL, *chap_end = NULL;
@@ -1034,10 +899,10 @@ static const char *test_ecmac(void) {
       }
     }
     snprintf(tail_cmd, sizeof(tail_cmd),
-             "%.*s (tail -c +%lu tests/ecmac.db|head -c %lu)",
-             chap_len, chap_begin == NULL ? "" : chap_begin,
-             (unsigned long) (current_case - db + 1),
-             (unsigned long) (next_case - current_case));
+             "%.*s (tail -c +%lu tests/ecmac.db|head -c %lu)", chap_len,
+             chap_begin == NULL ? "" : chap_begin,
+             (unsigned long)(current_case - db + 1),
+             (unsigned long)(next_case - current_case));
 
 #if 0
     printf("-- Parsing %d: \"%s\"\n", i, current_case);
@@ -1049,8 +914,8 @@ static const char *test_ecmac(void) {
     if ((child = fork()) == 0) {
 #endif
       if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
-          i == 1255 || i == 2649 || i == 2068 ||
-          i == 7445 || i == 7446 || i == 3400     /* slow Number */
+          i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
+          i == 3400 /* slow Number */
 #ifndef ECMA_SLOW
           || i == 3348 || i == 3349 || i == 3401
 #endif
@@ -1093,7 +958,8 @@ static const char *test_ecmac(void) {
     ast_dump(stdout, &a, 0);
 #endif
   }
-  printf("ECMA tests coverage: %.2lf%% (%d of %d)\n", (double) passed / i * 100.0, passed, i);
+  printf("ECMA tests coverage: %.2lf%% (%d of %d)\n",
+         (double)passed / i * 100.0, passed, i);
 
   free(db);
   fclose(r);
@@ -1274,7 +1140,10 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "[1,2]"));
   ASSERT(v7_exec(v7, &v, "new Array(1,2)") == V7_OK);
   ASSERT(check_value(v7, v, "[1,2]"));
-  ASSERT(v7_exec(v7, &v, "Object.isPrototypeOf(Array(1,2), Object.getPrototypeOf([]))") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v,
+              "Object.isPrototypeOf(Array(1,2), Object.getPrototypeOf([]))") ==
+      V7_OK);
   ASSERT(v7_exec(v7, &v, "a=[];r=a.push(1,2,3);[r,a]") == V7_OK);
   ASSERT(check_value(v7, v, "[3,[1,2,3]]"));
 
@@ -1301,32 +1170,54 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "5"));
   ASSERT(v7_exec(v7, &v, "i=0;do{if(i==5)break}while(++i);i") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(v7_exec(v7, &v, "(function(){i=0;do{if(i==5)break}while(++i);i+=10})();i") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){i=0;do{if(i==5)break}while(++i);i+=10})();i") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "15"));
-  ASSERT(v7_exec(v7, &v, "(function(){x=i=0;do{if(i==5)break;if(i%2)continue;x++}while(++i);i+=10})();[i,x]") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){x=i=0;do{if(i==5)break;if(i%2)continue;x++}while("
+                 "++i);i+=10})();[i,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[15,3]"));
-  ASSERT(v7_exec(v7, &v, "(function(){i=0;while(++i){if(i==5)break};i+=10})();i") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){i=0;while(++i){if(i==5)break};i+=10})();i") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "15"));
-  ASSERT(v7_exec(v7, &v, "(function(){x=i=0;while(++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){x=i=0;while(++i){if(i==5)break;if(i%2)continue;x+"
+                 "+};i+=10})();[i,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[15,2]"));
-  ASSERT(v7_exec(v7, &v, "(function(){for(i=0;1;++i){if(i==5)break};i+=10})();i") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){for(i=0;1;++i){if(i==5)break};i+=10})();i") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "15"));
-  ASSERT(v7_exec(v7, &v, "(function(){x=0;for(i=0;1;++i){if(i==5)break;if(i%2)continue;x++};i+=10})();[i,x]") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){x=0;for(i=0;1;++i){if(i==5)break;if(i%2)continue;"
+                 "x++};i+=10})();[i,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[15,3]"));
-  ASSERT(v7_exec(v7, &v, "a=1,[(function(){function a(){1+2}; return a})(),a]") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "a=1,[(function(){function a(){1+2}; return a})(),a]") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "[[function a()],1]"));
-  ASSERT(v7_exec(v7, &v, "x=0;(function(){try{ff; x=42}catch(e){x=1};function ff(){}})();x") == V7_OK);
+  ASSERT(
+      v7_exec(
+          v7, &v,
+          "x=0;(function(){try{ff; x=42}catch(e){x=1};function ff(){}})();x") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec(v7, &v, "a=1,[(function(){return a; function a(){1+2}})(),a]") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "a=1,[(function(){return a; function a(){1+2}})(),a]") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "[[function a()],1]"));
-  ASSERT(v7_exec(v7, &v, "(function(){f=42;function f(){};return f})()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "(function(){f=42;function f(){};return f})()") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
   ASSERT(v7_exec(v7, &v, "x=0;try{x=1};x") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
   ASSERT(v7_exec(v7, &v, "x=0;try{x=1}finally{x=x+1};x") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
-  ASSERT(v7_exec(v7, &v, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "2"));
 
   ASSERT(v7_exec(v7, &v, "x=0;try{xxx;var xxx;x=42}catch(e){x=1};x") == V7_OK);
@@ -1338,13 +1229,19 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "[function(){var x,y}]"));
   ASSERT(v7_exec(v7, &v, "(function(a) {var x=1,y=2; return x})") == V7_OK);
   ASSERT(check_value(v7, v, "[function(a){var x,y}]"));
-  ASSERT(v7_exec(v7, &v, "(function(a,b) {var x=1,y=2; return x; var z})") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "(function(a,b) {var x=1,y=2; return x; var z})") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "[function(a,b){var x,y,z}]"));
-  ASSERT(v7_exec(v7, &v, "(function(a) {var x=1; for(var y in x){}; var z})") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "(function(a) {var x=1; for(var y in x){}; var z})") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
-  ASSERT(v7_exec(v7, &v, "(function(a) {var x=1; for(var y=0;y<x;y++){}; var z})") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(a) {var x=1; for(var y=0;y<x;y++){}; var z})") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "[function(a){var x,y,z}]"));
-  ASSERT(v7_exec(v7, &v, "(function() {var x=(function y(){for(var z;;){}})})") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "(function() {var x=(function y(){for(var z;;){}})})") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "[function(){var x}]"));
   ASSERT(v7_exec(v7, &v, "function square(x){return x*x;};square") == V7_OK);
   ASSERT(check_value(v7, v, "[function square(x)]"));
@@ -1359,24 +1256,34 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "8"));
   ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y;})(40,2)") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec(v7, &v, "(function(x,y){if(x==40)return x+y})(40,2)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "(function(x,y){if(x==40)return x+y})(40,2)") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "42"));
   ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y})(40)") == V7_OK);
   ASSERT(check_value(v7, v, "NaN"));
   ASSERT(v7_exec(v7, &v, "(function(x){return x+y; var y})(40)") == V7_OK);
   ASSERT(check_value(v7, v, "NaN"));
-  ASSERT(v7_exec(v7, &v, "x=1;(function(a){return a})(40,(function(){x=x+1})())+x") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "x=1;(function(a){return a})(40,(function(){x=x+1})())+x") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "42"));
   ASSERT(v7_exec(v7, &v, "(function(){x=42;return;x=0})();x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec(v7, &v, "(function(){for(i=0;1;i++)if(i==5)return i})()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "(function(){for(i=0;1;i++)if(i==5)return i})()") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(v7_exec(v7, &v, "(function(){i=0;while(++i)if(i==5)return i})()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "(function(){i=0;while(++i)if(i==5)return i})()") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(v7_exec(v7, &v, "(function(){i=0;do{if(i==5)return i}while(++i)})()") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "(function(){i=0;do{if(i==5)return i}while(++i)})()") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "5"));
 
-  ASSERT(v7_exec(v7, &v, "(function(x,y){return x+y})(40,2,(function(){return fail})())") == V7_EXEC_EXCEPTION);
+  ASSERT(v7_exec(
+             v7, &v,
+             "(function(x,y){return x+y})(40,2,(function(){return fail})())") ==
+         V7_EXEC_EXCEPTION);
 
   ASSERT(v7_exec(v7, &v, "x=42; (function(){return x})()") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
@@ -1384,13 +1291,19 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "42"));
   ASSERT(v7_exec(v7, &v, "x=1; (function(y){x=x+1; return y})(40)+x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec(v7, &v, "x=0;f=function(){x=42; return function() {return x}; var x};f()()") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "x=0;f=function(){x=42; return function() {return x}; var "
+                 "x};f()()") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec(v7, &v, "x=42;o={x:66,f:function(){return this}};o.f().x") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "x=42;o={x:66,f:function(){return this}};o.f().x") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "66"));
-  ASSERT(v7_exec(v7, &v, "x=42;o={x:66,f:function(){return this}};(1,o.f)().x") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "x=42;o={x:66,f:function(){return this}};(1,o.f)().x") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec(v7, &v, "x=66;o={x:42,f:function(){return this.x}};o.f()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "x=66;o={x:42,f:function(){return this.x}};o.f()") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
   ASSERT(v7_exec(v7, &v, "o={};o.x=24") == V7_OK);
@@ -1406,9 +1319,13 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "(function(){fox=1})();fox") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
 
-  ASSERT(v7_exec(v7, &v, "fin=0;(function(){while(1){try{xxxx}finally{fin=1;return 1}}})();fin") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "fin=0;(function(){while(1){try{xxxx}finally{fin=1;return "
+                 "1}}})();fin") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(v7_exec(v7, &v, "ca=0;fin=0;(function(){try{(function(){try{xxxx}finally{fin=1}})()}catch(e){ca=1}})();fin+ca") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "ca=0;fin=0;(function(){try{(function(){try{xxxx}finally{fin="
+                 "1}})()}catch(e){ca=1}})();fin+ca") == V7_OK);
   ASSERT(check_value(v7, v, "2"));
   ASSERT(v7_exec(v7, &v, "x=0;try{throw 1}catch(e){x=42};x") == V7_OK);
   ASSERT(check_value(v7, v, "42"));
@@ -1469,9 +1386,12 @@ static const char *test_interpreter(void) {
   ASSERT(v7_exec(v7, &v, "x=1; delete x; typeof x") == V7_OK);
   s = "\"undefined\"";
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "x=1; (function(){x=2;delete x; return typeof x})()") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "x=1; (function(){x=2;delete x; return typeof x})()") ==
+      V7_OK);
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "x=1; (function(){x=2;delete x})(); typeof x") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "x=1; (function(){x=2;delete x})(); typeof x") ==
+         V7_OK);
   ASSERT(check_value(v7, v, s));
   ASSERT(v7_exec(v7, &v, "x=1; (function(){var x=2;delete x})(); x") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
@@ -1504,66 +1424,103 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "2"));
 #endif
 
-  ASSERT(v7_exec(v7, &v, "(function(){try {throw new Error}catch(e){c=e}})();c instanceof Error") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){try {throw new Error}catch(e){c=e}})();c "
+                 "instanceof Error") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(v7_exec(v7, &v, "delete e;(function(){try {throw new Error}catch(e){}})();typeof e") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "delete e;(function(){try {throw new "
+                 "Error}catch(e){}})();typeof e") == V7_OK);
   s = "\"undefined\"";
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "x=(function(){c=1;try {throw 1}catch(e){c=0};return c})()") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "x=(function(){c=1;try {throw 1}catch(e){c=0};return c})()") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "0"));
-  ASSERT(v7_exec(v7, &v, "x=(function(){var c=1;try {throw 1}catch(e){c=0};return c})()") == V7_OK);
+  ASSERT(v7_exec(
+             v7, &v,
+             "x=(function(){var c=1;try {throw 1}catch(e){c=0};return c})()") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "0"));
-  ASSERT(v7_exec(v7, &v, "c=1;x=(function(){try {throw 1}catch(e){var c=0};return c})();[c,x]") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "c=1;x=(function(){try {throw 1}catch(e){var c=0};return "
+                 "c})();[c,x]") == V7_OK);
   ASSERT(check_value(v7, v, "[1,0]"));
-  ASSERT(v7_exec(v7, &v, "c=1;x=(function(){try {throw 1}catch(e){c=0};return c})();[c,x]") == V7_OK);
+  ASSERT(
+      v7_exec(
+          v7, &v,
+          "c=1;x=(function(){try {throw 1}catch(e){c=0};return c})();[c,x]") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "[0,0]"));
 
   ASSERT(v7_exec(v7, &v, "Object.keys(new Boolean(1))") == V7_OK);
   ASSERT(check_value(v7, v, "[]"));
-  ASSERT(v7_exec(v7, &v, "b={c:1};a=Object.create(b); a.d=4;Object.keys(a)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "b={c:1};a=Object.create(b); a.d=4;Object.keys(a)") ==
+         V7_OK);
   s = "[\"d\"]";
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "Object.getOwnPropertyNames(new Boolean(1))") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "Object.getOwnPropertyNames(new Boolean(1))") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "[]"));
-  ASSERT(v7_exec(v7, &v, "b={c:1};a=Object.create(b); a.d=4;Object.getOwnPropertyNames(a)") == V7_OK);
+  ASSERT(
+      v7_exec(
+          v7, &v,
+          "b={c:1};a=Object.create(b); a.d=4;Object.getOwnPropertyNames(a)") ==
+      V7_OK);
   ASSERT(check_value(v7, v, s));
   s = "o={};Object.defineProperty(o, \"x\", {value:2});[o.x,o]";
   ASSERT(v7_exec(v7, &v, s) == V7_OK);
   ASSERT(check_value(v7, v, "[2,{}]"));
-  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperties(o,{x:{value:2},y:{value:3,enumerable:true}});[o.x,o.y,o]") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o={};Object.defineProperties(o,{x:{value:2},y:{value:3,"
+                 "enumerable:true}});[o.x,o.y,o]") == V7_OK);
   s = "[2,3,{\"y\":3}]";
   ASSERT(check_value(v7, v, s));
   s = "o={};Object.defineProperty(o, \"x\", {value:2,enumerable:true});[o.x,o]";
   ASSERT(v7_exec(v7, &v, s) == V7_OK);
   s = "[2,{\"x\":2}]";
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1});o.propertyIsEnumerable('a')") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o={};Object.defineProperty(o,'a',{value:1});o."
+                 "propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});o.propertyIsEnumerable('a')") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});"
+                 "o.propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
   ASSERT(v7_exec(v7, &v, "o={a:1};o.propertyIsEnumerable('a')") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(v7_exec(v7, &v, "b={a:1};o=Object.create(b);o.propertyIsEnumerable('a')") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "b={a:1};o=Object.create(b);o.propertyIsEnumerable('a')") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "false"));
-  ASSERT(v7_exec(v7, &v, "b={a:1};o=Object.create(b);o.hasOwnProperty('a')") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "b={a:1};o=Object.create(b);o.hasOwnProperty('a')") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "false"));
   ASSERT(v7_exec(v7, &v, "o={a:1};o.hasOwnProperty('a')") == V7_OK);
   ASSERT(check_value(v7, v, "true"));
-  ASSERT(v7_exec(v7, &v, "o={a:1};d=Object.getOwnPropertyDescriptor(o, 'a');"
+  ASSERT(v7_exec(v7, &v,
+                 "o={a:1};d=Object.getOwnPropertyDescriptor(o, 'a');"
                  "[d.value,d.writable,d.enumerable,d.configurable]") == V7_OK);
   ASSERT(check_value(v7, v, "[1,true,true,true]"));
-  ASSERT(v7_exec(v7, &v, "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});"
+  ASSERT(v7_exec(v7, &v,
+                 "o={};Object.defineProperty(o,'a',{value:1,enumerable:true});"
                  "d=Object.getOwnPropertyDescriptor(o, 'a');"
                  "[d.value,d.writable,d.enumerable,d.configurable]") == V7_OK);
   ASSERT(check_value(v7, v, "[1,false,true,false]"));
-  ASSERT(v7_exec(v7, &v, "o=Object.defineProperty({},'a',{value:1,enumerable:true});o.a=2;o.a") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o=Object.defineProperty({},'a',{value:1,enumerable:true});o."
+                 "a=2;o.a") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
-  ASSERT(v7_exec(v7, &v, "o=Object.defineProperty({},'a',{value:1,enumerable:true});r=delete o.a;[r,o.a]") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o=Object.defineProperty({},'a',{value:1,enumerable:true});r="
+                 "delete o.a;[r,o.a]") == V7_OK);
   ASSERT(check_value(v7, v, "[false,1]"));
 
   ASSERT(v7_exec(v7, &v, "r=0;o={a:1,b:2};for(i in o){r+=o[i]};r") == V7_OK);
   ASSERT(check_value(v7, v, "3"));
-  ASSERT(v7_exec(v7, &v, "r=0;o={a:1,b:2};for(var i in o){r+=o[i]};r") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "r=0;o={a:1,b:2};for(var i in o){r+=o[i]};r") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "3"));
   ASSERT(v7_exec(v7, &v, "r=1;for(var i in null){r=0};r") == V7_OK);
   ASSERT(check_value(v7, v, "1"));
@@ -1574,23 +1531,36 @@ static const char *test_interpreter(void) {
 
   ASSERT(v7_exec_with(v7, &v, "this", v7_create_number(42)) == V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec_with(v7, &v, "a=666;(function(a){return a})(this)", v7_create_number(42)) == V7_OK);
+  ASSERT(v7_exec_with(v7, &v, "a=666;(function(a){return a})(this)",
+                      v7_create_number(42)) == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
-  ASSERT(v7_exec(v7, &v, "a='aa', b='bb';(function(){return a + ' ' + b;})()") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "a='aa', b='bb';(function(){return a + ' ' + b;})()") ==
+      V7_OK);
   s = "\"aa bb\"";
   ASSERT(check_value(v7, v, s));
 
   s = "{\"fall\":2,\"one\":1}";
-  ASSERT(v7_exec(v7, &v, "o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; break; case 3: o.three=1; };o") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; break; "
+                 "case 3: o.three=1; };o") == V7_OK);
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "o={};for(i=0;i<1;i++) switch(1) {case 1: o.one=1; case 2: o.fall=2; continue; case 3: o.three=1; };o") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o={};for(i=0;i<1;i++) switch(1) {case 1: o.one=1; case 2: "
+                 "o.fall=2; continue; case 3: o.three=1; };o") == V7_OK);
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "(function(){o={};switch(1) {case 1: o.one=1; case 2: o.fall=2; return o; case 3: o.three=1; }})()") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "(function(){o={};switch(1) {case 1: o.one=1; case 2: "
+                 "o.fall=2; return o; case 3: o.three=1; }})()") == V7_OK);
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "o={};switch(1) {case 1: o.one=1; default: o.fall=2; break; case 3: o.three=1; };o") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o={};switch(1) {case 1: o.one=1; default: o.fall=2; break; "
+                 "case 3: o.three=1; };o") == V7_OK);
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_exec(v7, &v, "o={};switch(10) {case 1: o.one=1; case 2: o.fall=2; break; case 3: o.three=1; break; default: o.def=1};o") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "o={};switch(10) {case 1: o.one=1; case 2: o.fall=2; break; "
+                 "case 3: o.three=1; break; default: o.def=1};o") == V7_OK);
   s = "{\"def\":1}";
   ASSERT(check_value(v7, v, s));
 
@@ -1602,26 +1572,48 @@ static const char *test_interpreter(void) {
   ASSERT(check_value(v7, v, "10"));
   ASSERT(v7_exec(v7, &v, "o={set x(v){},get x(){return 10}};o.x") == V7_OK);
   ASSERT(check_value(v7, v, "10"));
-  ASSERT(v7_exec(v7, &v, "r=0;o={get x() {return 10}, set x(v){r=v}};o.x=10;r") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v, "r=0;o={get x() {return 10}, set x(v){r=v}};o.x=10;r") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "10"));
-  ASSERT(v7_exec(v7, &v, "g=0;function O() {}; O.prototype = {set x(v) {g=v}};o=new O;o.x=42;[g,Object.keys(o)]") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "g=0;function O() {}; O.prototype = {set x(v) {g=v}};o=new "
+                 "O;o.x=42;[g,Object.keys(o)]") == V7_OK);
   ASSERT(check_value(v7, v, "[42,[]]"));
 
   ASSERT(v7_exec(v7, &v, "String(new Number(42))") == V7_OK);
   s = "\"42\"";
   ASSERT(check_value(v7, v, s));
 
-  ASSERT(v7_exec(v7, &v, "L: for(i=0;i<10;i++){for(j=4;j<10;j++){if(i==j) break L}};i") == V7_OK);
+  ASSERT(
+      v7_exec(v7, &v,
+              "L: for(i=0;i<10;i++){for(j=4;j<10;j++){if(i==j) break L}};i") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "4"));
-  ASSERT(v7_exec(v7, &v, "L: for(i=0;i<10;i++){M:for(j=4;j<10;j++){if(i==j) break L}};i") == V7_OK);
+  ASSERT(v7_exec(
+             v7, &v,
+             "L: for(i=0;i<10;i++){M:for(j=4;j<10;j++){if(i==j) break L}};i") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "4"));
-  ASSERT(v7_exec(v7, &v, "x=0;L: for(i=0;i<10;i++){try{for(j=4;j<10;j++){if(i==j) break L}}finally{x++}};x") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "x=0;L: for(i=0;i<10;i++){try{for(j=4;j<10;j++){if(i==j) "
+                 "break L}}finally{x++}};x") == V7_OK);
   ASSERT(check_value(v7, v, "5"));
-  ASSERT(v7_exec(v7, &v, "x=0;L: for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "x=0;L: for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") ==
+         V7_OK);
   ASSERT(check_value(v7, v, "50"));
-  ASSERT(v7_exec(v7, &v, "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(
+      v7_exec(
+          v7, &v,
+          "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "50"));
-  ASSERT(v7_exec(v7, &v, "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") == V7_OK);
+  ASSERT(
+      v7_exec(
+          v7, &v,
+          "x=0;L: if(true) for(i=0;i<11;i++) {if(i==5) continue L; x+=i}; x") ==
+      V7_OK);
   ASSERT(check_value(v7, v, "50"));
   ASSERT(v7_exec(v7, &v, "L:do {i=0;continue L;}while(i>0);i") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
@@ -1665,7 +1657,7 @@ static const char *test_strings(void) {
 
   v7 = v7_create();
   off = v7->owned_strings.len;
-  ASSERT(off > 0);  /* properties names use it */
+  ASSERT(off > 0); /* properties names use it */
 
   s = v7_create_string(v7, "hi", 2, 1);
   ASSERT(memcmp(&s, "\x02\x68\x69\x00\x00\x00\xfa\xff", sizeof(s)) == 0);
@@ -1686,8 +1678,10 @@ static const char *test_strings(void) {
   s = v7_create_string(v7, "with embedded \x00 one", 19, 1);
 
   ASSERT(v7->owned_strings.len == off + 33);
-  ASSERT(memcmp(v7->owned_strings.buf + off, "\x0alonger one\x00"
-         "\x13with embedded \x00 one\x00" , 33) == 0);
+  ASSERT(memcmp(v7->owned_strings.buf + off,
+                "\x0alonger one\x00"
+                "\x13with embedded \x00 one\x00",
+                33) == 0);
 
   v7_destroy(v7);
 
@@ -1702,7 +1696,7 @@ static const char *test_to_json(void) {
   v7_exec(v7, &v, "123.45");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT(strcmp(p, "123.45") == 0);
-  /* TODO(mkm): fix to_json alloc */
+/* TODO(mkm): fix to_json alloc */
 #if 0
   ASSERT((p = v7_to_json(v7, v, buf, 3)) != buf);
   ASSERT(strcmp(p, "123.45") == 0);
@@ -1765,14 +1759,16 @@ static const char *test_gc_mark(void) {
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v, "var f;(function() {var x={a:1};f=function(){return x};return x})()");
+  v7_exec(v7, &v,
+          "var f;(function() {var x={a:1};f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `x` is reachable through `f`'s closure scope */
   ASSERT(MARKED(v7_to_object(v)));
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v, "(function() {var x={a:1};var f=function(){return x};return x})()");
+  v7_exec(v7, &v,
+          "(function() {var x={a:1};var f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `f` is unreachable, hence `x` is not marked through the scope */
   ASSERT(!MARKED(v7_to_object(v)));
@@ -1804,7 +1800,9 @@ static const char *test_gc_sweep(void) {
 
   v7 = v7_create();
   v7_gc(v7);
-  v7_exec(v7, &v, "for(i=0;i<9;i++)({});for(i=0;i<7;i++){x=(new Number(1))+({} && 1)};x");
+  v7_exec(
+      v7, &v,
+      "for(i=0;i<9;i++)({});for(i=0;i<7;i++){x=(new Number(1))+({} && 1)};x");
   ASSERT(check_value(v7, v, "2"));
   v7_gc(v7);
 

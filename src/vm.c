@@ -58,14 +58,18 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
   }
 }
 
-int v7_is_double(val_t v) { return v == V7_TAG_NAN || !isnan(v7_to_double(v)); }
+int v7_is_double(val_t v) {
+  return v == V7_TAG_NAN || !isnan(v7_to_double(v));
+}
 
 int v7_is_object(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_OBJECT ||
          (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
-int v7_is_function(val_t v) { return (v & V7_TAG_MASK) == V7_TAG_FUNCTION; }
+int v7_is_function(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
+}
 
 int v7_is_string(val_t v) {
   uint64_t t = v & V7_TAG_MASK;
@@ -73,19 +77,29 @@ int v7_is_string(val_t v) {
          t == V7_TAG_STRING_5;
 }
 
-int v7_is_boolean(val_t v) { return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN; }
+int v7_is_boolean(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN;
+}
 
-int v7_is_regexp(val_t v) { return (v & V7_TAG_MASK) == V7_TAG_REGEXP; }
+int v7_is_regexp(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_REGEXP;
+}
 
 V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t v) {
   return (struct v7_regexp *)v7_to_pointer(v);
 }
 
-int v7_is_null(val_t v) { return v == V7_NULL; }
+int v7_is_null(val_t v) {
+  return v == V7_NULL;
+}
 
-int v7_is_undefined(val_t v) { return v == V7_UNDEFINED; }
+int v7_is_undefined(val_t v) {
+  return v == V7_UNDEFINED;
+}
 
-int v7_is_cfunction(val_t v) { return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION; }
+int v7_is_cfunction(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
+}
 
 /* A convenience function to check exec result */
 int v7_is_error(struct v7 *v7, val_t v) {
@@ -93,7 +107,7 @@ int v7_is_error(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
-  return ((uint64_t)(uintptr_t) p) & ~V7_TAG_MASK;
+  return ((uint64_t)(uintptr_t)p) & ~V7_TAG_MASK;
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
@@ -135,11 +149,17 @@ v7_val_t v7_create_cfunction(v7_cfunction_t f) {
   return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
 
-void *v7_to_foreign(val_t v) { return v7_to_pointer(v); }
+void *v7_to_foreign(val_t v) {
+  return v7_to_pointer(v);
+}
 
-v7_val_t v7_create_boolean(int v) { return (!!v) | V7_TAG_BOOLEAN; }
+v7_val_t v7_create_boolean(int v) {
+  return (!!v) | V7_TAG_BOOLEAN;
+}
 
-int v7_to_boolean(val_t v) { return v & 1; }
+int v7_to_boolean(val_t v) {
+  return v & 1;
+}
 
 v7_val_t v7_create_number(double v) {
   val_t res;
@@ -152,7 +172,9 @@ v7_val_t v7_create_number(double v) {
   return res;
 }
 
-double v7_to_double(val_t v) { return *(double *)&v; }
+double v7_to_double(val_t v) {
+  return *(double *)&v;
+}
 
 V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
   if (v7_is_function(obj)) {
@@ -176,9 +198,13 @@ v7_val_t v7_create_object(struct v7 *v7) {
   return create_object(v7, v7->object_prototype);
 }
 
-v7_val_t v7_create_null(void) { return V7_NULL; }
+v7_val_t v7_create_null(void) {
+  return V7_NULL;
+}
 
-v7_val_t v7_create_undefined(void) { return V7_UNDEFINED; }
+v7_val_t v7_create_undefined(void) {
+  return V7_UNDEFINED;
+}
 
 v7_val_t v7_create_array(struct v7 *v7) {
   return create_object(v7, v7->array_prototype);
@@ -543,7 +569,9 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
 }
 
-V7_PRIVATE void v7_destroy_property(struct v7_property **p) { *p = NULL; }
+V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
+  *p = NULL;
+}
 
 int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
   size_t len;
@@ -1024,7 +1052,9 @@ struct v7 *v7_create(void) {
   return v7;
 }
 
-val_t v7_get_global_object(struct v7 *v7) { return v7->global_object; }
+val_t v7_get_global_object(struct v7 *v7) {
+  return v7->global_object;
+}
 
 void v7_destroy(struct v7 *v7) {
   struct ast **a;

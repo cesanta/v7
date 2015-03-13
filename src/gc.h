@@ -14,9 +14,9 @@
 #define V7_DISABLE_GC
 #endif
 
-#define MARK(p)   (((struct gc_cell *) (p))->word |= 1)
-#define UNMARK(p) (((struct gc_cell *) (p))->word &= ~1)
-#define MARKED(p) (((struct gc_cell *) (p))->word & 1)
+#define MARK(p) (((struct gc_cell *)(p))->word |= 1)
+#define UNMARK(p) (((struct gc_cell *)(p))->word &= ~1)
+#define MARKED(p) (((struct gc_cell *)(p))->word & 1)
 
 struct gc_tmp_frame {
   struct v7 *v7;
@@ -29,7 +29,7 @@ struct gc_cell {
 
 #if defined(__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 V7_PRIVATE struct v7_object *new_object(struct v7 *);
 V7_PRIVATE struct v7_property *new_property(struct v7 *);
@@ -49,6 +49,6 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
 
 #if defined(__cplusplus)
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#endif  /* GC_H_INCLUDED */
+#endif /* GC_H_INCLUDED */

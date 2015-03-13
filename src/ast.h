@@ -11,7 +11,7 @@
 
 #if defined(__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 enum ast_tag {
   AST_NOP,
@@ -135,11 +135,11 @@ struct ast {
 typedef unsigned long ast_off_t;
 
 struct ast_node_def {
-  const char *name;            /* tag name, for debugging and serialization */
-  unsigned char has_varint;    /* has a varint body */
-  unsigned char has_inlined;   /* inlined data whose size is in varint field */
-  unsigned char num_skips;     /* number of skips */
-  unsigned char num_subtrees;  /* number of fixed subtrees */
+  const char *name;           /* tag name, for debugging and serialization */
+  unsigned char has_varint;   /* has a varint body */
+  unsigned char has_inlined;  /* inlined data whose size is in varint field */
+  unsigned char num_skips;    /* number of skips */
+  unsigned char num_subtrees; /* number of fixed subtrees */
 };
 extern const struct ast_node_def ast_node_defs[];
 
@@ -164,8 +164,8 @@ V7_PRIVATE ast_off_t ast_add_node(struct ast *, enum ast_tag);
 V7_PRIVATE ast_off_t ast_insert_node(struct ast *, ast_off_t, enum ast_tag);
 V7_PRIVATE ast_off_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
-V7_PRIVATE ast_off_t ast_modify_skip(struct ast *, ast_off_t, ast_off_t,
-                                     enum ast_which_skip);
+V7_PRIVATE ast_off_t
+    ast_modify_skip(struct ast *, ast_off_t, ast_off_t, enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
@@ -182,6 +182,6 @@ V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
 #if defined(__cplusplus)
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#endif  /* AST_H_INCLUDED */
+#endif /* AST_H_INCLUDED */

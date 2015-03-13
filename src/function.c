@@ -12,7 +12,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   const char *s;
   val_t param, body, res = v7_create_undefined();
 
-  (void) this_obj;
+  (void)this_obj;
 
   if (num_args <= 0) return res;
 
@@ -26,14 +26,14 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       if (i > 0) {
         n += snprintf(buf + n, sizeof(buf) - n, "%s", ",");
       }
-      n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
+      n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int)size, s);
     }
   }
   n += snprintf(buf + n, sizeof(buf) - n, "%s", "){");
   body = i_value_of(v7, v7_array_get(v7, args, num_args - 1));
   if (v7_is_string(body)) {
     s = v7_to_string(v7, &body, &size);
-    n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
+    n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int)size, s);
   }
   n += snprintf(buf + n, sizeof(buf) - n, "%s", "})");
 
@@ -50,7 +50,7 @@ static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
   struct ast *a = func->ast;
   int argn = 0;
 
-  (void) args;
+  (void)args;
 
   V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
   body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);

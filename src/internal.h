@@ -199,8 +199,8 @@ struct v7 {
    */
   val_t call_stack;
 
-  struct mbuf owned_strings;    /* Sequence of (varint len, char data[]) */
-  struct mbuf foreign_strings;  /* Sequence of (varint len, char *data) */
+  struct mbuf owned_strings;   /* Sequence of (varint len, char data[]) */
+  struct mbuf foreign_strings; /* Sequence of (varint len, char *data) */
 
   struct mbuf tmp_stack; /* Stack of val_t* elements, used as root set */
 
@@ -208,11 +208,11 @@ struct v7 {
   struct gc_arena function_arena;
   struct gc_arena property_arena;
 
-  int strict_mode;  /* true if currently in strict mode */
+  int strict_mode; /* true if currently in strict mode */
 
   val_t thrown_error;
-  char error_msg[60];           /* Exception message */
-  int creating_exception;  /* Avoids reentrant exception creation */
+  char error_msg[60];     /* Exception message */
+  int creating_exception; /* Avoids reentrant exception creation */
 #if defined(__cplusplus)
   ::jmp_buf jmp_buf;
   ::jmp_buf label_jmp_buf;
@@ -220,11 +220,11 @@ struct v7 {
   jmp_buf jmp_buf;       /* Exception environment for v7_exec() */
   jmp_buf label_jmp_buf; /* Target for non local (labeled) breaks */
 #endif
-  char *label;            /* Inner label */
-  size_t label_len;       /* Inner label length */
-  int lab_cont; /* True if re-entering a loop with labeled continue */
+  char *label;      /* Inner label */
+  size_t label_len; /* Inner label length */
+  int lab_cont;     /* True if re-entering a loop with labeled continue */
 
-  struct mbuf json_visited_stack;  /* Detecting cycle in to_json */
+  struct mbuf json_visited_stack; /* Detecting cycle in to_json */
 
   /* Parser state */
   struct v7_pstate pstate; /* Parsing state */
@@ -249,25 +249,25 @@ struct v7 {
 #endif
 
 #define V7_STATIC_ASSERT(COND, MSG) \
-      typedef char static_assertion_##MSG[2*(!!(COND)) - 1]
+  typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
 
-#define V7_CHECK(v7, COND)                                              \
-  do { if (!(COND))                                                     \
-      throw_exception(v7, "InternalError", "%s line %d: %s",            \
-                      __func__, __LINE__, #COND);                       \
+#define V7_CHECK(v7, COND)                                             \
+  do {                                                                 \
+    if (!(COND))                                                       \
+      throw_exception(v7, "InternalError", "%s line %d: %s", __func__, \
+                      __LINE__, #COND);                                \
   } while (0)
 
-#define TRACE_VAL(v7, val)                                              \
-  do {                                                                  \
-    char buf[200], *p = v7_to_json(v7, val, buf, sizeof(buf));          \
-    printf("%s %d: [%s]\n", __func__, __LINE__, p);                     \
-    if (p != buf) free(p);                                              \
+#define TRACE_VAL(v7, val)                                     \
+  do {                                                         \
+    char buf[200], *p = v7_to_json(v7, val, buf, sizeof(buf)); \
+    printf("%s %d: [%s]\n", __func__, __LINE__, p);            \
+    if (p != buf) free(p);                                     \
   } while (0)
-
 
 #if defined(__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 V7_PRIVATE void throw_value(struct v7 *, val_t);
 V7_PRIVATE void throw_exception(struct v7 *, const char *, const char *, ...);
@@ -275,6 +275,6 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 #if defined(__cplusplus)
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 #endif /* V7_INTERNAL_H_INCLUDED */

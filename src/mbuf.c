@@ -29,7 +29,7 @@ V7_PRIVATE void mbuf_free(struct mbuf *mbuf) {
 V7_PRIVATE void mbuf_resize(struct mbuf *a, size_t new_size) {
   char *p;
   if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
-      (p = (char *) realloc(a->buf, new_size)) != NULL) {
+      (p = (char *)realloc(a->buf, new_size)) != NULL) {
     a->size = new_size;
     a->buf = p;
   }
@@ -56,8 +56,8 @@ V7_PRIVATE size_t mbuf_append(struct mbuf *a, const char *buf, size_t len) {
  * be grown if necessary.
  * It returns the amount of bytes inserted.
  */
-V7_PRIVATE size_t mbuf_insert(struct mbuf *a, size_t off, const char *buf,
-                              size_t len) {
+V7_PRIVATE size_t
+    mbuf_insert(struct mbuf *a, size_t off, const char *buf, size_t len) {
   char *p = NULL;
 
   assert(a != NULL);
@@ -65,8 +65,7 @@ V7_PRIVATE size_t mbuf_insert(struct mbuf *a, size_t off, const char *buf,
   assert(off <= a->len);
 
   /* check overflow */
-  if (~(size_t)0 - (size_t)a->buf < len)
-    return 0;
+  if (~(size_t)0 - (size_t)a->buf < len) return 0;
 
   if (a->len + len <= a->size) {
     memmove(a->buf + off + len, a->buf + off, a->len - off);
@@ -74,9 +73,8 @@ V7_PRIVATE size_t mbuf_insert(struct mbuf *a, size_t off, const char *buf,
       memcpy(a->buf + off, buf, len);
     }
     a->len += len;
-  } else if ((p = (char *)
-              realloc(a->buf,
-                      (a->len + len) * MBUF_SIZE_MULTIPLIER)) != NULL) {
+  } else if ((p = (char *)realloc(
+                  a->buf, (a->len + len) * MBUF_SIZE_MULTIPLIER)) != NULL) {
     a->buf = p;
     memmove(a->buf + off + len, a->buf + off, a->len - off);
     if (buf != NULL) {

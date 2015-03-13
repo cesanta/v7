@@ -8,7 +8,7 @@
 
 #if defined(__cplusplus)
 extern "C" {
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
 #include <stdlib.h>
 
@@ -39,6 +39,6 @@ V7_PRIVATE size_t mbuf_append(struct mbuf *, const char *, size_t);
 
 #if defined(__cplusplus)
 }
-#endif  /* __cplusplus */
+#endif /* __cplusplus */
 
-#endif  /* MBUF_H_INCLUDED */
+#endif /* MBUF_H_INCLUDED */

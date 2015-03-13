@@ -118,7 +118,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
 
       for (i = 0; i < sub.num_captures; i++, ptok++)
         v7_array_push(v7, arr, v7_create_string(v7, ptok->start,
-                      ptok->end - ptok->start, 1));
+                                                ptok->end - ptok->start, 1));
       if (flag_g) rp->lastIndex = utfnlen(str, sub.caps->end - str);
       return arr;
     } else

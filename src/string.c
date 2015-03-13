@@ -110,7 +110,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
         double d = i_as_num(v7, v7_array_get(v7, args, 1));
         if (isnan(d) || d < 0) {
           d = 0.0;
-        } else if(isinf(d)) {
+        } else if (isinf(d)) {
           d = n1;
         }
         fromIndex = d;
@@ -216,7 +216,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       i = 0;
       do {
         v7_array_push(v7, arr, v7_create_string(v7, ptok->start,
-                                                  ptok->end - ptok->start, 1));
+                                                ptok->end - ptok->start, 1));
         ptok++;
       } while (!flag_g && ++i < sub.num_captures);
     } while (flag_g && s < end);
@@ -277,12 +277,11 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
         val_t arr = v7_create_array(v7);
 
         for (i = 0; i < loot.num_captures; i++)
-          v7_array_push(
-              v7, arr,
-              v7_create_string(v7, loot.caps[i].start,
-                               loot.caps[i].end - loot.caps[i].start, 1));
-        v7_array_push(v7, arr, v7_create_number(utfnlen(
-                                     (char *)s, loot.caps[0].start - s)));
+          v7_array_push(v7, arr, v7_create_string(
+                                     v7, loot.caps[i].start,
+                                     loot.caps[i].end - loot.caps[i].start, 1));
+        v7_array_push(v7, arr, v7_create_number(
+                                   utfnlen((char *)s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
@@ -321,9 +320,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
           ptok->start < old_owned_mbuf_end) {
         ps += v7->owned_strings.buf - old_owned_mbuf_base;
       }
-      out_str_o =
-          s_concat(v7, out_str_o, v7_create_string(v7, ps,
-                                                   ln, 1));
+      out_str_o = s_concat(v7, out_str_o, v7_create_string(v7, ps, ln, 1));
       p += ln;
       ptok++;
     } while (--out_sub_num);
@@ -423,7 +420,9 @@ static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj, val_t args) {
   return s_transform(v7, this_obj, args, toupperrune);
 }
 
-static int s_isspace(Rune c) { return isspacerune(c) || isnewline(c); }
+static int s_isspace(Rune c) {
+  return isspacerune(c) || isnewline(c);
+}
 
 static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   val_t s = to_string(v7, this_obj);
@@ -562,11 +561,12 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       v7_array_push(v7, res, tmp_s);
 
       for (i = 1; i < loot.num_captures; i++)
-        v7_array_push(v7, res, (loot.caps[i].start != NULL) ?
-                      v7_create_string(v7, loot.caps[i].start,
-                                       loot.caps[i].end -
-                                       loot.caps[i].start, 1) :
-                      v7_create_undefined());
+        v7_array_push(
+            v7, res,
+            (loot.caps[i].start != NULL)
+                ? v7_create_string(v7, loot.caps[i].start,
+                                   loot.caps[i].end - loot.caps[i].start, 1)
+                : v7_create_undefined());
     }
     len = s_len - shift;
     v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));

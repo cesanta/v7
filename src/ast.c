@@ -23,7 +23,8 @@ typedef unsigned short ast_skip_t;
  * Skips allow skipping a subtree or sequence of subtrees.
  *
  * Sequences of subtrees (i.e. `child []`) have to be terminated by a skip:
- * they don't have a termination tag; all nodes whose position is before the skip
+ * they don't have a termination tag; all nodes whose position is before the
+ *skip
  * are part of the sequence.
  *
  * Skips are encoded as network-byte-order 16-bit offsets counted from the
@@ -44,325 +45,325 @@ typedef unsigned short ast_skip_t;
  *
  */
 const struct ast_node_def ast_node_defs[] = {
-  {"NOP", 0, 0, 0, 0},  /* struct {} */
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t first_var;
-   *   child body[];
-   * end:
-   * }
-   */
-  {"SCRIPT", 0, 0, 2, 0},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t next;
-   *   child decls[];
-   * end:
-   * }
-   */
-  {"VAR", 0, 0, 2, 0},
-  /*
-   * struct {
-   *   varint len;
-   *   char name[len];
-   *   child expr;
-   * }
-   */
-  {"VAR_DECL", 1, 1, 0, 1},
-  /*
-   * struct {
-   *   varint len;
-   *   char name[len];
-   *   child expr;
-   * }
-   */
-  {"FUNC_DECL", 1, 1, 0, 1},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t end_true;
-   *   child cond;
-   *   child iftrue[];
-   * end_true:
-   *   child iffalse[];
-   * end:
-   * }
-   */
-  {"IF", 0, 0, 2, 1},
-  /*
-   * TODO(mkm) distinguish function expressions
-   * from function statements.
-   * Function statements behave like vars and need a
-   * next field for hoisting.
-   * We can also ignore the name for function expressions
-   * if it's only needed for debugging.
-   *
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t first_var;
-   *   ast_skip_t body;
-   *   child name;
-   *   child params[];
-   * body:
-   *   child body[];
-   * end:
-   * }
-   */
-  {"FUNC", 0, 0, 3, 1},
-  {"ASSIGN", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"REM_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
-  {"MUL_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
-  {"DIV_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
-  {"XOR_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
-  {"PLUS_ASSIGN", 0, 0, 0, 2},    /* struct { child left, right; } */
-  {"MINUS_ASSIGN", 0, 0, 0, 2},   /* struct { child left, right; } */
-  {"OR_ASSIGN", 0, 0, 0, 2},      /* struct { child left, right; } */
-  {"AND_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
-  {"LSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
-  {"RSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
-  {"URSHIFT_ASSIGN", 0, 0, 0, 2}, /* struct { child left, right; } */
-  {"NUM", 1, 1, 0, 0},            /* struct { varint len, char s[len]; } */
-  {"IDENT", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
-  {"STRING", 1, 1, 0, 0},         /* struct { varint len, char s[len]; } */
-  {"REGEX", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
-  {"LABEL", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child body[];
-   * end:
-   * }
-   */
-  {"SEQ", 0, 0, 1, 0},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child cond;
-   *   child body[];
-   * end:
-   * }
-   */
-  {"WHILE", 0, 0, 1, 1},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t cond;
-   *   child body[];
-   * cond:
-   *   child cond;
-   * end:
-   * }
-   */
-  {"DOWHILE", 0, 0, 2, 0},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t body;
-   *   child init;
-   *   child cond;
-   *   child iter;
-   * body:
-   *   child body[];
-   * end:
-   * }
-   */
-  {"FOR", 0, 0, 2, 3},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t dummy; // allows to quickly promote a for to a for in
-   *   child var;
-   *   child expr;
-   *   child dummy;
-   *   child body[];
-   * end:
-   * }
-   */
-  {"FOR_IN", 0, 0, 2, 3},
-  {"COND", 0, 0, 0, 3},  /* struct { child cond, iftrue, iffalse; } */
-  {"DEBUGGER", 0, 0, 0, 0},  /* struct {} */
-  {"BREAK", 0, 0, 0, 0},     /* struct {} */
-  /*
-   * struct {
-   *   child label; // TODO(mkm): inline
-   * }
-   */
-  {"LAB_BREAK", 0, 0, 0, 1},
-  {"CONTINUE", 0, 0, 0, 0},  /* struct {} */
-  /*
-   * struct {
-   *   child label; // TODO(mkm): inline
-   * }
-   */
-  {"LAB_CONTINUE", 0, 0, 0, 1},
-  {"RETURN", 0, 0, 0, 0},     /* struct {} */
-  {"VAL_RETURN", 0, 0, 0, 1}, /* struct { child expr; } */
-  {"THROW", 0, 0, 0, 1},      /* struct { child expr; } */
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t catch;
-   *   ast_skip_t finally;
-   *   child try[];
-   * catch:
-   *   child var; // TODO(mkm): inline
-   *   child catch[];
-   * finally:
-   *   child finally[];
-   * end:
-   * }
-   */
-  {"TRY", 0, 0, 3, 1},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   ast_skip_t def;
-   *   child expr;
-   *   child cases[];
-   * def:
-   *   child default?; // optional
-   * end:
-   * }
-   */
-  {"SWITCH", 0, 0, 2, 1},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child val;
-   *   child stmts[];
-   * end:
-   * }
-   */
-  {"CASE", 0, 0, 1, 1},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child stmts[];
-   * end:
-   * }
-   */
-  {"DEFAULT", 0, 0, 1, 0},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child expr;
-   *   child body[];
-   * end:
-   * }
-   */
-  {"WITH", 0, 0, 1, 1},
-  {"LOG_OR", 0, 0, 0, 2},      /* struct { child left, right; } */
-  {"LOG_AND", 0, 0, 0, 2},     /* struct { child left, right; } */
-  {"OR", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"XOR", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"AND", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"EQ", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"EQ_EQ", 0, 0, 0, 2},       /* struct { child left, right; } */
-  {"NE", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"NE_NE", 0, 0, 0, 2},       /* struct { child left, right; } */
-  {"LE", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"LT", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"GE", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"GT", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"IN", 0, 0, 0, 2},          /* struct { child left, right; } */
-  {"INSTANCEOF", 0, 0, 0, 2},  /* struct { child left, right; } */
-  {"LSHIFT", 0, 0, 0, 2},      /* struct { child left, right; } */
-  {"RSHIFT", 0, 0, 0, 2},      /* struct { child left, right; } */
-  {"URSHIFT", 0, 0, 0, 2},     /* struct { child left, right; } */
-  {"ADD", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"SUB", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"REM", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"MUL", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"DIV", 0, 0, 0, 2},         /* struct { child left, right; } */
-  {"POS", 0, 0, 0, 1},         /* struct { child expr; } */
-  {"NEG", 0, 0, 0, 1},         /* struct { child expr; } */
-  {"NOT", 0, 0, 0, 1},         /* struct { child expr; } */
-  {"LOGICAL_NOT", 0, 0, 0, 1}, /* struct { child expr; } */
-  {"VOID", 0, 0, 0, 1},        /* struct { child expr; } */
-  {"DELETE", 0, 0, 0, 1},      /* struct { child expr; } */
-  {"TYPEOF", 0, 0, 0, 1},      /* struct { child expr; } */
-  {"PREINC", 0, 0, 0, 1},      /* struct { child expr; } */
-  {"PREDEC", 0, 0, 0, 1},      /* struct { child expr; } */
-  {"POSTINC", 0, 0, 0, 1},     /* struct { child expr; } */
-  {"POSTDEC", 0, 0, 0, 1},     /* struct { child expr; } */
-  /*
-   * struct {
-   *   varint len;
-   *   char ident[len];
-   *   child expr;
-   * }
-   */
-  {"MEMBER", 1, 1, 0, 1},
-  /*
-   * struct {
-   *   child expr;
-   *   child index;
-   * }
-   */
-  {"INDEX", 0, 0, 0, 2},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child expr;
-   *   child args[];
-   * end:
-   * }
-   */
-  {"CALL", 0, 0, 1, 1},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child expr;
-   *   child args[];
-   * end:
-   * }
-   */
-  {"NEW", 0, 0, 1, 1},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child elements[];
-   * end:
-   * }
-   */
-  {"ARRAY", 0, 0, 1, 0},
-  /*
-   * struct {
-   *   ast_skip_t end;
-   *   child props[];
-   * end:
-   * }
-   */
-  {"OBJECT", 0, 0, 1, 0},
-  /*
-   * struct {
-   *   varint len;
-   *   char name[len];
-   *   child expr;
-   * }
-   */
-  {"PROP", 1, 1, 0, 1},
-  /*
-   * struct {
-   *   child func;
-   * }
-   */
-  {"GETTER", 0, 0, 0, 1},
-  /*
-   * struct {
-   *   child func;
-   * end:
-   * }
-   */
-  {"SETTER", 0, 0, 0, 1},
-  {"THIS", 0, 0, 0, 0},  /* struct {} */
-  {"TRUE", 0, 0, 0, 0},  /* struct {} */
-  {"FALSE", 0, 0, 0, 0}, /* struct {} */
-  {"NULL", 0, 0, 0, 0},  /* struct {} */
-  {"UNDEF", 0, 0, 0, 0}, /* struct {} */
-  {"USE_STRICT", 0, 0, 0, 0},   /* struct {} */
+    {"NOP", 0, 0, 0, 0}, /* struct {} */
+                         /*
+                          * struct {
+                          *   ast_skip_t end;
+                          *   ast_skip_t first_var;
+                          *   child body[];
+                          * end:
+                          * }
+                          */
+    {"SCRIPT", 0, 0, 2, 0},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   ast_skip_t next;
+     *   child decls[];
+     * end:
+     * }
+     */
+    {"VAR", 0, 0, 2, 0},
+    /*
+     * struct {
+     *   varint len;
+     *   char name[len];
+     *   child expr;
+     * }
+     */
+    {"VAR_DECL", 1, 1, 0, 1},
+    /*
+     * struct {
+     *   varint len;
+     *   char name[len];
+     *   child expr;
+     * }
+     */
+    {"FUNC_DECL", 1, 1, 0, 1},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   ast_skip_t end_true;
+     *   child cond;
+     *   child iftrue[];
+     * end_true:
+     *   child iffalse[];
+     * end:
+     * }
+     */
+    {"IF", 0, 0, 2, 1},
+    /*
+     * TODO(mkm) distinguish function expressions
+     * from function statements.
+     * Function statements behave like vars and need a
+     * next field for hoisting.
+     * We can also ignore the name for function expressions
+     * if it's only needed for debugging.
+     *
+     * struct {
+     *   ast_skip_t end;
+     *   ast_skip_t first_var;
+     *   ast_skip_t body;
+     *   child name;
+     *   child params[];
+     * body:
+     *   child body[];
+     * end:
+     * }
+     */
+    {"FUNC", 0, 0, 3, 1},
+    {"ASSIGN", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"REM_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+    {"MUL_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+    {"DIV_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+    {"XOR_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+    {"PLUS_ASSIGN", 0, 0, 0, 2},    /* struct { child left, right; } */
+    {"MINUS_ASSIGN", 0, 0, 0, 2},   /* struct { child left, right; } */
+    {"OR_ASSIGN", 0, 0, 0, 2},      /* struct { child left, right; } */
+    {"AND_ASSIGN", 0, 0, 0, 2},     /* struct { child left, right; } */
+    {"LSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
+    {"RSHIFT_ASSIGN", 0, 0, 0, 2},  /* struct { child left, right; } */
+    {"URSHIFT_ASSIGN", 0, 0, 0, 2}, /* struct { child left, right; } */
+    {"NUM", 1, 1, 0, 0},            /* struct { varint len, char s[len]; } */
+    {"IDENT", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
+    {"STRING", 1, 1, 0, 0},         /* struct { varint len, char s[len]; } */
+    {"REGEX", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
+    {"LABEL", 1, 1, 0, 0},          /* struct { varint len, char s[len]; } */
+                                    /*
+                                     * struct {
+                                     *   ast_skip_t end;
+                                     *   child body[];
+                                     * end:
+                                     * }
+                                     */
+    {"SEQ", 0, 0, 1, 0},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child cond;
+     *   child body[];
+     * end:
+     * }
+     */
+    {"WHILE", 0, 0, 1, 1},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   ast_skip_t cond;
+     *   child body[];
+     * cond:
+     *   child cond;
+     * end:
+     * }
+     */
+    {"DOWHILE", 0, 0, 2, 0},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   ast_skip_t body;
+     *   child init;
+     *   child cond;
+     *   child iter;
+     * body:
+     *   child body[];
+     * end:
+     * }
+     */
+    {"FOR", 0, 0, 2, 3},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   ast_skip_t dummy; // allows to quickly promote a for to a for in
+     *   child var;
+     *   child expr;
+     *   child dummy;
+     *   child body[];
+     * end:
+     * }
+     */
+    {"FOR_IN", 0, 0, 2, 3},
+    {"COND", 0, 0, 0, 3},     /* struct { child cond, iftrue, iffalse; } */
+    {"DEBUGGER", 0, 0, 0, 0}, /* struct {} */
+    {"BREAK", 0, 0, 0, 0},    /* struct {} */
+                              /*
+                               * struct {
+                               *   child label; // TODO(mkm): inline
+                               * }
+                               */
+    {"LAB_BREAK", 0, 0, 0, 1},
+    {"CONTINUE", 0, 0, 0, 0}, /* struct {} */
+                              /*
+                               * struct {
+                               *   child label; // TODO(mkm): inline
+                               * }
+                               */
+    {"LAB_CONTINUE", 0, 0, 0, 1},
+    {"RETURN", 0, 0, 0, 0},     /* struct {} */
+    {"VAL_RETURN", 0, 0, 0, 1}, /* struct { child expr; } */
+    {"THROW", 0, 0, 0, 1},      /* struct { child expr; } */
+                                /*
+                                 * struct {
+                                 *   ast_skip_t end;
+                                 *   ast_skip_t catch;
+                                 *   ast_skip_t finally;
+                                 *   child try[];
+                                 * catch:
+                                 *   child var; // TODO(mkm): inline
+                                 *   child catch[];
+                                 * finally:
+                                 *   child finally[];
+                                 * end:
+                                 * }
+                                 */
+    {"TRY", 0, 0, 3, 1},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   ast_skip_t def;
+     *   child expr;
+     *   child cases[];
+     * def:
+     *   child default?; // optional
+     * end:
+     * }
+     */
+    {"SWITCH", 0, 0, 2, 1},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child val;
+     *   child stmts[];
+     * end:
+     * }
+     */
+    {"CASE", 0, 0, 1, 1},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child stmts[];
+     * end:
+     * }
+     */
+    {"DEFAULT", 0, 0, 1, 0},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child expr;
+     *   child body[];
+     * end:
+     * }
+     */
+    {"WITH", 0, 0, 1, 1},
+    {"LOG_OR", 0, 0, 0, 2},      /* struct { child left, right; } */
+    {"LOG_AND", 0, 0, 0, 2},     /* struct { child left, right; } */
+    {"OR", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"XOR", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"AND", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"EQ", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"EQ_EQ", 0, 0, 0, 2},       /* struct { child left, right; } */
+    {"NE", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"NE_NE", 0, 0, 0, 2},       /* struct { child left, right; } */
+    {"LE", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"LT", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"GE", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"GT", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"IN", 0, 0, 0, 2},          /* struct { child left, right; } */
+    {"INSTANCEOF", 0, 0, 0, 2},  /* struct { child left, right; } */
+    {"LSHIFT", 0, 0, 0, 2},      /* struct { child left, right; } */
+    {"RSHIFT", 0, 0, 0, 2},      /* struct { child left, right; } */
+    {"URSHIFT", 0, 0, 0, 2},     /* struct { child left, right; } */
+    {"ADD", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"SUB", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"REM", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"MUL", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"DIV", 0, 0, 0, 2},         /* struct { child left, right; } */
+    {"POS", 0, 0, 0, 1},         /* struct { child expr; } */
+    {"NEG", 0, 0, 0, 1},         /* struct { child expr; } */
+    {"NOT", 0, 0, 0, 1},         /* struct { child expr; } */
+    {"LOGICAL_NOT", 0, 0, 0, 1}, /* struct { child expr; } */
+    {"VOID", 0, 0, 0, 1},        /* struct { child expr; } */
+    {"DELETE", 0, 0, 0, 1},      /* struct { child expr; } */
+    {"TYPEOF", 0, 0, 0, 1},      /* struct { child expr; } */
+    {"PREINC", 0, 0, 0, 1},      /* struct { child expr; } */
+    {"PREDEC", 0, 0, 0, 1},      /* struct { child expr; } */
+    {"POSTINC", 0, 0, 0, 1},     /* struct { child expr; } */
+    {"POSTDEC", 0, 0, 0, 1},     /* struct { child expr; } */
+                                 /*
+                                  * struct {
+                                  *   varint len;
+                                  *   char ident[len];
+                                  *   child expr;
+                                  * }
+                                  */
+    {"MEMBER", 1, 1, 0, 1},
+    /*
+     * struct {
+     *   child expr;
+     *   child index;
+     * }
+     */
+    {"INDEX", 0, 0, 0, 2},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child expr;
+     *   child args[];
+     * end:
+     * }
+     */
+    {"CALL", 0, 0, 1, 1},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child expr;
+     *   child args[];
+     * end:
+     * }
+     */
+    {"NEW", 0, 0, 1, 1},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child elements[];
+     * end:
+     * }
+     */
+    {"ARRAY", 0, 0, 1, 0},
+    /*
+     * struct {
+     *   ast_skip_t end;
+     *   child props[];
+     * end:
+     * }
+     */
+    {"OBJECT", 0, 0, 1, 0},
+    /*
+     * struct {
+     *   varint len;
+     *   char name[len];
+     *   child expr;
+     * }
+     */
+    {"PROP", 1, 1, 0, 1},
+    /*
+     * struct {
+     *   child func;
+     * }
+     */
+    {"GETTER", 0, 0, 0, 1},
+    /*
+     * struct {
+     *   child func;
+     * end:
+     * }
+     */
+    {"SETTER", 0, 0, 0, 1},
+    {"THIS", 0, 0, 0, 0},       /* struct {} */
+    {"TRUE", 0, 0, 0, 0},       /* struct {} */
+    {"FALSE", 0, 0, 0, 0},      /* struct {} */
+    {"NULL", 0, 0, 0, 0},       /* struct {} */
+    {"UNDEF", 0, 0, 0, 0},      /* struct {} */
+    {"USE_STRICT", 0, 0, 0, 0}, /* struct {} */
 };
 
 V7_STATIC_ASSERT(AST_MAX_TAG < 256, ast_tag_should_fit_in_char);
@@ -381,7 +382,7 @@ V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
  */
 V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   ast_off_t start = a->mbuf.len;
-  uint8_t t = (uint8_t) tag;
+  uint8_t t = (uint8_t)tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
@@ -391,9 +392,9 @@ V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   return start + 1;
 }
 
-V7_PRIVATE ast_off_t ast_insert_node(struct ast *a, ast_off_t start,
-                                     enum ast_tag tag) {
-  uint8_t t = (uint8_t) tag;
+V7_PRIVATE ast_off_t
+    ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
+  uint8_t t = (uint8_t)tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
@@ -426,8 +427,8 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  *
  * Every tree reader can assume this and safely skip unknown nodes.
  */
-V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
-                                  enum ast_which_skip skip) {
+V7_PRIVATE ast_off_t
+    ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
   return ast_modify_skip(a, start, a->mbuf.len, skip);
 }
 
@@ -438,30 +439,30 @@ V7_PRIVATE ast_off_t ast_set_skip(struct ast *a, ast_off_t start,
 V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
                                      ast_off_t where,
                                      enum ast_which_skip skip) {
-  uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
+  uint8_t *p = (uint8_t *)a->mbuf.buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = where - start;
-  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + start - 1);
+  enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
   /* assertion, to be optimizable out */
-  assert((int) skip < def->num_skips);
+  assert((int)skip < def->num_skips);
 
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
   return where;
 }
 
-V7_PRIVATE ast_off_t ast_get_skip(struct ast *a, ast_off_t pos,
-                                  enum ast_which_skip skip) {
+V7_PRIVATE ast_off_t
+    ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   uint8_t *p;
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
-  p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
+  p = (uint8_t *)a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
   assert(*pos < a->mbuf.len);
-  return (enum ast_tag) (uint8_t) * (a->mbuf.buf + (*pos)++);
+  return (enum ast_tag)(uint8_t) * (a->mbuf.buf + (*pos)++);
 }
 
 /*
@@ -470,12 +471,12 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
  * TODO(mkm): add doc, find better name.
  */
 V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
-  enum ast_tag tag = (enum ast_tag) (uint8_t) * (a->mbuf.buf + *pos - 1);
+  enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
   assert(*pos - 1 < a->mbuf.len);
   if (def->has_varint) {
     int llen;
-    size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
+    size_t slen = decode_varint((unsigned char *)a->mbuf.buf + *pos, &llen);
     *pos += llen;
     if (def->has_inlined) {
       *pos += slen;
@@ -503,7 +504,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
   assert(pos < a->mbuf.len);
-  *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
+  *n = decode_varint((unsigned char *)a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
@@ -568,8 +569,8 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   fprintf(fp, "%s", def->name);
 
   if (def->has_inlined) {
-    slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
-    fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + *pos + llen);
+    slen = decode_varint((unsigned char *)a->mbuf.buf + *pos, &llen);
+    fprintf(fp, " %.*s\n", (int)slen, a->mbuf.buf + *pos + llen);
   } else {
     fprintf(fp, "\n");
   }
@@ -592,7 +593,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     while (*pos < end) {
       int s;
       for (s = ast_node_defs[tag].num_skips - 1; s > 0; s--) {
-        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip) s)) {
+        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip)s)) {
           comment_at_depth(fp, "%d ->", depth + 1, s);
           break;
         }
