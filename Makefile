@@ -17,7 +17,7 @@ endif
 
 include src/sources.mk
 
-.PHONY: cpplint
+.PHONY: cpplint format tidy docker
 
 all: v7 amalgamated_v7
 	@$(MAKE) -C examples
@@ -83,6 +83,13 @@ difftest:
 format:
 	@/usr/bin/find src -name "*.[ch]" | grep -v utf.c | grep -v crypto.c | xargs $(CLANG_FORMAT) -i
 	@$(CLANG_FORMAT) -i tests/unit_test.c
+
+compile_commands.json: $(TOP_SOURCES) Makefile scripts/gen-llvm-json.sh
+	@scripts/gen-llvm-json.sh >compile_commands.json
+
+tidy: compile_commands.json
+	@echo "CLANG-TIDY"
+	@docker run --rm -v $(PWD)/..:/cesanta -t -i --entrypoint=/bin/bash cesanta/v7_test -c "cd /cesanta/v7; clang-tidy-3.5 -p . $(TOP_SOURCES)"
 
 cpplint:
 	@$(MAKE) -C tests cpplint
