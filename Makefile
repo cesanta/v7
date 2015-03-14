@@ -85,7 +85,7 @@ difftest:
 
 format:
 	@/usr/bin/find src -name "*.[ch]" | grep -v utf.c | grep -v crypto.c | grep -v js_stdlib.c | xargs $(CLANG_FORMAT) -i
-	@$(CLANG_FORMAT) -i tests/unit_test.c
+	@$(CLANG_FORMAT) -i tests/unit_test.c v7.h
 
 compile_commands.json: $(TOP_SOURCES) Makefile scripts/gen-llvm-json.sh
 	@scripts/gen-llvm-json.sh >compile_commands.json

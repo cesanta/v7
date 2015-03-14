@@ -21,15 +21,11 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include <stddef.h>   /* For size_t */
+#include <stddef.h> /* For size_t */
 
 #define V7_VERSION "1.0"
 
-enum v7_err {
-  V7_OK,
-  V7_SYNTAX_ERROR,
-  V7_EXEC_EXCEPTION
-};
+enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION };
 
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
