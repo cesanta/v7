@@ -21,15 +21,11 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include <stddef.h>   /* For size_t */
+#include <stddef.h> /* For size_t */
 
 #define V7_VERSION "1.0"
 
-enum v7_err {
-  V7_OK,
-  V7_SYNTAX_ERROR,
-  V7_EXEC_EXCEPTION
-};
+enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION };
 
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
@@ -12642,60 +12638,57 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   val_t res;
 
-  v7_exec(v7, &res, STRINGIFY(Array.prototype.indexOf = function(a, x) {
-                      var i;
-                      var r = -1;
-                      var b = +x;
-                      if (!b || b < 0) b = 0;
-                      for (i in this)
-                        if (i >= b && (r < 0 || i < r) && this[i] === a)
-                          r = +i;
-                      return r;
-                    };));
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.indexOf = function(a, x) {
+      var i; var r = -1; var b = +x;
+      if (!b || b < 0) b = 0;
+      for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = +i;
+      return r;
+    };));
 
-  v7_exec(v7, &res, STRINGIFY(Array.prototype.lastIndexOf = function(a, x) {
-                      var i;
-                      var r = -1;
-                      var b = +x;
-                      if (isNaN(b) || b < 0 || b >= this.length)
-                        b = this.length - 1;
-                      for (i in this)
-                        if (i <= b && (r < 0 || i > r) && this[i] === a)
-                          r = +i;
-                      return r;
-                    };));
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.lastIndexOf = function(a, x) {
+      var i; var r = -1; var b = +x;
+      if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
+      for (i in this) if (i <= b && (r < 0 || i > r) && this[i] === a) r = +i;
+      return r;
+    };));
 
-  v7_exec(v7, &res, STRINGIFY(Array.prototype.reduce = function(a, b) {
-                      var f = 0;
-                      if (typeof(a) != 'function') {
-                        throw new TypeError(a + ' is not a function');
-                      }
-                      for (var k in this) {
-                        if (f == 0 && b === undefined) {
-                          b = this[k];
-                          f = 1;
-                        } else {
-                          b = a(b, this[k], k, this);
-                        }
-                      }
-                      return b;
-                    };));
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.reduce = function(a, b) {
+      var f = 0;
+      if (typeof(a) != 'function') {
+        throw new TypeError(a + ' is not a function');
+      }
+      for (var k in this) {
+        if (f == 0 && b === undefined) {
+          b = this[k];
+          f = 1;
+        } else {
+          b = a(b, this[k], k, this);
+        }
+      }
+      return b;
+    };));
 
-  v7_exec(v7, &res, STRINGIFY(Array.prototype.pop = function() {
-                      var i = this.length - 1;
-                      return this.splice(i, 1)[0];
-                    };));
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.pop = function() {
+      var i = this.length - 1;
+      return this.splice(i, 1)[0];
+    };));
 
-  v7_exec(v7, &res, STRINGIFY(Array.prototype.shift = function() {
-                      return this.splice(0, 1)[0];
-                    };));
+  v7_exec(v7, &res, STRINGIFY(
+    Array.prototype.shift = function() {
+      return this.splice(0, 1)[0];
+    };));
 
-  v7_exec(v7, &res, STRINGIFY(Function.prototype.call = function() {
-                      var t = arguments.splice(0, 1)[0];
-                      return this.apply(t, arguments);
-                    };));
-  
-/* TODO(lsm): re-enable in a separate PR */
+  v7_exec(v7, &res, STRINGIFY(
+    Function.prototype.call = function() {
+      var t = arguments.splice(0, 1)[0];
+      return this.apply(t, arguments);
+    };));
+
+  /* TODO(lsm): re-enable in a separate PR */
 #if 0
   v7_exec(v7, &res, STRINGIFY(
     Array.prototype.unshift = function() {
@@ -12706,7 +12699,6 @@ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
     };));
 #endif
 }
-
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
