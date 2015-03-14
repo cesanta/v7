@@ -1639,6 +1639,11 @@ static const char *test_interpreter(void) {
   s = "\"\"";
   ASSERT(check_value(v7, v, s));
 
+  ASSERT(v7_exec_with(v7, &v, "a=this;a", v7_create_foreign((void *)"foo")) ==
+         V7_OK);
+  ASSERT(v7_is_foreign(v));
+  ASSERT(strcmp((char *)v7_to_foreign(v), "foo") == 0);
+
   /* here temporarily because test_stdlib has memory violations */
   ASSERT(v7_exec(v7, &v, "a=[2,1];a.sort();a") == V7_OK);
   ASSERT(check_value(v7, v, "[1,2]"));
