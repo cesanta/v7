@@ -85,6 +85,10 @@ int v7_is_regexp(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_REGEXP;
 }
 
+int v7_is_foreign(val_t v) {
+  return (v & V7_TAG_MASK) == V7_TAG_FOREIGN;
+}
+
 V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t v) {
   return (struct v7_regexp *)v7_to_pointer(v);
 }
@@ -227,6 +231,10 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
     return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
   }
+}
+
+v7_val_t v7_create_foreign(void *p) {
+  return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
 v7_val_t v7_create_function(struct v7 *v7) {

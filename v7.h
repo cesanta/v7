@@ -69,6 +69,7 @@ v7_val_t v7_create_undefined(void);
 v7_val_t v7_create_string(struct v7 *v7, const char *, size_t, int);
 v7_val_t v7_create_regexp(struct v7 *, const char *, size_t, const char *,
                           size_t);
+v7_val_t v7_create_foreign(void *);
 
 int v7_is_object(v7_val_t);
 int v7_is_function(v7_val_t);
@@ -79,6 +80,7 @@ int v7_is_double(v7_val_t);
 int v7_is_null(v7_val_t);
 int v7_is_undefined(v7_val_t);
 int v7_is_regexp(v7_val_t);
+int v7_is_foreign(v7_val_t);
 
 void *v7_to_foreign(v7_val_t);
 int v7_to_boolean(v7_val_t);
