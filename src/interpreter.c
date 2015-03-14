@@ -55,15 +55,20 @@ V7_PRIVATE void throw_exception(struct v7 *v7, const char *type,
 } /* LCOV_EXCL_LINE */
 
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
-  val_t f = v7_create_undefined();
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
-  tmp_stack_push(&tf, &v);
-  tmp_stack_push(&tf, &f);
+  val_t f;
+  if (!v7_is_object(v)) {
+    return v;
+  }
 
-  if (v7_is_object(v) && (f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
+  if ((f = v7_get(v7, v, "valueOf", 7)) != V7_UNDEFINED) {
+    /*
+     * v7_apply will root all parameters since it can be called
+     * from user code, hence it's not necessary to root `f`.
+     * This assumes all callers of i_value_of will root their
+     * temporary values.
+     */
     v = v7_apply(v7, f, v, v7_create_array(v7));
   }
-  tmp_frame_cleanup(&tf);
   return v;
 }
 
