@@ -7628,38 +7628,29 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   return v;
 }
 
+/* i_as_num expects callers to root temporary values passed as args */
 V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   double res = 0.0;
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
-  tmp_stack_push(&tf, &v);
 
   v = i_value_of(v7, v);
-  if (!v7_is_double(v) && !v7_is_boolean(v)) {
-    if (v7_is_string(v)) {
-      size_t n;
-      char buf[20], *e, *s = (char *)v7_to_string(v7, &v, &n);
-      if (n != 0) {
-        snprintf(buf, sizeof(buf), "%.*s", (int)n, s);
-        buf[sizeof(buf) - 1] = '\0';
-        res = strtod(buf, &e);
-        if (e - n != buf) {
-          res = NAN;
-        }
+  if (v7_is_double(v)) {
+    res = v7_to_double(v);
+  } else if (v7_is_string(v)) {
+    size_t n;
+    char *e, *s = (char *)v7_to_string(v7, &v, &n);
+    if (n != 0) {
+      res = strtod(s, &e);
+      if (e - n != s) {
+        res = NAN;
       }
-    } else if (v7_is_null(v)) {
-      res = 0.0;
-    } else {
-      res = NAN;
     }
+  } else if (v7_is_boolean(v)) {
+    res = (double)v7_to_boolean(v);
+  } else if (v7_is_null(v)) {
+    res = 0.0;
   } else {
-    if (v7_is_boolean(v)) {
-      res = (double)v7_to_boolean(v);
-    } else {
-      res = v7_to_double(v);
-    }
+    res = NAN;
   }
-
-  tmp_frame_cleanup(&tf);
   return res;
 }
 
@@ -7730,8 +7721,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
     case AST_OR:
     case AST_XOR:
     case AST_AND:
-      return i_int_bin_op(v7, tag, isnan(a) || isinf(a) ? 0.0 : a,
-                          isnan(b) || isinf(b) ? 0.0 : b);
+      return i_int_bin_op(v7, tag, a, b);
     default:
       throw_exception(v7, "InternalError", "%s", __func__); /* LCOV_EXCL_LINE */
       return 0;                                             /* LCOV_EXCL_LINE */

@@ -770,7 +770,7 @@
 766	PASS ch09/9.3/9.3.1/S9.3.1_A29.js (tail -c +562915 tests/ecmac.db|head -c 681)
 767	PASS ch09/9.3/9.3.1/S9.3.1_A30.js (tail -c +563597 tests/ecmac.db|head -c 681)
 768	PASS ch09/9.3/9.3.1/S9.3.1_A31.js (tail -c +564279 tests/ecmac.db|head -c 681)
-769	FAIL ch09/9.3/9.3.1/S9.3.1_A32.js (tail -c +564961 tests/ecmac.db|head -c 1375): [{"message":"#1: Number("1234567890.1234567890") === 1234567890.1234567890. Actual: NaN"}]
+769	PASS ch09/9.3/9.3.1/S9.3.1_A32.js (tail -c +564961 tests/ecmac.db|head -c 1375)
 770	FAIL ch09/9.3/9.3.1/S9.3.1_A3_T1.js (tail -c +566337 tests/ecmac.db|head -c 3048): [{"message":"#1: Number("	  
    ᠎             　") === Number("")"}]
 771	FAIL ch09/9.3/9.3.1/S9.3.1_A3_T2.js (tail -c +569386 tests/ecmac.db|head -c 2565): [{"message":"#1: Number("	  "+"
