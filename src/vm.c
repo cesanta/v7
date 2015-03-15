@@ -840,10 +840,10 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 
 /* Insert a string into mbuf at specified offset */
 V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t len, int zero_term) {
+                             size_t len, int zero_term, int unesc) {
   char *old_base = m->buf;
   int p_backed_by_mbuf = p >= old_base && p < old_base + m->len;
-  size_t n = unescape(p, len, NULL);
+  size_t n = unesc ? unescape(p, len, NULL) : len;
   int k = calc_llen(n); /* Calculate how many bytes length takes */
   size_t tot_len = k + n + zero_term;
   mbuf_insert(m, offset, NULL, tot_len); /* Allocate  buffer */
@@ -852,7 +852,12 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
     p += m->buf - old_base;
   }
   encode_varint(n, (unsigned char *)m->buf + offset); /* Write length */
-  unescape(p, len, m->buf + offset + k);              /* Write string */
+  /* Write string */
+  if (unesc) {
+    unescape(p, len, m->buf + offset + k);
+  } else {
+    memcpy(m->buf + offset + k, p, len);
+  }
   if (zero_term) {
     m->buf[offset + tot_len - 1] = '\0';
   }
@@ -875,11 +880,11 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     memcpy(s, p, len);
     tag = V7_TAG_STRING_5;
   } else if (own) {
-    embed_string(m, m->len, p, len, 1);
+    embed_string(m, m->len, p, len, 1, 0);
     tag = V7_TAG_STRING_O;
   } else {
     /* TODO(mkm): this doesn't set correctly the foreign string length */
-    embed_string(m, m->len, (char *)&p, sizeof(p), 0);
+    embed_string(m, m->len, (char *)&p, sizeof(p), 0, 0);
   }
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
