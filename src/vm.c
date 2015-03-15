@@ -520,6 +520,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
                                                     size_t len,
                                                     unsigned int attrs) {
   struct v7_property *p;
+  val_t ss;
   if (!v7_is_object(obj)) {
     return NULL;
   }
@@ -527,12 +528,21 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
     len = strlen(name);
   }
 
-  for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
-    size_t n;
-    const char *s = v7_to_string(v7, &p->name, &n);
-    if (n == len && strncmp(s, name, len) == 0 &&
-        (attrs == 0 || (p->attributes & attrs))) {
-      return p;
+  if (len <= 5) {
+    ss = v7_create_string(v7, name, len, 1);
+    for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+      if (p->name == ss && (attrs == 0 || (p->attributes & attrs))) {
+        return p;
+      }
+    }
+  } else {
+    for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p->name, &n);
+      if (n == len && strncmp(s, name, len) == 0 &&
+          (attrs == 0 || (p->attributes & attrs))) {
+        return p;
+      }
     }
   }
   return NULL;

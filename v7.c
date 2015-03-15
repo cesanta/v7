@@ -959,7 +959,7 @@ struct v7_object {
   struct v7_property *properties;
   struct v7_object *prototype;
   uint8_t attributes;
-#define V7_OBJ_NOT_EXTENSIBLE 1  /* TODO(lsm): store this in LSB */
+#define V7_OBJ_NOT_EXTENSIBLE 1 /* TODO(lsm): store this in LSB */
 };
 
 /*
@@ -5764,6 +5764,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
                                                     size_t len,
                                                     unsigned int attrs) {
   struct v7_property *p;
+  val_t ss;
   if (!v7_is_object(obj)) {
     return NULL;
   }
@@ -5771,12 +5772,21 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
     len = strlen(name);
   }
 
-  for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
-    size_t n;
-    const char *s = v7_to_string(v7, &p->name, &n);
-    if (n == len && strncmp(s, name, len) == 0 &&
-        (attrs == 0 || (p->attributes & attrs))) {
-      return p;
+  if (len <= 5) {
+    ss = v7_create_string(v7, name, len, 1);
+    for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+      if (p->name == ss && (attrs == 0 || (p->attributes & attrs))) {
+        return p;
+      }
+    }
+  } else {
+    for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+      size_t n;
+      const char *s = v7_to_string(v7, &p->name, &n);
+      if (n == len && strncmp(s, name, len) == 0 &&
+          (attrs == 0 || (p->attributes & attrs))) {
+        return p;
+      }
     }
   }
   return NULL;
@@ -10838,14 +10848,14 @@ static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
-static val_t
-    Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   (void)this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
-static val_t
-    Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
+                                          val_t args) {
   struct v7_property *prop;
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
@@ -10871,7 +10881,7 @@ static val_t
 }
 
 static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
-                                     int name_len, val_t desc) {
+                                 int name_len, val_t desc) {
   unsigned int flags = 0;
   val_t val = v7_get(v7, desc, "value", 5);
   if (!v7_is_true(v7, v7_get(v7, desc, "enumerable", 10))) {
@@ -11016,8 +11026,8 @@ static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError", "Object expected");
   }
-  return v7_create_boolean(!(v7_to_object(arg)->attributes &
-                           V7_OBJ_NOT_EXTENSIBLE));
+  return v7_create_boolean(
+      !(v7_to_object(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE));
 }
 
 V7_PRIVATE void init_object(struct v7 *v7) {
