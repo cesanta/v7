@@ -1,6 +1,6 @@
 WARNS = -W -Wall -pedantic -Wno-comment -Wno-variadic-macros
 V7_FLAGS = -I./src -I.
-CFLAGS = $(WARNS) -g -O0 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
+CFLAGS = $(WARNS) -g -O3 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
 
 SRC_DIR=src
 TOP_SOURCES=$(addprefix $(SRC_DIR)/, $(SOURCES))
