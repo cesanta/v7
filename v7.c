@@ -10774,7 +10774,7 @@ int main(int argc, char **argv) {
  */
 
 
-V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void)this_obj;
   if (!v7_is_object(arg)) {
@@ -10784,17 +10784,7 @@ V7_PRIVATE val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v_get_prototype(v7, arg);
 }
 
-V7_PRIVATE val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t proto = v7_array_get(v7, args, 0);
-  (void)this_obj;
-  if (!v7_is_null(proto) && !v7_is_object(proto)) {
-    throw_exception(v7, "TypeError",
-                    "Object prototype may only be an Object or null");
-  }
-  return create_object(v7, proto);
-}
-
-V7_PRIVATE val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t proto = v7_array_get(v7, args, 1);
   (void)this_obj;
@@ -10835,18 +10825,18 @@ static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
   return v7_get_own_property(v7, obj, name_buf, name_len);
 }
 
-V7_PRIVATE val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
   (void)this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
-V7_PRIVATE val_t
+static val_t
     Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj, val_t args) {
   (void)this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
-V7_PRIVATE val_t
+static val_t
     Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *prop;
   val_t obj = v7_array_get(v7, args, 0);
@@ -10872,7 +10862,7 @@ V7_PRIVATE val_t
   return desc;
 }
 
-V7_PRIVATE val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
+static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
                                      int name_len, val_t desc) {
   unsigned int flags = 0;
   val_t val = v7_get(v7, desc, "value", 5);
@@ -10890,7 +10880,7 @@ V7_PRIVATE val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
   return obj;
 }
 
-V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
   val_t desc = v7_array_get(v7, args, 2);
@@ -10904,13 +10894,8 @@ V7_PRIVATE val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
 
-V7_PRIVATE val_t
-    Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
+static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   struct v7_property *p;
-  val_t obj = v7_array_get(v7, args, 0);
-  val_t descs = v7_array_get(v7, args, 1);
-  (void)this_obj;
-
   if (!v7_is_object(descs)) {
     throw_exception(v7, "TypeError", "object expected");
   }
@@ -10922,11 +10907,33 @@ V7_PRIVATE val_t
     }
     _Obj_defineProperty(v7, obj, s, n, p->value);
   }
+}
+
+static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t obj = v7_array_get(v7, args, 0);
+  val_t descs = v7_array_get(v7, args, 1);
+  (void)this_obj;
+  o_define_props(v7, obj, descs);
   return obj;
 }
 
-V7_PRIVATE val_t
-    Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t res, proto = v7_array_get(v7, args, 0);
+  val_t descs = v7_array_get(v7, args, 1);
+  (void)this_obj;
+  if (!v7_is_null(proto) && !v7_is_object(proto)) {
+    throw_exception(v7, "TypeError",
+                    "Object prototype may only be an Object or null");
+  }
+  res = create_object(v7, proto);
+  if (v7_is_object(descs)) {
+    o_define_props(v7, res, descs);
+  }
+  return res;
+}
+
+static val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   struct v7_property *prop;
   val_t name = v7_array_get(v7, args, 0);
   if ((prop = _Obj_getOwnProperty(v7, this_obj, name)) == NULL) {
@@ -10936,13 +10943,13 @@ V7_PRIVATE val_t
       !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
 }
 
-V7_PRIVATE val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t name = v7_array_get(v7, args, 0);
   return v7_create_boolean(_Obj_getOwnProperty(v7, this_obj, name) != NULL);
 }
 
 #if 0
-V7_PRIVATE enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
+static enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
   char *p, buf[500];
   p = v7_stringify(cfa->this_obj, buf, sizeof(buf));
   v7_push_string(cfa->v7, p, strlen(p), 1);
@@ -10950,7 +10957,7 @@ V7_PRIVATE enum v7_err Obj_toString(struct v7_c_func_arg *cfa) {
   return V7_OK;
 }
 
-V7_PRIVATE enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
+static enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
   struct v7_prop *p;
   struct v7_val *result = v7_push_new_object(cfa->v7);
   v7_set_class(result, V7_CLASS_ARRAY);
