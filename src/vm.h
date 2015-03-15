@@ -70,7 +70,8 @@ struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
   struct v7_object *prototype;
-  uintptr_t debug;
+  uint8_t attributes;
+#define V7_OBJ_NOT_EXTENSIBLE 1  /* TODO(lsm): store this in LSB */
 };
 
 /*

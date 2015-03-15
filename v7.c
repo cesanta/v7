@@ -958,7 +958,8 @@ struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
   struct v7_object *prototype;
-  uintptr_t debug;
+  uint8_t attributes;
+#define V7_OBJ_NOT_EXTENSIBLE 1  /* TODO(lsm): store this in LSB */
 };
 
 /*
@@ -5860,6 +5861,13 @@ int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
   const char *n = v7_to_string(v7, &name, &len);
 
   if (!v7_is_object(obj)) {
+    return -1;
+  }
+
+  if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
+    if (v7->strict_mode) {
+      throw_exception(v7, "TypeError", "Object is not extensible");
+    }
     return -1;
   }
 
@@ -10992,6 +11000,26 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
+static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg = v7_array_get(v7, args, 0);
+  (void)this_obj;
+  if (!v7_is_object(arg)) {
+    throw_exception(v7, "TypeError", "Object expected");
+  }
+  v7_to_object(arg)->attributes |= V7_OBJ_NOT_EXTENSIBLE;
+  return arg;
+}
+
+static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg = v7_array_get(v7, args, 0);
+  (void)this_obj;
+  if (!v7_is_object(arg)) {
+    throw_exception(v7, "TypeError", "Object expected");
+  }
+  return v7_create_boolean(!(v7_to_object(arg)->attributes &
+                           V7_OBJ_NOT_EXTENSIBLE));
+}
+
 V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
@@ -11016,6 +11044,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, object, "create", Obj_create);
   set_cfunc_prop(v7, object, "keys", Obj_keys);
   set_cfunc_prop(v7, object, "getOwnPropertyNames", Obj_getOwnPropertyNames);
+  set_cfunc_obj_prop(v7, object, "preventExtensions", Obj_preventExtensions, 1);
+  set_cfunc_obj_prop(v7, object, "isExtensible", Obj_isExtensible, 1);
 
   set_cfunc_prop(v7, v7->object_prototype, "propertyIsEnumerable",
                  Obj_propertyIsEnumerable);
