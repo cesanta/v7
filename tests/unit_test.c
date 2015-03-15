@@ -1693,6 +1693,54 @@ static const char *test_strings(void) {
   return NULL;
 }
 
+static const char *test_interp_unescape(void) {
+  struct v7 *v7 = v7_create();
+  val_t v;
+
+  ASSERT(v7_exec(v7, &v, "'1234'") == V7_OK);
+  ASSERT((v & V7_TAG_MASK) == V7_TAG_STRING_I);
+  ASSERT(v7_exec(v7, &v, "'12345'") == V7_OK);
+  ASSERT((v & V7_TAG_MASK) == V7_TAG_STRING_5);
+  ASSERT(v7_exec(v7, &v, "'123456'") == V7_OK);
+  ASSERT((v & V7_TAG_MASK) == V7_TAG_STRING_O);
+
+  ASSERT(v7_exec(v7, &v, "'123'.length") == V7_OK);
+  ASSERT(check_num(v, 3));
+  ASSERT(v7_exec(v7, &v, "'123\\n'.length") == V7_OK);
+  ASSERT(check_num(v, 4));
+  ASSERT(v7_exec(v7, &v, "'123\\n\\n'.length") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "'123\\n\\n\\n'.length") == V7_OK);
+  ASSERT(check_num(v, 6));
+  ASSERT(v7_exec(v7, &v, "'123\\n\\n\\n\\n'.length") == V7_OK);
+  ASSERT(check_num(v, 7));
+  ASSERT(v7_exec(v7, &v, "'123\\n\\n\\n\\n\\n'.length") == V7_OK);
+  ASSERT(check_num(v, 8));
+
+  ASSERT(v7_exec(v7, &v, "'123\\\\\\\\'.length == '1234\\\\\\\\'.length") ==
+         V7_OK);
+  ASSERT(check_value(v7, v, "false"));
+
+  ASSERT(v7_exec(v7, &v, "'123'.length") == V7_OK);
+  ASSERT(check_num(v, 3));
+  ASSERT(v7_exec(v7, &v, "'123\\\\'.length") == V7_OK);
+  ASSERT(check_num(v, 4));
+  ASSERT(v7_exec(v7, &v, "'123\\\\\\\\'.length") == V7_OK);
+  ASSERT(check_num(v, 5));
+  ASSERT(v7_exec(v7, &v, "'123\\\\\\\\\\\\'.length") == V7_OK);
+  ASSERT(check_num(v, 6));
+  ASSERT(v7_exec(v7, &v, "'123\\\\\\\\\\\\\\\\'.length") == V7_OK);
+  ASSERT(check_num(v, 7));
+  ASSERT(v7_exec(v7, &v, "'123\\\\\\\\\\\\\\\\\\\\'.length") == V7_OK);
+  ASSERT(check_num(v, 8));
+
+  ASSERT(v7_exec(v7, &v, "'1234\\\\\\\\'") == V7_OK);
+  ASSERT((v & V7_TAG_MASK) == V7_TAG_STRING_O);
+
+  v7_destroy(v7);
+  return NULL;
+}
+
 static const char *test_to_json(void) {
   char buf[10], *p;
   struct v7 *v7 = v7_create();
@@ -1828,6 +1876,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);
   RUN_TEST(test_interpreter);
+  RUN_TEST(test_interp_unescape);
   RUN_TEST(test_strings);
   RUN_TEST(test_ecmac);
 #ifndef V7_DISABLE_GC
