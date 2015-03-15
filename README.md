@@ -32,12 +32,12 @@ Project Status:
 - Parser: completed
 - Abstract Syntax Tree: completed
 - VM: completed
-- Standard library: TODO
-- ECMA tests: correctly parsing, execution TODO
+- Standard library: partially implemented
+- ECMA tests: coverage 50.27% (as of Mar 15)
 
 Estimated beta release date: May 2015.
 
-## Example: call C/C++ function `foo()` from JavaScript
+## Example: call C/C++ function `foo()` in JavaScript
 
     // Javascript code. Invokes C function which calculates sum of two numbers
     var result = foo(1, 2);
@@ -45,11 +45,11 @@ Estimated beta release date: May 2015.
 <!-- -->
 
     // C code. foo_glue() is invoked when JavaScript makes foo() call
-    static v7_val_t foo_glue(struct v7 *v7, v7_val_t args) {
-      double arg0 = v7_to_double(v7_array_at(v7, args, 0));
-      double arg1 = v7_to_double(v7_array_at(v7, args, 1));
+    static v7_val_t foo_glue(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+      double arg0 = v7_to_double(v7_array_get(v7, args, 0));
+      double arg1 = v7_to_double(v7_array_get(v7, args, 1));
       double result = foo(arg0, arg1);        // Call foo()
-      return v7_double_to_value(v7, result);  // Push result to JavaScript
+      return v7_double_to_value(v7, result);  // Return result to JavaScript
     }
 
     ...
@@ -58,6 +58,30 @@ Estimated beta release date: May 2015.
     v7_set_attribute(v7, v7_get_global_object(v7), "foo", 3, 0,
                      v7_create_cfunction(v7, &exported_foo));
     v7_exec_file(v7, "my_js_code.js");
+
+## Example: call JavaScript function `foo(a, b)` in C/C++
+
+Assume we have a JavaScript function `foo()` that calculates sum of two numbers:
+
+    var foo = function(a, b) {
+      return a + b;
+    };
+
+Here is how we call that function from C/C++:
+
+    v7_val_t func, result, args;
+    
+    /* Lookup function */
+    func = v7_get(v7, v7_get_global_object(v7), "foo", 3);
+    
+    /* Prepare arguments: array with two numbers */
+    args = v7_create_array(v7);
+    v7_array_push(v7, args, v7_to_double(123.0));
+    v7_array_push(v7, args, v7_to_double(456.0));
+    
+    /* Call function. Pass undefined as `this` */
+    result = v7_apply(v7, func, v7_create_undefined(), args);
+    printf("Result: %lf\n", v7_to_double(result));
 
 ## Example: loading complex JSON configuration
 

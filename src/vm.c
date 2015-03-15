@@ -620,6 +620,13 @@ int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
     return -1;
   }
 
+  if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
+    if (v7->strict_mode) {
+      throw_exception(v7, "TypeError", "Object is not extensible");
+    }
+    return -1;
+  }
+
   prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
