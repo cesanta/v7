@@ -1100,12 +1100,12 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   struct slre_instruction *split, *jump;
   int err_code;
 
-  e.is_regex = 0;
+  e.is_regex = is_regex;
   e.prog = (struct slre_prog *)SLRE_MALLOC(sizeof(struct slre_prog));
   e.pstart = e.pend =
       (struct slre_node *)SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
   e.prog->flags = 0;
-  if (is_regex) e.prog->flags = SLRE_FLAG_RE;
+  e.prog->flags = is_regex ? SLRE_FLAG_RE : 0;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
     SLRE_FREE(e.pstart);
