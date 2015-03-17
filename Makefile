@@ -7,15 +7,11 @@ TOP_SOURCES=$(addprefix $(SRC_DIR)/, $(SOURCES))
 TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
 
 CLANG:=clang
-# installable with: `brew info clang-format`
-CLANG_FORMAT:=clang-format
+# installable with: `brew install llvm36 --with-clang`
+CLANG_FORMAT:=/usr/local/bin/clang-format-3.6
 
 ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
 	CLANG:=/usr/local/bin/clang-3.5
-	# clang-format-3.5 build from sources doesn't
-	# produce exactly the same thing as brew install clang-format
-	# which is built from the apple fork of 3.5svn
-	# LANG_FORMAT:=/usr/local/bin/clang-format-3.5
 endif
 
 include src/sources.mk

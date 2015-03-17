@@ -382,25 +382,25 @@ V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
  */
 V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   ast_off_t start = a->mbuf.len;
-  uint8_t t = (uint8_t)tag;
+  uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
 
-  mbuf_append(&a->mbuf, (char *)&t, sizeof(t));
+  mbuf_append(&a->mbuf, (char *) &t, sizeof(t));
   mbuf_append(&a->mbuf, NULL, sizeof(ast_skip_t) * d->num_skips);
   return start + 1;
 }
 
 V7_PRIVATE ast_off_t
-    ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
-  uint8_t t = (uint8_t)tag;
+ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
+  uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
 
   mbuf_insert(&a->mbuf, start, NULL, sizeof(ast_skip_t) * d->num_skips);
-  mbuf_insert(&a->mbuf, start, (char *)&t, sizeof(t));
+  mbuf_insert(&a->mbuf, start, (char *) &t, sizeof(t));
 
   if (d->num_skips) {
     ast_set_skip(a, start + 1, AST_END_SKIP);
@@ -428,7 +428,7 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  * Every tree reader can assume this and safely skip unknown nodes.
  */
 V7_PRIVATE ast_off_t
-    ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
+ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
   return ast_modify_skip(a, start, a->mbuf.len, skip);
 }
 
@@ -439,13 +439,13 @@ V7_PRIVATE ast_off_t
 V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
                                      ast_off_t where,
                                      enum ast_which_skip skip) {
-  uint8_t *p = (uint8_t *)a->mbuf.buf + start + skip * sizeof(ast_skip_t);
+  uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = where - start;
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
   /* assertion, to be optimizable out */
-  assert((int)skip < def->num_skips);
+  assert((int) skip < def->num_skips);
 
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
@@ -453,10 +453,10 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
 }
 
 V7_PRIVATE ast_off_t
-    ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
+ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   uint8_t *p;
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
-  p = (uint8_t *)a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
+  p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
@@ -476,7 +476,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   assert(*pos - 1 < a->mbuf.len);
   if (def->has_varint) {
     int llen;
-    size_t slen = decode_varint((unsigned char *)a->mbuf.buf + *pos, &llen);
+    size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
     *pos += llen;
     if (def->has_inlined) {
       *pos += slen;
@@ -504,7 +504,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
   assert(pos < a->mbuf.len);
-  *n = decode_varint((unsigned char *)a->mbuf.buf + pos, &llen);
+  *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
@@ -569,8 +569,8 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   fprintf(fp, "%s", def->name);
 
   if (def->has_inlined) {
-    slen = decode_varint((unsigned char *)a->mbuf.buf + *pos, &llen);
-    fprintf(fp, " %.*s\n", (int)slen, a->mbuf.buf + *pos + llen);
+    slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
+    fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + *pos + llen);
   } else {
     fprintf(fp, "\n");
   }
@@ -593,7 +593,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     while (*pos < end) {
       int s;
       for (s = ast_node_defs[tag].num_skips - 1; s > 0; s--) {
-        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip)s)) {
+        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip) s)) {
           comment_at_depth(fp, "%d ->", depth + 1, s);
           break;
         }

@@ -357,7 +357,7 @@ enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
 static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
                                 ast_off_t pos) {
 #define NONE \
-  { (enum v7_tok)0, (enum v7_tok)0, (enum ast_tag)0 }
+  { (enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0 }
 
   struct {
     int len, left_to_right;
@@ -383,7 +383,7 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
   enum v7_tok tok;
   enum ast_tag ast;
 
-  if (level == (int)ARRAY_SIZE(levels) - 1) {
+  if (level == (int) ARRAY_SIZE(levels) - 1) {
     PARSE(prefix);
   } else {
     TRY(parse_binary(v7, a, level + 1, a->mbuf.len));
@@ -855,7 +855,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
     snprintf(v7->error_msg, sizeof(v7->error_msg),
              "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
-             col, (int)(col + v7->tok_len), v7->tok - col);
+             col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
 }

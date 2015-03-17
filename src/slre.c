@@ -193,7 +193,7 @@ static int hex(int c) {
 }
 
 int nextesc(const char **p) {
-  const unsigned char *s = (unsigned char *)(*p)++;
+  const unsigned char *s = (unsigned char *) (*p)++;
   switch (*s) {
     case 0:
       return -SLRE_UNTERM_ESC_SEQ;
@@ -1101,9 +1101,9 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   int err_code;
 
   e.is_regex = is_regex;
-  e.prog = (struct slre_prog *)SLRE_MALLOC(sizeof(struct slre_prog));
+  e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
   e.pstart = e.pend =
-      (struct slre_node *)SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+      (struct slre_node *) SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
   e.prog->flags = is_regex ? SLRE_FLAG_RE : 0;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
@@ -1143,7 +1143,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   }
 
   e.prog->num_captures = e.num_captures;
-  e.prog->start = e.prog->end = (struct slre_instruction *)SLRE_MALLOC(
+  e.prog->start = e.prog->end = (struct slre_instruction *) SLRE_MALLOC(
       (re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
 
   split = re_newinst(e.prog, I_SPLIT);
@@ -1490,7 +1490,7 @@ static const char *err_code_to_str(int err_code) {
       [2 * !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -
        1];
 
-  return err_code >= 0 && err_code < (int)(sizeof(ar) / sizeof(ar[0]))
+  return err_code >= 0 && err_code < (int) (sizeof(ar) / sizeof(ar[0]))
              ? ar[err_code]
              : "invalid error code";
 }
@@ -1548,18 +1548,18 @@ static int process_line(struct slre_prog *pr, const char *flags,
   if (err_code == SLRE_OK) {
     if (n >= 0 && n < loot.num_captures && replace != NULL) {
       struct slre_cap *cap = &loot.caps[n];
-      printf("%.*s", (int)(cap->start - line), line);
+      printf("%.*s", (int) (cap->start - line), line);
       printf("%s", replace);
-      printf("%.*s", (int)((line + strlen(line)) - cap->end), cap->end);
+      printf("%.*s", (int) ((line + strlen(line)) - cap->end), cap->end);
     } else if (n >= 0 && n < loot.num_captures) {
-      printf("%.*s\n", (int)(cap->end - cap->start), cap->start);
+      printf("%.*s\n", (int) (cap->end - cap->start), cap->start);
     }
 
     if (verbose != NULL) {
       fprintf(stderr, "%s\n", "Captures:");
       for (i = 0; i < loot.num_captures; i++) {
         fprintf(stderr, "%d [%.*s]\n", i,
-                (int)(loot.caps[i].end - loot.caps[i].start),
+                (int) (loot.caps[i].end - loot.caps[i].start),
                 loot.caps[i].start);
       }
     }

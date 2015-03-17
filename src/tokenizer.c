@@ -41,9 +41,9 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
-  while (s != p && *s != '\0' && (isspace((unsigned char)*s) || *s == '/')) {
+  while (s != p && *s != '\0' && (isspace((unsigned char) *s) || *s == '/')) {
     p = s;
-    while (*s != '\0' && isspace((unsigned char)*s)) {
+    while (*s != '\0' && isspace((unsigned char) *s)) {
       if (*s == '\n') num_lines++;
       s++;
     }
@@ -66,7 +66,7 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
 
 /* Advance `s` pointer to the end of identifier  */
 static void ident(const char **s) {
-  const unsigned char *p = (unsigned char *)*s;
+  const unsigned char *p = (unsigned char *) *s;
   int n;
   Rune r;
 
@@ -78,7 +78,7 @@ static void ident(const char **s) {
                isxdigit(p[3]) && isxdigit(p[4]) && isxdigit(p[5])) {
       /* Unicode escape, \uXXXX . Could be used like "var \u0078 = 1;" */
       p += 6;
-    } else if ((n = chartorune(&r, (char *)p)) > 1 && isalpharune(r)) {
+    } else if ((n = chartorune(&r, (char *) p)) > 1 && isalpharune(r)) {
       /* Unicode alphanumeric character */
       p += n;
     } else {
@@ -86,7 +86,7 @@ static void ident(const char **s) {
     }
   }
 
-  *s = (char *)p;
+  *s = (char *) p;
 }
 
 static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
@@ -137,7 +137,7 @@ static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
 }
 
 static void parse_number(const char *s, const char **end, double *num) {
-  *num = strtod(s, (char **)end);
+  *num = strtod(s, (char **) end);
 }
 
 static enum v7_tok parse_str_literal(const char **p) {
@@ -466,11 +466,11 @@ int main(void) {
 
   skip_to_next_tok(&src);
   while ((tok = get_tok(&src, &num)) != TOK_END_OF_INPUT) {
-    printf("%d [%.*s]\n", tok, (int)(src - p), p);
+    printf("%d [%.*s]\n", tok, (int) (src - p), p);
     skip_to_next_tok(&src);
     p = src;
   }
-  printf("%d [%.*s]\n", tok, (int)(src - p), p);
+  printf("%d [%.*s]\n", tok, (int) (src - p), p);
 
   return 0;
 }

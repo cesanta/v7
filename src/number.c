@@ -22,7 +22,7 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d = i_as_num(v7, arg0);
-  int len, digits = d > 0 ? (int)d : 0;
+  int len, digits = d > 0 ? (int) d : 0;
   char fmt[10], buf[100];
 
   snprintf(fmt, sizeof(fmt), format, digits);
@@ -56,7 +56,7 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[512];
-  (void)args;
+  (void) args;
 
   if (this_obj == v7->number_prototype) {
     return v7_create_string(v7, "0", 1, 1);
@@ -76,7 +76,7 @@ static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   return v7_create_boolean(!v7_is_double(arg0) || arg0 == V7_TAG_NAN);
 }
 

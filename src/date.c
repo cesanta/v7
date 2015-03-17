@@ -92,7 +92,7 @@ static int ecma_IsLeapYear(int year) {
 }
 
 static int ecma_DayWithinYear(etime_t t, int year) {
-  return (int)(ecma_Day(t) - ecma_DayFromYear(year));
+  return (int) (ecma_Day(t) - ecma_DayFromYear(year));
 }
 
 static int *ecma_getfirstdays(int isleap) {
@@ -156,7 +156,7 @@ static int ecma_DaylightSavingTA(etime_t t) {
 }
 
 static int ecma_LocalTZA() {
-  return (int)-g_gmtoffms;
+  return (int) -g_gmtoffms;
 }
 
 static etimeint_t ecma_LocalTime(etime_t t) {
@@ -169,7 +169,7 @@ static etimeint_t ecma_UTC(etime_t t) {
 
 #define DEF_EXCTRACT_TIMEPART(funcname, c1, c2) \
   static int ecma_##funcname(etime_t t) {       \
-    int ret = (etimeint_t)floor(t / c1) % c2;   \
+    int ret = (etimeint_t) floor(t / c1) % c2;  \
     if (ret < 0) {                              \
       ret += c2;                                \
     }                                           \
@@ -448,7 +448,7 @@ static int d_timeFromString(etime_t *time, const char *str, size_t str_len) {
 
       if (tz != NO_TZ) {
         /* timezone specified, use it */
-        *time -= tz * msPerHour;
+        *time -= (tz * msPerHour);
       } else if (tz != 0) {
         /* assuming local timezone and moving back to UTC */
         *time = ecma_UTC(*time);
@@ -520,7 +520,7 @@ static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
 }
 
 static int d_tptodatestr(const struct timeparts *tp, char *buf, int addtz) {
-  (void)addtz;
+  (void) addtz;
 
   return sprintf(buf, "%s %s %02d %d", wday_name[tp->dayofweek],
                  mon_name[tp->month], tp->day, tp->year);
@@ -533,10 +533,10 @@ static int d_tptotimestr(const struct timeparts *tp, char *buf, int addtz) {
 
   if (addtz && g_gmtoffms != 0) {
     len = sprintf(buf + len, "%c%02d00 (%s)", g_gmtoffms > 0 ? '-' : '+',
-                  abs((int)g_gmtoffms / msPerHour), d_gettzname());
+                  abs((int) g_gmtoffms / msPerHour), d_gettzname());
   }
 
-  return (int)strlen(buf);
+  return (int) strlen(buf);
 }
 
 static int d_tptostr(const struct timeparts *tp, char *buf, int addtz) {
@@ -601,7 +601,7 @@ static etime_t d_changepartoftime(const etime_t *current,
 
   for (i = 0; i < ARRAY_SIZE(tp_arr); i++) {
     if (!isnan(a->args[i]) && !isinf(a->args[i])) {
-      *tp_arr[i] = (int)a->args[i];
+      *tp_arr[i] = (int) a->args[i];
     }
   }
 
@@ -741,7 +741,7 @@ static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[30];
   etime_t time;
   int len;
-  (void)args;
+  (void) args;
 
   time = v7_to_double(d_trytogetobjforstring(v7, this_obj));
   len = d_timetoISOstr(&time, buf, sizeof(buf));
@@ -833,7 +833,7 @@ static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)args;
+  (void) args;
   if (!v7_is_object(this_obj) ||
       (v7_is_object(this_obj) &&
        v7_to_object(this_obj)->prototype != v7_to_object(v7->date_prototype))) {
@@ -848,17 +848,17 @@ static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)args;
-  (void)v7;
-  (void)this_obj;
+  (void) args;
+  (void) v7;
+  (void) this_obj;
   return v7_create_number(g_gmtoffms / msPerMinute);
 }
 
 static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
-  (void)args;
-  (void)v7;
-  (void)this_obj;
+  (void) args;
+  (void) v7;
+  (void) this_obj;
 
   d_gettime(&ret_time);
 
@@ -867,7 +867,7 @@ static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
-  (void)args;
+  (void) args;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
     throw_exception(v7, "TypeError", "Date.parse() called on object");
@@ -888,7 +888,7 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
-  (void)args;
+  (void) args;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
     throw_exception(v7, "TypeError", "Date.now() called on object");

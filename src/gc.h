@@ -14,9 +14,9 @@
 #define V7_DISABLE_GC
 #endif
 
-#define MARK(p) (((struct gc_cell *)(p))->word |= 1)
-#define UNMARK(p) (((struct gc_cell *)(p))->word &= ~1)
-#define MARKED(p) (((struct gc_cell *)(p))->word & 1)
+#define MARK(p) (((struct gc_cell *) (p))->word |= 1)
+#define UNMARK(p) (((struct gc_cell *) (p))->word &= ~1)
+#define MARKED(p) (((struct gc_cell *) (p))->word & 1)
 
 struct gc_tmp_frame {
   struct v7 *v7;
