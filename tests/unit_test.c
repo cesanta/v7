@@ -165,7 +165,7 @@ static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
   double sum = 0;
   unsigned long i;
 
-  (void)this_obj;
+  (void) this_obj;
   for (i = 0; i < v7_array_length(v7, args); i++) {
     sum += v7_to_double(v7_array_get(v7, args, i));
   }
@@ -785,7 +785,7 @@ static const char *test_parser(void) {
   ASSERT(feof(fp));
   fclose(fp);
 
-  for (i = 0; i < (int)ARRAY_SIZE(cases); i++) {
+  for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
     char *current_want_ast = next_want_ast;
     ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
     want_ast_len = (size_t)(next_want_ast - current_want_ast - 1);
@@ -825,11 +825,11 @@ static const char *test_parser(void) {
 
 #else /* SAVE_AST */
 
-  (void)got_ast;
-  (void)next_want_ast;
-  (void)want_ast_len;
+  (void) got_ast;
+  (void) next_want_ast;
+  (void) want_ast_len;
   ASSERT((fp = fopen(want_ast_db, "w")) != NULL);
-  for (i = 0; i < (int)ARRAY_SIZE(cases); i++) {
+  for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
     ast_free(&a);
     ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
     ast_dump(fp, &a, 0);
@@ -839,7 +839,7 @@ static const char *test_parser(void) {
 
 #endif /* SAVE_AST */
 
-  for (i = 0; i < (int)ARRAY_SIZE(invalid); i++) {
+  for (i = 0; i < (int) ARRAY_SIZE(invalid); i++) {
     ast_free(&a);
 #if 0
     printf("-- Parsing \"%s\"\n", invalid[i]);
@@ -857,7 +857,7 @@ static char *read_file(const char *path, size_t *size) {
   char *data = NULL;
   if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
     *size = st.st_size;
-    data = (char *)malloc(*size + 1);
+    data = (char *) malloc(*size + 1);
     if (data != NULL) {
       fread(data, 1, *size, fp);
       data[*size] = '\0';
@@ -901,8 +901,8 @@ static const char *test_ecmac(void) {
     snprintf(tail_cmd, sizeof(tail_cmd),
              "%.*s (tail -c +%lu tests/ecmac.db|head -c %lu)", chap_len,
              chap_begin == NULL ? "" : chap_begin,
-             (unsigned long)(current_case - db + 1),
-             (unsigned long)(next_case - current_case));
+             (unsigned long) (current_case - db + 1),
+             (unsigned long) (next_case - current_case));
 
 #if 0
     printf("-- Parsing %d: \"%s\"\n", i, current_case);
@@ -959,7 +959,7 @@ static const char *test_ecmac(void) {
 #endif
   }
   printf("ECMA tests coverage: %.2lf%% (%d of %d)\n",
-         (double)passed / i * 100.0, passed, i);
+         (double) passed / i * 100.0, passed, i);
 
   free(db);
   fclose(r);
@@ -1639,10 +1639,10 @@ static const char *test_interpreter(void) {
   s = "\"\"";
   ASSERT(check_value(v7, v, s));
 
-  ASSERT(v7_exec_with(v7, &v, "a=this;a", v7_create_foreign((void *)"foo")) ==
+  ASSERT(v7_exec_with(v7, &v, "a=this;a", v7_create_foreign((void *) "foo")) ==
          V7_OK);
   ASSERT(v7_is_foreign(v));
-  ASSERT(strcmp((char *)v7_to_foreign(v), "foo") == 0);
+  ASSERT(strcmp((char *) v7_to_foreign(v), "foo") == 0);
 
   /* here temporarily because test_stdlib has memory violations */
   ASSERT(v7_exec(v7, &v, "a=[2,1];a.sort();a") == V7_OK);

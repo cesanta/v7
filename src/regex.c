@@ -16,7 +16,7 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     struct slre_prog *p = NULL;
     struct v7_regexp *rp;
 
-    (void)this_obj;
+    (void) this_obj;
     if (argnum > 1) {
       val_t fl = to_string(v7, v7_array_get(v7, args, 1));
       flags = v7_to_string(v7, &fl, &flags_len);
@@ -26,7 +26,7 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       throw_exception(v7, "TypeError", "Invalid regex");
       return v7_create_undefined();
     } else {
-      rp = (struct v7_regexp *)malloc(sizeof(*rp));
+      rp = (struct v7_regexp *) malloc(sizeof(*rp));
       rp->regexp_string = v7_create_string(v7, re, re_len, 1);
       rp->compiled_regexp = p;
       rp->lastIndex = 0;
@@ -41,7 +41,7 @@ static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_G);
@@ -51,7 +51,7 @@ static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_I);
@@ -61,7 +61,7 @@ static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_M);
@@ -72,7 +72,7 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
   const char *buf = 0;
   size_t len = 0;
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r))
     buf = v7_to_string(v7, &v7_to_regexp(r)->regexp_string, &len);
 
@@ -82,8 +82,8 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   long lastIndex = 0;
 
-  (void)v7;
-  (void)args;
+  (void) v7;
+  (void) args;
   if (v7_is_regexp(this_obj)) lastIndex = v7_to_regexp(this_obj)->lastIndex;
 
   return v7_create_number(lastIndex);
@@ -104,7 +104,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
     size_t len;
     struct slre_loot sub;
     struct slre_cap *ptok = sub.caps;
-    char *const str = (char *)v7_to_string(v7, &s, &len);
+    char *const str = (char *) v7_to_string(v7, &s, &len);
     const char *const end = str + len;
     const char *begin = str;
     struct v7_regexp *rp = v7_to_regexp(this_obj);

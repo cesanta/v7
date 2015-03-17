@@ -81,7 +81,7 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
     res = v7_to_double(v);
   } else if (v7_is_string(v)) {
     size_t n;
-    char *e, *s = (char *)v7_to_string(v7, &v, &n);
+    char *e, *s = (char *) v7_to_string(v7, &v, &n);
     if (n != 0) {
       res = strtod(s, &e);
       if (e - n != s) {
@@ -89,7 +89,7 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
       }
     }
   } else if (v7_is_boolean(v)) {
-    res = (double)v7_to_boolean(v);
+    res = (double) v7_to_boolean(v);
   } else if (v7_is_null(v)) {
     res = 0.0;
   } else {
@@ -112,16 +112,16 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
 
 static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
                            double b) {
-  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t)a;
-  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t)b;
+  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
+  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
 
   switch (tag) {
     case AST_LSHIFT:
-      return (int32_t)((uint32_t)ia << ((uint32_t)ib & 31));
+      return (int32_t)((uint32_t) ia << ((uint32_t) ib & 31));
     case AST_RSHIFT:
-      return ia >> ((uint32_t)ib & 31);
+      return ia >> ((uint32_t) ib & 31);
     case AST_URSHIFT:
-      return (uint32_t)ia >> ((uint32_t)ib & 31);
+      return (uint32_t) ia >> ((uint32_t) ib & 31);
     case AST_OR:
       return ia | ib;
     case AST_XOR:
@@ -151,7 +151,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       if (b == 0 || isnan(b) || isnan(a) || isinf(b) || isinf(a)) {
         return NAN;
       }
-      return (int)a % (int)b;
+      return (int) a % (int) b;
     case AST_MUL:
       return a * b;
     case AST_DIV:
@@ -346,7 +346,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       break;
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      res = v7_create_boolean(!(int64_t)v7_is_true(v7, v1));
+      res = v7_create_boolean(!(int64_t) v7_is_true(v7, v1));
       break;
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
@@ -354,7 +354,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if (isnan(d1) || isinf(d1)) {
         res = v7_create_number(-1);
       } else {
-        res = v7_create_number(~(int64_t)d1);
+        res = v7_create_number(~(int64_t) d1);
       }
       break;
     case AST_ASSIGN:
@@ -591,7 +591,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       if ((p = v7_get_property(v7, scope, name, name_len)) == NULL) {
         throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
-                        (int)name_len, name);
+                        (int) name_len, name);
       }
       res = v7_property_value(v7, scope, p);
       break;
@@ -1296,7 +1296,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
      * not matching the current label.
      */
     cont:
-      if ((j = (enum jmp_type)sigsetjmp(v7->jmp_buf, 0)) == 0) {
+      if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmt(v7, a, pos, scope, brk);
       } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
                  name_len == v7->label_len &&
@@ -1327,7 +1327,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
       finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
       ast_move_to_children(a, pos);
-      if ((j = (enum jmp_type)sigsetjmp(v7->jmp_buf, 0)) == 0) {
+      if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
         val_t catch_scope;
@@ -1489,7 +1489,7 @@ cleanup:
 
 enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
   /* TODO(mkm): use GC pool */
-  struct ast *a = (struct ast *)malloc(sizeof(struct ast));
+  struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
@@ -1503,7 +1503,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
   memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
 
   ast_init(a, 0);
-  mbuf_append(&v7->allocated_asts, (char *)&a, sizeof(a));
+  mbuf_append(&v7->allocated_asts, (char *) &a, sizeof(a));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     v7->tmp_stack.len = saved_tmp_stack_pos;
     r = v7->thrown_error;
@@ -1552,13 +1552,13 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
              strerror(errno));
     *res = create_exception(v7, "Error", v7->error_msg);
     fclose(fp);
-  } else if ((p = (char *)calloc(1, (size_t)file_size + 1)) == NULL) {
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes",
              file_size + 1);
     fclose(fp);
   } else {
     rewind(fp);
-    fread(p, 1, (size_t)file_size, fp);
+    fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
     err = v7_exec(v7, res, p);
     free(p);

@@ -11,8 +11,8 @@ struct a_sort_data {
 };
 
 static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)v7;
-  (void)this_obj;
+  (void) v7;
+  (void) this_obj;
   return args;
 }
 
@@ -28,7 +28,7 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   long len = 0;
-  (void)args;
+  (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
   }
@@ -75,16 +75,16 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static int a_cmp(void *user_data, const void *pa, const void *pb) {
-  struct a_sort_data *sort_data = (struct a_sort_data *)user_data;
+  struct a_sort_data *sort_data = (struct a_sort_data *) user_data;
   struct v7 *v7 = sort_data->v7;
-  val_t a = *(val_t *)pa, b = *(val_t *)pb, func = sort_data->sort_func;
+  val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
 
   if (v7_is_function(func)) {
     val_t res, args = v7_create_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
-    return (int)-v7_to_double(res);
+    return (int) -v7_to_double(res);
   } else {
     char sa[100], sb[100];
     to_str(v7, a, sa, sizeof(sa), 0);
@@ -127,7 +127,7 @@ static void a_qsort(val_t *a, int l, int r, void *user_data) {
 static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
                     int (*sorting_func)(void *, const void *, const void *)) {
   int i = 0, len = v7_array_length(v7, obj);
-  val_t *arr = (val_t *)malloc(len * sizeof(arr[0]));
+  val_t *arr = (val_t *) malloc(len * sizeof(arr[0]));
   val_t arg0 = v7_array_get(v7, args, 0);
   struct v7_property *p;
 
@@ -196,8 +196,8 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
       /* Append next item from an array */
       p = buf;
       n = to_str(v7, v7_array_get(v7, this_obj, i), buf, sizeof(buf), 0);
-      if (n > (long)sizeof(buf)) {
-        p = (char *)malloc(n + 1);
+      if (n > (long) sizeof(buf)) {
+        p = (char *) malloc(n + 1);
         to_str(v7, v7_array_get(v7, this_obj, i), p, n, 0);
       }
       mbuf_append(&m, p, n);

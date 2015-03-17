@@ -35,7 +35,7 @@ static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[512];
-  (void)args;
+  (void) args;
 
   if (this_obj == v7->boolean_prototype) {
     return v7_create_string(v7, "false", 5, 1);
