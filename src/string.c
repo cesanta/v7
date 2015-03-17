@@ -527,7 +527,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   s_end = s + s_len;
 
   if (num_args == 0 || s_len == 0) {
-    v7_array_push(v7, res, v7_create_string(v7, s, s_len, 1));
+    v7_array_push(v7, res, this_obj);
   } else {
     val_t ro = i_value_of(v7, v7_array_get(v7, args, 0));
     long len, elem = 0, limit = arg_long(v7, args, 1, LONG_MAX);
@@ -543,8 +543,9 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
         throw_exception(v7, "TypeError", "Invalid String");
         return v7_create_undefined();
       }
-    } else
+    } else {
       prog = v7_to_regexp(ro)->compiled_regexp;
+    }
 
     for (; elem < limit && shift < s_len; elem++) {
       val_t tmp_s;
@@ -560,16 +561,19 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       }
       v7_array_push(v7, res, tmp_s);
 
-      for (i = 1; i < loot.num_captures; i++)
+      for (i = 1; i < loot.num_captures; i++) {
         v7_array_push(
             v7, res,
             (loot.caps[i].start != NULL)
                 ? v7_create_string(v7, loot.caps[i].start,
                                    loot.caps[i].end - loot.caps[i].start, 1)
                 : v7_create_undefined());
+      }
     }
     len = s_len - shift;
-    v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));
+    if (len > 0 && elem < limit) {
+      v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));
+    }
   }
 
   return res;

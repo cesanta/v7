@@ -28,6 +28,7 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#include <pthread.h>
 #endif
 
 #include "../v7.h"
@@ -260,7 +261,6 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "hi there"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, v, "hi there"));
-#if 0
   ASSERT(v7_exec(v7, &v, "'dew dee'.match(/\\d+/)") == V7_OK);
   ASSERT(v == V7_NULL);
   ASSERT(v7_exec(v7, &v, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);
@@ -301,12 +301,12 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 2.0));
   ASSERT(v7_exec(v7, &v, "'aa bb cc'.substr(0, 4).split(' ')[1]") == V7_OK);
   ASSERT(check_str(v7, v, "b"));
-  ASSERT(v7_exec(v7, &v, "{z: '123456'}.z.substr(0, 3).split('').length") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "({z: '123456'}).z"
+         ".toString().substr(0, 3).split('').length") == V7_OK);
   ASSERT(check_num(v, 3.0));
   ASSERT(v7_exec(v7, &v, "String('hi')") == V7_OK);
   ASSERT(check_str(v7, v, "hi"));
   ASSERT(v7_exec(v7, &v, "new String('blah')") == V7_OK);
-#endif
 
   /* Date() tests interact with external object (local date & time), so
       if host have strange date/time setting it won't be work */
@@ -877,9 +877,6 @@ static const char *test_ecmac(void) {
   FILE *r;
   struct v7 *v7;
   val_t res;
-#ifdef ECMA_FORK
-  pid_t child;
-#endif
 
   ASSERT((r = fopen(".ecma_report.txt", "wb")) != NULL);
 
@@ -910,15 +907,9 @@ static const char *test_ecmac(void) {
     v7 = v7_create();
     ASSERT(parse(v7, &a, current_case, 1) == V7_OK);
     ast_free(&a);
-#ifdef ECMA_FORK
-    if ((child = fork()) == 0) {
-#endif
       if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
           i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
-          i == 3400 /* slow Number */
-#ifndef ECMA_SLOW
-          || i == 3348 || i == 3349 || i == 3401
-#endif
+          i == 3400 || i == 3348 || i == 3349 || i == 3401
           ) {
         fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
         continue;
@@ -933,30 +924,12 @@ static const char *test_ecmac(void) {
           if (err_str != buf) {
             free(err_str);
           }
-#ifdef ECMA_FORK
-          exit(1);
-#endif
         } else {
           passed++;
           fprintf(r, "%i\tPASS %s\n", i, tail_cmd);
-#ifdef ECMA_FORK
-          exit(0);
-#endif
         }
       }
-#ifdef ECMA_FORK
-    } else {
-      int status;
-      waitpid(child, &status, WNOHANG);
-      if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-        passed++;
-      }
-    }
-#endif
     v7_destroy(v7);
-#if 0
-    ast_dump(stdout, &a, 0);
-#endif
   }
   printf("ECMA tests coverage: %.2lf%% (%d of %d)\n",
          (double)passed / i * 100.0, passed, i);
