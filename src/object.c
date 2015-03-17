@@ -7,7 +7,7 @@
 
 static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError",
                     "Object.getPrototypeOf called on non-object");
@@ -18,7 +18,7 @@ static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t proto = v7_array_get(v7, args, 1);
-  (void)this_obj;
+  (void) this_obj;
   return v7_create_boolean(is_prototype_of(v7, obj, proto));
 }
 
@@ -57,13 +57,13 @@ static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
 }
 
 static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)this_obj;
+  (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
 static val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
                                      val_t args) {
-  (void)this_obj;
+  (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
@@ -73,7 +73,7 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
   val_t desc;
-  (void)this_obj;
+  (void) this_obj;
   if ((prop = _Obj_getOwnProperty(v7, obj, name)) == NULL) {
     return V7_UNDEFINED;
   }
@@ -117,7 +117,7 @@ static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t desc = v7_array_get(v7, args, 2);
   char name_buf[512];
   int name_len;
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(obj)) {
     throw_exception(v7, "TypeError", "object expected");
   }
@@ -143,7 +143,7 @@ static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
 static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
-  (void)this_obj;
+  (void) this_obj;
   o_define_props(v7, obj, descs);
   return obj;
 }
@@ -151,7 +151,7 @@ static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res, proto = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
     throw_exception(v7, "TypeError",
                     "Object prototype may only be an Object or null");
@@ -203,7 +203,7 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
-  (void)args;
+  (void) args;
   p = v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
   if (p != NULL) {
     res = p->value;
@@ -215,7 +215,7 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
-  (void)args;
+  (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     type = "Array";
   }
@@ -225,7 +225,7 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError", "Object expected");
   }
@@ -235,7 +235,7 @@ static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError", "Object expected");
   }

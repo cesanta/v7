@@ -31,7 +31,7 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   int i, num_args = v7_array_length(v7, args);
   val_t res = v7_create_string(v7, "", 0, 1); /* Empty string */
 
-  (void)this_obj;
+  (void) this_obj;
   for (i = 0; i < num_args; i++) {
     char buf[10];
     val_t arg = v7_array_get(v7, args, i);
@@ -52,11 +52,11 @@ static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   double at = v7_to_double(arg);
 
-  n = utfnlen((char *)p, n);
+  n = utfnlen((char *) p, n);
   if (v7_is_double(arg) && at >= 0 && at < n) {
     Rune r = 0;
-    p = utfnshift((char *)p, at);
-    chartorune(&r, (char *)p);
+    p = utfnshift((char *) p, at);
+    chartorune(&r, (char *) p);
     return r;
   }
   return NAN;
@@ -72,7 +72,7 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   int len = 0;
 
   if (!isnan(code)) {
-    Rune r = (Rune)code;
+    Rune r = (Rune) code;
     len = runetochar(buf, &r);
   }
   return v7_create_string(v7, buf, len, 1);
@@ -105,7 +105,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
 
     if (n2 <= n1) {
       end = p1 + n1;
-      n1 = utfnlen((char *)p1, n1);
+      n1 = utfnlen((char *) p1, n1);
       if (v7_array_length(v7, args) > 1) {
         double d = i_as_num(v7, v7_array_get(v7, args, 1));
         if (isnan(d) || d < 0) {
@@ -118,15 +118,15 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
       if (fromIndex > 0) {
         if (fromIndex >= n1) return v7_create_number(-1);
         if (last)
-          end = utfnshift((char *)p1, fromIndex + 1);
+          end = utfnshift((char *) p1, fromIndex + 1);
         else
-          p1 = utfnshift((char *)p1, fromIndex);
+          p1 = utfnshift((char *) p1, fromIndex);
       }
       if (!last || fromIndex != 0) {
         if (0 == n2 || end - p1 == 0)
           res = 0;
         else {
-          for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *)p1, 1))
+          for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *) p1, 1))
             if (memcmp(p1, p2, n2) == 0) {
               res = i;
               if (!last) break;
@@ -165,7 +165,7 @@ static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)args;
+  (void) args;
 
   if (this_obj == v7->string_prototype) {
     return v7_create_string(v7, "false", 5, 1);
@@ -235,7 +235,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (s_len != 0 && v7_array_length(v7, args) > 1) {
     const char *const str_end = s + s_len;
-    char *p = (char *)s;
+    char *p = (char *) s;
     uint32_t out_sub_num = 0;
     val_t ro = i_value_of(v7, v7_array_get(v7, args, 0)),
           str_func = i_value_of(v7, v7_array_get(v7, args, 1));
@@ -280,8 +280,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
           v7_array_push(v7, arr, v7_create_string(
                                      v7, loot.caps[i].start,
                                      loot.caps[i].end - loot.caps[i].start, 1));
-        v7_array_push(v7, arr, v7_create_number(
-                                   utfnlen((char *)s, loot.caps[0].start - s)));
+        v7_array_push(v7, arr, v7_create_number(utfnlen(
+                                   (char *) s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
@@ -303,7 +303,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
           out_sub_num++;
         }
       }
-      p = (char *)loot.caps[0].end;
+      p = (char *) loot.caps[0].end;
     } while (flag_g && p < str_end);
     if (p < str_end) {
       ptok->start = p;
@@ -356,7 +356,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
 
     if (!slre_exec(prog, 0, s, s + s_len, &sub))
       utf_shift =
-          utfnlen((char *)s, sub.caps[0].start - s); /* calc shift for UTF-8 */
+          utfnlen((char *) s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else
     utf_shift = 0;
   return v7_create_number(utf_shift);
@@ -369,26 +369,26 @@ static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   const char *begin = v7_to_string(v7, &so, &len), *end;
   int num_args = v7_array_length(v7, args);
 
-  to = len = utfnlen((char *)begin, len);
+  to = len = utfnlen((char *) begin, len);
   if (num_args > 0) {
     from = arg_long(v7, args, 0, 0);
     if (from < 0) {
       from += len;
       if (from < 0) from = 0;
-    } else if ((size_t)from > len)
+    } else if ((size_t) from > len)
       from = len;
     if (num_args > 1) {
       to = arg_long(v7, args, 1, 0);
       if (to < 0) {
         to += len;
         if (to < 0) to = 0;
-      } else if ((size_t)to > len)
+      } else if ((size_t) to > len)
         to = len;
     }
   }
   if (from > to) to = from;
-  end = utfnshift((char *)begin, to);
-  begin = utfnshift((char *)begin, from);
+  end = utfnshift((char *) begin, to);
+  begin = utfnshift((char *) begin, from);
   return v7_create_string(v7, begin, end - begin, 1);
 }
 
@@ -400,13 +400,13 @@ static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
   val_t res = v7_create_string(v7, p, len, 1);
   Rune r;
 
-  (void)args;
+  (void) args;
 
   p = v7_to_string(v7, &res, &len);
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
     r = func(r);
-    runetochar((char *)p + i, &r);
+    runetochar((char *) p + i, &r);
   }
 
   return res;
@@ -430,7 +430,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
 
-  (void)args;
+  (void) args;
   end = len;
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
@@ -447,10 +447,10 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   size_t len = 0;
   val_t s = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_string(s)) {
     const char *p = v7_to_string(v7, &s, &len);
-    len = utfnlen((char *)p, len);
+    len = utfnlen((char *) p, len);
   }
 
   return v7_create_number(len);
@@ -468,7 +468,7 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
     } else if (d > LONG_MAX) {
       return LONG_MAX;
     }
-    return (long)d;
+    return (long) d;
   }
   if (v7_is_null(arg_n)) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
@@ -481,16 +481,16 @@ static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   const char *p;
   s = to_string(v7, s);
   p = v7_to_string(v7, &s, &n);
-  n = utfnlen((char *)p, n);
+  n = utfnlen((char *) p, n);
 
-  if (start < (long)n && len > 0) {
-    if (start < 0) start = (long)n + start;
+  if (start < (long) n && len > 0) {
+    if (start < 0) start = (long) n + start;
     if (start < 0) start = 0;
 
-    if (start > (long)n) start = n;
+    if (start > (long) n) start = n;
     if (len < 0) len = 0;
-    if (len > (long)n - start) len = n - start;
-    p = utfnshift((char *)p, start);
+    if (len > (long) n - start) len = n - start;
+    p = utfnshift((char *) p, start);
   } else
     len = 0;
 

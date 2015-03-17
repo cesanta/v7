@@ -540,7 +540,7 @@ V7_PRIVATE ast_off_t ast_insert_node(struct ast *, ast_off_t, enum ast_tag);
 V7_PRIVATE ast_off_t ast_set_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE ast_off_t ast_get_skip(struct ast *, ast_off_t, enum ast_which_skip);
 V7_PRIVATE ast_off_t
-    ast_modify_skip(struct ast *, ast_off_t, ast_off_t, enum ast_which_skip);
+ast_modify_skip(struct ast *, ast_off_t, ast_off_t, enum ast_which_skip);
 V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *, ast_off_t *);
 V7_PRIVATE void ast_move_to_children(struct ast *, ast_off_t *);
 
@@ -901,21 +901,21 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
 typedef uint64_t val_t;
 #endif
 
-#define V7_TAG_OBJECT ((uint64_t)0xFFFF << 48)
-#define V7_TAG_FOREIGN ((uint64_t)0xFFFE << 48)
-#define V7_TAG_UNDEFINED ((uint64_t)0xFFFD << 48)
-#define V7_TAG_BOOLEAN ((uint64_t)0xFFFC << 48)
-#define V7_TAG_NAN ((uint64_t)0xFFFB << 48)
-#define V7_TAG_STRING_I ((uint64_t)0xFFFA << 48)  /* Inlined string len < 5 */
-#define V7_TAG_STRING_5 ((uint64_t)0xFFF9 << 48)  /* Inlined string len 5 */
-#define V7_TAG_STRING_O ((uint64_t)0xFFF8 << 48)  /* Owned string */
-#define V7_TAG_STRING_F ((uint64_t)0xFFF7 << 48)  /* Foreign string */
-#define V7_TAG_STRING_C ((uint64_t)0xFFF6 << 48)  /* String chunk */
-#define V7_TAG_FUNCTION ((uint64_t)0xFFF5 << 48)  /* JavaScript function */
-#define V7_TAG_CFUNCTION ((uint64_t)0xFFF4 << 48) /* C function */
-#define V7_TAG_GETSETTER ((uint64_t)0xFFF3 << 48) /* getter+setter */
-#define V7_TAG_REGEXP ((uint64_t)0xFFF2 << 48)    /* Regex */
-#define V7_TAG_MASK ((uint64_t)0xFFFF << 48)
+#define V7_TAG_OBJECT ((uint64_t) 0xFFFF << 48)
+#define V7_TAG_FOREIGN ((uint64_t) 0xFFFE << 48)
+#define V7_TAG_UNDEFINED ((uint64_t) 0xFFFD << 48)
+#define V7_TAG_BOOLEAN ((uint64_t) 0xFFFC << 48)
+#define V7_TAG_NAN ((uint64_t) 0xFFFB << 48)
+#define V7_TAG_STRING_I ((uint64_t) 0xFFFA << 48)  /* Inlined string len < 5 */
+#define V7_TAG_STRING_5 ((uint64_t) 0xFFF9 << 48)  /* Inlined string len 5 */
+#define V7_TAG_STRING_O ((uint64_t) 0xFFF8 << 48)  /* Owned string */
+#define V7_TAG_STRING_F ((uint64_t) 0xFFF7 << 48)  /* Foreign string */
+#define V7_TAG_STRING_C ((uint64_t) 0xFFF6 << 48)  /* String chunk */
+#define V7_TAG_FUNCTION ((uint64_t) 0xFFF5 << 48)  /* JavaScript function */
+#define V7_TAG_CFUNCTION ((uint64_t) 0xFFF4 << 48) /* C function */
+#define V7_TAG_GETSETTER ((uint64_t) 0xFFF3 << 48) /* getter+setter */
+#define V7_TAG_REGEXP ((uint64_t) 0xFFF2 << 48)    /* Regex */
+#define V7_TAG_MASK ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
 #define V7_UNDEFINED V7_TAG_UNDEFINED
@@ -1035,9 +1035,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
 V7_PRIVATE v7_val_t
-    v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int);
+v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int);
 V7_PRIVATE v7_val_t
-    v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t, int);
+v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t, int);
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
                                   v7_cfunction_t f, int num_args);
@@ -1046,7 +1046,7 @@ V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
 V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 /* TODO(lsm): NaN payload location depends on endianness, make crossplatform */
-#define GET_VAL_NAN_PAYLOAD(v) ((char *)&(v))
+#define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
 V7_PRIVATE val_t create_object(struct v7 *, val_t);
 V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
@@ -1117,9 +1117,9 @@ V7_PRIVATE double i_as_num(struct v7 *, val_t);
 #define V7_DISABLE_GC
 #endif
 
-#define MARK(p) (((struct gc_cell *)(p))->word |= 1)
-#define UNMARK(p) (((struct gc_cell *)(p))->word &= ~1)
-#define MARKED(p) (((struct gc_cell *)(p))->word & 1)
+#define MARK(p) (((struct gc_cell *) (p))->word |= 1)
+#define UNMARK(p) (((struct gc_cell *) (p))->word &= ~1)
+#define MARKED(p) (((struct gc_cell *) (p))->word & 1)
 
 struct gc_tmp_frame {
   struct v7 *v7;
@@ -1293,7 +1293,7 @@ V7_PRIVATE void mbuf_free(struct mbuf *mbuf) {
 V7_PRIVATE void mbuf_resize(struct mbuf *a, size_t new_size) {
   char *p;
   if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
-      (p = (char *)realloc(a->buf, new_size)) != NULL) {
+      (p = (char *) realloc(a->buf, new_size)) != NULL) {
     a->size = new_size;
     a->buf = p;
   }
@@ -1321,7 +1321,7 @@ V7_PRIVATE size_t mbuf_append(struct mbuf *a, const char *buf, size_t len) {
  * It returns the amount of bytes inserted.
  */
 V7_PRIVATE size_t
-    mbuf_insert(struct mbuf *a, size_t off, const char *buf, size_t len) {
+mbuf_insert(struct mbuf *a, size_t off, const char *buf, size_t len) {
   char *p = NULL;
 
   assert(a != NULL);
@@ -1329,7 +1329,7 @@ V7_PRIVATE size_t
   assert(off <= a->len);
 
   /* check overflow */
-  if (~(size_t)0 - (size_t)a->buf < len) return 0;
+  if (~(size_t) 0 - (size_t) a->buf < len) return 0;
 
   if (a->len + len <= a->size) {
     memmove(a->buf + off + len, a->buf + off, a->len - off);
@@ -1337,7 +1337,7 @@ V7_PRIVATE size_t
       memcpy(a->buf + off, buf, len);
     }
     a->len += len;
-  } else if ((p = (char *)realloc(
+  } else if ((p = (char *) realloc(
                   a->buf, (a->len + len) * MBUF_SIZE_MULTIPLIER)) != NULL) {
     a->buf = p;
     memmove(a->buf + off + len, a->buf + off, a->len - off);
@@ -2937,7 +2937,7 @@ V7_PRIVATE int calc_llen(size_t len) {
     n++;
   } while (len >>= 7);
 
-  assert(n <= (int)sizeof(len));
+  assert(n <= (int) sizeof(len));
 
   return n;
 }
@@ -2994,9 +2994,9 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
-  while (s != p && *s != '\0' && (isspace((unsigned char)*s) || *s == '/')) {
+  while (s != p && *s != '\0' && (isspace((unsigned char) *s) || *s == '/')) {
     p = s;
-    while (*s != '\0' && isspace((unsigned char)*s)) {
+    while (*s != '\0' && isspace((unsigned char) *s)) {
       if (*s == '\n') num_lines++;
       s++;
     }
@@ -3019,7 +3019,7 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
 
 /* Advance `s` pointer to the end of identifier  */
 static void ident(const char **s) {
-  const unsigned char *p = (unsigned char *)*s;
+  const unsigned char *p = (unsigned char *) *s;
   int n;
   Rune r;
 
@@ -3031,7 +3031,7 @@ static void ident(const char **s) {
                isxdigit(p[3]) && isxdigit(p[4]) && isxdigit(p[5])) {
       /* Unicode escape, \uXXXX . Could be used like "var \u0078 = 1;" */
       p += 6;
-    } else if ((n = chartorune(&r, (char *)p)) > 1 && isalpharune(r)) {
+    } else if ((n = chartorune(&r, (char *) p)) > 1 && isalpharune(r)) {
       /* Unicode alphanumeric character */
       p += n;
     } else {
@@ -3039,7 +3039,7 @@ static void ident(const char **s) {
     }
   }
 
-  *s = (char *)p;
+  *s = (char *) p;
 }
 
 static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
@@ -3090,7 +3090,7 @@ static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
 }
 
 static void parse_number(const char *s, const char **end, double *num) {
-  *num = strtod(s, (char **)end);
+  *num = strtod(s, (char **) end);
 }
 
 static enum v7_tok parse_str_literal(const char **p) {
@@ -3419,11 +3419,11 @@ int main(void) {
 
   skip_to_next_tok(&src);
   while ((tok = get_tok(&src, &num)) != TOK_END_OF_INPUT) {
-    printf("%d [%.*s]\n", tok, (int)(src - p), p);
+    printf("%d [%.*s]\n", tok, (int) (src - p), p);
     skip_to_next_tok(&src);
     p = src;
   }
-  printf("%d [%.*s]\n", tok, (int)(src - p), p);
+  printf("%d [%.*s]\n", tok, (int) (src - p), p);
 
   return 0;
 }
@@ -3440,8 +3440,8 @@ struct a_sort_data {
 };
 
 static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)v7;
-  (void)this_obj;
+  (void) v7;
+  (void) this_obj;
   return args;
 }
 
@@ -3457,7 +3457,7 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   long len = 0;
-  (void)args;
+  (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     len = v7_array_length(v7, this_obj);
   }
@@ -3504,16 +3504,16 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static int a_cmp(void *user_data, const void *pa, const void *pb) {
-  struct a_sort_data *sort_data = (struct a_sort_data *)user_data;
+  struct a_sort_data *sort_data = (struct a_sort_data *) user_data;
   struct v7 *v7 = sort_data->v7;
-  val_t a = *(val_t *)pa, b = *(val_t *)pb, func = sort_data->sort_func;
+  val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
 
   if (v7_is_function(func)) {
     val_t res, args = v7_create_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
-    return (int)-v7_to_double(res);
+    return (int) -v7_to_double(res);
   } else {
     char sa[100], sb[100];
     to_str(v7, a, sa, sizeof(sa), 0);
@@ -3556,7 +3556,7 @@ static void a_qsort(val_t *a, int l, int r, void *user_data) {
 static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
                     int (*sorting_func)(void *, const void *, const void *)) {
   int i = 0, len = v7_array_length(v7, obj);
-  val_t *arr = (val_t *)malloc(len * sizeof(arr[0]));
+  val_t *arr = (val_t *) malloc(len * sizeof(arr[0]));
   val_t arg0 = v7_array_get(v7, args, 0);
   struct v7_property *p;
 
@@ -3625,8 +3625,8 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
       /* Append next item from an array */
       p = buf;
       n = to_str(v7, v7_array_get(v7, this_obj, i), buf, sizeof(buf), 0);
-      if (n > (long)sizeof(buf)) {
-        p = (char *)malloc(n + 1);
+      if (n > (long) sizeof(buf)) {
+        p = (char *) malloc(n + 1);
         to_str(v7, v7_array_get(v7, this_obj, i), p, n, 0);
       }
       mbuf_append(&m, p, n);
@@ -3874,7 +3874,7 @@ static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[512];
-  (void)args;
+  (void) args;
 
   if (this_obj == v7->boolean_prototype) {
     return v7_create_string(v7, "false", 5, 1);
@@ -3948,13 +3948,13 @@ V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
   static int srand_called = 0;
 
   if (!srand_called) {
-    srand((unsigned)(unsigned long)v7);
+    srand((unsigned) (unsigned long) v7);
     srand_called++;
   }
 
-  (void)this_obj;
-  (void)args;
-  return v7_create_number((double)rand() / RAND_MAX);
+  (void) this_obj;
+  (void) args;
+  return v7_create_number((double) rand() / RAND_MAX);
 }
 
 static val_t min_max(struct v7 *v7, val_t args, int is_min) {
@@ -3972,12 +3972,12 @@ static val_t min_max(struct v7 *v7, val_t args, int is_min) {
 }
 
 V7_PRIVATE val_t Math_min(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)this_obj;
+  (void) this_obj;
   return min_max(v7, args, 1);
 }
 
 V7_PRIVATE val_t Math_max(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)this_obj;
+  (void) this_obj;
   return min_max(v7, args, 0);
 }
 
@@ -4047,7 +4047,7 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   int i, num_args = v7_array_length(v7, args);
   val_t res = v7_create_string(v7, "", 0, 1); /* Empty string */
 
-  (void)this_obj;
+  (void) this_obj;
   for (i = 0; i < num_args; i++) {
     char buf[10];
     val_t arg = v7_array_get(v7, args, i);
@@ -4068,11 +4068,11 @@ static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   double at = v7_to_double(arg);
 
-  n = utfnlen((char *)p, n);
+  n = utfnlen((char *) p, n);
   if (v7_is_double(arg) && at >= 0 && at < n) {
     Rune r = 0;
-    p = utfnshift((char *)p, at);
-    chartorune(&r, (char *)p);
+    p = utfnshift((char *) p, at);
+    chartorune(&r, (char *) p);
     return r;
   }
   return NAN;
@@ -4088,7 +4088,7 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   int len = 0;
 
   if (!isnan(code)) {
-    Rune r = (Rune)code;
+    Rune r = (Rune) code;
     len = runetochar(buf, &r);
   }
   return v7_create_string(v7, buf, len, 1);
@@ -4121,7 +4121,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
 
     if (n2 <= n1) {
       end = p1 + n1;
-      n1 = utfnlen((char *)p1, n1);
+      n1 = utfnlen((char *) p1, n1);
       if (v7_array_length(v7, args) > 1) {
         double d = i_as_num(v7, v7_array_get(v7, args, 1));
         if (isnan(d) || d < 0) {
@@ -4134,15 +4134,15 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
       if (fromIndex > 0) {
         if (fromIndex >= n1) return v7_create_number(-1);
         if (last)
-          end = utfnshift((char *)p1, fromIndex + 1);
+          end = utfnshift((char *) p1, fromIndex + 1);
         else
-          p1 = utfnshift((char *)p1, fromIndex);
+          p1 = utfnshift((char *) p1, fromIndex);
       }
       if (!last || fromIndex != 0) {
         if (0 == n2 || end - p1 == 0)
           res = 0;
         else {
-          for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *)p1, 1))
+          for (i = 0; p1 <= (end - n2); i++, p1 = utfnshift((char *) p1, 1))
             if (memcmp(p1, p2, n2) == 0) {
               res = i;
               if (!last) break;
@@ -4181,7 +4181,7 @@ static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)args;
+  (void) args;
 
   if (this_obj == v7->string_prototype) {
     return v7_create_string(v7, "false", 5, 1);
@@ -4251,7 +4251,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
 
   if (s_len != 0 && v7_array_length(v7, args) > 1) {
     const char *const str_end = s + s_len;
-    char *p = (char *)s;
+    char *p = (char *) s;
     uint32_t out_sub_num = 0;
     val_t ro = i_value_of(v7, v7_array_get(v7, args, 0)),
           str_func = i_value_of(v7, v7_array_get(v7, args, 1));
@@ -4296,8 +4296,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
           v7_array_push(v7, arr, v7_create_string(
                                      v7, loot.caps[i].start,
                                      loot.caps[i].end - loot.caps[i].start, 1));
-        v7_array_push(v7, arr, v7_create_number(
-                                   utfnlen((char *)s, loot.caps[0].start - s)));
+        v7_array_push(v7, arr, v7_create_number(utfnlen(
+                                   (char *) s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
@@ -4319,7 +4319,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
           out_sub_num++;
         }
       }
-      p = (char *)loot.caps[0].end;
+      p = (char *) loot.caps[0].end;
     } while (flag_g && p < str_end);
     if (p < str_end) {
       ptok->start = p;
@@ -4372,7 +4372,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
 
     if (!slre_exec(prog, 0, s, s + s_len, &sub))
       utf_shift =
-          utfnlen((char *)s, sub.caps[0].start - s); /* calc shift for UTF-8 */
+          utfnlen((char *) s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else
     utf_shift = 0;
   return v7_create_number(utf_shift);
@@ -4385,26 +4385,26 @@ static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   const char *begin = v7_to_string(v7, &so, &len), *end;
   int num_args = v7_array_length(v7, args);
 
-  to = len = utfnlen((char *)begin, len);
+  to = len = utfnlen((char *) begin, len);
   if (num_args > 0) {
     from = arg_long(v7, args, 0, 0);
     if (from < 0) {
       from += len;
       if (from < 0) from = 0;
-    } else if ((size_t)from > len)
+    } else if ((size_t) from > len)
       from = len;
     if (num_args > 1) {
       to = arg_long(v7, args, 1, 0);
       if (to < 0) {
         to += len;
         if (to < 0) to = 0;
-      } else if ((size_t)to > len)
+      } else if ((size_t) to > len)
         to = len;
     }
   }
   if (from > to) to = from;
-  end = utfnshift((char *)begin, to);
-  begin = utfnshift((char *)begin, from);
+  end = utfnshift((char *) begin, to);
+  begin = utfnshift((char *) begin, from);
   return v7_create_string(v7, begin, end - begin, 1);
 }
 
@@ -4416,13 +4416,13 @@ static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
   val_t res = v7_create_string(v7, p, len, 1);
   Rune r;
 
-  (void)args;
+  (void) args;
 
   p = v7_to_string(v7, &res, &len);
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
     r = func(r);
-    runetochar((char *)p + i, &r);
+    runetochar((char *) p + i, &r);
   }
 
   return res;
@@ -4446,7 +4446,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   const char *p = v7_to_string(v7, &s, &len);
   Rune r;
 
-  (void)args;
+  (void) args;
   end = len;
   for (i = 0; i < len; i += n) {
     n = chartorune(&r, p + i);
@@ -4463,10 +4463,10 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   size_t len = 0;
   val_t s = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_string(s)) {
     const char *p = v7_to_string(v7, &s, &len);
-    len = utfnlen((char *)p, len);
+    len = utfnlen((char *) p, len);
   }
 
   return v7_create_number(len);
@@ -4484,7 +4484,7 @@ V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
     } else if (d > LONG_MAX) {
       return LONG_MAX;
     }
-    return (long)d;
+    return (long) d;
   }
   if (v7_is_null(arg_n)) return 0;
   l = to_str(v7, arg_n, buf, sizeof(buf), 0);
@@ -4497,16 +4497,16 @@ static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   const char *p;
   s = to_string(v7, s);
   p = v7_to_string(v7, &s, &n);
-  n = utfnlen((char *)p, n);
+  n = utfnlen((char *) p, n);
 
-  if (start < (long)n && len > 0) {
-    if (start < 0) start = (long)n + start;
+  if (start < (long) n && len > 0) {
+    if (start < 0) start = (long) n + start;
     if (start < 0) start = 0;
 
-    if (start > (long)n) start = n;
+    if (start > (long) n) start = n;
     if (len < 0) len = 0;
-    if (len > (long)n - start) len = n - start;
-    p = utfnshift((char *)p, start);
+    if (len > (long) n - start) len = n - start;
+    p = utfnshift((char *) p, start);
   } else
     len = 0;
 
@@ -5011,25 +5011,25 @@ V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
  */
 V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   ast_off_t start = a->mbuf.len;
-  uint8_t t = (uint8_t)tag;
+  uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
 
-  mbuf_append(&a->mbuf, (char *)&t, sizeof(t));
+  mbuf_append(&a->mbuf, (char *) &t, sizeof(t));
   mbuf_append(&a->mbuf, NULL, sizeof(ast_skip_t) * d->num_skips);
   return start + 1;
 }
 
 V7_PRIVATE ast_off_t
-    ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
-  uint8_t t = (uint8_t)tag;
+ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
+  uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
   assert(tag < AST_MAX_TAG);
 
   mbuf_insert(&a->mbuf, start, NULL, sizeof(ast_skip_t) * d->num_skips);
-  mbuf_insert(&a->mbuf, start, (char *)&t, sizeof(t));
+  mbuf_insert(&a->mbuf, start, (char *) &t, sizeof(t));
 
   if (d->num_skips) {
     ast_set_skip(a, start + 1, AST_END_SKIP);
@@ -5057,7 +5057,7 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  * Every tree reader can assume this and safely skip unknown nodes.
  */
 V7_PRIVATE ast_off_t
-    ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
+ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
   return ast_modify_skip(a, start, a->mbuf.len, skip);
 }
 
@@ -5068,13 +5068,13 @@ V7_PRIVATE ast_off_t
 V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
                                      ast_off_t where,
                                      enum ast_which_skip skip) {
-  uint8_t *p = (uint8_t *)a->mbuf.buf + start + skip * sizeof(ast_skip_t);
+  uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = where - start;
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
   /* assertion, to be optimizable out */
-  assert((int)skip < def->num_skips);
+  assert((int) skip < def->num_skips);
 
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
@@ -5082,10 +5082,10 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
 }
 
 V7_PRIVATE ast_off_t
-    ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
+ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   uint8_t *p;
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
-  p = (uint8_t *)a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
+  p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
@@ -5105,7 +5105,7 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   assert(*pos - 1 < a->mbuf.len);
   if (def->has_varint) {
     int llen;
-    size_t slen = decode_varint((unsigned char *)a->mbuf.buf + *pos, &llen);
+    size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
     *pos += llen;
     if (def->has_inlined) {
       *pos += slen;
@@ -5133,7 +5133,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
 V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
   int llen;
   assert(pos < a->mbuf.len);
-  *n = decode_varint((unsigned char *)a->mbuf.buf + pos, &llen);
+  *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
@@ -5198,8 +5198,8 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
   fprintf(fp, "%s", def->name);
 
   if (def->has_inlined) {
-    slen = decode_varint((unsigned char *)a->mbuf.buf + *pos, &llen);
-    fprintf(fp, " %.*s\n", (int)slen, a->mbuf.buf + *pos + llen);
+    slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
+    fprintf(fp, " %.*s\n", (int) slen, a->mbuf.buf + *pos + llen);
   } else {
     fprintf(fp, "\n");
   }
@@ -5222,7 +5222,7 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     while (*pos < end) {
       int s;
       for (s = ast_node_defs[tag].num_skips - 1; s > 0; s--) {
-        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip)s)) {
+        if (*pos == ast_get_skip(a, skips, (enum ast_which_skip) s)) {
           comment_at_depth(fp, "%d ->", depth + 1, s);
           break;
         }
@@ -5338,7 +5338,7 @@ int v7_is_foreign(val_t v) {
 }
 
 V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t v) {
-  return (struct v7_regexp *)v7_to_pointer(v);
+  return (struct v7_regexp *) v7_to_pointer(v);
 }
 
 int v7_is_null(val_t v) {
@@ -5359,14 +5359,14 @@ int v7_is_error(struct v7 *v7, val_t v) {
 }
 
 V7_PRIVATE val_t v7_pointer_to_value(void *p) {
-  return ((uint64_t)(uintptr_t)p) & ~V7_TAG_MASK;
+  return ((uint64_t)(uintptr_t) p) & ~V7_TAG_MASK;
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
   struct {
     uint64_t s : 48;
   } h;
-  return (void *)(uintptr_t)(h.s = v);
+  return (void *) (uintptr_t)(h.s = v);
 }
 
 val_t v7_object_to_value(struct v7_object *o) {
@@ -5377,7 +5377,7 @@ val_t v7_object_to_value(struct v7_object *o) {
 }
 
 struct v7_object *v7_to_object(val_t v) {
-  return (struct v7_object *)v7_to_pointer(v);
+  return (struct v7_object *) v7_to_pointer(v);
 }
 
 val_t v7_function_to_value(struct v7_function *o) {
@@ -5385,11 +5385,11 @@ val_t v7_function_to_value(struct v7_function *o) {
 }
 
 struct v7_function *v7_to_function(val_t v) {
-  return (struct v7_function *)v7_to_pointer(v);
+  return (struct v7_function *) v7_to_pointer(v);
 }
 
 v7_cfunction_t v7_to_cfunction(val_t v) {
-  return (v7_cfunction_t)v7_to_pointer(v);
+  return (v7_cfunction_t) v7_to_pointer(v);
 }
 
 v7_val_t v7_create_cfunction(v7_cfunction_t f) {
@@ -5419,13 +5419,13 @@ v7_val_t v7_create_number(double v) {
   if (isnan(v)) {
     res = V7_TAG_NAN;
   } else {
-    *(double *)&res = v;
+    *(double *) &res = v;
   }
   return res;
 }
 
 double v7_to_double(val_t v) {
-  return *(double *)&v;
+  return *(double *) &v;
 }
 
 V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
@@ -5440,7 +5440,7 @@ V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   if (o == NULL) {
     return V7_NULL;
   }
-  (void)v7;
+  (void) v7;
   o->properties = NULL;
   o->prototype = v7_to_object(prototype);
   return v7_object_to_value(o);
@@ -5472,7 +5472,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     throw_exception(v7, "TypeError", "Invalid regex");
     return V7_UNDEFINED;
   } else {
-    rp = (struct v7_regexp *)malloc(sizeof(*rp));
+    rp = (struct v7_regexp *) malloc(sizeof(*rp));
     rp->regexp_string = v7_create_string(v7, re, re_len, 1);
     rp->compiled_regexp = p;
     rp->lastIndex = 0;
@@ -5539,7 +5539,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
   for (vp = v7->json_visited_stack.buf;
        vp < v7->json_visited_stack.buf + v7->json_visited_stack.len;
        vp += sizeof(val_t)) {
-    if (*(val_t *)vp == v) {
+    if (*(val_t *) vp == v) {
       strncpy(buf, "[Circular]", size);
       return MIN(10, size);
     }
@@ -5576,21 +5576,21 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       size_t n;
       const char *str = v7_to_string(v7, &v, &n);
       if (as_json) {
-        return v_sprintf_s(buf, size, "\"%.*s\"", (int)n, str);
+        return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
       } else {
-        return v_sprintf_s(buf, size, "%.*s", (int)n, str);
+        return v_sprintf_s(buf, size, "%.*s", (int) n, str);
       }
     }
     case V7_TYPE_REGEXP_OBJECT: {
       size_t n1, n2 = 0;
       char s2[3] = {0};
-      struct v7_regexp *rp = (struct v7_regexp *)v7_to_pointer(v);
+      struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(v);
       const char *s1 = v7_to_string(v7, &rp->regexp_string, &n1);
       int flags = slre_get_flags(rp->compiled_regexp);
       if (flags & SLRE_FLAG_G) s2[n2++] = 'g';
       if (flags & SLRE_FLAG_I) s2[n2++] = 'i';
       if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
-      return v_sprintf_s(buf, size, "/%.*s/%.*s", (int)n1, s1, (int)n2, s2);
+      return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
     }
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
@@ -5609,7 +5609,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
     case V7_TYPE_ERROR_OBJECT: {
       char *b = buf;
       struct v7_property *p;
-      mbuf_append(&v7->json_visited_stack, (char *)&v, sizeof(v));
+      mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       b += v_sprintf_s(b, size - (b - buf), "{");
       for (p = v7_to_object(v)->properties; p && (size - (b - buf));
            p = p->next) {
@@ -5619,7 +5619,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
           continue;
         }
         s = v7_to_string(v7, &p->name, &n);
-        b += v_sprintf_s(b, size - (b - buf), "\"%.*s\":", (int)n, s);
+        b += v_sprintf_s(b, size - (b - buf), "\"%.*s\":", (int) n, s);
         b += to_str(v7, p->value, b, size - (b - buf), 1);
         if (p->next) {
           b += v_sprintf_s(b, size - (b - buf), ",");
@@ -5634,7 +5634,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       char *b = buf;
       char key[512];
       size_t i, len = v7_array_length(v7, v);
-      mbuf_append(&v7->json_visited_stack, (char *)&v, sizeof(v));
+      mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       if (as_json) {
         b += v_sprintf_s(b, size - (b - buf), "[");
       }
@@ -5673,14 +5673,14 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (ast_fetch_tag(a, &pos) == AST_IDENT) {
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
-        b += v_sprintf_s(b, size - (b - buf), " %.*s", (int)name_len, name);
+        b += v_sprintf_s(b, size - (b - buf), " %.*s", (int) name_len, name);
       }
       b += v_sprintf_s(b, size - (b - buf), "(");
       while (pos < body) {
         V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_IDENT);
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
-        b += v_sprintf_s(b, size - (b - buf), "%.*s", (int)name_len, name);
+        b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
         if (pos < body) {
           b += v_sprintf_s(b, size - (b - buf), ",");
         }
@@ -5705,7 +5705,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
             ast_move_to_children(a, &var);
             ast_skip_tree(a, &var);
 
-            b += v_sprintf_s(b, size - (b - buf), "%.*s", (int)name_len, name);
+            b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
             if (var < var_end || next) {
               b += v_sprintf_s(b, size - (b - buf), ",");
             }
@@ -5728,9 +5728,9 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
 char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   int len = to_str(v7, v, buf, size, 1);
 
-  if (len > (int)size) {
+  if (len > (int) size) {
     /* Buffer is not large enough. Allocate a bigger one */
-    char *p = (char *)malloc(len + 1);
+    char *p = (char *) malloc(len + 1);
     to_str(v7, v, p, len + 1, 1);
     p[len] = '\0';
     return p;
@@ -5772,7 +5772,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
   if (!v7_is_object(obj)) {
     return NULL;
   }
-  if (len == (size_t)~0) {
+  if (len == (size_t) ~0) {
     len = strlen(name);
   }
 
@@ -5828,7 +5828,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
     v = v7->boolean_prototype;
   } else if (v7_is_undefined(obj)) {
     throw_exception(v7, "TypeError", "cannot read property '%.*s' of undefined",
-                    (int)name_len, name);
+                    (int) name_len, name);
   } else if (v7_is_cfunction(obj)) {
     return V7_UNDEFINED;
   }
@@ -5910,7 +5910,7 @@ int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
                     unsigned int attributes, v7_val_t val) {
   val_t n;
-  if (len == (size_t)~0) {
+  if (len == (size_t) ~0) {
     len = strlen(name);
   }
 
@@ -5924,7 +5924,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   if (!v7_is_object(obj)) {
     return -1;
   }
-  if (len == (size_t)~0) {
+  if (len == (size_t) ~0) {
     len = strlen(name);
   }
   for (prev = NULL, prop = v7_to_object(obj)->properties; prop != NULL;
@@ -5945,7 +5945,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
 }
 
 V7_PRIVATE v7_val_t
-    v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
+v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
@@ -6000,7 +6000,7 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
 }
 
 V7_PRIVATE val_t
-    v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
+v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
   }
@@ -6116,7 +6116,7 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
   if (p_backed_by_mbuf) {
     p += m->buf - old_base;
   }
-  encode_varint(n, (unsigned char *)m->buf + offset); /* Write length */
+  encode_varint(n, (unsigned char *) m->buf + offset); /* Write length */
   /* Write string */
   if (unesc) {
     unescape(p, len, m->buf + offset + k);
@@ -6149,7 +6149,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     tag = V7_TAG_STRING_O;
   } else {
     /* TODO(mkm): this doesn't set correctly the foreign string length */
-    embed_string(m, m->len, (char *)&p, sizeof(p), 0, 0);
+    embed_string(m, m->len, (char *) &p, sizeof(p), 0, 0);
   }
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
@@ -6195,10 +6195,10 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   } else {
     struct mbuf *m =
         (tag == V7_TAG_STRING_O) ? &v7->owned_strings : &v7->foreign_strings;
-    size_t offset = (size_t)v7_to_pointer(*v);
+    size_t offset = (size_t) v7_to_pointer(*v);
     char *s = m->buf + offset;
 
-    *sizep = decode_varint((uint8_t *)s, &llen);
+    *sizep = decode_varint((uint8_t *) s, &llen);
     if (tag == V7_TAG_STRING_O) {
       p = s + llen;
     } else {
@@ -6255,7 +6255,7 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
     mbuf_append(&v7->owned_strings, NULL, a_len + b_len + llen + 1);
     /* all pointers might have been relocated */
     s = v7->owned_strings.buf + offset;
-    encode_varint(a_len + b_len, (unsigned char *)s); /* Write length */
+    encode_varint(a_len + b_len, (unsigned char *) s); /* Write length */
     s += llen;
     a_ptr = v7_to_string(v7, &a, &a_len);
     b_ptr = v7_to_string(v7, &b, &b_len);
@@ -6302,7 +6302,7 @@ struct v7 *v7_create(void) {
   val_t *p;
   char z = 0;
 
-  if ((v7 = (struct v7 *)calloc(1, sizeof(*v7))) != NULL) {
+  if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
 #define GC_SIZE (64 * 10)
     gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE,
                   "object");
@@ -6342,8 +6342,8 @@ void v7_destroy(struct v7 *v7) {
     mbuf_free(&v7->json_visited_stack);
     mbuf_free(&v7->tmp_stack);
 
-    for (a = (struct ast **)v7->allocated_asts.buf;
-         (char *)a < v7->allocated_asts.buf + v7->allocated_asts.len; a++) {
+    for (a = (struct ast **) v7->allocated_asts.buf;
+         (char *) a < v7->allocated_asts.buf + v7->allocated_asts.len; a++) {
       ast_free(*a);
       free(*a);
     }
@@ -6367,15 +6367,15 @@ void gc_mark_string(struct v7 *, val_t *);
 #endif
 
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
-  return (struct v7_object *)gc_alloc_cell(v7, &v7->object_arena);
+  return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
 
 V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
-  return (struct v7_property *)gc_alloc_cell(v7, &v7->property_arena);
+  return (struct v7_property *) gc_alloc_cell(v7, &v7->property_arena);
 }
 
 V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
-  return (struct v7_function *)gc_alloc_cell(v7, &v7->function_arena);
+  return (struct v7_function *) gc_alloc_cell(v7, &v7->function_arena);
 }
 
 V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
@@ -6395,7 +6395,7 @@ V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
  * able to debug the relocating GC.
  */
 V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
-  mbuf_append(&tf->v7->tmp_stack, (char *)&vp, sizeof(val_t *));
+  mbuf_append(&tf->v7->tmp_stack, (char *) &vp, sizeof(val_t *));
 }
 
 /* Initializes a new arena. */
@@ -6410,7 +6410,7 @@ V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size, size_t size,
   gc_arena_grow(a, size);
   assert(a->free != NULL);
 #else
-  (void)size;
+  (void) size;
 #endif
 }
 
@@ -6435,7 +6435,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
   size_t old_size = a->size;
   uint32_t old_alive = a->alive;
   a->size = new_size;
-  a->base = (char *)realloc(a->base, a->size * a->cell_size);
+  a->base = (char *) realloc(a->base, a->size * a->cell_size);
   memset(a->base + old_size * a->cell_size, 0,
          (a->size - old_size) * a->cell_size);
   /* in case we grow preemptively */
@@ -6447,7 +6447,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
 
 V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #ifdef V7_DISABLE_GC
-  (void)v7;
+  (void) v7;
   return malloc(a->cell_size);
 #else
   char **r;
@@ -6466,7 +6466,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #endif
     }
   }
-  r = (char **)a->free;
+  r = (char **) a->free;
 
   UNMARK(r);
 
@@ -6474,7 +6474,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   a->allocations++;
   a->alive++;
 
-  return (void *)r;
+  return (void *) r;
 #endif
 }
 
@@ -6492,7 +6492,7 @@ void gc_sweep(struct gc_arena *a, size_t start) {
       a->alive++;
     } else {
       memset(cur, 0, a->cell_size);
-      *(char **)cur = a->free;
+      *(char **) cur = a->free;
       a->free = cur;
     }
   }
@@ -6518,8 +6518,8 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
     next = prop->next;
 
-    assert((char *)prop >= v7->property_arena.base &&
-           (char *)prop <
+    assert((char *) prop >= v7->property_arena.base &&
+           (char *) prop <
                (v7->property_arena.base +
                 v7->property_arena.size * v7->property_arena.cell_size));
     MARK(prop);
@@ -6539,7 +6539,7 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 #ifdef V7_ENABLE_COMPACTING_GC
 
 uint64_t gc_string_val_to_offset(val_t v) {
-  return ((uint64_t)v7_to_pointer(v)) & ~V7_TAG_MASK;
+  return ((uint64_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
 }
 
 val_t gc_string_val_from_offset(uint64_t s) {
@@ -6586,7 +6586,7 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
     tmp |= V7_TAG_FOREIGN;
   }
 
-  h = (val_t)v;
+  h = (val_t) v;
   s[-1] = 1;
   memcpy(s, &h, sizeof(h) - 2);
   memcpy(v, &tmp, sizeof(tmp));
@@ -6610,9 +6610,9 @@ void gc_compact_strings(struct v7 *v7) {
        */
       for (; (h & V7_TAG_MASK) != V7_TAG_STRING_C; h = next) {
         h &= ~V7_TAG_MASK;
-        memcpy(&next, (char *)h, sizeof(h));
+        memcpy(&next, (char *) h, sizeof(h));
 
-        *(val_t *)h = gc_string_val_from_offset(head);
+        *(val_t *) h = gc_string_val_from_offset(head);
       }
       h &= ~V7_TAG_MASK;
 
@@ -6620,7 +6620,7 @@ void gc_compact_strings(struct v7 *v7) {
        * the tail contains the first 6 bytes we stole from
        * the actual string.
        */
-      len = decode_varint((unsigned char *)&h, &llen);
+      len = decode_varint((unsigned char *) &h, &llen);
       len += llen + 1;
 
       /*
@@ -6637,7 +6637,7 @@ void gc_compact_strings(struct v7 *v7) {
       p += len;
       head += len;
     } else {
-      len = decode_varint((unsigned char *)p, &llen);
+      len = decode_varint((unsigned char *) p, &llen);
       len += llen + 1;
 
       p += len;
@@ -6705,8 +6705,8 @@ void v7_gc(struct v7 *v7) {
   gc_mark(v7, v7->this_object);
   gc_mark(v7, v7->call_stack);
 
-  for (vp = (val_t **)v7->tmp_stack.buf;
-       (char *)vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
+  for (vp = (val_t **) v7->tmp_stack.buf;
+       (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
     gc_mark(v7, **vp);
   }
 
@@ -7088,7 +7088,7 @@ enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
 static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
                                 ast_off_t pos) {
 #define NONE \
-  { (enum v7_tok)0, (enum v7_tok)0, (enum ast_tag)0 }
+  { (enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0 }
 
   struct {
     int len, left_to_right;
@@ -7114,7 +7114,7 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
   enum v7_tok tok;
   enum ast_tag ast;
 
-  if (level == (int)ARRAY_SIZE(levels) - 1) {
+  if (level == (int) ARRAY_SIZE(levels) - 1) {
     PARSE(prefix);
   } else {
     TRY(parse_binary(v7, a, level + 1, a->mbuf.len));
@@ -7586,7 +7586,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
     snprintf(v7->error_msg, sizeof(v7->error_msg),
              "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
-             col, (int)(col + v7->tok_len), v7->tok - col);
+             col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
 }
@@ -7671,7 +7671,7 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
     res = v7_to_double(v);
   } else if (v7_is_string(v)) {
     size_t n;
-    char *e, *s = (char *)v7_to_string(v7, &v, &n);
+    char *e, *s = (char *) v7_to_string(v7, &v, &n);
     if (n != 0) {
       res = strtod(s, &e);
       if (e - n != s) {
@@ -7679,7 +7679,7 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
       }
     }
   } else if (v7_is_boolean(v)) {
-    res = (double)v7_to_boolean(v);
+    res = (double) v7_to_boolean(v);
   } else if (v7_is_null(v)) {
     res = 0.0;
   } else {
@@ -7702,16 +7702,16 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
 
 static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
                            double b) {
-  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t)a;
-  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t)b;
+  int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
+  int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
 
   switch (tag) {
     case AST_LSHIFT:
-      return (int32_t)((uint32_t)ia << ((uint32_t)ib & 31));
+      return (int32_t)((uint32_t) ia << ((uint32_t) ib & 31));
     case AST_RSHIFT:
-      return ia >> ((uint32_t)ib & 31);
+      return ia >> ((uint32_t) ib & 31);
     case AST_URSHIFT:
-      return (uint32_t)ia >> ((uint32_t)ib & 31);
+      return (uint32_t) ia >> ((uint32_t) ib & 31);
     case AST_OR:
       return ia | ib;
     case AST_XOR:
@@ -7741,7 +7741,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       if (b == 0 || isnan(b) || isnan(a) || isinf(b) || isinf(a)) {
         return NAN;
       }
-      return (int)a % (int)b;
+      return (int) a % (int) b;
     case AST_MUL:
       return a * b;
     case AST_DIV:
@@ -7936,7 +7936,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       break;
     case AST_LOGICAL_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
-      res = v7_create_boolean(!(int64_t)v7_is_true(v7, v1));
+      res = v7_create_boolean(!(int64_t) v7_is_true(v7, v1));
       break;
     case AST_NOT:
       v1 = i_eval_expr(v7, a, pos, scope);
@@ -7944,7 +7944,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if (isnan(d1) || isinf(d1)) {
         res = v7_create_number(-1);
       } else {
-        res = v7_create_number(~(int64_t)d1);
+        res = v7_create_number(~(int64_t) d1);
       }
       break;
     case AST_ASSIGN:
@@ -8181,7 +8181,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       if ((p = v7_get_property(v7, scope, name, name_len)) == NULL) {
         throw_exception(v7, "ReferenceError", "[%.*s] is not defined",
-                        (int)name_len, name);
+                        (int) name_len, name);
       }
       res = v7_property_value(v7, scope, p);
       break;
@@ -8886,7 +8886,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
      * not matching the current label.
      */
     cont:
-      if ((j = (enum jmp_type)sigsetjmp(v7->jmp_buf, 0)) == 0) {
+      if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmt(v7, a, pos, scope, brk);
       } else if ((j == BREAK_JMP || j == CONTINUE_JMP) &&
                  name_len == v7->label_len &&
@@ -8917,7 +8917,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
       finally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
       ast_move_to_children(a, pos);
-      if ((j = (enum jmp_type)sigsetjmp(v7->jmp_buf, 0)) == 0) {
+      if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
         val_t catch_scope;
@@ -9079,7 +9079,7 @@ cleanup:
 
 enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
   /* TODO(mkm): use GC pool */
-  struct ast *a = (struct ast *)malloc(sizeof(struct ast));
+  struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t old_this = v7->this_object;
   enum i_break brk = B_RUN;
   ast_off_t pos = 0;
@@ -9093,7 +9093,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
   memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
 
   ast_init(a, 0);
-  mbuf_append(&v7->allocated_asts, (char *)&a, sizeof(a));
+  mbuf_append(&v7->allocated_asts, (char *) &a, sizeof(a));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     v7->tmp_stack.len = saved_tmp_stack_pos;
     r = v7->thrown_error;
@@ -9142,13 +9142,13 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
              strerror(errno));
     *res = create_exception(v7, "Error", v7->error_msg);
     fclose(fp);
-  } else if ((p = (char *)calloc(1, (size_t)file_size + 1)) == NULL) {
+  } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes",
              file_size + 1);
     fclose(fp);
   } else {
     rewind(fp);
-    fread(p, 1, (size_t)file_size, fp);
+    fread(p, 1, (size_t) file_size, fp);
     fclose(fp);
     err = v7_exec(v7, res, p);
     free(p);
@@ -9349,7 +9349,7 @@ static int hex(int c) {
 }
 
 int nextesc(const char **p) {
-  const unsigned char *s = (unsigned char *)(*p)++;
+  const unsigned char *s = (unsigned char *) (*p)++;
   switch (*s) {
     case 0:
       return -SLRE_UNTERM_ESC_SEQ;
@@ -10257,9 +10257,9 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   int err_code;
 
   e.is_regex = is_regex;
-  e.prog = (struct slre_prog *)SLRE_MALLOC(sizeof(struct slre_prog));
+  e.prog = (struct slre_prog *) SLRE_MALLOC(sizeof(struct slre_prog));
   e.pstart = e.pend =
-      (struct slre_node *)SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
+      (struct slre_node *) SLRE_MALLOC(sizeof(struct slre_node) * pat_len * 2);
   e.prog->flags = is_regex ? SLRE_FLAG_RE : 0;
 
   if ((err_code = setjmp(e.jmp_buf)) != SLRE_OK) {
@@ -10299,7 +10299,7 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   }
 
   e.prog->num_captures = e.num_captures;
-  e.prog->start = e.prog->end = (struct slre_instruction *)SLRE_MALLOC(
+  e.prog->start = e.prog->end = (struct slre_instruction *) SLRE_MALLOC(
       (re_nodelen(nd) + 6) * sizeof(struct slre_instruction));
 
   split = re_newinst(e.prog, I_SPLIT);
@@ -10646,7 +10646,7 @@ static const char *err_code_to_str(int err_code) {
       [2 * !!(((sizeof(ar) / sizeof(ar[0])) == SLRE_BAD_CHAR_AFTER_USD + 1)) -
        1];
 
-  return err_code >= 0 && err_code < (int)(sizeof(ar) / sizeof(ar[0]))
+  return err_code >= 0 && err_code < (int) (sizeof(ar) / sizeof(ar[0]))
              ? ar[err_code]
              : "invalid error code";
 }
@@ -10704,18 +10704,18 @@ static int process_line(struct slre_prog *pr, const char *flags,
   if (err_code == SLRE_OK) {
     if (n >= 0 && n < loot.num_captures && replace != NULL) {
       struct slre_cap *cap = &loot.caps[n];
-      printf("%.*s", (int)(cap->start - line), line);
+      printf("%.*s", (int) (cap->start - line), line);
       printf("%s", replace);
-      printf("%.*s", (int)((line + strlen(line)) - cap->end), cap->end);
+      printf("%.*s", (int) ((line + strlen(line)) - cap->end), cap->end);
     } else if (n >= 0 && n < loot.num_captures) {
-      printf("%.*s\n", (int)(cap->end - cap->start), cap->start);
+      printf("%.*s\n", (int) (cap->end - cap->start), cap->start);
     }
 
     if (verbose != NULL) {
       fprintf(stderr, "%s\n", "Captures:");
       for (i = 0; i < loot.num_captures; i++) {
         fprintf(stderr, "%d [%.*s]\n", i,
-                (int)(loot.caps[i].end - loot.caps[i].start),
+                (int) (loot.caps[i].end - loot.caps[i].start),
                 loot.caps[i].start);
       }
     }
@@ -10797,7 +10797,7 @@ int main(int argc, char **argv) {
 
 static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError",
                     "Object.getPrototypeOf called on non-object");
@@ -10808,7 +10808,7 @@ static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t proto = v7_array_get(v7, args, 1);
-  (void)this_obj;
+  (void) this_obj;
   return v7_create_boolean(is_prototype_of(v7, obj, proto));
 }
 
@@ -10847,13 +10847,13 @@ static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
 }
 
 static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)this_obj;
+  (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
 static val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
                                      val_t args) {
-  (void)this_obj;
+  (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
@@ -10863,7 +10863,7 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
   val_t desc;
-  (void)this_obj;
+  (void) this_obj;
   if ((prop = _Obj_getOwnProperty(v7, obj, name)) == NULL) {
     return V7_UNDEFINED;
   }
@@ -10907,7 +10907,7 @@ static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   val_t desc = v7_array_get(v7, args, 2);
   char name_buf[512];
   int name_len;
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(obj)) {
     throw_exception(v7, "TypeError", "object expected");
   }
@@ -10933,7 +10933,7 @@ static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
 static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
-  (void)this_obj;
+  (void) this_obj;
   o_define_props(v7, obj, descs);
   return obj;
 }
@@ -10941,7 +10941,7 @@ static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res, proto = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
     throw_exception(v7, "TypeError",
                     "Object prototype may only be an Object or null");
@@ -10993,7 +10993,7 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
-  (void)args;
+  (void) args;
   p = v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
   if (p != NULL) {
     res = p->value;
@@ -11005,7 +11005,7 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
-  (void)args;
+  (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     type = "Array";
   }
@@ -11015,7 +11015,7 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError", "Object expected");
   }
@@ -11025,7 +11025,7 @@ static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   if (!v7_is_object(arg)) {
     throw_exception(v7, "TypeError", "Object expected");
   }
@@ -11118,7 +11118,7 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d = i_as_num(v7, arg0);
-  int len, digits = d > 0 ? (int)d : 0;
+  int len, digits = d > 0 ? (int) d : 0;
   char fmt[10], buf[100];
 
   snprintf(fmt, sizeof(fmt), format, digits);
@@ -11152,7 +11152,7 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[512];
-  (void)args;
+  (void) args;
 
   if (this_obj == v7->number_prototype) {
     return v7_create_string(v7, "0", 1, 1);
@@ -11172,7 +11172,7 @@ static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   return v7_create_boolean(!v7_is_double(arg0) || arg0 == V7_TAG_NAN);
 }
 
@@ -11214,7 +11214,7 @@ static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   char buf[100], *p = v7_to_json(v7, arg0, buf, sizeof(buf));
   val_t res = v7_create_string(v7, p, strlen(p), 1);
-  (void)this_obj;
+  (void) this_obj;
   if (p != buf) free(p);
   return res;
 }
@@ -11253,7 +11253,7 @@ static char *read_file(const char *path, size_t *size) {
   char *data = NULL;
   if ((fp = fopen(path, "rb")) != NULL && !fstat(fileno(fp), &st)) {
     *size = st.st_size;
-    data = (char *)malloc(*size + 1);
+    data = (char *) malloc(*size + 1);
     if (data != NULL) {
       fread(data, 1, *size, fp);
       data[*size] = '\0';
@@ -11435,7 +11435,7 @@ static int ecma_IsLeapYear(int year) {
 }
 
 static int ecma_DayWithinYear(etime_t t, int year) {
-  return (int)(ecma_Day(t) - ecma_DayFromYear(year));
+  return (int) (ecma_Day(t) - ecma_DayFromYear(year));
 }
 
 static int *ecma_getfirstdays(int isleap) {
@@ -11499,7 +11499,7 @@ static int ecma_DaylightSavingTA(etime_t t) {
 }
 
 static int ecma_LocalTZA() {
-  return (int)-g_gmtoffms;
+  return (int) -g_gmtoffms;
 }
 
 static etimeint_t ecma_LocalTime(etime_t t) {
@@ -11512,7 +11512,7 @@ static etimeint_t ecma_UTC(etime_t t) {
 
 #define DEF_EXCTRACT_TIMEPART(funcname, c1, c2) \
   static int ecma_##funcname(etime_t t) {       \
-    int ret = (etimeint_t)floor(t / c1) % c2;   \
+    int ret = (etimeint_t) floor(t / c1) % c2;  \
     if (ret < 0) {                              \
       ret += c2;                                \
     }                                           \
@@ -11791,7 +11791,7 @@ static int d_timeFromString(etime_t *time, const char *str, size_t str_len) {
 
       if (tz != NO_TZ) {
         /* timezone specified, use it */
-        *time -= tz * msPerHour;
+        *time -= (tz * msPerHour);
       } else if (tz != 0) {
         /* assuming local timezone and moving back to UTC */
         *time = ecma_UTC(*time);
@@ -11863,7 +11863,7 @@ static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
 }
 
 static int d_tptodatestr(const struct timeparts *tp, char *buf, int addtz) {
-  (void)addtz;
+  (void) addtz;
 
   return sprintf(buf, "%s %s %02d %d", wday_name[tp->dayofweek],
                  mon_name[tp->month], tp->day, tp->year);
@@ -11876,10 +11876,10 @@ static int d_tptotimestr(const struct timeparts *tp, char *buf, int addtz) {
 
   if (addtz && g_gmtoffms != 0) {
     len = sprintf(buf + len, "%c%02d00 (%s)", g_gmtoffms > 0 ? '-' : '+',
-                  abs((int)g_gmtoffms / msPerHour), d_gettzname());
+                  abs((int) g_gmtoffms / msPerHour), d_gettzname());
   }
 
-  return (int)strlen(buf);
+  return (int) strlen(buf);
 }
 
 static int d_tptostr(const struct timeparts *tp, char *buf, int addtz) {
@@ -11944,7 +11944,7 @@ static etime_t d_changepartoftime(const etime_t *current,
 
   for (i = 0; i < ARRAY_SIZE(tp_arr); i++) {
     if (!isnan(a->args[i]) && !isinf(a->args[i])) {
-      *tp_arr[i] = (int)a->args[i];
+      *tp_arr[i] = (int) a->args[i];
     }
   }
 
@@ -12084,7 +12084,7 @@ static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[30];
   etime_t time;
   int len;
-  (void)args;
+  (void) args;
 
   time = v7_to_double(d_trytogetobjforstring(v7, this_obj));
   len = d_timetoISOstr(&time, buf, sizeof(buf));
@@ -12176,7 +12176,7 @@ static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)args;
+  (void) args;
   if (!v7_is_object(this_obj) ||
       (v7_is_object(this_obj) &&
        v7_to_object(this_obj)->prototype != v7_to_object(v7->date_prototype))) {
@@ -12191,17 +12191,17 @@ static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
-  (void)args;
-  (void)v7;
-  (void)this_obj;
+  (void) args;
+  (void) v7;
+  (void) this_obj;
   return v7_create_number(g_gmtoffms / msPerMinute);
 }
 
 static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
-  (void)args;
-  (void)v7;
-  (void)this_obj;
+  (void) args;
+  (void) v7;
+  (void) this_obj;
 
   d_gettime(&ret_time);
 
@@ -12210,7 +12210,7 @@ static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
-  (void)args;
+  (void) args;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
     throw_exception(v7, "TypeError", "Date.parse() called on object");
@@ -12231,7 +12231,7 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
-  (void)args;
+  (void) args;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
     throw_exception(v7, "TypeError", "Date.now() called on object");
@@ -12329,7 +12329,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   const char *s;
   val_t param, body, res = v7_create_undefined();
 
-  (void)this_obj;
+  (void) this_obj;
 
   if (num_args <= 0) return res;
 
@@ -12343,14 +12343,14 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       if (i > 0) {
         n += snprintf(buf + n, sizeof(buf) - n, "%s", ",");
       }
-      n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int)size, s);
+      n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
     }
   }
   n += snprintf(buf + n, sizeof(buf) - n, "%s", "){");
   body = i_value_of(v7, v7_array_get(v7, args, num_args - 1));
   if (v7_is_string(body)) {
     s = v7_to_string(v7, &body, &size);
-    n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int)size, s);
+    n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
   }
   n += snprintf(buf + n, sizeof(buf) - n, "%s", "})");
 
@@ -12367,7 +12367,7 @@ static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
   struct ast *a = func->ast;
   int argn = 0;
 
-  (void)args;
+  (void) args;
 
   V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
   body = ast_get_skip(a, pos, AST_FUNC_BODY_SKIP);
@@ -12410,7 +12410,7 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
 
-  (void)this_obj;
+  (void) this_obj;
   for (i = 0; i < num_args; i++) {
     p = v7_to_json(v7, v7_array_get(v7, args, i), buf, sizeof(buf));
     printf("%s", p);
@@ -12425,7 +12425,7 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
   val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
-  (void)t;
+  (void) t;
   if (arg != V7_UNDEFINED) {
     char buf[100], *p;
     p = v7_to_json(v7, arg, buf, sizeof(buf));
@@ -12444,7 +12444,7 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
 
 static val_t Std_exit(struct v7 *v7, val_t t, val_t args) {
   int exit_code = arg_long(v7, args, 0, 0);
-  (void)t;
+  (void) t;
   exit(exit_code);
   return v7_create_undefined();
 }
@@ -12521,13 +12521,13 @@ static val_t b64_transform(struct v7 *v7, val_t this_obj, val_t args,
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t res = v7_create_undefined();
 
-  (void)this_obj;
+  (void) this_obj;
   if (v7_is_string(arg0)) {
     size_t n;
     const char *s = v7_to_string(v7, &arg0, &n);
-    char *buf = (char *)malloc(n * mult + 2);
+    char *buf = (char *) malloc(n * mult + 2);
     if (buf != NULL) {
-      func((const unsigned char *)s, (int)n, buf);
+      func((const unsigned char *) s, (int) n, buf);
       res = v7_create_string(v7, buf, strlen(buf), 1);
       free(buf);
     }
@@ -12549,7 +12549,7 @@ static val_t Std_load(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t res = v7_create_undefined();
 
-  (void)this_obj;
+  (void) this_obj;
   if (v7_is_string(arg0)) {
     size_t n;
     const char *s = v7_to_string(v7, &arg0, &n);
@@ -12571,7 +12571,7 @@ static val_t Std_read(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[2048];
   size_t n;
 
-  (void)this_obj;
+  (void) this_obj;
   if (v7_is_double(arg0)) {
     int fd = v7_to_double(arg0);
     n = read(fd, buf, sizeof(buf));
@@ -12588,7 +12588,7 @@ static val_t Std_write(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg1 = v7_array_get(v7, args, 1);
   size_t n = 0, n2;
 
-  (void)this_obj;
+  (void) this_obj;
   if (v7_is_double(arg0) && v7_is_string(arg1)) {
     const char *s = v7_to_string(v7, &arg1, &n2);
     int fd = v7_to_double(arg0);
@@ -12600,9 +12600,9 @@ static val_t Std_write(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Std_close(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
-  (void)this_obj;
+  (void) this_obj;
   if (v7_is_double(arg0)) {
-    close((int)v7_to_double(arg0));
+    close((int) v7_to_double(arg0));
   }
   return v7_create_undefined();
 }
@@ -12612,11 +12612,11 @@ static val_t Std_open(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg1 = v7_array_get(v7, args, 1);
   val_t res = v7_create_undefined();
 
-  (void)this_obj;
+  (void) this_obj;
   if (v7_is_string(arg0)) {
     size_t n1;
     const char *s = v7_to_string(v7, &arg0, &n1);
-    int flags = v7_is_double(arg1) ? (int)v7_to_double(arg1) : 0;
+    int flags = v7_is_double(arg1) ? (int) v7_to_double(arg1) : 0;
     int fd = open(s, flags);
     res = v7_create_number(fd);
   }
@@ -12767,7 +12767,7 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     struct slre_prog *p = NULL;
     struct v7_regexp *rp;
 
-    (void)this_obj;
+    (void) this_obj;
     if (argnum > 1) {
       val_t fl = to_string(v7, v7_array_get(v7, args, 1));
       flags = v7_to_string(v7, &fl, &flags_len);
@@ -12777,7 +12777,7 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       throw_exception(v7, "TypeError", "Invalid regex");
       return v7_create_undefined();
     } else {
-      rp = (struct v7_regexp *)malloc(sizeof(*rp));
+      rp = (struct v7_regexp *) malloc(sizeof(*rp));
       rp->regexp_string = v7_create_string(v7, re, re_len, 1);
       rp->compiled_regexp = p;
       rp->lastIndex = 0;
@@ -12792,7 +12792,7 @@ static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_G);
@@ -12802,7 +12802,7 @@ static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_I);
@@ -12812,7 +12812,7 @@ static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_M);
@@ -12823,7 +12823,7 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
   const char *buf = 0;
   size_t len = 0;
 
-  (void)args;
+  (void) args;
   if (v7_is_regexp(r))
     buf = v7_to_string(v7, &v7_to_regexp(r)->regexp_string, &len);
 
@@ -12833,8 +12833,8 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
 static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   long lastIndex = 0;
 
-  (void)v7;
-  (void)args;
+  (void) v7;
+  (void) args;
   if (v7_is_regexp(this_obj)) lastIndex = v7_to_regexp(this_obj)->lastIndex;
 
   return v7_create_number(lastIndex);
@@ -12855,7 +12855,7 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
     size_t len;
     struct slre_loot sub;
     struct slre_cap *ptok = sub.caps;
-    char *const str = (char *)v7_to_string(v7, &s, &len);
+    char *const str = (char *) v7_to_string(v7, &s, &len);
     const char *const end = str + len;
     const char *begin = str;
     struct v7_regexp *rp = v7_to_regexp(this_obj);
