@@ -1,16 +1,4 @@
-FROM cesanta/fossa
-
-RUN apt-get update && apt-get install -y --no-install-recommends curl wget git gnuplot time nodejs && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /v7/graphs && mkdir -p /v7/build && \
-    cd /v7/build; wget http://duktape.org/duktape-1.1.2.tar.xz && \
-    tar xvfJ duktape-1.1.2.tar.xz && cd duktape-1.1.2 && make -f Makefile.cmdline && \
-    mv /v7/build/duktape-1.1.2/duk /v7/ && \
-    cd /v7/build; git clone git://git.ghostscript.com/mujs.git && \
-    cd mujs && make  && \
-    mv /v7/build/mujs/build/mujs /v7/ && \
-    rm -rf /v7/build && \
-    strip /v7/duk /v7/mujs
+FROM cesanta/v7_benchmark_base:latest
 
 COPY v7.* /v7/
 
