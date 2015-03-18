@@ -272,7 +272,9 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "1234"));
   ASSERT(v7_exec(v7, &v, "m[2]") == V7_OK);
   ASSERT(v7_is_undefined(v));
-  ASSERT(v7_exec(v7, &v, "m = 'should match empty string at index 0'.match(/x*/)") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "m = 'should match empty string at index 0'.match(/x*/)") ==
+         V7_OK);
   ASSERT(v7_exec(v7, &v, "m.length") == V7_OK);
   ASSERT(check_num(v, 1.0));
   ASSERT(v7_exec(v7, &v, "m[0]") == V7_OK);
@@ -281,7 +283,8 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 1.0));
   ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(''); m.length") == V7_OK);
   ASSERT(check_num(v, 8.0));
-  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(RegExp('')); m.length") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(RegExp('')); m.length") ==
+         V7_OK);
   ASSERT(check_num(v, 8.0));
   ASSERT(v7_exec(v7, &v, "m = 'aa bb cc'.split(/x*/); m.length") == V7_OK);
   ASSERT(check_num(v, 8.0));
@@ -301,8 +304,9 @@ static const char *test_stdlib(void) {
   ASSERT(check_num(v, 2.0));
   ASSERT(v7_exec(v7, &v, "'aa bb cc'.substr(0, 4).split(' ')[1]") == V7_OK);
   ASSERT(check_str(v7, v, "b"));
-  ASSERT(v7_exec(v7, &v, "({z: '123456'}).z"
-         ".toString().substr(0, 3).split('').length") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "({z: '123456'}).z"
+                 ".toString().substr(0, 3).split('').length") == V7_OK);
   ASSERT(check_num(v, 3.0));
   ASSERT(v7_exec(v7, &v, "String('hi')") == V7_OK);
   ASSERT(check_str(v7, v, "hi"));
@@ -907,28 +911,27 @@ static const char *test_ecmac(void) {
     v7 = v7_create();
     ASSERT(parse(v7, &a, current_case, 1) == V7_OK);
     ast_free(&a);
-      if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
-          i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
-          i == 3400 || i == 3348 || i == 3349 || i == 3401
-          ) {
-        fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
-        continue;
-      }
+    if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
+        i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
+        i == 3400 || i == 3348 || i == 3349 || i == 3401) {
+      fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
+      continue;
+    }
 
-      if (v7_exec(v7, &res, driver) != V7_OK) {
-        fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
-      } else {
-        if (v7_exec(v7, &res, current_case) != V7_OK) {
-          char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
-          fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
-          if (err_str != buf) {
-            free(err_str);
-          }
-        } else {
-          passed++;
-          fprintf(r, "%i\tPASS %s\n", i, tail_cmd);
+    if (v7_exec(v7, &res, driver) != V7_OK) {
+      fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
+    } else {
+      if (v7_exec(v7, &res, current_case) != V7_OK) {
+        char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
+        fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
+        if (err_str != buf) {
+          free(err_str);
         }
+      } else {
+        passed++;
+        fprintf(r, "%i\tPASS %s\n", i, tail_cmd);
       }
+    }
     v7_destroy(v7);
   }
   printf("ECMA tests coverage: %.2lf%% (%d of %d)\n",
