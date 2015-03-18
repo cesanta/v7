@@ -125,6 +125,14 @@ the AST and strings.
 ### Abstract Syntax Tree (AST)
 ### Interpreter (VM)
 
+# Contributions
+
+People who have agreed to the
+[Cesanta CLA](http://cesanta.com/contributors_la.html)
+can make contributions. Note that the CLA isn't a copyright
+_assigment_ but rather a copyright _license_.
+You retain the copyright on your contributions.
+
 ## Licensing
 
 V7 is released under commercial and
@@ -133,6 +141,6 @@ source licenses. The GPLv2 open source License does not generally permit
 incorporating this software into non-open source programs.
 For those customers who do not wish to comply with the GPLv2 open
 source license requirements,
-[Cesanta Software](http://cesanta.com) offers a full,
+[Cesanta](http://cesanta.com) offers a full,
 royalty-free commercial license and professional support
 without any of the GPL restrictions.
