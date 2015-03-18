@@ -5,6 +5,8 @@ general:
     - "tests/hist_ecma_report.svg"
 
 machine:
+  services:
+    - docker
   pre:
     - sudo apt-get install -y --no-install-recommends g++-multilib libc6-dev-i386
     - sudo pip install cpp-coveralls
@@ -12,5 +14,13 @@ machine:
 test:
   pre:
     - make run
+    - make -C benchmark build
   post:
     - tests/update_hist_ecma_report.sh
+
+deployment:
+  hub:
+    branch: master
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - make -C benchmark push
