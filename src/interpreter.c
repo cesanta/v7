@@ -900,7 +900,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   ast_off_t end, fpos, fend, fbody;
   val_t frame = v7_create_undefined(), res = v7_create_undefined();
   val_t v1 = v7_create_undefined(), args = v7_create_undefined();
-  val_t old_this = v7->this_object;
+  val_t cfunc = v7_create_undefined(), old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -917,19 +917,44 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
-  v1 = i_eval_expr(v7, a, pos, scope);
+  cfunc = v1 = i_eval_expr(v7, a, pos, scope);
   if (!v7_is_cfunction(v1) && !v7_is_function(v1)) {
-    v1 = i_value_of(v7, v1);
+    /* extract the hidden property from a cfunction_object */
+    struct v7_property *p;
+    p = v7_get_own_property2(v7, v1, "", 0, V7_PROPERTY_HIDDEN);
+    if (p != NULL) {
+      cfunc = p->value;
+    }
   }
 
-  if (v7_is_cfunction(v1)) {
+  if (is_constructor) {
+    if (!v7_is_cfunction(v1)) {
+      val_t fun_proto = v7_get(v7, v1, "prototype", 9);
+      tmp_stack_push(&tf, &fun_proto);
+      if (!v7_is_object(fun_proto)) {
+        /* TODO(mkm): box primitive value */
+        throw_exception(v7, "TypeError",
+                        "Cannot set a primitive value as object prototype");
+      }
+      v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
+    }
+  } else if (v7_is_undefined(this_object) && v7_is_function(v1) &&
+             !(v7_to_function(v1)->attributes & V7_FUNCTION_STRICT)) {
+    /*
+     * null and undefined are replaced with `global` in non-strict mode,
+     * as per ECMA-262 6th, 19.2.3.3.
+     */
+    this_object = v7->global_object;
+  }
+
+  if (v7_is_cfunction(cfunc)) {
     args = v7_create_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property(v7, args, buf, n, 0, res);
     }
-    res = v7_to_cfunction(v1)(v7, this_object, args);
+    res = v7_to_cfunction(cfunc)(v7, this_object, args);
     goto cleanup;
   }
   if (!v7_is_function(v1)) {
@@ -938,24 +963,6 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   func = v7_to_function(v1);
-  if (is_constructor) {
-    val_t fun_proto = v7_get(v7, v1, "prototype", 9);
-    tmp_stack_push(&tf, &fun_proto);
-    if (!v7_is_object(fun_proto)) {
-      /* TODO(mkm): box primitive value */
-      throw_exception(v7, "TypeError",
-                      "Cannot set a primitive value as object prototype");
-    }
-    v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
-  } else if (v7_is_undefined(this_object) &&
-             !(func->attributes & V7_FUNCTION_STRICT)) {
-    /*
-     * null and undefined are replaced with `global` in non-strict mode,
-     * as per ECMA-262 6th, 19.2.3.3.
-     */
-    this_object = v7->global_object;
-  }
-
   frame = i_prepare_call(v7, func, &fpos, &fbody, &fend);
 
   /*
@@ -1439,6 +1446,15 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   tmp_stack_push(&vf, &args);
   tmp_stack_push(&vf, &f);
   tmp_stack_push(&vf, &this_object);
+
+  if (!v7_is_cfunction(f) && !v7_is_function(f)) {
+    /* extract the hidden property from a cfunction_object */
+    struct v7_property *p;
+    p = v7_get_own_property2(v7, f, "", 0, V7_PROPERTY_HIDDEN);
+    if (p != NULL) {
+      f = p->value;
+    }
+  }
 
   if (v7_is_cfunction(f)) {
     res = v7_to_cfunction(f)(v7, this_object, args);

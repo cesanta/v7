@@ -171,6 +171,16 @@ enum cached_strings {
   PREDEFINED_STR_MAX
 };
 
+enum error_constructors {
+  TYPE_ERROR,
+  SYNTAX_ERROR,
+  REFERENCE_ERROR,
+  INTERNAL_ERROR,
+  RANGE_ERROR,
+
+  ERROR_CTOR_MAX
+};
+
 #include "vm.h"
 
 struct v7 {
@@ -210,6 +220,8 @@ struct v7 {
 
   int strict_mode; /* true if currently in strict mode */
 
+  val_t error_objects[ERROR_CTOR_MAX];
+
   val_t thrown_error;
   char error_msg[60];     /* Exception message */
   int creating_exception; /* Avoids reentrant exception creation */
@@ -239,9 +251,6 @@ struct v7 {
   struct mbuf allocated_asts;
 
   val_t predefined_strings[PREDEFINED_STR_MAX];
-
-  /* TODO(mkm): remove when finishing debugging compacting GC */
-  val_t number_object;
 };
 
 #ifndef ARRAY_SIZE
