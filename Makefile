@@ -8,7 +8,10 @@ TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
 
 CLANG:=clang
 # installable with: `brew install llvm36 --with-clang`
-CLANG_FORMAT:=/usr/local/bin/clang-format-3.6
+CLANG_FORMAT:=/usr/bin/clang-format-3.6
+ifneq ("$(wildcard /usr/local/bin/clang-format-3.6)","")
+	CLANG_FORMAT:=/usr/local/bin/clang-format-3.6
+endif
 
 ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
 	CLANG:=/usr/local/bin/clang-3.5
