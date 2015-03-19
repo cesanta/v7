@@ -48,7 +48,7 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
            v7->number_prototype)) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "Number.valueOf called on non-number object");
   }
   return Obj_valueOf(v7, this_obj, args);
@@ -65,7 +65,7 @@ static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_double(this_obj) &&
       !(v7_is_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->number_prototype))) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "Number.toString called on non-number object");
   }
 

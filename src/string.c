@@ -144,7 +144,7 @@ static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
            v7->string_prototype)) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "String.valueOf called on non-string object");
   }
   return Obj_valueOf(v7, this_obj, args);
@@ -174,7 +174,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_string(this_obj) &&
       !(v7_is_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->string_prototype))) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "String.toString called on non-string object");
   }
 
@@ -195,7 +195,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       s = v7_to_string(v7, &so, &s_len);
       if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
-        throw_exception(v7, "TypeError", "Invalid String");
+        throw_exception(v7, TYPE_ERROR, "Invalid String");
         return v7_create_undefined();
       }
     } else
@@ -251,7 +251,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       str = v7_to_string(v7, &ro, &str_len);
       if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
-        throw_exception(v7, "TypeError", "Invalid String");
+        throw_exception(v7, TYPE_ERROR, "Invalid String");
         return v7_create_undefined();
       }
     } else {
@@ -345,7 +345,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
       s = v7_to_string(v7, &so, &s_len);
       if (slre_compile(s, s_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
-        throw_exception(v7, "TypeError", "Invalid String");
+        throw_exception(v7, TYPE_ERROR, "Invalid String");
         return v7_create_undefined();
       }
     } else
@@ -540,7 +540,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
       str = v7_to_string(v7, &ro, &str_len);
       if (slre_compile(str, str_len, NULL, 0, &prog, 0) != SLRE_OK ||
           prog == NULL) {
-        throw_exception(v7, "TypeError", "Invalid String");
+        throw_exception(v7, TYPE_ERROR, "Invalid String");
         return v7_create_undefined();
       }
     } else {

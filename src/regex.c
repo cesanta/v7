@@ -23,7 +23,7 @@ static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     }
     if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
         p == NULL) {
-      throw_exception(v7, "TypeError", "Invalid regex");
+      throw_exception(v7, TYPE_ERROR, "Invalid regex");
       return v7_create_undefined();
     } else {
       rp = (struct v7_regexp *) malloc(sizeof(*rp));

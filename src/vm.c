@@ -221,7 +221,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 
   if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
       p == NULL) {
-    throw_exception(v7, "TypeError", "Invalid regex");
+    throw_exception(v7, TYPE_ERROR, "Invalid regex");
     return V7_UNDEFINED;
   } else {
     rp = (struct v7_regexp *) malloc(sizeof(*rp));
@@ -579,7 +579,7 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   } else if (v7_is_boolean(obj)) {
     v = v7->boolean_prototype;
   } else if (v7_is_undefined(obj)) {
-    throw_exception(v7, "TypeError", "cannot read property '%.*s' of undefined",
+    throw_exception(v7, TYPE_ERROR, "cannot read property '%.*s' of undefined",
                     (int) name_len, name);
   } else if (v7_is_cfunction(obj)) {
     return V7_UNDEFINED;
@@ -632,7 +632,7 @@ int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
 
   if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
     if (v7->strict_mode) {
-      throw_exception(v7, "TypeError", "Object is not extensible");
+      throw_exception(v7, TYPE_ERROR, "Object is not extensible");
     }
     return -1;
   }

@@ -27,7 +27,7 @@ static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
            v7->boolean_prototype)) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "Boolean.valueOf called on non-boolean object");
   }
   return Obj_valueOf(v7, this_obj, args);
@@ -44,7 +44,7 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_boolean(this_obj) &&
       !(v7_is_object(this_obj) &&
         is_prototype_of(v7, this_obj, v7->boolean_prototype))) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "Boolean.toString called on non-boolean object");
   }
 
