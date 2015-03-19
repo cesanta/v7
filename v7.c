@@ -779,6 +779,16 @@ enum cached_strings {
   PREDEFINED_STR_MAX
 };
 
+enum error_constructors {
+  TYPE_ERROR,
+  SYNTAX_ERROR,
+  REFERENCE_ERROR,
+  INTERNAL_ERROR,
+  RANGE_ERROR,
+
+  ERROR_CTOR_MAX
+};
+
 
 struct v7 {
   val_t global_object;
@@ -817,6 +827,8 @@ struct v7 {
 
   int strict_mode; /* true if currently in strict mode */
 
+  val_t error_objects[ERROR_CTOR_MAX];
+
   val_t thrown_error;
   char error_msg[60];     /* Exception message */
   int creating_exception; /* Avoids reentrant exception creation */
@@ -846,9 +858,6 @@ struct v7 {
   struct mbuf allocated_asts;
 
   val_t predefined_strings[PREDEFINED_STR_MAX];
-
-  /* TODO(mkm): remove when finishing debugging compacting GC */
-  val_t number_object;
 };
 
 #ifndef ARRAY_SIZE
@@ -6683,13 +6692,6 @@ void v7_gc(struct v7 *v7) {
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
   gc_dump_arena_stats("Before GC properties", &v7->property_arena);
 
-#if 0
-#ifdef V7_ENABLE_COMPACTING_GC
-  printf("DUMP BEFORE\n");
-  gc_dump_owned_strings(v7);
-#endif
-#endif
-
   /* TODO(mkm): paranoia? */
   gc_mark(v7, v7->object_prototype);
   gc_mark(v7, v7->array_prototype);
@@ -6711,15 +6713,7 @@ void v7_gc(struct v7 *v7) {
   }
 
 #ifdef V7_ENABLE_COMPACTING_GC
-#if 0
-  printf("Owned string mbuf len was %lu\n", v7->owned_strings.len);
-#endif
   gc_compact_strings(v7);
-#if 0
-  printf("DUMP AFTER\n");
-  gc_dump_owned_strings(v7);
-  printf("Owned string mbuf len is %lu\n", v7->owned_strings.len);
-#endif
 #endif
 
   gc_sweep(&v7->object_arena, 0);
@@ -8490,7 +8484,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   ast_off_t end, fpos, fend, fbody;
   val_t frame = v7_create_undefined(), res = v7_create_undefined();
   val_t v1 = v7_create_undefined(), args = v7_create_undefined();
-  val_t old_this = v7->this_object;
+  val_t cfunc = v7_create_undefined(), old_this = v7->this_object;
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -8507,19 +8501,44 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
-  v1 = i_eval_expr(v7, a, pos, scope);
+  cfunc = v1 = i_eval_expr(v7, a, pos, scope);
   if (!v7_is_cfunction(v1) && !v7_is_function(v1)) {
-    v1 = i_value_of(v7, v1);
+    /* extract the hidden property from a cfunction_object */
+    struct v7_property *p;
+    p = v7_get_own_property2(v7, v1, "", 0, V7_PROPERTY_HIDDEN);
+    if (p != NULL) {
+      cfunc = p->value;
+    }
   }
 
-  if (v7_is_cfunction(v1)) {
+  if (is_constructor) {
+    if (!v7_is_cfunction(v1)) {
+      val_t fun_proto = v7_get(v7, v1, "prototype", 9);
+      tmp_stack_push(&tf, &fun_proto);
+      if (!v7_is_object(fun_proto)) {
+        /* TODO(mkm): box primitive value */
+        throw_exception(v7, "TypeError",
+                        "Cannot set a primitive value as object prototype");
+      }
+      v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
+    }
+  } else if (v7_is_undefined(this_object) && v7_is_function(v1) &&
+             !(v7_to_function(v1)->attributes & V7_FUNCTION_STRICT)) {
+    /*
+     * null and undefined are replaced with `global` in non-strict mode,
+     * as per ECMA-262 6th, 19.2.3.3.
+     */
+    this_object = v7->global_object;
+  }
+
+  if (v7_is_cfunction(cfunc)) {
     args = v7_create_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       n = snprintf(buf, sizeof(buf), "%d", i);
       v7_set_property(v7, args, buf, n, 0, res);
     }
-    res = v7_to_cfunction(v1)(v7, this_object, args);
+    res = v7_to_cfunction(cfunc)(v7, this_object, args);
     goto cleanup;
   }
   if (!v7_is_function(v1)) {
@@ -8528,24 +8547,6 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   func = v7_to_function(v1);
-  if (is_constructor) {
-    val_t fun_proto = v7_get(v7, v1, "prototype", 9);
-    tmp_stack_push(&tf, &fun_proto);
-    if (!v7_is_object(fun_proto)) {
-      /* TODO(mkm): box primitive value */
-      throw_exception(v7, "TypeError",
-                      "Cannot set a primitive value as object prototype");
-    }
-    v7_to_object(this_object)->prototype = v7_to_object(fun_proto);
-  } else if (v7_is_undefined(this_object) &&
-             !(func->attributes & V7_FUNCTION_STRICT)) {
-    /*
-     * null and undefined are replaced with `global` in non-strict mode,
-     * as per ECMA-262 6th, 19.2.3.3.
-     */
-    this_object = v7->global_object;
-  }
-
   frame = i_prepare_call(v7, func, &fpos, &fbody, &fend);
 
   /*
@@ -9029,6 +9030,15 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   tmp_stack_push(&vf, &args);
   tmp_stack_push(&vf, &f);
   tmp_stack_push(&vf, &this_object);
+
+  if (!v7_is_cfunction(f) && !v7_is_function(f)) {
+    /* extract the hidden property from a cfunction_object */
+    struct v7_property *p;
+    p = v7_get_own_property2(v7, f, "", 0, V7_PROPERTY_HIDDEN);
+    if (p != NULL) {
+      f = p->value;
+    }
+  }
 
   if (v7_is_cfunction(f)) {
     res = v7_to_cfunction(f)(v7, this_object, args);
@@ -11073,27 +11083,42 @@ V7_PRIVATE void init_object(struct v7 *v7) {
  */
 
 
-V7_PRIVATE void init_error(struct v7 *v7) {
-  val_t v;
-  v7_exec(v7, &v, "function Error(m) {this.message = m}");
-  v7_exec(v7, &v,
-          "function TypeError(m) {this.message = m};"
-          "TypeError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, &v,
-          "function SyntaxError(m) {this.message = m};"
-          "SyntaxError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, &v,
-          "function ReferenceError(m) {this.message = m};"
-          "ReferenceError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, &v,
-          "function InternalError(m) {this.message = m};"
-          "ReferenceError.prototype = Object.create(Error.prototype)");
-  v7_exec(v7, &v,
-          "function RangeError(m) {this.message = m};"
-          "RangeError.prototype = Object.create(Error.prototype)");
+static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_get(v7, args, 0);
+  val_t res;
 
-  v7->error_prototype =
-      v7_get(v7, v7_get(v7, v7->global_object, "Error", 5), "prototype", 9);
+  if (v7_is_object(this_obj) && this_obj != v7->global_object) {
+    res = this_obj;
+  } else {
+    res = create_object(v7, v7->error_prototype);
+  }
+  /* TODO(mkm): set non enumerable but provide toString method */
+  v7_set_property(v7, res, "message", 7, 0, arg0);
+
+  return res;
+}
+
+static const char *error_names[] = {"TypeError", "SyntaxError",
+                                    "ReferenceError", "InternalError",
+                                    "RangeError"};
+V7_STATIC_ASSERT(ARRAY_SIZE(error_names) == ERROR_CTOR_MAX,
+                 error_name_count_mismatch);
+
+V7_PRIVATE void init_error(struct v7 *v7) {
+  val_t error;
+  size_t i;
+
+  error = v7_create_cfunction_ctor(v7, v7->error_prototype, Error_ctor, 1);
+  v7_set_property(v7, v7->global_object, "Error", 5, V7_PROPERTY_DONT_ENUM,
+                  error);
+
+  for (i = 0; i < ARRAY_SIZE(error_names); i++) {
+    error = v7_create_cfunction_ctor(v7, create_object(v7, v7->error_prototype),
+                                     Error_ctor, 1);
+    v7_set_property(v7, v7->global_object, error_names[i],
+                    strlen(error_names[i]), V7_PROPERTY_DONT_ENUM, error);
+    v7->error_objects[i] = error;
+  }
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -11183,7 +11208,6 @@ V7_PRIVATE void init_number(struct v7 *v7) {
       v7_create_cfunction_ctor(v7, v7->number_prototype, Number_ctor, 1);
   v7_set_property(v7, v7->global_object, "Number", 6, V7_PROPERTY_DONT_ENUM,
                   num);
-  v7->number_object = num;
 
   set_cfunc_prop(v7, v7->number_prototype, "toFixed", Number_toFixed);
   set_cfunc_prop(v7, v7->number_prototype, "toPrecision", Number_toPrecision);
@@ -12636,6 +12660,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->string_prototype = v7_create_object(v7);
   v7->regexp_prototype = v7_create_object(v7);
   v7->number_prototype = v7_create_object(v7);
+  v7->error_prototype = v7_create_object(v7);
   v7->global_object = v7_create_object(v7);
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);

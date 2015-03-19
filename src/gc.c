@@ -327,13 +327,6 @@ void v7_gc(struct v7 *v7) {
   gc_dump_arena_stats("Before GC functions", &v7->function_arena);
   gc_dump_arena_stats("Before GC properties", &v7->property_arena);
 
-#if 0
-#ifdef V7_ENABLE_COMPACTING_GC
-  printf("DUMP BEFORE\n");
-  gc_dump_owned_strings(v7);
-#endif
-#endif
-
   /* TODO(mkm): paranoia? */
   gc_mark(v7, v7->object_prototype);
   gc_mark(v7, v7->array_prototype);
@@ -355,15 +348,7 @@ void v7_gc(struct v7 *v7) {
   }
 
 #ifdef V7_ENABLE_COMPACTING_GC
-#if 0
-  printf("Owned string mbuf len was %lu\n", v7->owned_strings.len);
-#endif
   gc_compact_strings(v7);
-#if 0
-  printf("DUMP AFTER\n");
-  gc_dump_owned_strings(v7);
-  printf("Owned string mbuf len is %lu\n", v7->owned_strings.len);
-#endif
 #endif
 
   gc_sweep(&v7->object_arena, 0);
