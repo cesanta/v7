@@ -40,11 +40,11 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
   long new_len = arg_long(v7, args, 0, -1);
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, "TypeError", "Array expected");
+    throw_exception(v7, TYPE_ERROR, "Array expected");
   } else if (new_len < 0 ||
              (v7_is_double(arg0) &&
               (isnan(v7_to_double(arg0)) || isinf(v7_to_double(arg0))))) {
-    throw_exception(v7, "RangeError", "Invalid array length");
+    throw_exception(v7, RANGE_ERROR, "Invalid array length");
   } else {
     struct v7_property **p, **next;
     long index, max_index = -1;
@@ -307,7 +307,7 @@ static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, "TypeError", "Array expected");
+    throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
     res = v7_create_array(v7);
@@ -328,7 +328,7 @@ static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, "TypeError", "Array expected");
+    throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
     res = v7_create_boolean(1);
@@ -349,7 +349,7 @@ static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, "TypeError", "Array expected");
+    throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
     res = v7_create_boolean(0);
@@ -370,7 +370,7 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_property *p;
 
   if (!v7_is_object(this_obj)) {
-    throw_exception(v7, "TypeError", "Array expected");
+    throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
     res = v7_create_array(v7);

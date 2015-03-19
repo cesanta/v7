@@ -9,7 +9,7 @@ static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "Object.getPrototypeOf called on non-object");
   }
   return v_get_prototype(v7, arg);
@@ -41,7 +41,7 @@ static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
   val_t obj = v7_array_get(v7, args, 0);
   val_t res = v7_create_array(v7);
   if (!v7_is_object(obj)) {
-    throw_exception(v7, "TypeError", "Object.keys called on non-object");
+    throw_exception(v7, TYPE_ERROR, "Object.keys called on non-object");
   }
 
   _Obj_append_reverse(v7, v7_to_object(obj)->properties, res, 0, ignore_flags);
@@ -119,7 +119,7 @@ static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   int name_len;
   (void) this_obj;
   if (!v7_is_object(obj)) {
-    throw_exception(v7, "TypeError", "object expected");
+    throw_exception(v7, TYPE_ERROR, "object expected");
   }
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
@@ -128,7 +128,7 @@ static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
 static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   struct v7_property *p;
   if (!v7_is_object(descs)) {
-    throw_exception(v7, "TypeError", "object expected");
+    throw_exception(v7, TYPE_ERROR, "object expected");
   }
   for (p = v7_to_object(descs)->properties; p; p = p->next) {
     size_t n;
@@ -153,7 +153,7 @@ static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t descs = v7_array_get(v7, args, 1);
   (void) this_obj;
   if (!v7_is_null(proto) && !v7_is_object(proto)) {
-    throw_exception(v7, "TypeError",
+    throw_exception(v7, TYPE_ERROR,
                     "Object prototype may only be an Object or null");
   }
   res = create_object(v7, proto);
@@ -227,7 +227,7 @@ static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
-    throw_exception(v7, "TypeError", "Object expected");
+    throw_exception(v7, TYPE_ERROR, "Object expected");
   }
   v7_to_object(arg)->attributes |= V7_OBJ_NOT_EXTENSIBLE;
   return arg;
@@ -237,7 +237,7 @@ static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
-    throw_exception(v7, "TypeError", "Object expected");
+    throw_exception(v7, TYPE_ERROR, "Object expected");
   }
   return v7_create_boolean(
       !(v7_to_object(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE));

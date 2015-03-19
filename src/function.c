@@ -38,7 +38,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   n += snprintf(buf + n, sizeof(buf) - n, "%s", "})");
 
   if (v7_exec_with(v7, &res, buf, V7_UNDEFINED) != V7_OK) {
-    throw_exception(v7, "SyntaxError", "Invalid function body");
+    throw_exception(v7, SYNTAX_ERROR, "Invalid function body");
   }
 
   return res;

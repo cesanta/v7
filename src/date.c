@@ -267,7 +267,7 @@ typedef void (*fbreaktime_t)(const etime_t *, struct timeparts *);
 static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
   val_t ret = i_value_of(v7, obj);
   if (ret == V7_TAG_NAN) {
-    throw_exception(v7, "TypeError", "Date is invalid (for string)");
+    throw_exception(v7, TYPE_ERROR, "Date is invalid (for string)");
   }
   return ret;
 }
@@ -837,7 +837,7 @@ static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_object(this_obj) ||
       (v7_is_object(this_obj) &&
        v7_to_object(this_obj)->prototype != v7_to_object(v7->date_prototype))) {
-    throw_exception(v7, "TypeError", "Date.valueOf called on non-Date object");
+    throw_exception(v7, TYPE_ERROR, "Date.valueOf called on non-Date object");
   }
 
   return Obj_valueOf(v7, this_obj, args);
@@ -870,7 +870,7 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
-    throw_exception(v7, "TypeError", "Date.parse() called on object");
+    throw_exception(v7, TYPE_ERROR, "Date.parse() called on object");
   }
 
   if (v7_array_length(v7, args) >= 1) {
@@ -891,7 +891,7 @@ static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
 
   if (!d_iscalledasfunction(v7, this_obj)) {
-    throw_exception(v7, "TypeError", "Date.now() called on object");
+    throw_exception(v7, TYPE_ERROR, "Date.now() called on object");
   }
 
   ret_time = d_time_number_from_arr(v7, this_obj, args, tpyear, 0, d_gmktime);
