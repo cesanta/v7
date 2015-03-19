@@ -620,27 +620,27 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_apply(v7, setter, obj, args);
 }
 
-int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
-                      unsigned int attributes, v7_val_t val) {
+V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
+                                           unsigned int attributes, val_t val) {
   struct v7_property *prop;
   size_t len;
   const char *n = v7_to_string(v7, &name, &len);
 
   if (!v7_is_object(obj)) {
-    return -1;
+    return NULL;
   }
 
   if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
     if (v7->strict_mode) {
       throw_exception(v7, TYPE_ERROR, "Object is not extensible");
     }
-    return -1;
+    return NULL;
   }
 
   prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
-      return -1; /* LCOV_EXCL_LINE */
+      return NULL; /* LCOV_EXCL_LINE */
     }
     prop->next = v7_to_object(obj)->properties;
     v7_to_object(obj)->properties = prop;
@@ -656,7 +656,13 @@ int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
 
   prop->value = val;
   prop->attributes = attributes;
-  return 0;
+  return prop;
+}
+
+int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
+                      unsigned int attributes, v7_val_t val) {
+  struct v7_property *prop = v7_set_prop(v7, obj, name, attributes, val);
+  return prop == NULL ? -1 : 0;
 }
 
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
