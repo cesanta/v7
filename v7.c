@@ -7596,7 +7596,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
  */
 
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(ARDUINO)
 #define siglongjmp longjmp
 #define sigsetjmp(buf, mask) setjmp(buf)
 #endif

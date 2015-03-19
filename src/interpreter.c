@@ -6,7 +6,7 @@
 #include "internal.h"
 #include "gc.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(ARDUINO)
 #define siglongjmp longjmp
 #define sigsetjmp(buf, mask) setjmp(buf)
 #endif
