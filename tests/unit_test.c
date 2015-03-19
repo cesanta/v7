@@ -398,7 +398,7 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "-000959-12-31T23:59:59.999Z"));
   ASSERT(v7_exec(v7, &v, "new Date(\"1970\").valueOf()") == V7_OK);
   ASSERT(check_num(v, 1970));
-  ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(Number(1999), Number(10), 15)).toISOString()") == V7_OK);
+ ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(Number(1999), Number(10), 15)).toISOString()") == V7_OK);
   ASSERT(check_str(v7, v, "1999-11-15T00:00:00.000Z"));
   ASSERT(v7_exec(v7, &v, "new Date(Date.UTC(-1000, 10, 10)).valueOf()") == V7_OK);
   ASSERT(check_num(v, ADJTZ(-93696998400000)));
@@ -536,6 +536,34 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/\n")) != NULL);
   ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/")) != NULL);
 #endif
+
+  ASSERT(v7_exec(v7, &v, "var d = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var d = Socket()") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.Family.AF_INET)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.Family.AF_INET6)") ==
+         V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "var d = new Socket(Socket.Family.AF_INET,"
+                 "Socket.Type.SOCK_STREAM)") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "var d = new Socket(Socket.Family.AF_INET,"
+                 "Socket.Type.SOCK_DGRAM)") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "var d = new Socket(Socket.Family.AF_INET,"
+                 "Socket.Type.SOCK_STREAM, Socket.RecvType.STRING)") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "var d = new Socket(Socket.Family.AF_INET,"
+                 "Socket.Type.SOCK_STREAM, Socket.RecvType.RAW)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.close()") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.bind(1234)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.bind(1234)") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "var t = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "t.bind(\"non_number\")") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "t.bind(12345.25)") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "t.bind(12345.0)") == V7_OK);
 
   v7_destroy(v7);
   return NULL;
