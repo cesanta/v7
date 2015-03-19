@@ -92,7 +92,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
 V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #ifdef V7_DISABLE_GC
   (void) v7;
-  return malloc(a->cell_size);
+  return calloc(1, a->cell_size);
 #else
   char **r;
   if (a->free == NULL) {
@@ -118,6 +118,11 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   a->allocations++;
   a->alive++;
 
+  /*
+   * TODO(mkm): minor opt possible since most of the fields
+   * are overwritten downstream, but not worth the yak shave time
+   * when fields are added to GC-able structures */
+  memset(r, 0, a->cell_size);
   return (void *) r;
 #endif
 }
