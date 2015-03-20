@@ -382,18 +382,18 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       return b - buf;
     }
     case V7_TYPE_ARRAY_OBJECT: {
-      struct v7_property *p;
+      val_t el;
+      int has;
       char *b = buf;
-      char key[512];
       size_t i, len = v7_array_length(v7, v);
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       if (as_json) {
         b += v_sprintf_s(b, size - (b - buf), "[");
       }
       for (i = 0; i < len; i++) {
-        v_sprintf_s(key, sizeof(key), "%lu", i);
-        if ((p = v7_get_property(v7, v, key, -1)) != NULL) {
-          b += to_str(v7, p->value, b, size - (b - buf), 1);
+        el = v7_array_get2(v7, v, i, &has);
+        if (has) {
+          b += to_str(v7, el, b, size - (b - buf), 1);
         }
         if (i != len - 1) {
           b += v_sprintf_s(b, size - (b - buf), ",");
@@ -809,12 +809,21 @@ int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
 }
 
 val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
+  return v7_array_get2(v7, arr, index, NULL);
+}
+
+val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
   if (v7_is_object(arr)) {
+    struct v7_property *p;
     char buf[20];
     int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
-    return v7_get(v7, arr, buf, n);
+    p = v7_get_property(v7, arr, buf, n);
+    if (has != NULL) {
+      *has = (p != NULL);
+    }
+    return v7_property_value(v7, arr, p);
   } else {
-    return V7_UNDEFINED;
+    return v7_create_undefined();
   }
 }
 
