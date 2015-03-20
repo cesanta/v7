@@ -240,7 +240,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);
   v7->function_prototype = v7_create_object(v7);
+#ifndef V7_DISABLE_SOCKETS
   v7->socket_prototype = v7_create_object(v7);
+#endif
 
   set_cfunc_prop(v7, v7->global_object, "print", Std_print);
   set_cfunc_prop(v7, v7->global_object, "eval", Std_eval);
@@ -275,7 +277,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_number(v7);
   init_json(v7);
   init_date(v7);
+#ifndef V7_DISABLE_SOCKETS
   init_socket(v7);
+#endif
   init_function(v7);
   init_js_stdlib(v7);
 }
