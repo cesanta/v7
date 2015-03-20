@@ -182,6 +182,8 @@ V7_PRIVATE int v7_set_property_v(struct v7 *, v7_val_t obj, v7_val_t name,
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);
+V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
+                                           unsigned int attributes, val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);

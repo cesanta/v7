@@ -93,21 +93,37 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
   return desc;
 }
 
+static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
+                       struct v7_property *prop, unsigned int attr) {
+  val_t v = v7_get(v7, desc, name, n);
+  if (v7_is_true(v7, v)) {
+    prop->attributes &= ~attr;
+  } else {
+    prop->attributes |= attr;
+  }
+}
+
 static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
                                  int name_len, val_t desc) {
-  unsigned int flags = 0;
   val_t val = v7_get(v7, desc, "value", 5);
-  if (!v7_is_true(v7, v7_get(v7, desc, "enumerable", 10))) {
-    flags |= V7_PROPERTY_DONT_ENUM;
-  }
-  if (!v7_is_true(v7, v7_get(v7, desc, "writable", 8))) {
-    flags |= V7_PROPERTY_READ_ONLY;
-  }
-  if (!v7_is_true(v7, v7_get(v7, desc, "configurable", 12))) {
-    flags |= V7_PROPERTY_DONT_DELETE;
+  struct v7_property *prop = v7_get_own_property(v7, obj, name, name_len);
+
+  if (prop == NULL) {
+    val_t key = v7_create_string(v7, name, name_len, 1);
+    prop = v7_set_prop(v7, obj, key, 0, val);
   }
 
-  v7_set_property(v7, obj, name, name_len, flags, val);
+  if (prop == NULL) {
+    throw_exception(v7, INTERNAL_ERROR, "OOM");
+  } else {
+    o_set_attr(v7, desc, "enumerable", 10, prop, V7_PROPERTY_DONT_ENUM);
+    o_set_attr(v7, desc, "writable", 8, prop, V7_PROPERTY_READ_ONLY);
+    o_set_attr(v7, desc, "configurable", 12, prop, V7_PROPERTY_DONT_DELETE);
+    if (!v7_is_undefined(val)) {
+      prop->value = val;
+    }
+  }
+
   return obj;
 }
 

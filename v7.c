@@ -1080,6 +1080,8 @@ V7_PRIVATE int v7_set_property_v(struct v7 *, v7_val_t obj, v7_val_t name,
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
                                size_t len, unsigned int attributes,
                                v7_val_t val);
+V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
+                                           unsigned int attributes, val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
@@ -5878,27 +5880,27 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_apply(v7, setter, obj, args);
 }
 
-int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
-                      unsigned int attributes, v7_val_t val) {
+V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
+                                           unsigned int attributes, val_t val) {
   struct v7_property *prop;
   size_t len;
   const char *n = v7_to_string(v7, &name, &len);
 
   if (!v7_is_object(obj)) {
-    return -1;
+    return NULL;
   }
 
   if (v7_to_object(obj)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
     if (v7->strict_mode) {
       throw_exception(v7, TYPE_ERROR, "Object is not extensible");
     }
-    return -1;
+    return NULL;
   }
 
   prop = v7_get_own_property(v7, obj, n, len);
   if (prop == NULL) {
     if ((prop = v7_create_property(v7)) == NULL) {
-      return -1; /* LCOV_EXCL_LINE */
+      return NULL; /* LCOV_EXCL_LINE */
     }
     prop->next = v7_to_object(obj)->properties;
     v7_to_object(obj)->properties = prop;
@@ -5914,7 +5916,13 @@ int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
 
   prop->value = val;
   prop->attributes = attributes;
-  return 0;
+  return prop;
+}
+
+int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
+                      unsigned int attributes, v7_val_t val) {
+  struct v7_property *prop = v7_set_prop(v7, obj, name, attributes, val);
+  return prop == NULL ? -1 : 0;
 }
 
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
@@ -10901,21 +10909,47 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
   return desc;
 }
 
+static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
+                       struct v7_property *prop, unsigned int attr) {
+  val_t v = v7_get(v7, desc, name, n);
+    if (v7_is_true(v7, v)) {
+      prop->attributes &= ~attr;
+    } else {
+      prop->attributes |= attr;
+    }
+
+  #if 0
+  if (!v7_is_undefined(v)) {
+    if (v7_is_true(v7, v)) {
+      prop->attributes &= ~attr;
+    } else {
+      prop->attributes |= attr;
+    }
+  }
+  #endif
+}
+
 static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
                                  int name_len, val_t desc) {
-  unsigned int flags = 0;
   val_t val = v7_get(v7, desc, "value", 5);
-  if (!v7_is_true(v7, v7_get(v7, desc, "enumerable", 10))) {
-    flags |= V7_PROPERTY_DONT_ENUM;
-  }
-  if (!v7_is_true(v7, v7_get(v7, desc, "writable", 8))) {
-    flags |= V7_PROPERTY_READ_ONLY;
-  }
-  if (!v7_is_true(v7, v7_get(v7, desc, "configurable", 12))) {
-    flags |= V7_PROPERTY_DONT_DELETE;
+  struct v7_property *prop = v7_get_own_property(v7, obj, name, name_len);
+
+  if (prop == NULL) {
+    val_t key = v7_create_string(v7, name, name_len, 1);
+    prop = v7_set_prop(v7, obj, key, 0, val);
   }
 
-  v7_set_property(v7, obj, name, name_len, flags, val);
+  if (prop == NULL) {
+    throw_exception(v7, INTERNAL_ERROR, "OOM");
+  } else {
+    o_set_attr(v7, desc, "enumerable", 10, prop, V7_PROPERTY_DONT_ENUM);
+    o_set_attr(v7, desc, "writable", 8, prop, V7_PROPERTY_READ_ONLY);
+    o_set_attr(v7, desc, "configurable", 12, prop, V7_PROPERTY_DONT_DELETE);
+    if (!v7_is_undefined(val)) {
+      prop->value = val;
+    }
+  }
+
   return obj;
 }
 
@@ -11253,12 +11287,9 @@ static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE void init_json(struct v7 *v7) {
   val_t o = v7_create_object(v7);
-  unsigned flags = V7_PROPERTY_DONT_ENUM;
-
-  v7_set_property(v7, o, "stringify", 9, flags,
-                  v7_create_cfunction(Json_stringify));
-  v7_set_property(v7, o, "parse", 5, flags, v7_create_cfunction(Std_eval));
-  v7_set_property(v7, v7->global_object, "JSON", 4, 0, o);
+  set_cfunc_obj_prop(v7, o, "stringify", Json_stringify, 1);
+  set_cfunc_obj_prop(v7, o, "parse", Std_eval, 1);
+  v7_set_property(v7, v7->global_object, "JSON", 4, V7_PROPERTY_DONT_ENUM, o);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
