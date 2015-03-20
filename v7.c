@@ -3846,8 +3846,8 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "some", Array_some, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "filter", Array_filter, 1);
 
-  v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
-  v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
+  v7_array_set(v7, length, 0, v7_create_cfunction(Array_get_length));
+  v7_array_set(v7, length, 1, v7_create_cfunction(Array_set_length));
   v7_set_property(v7, v7->array_prototype, "length", 6,
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, length);
 }
@@ -4305,10 +4305,11 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
         size_t rez_len;
         val_t arr = v7_create_array(v7);
 
-        for (i = 0; i < loot.num_captures; i++)
+        for (i = 0; i < loot.num_captures; i++) {
           v7_array_push(v7, arr, v7_create_string(
                                      v7, loot.caps[i].start,
                                      loot.caps[i].end - loot.caps[i].start, 1));
+        }
         v7_array_push(v7, arr, v7_create_number(utfnlen(
                                    (char *) s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
@@ -5877,7 +5878,7 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   if (prop->attributes & V7_PROPERTY_GETTER) {
     setter = v7_array_get(v7, prop->value, 1);
   }
-  v7_set(v7, args, "0", 1, val);
+  v7_array_set(v7, args, 0, val);
   v7_apply(v7, setter, obj, args);
 }
 
@@ -7668,7 +7669,7 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
      * This assumes all callers of i_value_of will root their
      * temporary values.
      */
-    v = v7_apply(v7, f, v, v7_create_array(v7));
+    v = v7_apply(v7, f, v, v7_create_undefined());
   }
   return v;
 }
@@ -8098,8 +8099,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         tag = ast_fetch_tag(a, &lookahead);
         v1 = i_eval_expr(v7, a, pos, scope);
         if (tag != AST_NOP) {
-          snprintf(buf, sizeof(buf), "%d", i);
-          v7_set_property(v7, res, buf, -1, 0, v1);
+          v7_array_set(v7, res, i, v1);
         }
       }
       break;
@@ -8140,8 +8140,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                 p->attributes & other) {
               val_t arr = v7_create_array(v7);
               tmp_stack_push(&tf, &arr);
-              v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
-              v7_set(v7, arr, tag == AST_SETTER ? "1" : "0", 1, v1);
+              v7_array_set(v7, arr, tag == AST_GETTER ? 1 : 0, p->value);
+              v7_array_set(v7, arr, tag == AST_SETTER ? 1 : 0, v1);
               p->value = arr;
               p->attributes |= attr;
             } else {
@@ -8506,8 +8506,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   enum ast_tag tag;
   char *name;
   size_t name_len;
-  char buf[20];
-  int i, n;
+  int i;
 
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &frame);
@@ -8552,8 +8551,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     args = v7_create_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
-      n = snprintf(buf, sizeof(buf), "%d", i);
-      v7_set_property(v7, args, buf, n, 0, res);
+      v7_array_set(v7, args, i, res);
     }
     res = v7_to_cfunction(cfunc)(v7, this_object, args);
     goto cleanup;
@@ -8582,8 +8580,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     if (*pos < end) {
       res = i_eval_expr(v7, a, pos, scope);
       if (!v7_is_undefined(args)) {
-        n = snprintf(buf, sizeof(buf), "%d", i);
-        v7_set_property(v7, args, buf, n, 0, res);
+        v7_array_set(v7, args, i, res);
       }
     } else {
       res = v7_create_undefined();
@@ -8596,8 +8593,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   for (; *pos < end; i++) {
     res = i_eval_expr(v7, a, pos, scope);
     if (!v7_is_undefined(args)) {
-      n = snprintf(buf, sizeof(buf), "%d", i);
-      v7_set_property(v7, args, buf, n, 0, res);
+      v7_array_set(v7, args, i, res);
     }
   }
 
@@ -9032,8 +9028,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   val_t arguments = v7_create_undefined(), saved_this = v7->this_object;
   char *name;
   size_t name_len;
-  char buf[20];
-  int i, n;
+  int i;
 
   struct gc_tmp_frame vf = new_tmp_frame(v7);
   tmp_stack_push(&vf, &frame);
@@ -9081,8 +9076,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
     res = v7_array_get(v7, args, i);
     v7_set_property(v7, frame, name, name_len, 0, res);
     if (!v7_is_undefined(arguments)) {
-      n = snprintf(buf, sizeof(buf), "%d", i);
-      v7_set_property(v7, arguments, buf, n, 0, res);
+      v7_array_set(v7, arguments, i, res);
     }
   }
 
@@ -10844,13 +10838,11 @@ static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
  * This will be obsoleted when arrays will have a special object type. */
 static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
                                 int i, unsigned int ignore_flags) {
-  char buf[20];
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
   if (p->next) _Obj_append_reverse(v7, p->next, res, i + 1, ignore_flags);
 
-  snprintf(buf, sizeof(buf), "%d", i);
-  v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
+  v7_array_set(v7, res, i, p->name);
 }
 
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
@@ -10913,21 +10905,11 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
 static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
                        struct v7_property *prop, unsigned int attr) {
   val_t v = v7_get(v7, desc, name, n);
-    if (v7_is_true(v7, v)) {
-      prop->attributes &= ~attr;
-    } else {
-      prop->attributes |= attr;
-    }
-
-  #if 0
-  if (!v7_is_undefined(v)) {
-    if (v7_is_true(v7, v)) {
-      prop->attributes &= ~attr;
-    } else {
-      prop->attributes |= attr;
-    }
+  if (v7_is_true(v7, v)) {
+    prop->attributes &= ~attr;
+  } else {
+    prop->attributes |= attr;
   }
-  #endif
 }
 
 static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
@@ -12968,8 +12950,8 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
   v7_set_property(v7, v7->regexp_prototype, "source", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Regex_source));
 
-  v7_set(v7, lastIndex, "0", 1, v7_create_cfunction(Regex_get_lastIndex));
-  v7_set(v7, lastIndex, "1", 1, v7_create_cfunction(Regex_set_lastIndex));
+  v7_array_set(v7, lastIndex, 0, v7_create_cfunction(Regex_get_lastIndex));
+  v7_array_set(v7, lastIndex, 1, v7_create_cfunction(Regex_set_lastIndex));
   v7_set_property(v7, v7->regexp_prototype, "lastIndex", 9,
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, lastIndex);
 }

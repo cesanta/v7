@@ -151,8 +151,8 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
   v7_set_property(v7, v7->regexp_prototype, "source", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Regex_source));
 
-  v7_set(v7, lastIndex, "0", 1, v7_create_cfunction(Regex_get_lastIndex));
-  v7_set(v7, lastIndex, "1", 1, v7_create_cfunction(Regex_set_lastIndex));
+  v7_array_set(v7, lastIndex, 0, v7_create_cfunction(Regex_get_lastIndex));
+  v7_array_set(v7, lastIndex, 1, v7_create_cfunction(Regex_set_lastIndex));
   v7_set_property(v7, v7->regexp_prototype, "lastIndex", 9,
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, lastIndex);
 }

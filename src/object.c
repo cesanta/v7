@@ -27,13 +27,11 @@ static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
  * This will be obsoleted when arrays will have a special object type. */
 static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
                                 int i, unsigned int ignore_flags) {
-  char buf[20];
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
   if (p->next) _Obj_append_reverse(v7, p->next, res, i + 1, ignore_flags);
 
-  snprintf(buf, sizeof(buf), "%d", i);
-  v7_set_property(v7, res, buf, strlen(buf), 0, p->name);
+  v7_array_set(v7, res, i, p->name);
 }
 
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,

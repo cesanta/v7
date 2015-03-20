@@ -404,8 +404,8 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   set_cfunc_obj_prop(v7, v7->array_prototype, "some", Array_some, 1);
   set_cfunc_obj_prop(v7, v7->array_prototype, "filter", Array_filter, 1);
 
-  v7_set(v7, length, "0", 1, v7_create_cfunction(Array_get_length));
-  v7_set(v7, length, "1", 1, v7_create_cfunction(Array_set_length));
+  v7_array_set(v7, length, 0, v7_create_cfunction(Array_get_length));
+  v7_array_set(v7, length, 1, v7_create_cfunction(Array_set_length));
   v7_set_property(v7, v7->array_prototype, "length", 6,
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, length);
 }
