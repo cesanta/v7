@@ -802,7 +802,9 @@ struct v7 {
   val_t number_prototype;
   val_t date_prototype;
   val_t function_prototype;
+#ifndef V7_DISABLE_SOCKETS
   val_t socket_prototype;
+#endif
 
   /*
    * Stack of execution contexts.
@@ -12687,7 +12689,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);
   v7->function_prototype = v7_create_object(v7);
+#ifndef V7_DISABLE_SOCKETS
   v7->socket_prototype = v7_create_object(v7);
+#endif
 
   set_cfunc_prop(v7, v7->global_object, "print", Std_print);
   set_cfunc_prop(v7, v7->global_object, "eval", Std_eval);
@@ -12722,7 +12726,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_number(v7);
   init_json(v7);
   init_date(v7);
+#ifndef V7_DISABLE_SOCKETS
   init_socket(v7);
+#endif
   init_function(v7);
   init_js_stdlib(v7);
 }
@@ -12960,11 +12966,13 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
  * All rights reserved
  */
 
+#ifndef V7_DISABLE_SOCKETS
+
 
 #ifdef _WIN32
-#include <Ws2tcpip.h>
-#include <Ws2ipdef.h>
-#include <Windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 #define close(x) closesocket(x)
 #ifdef _MSC_VER
 #pragma comment(lib, "ws2_32.lib")
@@ -13087,17 +13095,20 @@ static void Socket_getlocal_sockaddr(struct v7 *v7, struct socket_internal *si,
       sa4->sin_addr.s_addr = INADDR_ANY;
       break;
     }
+#ifdef V7_ENABLE_IPV6
     case AF_INET6: {
       struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *) sa;
       sa6->sin6_family = si->family;
       sa6->sin6_port = htons(si->local_port);
       sa6->sin6_addr = in6addr_any;
     }
+#endif
     default:
       throw_exception(v7, TYPE_ERROR, "Unsupported address family");
   }
 }
 
+#ifdef V7_ENABLE_GETADDRINFO
 static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
                                       struct sockaddr *sa) {
   struct addrinfo *ai;
@@ -13113,6 +13124,7 @@ static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
       memcpy(sa, psa, sizeof(*psa));
       break;
     };
+#ifdef V7_ENABLE_IPV6
     case AF_INET6: {
       /* TODO(alashkin): verify IPv6 [my provider doesn't support it] */
       struct sockaddr_in6 *psa = (struct sockaddr_in6 *) ai[0].ai_addr;
@@ -13120,10 +13132,47 @@ static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
       memcpy(sa, psa, sizeof(*psa));
       break;
     }
+#endif
+    default:
+      freeaddrinfo(ai);
+      throw_exception(v7, TYPE_ERROR, "Unsupported address family");
+  }
+
+  freeaddrinfo(ai);
+}
+#else
+static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
+                                      struct sockaddr *sa) {
+  struct hostent *host = gethostbyname(addr);
+  memset(sa, 0, sizeof(*sa));
+
+  if (host == NULL) {
+    throw_exception(v7, TYPE_ERROR, "Invalid host name");
+  }
+
+  switch (host->h_addrtype) {
+    case AF_INET: {
+      struct sockaddr_in *psa = (struct sockaddr_in *) sa;
+      psa->sin_port = htons(port);
+      memcpy(&psa->sin_addr.s_addr, host->h_addr_list[0],
+             sizeof(psa->sin_addr.s_addr));
+      break;
+    };
+#ifdef V7_ENABLE_IPV6
+    case AF_INET6: {
+      /* TODO(alashkin): verify IPv6 [my provider doesn't support it] */
+      struct sockaddr_in6 *psa = (struct sockaddr_in6 *) sa;
+      psa->sin6_port = htons(port);
+      memcpy(&psa->sin6_addr, host->h_addr_list[0], sizeof(psa->sin6_addr));
+
+      break;
+    }
+#endif
     default:
       throw_exception(v7, TYPE_ERROR, "Unsupported address family");
   }
 }
+#endif
 
 uint16_t Socket_check_and_get_port(struct v7 *v7, val_t port_val) {
   double port_number = i_as_num(v7, port_val);
@@ -13327,7 +13376,9 @@ V7_PRIVATE void init_socket(struct v7 *v7) {
     val_t family = v7_create_object(v7);
     v7_set_property(v7, socket, "Family", 6, 0, family);
     v7_set_property(v7, family, "AF_INET", 7, 0, v7_create_number(AF_INET));
+#ifdef V7_ENABLE_IPV6
     v7_set_property(v7, family, "AF_INET6", 8, 0, v7_create_number(AF_INET6));
+#endif
   }
 
   {
@@ -13356,3 +13407,5 @@ V7_PRIVATE void init_socket(struct v7 *v7) {
   signal(SIGPIPE, SIG_IGN);
 #endif
 }
+
+#endif

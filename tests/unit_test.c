@@ -540,8 +540,10 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "var d = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "var d = Socket()") != V7_OK);
   ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.Family.AF_INET)") == V7_OK);
+#ifdef V7_ENABLE_IPV6
   ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.Family.AF_INET6)") ==
          V7_OK);
+#endif
   ASSERT(v7_exec(v7, &v,
                  "var d = new Socket(Socket.Family.AF_INET,"
                  "Socket.Type.SOCK_STREAM)") == V7_OK);
