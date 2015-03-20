@@ -1,5 +1,5 @@
 /* Copyright (c) 2004-2013 Sergey Lyubka <valenok@gmail.com>
- * Copyright (c) 2013-2015 Cesanta Software Limited
+ * Copyright (c) 2013-2014 Cesanta Software Limited
  * All rights reserved
  *
  * This library is dual-licensed: you can redistribute it and/or modify
@@ -25,11 +25,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <fcntl.h>  /* for O_RDWR */
 
 #ifndef _WIN32
 #include <unistd.h>
 #include <pthread.h>
+#include <fcntl.h>
 #endif
 
 #include "../v7.h"
@@ -85,6 +85,15 @@ static int check_value(struct v7 *v7, val_t v, const char *str) {
 
 static int check_num(val_t v, double num) {
   int ret = isnan(num) ? isnan(v7_to_double(v)) : v7_to_double(v) == num;
+  if (!ret) {
+    printf("Num: want %f got %f\n", num, v7_to_double(v));
+  }
+
+  return ret;
+}
+
+static int check_num_not(val_t v, double num) {
+  int ret = isnan(num) ? isnan(v7_to_double(v)) : v7_to_double(v) != num;
   if (!ret) {
     printf("Num: want %f got %f\n", num, v7_to_double(v));
   }
@@ -538,58 +547,155 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "re = /GET (\\S+) HTTP/")) != NULL);
 #endif
 
+#ifndef V7_DISABLE_SOCKETS
+
   ASSERT(v7_exec(v7, &v, "var d = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v, "var d = Socket()") != V7_OK);
-  ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.Family.AF_INET)") == V7_OK);
+
+  ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.AF_INET)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.close()") == V7_OK);
+
 #ifdef V7_ENABLE_IPV6
-  ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.Family.AF_INET6)") ==
-         V7_OK);
+  ASSERT(v7_exec(v7, &v, "var d = new Socket(Socket.AF_INET6)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.close()") == V7_OK);
 #endif
+
   ASSERT(v7_exec(v7, &v,
-                 "var d = new Socket(Socket.Family.AF_INET,"
-                 "Socket.Type.SOCK_STREAM)") == V7_OK);
+                 "var d = new Socket(Socket.AF_INET,"
+                 "Socket.SOCK_STREAM)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v,
-                 "var d = new Socket(Socket.Family.AF_INET,"
-                 "Socket.Type.SOCK_DGRAM)") == V7_OK);
+                 "var d = new Socket(Socket.AF_INET,"
+                 "Socket.SOCK_DGRAM)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v,
-                 "var d = new Socket(Socket.Family.AF_INET,"
-                 "Socket.Type.SOCK_STREAM, Socket.RecvType.STRING)") == V7_OK);
+                 "var d = new Socket(Socket.AF_INET,"
+                 "Socket.SOCK_STREAM, Socket.RECV_STRING)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v,
-                 "var d = new Socket(Socket.Family.AF_INET,"
-                 "Socket.Type.SOCK_STREAM, Socket.RecvType.RAW)") == V7_OK);
+                 "var d = new Socket(Socket.AF_INET,"
+                 "Socket.SOCK_STREAM, Socket.RECV_RAW)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "d.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "s.close()") != V7_OK);
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.bind(60000)") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "s.bind(60000)") != V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.localPort") == V7_OK);
+  ASSERT(check_num(v, 60000));
+  ASSERT(v7_exec(v7, &v, "s.bind(60000)") == V7_OK);
+  ASSERT(check_num_not(v, 0));
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v, "var t = new Socket()") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "t.bind('non_number')") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "t.bind(\"non_number\")") == V7_OK);
+  ASSERT(check_num_not(v, 0));
+  ASSERT(v7_exec(v7, &v, "t.errno") == V7_OK);
+  ASSERT(check_num(v, 22));
   ASSERT(v7_exec(v7, &v, "t.bind(12345.25)") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "t.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
   ASSERT(v7_exec(v7, &v, "t.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.bind(12345)") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
   ASSERT(v7_exec(v7, &v, "s.listen()") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "s.bind(600000)") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.bind(600000)") == V7_OK);
+  ASSERT(check_num_not(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 22));
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
 #if 0
   /* start fossa/examples/tcp_echo_server for running these tests */
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.connect(\"127.0.0.1\", 17000)") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.localAddress") == V7_OK);
+  ASSERT(check_str(v7, v, "127.0.0.1"));
+  ASSERT(v7_exec(v7, &v, "s.remoteAddress") == V7_OK);
+  ASSERT(check_str(v7, v, "127.0.0.1"));
+  ASSERT(v7_exec(v7, &v, "s.remotePort") == V7_OK);
+  ASSERT(check_num(v, 17000));
   ASSERT(v7_exec(v7, &v, "s.send(\"Hello, world!\")") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.recv()") == V7_OK);
+  ASSERT(check_str(v7, v, "Hello, world!"));
   ASSERT(v7_exec(v7, &v, "var arr = [102, 117, 99, 107]") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.send(arr)") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "var r = s.recv(Socket.RECV_RAW)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "r.toString()") == V7_OK);
+  ASSERT(check_str(v7, v, "102,117,99,107"));
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
 
   /* ensure internet connection for running these tests */
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.connect(\"microsoft.com\", 80)") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
+  /* start fossa/examples/coap_server for running these tests */
+  ASSERT(v7_exec(v7, &v,
+                 "var s = new Socket(Socket.AF_INET,"
+                 "Socket.SOCK_DGRAM)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var arr = [96, 0, 233, 27]") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.sendto(\"127.0.0.1\", 5683, arr)") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
+  ASSERT(v7_exec(v7, &v,
+                 "var s = new Socket(Socket.AF_INET,"
+                 "Socket.SOCK_DGRAM, Socket.RECV_RAW)") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "var arr = [66, 1, 233, 27, 7, 144, "
+                 "184, 115, 101, 112, 97, 114, 97, 116, 101, "
+                 "16, 209, 35, 17]") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.sendto(\"127.0.0.1\", 5683, arr)") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "s.errno") == V7_OK);
+  ASSERT(check_num(v, 0));
+  ASSERT(v7_exec(v7, &v, "var t = s.recvfrom()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "t.src.port") == V7_OK);
+  ASSERT(check_num(v, 5683));
+  ASSERT(v7_exec(v7, &v, "t.src.address") == V7_OK);
+  ASSERT(check_str(v7, v, "127.0.0.1"));
+  ASSERT(v7_exec(v7, &v, "t.src.family") == V7_OK);
+  ASSERT(check_num(v, 2));
+  ASSERT(v7_exec(v7, &v, "var y = t.data") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "y.toString()") == V7_OK);
+  ASSERT(check_str(v7, v, "96,0,233,27"));
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
 #endif
 
+#endif
   v7_destroy(v7);
   return NULL;
 }
