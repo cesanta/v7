@@ -215,8 +215,7 @@ static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
 uint16_t Socket_check_and_get_port(struct v7 *v7, val_t port_val) {
   double port_number = i_as_num(v7, port_val);
 
-  if (isnan(port_number) || port_number < 0 ||
-      trunc(port_number) != port_number) {
+  if (isnan(port_number) || port_number < 0 || port_number > 0xFFFF) {
     throw_exception(v7, TYPE_ERROR, "Invalid port number");
   }
   return (uint16_t) port_number;

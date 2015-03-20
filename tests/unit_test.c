@@ -560,19 +560,20 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.close()") != V7_OK);
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "s.bind(101112)") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "s.bind(101112)") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.bind(60000)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.bind(60000)") != V7_OK);
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "var t = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "t.bind(\"non_number\")") != V7_OK);
-  ASSERT(v7_exec(v7, &v, "t.bind(12345.25)") != V7_OK);
-  ASSERT(v7_exec(v7, &v, "t.bind(12345.0)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "t.bind(12345.25)") == V7_OK);
   ASSERT(v7_exec(v7, &v, "t.close()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.bind(12345)") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.listen()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
-
+  ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.bind(600000)") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
 #if 0
   /* start fossa/examples/tcp_echo_server for running these tests */
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
