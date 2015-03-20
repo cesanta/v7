@@ -195,6 +195,7 @@ V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
  */
 V7_PRIVATE int v7_del_property(struct v7 *, val_t, const char *, size_t);
 
+V7_PRIVATE val_t v7_array_get2(struct v7 *, v7_val_t, unsigned long, int *);
 V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value);
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json);
