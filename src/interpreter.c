@@ -69,7 +69,7 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
      * This assumes all callers of i_value_of will root their
      * temporary values.
      */
-    v = v7_apply(v7, f, v, v7_create_array(v7));
+    v = v7_apply(v7, f, v, v7_create_undefined());
   }
   return v;
 }
@@ -499,8 +499,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         tag = ast_fetch_tag(a, &lookahead);
         v1 = i_eval_expr(v7, a, pos, scope);
         if (tag != AST_NOP) {
-          snprintf(buf, sizeof(buf), "%d", i);
-          v7_set_property(v7, res, buf, -1, 0, v1);
+          v7_array_set(v7, res, i, v1);
         }
       }
       break;
@@ -541,8 +540,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                 p->attributes & other) {
               val_t arr = v7_create_array(v7);
               tmp_stack_push(&tf, &arr);
-              v7_set(v7, arr, tag == AST_GETTER ? "1" : "0", 1, p->value);
-              v7_set(v7, arr, tag == AST_SETTER ? "1" : "0", 1, v1);
+              v7_array_set(v7, arr, tag == AST_GETTER ? 1 : 0, p->value);
+              v7_array_set(v7, arr, tag == AST_SETTER ? 1 : 0, v1);
               p->value = arr;
               p->attributes |= attr;
             } else {
@@ -907,8 +906,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   enum ast_tag tag;
   char *name;
   size_t name_len;
-  char buf[20];
-  int i, n;
+  int i;
 
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &frame);
@@ -953,8 +951,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     args = v7_create_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
-      n = snprintf(buf, sizeof(buf), "%d", i);
-      v7_set_property(v7, args, buf, n, 0, res);
+      v7_array_set(v7, args, i, res);
     }
     res = v7_to_cfunction(cfunc)(v7, this_object, args);
     goto cleanup;
@@ -983,8 +980,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     if (*pos < end) {
       res = i_eval_expr(v7, a, pos, scope);
       if (!v7_is_undefined(args)) {
-        n = snprintf(buf, sizeof(buf), "%d", i);
-        v7_set_property(v7, args, buf, n, 0, res);
+        v7_array_set(v7, args, i, res);
       }
     } else {
       res = v7_create_undefined();
@@ -997,8 +993,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   for (; *pos < end; i++) {
     res = i_eval_expr(v7, a, pos, scope);
     if (!v7_is_undefined(args)) {
-      n = snprintf(buf, sizeof(buf), "%d", i);
-      v7_set_property(v7, args, buf, n, 0, res);
+      v7_array_set(v7, args, i, res);
     }
   }
 
@@ -1433,8 +1428,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   val_t arguments = v7_create_undefined(), saved_this = v7->this_object;
   char *name;
   size_t name_len;
-  char buf[20];
-  int i, n;
+  int i;
 
   struct gc_tmp_frame vf = new_tmp_frame(v7);
   tmp_stack_push(&vf, &frame);
@@ -1482,8 +1476,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
     res = v7_array_get(v7, args, i);
     v7_set_property(v7, frame, name, name_len, 0, res);
     if (!v7_is_undefined(arguments)) {
-      n = snprintf(buf, sizeof(buf), "%d", i);
-      v7_set_property(v7, arguments, buf, n, 0, res);
+      v7_array_set(v7, arguments, i, res);
     }
   }
 

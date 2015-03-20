@@ -616,7 +616,7 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   if (prop->attributes & V7_PROPERTY_GETTER) {
     setter = v7_array_get(v7, prop->value, 1);
   }
-  v7_set(v7, args, "0", 1, val);
+  v7_array_set(v7, args, 0, val);
   v7_apply(v7, setter, obj, args);
 }
 

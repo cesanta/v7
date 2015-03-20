@@ -276,10 +276,11 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
         size_t rez_len;
         val_t arr = v7_create_array(v7);
 
-        for (i = 0; i < loot.num_captures; i++)
+        for (i = 0; i < loot.num_captures; i++) {
           v7_array_push(v7, arr, v7_create_string(
                                      v7, loot.caps[i].start,
                                      loot.caps[i].end - loot.caps[i].start, 1));
+        }
         v7_array_push(v7, arr, v7_create_number(utfnlen(
                                    (char *) s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
