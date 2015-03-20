@@ -10913,21 +10913,11 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
 static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
                        struct v7_property *prop, unsigned int attr) {
   val_t v = v7_get(v7, desc, name, n);
-    if (v7_is_true(v7, v)) {
-      prop->attributes &= ~attr;
-    } else {
-      prop->attributes |= attr;
-    }
-
-  #if 0
-  if (!v7_is_undefined(v)) {
-    if (v7_is_true(v7, v)) {
-      prop->attributes &= ~attr;
-    } else {
-      prop->attributes |= attr;
-    }
+  if (v7_is_true(v7, v)) {
+    prop->attributes &= ~attr;
+  } else {
+    prop->attributes |= attr;
   }
-  #endif
 }
 
 static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
@@ -12991,6 +12981,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <signal.h>
+#include <netdb.h>
 #endif
 
 #define RECVTYPE_STRING 1
@@ -13007,7 +12998,6 @@ struct socket_internal {
   int recvtype;
   int local_port;
   int family;
-  struct sockaddr remote_addr;
 };
 
 static int get_sockerror() {
@@ -13093,8 +13083,8 @@ static struct socket_internal *Socket_check_and_get_si(struct v7 *v7,
   return si;
 }
 
-static void Socket_compose_sockaddr(struct v7 *v7, struct socket_internal *si,
-                                    struct sockaddr *sa) {
+static void Socket_getlocal_sockaddr(struct v7 *v7, struct socket_internal *si,
+                                     struct sockaddr *sa) {
   memset(sa, 0, sizeof(*sa));
 
   switch (si->family) {
@@ -13116,6 +13106,43 @@ static void Socket_compose_sockaddr(struct v7 *v7, struct socket_internal *si,
   }
 }
 
+static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
+                                      struct sockaddr *sa) {
+  struct addrinfo *ai;
+
+  if (getaddrinfo(addr, 0, 0, &ai) != 0) {
+    throw_exception(v7, TYPE_ERROR, "Invalid host name");
+  }
+
+  switch (ai->ai_family) {
+    case AF_INET: {
+      struct sockaddr_in *psa = (struct sockaddr_in *) ai[0].ai_addr;
+      psa->sin_port = htons(port);
+      memcpy(sa, psa, sizeof(*psa));
+      break;
+    };
+    case AF_INET6: {
+      /* TODO(alashkin): verify IPv6 [my provider doesn't support it] */
+      struct sockaddr_in6 *psa = (struct sockaddr_in6 *) ai[0].ai_addr;
+      psa->sin6_port = htons(port);
+      memcpy(sa, psa, sizeof(*psa));
+      break;
+    }
+    default:
+      throw_exception(v7, TYPE_ERROR, "Unsupported address family");
+  }
+}
+
+uint16_t Socket_check_and_get_port(struct v7 *v7, val_t port_val) {
+  double port_number = i_as_num(v7, port_val);
+
+  if (isnan(port_number) || port_number < 0 ||
+      trunc(port_number) != port_number) {
+    throw_exception(v7, TYPE_ERROR, "Invalid port number");
+  }
+  return (uint16_t) port_number;
+}
+
 /*
  * Associates a local address with a socket.
  * JS: var s = new Socket(); s.bind(80)
@@ -13124,7 +13151,6 @@ static void Socket_compose_sockaddr(struct v7 *v7, struct socket_internal *si,
 static v7_val_t Socket_bind(struct v7 *v7, val_t this_obj, val_t args) {
   struct sockaddr sa;
   long arg_count;
-  double port_number;
 
   struct socket_internal *si = Socket_check_and_get_si(v7, this_obj);
 
@@ -13135,15 +13161,9 @@ static v7_val_t Socket_bind(struct v7 *v7, val_t this_obj, val_t args) {
                     "Cannot bind socket: no local port specified");
   }
 
-  port_number = i_as_num(v7, v7_array_get(v7, args, 0));
-  if (isnan(port_number) || port_number < 0 ||
-      trunc(port_number) != port_number) {
-    throw_exception(v7, TYPE_ERROR, "Invalid port number");
-  }
+  si->local_port = Socket_check_and_get_port(v7, v7_array_get(v7, args, 0));
 
-  si->local_port = port_number;
-
-  Socket_compose_sockaddr(v7, si, &sa);
+  Socket_getlocal_sockaddr(v7, si, &sa);
   if (bind(si->socket, &sa, sizeof(sa)) != 0) {
     throw_exception(v7, TYPE_ERROR, "Cannot bind socket (%d)", get_sockerror());
   }
@@ -13151,7 +13171,141 @@ static v7_val_t Socket_bind(struct v7 *v7, val_t this_obj, val_t args) {
   return this_obj;
 }
 
-/* Closes a socket. JS: var s = new Socket() ... s.close() */
+/*
+ * Places a socket in a state in which it is listening
+ * for an incoming connection.
+ * JS: var x = new Socket().... x.listen()
+ */
+static v7_val_t Socket_listen(struct v7 *v7, val_t this_obj, val_t args) {
+  struct socket_internal *si = Socket_check_and_get_si(v7, this_obj);
+  (void) args;
+
+  if (listen(si->socket, SOMAXCONN) != 0) {
+    throw_exception(v7, TYPE_ERROR, "Cannot start listening (%d)",
+                    get_sockerror());
+  }
+
+  return this_obj;
+}
+
+static uint8_t *Sockey_JSarray_to_Carray(struct v7 *v7, val_t arr,
+                                         size_t *buf_size) {
+  uint8_t *retval, *ptr;
+  unsigned long i, elem_count = v7_array_length(v7, arr);
+  /* Support byte array only */
+  *buf_size = elem_count * sizeof(uint8_t);
+  retval = ptr = (uint8_t *) malloc(*buf_size);
+
+  for (i = 0; i < elem_count; i++) {
+    double elem = i_as_num(v7, v7_array_get(v7, arr, i));
+    if (isnan(elem) || elem < 0 || elem > 0xFF) {
+      break;
+    }
+    *ptr = (uint8_t) elem;
+    ptr++;
+  }
+
+  if (i != elem_count) {
+    free(retval);
+    throw_exception(v7, TYPE_ERROR, "Parameter should be a byte array");
+  }
+
+  return retval;
+}
+
+static uint8_t *Socket_get_send_buf(struct v7 *v7, val_t buf_val,
+                                    size_t *buf_size, int *free_buf) {
+  uint8_t *retval = NULL;
+
+  if (v7_is_string(buf_val)) {
+    retval = (uint8_t *) v7_to_string(v7, &buf_val, buf_size);
+    *free_buf = 0;
+  } else if (is_prototype_of(v7, buf_val, v7->array_prototype)) {
+    retval = Sockey_JSarray_to_Carray(v7, buf_val, buf_size);
+    *free_buf = 1;
+  }
+
+  return retval;
+}
+
+/*
+ * Sends data on a connected socket.
+ * JS: Socket.send(buf)
+ * Ex: var x = new Socket().... x.send("Hello, world!")
+ */
+static v7_val_t Socket_send(struct v7 *v7, val_t this_obj, val_t args) {
+  struct socket_internal *si = Socket_check_and_get_si(v7, this_obj);
+  uint8_t *buf = NULL;
+  size_t buf_size = 0;
+  long bytes_sent;
+  int free_buf = 0;
+
+  if (v7_array_length(v7, args) != 0) {
+    buf = Socket_get_send_buf(v7, v7_array_get(v7, args, 0), &buf_size,
+                              &free_buf);
+  }
+
+  if (buf == NULL || buf_size == 0) {
+    throw_exception(v7, TYPE_ERROR, "Invalid data to send");
+  }
+
+  bytes_sent = send(si->socket, buf, buf_size, 0);
+
+  if (free_buf) {
+    free(buf);
+  }
+
+  if (bytes_sent < 0) {
+    throw_exception(v7, TYPE_ERROR, "Connot send data (%d)", get_sockerror());
+  }
+
+  return v7_create_number(bytes_sent);
+}
+
+/*
+ * Establishes a connection.
+ * JS: Socket.connect(addr, port)
+ * Ex: var x = new Socket(); x.connect("www.hello.com",80);
+ */
+static v7_val_t Socket_connect(struct v7 *v7, val_t this_obj, val_t args) {
+  struct socket_internal *si = Socket_check_and_get_si(v7, this_obj);
+  char addr[100] = {0};
+  struct sockaddr sa;
+  uint16_t port;
+
+  if (v7_array_length(v7, args) != 2) {
+    throw_exception(v7, TYPE_ERROR, "Invalid arguments count");
+  }
+
+  {
+    val_t addr_val;
+    size_t addr_size = 0;
+    const char *addr_pointer = 0;
+    addr_val = v7_array_get(v7, args, 0);
+    if (v7_is_string(addr_val)) {
+      addr_pointer = v7_to_string(v7, &addr_val, &addr_size);
+    }
+    if (addr_pointer == NULL || addr_size > sizeof(addr)) {
+      throw_exception(v7, TYPE_ERROR, "Invalid address");
+    }
+    strncpy(addr, addr_pointer, addr_size);
+  }
+
+  port = Socket_check_and_get_port(v7, v7_array_get(v7, args, 1));
+  Socket_getremote_sockaddr(v7, addr, port, &sa);
+
+  if (connect(si->socket, (struct sockaddr *) &sa, sizeof(sa)) != 0) {
+    throw_exception(v7, TYPE_ERROR, "Cannot connect (%d)", get_sockerror());
+  }
+
+  return this_obj;
+}
+
+/*
+ * Closes a socket.
+ * JS: Socket.close();
+ * Ex: var x = new Socket(); .... x.close()
+ */
 static v7_val_t Socket_close(struct v7 *v7, val_t this_obj, val_t args) {
   struct socket_internal *si = Socket_check_and_get_si(v7, this_obj);
   (void) args;
@@ -13173,6 +13327,9 @@ V7_PRIVATE void init_socket(struct v7 *v7) {
 
   set_cfunc_prop(v7, v7->socket_prototype, "close", Socket_close);
   set_cfunc_prop(v7, v7->socket_prototype, "bind", Socket_bind);
+  set_cfunc_prop(v7, v7->socket_prototype, "listen", Socket_listen);
+  set_cfunc_prop(v7, v7->socket_prototype, "send", Socket_send);
+  set_cfunc_prop(v7, v7->socket_prototype, "connect", Socket_connect);
 
   {
     val_t family = v7_create_object(v7);

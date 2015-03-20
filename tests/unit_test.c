@@ -560,10 +560,31 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.bind(101112)") == V7_OK);
   ASSERT(v7_exec(v7, &v, "s.bind(101112)") != V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "var t = new Socket()") == V7_OK);
   ASSERT(v7_exec(v7, &v, "t.bind(\"non_number\")") != V7_OK);
   ASSERT(v7_exec(v7, &v, "t.bind(12345.25)") != V7_OK);
   ASSERT(v7_exec(v7, &v, "t.bind(12345.0)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "t.close()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.bind(12345)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.listen()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
+#if 0
+  /* start fossa/examples/tcp_echo_server for running these tests */
+  ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.connect(\"127.0.0.1\", 17000)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.send(\"Hello, world!\")") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var arr = [102, 117, 99, 107]") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.send(arr)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+
+  /* ensure internet connection for running these tests */
+  ASSERT(v7_exec(v7, &v, "var s = new Socket()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.connect(\"microsoft.com\", 80)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "s.close()") == V7_OK);
+#endif
 
   v7_destroy(v7);
   return NULL;
