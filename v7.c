@@ -13164,6 +13164,7 @@ static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
     case AF_INET: {
       struct sockaddr_in *psa = (struct sockaddr_in *) sa;
       psa->sin_port = htons(port);
+      psa->sin_family = AF_INET;
       memcpy(&psa->sin_addr.s_addr, host->h_addr_list[0],
              sizeof(psa->sin_addr.s_addr));
       break;
@@ -13173,6 +13174,7 @@ static void Socket_getremote_sockaddr(struct v7 *v7, char *addr, uint16_t port,
       /* TODO(alashkin): verify IPv6 [my provider doesn't support it] */
       struct sockaddr_in6 *psa = (struct sockaddr_in6 *) sa;
       psa->sin6_port = htons(port);
+      psa->sin_family = AF_INET6;
       memcpy(&psa->sin6_addr, host->h_addr_list[0], sizeof(psa->sin6_addr));
 
       break;
