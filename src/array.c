@@ -129,7 +129,6 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   int i = 0, len = v7_array_length(v7, obj);
   val_t *arr = (val_t *) malloc(len * sizeof(arr[0]));
   val_t arg0 = v7_array_get(v7, args, 0);
-  struct v7_property *p;
 
   if (!v7_is_object(obj)) return obj;
   assert(obj != v7->global_object);
@@ -146,11 +145,7 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   }
 
   for (i = 0; i < len; i++) {
-    char buf[40];
-    snprintf(buf, sizeof(buf), "%d", i);
-    if ((p = v7_get_own_property(v7, obj, buf, strlen(buf))) != NULL) {
-      p->value = arr[len - (i + 1)];
-    }
+    v7_array_set(v7, obj, i, arr[len - (i + 1)]);
   }
 
   free(arr);
@@ -303,20 +298,21 @@ static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
 }
 
 static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res = v7_create_undefined();
-  struct v7_property *p;
+  val_t arg0, arg1, el, v, res = v7_create_undefined();
+  unsigned long len, i;
+  int has;
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
     res = v7_create_array(v7);
-    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-      size_t n;
-      const char *name;
-      el = a_prep2(v7, arg0, p->value, p->name, arg1);
-      name = v7_to_string(v7, &p->name, &n);
-      v7_set(v7, res, name, n, el);
+    len = v7_array_length(v7, this_obj);
+    for (i = 0; i < len; i++) {
+      v = v7_array_get2(v7, this_obj, i, &has);
+      if (!has) continue;
+      el = a_prep2(v7, arg0, v, v7_create_number(i), arg1);
+      v7_array_set(v7, res, i, el);
     }
   }
 
@@ -324,64 +320,71 @@ static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res = v7_create_undefined();
-  struct v7_property *p;
+  val_t arg0, arg1, el, v;
+  unsigned long i, len;
+  int has;
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
-    res = v7_create_boolean(1);
-    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-      el = a_prep2(v7, arg0, p->value, p->name, arg1);
+
+    len = v7_array_length(v7, this_obj);
+    for (i = 0; i < len; i++) {
+      v = v7_array_get2(v7, this_obj, i, &has);
+      if (!has) continue;
+      el = a_prep2(v7, arg0, v, v7_create_number(i), arg1);
       if (!v7_is_true(v7, el)) {
-        res = v7_create_boolean(0);
-        break;
+        return v7_create_boolean(0);
       }
     }
   }
-
-  return res;
+  return v7_create_boolean(1);
 }
 
 static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res = v7_create_undefined();
-  struct v7_property *p;
+  val_t arg0, arg1, el, v;
+  unsigned long i, len;
+  int has;
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
-    res = v7_create_boolean(0);
-    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-      el = a_prep2(v7, arg0, p->value, p->name, arg1);
+
+    len = v7_array_length(v7, this_obj);
+    for (i = 0; i < len; i++) {
+      v = v7_array_get2(v7, this_obj, i, &has);
+      if (!has) continue;
+      el = a_prep2(v7, arg0, v, v7_create_number(i), arg1);
       if (v7_is_true(v7, el)) {
-        res = v7_create_boolean(1);
-        break;
+        return v7_create_boolean(1);
       }
     }
   }
-
-  return res;
+  return v7_create_boolean(0);
 }
 
 static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0, arg1, el, res = v7_create_undefined();
-  struct v7_property *p;
+  val_t arg0, arg1, el, v, res = v7_create_undefined();
+  unsigned long len, i;
+  int has;
 
   if (!v7_is_object(this_obj)) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
     res = v7_create_array(v7);
-    for (p = v7_to_object(this_obj)->properties; p != NULL; p = p->next) {
-      el = a_prep2(v7, arg0, p->value, p->name, arg1);
+    len = v7_array_length(v7, this_obj);
+    for (i = 0; i < len; i++) {
+      v = v7_array_get2(v7, this_obj, i, &has);
+      if (!has) continue;
+      el = a_prep2(v7, arg0, v, v7_create_number(i), arg1);
       if (v7_is_true(v7, el)) {
-        v7_array_push(v7, res, p->value);
+        v7_array_push(v7, res, v);
       }
     }
   }
-
   return res;
 }
 
