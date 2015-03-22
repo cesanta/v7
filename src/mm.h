@@ -8,6 +8,8 @@
 
 #include "internal.h"
 
+typedef void (*gc_cell_destructor_t)(struct v7 *v7, void *);
+
 struct gc_arena {
   char *base;
   size_t size;
@@ -16,6 +18,8 @@ struct gc_arena {
 
   unsigned long allocations; /* cumulative counter of allocations */
   unsigned long alive;       /* number of living cells */
+
+  gc_cell_destructor_t destructor;
 
   int verbose;
   const char *name; /* for debugging purposes */

@@ -37,7 +37,7 @@ static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
                           unsigned int ignore_flags) {
   val_t obj = v7_array_get(v7, args, 0);
-  val_t res = v7_create_array(v7);
+  val_t res = v7_create_dense_array(v7);
   if (!v7_is_object(obj)) {
     throw_exception(v7, TYPE_ERROR, "Object.keys called on non-object");
   }

@@ -37,10 +37,11 @@ V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
 V7_PRIVATE void gc_mark(struct v7 *, val_t);
 
-V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, const char *);
-V7_PRIVATE void gc_arena_grow(struct gc_arena *, size_t);
-V7_PRIVATE void gc_arena_destroy(struct gc_arena *a);
-V7_PRIVATE void gc_sweep(struct gc_arena *, size_t);
+V7_PRIVATE void gc_arena_init(struct v7 *, struct gc_arena *, size_t, size_t,
+                              const char *);
+V7_PRIVATE void gc_arena_grow(struct v7 *, struct gc_arena *, size_t);
+V7_PRIVATE void gc_arena_destroy(struct v7 *, struct gc_arena *a);
+V7_PRIVATE void gc_sweep(struct v7 *, struct gc_arena *, size_t);
 V7_PRIVATE void *gc_alloc_cell(struct v7 *, struct gc_arena *);
 
 V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *);

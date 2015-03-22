@@ -211,7 +211,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       struct slre_cap *ptok = sub.caps;
       int i;
       if (slre_exec(prog, 0, s, end, &sub)) break;
-      if (v7_is_null(arr)) arr = v7_create_array(v7);
+      if (v7_is_null(arr)) arr = v7_create_dense_array(v7);
       s = ptok->end;
       i = 0;
       do {
@@ -274,7 +274,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       if (v7_is_function(str_func)) { /* replace function */
         const char *rez_str;
         size_t rez_len;
-        val_t arr = v7_create_array(v7);
+        val_t arr = v7_create_dense_array(v7);
 
         for (i = 0; i < loot.num_captures; i++) {
           v7_array_push(v7, arr, v7_create_string(
@@ -518,7 +518,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = v7_create_array(v7);
+  val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
   size_t s_len;
   long num_args = v7_array_length(v7, args);
