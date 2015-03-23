@@ -253,6 +253,8 @@ struct v7 {
   struct mbuf allocated_asts;
 
   val_t predefined_strings[PREDEFINED_STR_MAX];
+  /* singleton, pointer because of amalgamation */
+  struct v7_property *cur_dense_prop;
 };
 
 #ifndef ARRAY_SIZE

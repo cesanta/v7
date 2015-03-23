@@ -19,7 +19,8 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
+V7_PRIVATE
+val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d = i_as_num(v7, arg0);
   int len, digits = d > 0 ? (int) d : 0;

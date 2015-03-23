@@ -748,6 +748,53 @@ static const char *test_runtime(void) {
   return NULL;
 }
 
+static const char *test_dense_arrays(void) {
+  struct v7 *v7 = v7_create();
+  val_t a;
+
+  a = v7_create_dense_array(v7);
+
+  v7_array_set(v7, a, 0, v7_create_number(42));
+  ASSERT(check_num(v7_array_get(v7, a, 0), 42));
+  ASSERT(v7_array_length(v7, a) == 1);
+
+  v7_array_set(v7, a, 1, v7_create_number(24));
+  ASSERT(check_num(v7_array_get(v7, a, 0), 42));
+  ASSERT(check_num(v7_array_get(v7, a, 1), 24));
+  ASSERT(v7_array_length(v7, a) == 2);
+
+  a = v7_create_dense_array(v7);
+  v7_array_set(v7, a, 0, v7_create_number(42));
+  v7_array_set(v7, a, 2, v7_create_number(42));
+  ASSERT(v7_array_length(v7, a) == 3);
+
+  a = v7_create_dense_array(v7);
+  v7_array_set(v7, a, 1, v7_create_number(42));
+  ASSERT(v7_array_length(v7, a) == 2);
+
+  ASSERT(v7_exec(v7, &a, "function mka(){return arguments}") == V7_OK);
+
+  ASSERT(v7_exec(v7, &a, "a=mka(1,2,3);a.splice(0,1);a") == V7_OK);
+  ASSERT(check_value(v7, a, "[2,3]"));
+  ASSERT(v7_exec(v7, &a, "a=mka(1,2,3);a.splice(2,1);a") == V7_OK);
+  ASSERT(check_value(v7, a, "[1,2]"));
+  ASSERT(v7_exec(v7, &a, "a=mka(1,2,3);a.splice(1,1);a") == V7_OK);
+  ASSERT(check_value(v7, a, "[1,3]"));
+
+  ASSERT(v7_exec(v7, &a, "a=mka(1,2,3);a.slice(0,1)") == V7_OK);
+  ASSERT(check_value(v7, a, "[1]"));
+  ASSERT(v7_exec(v7, &a, "a=mka(1,2,3);a.slice(2,3)") == V7_OK);
+  ASSERT(check_value(v7, a, "[3]"));
+  ASSERT(v7_exec(v7, &a, "a=mka(1,2,3);a.slice(1,3)") == V7_OK);
+  ASSERT(check_value(v7, a, "[2,3]"));
+
+  ASSERT(v7_exec(v7, &a, "a=mka(1,2,3);a.indexOf(3)") == V7_OK);
+  ASSERT(check_num(a, 2));
+
+  v7_destroy(v7);
+  return NULL;
+}
+
 static const char *test_parser(void) {
   int i;
   struct ast a;
@@ -1672,6 +1719,20 @@ static const char *test_interpreter(void) {
   ASSERT(v7_is_foreign(v));
   ASSERT(strcmp((char *) v7_to_foreign(v), "foo") == 0);
 
+  ASSERT(v7_exec(v7, &v, "a=[1,2,3];a.splice(0,1);a") == V7_OK);
+  ASSERT(check_value(v7, v, "[2,3]"));
+  ASSERT(v7_exec(v7, &v, "a=[1,2,3];a.splice(2,1);a") == V7_OK);
+  ASSERT(check_value(v7, v, "[1,2]"));
+  ASSERT(v7_exec(v7, &v, "a=[1,2,3];a.splice(1,1);a") == V7_OK);
+  ASSERT(check_value(v7, v, "[1,3]"));
+
+  ASSERT(v7_exec(v7, &v, "a=[1,2,3];a.slice(0,1)") == V7_OK);
+  ASSERT(check_value(v7, v, "[1]"));
+  ASSERT(v7_exec(v7, &v, "a=[1,2,3];a.slice(2,3)") == V7_OK);
+  ASSERT(check_value(v7, v, "[3]"));
+  ASSERT(v7_exec(v7, &v, "a=[1,2,3];a.slice(1,3)") == V7_OK);
+  ASSERT(check_value(v7, v, "[2,3]"));
+
   /* here temporarily because test_stdlib has memory violations */
   ASSERT(v7_exec(v7, &v, "a=[2,1];a.sort();a") == V7_OK);
   ASSERT(check_value(v7, v, "[1,2]"));
@@ -1906,6 +1967,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_interpreter);
   RUN_TEST(test_interp_unescape);
   RUN_TEST(test_strings);
+  RUN_TEST(test_dense_arrays);
   RUN_TEST(test_ecmac);
 #ifndef V7_DISABLE_GC
   RUN_TEST(test_gc_mark);

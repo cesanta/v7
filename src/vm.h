@@ -27,6 +27,7 @@ typedef uint64_t val_t;
 #define V7_TAG_CFUNCTION ((uint64_t) 0xFFF4 << 48) /* C function */
 #define V7_TAG_GETSETTER ((uint64_t) 0xFFF3 << 48) /* getter+setter */
 #define V7_TAG_REGEXP ((uint64_t) 0xFFF2 << 48)    /* Regex */
+#define V7_TAG_NOVALUE ((uint64_t) 0xFFF1 << 48)   /* Sentinel for no value */
 #define V7_TAG_MASK ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -71,7 +72,8 @@ struct v7_object {
   struct v7_property *properties;
   struct v7_object *prototype;
   uint8_t attributes;
-#define V7_OBJ_NOT_EXTENSIBLE 0  /* TODO(lsm): store this in LSB */
+#define V7_OBJ_NOT_EXTENSIBLE 1 /* TODO(lsm): store this in LSB */
+#define V7_OBJ_DENSE_ARRAY 2    /* TODO(mkm): store in some tag */
 };
 
 /*
@@ -163,6 +165,7 @@ V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 V7_PRIVATE val_t create_object(struct v7 *, val_t);
 V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
+V7_PRIVATE v7_val_t v7_create_dense_array(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
@@ -206,6 +209,9 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+V7_PRIVATE val_t ulong_to_str(struct v7 *, unsigned long);
+V7_PRIVATE unsigned long str_to_ulong(struct v7 *, val_t, int *);
+V7_PRIVATE unsigned long cstr_to_ulong(const char *, size_t len, int *);
 V7_PRIVATE void embed_string(struct mbuf *, size_t, const char *, size_t, int,
                              int);
 /* TODO(mkm): rename after regexp merge */
@@ -213,6 +219,7 @@ V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
+V7_PRIVATE val_t n_to_str(struct v7 *, val_t, val_t, const char *);
 
 #if defined(__cplusplus)
 }

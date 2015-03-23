@@ -38,7 +38,7 @@ static val_t create_exception(struct v7 *v7, enum error_ctor ex,
     fprintf(stderr, "Exception creation throws an exception %d: %s\n", ex, msg);
     return V7_UNDEFINED;
   }
-  args = v7_create_array(v7);
+  args = v7_create_dense_array(v7);
   v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
   v7->creating_exception++;
   e = create_object(v7, v7_get(v7, v7->error_objects[ex], "prototype", 9));
@@ -459,8 +459,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           res = v1 = v7_create_number(i_num_bin_op(v7, op, d1, d2));
       }
 
-      /* variables are modified where they are found in the scope chain */
+      if (v7_is_object(lval) &&
+          v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
+        int ok;
+        unsigned long i = cstr_to_ulong(name, name_len, &ok);
+        if (ok) {
+          v7_array_set(v7, lval, i, v1);
+          break;
+        }
+      }
+
       if (prop != NULL && tag == AST_IDENT) {
+        /* variables are modified where they are found in the scope chain */
         prop->value = v1;
       } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
         /* nop */
@@ -538,7 +548,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v1 = i_eval_expr(v7, a, pos, scope);
             if ((p = v7_get_property(v7, res, name, name_len)) &&
                 p->attributes & other) {
-              val_t arr = v7_create_array(v7);
+              val_t arr = v7_create_dense_array(v7);
               tmp_stack_push(&tf, &arr);
               v7_array_set(v7, arr, tag == AST_GETTER ? 1 : 0, p->value);
               v7_array_set(v7, arr, tag == AST_SETTER ? 1 : 0, v1);
@@ -751,6 +761,20 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           return v7_create_boolean(1);
       }
 
+      if (v7_is_object(lval) &&
+          v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
+        int ok;
+        unsigned long i = cstr_to_ulong(name, name_len, &ok);
+        if (ok) {
+          int has;
+          v7_array_get2(v7, lval, (unsigned long) i, &has);
+          if (has) {
+            v7_array_set(v7, lval, (unsigned long) i, V7_TAG_NOVALUE);
+          }
+          res = v7_create_boolean(1);
+        }
+      }
+
       prop = v7_get_property(v7, lval, name, name_len);
       if (prop != NULL) {
         if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
@@ -948,7 +972,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (v7_is_cfunction(cfunc)) {
-    args = v7_create_array(v7);
+    args = v7_create_dense_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       v7_array_set(v7, args, i, res);
@@ -968,7 +992,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
    * TODO(mkm): don't create args array if the parser didn't see
    * any `arguments` or `eval` identifier being referenced in the function.
    */
-  args = v7_create_array(v7);
+  args = v7_create_dense_array(v7);
 
   /* scan actual and formal arguments and updates the value in the frame */
   for (i = 0; fpos < fbody; i++) {
@@ -1195,6 +1219,43 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         goto cleanup;
       }
       ast_skip_tree(a, pos);
+      loop = *pos;
+
+      /* first iterate on dense array elements if any */
+      /* TODO(mkm): make it DRY */
+      if (v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
+        struct v7_property *p =
+            v7_get_own_property2(v7, obj, "", 0, V7_PROPERTY_HIDDEN);
+        struct mbuf *abuf;
+        if (p != NULL) {
+          abuf = (struct mbuf *) v7_to_foreign(p->value);
+          if (abuf != NULL) {
+            unsigned long i, len = v7_array_length(v7, obj);
+            for (i = 0; i < len; i++, *pos = loop) {
+              key = ulong_to_str(v7, i);
+              if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
+                var->value = key;
+              } else {
+                v7_set_property(v7, v7->global_object, name, name_len, 0, key);
+              }
+              res = i_eval_stmts(v7, a, pos, end, scope,
+                                 brk); /* LCOV_EXCL_LINE */
+              switch (*brk) {          /* LCOV_EXCL_LINE */
+                case B_RUN:
+                  break;
+                case B_CONTINUE:
+                  *brk = B_RUN;
+                  break;
+                case B_BREAK:
+                  *brk = B_RUN; /* fall through */
+                case B_RETURN:
+                  *pos = end;
+                  goto cleanup;
+              }
+            }
+          }
+        }
+      }
       loop = *pos;
 
       for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
@@ -1466,7 +1527,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
    * TODO(mkm): don't create arguments array if the parser didn't see
    * any `arguments` or `eval` identifier being referenced in the function.
    */
-  arguments = v7_create_array(v7);
+  arguments = v7_create_dense_array(v7);
 
   for (i = 0; pos < body; i++) {
     tag = ast_fetch_tag(func->ast, &pos);

@@ -189,7 +189,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   if (v7_array_length(v7, args) == 0) ro = v7_create_regexp(v7, "", 0, "", 0);
   else ro = i_value_of(v7, v7_array_get(v7, args, 0));
   if (!v7_is_regexp(ro)) {
-    val_t arg = v7_create_array(v7);
+    val_t arg = v7_create_dense_array(v7);
     v7_array_push(v7, arg, ro);
     ro = Regex_ctor(v7, v7_create_null(), arg);
   }
@@ -198,7 +198,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   if (!flag_g) return rx_exec(v7, ro, so, 0);
   
   v7_set_property(v7, ro, "lastIndex", 9, 0, v7_create_number(0));
-  arr = v7_create_array(v7);
+  arr = v7_create_dense_array(v7);
   while (lastMatch) {
     val_t result = rx_exec(v7, ro, so, 1);
     if (v7_is_null(result)) lastMatch = 0;
@@ -237,7 +237,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
     int flag_g;
 
     if (!v7_is_regexp(ro)) {
-      val_t arg = v7_create_array(v7);
+      val_t arg = v7_create_dense_array(v7);
       v7_array_push(v7, arg, ro);
       ro = Regex_ctor(v7, v7_create_null(), arg);
     }
@@ -259,7 +259,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       if (v7_is_function(str_func)) { /* replace function */
         const char *rez_str;
         size_t rez_len;
-        val_t arr = v7_create_array(v7);
+        val_t arr = v7_create_dense_array(v7);
 
         for (i = 0; i < loot.num_captures; i++) {
           v7_array_push(v7, arr, v7_create_string(
@@ -326,7 +326,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
     val_t so, ro = i_value_of(v7, v7_array_get(v7, args, 0));
     const char *s;
     if (!v7_is_regexp(ro)) {
-    val_t arg = v7_create_array(v7);
+    val_t arg = v7_create_dense_array(v7);
     v7_array_push(v7, arg, ro);
     ro = Regex_ctor(v7, v7_create_null(), arg);
     }
@@ -497,7 +497,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = v7_create_array(v7);
+  val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
   size_t s_len;
   long num_args = v7_array_length(v7, args);
@@ -514,7 +514,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
     size_t shift = 0;
     struct slre_loot loot;
     if (!v7_is_regexp(ro)) {
-      val_t arg = v7_create_array(v7);
+      val_t arg = v7_create_dense_array(v7);
       v7_array_push(v7, arg, ro);
       ro = Regex_ctor(v7, v7_create_null(), arg);
     }
