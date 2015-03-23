@@ -43,23 +43,26 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
 }
 
 /* Initializes a new arena. */
-V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size, size_t size,
-                              const char *name) {
+V7_PRIVATE void gc_arena_init(struct v7 *v7, struct gc_arena *a,
+                              size_t cell_size, size_t size, const char *name) {
   assert(cell_size >= sizeof(uintptr_t));
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
   a->name = name;
 /* Avoid arena initialization cost when GC is disabled */
 #ifndef V7_DISABLE_GC
-  gc_arena_grow(a, size);
+  gc_arena_grow(v7, a, size);
   assert(a->free != NULL);
 #else
   (void) size;
 #endif
 }
 
-V7_PRIVATE void gc_arena_destroy(struct gc_arena *a) {
+V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
   if (a->base != NULL) {
+    if (a->destructor != NULL) {
+      gc_sweep(v7, a, 0);
+    }
     free(a->base);
   }
 }
@@ -74,7 +77,8 @@ V7_PRIVATE void gc_arena_destroy(struct gc_arena *a) {
  * have a smaller memory spike footprint, but it’s slightly more
  * complicated, and can be implemented in a second phase.
  */
-V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
+V7_PRIVATE void gc_arena_grow(struct v7 *v7, struct gc_arena *a,
+                              size_t new_size) {
   size_t free_adjust = a->free ? a->free - a->base : 0;
   size_t old_size = a->size;
   uint32_t old_alive = a->alive;
@@ -85,7 +89,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
   /* in case we grow preemptively */
   a->free += free_adjust;
   /* sweep will add the trailing zeroed memory to free list */
-  gc_sweep(a, old_size);
+  gc_sweep(v7, a, old_size);
   a->alive = old_alive; /* sweeping will decrement `alive` */
 }
 
@@ -130,7 +134,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 /*
  * Scans the arena and add all unmarked cells to the free list.
  */
-void gc_sweep(struct gc_arena *a, size_t start) {
+void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
   char *cur;
   a->alive = 0;
   a->free = NULL;
@@ -140,6 +144,9 @@ void gc_sweep(struct gc_arena *a, size_t start) {
       UNMARK(cur);
       a->alive++;
     } else {
+      if (a->destructor != NULL) {
+        a->destructor(v7, cur);
+      }
       memset(cur, 0, a->cell_size);
       *(char **) cur = a->free;
       a->free = cur;
@@ -356,9 +363,9 @@ void v7_gc(struct v7 *v7) {
   gc_compact_strings(v7);
 #endif
 
-  gc_sweep(&v7->object_arena, 0);
-  gc_sweep(&v7->function_arena, 0);
-  gc_sweep(&v7->property_arena, 0);
+  gc_sweep(v7, &v7->object_arena, 0);
+  gc_sweep(v7, &v7->function_arena, 0);
+  gc_sweep(v7, &v7->property_arena, 0);
 
   gc_dump_arena_stats("After GC objects", &v7->object_arena);
   gc_dump_arena_stats("After GC functions", &v7->function_arena);

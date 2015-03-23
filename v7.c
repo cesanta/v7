@@ -602,6 +602,8 @@ V7_PRIVATE enum v7_err parse(struct v7 *, struct ast *, const char *, int);
 #define MM_H_INCLUDED
 
 
+typedef void (*gc_cell_destructor_t)(struct v7 *v7, void *);
+
 struct gc_arena {
   char *base;
   size_t size;
@@ -610,6 +612,8 @@ struct gc_arena {
 
   unsigned long allocations; /* cumulative counter of allocations */
   unsigned long alive;       /* number of living cells */
+
+  gc_cell_destructor_t destructor;
 
   int verbose;
   const char *name; /* for debugging purposes */
@@ -860,6 +864,8 @@ struct v7 {
   struct mbuf allocated_asts;
 
   val_t predefined_strings[PREDEFINED_STR_MAX];
+  /* singleton, pointer because of amalgamation */
+  struct v7_property *cur_dense_prop;
 };
 
 #ifndef ARRAY_SIZE
@@ -927,6 +933,7 @@ typedef uint64_t val_t;
 #define V7_TAG_CFUNCTION ((uint64_t) 0xFFF4 << 48) /* C function */
 #define V7_TAG_GETSETTER ((uint64_t) 0xFFF3 << 48) /* getter+setter */
 #define V7_TAG_REGEXP ((uint64_t) 0xFFF2 << 48)    /* Regex */
+#define V7_TAG_NOVALUE ((uint64_t) 0xFFF1 << 48)   /* Sentinel for no value */
 #define V7_TAG_MASK ((uint64_t) 0xFFFF << 48)
 
 #define V7_NULL V7_TAG_FOREIGN
@@ -972,6 +979,7 @@ struct v7_object {
   struct v7_object *prototype;
   uint8_t attributes;
 #define V7_OBJ_NOT_EXTENSIBLE 1 /* TODO(lsm): store this in LSB */
+#define V7_OBJ_DENSE_ARRAY 2    /* TODO(mkm): store in some tag */
 };
 
 /*
@@ -1063,6 +1071,7 @@ V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 
 V7_PRIVATE val_t create_object(struct v7 *, val_t);
 V7_PRIVATE v7_val_t v7_create_function(struct v7 *v7);
+V7_PRIVATE v7_val_t v7_create_dense_array(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 
@@ -1113,6 +1122,7 @@ V7_PRIVATE val_t to_string(struct v7 *v7, val_t v);
 
 V7_PRIVATE val_t Obj_valueOf(struct v7 *, val_t, val_t);
 V7_PRIVATE double i_as_num(struct v7 *, val_t);
+V7_PRIVATE val_t n_to_str(struct v7 *, val_t, val_t, const char *);
 
 #if defined(__cplusplus)
 }
@@ -1156,10 +1166,11 @@ V7_PRIVATE struct v7_function *new_function(struct v7 *);
 
 V7_PRIVATE void gc_mark(struct v7 *, val_t);
 
-V7_PRIVATE void gc_arena_init(struct gc_arena *, size_t, size_t, const char *);
-V7_PRIVATE void gc_arena_grow(struct gc_arena *, size_t);
-V7_PRIVATE void gc_arena_destroy(struct gc_arena *a);
-V7_PRIVATE void gc_sweep(struct gc_arena *, size_t);
+V7_PRIVATE void gc_arena_init(struct v7 *, struct gc_arena *, size_t, size_t,
+                              const char *);
+V7_PRIVATE void gc_arena_grow(struct v7 *, struct gc_arena *, size_t);
+V7_PRIVATE void gc_arena_destroy(struct v7 *, struct gc_arena *a);
+V7_PRIVATE void gc_sweep(struct v7 *, struct gc_arena *, size_t);
 V7_PRIVATE void *gc_alloc_cell(struct v7 *, struct gc_arena *);
 
 V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *);
@@ -3456,9 +3467,26 @@ struct a_sort_data {
 };
 
 static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+#if 0
   (void) v7;
   (void) this_obj;
   return args;
+#else
+  unsigned long i, len;
+  val_t res = v7_create_array(v7);
+  (void) v7;
+  (void) this_obj;
+  /*
+   * The interpreter passes dense array to C functions.
+   * However dense array implementation is not yet complete
+   * so we don't want to propagate them at each call to Array()
+   */
+  len = v7_array_length(v7, args);
+  for (i = 0; i < len; i++) {
+    v7_array_set(v7, res, i, v7_array_get(v7, args, i));
+  }
+  return res;
+#endif
 }
 
 static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
@@ -3525,7 +3553,7 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
   val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
 
   if (v7_is_function(func)) {
-    val_t res, args = v7_create_array(v7);
+    val_t res, args = v7_create_dense_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
@@ -3659,7 +3687,7 @@ static val_t Array_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
-  val_t res = v7_create_array(v7);
+  val_t res = v7_create_dense_array(v7);
   long i, len = v7_array_length(v7, this_obj);
   long num_args = v7_array_length(v7, args);
   long elems_to_insert = num_args > 2 ? num_args - 2 : 0;
@@ -3683,8 +3711,24 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     v7_array_push(v7, res, v7_array_get(v7, this_obj, i));
   }
 
-  /* If splicing, modify this_obj array: remove spliced sub-array */
-  if (mutate) {
+  if (mutate && v7_to_object(this_obj)->attributes & V7_OBJ_DENSE_ARRAY) {
+    /*
+     * dense arrays are spliced by memmoving leaving the trailing
+     * space allocated for future appends.
+     * TODO(mkm): figure out if trimming is better
+     */
+    struct v7_property *p =
+        v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
+    struct mbuf *abuf;
+    if (p == NULL) return res;
+    abuf = (struct mbuf *) v7_to_foreign(p->value);
+    if (abuf == NULL) return res;
+
+    memmove(abuf->buf + arg0 * sizeof(val_t), abuf->buf + arg1 * sizeof(val_t),
+            (len - arg1) * sizeof(val_t));
+    abuf->len -= (arg1 - arg0) * sizeof(val_t);
+  } else if (mutate) {
+    /* If splicing, modify this_obj array: remove spliced sub-array */
     struct v7_property **p, **next;
     long i;
 
@@ -3735,7 +3779,7 @@ static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
 }
 
 static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
-  val_t params = v7_create_array(v7);
+  val_t params = v7_create_dense_array(v7);
   v7_array_push(v7, params, v);
   v7_array_push(v7, params, n);
   v7_array_push(v7, params, t);
@@ -3751,7 +3795,7 @@ static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
-    res = v7_create_array(v7);
+    res = v7_create_dense_array(v7);
     len = v7_array_length(v7, this_obj);
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
@@ -3819,7 +3863,7 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
-    res = v7_create_array(v7);
+    res = v7_create_dense_array(v7);
     len = v7_array_length(v7, this_obj);
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
@@ -3835,7 +3879,7 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
-  val_t length = v7_create_array(v7);
+  val_t length = v7_create_dense_array(v7);
 
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
@@ -4246,7 +4290,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
       struct slre_cap *ptok = sub.caps;
       int i;
       if (slre_exec(prog, 0, s, end, &sub)) break;
-      if (v7_is_null(arr)) arr = v7_create_array(v7);
+      if (v7_is_null(arr)) arr = v7_create_dense_array(v7);
       s = ptok->end;
       i = 0;
       do {
@@ -4309,7 +4353,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
       if (v7_is_function(str_func)) { /* replace function */
         const char *rez_str;
         size_t rez_len;
-        val_t arr = v7_create_array(v7);
+        val_t arr = v7_create_dense_array(v7);
 
         for (i = 0; i < loot.num_captures; i++) {
           v7_array_push(v7, arr, v7_create_string(
@@ -4553,7 +4597,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res = v7_create_array(v7);
+  val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
   size_t s_len;
   long num_args = v7_array_length(v7, args);
@@ -5479,7 +5523,31 @@ v7_val_t v7_create_undefined(void) {
 }
 
 v7_val_t v7_create_array(struct v7 *v7) {
-  return create_object(v7, v7->array_prototype);
+  val_t a = create_object(v7, v7->array_prototype);
+#if 0
+  v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
+#endif
+  return a;
+}
+
+/*
+ * Dense arrays are backed by mbuf. Currently the array can only grow by
+ * appending (i.e. setting an element whose index == array.length)
+ *
+ * TODO(mkm): automatically promote dense arrays to normal objects
+ *            when they are used as sparse arrays or to store arbitrary keys
+ *            (perhaps a hybrid approach)
+ * TODO(mkm): small sparsness doesn't have to promote the array,
+ *            we can just fill empty slots with a tag. In JS missing array
+ *            indices are subtly different from indices with an undefined value
+ *            (key iteration).
+ * TODO(mkm): change the interpreter so it can set elements in dense arrays
+ */
+V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
+  val_t a = v7_create_array(v7);
+  v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
+  v7_to_object(a)->attributes |= V7_OBJ_DENSE_ARRAY;
+  return a;
 }
 
 v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
@@ -5739,8 +5807,10 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       b += v_sprintf_s(b, size - (b - buf), "]");
       return b - buf;
     }
+    case V7_TYPE_FOREIGN:
+      return v_sprintf_s(buf, size, "[foreign]");
     default:
-      printf("NOT IMPLEMENTED YET\n"); /* LCOV_EXCL_LINE */
+      printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
   }
 }
@@ -5788,6 +5858,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
                                                     size_t len,
                                                     unsigned int attrs) {
   struct v7_property *p;
+  struct v7_object *o;
   val_t ss;
   if (!v7_is_object(obj)) {
     return NULL;
@@ -5796,15 +5867,32 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
     len = strlen(name);
   }
 
+  o = v7_to_object(obj);
+  /*
+   * len check is needed to allow getting the mbuf from the hidden property.
+   * TODO(mkm): however hidden properties cannot be safely represented with
+   * a zero length string anyway, so this will change.
+   */
+  if (o->attributes & V7_OBJ_DENSE_ARRAY && len > 0) {
+    char *e;
+    double i = strtod(name, &e);
+    if ((e - len) == name && trunc(i) == i) {
+      int has;
+      v7->cur_dense_prop->value =
+          v7_array_get2(v7, obj, (unsigned long) i, &has);
+      return has ? v7->cur_dense_prop : NULL;
+    }
+  }
+
   if (len <= 5) {
     ss = v7_create_string(v7, name, len, 1);
-    for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+    for (p = o->properties; p != NULL; p = p->next) {
       if (p->name == ss && (attrs == 0 || (p->attributes & attrs))) {
         return p;
       }
     }
   } else {
-    for (p = v7_to_object(obj)->properties; p != NULL; p = p->next) {
+    for (p = o->properties; p != NULL; p = p->next) {
       size_t n;
       const char *s = v7_to_string(v7, &p->name, &n);
       if (n == len && strncmp(s, name, len) == 0 &&
@@ -5880,7 +5968,7 @@ int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
 
 V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
                                  val_t obj, val_t val) {
-  val_t setter = prop->value, args = v7_create_array(v7);
+  val_t setter = prop->value, args = v7_create_dense_array(v7);
   if (prop->attributes & V7_PROPERTY_GETTER) {
     setter = v7_array_get(v7, prop->value, 1);
   }
@@ -6049,6 +6137,16 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
     return 0;
   }
 
+  if (v7_to_object(v)->attributes & V7_OBJ_DENSE_ARRAY) {
+    struct v7_property *p =
+        v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+    struct mbuf *abuf;
+    if (p == NULL) return 0;
+    abuf = (struct mbuf *) v7_to_foreign(p->value);
+    if (abuf == NULL) return 0;
+    return abuf->len / sizeof(val_t);
+  }
+
   for (p = v7_to_object(v)->properties; p != NULL; p = p->next) {
     size_t n;
     const char *s = v7_to_string(v7, &p->name, &n);
@@ -6065,9 +6163,47 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
 int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
   int res = -1;
   if (v7_is_object(arr)) {
-    char buf[20];
-    int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
-    res = v7_set(v7, arr, buf, n, v);
+    if (v7_to_object(arr)->attributes & V7_OBJ_DENSE_ARRAY) {
+      struct v7_property *p =
+          v7_get_own_property2(v7, arr, "", 0, V7_PROPERTY_HIDDEN);
+      struct mbuf *abuf;
+      unsigned long len;
+      assert(p != NULL);
+      abuf = (struct mbuf *) v7_to_foreign(p->value);
+
+      if (v7_to_object(arr)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
+        if (v7->strict_mode) {
+          throw_exception(v7, TYPE_ERROR, "Object is not extensible");
+        }
+        return res;
+      }
+
+      if (abuf == NULL) {
+        abuf = (struct mbuf *) malloc(sizeof(*abuf));
+        mbuf_init(abuf, sizeof(val_t) * 1);
+        p->value = v7_create_foreign(abuf);
+      }
+      len = abuf->len / sizeof(val_t);
+      /* TODO(mkm): possibly promote to sparse array */
+      if (index > len) {
+        unsigned long i;
+        val_t s = V7_TAG_NOVALUE;
+        for (i = len; i < index; i++) {
+          mbuf_append(abuf, (char *) &s, sizeof(val_t));
+        }
+        len = index;
+      }
+
+      if (index == len) {
+        mbuf_append(abuf, (char *) &v, sizeof(val_t));
+      } else {
+        memcpy(abuf->buf + index * sizeof(val_t), &v, sizeof(val_t));
+      }
+    } else {
+      char buf[20];
+      int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
+      res = v7_set(v7, arr, buf, n, v);
+    }
   }
   return res;
 }
@@ -6082,14 +6218,44 @@ val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
 
 val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
   if (v7_is_object(arr)) {
-    struct v7_property *p;
-    char buf[20];
-    int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
-    p = v7_get_property(v7, arr, buf, n);
-    if (has != NULL) {
-      *has = (p != NULL);
+    if (v7_to_object(arr)->attributes & V7_OBJ_DENSE_ARRAY) {
+      struct v7_property *p =
+          v7_get_own_property2(v7, arr, "", 0, V7_PROPERTY_HIDDEN);
+      struct mbuf *abuf = NULL;
+      unsigned long len;
+      if (p != NULL) {
+        abuf = (struct mbuf *) v7_to_foreign(p->value);
+      }
+      if (abuf == NULL) {
+        if (has != NULL) {
+          *has = 0;
+        }
+        return v7_create_undefined();
+      }
+      len = abuf->len / sizeof(val_t);
+      if (index >= len) {
+        return v7_create_undefined();
+      } else {
+        val_t res;
+        memcpy(&res, abuf->buf + index * sizeof(val_t), sizeof(val_t));
+        if (has != NULL) {
+          *has = res != V7_TAG_NOVALUE;
+        }
+        if (res == V7_TAG_NOVALUE) {
+          res = v7_create_undefined();
+        }
+        return res;
+      }
+    } else {
+      struct v7_property *p;
+      char buf[20];
+      int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
+      p = v7_get_property(v7, arr, buf, n);
+      if (has != NULL) {
+        *has = (p != NULL);
+      }
+      return v7_property_value(v7, arr, p);
     }
-    return v7_property_value(v7, arr, p);
   } else {
     return v7_create_undefined();
   }
@@ -6332,19 +6498,36 @@ int v7_is_true(struct v7 *v7, val_t v) {
          v != V7_TAG_NAN;
 }
 
+static void object_destructor(struct v7 *v7, void *ptr) {
+  struct v7_object *o = (struct v7_object *) ptr;
+  struct v7_property *p;
+  struct mbuf *abuf;
+  if (o->attributes & V7_OBJ_DENSE_ARRAY) {
+    p = v7_get_own_property2(v7, v7_object_to_value(o), "", 0,
+                             V7_PROPERTY_HIDDEN);
+    if (p != NULL &&
+        ((abuf = (struct mbuf *) v7_to_foreign(p->value)) != NULL)) {
+      mbuf_free(abuf);
+    }
+  }
+}
+
 struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
   val_t *p;
   char z = 0;
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
+    v7->cur_dense_prop =
+        (struct v7_property *) calloc(1, sizeof(struct v7_property));
 #define GC_SIZE (64 * 10)
-    gc_arena_init(&v7->object_arena, sizeof(struct v7_object), GC_SIZE,
+    gc_arena_init(v7, &v7->object_arena, sizeof(struct v7_object), GC_SIZE,
                   "object");
-    gc_arena_init(&v7->function_arena, sizeof(struct v7_function), GC_SIZE,
+    v7->object_arena.destructor = object_destructor;
+    gc_arena_init(v7, &v7->function_arena, sizeof(struct v7_function), GC_SIZE,
                   "function");
-    gc_arena_init(&v7->property_arena, sizeof(struct v7_property), GC_SIZE * 3,
-                  "property");
+    gc_arena_init(v7, &v7->property_arena, sizeof(struct v7_property),
+                  GC_SIZE * 3, "property");
 
     /*
      * The compacting GC exploits the null terminator of the previous
@@ -6384,9 +6567,9 @@ void v7_destroy(struct v7 *v7) {
     }
     mbuf_free(&v7->allocated_asts);
 
-    gc_arena_destroy(&v7->object_arena);
-    gc_arena_destroy(&v7->function_arena);
-    gc_arena_destroy(&v7->property_arena);
+    gc_arena_destroy(v7, &v7->object_arena);
+    gc_arena_destroy(v7, &v7->function_arena);
+    gc_arena_destroy(v7, &v7->property_arena);
 
     free(v7);
   }
@@ -6434,23 +6617,26 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
 }
 
 /* Initializes a new arena. */
-V7_PRIVATE void gc_arena_init(struct gc_arena *a, size_t cell_size, size_t size,
-                              const char *name) {
+V7_PRIVATE void gc_arena_init(struct v7 *v7, struct gc_arena *a,
+                              size_t cell_size, size_t size, const char *name) {
   assert(cell_size >= sizeof(uintptr_t));
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
   a->name = name;
 /* Avoid arena initialization cost when GC is disabled */
 #ifndef V7_DISABLE_GC
-  gc_arena_grow(a, size);
+  gc_arena_grow(v7, a, size);
   assert(a->free != NULL);
 #else
   (void) size;
 #endif
 }
 
-V7_PRIVATE void gc_arena_destroy(struct gc_arena *a) {
+V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
   if (a->base != NULL) {
+    if (a->destructor != NULL) {
+      gc_sweep(v7, a, 0);
+    }
     free(a->base);
   }
 }
@@ -6465,7 +6651,8 @@ V7_PRIVATE void gc_arena_destroy(struct gc_arena *a) {
  * have a smaller memory spike footprint, but it’s slightly more
  * complicated, and can be implemented in a second phase.
  */
-V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
+V7_PRIVATE void gc_arena_grow(struct v7 *v7, struct gc_arena *a,
+                              size_t new_size) {
   size_t free_adjust = a->free ? a->free - a->base : 0;
   size_t old_size = a->size;
   uint32_t old_alive = a->alive;
@@ -6476,7 +6663,7 @@ V7_PRIVATE void gc_arena_grow(struct gc_arena *a, size_t new_size) {
   /* in case we grow preemptively */
   a->free += free_adjust;
   /* sweep will add the trailing zeroed memory to free list */
-  gc_sweep(a, old_size);
+  gc_sweep(v7, a, old_size);
   a->alive = old_alive; /* sweeping will decrement `alive` */
 }
 
@@ -6521,7 +6708,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 /*
  * Scans the arena and add all unmarked cells to the free list.
  */
-void gc_sweep(struct gc_arena *a, size_t start) {
+void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
   char *cur;
   a->alive = 0;
   a->free = NULL;
@@ -6531,6 +6718,9 @@ void gc_sweep(struct gc_arena *a, size_t start) {
       UNMARK(cur);
       a->alive++;
     } else {
+      if (a->destructor != NULL) {
+        a->destructor(v7, cur);
+      }
       memset(cur, 0, a->cell_size);
       *(char **) cur = a->free;
       a->free = cur;
@@ -6747,9 +6937,9 @@ void v7_gc(struct v7 *v7) {
   gc_compact_strings(v7);
 #endif
 
-  gc_sweep(&v7->object_arena, 0);
-  gc_sweep(&v7->function_arena, 0);
-  gc_sweep(&v7->property_arena, 0);
+  gc_sweep(v7, &v7->object_arena, 0);
+  gc_sweep(v7, &v7->function_arena, 0);
+  gc_sweep(v7, &v7->property_arena, 0);
 
   gc_dump_arena_stats("After GC objects", &v7->object_arena);
   gc_dump_arena_stats("After GC functions", &v7->function_arena);
@@ -7653,7 +7843,7 @@ static val_t create_exception(struct v7 *v7, enum error_ctor ex,
     fprintf(stderr, "Exception creation throws an exception %d: %s\n", ex, msg);
     return V7_UNDEFINED;
   }
-  args = v7_create_array(v7);
+  args = v7_create_dense_array(v7);
   v7_array_set(v7, args, 0, v7_create_string(v7, msg, strlen(msg), 1));
   v7->creating_exception++;
   e = create_object(v7, v7_get(v7, v7->error_objects[ex], "prototype", 9));
@@ -8074,8 +8264,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           res = v1 = v7_create_number(i_num_bin_op(v7, op, d1, d2));
       }
 
-      /* variables are modified where they are found in the scope chain */
+      if (v7_is_object(lval) &&
+          v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
+        char *e;
+        double i = strtod(name, &e);
+        if ((e - name_len) == name && trunc(i) == i) {
+          v7_array_set(v7, lval, (unsigned long) i, v1);
+          break;
+        }
+      }
+
       if (prop != NULL && tag == AST_IDENT) {
+        /* variables are modified where they are found in the scope chain */
         prop->value = v1;
       } else if (prop != NULL && prop->attributes & V7_PROPERTY_READ_ONLY) {
         /* nop */
@@ -8153,7 +8353,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
             v1 = i_eval_expr(v7, a, pos, scope);
             if ((p = v7_get_property(v7, res, name, name_len)) &&
                 p->attributes & other) {
-              val_t arr = v7_create_array(v7);
+              val_t arr = v7_create_dense_array(v7);
               tmp_stack_push(&tf, &arr);
               v7_array_set(v7, arr, tag == AST_GETTER ? 1 : 0, p->value);
               v7_array_set(v7, arr, tag == AST_SETTER ? 1 : 0, v1);
@@ -8366,6 +8566,20 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           return v7_create_boolean(1);
       }
 
+      if (v7_is_object(lval) &&
+          v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
+        char *e;
+        double i = strtod(name, &e);
+        if ((e - name_len) == name && trunc(i) == i) {
+          int has;
+          v7_array_get2(v7, lval, (unsigned long) i, &has);
+          if (has) {
+            v7_array_set(v7, lval, (unsigned long) i, V7_TAG_NOVALUE);
+          }
+          res = v7_create_boolean(1);
+        }
+      }
+
       prop = v7_get_property(v7, lval, name, name_len);
       if (prop != NULL) {
         if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
@@ -8563,7 +8777,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   }
 
   if (v7_is_cfunction(cfunc)) {
-    args = v7_create_array(v7);
+    args = v7_create_dense_array(v7);
     for (i = 0; *pos < end; i++) {
       res = i_eval_expr(v7, a, pos, scope);
       v7_array_set(v7, args, i, res);
@@ -8583,7 +8797,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
    * TODO(mkm): don't create args array if the parser didn't see
    * any `arguments` or `eval` identifier being referenced in the function.
    */
-  args = v7_create_array(v7);
+  args = v7_create_dense_array(v7);
 
   /* scan actual and formal arguments and updates the value in the frame */
   for (i = 0; fpos < fbody; i++) {
@@ -8810,6 +9024,44 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
         goto cleanup;
       }
       ast_skip_tree(a, pos);
+      loop = *pos;
+
+      /* first iterate on dense array elements if any */
+      /* TODO(mkm): make it DRY */
+      if (v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
+        struct v7_property *p =
+            v7_get_own_property2(v7, obj, "", 0, V7_PROPERTY_HIDDEN);
+        struct mbuf *abuf;
+        if (p != NULL) {
+          abuf = (struct mbuf *) v7_to_foreign(p->value);
+          if (abuf != NULL) {
+            unsigned long i, len = v7_array_length(v7, obj);
+            for (i = 0; i < len; i++, *pos = loop) {
+              key = n_to_str(v7, v7_create_number(i), v7_create_undefined(),
+                             "%%lg");
+              if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
+                var->value = key;
+              } else {
+                v7_set_property(v7, v7->global_object, name, name_len, 0, key);
+              }
+              res = i_eval_stmts(v7, a, pos, end, scope,
+                                 brk); /* LCOV_EXCL_LINE */
+              switch (*brk) {          /* LCOV_EXCL_LINE */
+                case B_RUN:
+                  break;
+                case B_CONTINUE:
+                  *brk = B_RUN;
+                  break;
+                case B_BREAK:
+                  *brk = B_RUN; /* fall through */
+                case B_RETURN:
+                  *pos = end;
+                  goto cleanup;
+              }
+            }
+          }
+        }
+      }
       loop = *pos;
 
       for (p = v7_to_object(obj)->properties; p; p = p->next, *pos = loop) {
@@ -9081,7 +9333,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
    * TODO(mkm): don't create arguments array if the parser didn't see
    * any `arguments` or `eval` identifier being referenced in the function.
    */
-  arguments = v7_create_array(v7);
+  arguments = v7_create_dense_array(v7);
 
   for (i = 0; pos < body; i++) {
     tag = ast_fetch_tag(func->ast, &pos);
@@ -10863,7 +11115,7 @@ static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
 static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
                           unsigned int ignore_flags) {
   val_t obj = v7_array_get(v7, args, 0);
-  val_t res = v7_create_array(v7);
+  val_t res = v7_create_dense_array(v7);
   if (!v7_is_object(obj)) {
     throw_exception(v7, TYPE_ERROR, "Object.keys called on non-object");
   }
@@ -11180,7 +11432,8 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
+V7_PRIVATE
+val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d = i_as_num(v7, arg0);
   int len, digits = d > 0 ? (int) d : 0;
@@ -12952,7 +13205,7 @@ static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
 V7_PRIVATE void init_regex(struct v7 *v7) {
   val_t ctor =
       v7_create_cfunction_ctor(v7, v7->regexp_prototype, Regex_ctor, 1);
-  val_t lastIndex = v7_create_array(v7);
+  val_t lastIndex = v7_create_dense_array(v7);
 
   v7_set_property(v7, v7->global_object, "RegExp", 6, V7_PROPERTY_DONT_ENUM,
                   ctor);

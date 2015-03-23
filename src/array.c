@@ -11,9 +11,26 @@ struct a_sort_data {
 };
 
 static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+#if 0
   (void) v7;
   (void) this_obj;
   return args;
+#else
+  unsigned long i, len;
+  val_t res = v7_create_array(v7);
+  (void) v7;
+  (void) this_obj;
+  /*
+   * The interpreter passes dense array to C functions.
+   * However dense array implementation is not yet complete
+   * so we don't want to propagate them at each call to Array()
+   */
+  len = v7_array_length(v7, args);
+  for (i = 0; i < len; i++) {
+    v7_array_set(v7, res, i, v7_array_get(v7, args, i));
+  }
+  return res;
+#endif
 }
 
 static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
@@ -80,7 +97,7 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
   val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
 
   if (v7_is_function(func)) {
-    val_t res, args = v7_create_array(v7);
+    val_t res, args = v7_create_dense_array(v7);
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     res = v7_apply(v7, func, V7_UNDEFINED, args);
@@ -214,7 +231,7 @@ static val_t Array_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
-  val_t res = v7_create_array(v7);
+  val_t res = v7_create_dense_array(v7);
   long i, len = v7_array_length(v7, this_obj);
   long num_args = v7_array_length(v7, args);
   long elems_to_insert = num_args > 2 ? num_args - 2 : 0;
@@ -238,8 +255,24 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     v7_array_push(v7, res, v7_array_get(v7, this_obj, i));
   }
 
-  /* If splicing, modify this_obj array: remove spliced sub-array */
-  if (mutate) {
+  if (mutate && v7_to_object(this_obj)->attributes & V7_OBJ_DENSE_ARRAY) {
+    /*
+     * dense arrays are spliced by memmoving leaving the trailing
+     * space allocated for future appends.
+     * TODO(mkm): figure out if trimming is better
+     */
+    struct v7_property *p =
+        v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
+    struct mbuf *abuf;
+    if (p == NULL) return res;
+    abuf = (struct mbuf *) v7_to_foreign(p->value);
+    if (abuf == NULL) return res;
+
+    memmove(abuf->buf + arg0 * sizeof(val_t), abuf->buf + arg1 * sizeof(val_t),
+            (len - arg1) * sizeof(val_t));
+    abuf->len -= (arg1 - arg0) * sizeof(val_t);
+  } else if (mutate) {
+    /* If splicing, modify this_obj array: remove spliced sub-array */
     struct v7_property **p, **next;
     long i;
 
@@ -290,7 +323,7 @@ static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
 }
 
 static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
-  val_t params = v7_create_array(v7);
+  val_t params = v7_create_dense_array(v7);
   v7_array_push(v7, params, v);
   v7_array_push(v7, params, n);
   v7_array_push(v7, params, t);
@@ -306,7 +339,7 @@ static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
-    res = v7_create_array(v7);
+    res = v7_create_dense_array(v7);
     len = v7_array_length(v7, this_obj);
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
@@ -374,7 +407,7 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
     throw_exception(v7, TYPE_ERROR, "Array expected");
   } else {
     a_prep1(v7, this_obj, args, &arg0, &arg1);
-    res = v7_create_array(v7);
+    res = v7_create_dense_array(v7);
     len = v7_array_length(v7, this_obj);
     for (i = 0; i < len; i++) {
       v = v7_array_get2(v7, this_obj, i, &has);
@@ -390,7 +423,7 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
-  val_t length = v7_create_array(v7);
+  val_t length = v7_create_dense_array(v7);
 
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
