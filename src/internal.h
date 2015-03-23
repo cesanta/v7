@@ -287,6 +287,10 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 
 V7_PRIVATE void init_js_stdlib(struct v7 *);
 
+V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args);
+
+V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str);
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */

@@ -71,7 +71,7 @@ struct v7_object {
   struct v7_property *properties;
   struct v7_object *prototype;
   uint8_t attributes;
-#define V7_OBJ_NOT_EXTENSIBLE 1 /* TODO(lsm): store this in LSB */
+#define V7_OBJ_NOT_EXTENSIBLE 0  /* TODO(lsm): store this in LSB */
 };
 
 /*

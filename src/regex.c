@@ -7,7 +7,7 @@
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
-static val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   long argnum = v7_array_length(v7, args);
   if (argnum > 0) {
     val_t ro = to_string(v7, v7_array_get(v7, args, 0));
@@ -98,16 +98,16 @@ static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(lastIndex);
 }
 
-static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
-  if (v7_is_regexp(this_obj) && v7_array_length(v7, args) > 0) {
-    val_t s = to_string(v7, v7_array_get(v7, args, 0));
+V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str) {
+  if (v7_is_regexp(rx)) {
+    val_t s = to_string(v7, str);
     size_t len;
     struct slre_loot sub;
     struct slre_cap *ptok = sub.caps;
     char *const str = (char *) v7_to_string(v7, &s, &len);
     const char *const end = str + len;
     const char *begin = str;
-    struct v7_regexp *rp = v7_to_regexp(this_obj);
+    struct v7_regexp *rp = v7_to_regexp(rx);
     int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
     if (rp->lastIndex < 0) rp->lastIndex = 0;
     if (flag_g) begin = utfnshift(str, rp->lastIndex);
@@ -120,9 +120,18 @@ static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
         v7_array_push(v7, arr, v7_create_string(v7, ptok->start,
                                                 ptok->end - ptok->start, 1));
       if (flag_g) rp->lastIndex = utfnlen(str, sub.caps->end - str);
+      v7_set_property(v7, arr, "index", 5, V7_PROPERTY_READ_ONLY,
+                      v7_create_number(utfnlen(str, sub.caps->start - str)));
       return arr;
     } else
       rp->lastIndex = 0;
+  }
+  return v7_create_null();
+}
+
+static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
+  if (v7_array_length(v7, args) > 0) {
+    return rx_exec(v7, this_obj, v7_array_get(v7, args, 0));
   }
   return v7_create_null();
 }
