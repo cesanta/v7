@@ -209,6 +209,9 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+V7_PRIVATE val_t ulong_to_str(struct v7 *, unsigned long);
+V7_PRIVATE unsigned long str_to_ulong(struct v7 *, val_t, int *);
+V7_PRIVATE unsigned long cstr_to_ulong(const char *, size_t len, int *);
 V7_PRIVATE void embed_string(struct mbuf *, size_t, const char *, size_t, int,
                              int);
 /* TODO(mkm): rename after regexp merge */

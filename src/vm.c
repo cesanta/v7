@@ -562,12 +562,10 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
    * a zero length string anyway, so this will change.
    */
   if (o->attributes & V7_OBJ_DENSE_ARRAY && len > 0) {
-    char *e;
-    double i = strtod(name, &e);
-    if ((e - len) == name && trunc(i) == i) {
-      int has;
-      v7->cur_dense_prop->value =
-          v7_array_get2(v7, obj, (unsigned long) i, &has);
+    int ok, has;
+    unsigned long i = cstr_to_ulong(name, len, &ok);
+    if (ok) {
+      v7->cur_dense_prop->value = v7_array_get2(v7, obj, i, &has);
       return has ? v7->cur_dense_prop : NULL;
     }
   }
@@ -868,7 +866,7 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
 
       if (abuf == NULL) {
         abuf = (struct mbuf *) malloc(sizeof(*abuf));
-        mbuf_init(abuf, sizeof(val_t) * 1);
+        mbuf_init(abuf, sizeof(val_t) * (index + 1));
         p->value = v7_create_foreign(abuf);
       }
       len = abuf->len / sizeof(val_t);
@@ -1157,6 +1155,37 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
   return (offset & ~V7_TAG_MASK) | tag;
+}
+
+/* Create V7 strings for integers such as array indices */
+V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
+  char buf[100];
+  int len;
+  len = snprintf(buf, sizeof(buf), "%lu", n);
+  return v7_create_string(v7, buf, len, 1);
+}
+
+/*
+ * Convert a V7 string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ */
+V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
+  char *e;
+  unsigned long res = strtoul(s, &e, 10);
+  *ok = (e == s + len);
+  return res;
+}
+
+/*
+ * Convert a C string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ */
+V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v, int *ok) {
+  char buf[100];
+  size_t len = v7_stringify_value(v7, v, buf, sizeof(buf));
+  return cstr_to_ulong(buf, len, ok);
 }
 
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
