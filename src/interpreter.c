@@ -441,10 +441,14 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
               !(v7_is_undefined(res) || v7_is_double(res) ||
                 v7_is_boolean(res))) {
-            v7_stringify_value(v7, v1, buf, sizeof(buf));
-            v1 = v7_create_string(v7, buf, strlen(buf), 1);
-            v7_stringify_value(v7, res, buf, sizeof(buf));
-            res = v7_create_string(v7, buf, strlen(buf), 1);
+            if (!v7_is_string(v1)) {
+              v7_stringify_value(v7, v1, buf, sizeof(buf));
+              v1 = v7_create_string(v7, buf, strlen(buf), 1);
+            }
+            if (!v7_is_string(res)) {
+              v7_stringify_value(v7, res, buf, sizeof(buf));
+              res = v7_create_string(v7, buf, strlen(buf), 1);
+            }
             v1 = res = s_concat(v7, v1, res);
             break;
           }

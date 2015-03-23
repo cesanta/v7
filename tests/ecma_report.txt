@@ -3817,7 +3817,7 @@ err
 3769	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T13.js (tail -c +4244553 tests/ecmac.db|head -c 1680): [{"message":"#2: __executed = /(a(b(c)))(d(e(f)))\2\5/.exec("xabcdefbcefg"); __executed.index === 1. Actual: undefined"}]
 3770	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T14.js (tail -c +4246234 tests/ecmac.db|head -c 1547): [{"message":"#2: __executed = /a(.?)b\1c\1d\1/.exec("abcd"); __executed.index === 0. Actual: undefined"}]
 3771	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T15.js (tail -c +4247782 tests/ecmac.db|head -c 1991): [{"message":"Invalid regex"}]
-3772	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T16.js (tail -c +4249774 tests/ecmac.db|head -c 1937): [{"message":"Invalid regex"}]
+3772	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T16.js (tail -c +4249774 tests/ecmac.db|head -c 1937): [{"message":"#2: __re = new RegExp(__pattern); __executed = __re.exec(__strOriginal); __executed.index === 0. Actual: undefined"}]
 3773	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T17.js (tail -c +4251712 tests/ecmac.db|head -c 1935): [{"message":"Invalid regex"}]
 3774	PASS ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T18.js (tail -c +4253648 tests/ecmac.db|head -c 1127)
 3775	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T19.js (tail -c +4254776 tests/ecmac.db|head -c 1869): [{"message":"#2: __executed = /([\S]+([ \t]+[\S]+)*)[ \t]*=[ \t]*[\S]+/.exec("Course_Creator = Test"); __executed.index === 0. Actual: undefined"}]
