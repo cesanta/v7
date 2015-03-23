@@ -1964,8 +1964,9 @@ static const char *test_file(void) {
 
   /* Read file in C and Javascript, then compare respective strings */
   ASSERT(v7_exec(v7, &v, "var fd = File.open('unit_test.c')") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "var a = '', b; while ((b = File.read(fd)) != '') "
-         "{ a += b; }; a") == V7_OK);
+  ASSERT(v7_exec(v7, &v,
+                 "var a = '', b; while ((b = File.read(fd)) != '') "
+                 "{ a += b; }; a") == V7_OK);
   s = v7_to_string(v7, &v, &string_len);
   ASSERT(string_len == file_len);
   ASSERT(memcmp(s, file_data, string_len) == 0);

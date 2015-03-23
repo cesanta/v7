@@ -188,8 +188,10 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   struct v7_regexp *rxp;
 
   so = to_string(v7, this_obj);
-  if (v7_array_length(v7, args) == 0) ro = v7_create_regexp(v7, "", 0, "", 0);
-  else ro = i_value_of(v7, v7_array_get(v7, args, 0));
+  if (v7_array_length(v7, args) == 0)
+    ro = v7_create_regexp(v7, "", 0, "", 0);
+  else
+    ro = i_value_of(v7, v7_array_get(v7, args, 0));
   if (!v7_is_regexp(ro)) {
     val_t arg = v7_create_dense_array(v7);
     v7_array_push(v7, arg, ro);
@@ -199,18 +201,20 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   rxp = v7_to_regexp(ro);
   flag_g = slre_get_flags(rxp->compiled_regexp) & SLRE_FLAG_G;
   if (!flag_g) return rx_exec(v7, ro, so, 0);
-  
+
   rxp->lastIndex = 0;
   arr = v7_create_dense_array(v7);
   while (lastMatch) {
     val_t result = rx_exec(v7, ro, so, 1);
-    if (v7_is_null(result)) lastMatch = 0;
+    if (v7_is_null(result))
+      lastMatch = 0;
     else {
       long thisIndex = rxp->lastIndex;
       if (thisIndex == previousLastIndex) {
         previousLastIndex = thisIndex + 1;
         rxp->lastIndex = previousLastIndex;
-      } else previousLastIndex = thisIndex;
+      } else
+        previousLastIndex = thisIndex;
       v7_array_push(v7, arr, v7_array_get(v7, result, 0));
       n++;
     }
@@ -329,9 +333,9 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
     val_t so, ro = i_value_of(v7, v7_array_get(v7, args, 0));
     const char *s;
     if (!v7_is_regexp(ro)) {
-    val_t arg = v7_create_dense_array(v7);
-    v7_array_push(v7, arg, ro);
-    ro = Regex_ctor(v7, v7_create_null(), arg);
+      val_t arg = v7_create_dense_array(v7);
+      v7_array_push(v7, arg, ro);
+      ro = Regex_ctor(v7, v7_create_null(), arg);
     }
 
     so = to_string(v7, this_obj);
