@@ -183,7 +183,9 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 
 static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   val_t so, ro, arr = v7_create_null();
-  int previousLastIndex = 0, lastMatch = 1, n = 0, flag_g;
+  long previousLastIndex = 0;
+  int lastMatch = 1, n = 0, flag_g;
+  struct v7_regexp *rxp;
 
   so = to_string(v7, this_obj);
   if (v7_array_length(v7, args) == 0) ro = v7_create_regexp(v7, "", 0, "", 0);
@@ -194,19 +196,20 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
     ro = Regex_ctor(v7, v7_create_null(), arg);
   }
 
-  flag_g = slre_get_flags(v7_to_regexp(ro)->compiled_regexp) & SLRE_FLAG_G;
+  rxp = v7_to_regexp(ro);
+  flag_g = slre_get_flags(rxp->compiled_regexp) & SLRE_FLAG_G;
   if (!flag_g) return rx_exec(v7, ro, so, 0);
   
-  v7_set_property(v7, ro, "lastIndex", 9, 0, v7_create_number(0));
+  rxp->lastIndex = 0;
   arr = v7_create_dense_array(v7);
   while (lastMatch) {
     val_t result = rx_exec(v7, ro, so, 1);
     if (v7_is_null(result)) lastMatch = 0;
     else {
-      int thisIndex = (int) v7_to_double(v7_get(v7, ro, "lastIndex", 9));
+      long thisIndex = rxp->lastIndex;
       if (thisIndex == previousLastIndex) {
         previousLastIndex = thisIndex + 1;
-        v7_set_property(v7, ro, "lastIndex", 9, 0, v7_create_number(previousLastIndex));
+        rxp->lastIndex = previousLastIndex;
       } else previousLastIndex = thisIndex;
       v7_array_push(v7, arr, v7_array_get(v7, result, 0));
       n++;
