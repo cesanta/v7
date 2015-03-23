@@ -838,7 +838,7 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
     const char *s = v7_to_string(v7, &p->name, &n);
     key = strtoul(s, &end, 10);
     /* Array length could not be more then 2^32 */
-    if (end > s && *end == '\0' && key >= len && key < 4294967295L) {
+    if (end > s && *end == '\0' && key >= len && key < 4294967295UL) {
       len = key + 1;
     }
   }

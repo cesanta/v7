@@ -1,6 +1,6 @@
 WARNS = -W -Wall -pedantic -Wno-comment -Wno-variadic-macros
 V7_FLAGS = -I./src -I.
-CFLAGS = $(WARNS) -g -O3 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
+CFLAGS = $(WARNS) -g -O0 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
 
 SRC_DIR=src
 TOP_SOURCES=$(addprefix $(SRC_DIR)/, $(SOURCES))
@@ -47,7 +47,7 @@ all_warnings: v7.c
 	./$@
 
 v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
-	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
+	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE -DV7_DISABLE_SOCKETS $(CFLAGS) -lm
 #	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
 
 asan_v7:

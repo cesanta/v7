@@ -30,7 +30,7 @@ enum v7_err { V7_OK, V7_SYNTAX_ERROR, V7_EXEC_EXCEPTION };
 struct v7;     /* Opaque structure. V7 engine handler. */
 struct v7_val; /* Opaque structure. Holds V7 value, which has v7_type type. */
 
-#if defined(_WIN32) || (defined(_MSC_VER) && _MSC_VER <= 1200)
+#if (defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64__)) || (defined(_MSC_VER) && _MSC_VER <= 1200)
 #define V7_WINDOWS
 #endif
 
