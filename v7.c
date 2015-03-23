@@ -1115,6 +1115,9 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
 V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+V7_PRIVATE val_t ulong_to_str(struct v7 *, unsigned long);
+V7_PRIVATE unsigned long str_to_ulong(struct v7 *, val_t, int *);
+V7_PRIVATE unsigned long cstr_to_ulong(const char *, size_t len, int *);
 V7_PRIVATE void embed_string(struct mbuf *, size_t, const char *, size_t, int,
                              int);
 /* TODO(mkm): rename after regexp merge */
@@ -5874,12 +5877,10 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
    * a zero length string anyway, so this will change.
    */
   if (o->attributes & V7_OBJ_DENSE_ARRAY && len > 0) {
-    char *e;
-    double i = strtod(name, &e);
-    if ((e - len) == name && trunc(i) == i) {
-      int has;
-      v7->cur_dense_prop->value =
-          v7_array_get2(v7, obj, (unsigned long) i, &has);
+    int ok, has;
+    unsigned long i = cstr_to_ulong(name, len, &ok);
+    if (ok) {
+      v7->cur_dense_prop->value = v7_array_get2(v7, obj, i, &has);
       return has ? v7->cur_dense_prop : NULL;
     }
   }
@@ -6180,7 +6181,7 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
 
       if (abuf == NULL) {
         abuf = (struct mbuf *) malloc(sizeof(*abuf));
-        mbuf_init(abuf, sizeof(val_t) * 1);
+        mbuf_init(abuf, sizeof(val_t) * (index + 1));
         p->value = v7_create_foreign(abuf);
       }
       len = abuf->len / sizeof(val_t);
@@ -6469,6 +6470,37 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 
   /* NOTE(lsm): don't use v7_pointer_to_value, 32-bit ptrs will truncate */
   return (offset & ~V7_TAG_MASK) | tag;
+}
+
+/* Create V7 strings for integers such as array indices */
+V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
+  char buf[100];
+  int len;
+  len = snprintf(buf, sizeof(buf), "%lu", n);
+  return v7_create_string(v7, buf, len, 1);
+}
+
+/*
+ * Convert a V7 string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ */
+V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
+  char *e;
+  unsigned long res = strtoul(s, &e, 10);
+  *ok = (e == s + len);
+  return res;
+}
+
+/*
+ * Convert a C string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ */
+V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v, int *ok) {
+  char buf[100];
+  size_t len = v7_stringify_value(v7, v, buf, sizeof(buf));
+  return cstr_to_ulong(buf, len, ok);
 }
 
 V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
@@ -8266,10 +8298,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
       if (v7_is_object(lval) &&
           v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
-        char *e;
-        double i = strtod(name, &e);
-        if ((e - name_len) == name && trunc(i) == i) {
-          v7_array_set(v7, lval, (unsigned long) i, v1);
+        int ok;
+        unsigned long i = cstr_to_ulong(name, name_len, &ok);
+        if (ok) {
+          v7_array_set(v7, lval, i, v1);
           break;
         }
       }
@@ -8568,9 +8600,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
       if (v7_is_object(lval) &&
           v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
-        char *e;
-        double i = strtod(name, &e);
-        if ((e - name_len) == name && trunc(i) == i) {
+        int ok;
+        unsigned long i = cstr_to_ulong(name, name_len, &ok);
+        if (ok) {
           int has;
           v7_array_get2(v7, lval, (unsigned long) i, &has);
           if (has) {
@@ -9037,8 +9069,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           if (abuf != NULL) {
             unsigned long i, len = v7_array_length(v7, obj);
             for (i = 0; i < len; i++, *pos = loop) {
-              key = n_to_str(v7, v7_create_number(i), v7_create_undefined(),
-                             "%%lg");
+              key = ulong_to_str(v7, i);
               if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
                 var->value = key;
               } else {

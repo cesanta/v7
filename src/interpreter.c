@@ -461,10 +461,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
       if (v7_is_object(lval) &&
           v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
-        char *e;
-        double i = strtod(name, &e);
-        if ((e - name_len) == name && trunc(i) == i) {
-          v7_array_set(v7, lval, (unsigned long) i, v1);
+        int ok;
+        unsigned long i = cstr_to_ulong(name, name_len, &ok);
+        if (ok) {
+          v7_array_set(v7, lval, i, v1);
           break;
         }
       }
@@ -763,9 +763,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
       if (v7_is_object(lval) &&
           v7_to_object(lval)->attributes & V7_OBJ_DENSE_ARRAY) {
-        char *e;
-        double i = strtod(name, &e);
-        if ((e - name_len) == name && trunc(i) == i) {
+        int ok;
+        unsigned long i = cstr_to_ulong(name, name_len, &ok);
+        if (ok) {
           int has;
           v7_array_get2(v7, lval, (unsigned long) i, &has);
           if (has) {
@@ -1232,8 +1232,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
           if (abuf != NULL) {
             unsigned long i, len = v7_array_length(v7, obj);
             for (i = 0; i < len; i++, *pos = loop) {
-              key = n_to_str(v7, v7_create_number(i), v7_create_undefined(),
-                             "%%lg");
+              key = ulong_to_str(v7, i);
               if ((var = v7_get_property(v7, scope, name, name_len)) != NULL) {
                 var->value = key;
               } else {
