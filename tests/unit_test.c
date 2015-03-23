@@ -29,6 +29,7 @@
 #ifndef _WIN32
 #include <unistd.h>
 #include <pthread.h>
+#include <fcntl.h>
 #endif
 
 #include "../v7.h"
@@ -1953,6 +1954,45 @@ static const char *test_gc_sweep(void) {
 }
 #endif
 
+static const char *test_file(void) {
+  v7_val_t v;
+  size_t file_len, string_len;
+  char *file_data = read_file("unit_test.c", &file_len);
+  const char *s;
+  struct v7 *v7 = v7_create();
+  char buf[100];
+
+  /* Read file in C and Javascript, then compare respective strings */
+  ASSERT(v7_exec(v7, &v, "var fd = File.open('unit_test.c')") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var a = '', b; while ((b = File.read(fd)) != '') "
+         "{ a += b; }; a") == V7_OK);
+  s = v7_to_string(v7, &v, &string_len);
+  ASSERT(string_len == file_len);
+  ASSERT(memcmp(s, file_data, string_len) == 0);
+  free(file_data);
+  ASSERT(v7_exec(v7, &v, "File.close(fd)") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+
+  /* Create file, write into it, then remove it. 0x202 is O_RDWR | O_CREAT */
+  snprintf(buf, sizeof(buf), "fd = File.open('foo.txt', %d, %d);",
+           O_RDWR | O_CREAT, 0644);
+  ASSERT(v7_exec(v7, &v, buf) == V7_OK);
+  ASSERT(v7_exec(v7, &v, "File.write(fd, 'hi there');") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(v7_exec(v7, &v, "File.close(fd)") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT((file_data = read_file("foo.txt", &file_len)) != NULL);
+  ASSERT(file_len == 8);
+  ASSERT(memcmp(file_data, "hi there", 8) == 0);
+  free(file_data);
+  ASSERT(v7_exec(v7, &v, "File.remove('foo.txt')") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(fopen("foo.txt", "r") == NULL);
+
+  v7_destroy(v7);
+  return NULL;
+}
+
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_unescape);
   RUN_TEST(test_to_json);
@@ -1961,6 +2001,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_is_true);
   RUN_TEST(test_closure);
   RUN_TEST(test_native_functions);
+  RUN_TEST(test_file);
   RUN_TEST(test_stdlib);
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);

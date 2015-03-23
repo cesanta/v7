@@ -1,0 +1,37 @@
+= API Reference
+
+== File
+
+File API is a simple wrapper around POSIX file API. File object is not a
+constructor, but rather a namespace object that holds File API functions.
+It is a user responsibility to close opened files. Failure to do so
+results in file descriptor leak.
+
+=== `File.open(path, [flags, [mode]]) -> fd`
+
+Open a file and return opened numeric file
+descriptor. `flags`, if specified, should be a numeric bitmask valid for
+C `open()` call, see `O_RDONLY`, `O_WRNOLY`, `O_RDWR`, `O_CREAT`
+constants definitions in `fcntl.h`. Return -1 on error.
+
+=== `File.close(fd) -> 0 or error_code`
+
+Close opened file descriptor. Return 0 on success,
+or error code (system `errno` value) on error.
+
+=== `File.read(fd) -> string`
+
+Read data from file, return a string. On error or EOF, return an empty string.
+There is no way to distinquish between EOF or read error.
+
+=== `File.write(fd, string) -> 0 or error_code`
+
+Write data into file. Return 0 if all data has been written successfully,
+or error code (system `errno` value) on error.
+
+=== `File.remove(path) -> 0 or error_code`
+
+Delete file. Return 0 on success,
+or error code (system `errno` value) on error.
+
+== Socket
