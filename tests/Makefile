@@ -2,7 +2,7 @@ PROG = unit_test
 SRC_DIR=../src
 WARNS = -W -Wall -Wno-comment -Wno-variadic-macros
 V7_FLAGS = -I$(SRC_DIR) -I. -DV7_EXPOSE_PRIVATE # -DECMA_FORK
-CFLAGS = $(WARNS) -g -O3 $(V7_FLAGS) $(CFLAGS_EXTRA)
+CFLAGS = $(WARNS) -g -O0 $(V7_FLAGS) $(CFLAGS_EXTRA)
 LDFLAGS = -lm
 AMALGAMATED_SOURCES = ../v7.c
 
