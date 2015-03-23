@@ -195,12 +195,12 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   }
 
   flag_g = slre_get_flags(v7_to_regexp(ro)->compiled_regexp) & SLRE_FLAG_G;
-  if (!flag_g) return rx_exec(v7, ro, so);
+  if (!flag_g) return rx_exec(v7, ro, so, 0);
   
   v7_set_property(v7, ro, "lastIndex", 9, 0, v7_create_number(0));
   arr = v7_create_array(v7);
   while (lastMatch) {
-    val_t result = rx_exec(v7, ro, so);
+    val_t result = rx_exec(v7, ro, so, 1);
     if (v7_is_null(result)) lastMatch = 0;
     else {
       int thisIndex = (int) v7_to_double(v7_get(v7, ro, "lastIndex", 9));

@@ -98,7 +98,7 @@ static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(lastIndex);
 }
 
-V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str) {
+V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
   if (v7_is_regexp(rx)) {
     val_t s = to_string(v7, str);
     size_t len;
@@ -110,7 +110,7 @@ V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str) {
     struct v7_regexp *rp = v7_to_regexp(rx);
     int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
     if (rp->lastIndex < 0) rp->lastIndex = 0;
-    if (flag_g) begin = utfnshift(str, rp->lastIndex);
+    if (flag_g || lind) begin = utfnshift(str, rp->lastIndex);
 
     if (!slre_exec(rp->compiled_regexp, 0, begin, end, &sub)) {
       int i;
@@ -131,7 +131,7 @@ V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str) {
 
 static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
   if (v7_array_length(v7, args) > 0) {
-    return rx_exec(v7, this_obj, v7_array_get(v7, args, 0));
+    return rx_exec(v7, this_obj, v7_array_get(v7, args, 0), 0);
   }
   return v7_create_null();
 }
