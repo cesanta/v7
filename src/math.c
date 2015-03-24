@@ -22,7 +22,8 @@ static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
     return func(v7, args, name);                                            \
   }
 
-#ifdef V7_WINDOWS
+/* Visual studio 2012+ has round() */
+#if defined(V7_WINDOWS) && _MSC_VER < 1700
 static double round(double n) {
   return n;
 }
