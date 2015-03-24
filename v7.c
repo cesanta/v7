@@ -8257,10 +8257,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
           if (!(v7_is_undefined(v1) || v7_is_double(v1) || v7_is_boolean(v1)) ||
               !(v7_is_undefined(res) || v7_is_double(res) ||
                 v7_is_boolean(res))) {
-            v7_stringify_value(v7, v1, buf, sizeof(buf));
-            v1 = v7_create_string(v7, buf, strlen(buf), 1);
-            v7_stringify_value(v7, res, buf, sizeof(buf));
-            res = v7_create_string(v7, buf, strlen(buf), 1);
+            /*
+             * Only stringify non-strings. Note that if an object is large,
+             * v7_stringify_value() might not fit it in sizeof(buf).
+             */
+            if (!v7_is_string(v1)) {
+              v7_stringify_value(v7, v1, buf, sizeof(buf));
+              v1 = v7_create_string(v7, buf, strlen(buf), 1);
+            }
+            if (!v7_is_string(res)) {
+              v7_stringify_value(v7, res, buf, sizeof(buf));
+              res = v7_create_string(v7, buf, strlen(buf), 1);
+            }
             v1 = res = s_concat(v7, v1, res);
             break;
           }
@@ -12736,10 +12744,17 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
 
   (void) this_obj;
   for (i = 0; i < num_args; i++) {
-    p = v7_to_json(v7, v7_array_get(v7, args, i), buf, sizeof(buf));
-    printf("%s", p);
-    if (p != buf) {
-      free(p);
+    val_t arg = v7_array_get(v7, args, i);
+    if (v7_is_string(arg)) {
+      size_t n;
+      const char *s = v7_to_string(v7, &arg, &n);
+      printf("%s", s);
+    } else {
+      p = v7_to_json(v7, arg, buf, sizeof(buf));
+      printf("%s", p);
+      if (p != buf) {
+        free(p);
+      }
     }
   }
   putchar('\n');
@@ -12890,15 +12905,14 @@ static val_t Std_load(struct v7 *v7, val_t this_obj, val_t args) {
  * File.read(fd) -> string (empty string on EOF)
  * File.write(fd, str) -> num_bytes_written
  */
-static val_t Std_read(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t File_read(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
-  char buf[2048];
-  size_t n;
+  char buf[BUFSIZ];
 
   (void) this_obj;
   if (v7_is_double(arg0)) {
     int fd = v7_to_double(arg0);
-    n = read(fd, buf, sizeof(buf));
+    int n = read(fd, buf, sizeof(buf));
     if (n > 0) {
       return v7_create_string(v7, buf, n, 1);
     }
@@ -12907,45 +12921,61 @@ static val_t Std_read(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, "", 0, 1);
 }
 
-static val_t Std_write(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t File_write(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t arg1 = v7_array_get(v7, args, 1);
-  size_t n = 0, n2;
+  size_t sent = 0, len = 0;
 
   (void) this_obj;
   if (v7_is_double(arg0) && v7_is_string(arg1)) {
-    const char *s = v7_to_string(v7, &arg1, &n2);
-    int fd = v7_to_double(arg0);
-    n = write(fd, s, n2);
+    const char *s = v7_to_string(v7, &arg1, &len);
+    int fd = v7_to_double(arg0), n;
+    while (sent < len && (n = write(fd, s + sent, len - sent)) > 0) {
+      sent += n;
+    }
   }
 
-  return v7_create_number(n);
+  return v7_create_number(sent == len ? 0 : errno);
 }
 
-static val_t Std_close(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t File_close(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
+  int res = -1;
   (void) this_obj;
   if (v7_is_double(arg0)) {
-    close((int) v7_to_double(arg0));
+    res = close((int) v7_to_double(arg0));
   }
-  return v7_create_undefined();
+  return v7_create_number(res);
 }
 
-static val_t Std_open(struct v7 *v7, val_t this_obj, val_t args) {
+static val_t File_remove(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_get(v7, args, 0);
+  int res = -1;
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *path = v7_to_string(v7, &arg0, &n);
+    res = remove(path);
+  }
+  return v7_create_number(res == 0 ? 0 : errno);
+}
+
+static val_t File_open(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t arg1 = v7_array_get(v7, args, 1);
-  val_t res = v7_create_undefined();
+  val_t arg2 = v7_array_get(v7, args, 2);
+  int fd = -1;
 
   (void) this_obj;
   if (v7_is_string(arg0)) {
     size_t n1;
     const char *s = v7_to_string(v7, &arg0, &n1);
     int flags = v7_is_double(arg1) ? (int) v7_to_double(arg1) : 0;
-    int fd = open(s, flags);
-    res = v7_create_number(fd);
+    int mode = v7_is_double(arg2) ? (int) v7_to_double(arg2) : 0;
+    fd = open(s, flags, mode);
   }
 
-  return res;
+  return v7_create_number(fd);
 }
 #endif
 
@@ -12981,10 +13011,11 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   {
     val_t file_obj = v7_create_object(v7);
     v7_set_property(v7, v7->global_object, "File", 4, 0, file_obj);
-    set_cfunc_obj_prop(v7, file_obj, "open", Std_open, 2);
-    set_cfunc_obj_prop(v7, file_obj, "close", Std_close, 1);
-    set_cfunc_obj_prop(v7, file_obj, "read", Std_read, 0);
-    set_cfunc_obj_prop(v7, file_obj, "write", Std_write, 1);
+    set_cfunc_obj_prop(v7, file_obj, "open", File_open, 2);
+    set_cfunc_obj_prop(v7, file_obj, "close", File_close, 1);
+    set_cfunc_obj_prop(v7, file_obj, "read", File_read, 0);
+    set_cfunc_obj_prop(v7, file_obj, "write", File_write, 1);
+    set_cfunc_obj_prop(v7, file_obj, "remove", File_remove, 1);
   }
 #endif
 
