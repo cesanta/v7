@@ -14,7 +14,7 @@ machine:
 test:
   pre:
     - make run
-    - make -C benchmark build
+    - make -C benchmark build || echo FAILED
   post:
     - tests/update_hist_ecma_report.sh
 
@@ -22,5 +22,5 @@ deployment:
   hub:
     branch: master
     commands:
-      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-      - make -C benchmark push
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || echo FAILED
+      - make -C benchmark push || echo FAILED
