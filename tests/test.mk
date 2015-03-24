@@ -29,12 +29,7 @@
 SRC = $(realpath $(PROG).c)
 CLANG:=clang
 
-# OSX clang doesn't build ASAN. Use brew:
-#  $ brew tap homebrew/versions
-#  $ brew install llvm35 --with-clang --with-asan
-ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
-	CLANG:=/usr/local/bin/clang-3.5
-endif
+include ../scripts/platform.mk
 
 PEDANTIC=$(shell gcc --version 2>/dev/null | grep -q clang && echo -pedantic)
 
@@ -85,7 +80,7 @@ CC_asan=$(CLANG)
 CC_msan=$(CC_asan)
 CFLAGS_asan=-fsanitize=address -fcolor-diagnostics -fno-common -std=c99
 CFLAGS_msan=-fsanitize=memory -fcolor-diagnostics -fno-common -std=c99
-CMD_asan=ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=allocator_may_return_null=1,symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 $(CMD)
+CMD_asan=ASAN_SYMBOLIZER_PATH=$(LLVM_SYMBOLIZER) ASAN_OPTIONS=allocator_may_return_null=1,symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 $(CMD)
 CMD_msan=$(CMD_asan)
 
 CMD_valgrind=valgrind
@@ -123,7 +118,7 @@ $(PROG)-%: Makefile $(SRC) $(or $(SOURCES_$*), $(AMALGAMATED_SOURCES))
 
 $(ALL_TESTS): test_%: Makefile $(PROG)-%
 	@echo -e "RUN\t$(PROG)_$* $(TEST_FILTER)"
-	@$(or $(CMD_$*), $(CMD)) ./$(PROG)_$* $(TEST_FILTER)
+	$(or $(CMD_$*), $(CMD)) ./$(PROG)_$* $(TEST_FILTER)
 
 coverage: Makefile clean_coverage test_gcov
 	@echo -e "RUN\tGCOV"

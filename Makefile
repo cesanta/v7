@@ -1,22 +1,12 @@
 WARNS = -W -Wall -pedantic -Wno-comment -Wno-variadic-macros
 V7_FLAGS = -I./src -I.
-CFLAGS = $(WARNS) -g -O0 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_EXTRA)
+CFLAGS = $(WARNS) -g -O3 -lm $(PROF) $(V7_FLAGS) $(CFLAGS_PLATFORM) $(CFLAGS_EXTRA)
 
 SRC_DIR=src
 TOP_SOURCES=$(addprefix $(SRC_DIR)/, $(SOURCES))
 TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
 
-CLANG:=clang
-# installable with: `brew install llvm36 --with-clang`
-CLANG_FORMAT:=/usr/bin/clang-format-3.6
-ifneq ("$(wildcard /usr/local/bin/clang-format-3.6)","")
-	CLANG_FORMAT:=/usr/local/bin/clang-format-3.6
-endif
-
-ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
-	CLANG:=/usr/local/bin/clang-3.5
-endif
-
+include scripts/platform.mk
 include src/sources.mk
 
 .PHONY: cpplint format tidy docker
@@ -47,16 +37,15 @@ all_warnings: v7.c
 	./$@
 
 v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
-	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE -DV7_DISABLE_SOCKETS $(CFLAGS) -lm
-#	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE $(CFLAGS) -lm
+	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
 
 asan_v7:
 	@$(CLANG) -fsanitize=address -fcolor-diagnostics -fno-common $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
-	@ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 ./v7 $(V7_ARGS)
+	@ASAN_SYMBOLIZER_PATH=$(LLVM_SYMBOLIZER) ASAN_OPTIONS=symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 ./v7 $(V7_ARGS)
 
 msan_v7:
 	@$(CLANG) -fsanitize=memory -fcolor-diagnostics -fno-common -fsanitize-memory-track-origins $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
-	@ASAN_SYMBOLIZER_PATH=/usr/local/bin/llvm-symbolizer-3.5 ASAN_OPTIONS=symbolize=1 ./v7 $(V7_ARGS)
+	@ASAN_SYMBOLIZER_PATH=$(LLVM_SYMBOLIZER) ASAN_OPTIONS=symbolize=1 ./v7 $(V7_ARGS)
 
 amalgamated_v7: v7.h v7.c
 	$(CC) v7.c -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
