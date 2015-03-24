@@ -1271,6 +1271,7 @@ static void object_destructor(struct v7 *v7, void *ptr) {
     if (p != NULL &&
         ((abuf = (struct mbuf *) v7_to_foreign(p->value)) != NULL)) {
       mbuf_free(abuf);
+      free(abuf);
     }
   }
 }
@@ -1334,6 +1335,7 @@ void v7_destroy(struct v7 *v7) {
     gc_arena_destroy(v7, &v7->function_arena);
     gc_arena_destroy(v7, &v7->property_arena);
 
+    free(v7->cur_dense_prop);
     free(v7);
   }
 }
