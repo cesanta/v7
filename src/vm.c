@@ -970,6 +970,9 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
       }
       len = abuf->len / sizeof(val_t);
       if (index >= len) {
+        if (has != NULL) {
+          *has = 0;
+        }
         return v7_create_undefined();
       } else {
         val_t res;
