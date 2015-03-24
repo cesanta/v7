@@ -1102,6 +1102,12 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
 
+V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *, val_t,
+                                            struct v7_property *);
+V7_PRIVATE val_t v7_iter_get_value(struct v7 *, val_t, struct v7_property *);
+V7_PRIVATE val_t v7_iter_get_name(struct v7 *, struct v7_property *);
+V7_PRIVATE val_t v7_iter_get_index(struct v7 *, struct v7_property *);
+
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated.
  * Return 0 on success, -1 on error.
@@ -6108,6 +6114,56 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   return p->value;
 }
 
+/*
+ * Pack 15-bit length and 15 bit index, leaving 2 bits for tag. the LSB has to
+ * be set to distinguish it from a prop pointer.
+ * In alternative we just fetch the length from obj at each call to v7_next_prop
+ * and just stuff the index here (e.g. on 8/16-bit platforms).
+ * TODO(mkm): conditional for 16-bit platforms
+ */
+#define PACK_ITER(len, idx) \
+  ((struct v7_property *) ((len) << 17 | (idx) << 1 | 1))
+
+#define UNPACK_ITER_LEN(p) (((uintptr_t) p) >> 17)
+#define UNPACK_ITER_IDX(p) ((((uintptr_t) p) >> 1) & 0x7FFF)
+#define IS_PACKED_ITER(p) ((uintptr_t) p & 1)
+
+V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
+                                            struct v7_property *p) {
+  if (p == NULL && v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
+    unsigned long len = v7_array_length(v7, obj);
+    return PACK_ITER(len, 0);
+  } else if (IS_PACKED_ITER(p)) {
+    unsigned long len = UNPACK_ITER_LEN(p);
+    unsigned long idx = UNPACK_ITER_IDX(p);
+    return idx + 1 == len ? v7_to_object(obj)->properties
+                          : PACK_ITER(len, idx + 1);
+  }
+  return p == NULL ? v7_to_object(obj)->properties : p->next;
+}
+
+V7_PRIVATE
+val_t v7_iter_get_value(struct v7 *v7, val_t obj, struct v7_property *p) {
+  return IS_PACKED_ITER(p) ? v7_array_get(v7, obj, UNPACK_ITER_IDX(p))
+                           : p->value;
+}
+
+V7_PRIVATE val_t v7_iter_get_name(struct v7 *v7, struct v7_property *p) {
+  return IS_PACKED_ITER(p) ? ulong_to_str(v7, UNPACK_ITER_IDX(p)) : p->name;
+}
+
+/* return array index as number or undefined. works with iterators */
+V7_PRIVATE val_t v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
+  int ok;
+  unsigned long res;
+  if (IS_PACKED_ITER(p)) {
+    return v7_create_number(UNPACK_ITER_IDX(p));
+  }
+  res = str_to_ulong(v7, p->name, &ok);
+  if (!ok) return v7_create_undefined();
+  return v7_create_number(res);
+}
+
 unsigned long v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
   unsigned long key, len = 0;
@@ -6467,7 +6523,7 @@ V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
 V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
   char *e;
   unsigned long res = strtoul(s, &e, 10);
-  *ok = (e == s + len);
+  *ok = (e == s + len) && len != 0;
   return res;
 }
 
