@@ -171,13 +171,23 @@ v7_val_t v7_create_number(double v) {
   if (isnan(v)) {
     res = V7_TAG_NAN;
   } else {
-    *(double *) &res = v;
+    union {
+      double d;
+      val_t r;
+    } u;
+    u.d = v;
+    res = u.r;
   }
   return res;
 }
 
 double v7_to_double(val_t v) {
-  return *(double *) &v;
+  union {
+    double d;
+    val_t v;
+  } u;
+  u.v = v;
+  return u.d;
 }
 
 V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
