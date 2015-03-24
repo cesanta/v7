@@ -2029,7 +2029,7 @@
 2026	PASS ch11/11.5/11.5.2/S11.5.2_A4_T4.js (tail -c +1550682 tests/ecmac.db|head -c 983)
 2027	PASS ch11/11.5/11.5.2/S11.5.2_A4_T5.js (tail -c +1551666 tests/ecmac.db|head -c 1294)
 2028	PASS ch11/11.5/11.5.2/S11.5.2_A4_T6.js (tail -c +1552961 tests/ecmac.db|head -c 1355)
-2029	FAIL ch11/11.5/11.5.2/S11.5.2_A4_T7.js (tail -c +1554317 tests/ecmac.db|head -c 700): [{"message":"#1: +0 / +0 === Not-a-Number. Actual: Infinity"}]
+2029	PASS ch11/11.5/11.5.2/S11.5.2_A4_T7.js (tail -c +1554317 tests/ecmac.db|head -c 700)
 2030	PASS ch11/11.5/11.5.2/S11.5.2_A4_T8.js (tail -c +1555018 tests/ecmac.db|head -c 1663)
 2031	PASS ch11/11.5/11.5.2/S11.5.2_A4_T9.js (tail -c +1556682 tests/ecmac.db|head -c 1211)
 2032	FAIL ch11/11.5/11.5.3/S11.5.3_A1.js (tail -c +1557894 tests/ecmac.db|head -c 1399): [{"message":"#5: 1\u00A0%\u00A01 === 0"}]

@@ -115,11 +115,15 @@ typedef unsigned long uintptr_t;
 #endif
 
 #ifndef NAN
-#define NAN atof("NAN")
+extern double _v7_nan;
+#define HAS_V7_NAN
+#define NAN (_v7_nan)
 #endif
 
 #ifndef INFINITY
-#define INFINITY atof("INFINITY") /* TODO: fix this */
+extern double _v7_infinity;
+#define HAS_V7_INFINITY
+#define INFINITY (_v7_infinity)
 #endif
 
 #ifndef EXIT_SUCCESS

@@ -6,6 +6,14 @@
 #include "internal.h"
 #include "gc.h"
 
+#ifdef HAS_V7_INFINITY
+double _v7_infinity;
+#endif
+
+#ifdef HAS_V7_NAN
+double _v7_nan;
+#endif
+
 enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_double(v)) {
@@ -1290,6 +1298,17 @@ struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
   val_t *p;
   char z = 0;
+
+#if defined(HAS_V7_INFINITY) || defined(HAS_V7_NAN)
+  double zero = 0.0;
+#endif
+
+#ifdef HAS_V7_INFINITY
+  _v7_infinity = 1.0 / zero;
+#endif
+#ifdef HAS_V7_NAN
+  _v7_nan = zero / zero;
+#endif
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
     v7->cur_dense_prop =

@@ -54,8 +54,8 @@ m32_v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
 	$(CC) $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -m32 -lm
 
 w: v7.c
-	wine cl v7.c /Zi -DV7_EXE -DV7_EXPOSE_PRIVATE
-	wine cl tests/unit_test.c $(TOP_SOURCES) $(V7_FLAGS) /Zi -DV7_EXPOSE_PRIVATE
+	wine cl v7.c /Zi -DV7_EXE -DV7_EXPOSE_PRIVATE $(DEFS_WINDOWS)
+	wine cl tests/unit_test.c $(TOP_SOURCES) $(V7_FLAGS) $(DEFS_WINDOWS) /Zi -DV7_EXPOSE_PRIVATE
 
 clean:
 	@$(MAKE) -C tests clean

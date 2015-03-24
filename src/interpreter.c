@@ -142,7 +142,8 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
 /* Visual studio 2012+ has signbit() */
 #if defined(V7_WINDOWS) && _MSC_VER < 1700
 static int signbit(double x) {
-  return x > 0;
+  double s = _copysign(1, x);
+  return s < 0;
 }
 #endif
 
@@ -162,6 +163,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       return a * b;
     case AST_DIV:
       if (b == 0) {
+        if (a == 0) return NAN;
         return (!signbit(a) == !signbit(b)) ? INFINITY : -INFINITY;
       }
       return a / b;
