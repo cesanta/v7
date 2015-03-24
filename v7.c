@@ -7952,7 +7952,8 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
-#ifdef V7_WINDOWS
+/* Visual studio 2012+ has signbit() */
+#if defined(V7_WINDOWS) && _MSC_VER < 1700
 static int signbit(double x) {
   return x > 0;
 }
