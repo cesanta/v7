@@ -3999,7 +3999,8 @@ static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
     return func(v7, args, name);                                            \
   }
 
-#ifdef V7_WINDOWS
+/* Visual studio 2012+ has round() */
+#if defined(V7_WINDOWS) && _MSC_VER < 1700
 static double round(double n) {
   return n;
 }
@@ -8013,7 +8014,8 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
-#ifdef V7_WINDOWS
+/* Visual studio 2012+ has signbit() */
+#if defined(V7_WINDOWS) && _MSC_VER < 1700
 static int signbit(double x) {
   return x > 0;
 }
