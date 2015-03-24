@@ -6259,6 +6259,9 @@ val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
 }
 
 val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
+  if (has != NULL) {
+    *has = 0;
+  }
   if (v7_is_object(arr)) {
     if (v7_to_object(arr)->attributes & V7_OBJ_DENSE_ARRAY) {
       struct v7_property *p =
@@ -6269,9 +6272,6 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
         abuf = (struct mbuf *) v7_to_foreign(p->value);
       }
       if (abuf == NULL) {
-        if (has != NULL) {
-          *has = 0;
-        }
         return v7_create_undefined();
       }
       len = abuf->len / sizeof(val_t);
@@ -6280,9 +6280,7 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
       } else {
         val_t res;
         memcpy(&res, abuf->buf + index * sizeof(val_t), sizeof(val_t));
-        if (has != NULL) {
-          *has = res != V7_TAG_NOVALUE;
-        }
+        if (has != NULL && res != V7_TAG_NOVALUE) *has = 1;
         if (res == V7_TAG_NOVALUE) {
           res = v7_create_undefined();
         }
@@ -6293,9 +6291,7 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
       char buf[20];
       int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
       p = v7_get_property(v7, arr, buf, n);
-      if (has != NULL) {
-        *has = (p != NULL);
-      }
+      if (has != NULL && p != NULL) *has = 1;
       return v7_property_value(v7, arr, p);
     }
   } else {
