@@ -4302,6 +4302,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return to_string(v7, i_value_of(v7, this_obj));
 }
 
+#ifndef V7_DISABLE_REGEX
 static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   val_t so, ro, arr = v7_create_null();
   long previousLastIndex = 0;
@@ -4470,6 +4471,8 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(utf_shift);
 }
 
+#endif /* V7_DISABLE_REGEX */
+
 static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   long from = 0, to = 0;
   size_t len;
@@ -4624,6 +4627,8 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
   return s_substr(v7, this_obj, start, end - start);
 }
 
+/* TODO(mkm): make an alternative implementation without regexps */
+#ifndef V7_DISABLE_REGEX
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
@@ -4679,6 +4684,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 
   return res;
 }
+#endif /* V7_DISABLE_REGEX */
 
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str =
@@ -4696,9 +4702,12 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
   set_cfunc_prop(v7, v7->string_prototype, "lastIndexOf", Str_lastIndexOf);
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
+#ifndef V7_DISABLE_REGEX
   set_cfunc_prop(v7, v7->string_prototype, "match", Str_match);
   set_cfunc_prop(v7, v7->string_prototype, "replace", Str_replace);
   set_cfunc_prop(v7, v7->string_prototype, "search", Str_search);
+  set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
+#endif
   set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "trim", Str_trim);
   set_cfunc_prop(v7, v7->string_prototype, "toLowerCase", Str_toLowerCase);
@@ -4707,7 +4716,6 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "toUpperCase", Str_toUpperCase);
   set_cfunc_prop(v7, v7->string_prototype, "toLocaleUpperCase",
                  Str_toUpperCase);
-  set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
   set_cfunc_prop(v7, v7->string_prototype, "toString", Str_toString);
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
@@ -13135,7 +13143,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_boolean(v7);
   init_math(v7);
   init_string(v7);
+#ifndef V7_DISABLE_REGEX
   init_regex(v7);
+#endif
   init_number(v7);
   init_json(v7);
   init_date(v7);
@@ -13222,6 +13232,8 @@ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
  * All rights reserved
  */
 
+
+#ifndef V7_DISABLE_REGEX
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
@@ -13383,6 +13395,8 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
   v7_set_property(v7, v7->regexp_prototype, "lastIndex", 9,
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, lastIndex);
 }
+
+#endif /* V7_DISABLE_REGEX */
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
@@ -14174,4 +14188,4 @@ V7_PRIVATE void init_socket(struct v7 *v7) {
 #endif
 }
 
-#endif
+#endif /* V7_DISABLE_SOCKETS */

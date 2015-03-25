@@ -273,6 +273,7 @@ static const char *test_stdlib(void) {
   ASSERT(check_str(v7, v, "hi there"));
   ASSERT(v7_exec(v7, &v, "'hi there'.substr(0, 300)") == V7_OK);
   ASSERT(check_str(v7, v, "hi there"));
+#ifndef V7_DISABLE_REGEX
   ASSERT(v7_exec(v7, &v, "'dew dee'.match(/\\d+/)") == V7_OK);
   ASSERT(v == V7_NULL);
   ASSERT(v7_exec(v7, &v, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)") == V7_OK);
@@ -320,6 +321,7 @@ static const char *test_stdlib(void) {
                  "({z: '123456'}).z"
                  ".toString().substr(0, 3).split('').length") == V7_OK);
   ASSERT(check_num(v, 3.0));
+#endif /* V7_DISABLE_REGEX */
   ASSERT(v7_exec(v7, &v, "String('hi')") == V7_OK);
   ASSERT(check_str(v7, v, "hi"));
   ASSERT(v7_exec(v7, &v, "new String('blah')") == V7_OK);
