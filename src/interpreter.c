@@ -6,7 +6,10 @@
 #include "internal.h"
 #include "gc.h"
 
-#if defined(_WIN32) || defined(ARDUINO)
+#undef siglongjmp
+#undef sigsetjmp
+
+#if defined(_WIN32) || defined(ARDUINO) || 1
 #define siglongjmp longjmp
 #define sigsetjmp(buf, mask) setjmp(buf)
 #endif
@@ -176,6 +179,10 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
 }
 
 static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
+#ifdef V7_BROKEN_NAN
+  if (isnan(a) || isnan(b)) return tag == AST_NE || tag == AST_NE_NE;
+#endif
+
   switch (tag) {
     case AST_EQ:
     case AST_EQ_EQ:

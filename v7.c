@@ -636,6 +636,14 @@ struct gc_arena {
 #endif
 
 /*
+ * In some compilers (watcom) NAN == NAN (and other comparisons) don't follow
+ * the rules of IEEE 754. Since we don't know a priori which compilers
+ * will generate correct code, we disable the fallback on selected platforms.
+ * TODO(mkm): selectively disable on clang/gcc once we test this out.
+ */
+#define V7_BROKEN_NAN
+
+/*
  * DO NOT SUBMIT: remove this when adding support
  * for predefined strings as roots
  */
@@ -3982,15 +3990,34 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
  */
 
 
+#ifdef __WATCOM__
+int matherr(struct _exception *exc) {
+  if (exc->type == DOMAIN) {
+    exc->retval = NAN;
+    return 0;
+  }
+}
+#endif
+
 static val_t m_one_arg(struct v7 *v7, val_t args, double (*f)(double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
-  return v7_create_number(f(v7_to_double(arg0)));
+  double d0 = v7_to_double(arg0);
+#ifdef V7_BROKEN_NAN
+  if (isnan(d0)) return V7_TAG_NAN;
+#endif
+  return v7_create_number(f(d0));
 }
 
 static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t arg1 = v7_array_get(v7, args, 1);
-  return v7_create_number(f(v7_to_double(arg0), v7_to_double(arg1)));
+  double d0 = v7_to_double(arg0);
+  double d1 = v7_to_double(arg1);
+#ifdef V7_BROKEN_NAN
+  /* pow(NaN,0) == 1, doesn't fix atan2, but who cares */
+  if (isnan(d1)) return V7_TAG_NAN;
+#endif
+  return v7_create_number(f(d0, d1));
 }
 
 #define DEFINE_WRAPPER(name, func)                                          \
@@ -4000,7 +4027,7 @@ static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
   }
 
 /* Visual studio 2012+ has round() */
-#if defined(V7_WINDOWS) && _MSC_VER < 1700
+#if (defined(V7_WINDOWS) && _MSC_VER < 1700) || defined(__WATCOM__)
 static double round(double n) {
   return n;
 }
@@ -5313,18 +5340,20 @@ V7_PRIVATE void ast_dump(FILE *fp, struct ast *a, ast_off_t pos) {
 
 
 enum v7_type val_type(struct v7 *v7, val_t v) {
+  int tag;
   if (v7_is_double(v)) {
     return V7_TYPE_NUMBER;
   }
-  switch (v & V7_TAG_MASK) {
-    case V7_TAG_FOREIGN:
+  tag = (v & V7_TAG_MASK) >> 48;
+  switch (tag) {
+    case V7_TAG_FOREIGN >> 48:
       if (v7_is_null(v)) {
         return V7_TYPE_NULL;
       }
       return V7_TYPE_FOREIGN;
-    case V7_TAG_UNDEFINED:
+    case V7_TAG_UNDEFINED >> 48:
       return V7_TYPE_UNDEFINED;
-    case V7_TAG_OBJECT:
+    case V7_TAG_OBJECT >> 48:
       if (v7_to_object(v)->prototype == v7_to_object(v7->array_prototype)) {
         return V7_TYPE_ARRAY_OBJECT;
       } else if (v7_to_object(v)->prototype ==
@@ -5345,18 +5374,18 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
-    case V7_TAG_STRING_I:
-    case V7_TAG_STRING_O:
-    case V7_TAG_STRING_F:
-    case V7_TAG_STRING_5:
+    case V7_TAG_STRING_I >> 48:
+    case V7_TAG_STRING_O >> 48:
+    case V7_TAG_STRING_F >> 48:
+    case V7_TAG_STRING_5 >> 48:
       return V7_TYPE_STRING;
-    case V7_TAG_BOOLEAN:
+    case V7_TAG_BOOLEAN >> 48:
       return V7_TYPE_BOOLEAN;
-    case V7_TAG_FUNCTION:
+    case V7_TAG_FUNCTION >> 48:
       return V7_TYPE_FUNCTION_OBJECT;
-    case V7_TAG_CFUNCTION:
+    case V7_TAG_CFUNCTION >> 48:
       return V7_TYPE_CFUNCTION;
-    case V7_TAG_REGEXP:
+    case V7_TAG_REGEXP >> 48:
       return V7_TYPE_REGEXP_OBJECT;
     default:
       /* TODO(mkm): or should we crash? */
@@ -5421,10 +5450,7 @@ V7_PRIVATE val_t v7_pointer_to_value(void *p) {
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
-  struct {
-    uint64_t s : 48;
-  } h;
-  return (void *) (uintptr_t)(h.s = v);
+  return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
 val_t v7_object_to_value(struct v7_object *o) {
@@ -5817,6 +5843,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
   }
+  return 0; /* for compilers that don't know about abort() */
 }
 
 char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
@@ -7892,7 +7919,10 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
  */
 
 
-#if defined(_WIN32) || defined(ARDUINO)
+#undef siglongjmp
+#undef sigsetjmp
+
+#if defined(_WIN32) || defined(ARDUINO) || 1
 #define siglongjmp longjmp
 #define sigsetjmp(buf, mask) setjmp(buf)
 #endif
@@ -8062,6 +8092,10 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
 }
 
 static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
+#ifdef V7_BROKEN_NAN
+  if (isnan(a) || isnan(b)) return tag == AST_NE || tag == AST_NE_NE;
+#endif
+
   switch (tag) {
     case AST_EQ:
     case AST_EQ_EQ:
@@ -11508,7 +11542,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 
 
 static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_length(v7, args) <= 0 ? v7_create_number(0.0)
+  val_t arg0 = v7_array_length(v7, args) == 0 ? v7_create_number(0.0)
                                               : v7_array_get(v7, args, 0);
   val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
 
@@ -12364,10 +12398,11 @@ static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj, val_t args,
 
   if ((cargs = v7_array_length(v7, args)) >= 1 && objtime != V7_TAG_NAN) {
     int i;
-    struct dtimepartsarr a = {{INVALID_TIME, INVALID_TIME, INVALID_TIME,
-                               INVALID_TIME, INVALID_TIME, INVALID_TIME,
-                               INVALID_TIME}};
     etime_t new_part = INVALID_TIME;
+    struct dtimepartsarr a;
+    for (i = 0; i < 7; i++) {
+      a.args[i] = INVALID_TIME;
+    }
 
     for (i = 0; i < cargs && (i + start_pos < tpmax); i++) {
       new_part = i_as_num(v7, v7_array_get(v7, args, i));
@@ -13140,8 +13175,8 @@ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   v7_exec(v7, &res, STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
-      if (typeof(a) != 'function') {
-        throw new TypeError(a + ' is not a function');
+      if (typeof(a) != "function") {
+        throw new TypeError(a + " is not a function");
       }
       for (var k in this) {
         if (f == 0 && b === undefined) {
@@ -13370,6 +13405,10 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 #include <signal.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#endif
+
+#ifdef __WATCOM__
+#define SOMAXCONN 128
 #endif
 
 #define RECVTYPE_STRING 1

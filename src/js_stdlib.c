@@ -29,8 +29,8 @@ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   v7_exec(v7, &res, STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
-      if (typeof(a) != 'function') {
-        throw new TypeError(a + ' is not a function');
+      if (typeof(a) != "function") {
+        throw new TypeError(a + " is not a function");
       }
       for (var k in this) {
         if (f == 0 && b === undefined) {

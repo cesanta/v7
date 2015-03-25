@@ -6,7 +6,7 @@
 #include "internal.h"
 
 static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_length(v7, args) <= 0 ? v7_create_number(0.0)
+  val_t arg0 = v7_array_length(v7, args) == 0 ? v7_create_number(0.0)
                                               : v7_array_get(v7, args, 0);
   val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
 

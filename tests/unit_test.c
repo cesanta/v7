@@ -28,7 +28,9 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#ifndef __WATCOM__
 #include <pthread.h>
+#endif
 #include <fcntl.h>
 #endif
 
@@ -1130,7 +1132,8 @@ static const char *test_ecmac(void) {
     ast_free(&a);
     if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
         i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
-        i == 3400 || i == 3348 || i == 3349 || i == 3401) {
+        i == 3400 || i == 3348 || i == 3349 || i == 3401 || i == 89 ||
+        i == 462) {
       fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
       continue;
     }
