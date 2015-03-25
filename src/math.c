@@ -5,15 +5,34 @@
 
 #include "internal.h"
 
+#ifdef __WATCOM__
+int matherr(struct _exception *exc) {
+  if (exc->type == DOMAIN) {
+    exc->retval = NAN;
+    return 0;
+  }
+}
+#endif
+
 static val_t m_one_arg(struct v7 *v7, val_t args, double (*f)(double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
-  return v7_create_number(f(v7_to_double(arg0)));
+  double d0 = v7_to_double(arg0);
+#ifdef V7_BROKEN_NAN
+  if (isnan(d0)) return V7_TAG_NAN;
+#endif
+  return v7_create_number(f(d0));
 }
 
 static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t arg1 = v7_array_get(v7, args, 1);
-  return v7_create_number(f(v7_to_double(arg0), v7_to_double(arg1)));
+  double d0 = v7_to_double(arg0);
+  double d1 = v7_to_double(arg1);
+#ifdef V7_BROKEN_NAN
+  /* pow(NaN,0) == 1, doesn't fix atan2, but who cares */
+  if (isnan(d1)) return V7_TAG_NAN;
+#endif
+  return v7_create_number(f(d0, d1));
 }
 
 #define DEFINE_WRAPPER(name, func)                                          \
@@ -23,7 +42,7 @@ static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
   }
 
 /* Visual studio 2012+ has round() */
-#if defined(V7_WINDOWS) && _MSC_VER < 1700
+#if (defined(V7_WINDOWS) && _MSC_VER < 1700) || defined(__WATCOM__)
 static double round(double n) {
   return n;
 }

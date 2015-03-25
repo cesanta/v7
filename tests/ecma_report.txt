@@ -87,7 +87,7 @@
 86	PASS ch07/7.4/S7.4_A4_T6.js (tail -c +46587 tests/ecmac.db|head -c 283)
 87	PASS ch07/7.4/S7.4_A4_T7.js (tail -c +46871 tests/ecmac.db|head -c 268)
 88	FAIL ch07/7.4/S7.4_A5.js (tail -c +47140 tests/ecmac.db|head -c 1371): [{"message":"#000A "}]
-89	PASS ch07/7.4/S7.4_A6.js (tail -c +48512 tests/ecmac.db|head -c 1299)
+89	SKIP ch07/7.4/S7.4_A6.js (tail -c +48512 tests/ecmac.db|head -c 1299)
 90	PASS ch07/7.6/7.6-1.js (tail -c +49812 tests/ecmac.db|head -c 462)
 91	PASS ch07/7.6/7.6-10.js (tail -c +50275 tests/ecmac.db|head -c 460)
 92	PASS ch07/7.6/7.6-11.js (tail -c +50736 tests/ecmac.db|head -c 460)
@@ -461,7 +461,7 @@
 459	FAIL ch07/7.8/7.8.5/S7.8.5_A1.5_T5.js (tail -c +321576 tests/ecmac.db|head -c 618): [{"message":"#1.2: RegularExpressionFirstChar :: BackslashSequence :: \Line separator is incorrect. Actual: {"message":"#1.1: RegularExpressionFirstChar :: BackslashSequence :: \Line separator is incorrect. Actual: \ "}"}]
 460	FAIL ch07/7.8/7.8.5/S7.8.5_A1.5_T6.js (tail -c +322195 tests/ecmac.db|head -c 633): [{"message":"#1.2: RegularExpressionFirstChar :: BackslashSequence :: \Paragraph separator is incorrect. Actual: {"message":"#1.1: RegularExpressionFirstChar :: BackslashSequence :: \Paragraph separator is incorrect. Actual: \ "}"}]
 461	FAIL ch07/7.8/7.8.5/S7.8.5_A2.1_T1.js (tail -c +322829 tests/ecmac.db|head -c 582): [{"message":"#5: /a\u0041/"}]
-462	PASS ch07/7.8/7.8.5/S7.8.5_A2.1_T2.js (tail -c +323412 tests/ecmac.db|head -c 1794)
+462	SKIP ch07/7.8/7.8.5/S7.8.5_A2.1_T2.js (tail -c +323412 tests/ecmac.db|head -c 1794)
 463	PASS ch07/7.8/7.8.5/S7.8.5_A2.3_T2.js (tail -c +325207 tests/ecmac.db|head -c 517)
 464	FAIL ch07/7.8/7.8.5/S7.8.5_A2.3_T4.js (tail -c +325725 tests/ecmac.db|head -c 534): [{"message":"#1.2: RegularExpressionChar :: Carriage Retur is incorrect. Actual: {"message":"#1.1: RegularExpressionChar :: Carriage Retur is incorrect. Actual: a"}"}]
 465	FAIL ch07/7.8/7.8.5/S7.8.5_A2.3_T5.js (tail -c +326260 tests/ecmac.db|head -c 533): [{"message":"#1.2: RegularExpressionChar :: Line separator is incorrect. Actual: {"message":"#1.1: RegularExpressionChar :: Line separator is incorrect. Actual: a "}"}]
