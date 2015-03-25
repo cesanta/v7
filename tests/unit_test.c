@@ -142,10 +142,8 @@ static const char *test_is_true(void) {
   ASSERT(test_if_expr(v7, "''", 0));
   ASSERT(test_if_expr(v7, "null", 0));
   ASSERT(test_if_expr(v7, "undefined", 0));
-#ifndef _WIN32
   ASSERT(test_if_expr(v7, "Infinity", 1));
   ASSERT(test_if_expr(v7, "-Infinity", 1));
-#endif
   ASSERT(test_if_expr(v7, "[]", 1));
   ASSERT(test_if_expr(v7, "var x = {}", 1));
   ASSERT(test_if_expr(v7, "[[]]", 1));
@@ -217,13 +215,11 @@ static const char *test_stdlib(void) {
   ASSERT(v7_exec(v7, &v, "Math.sqrt(144)") == V7_OK);
   ASSERT(check_value(v7, v, "12"));
 
-/* Number */
-#ifndef _WIN32
+  /* Number */
   ASSERT(v7_exec(v7, &v, "Math.PI") == V7_OK);
   ASSERT(check_num(v, M_PI));
   ASSERT(v7_exec(v7, &v, "Number.NaN") == V7_OK);
   ASSERT(check_num(v, NAN));
-#endif
   ASSERT(v7_exec(v7, &v, "1 == 2") == V7_OK);
   ASSERT(check_bool(v, 0));
   ASSERT(v7_exec(v7, &v, "1 + 2 * 7 === 15") == V7_OK);
@@ -1042,8 +1038,8 @@ static const char *test_parser(void) {
       fclose(fp);
       system("diff -u /tmp/want_ast /tmp/got_ast");
     }
-#endif
     ASSERT(strncmp(got_ast, current_want_ast, sizeof(got_ast)) == 0);
+#endif
   }
 
 #else /* SAVE_AST */
@@ -1101,6 +1097,11 @@ static const char *test_ecmac(void) {
   struct v7 *v7;
   val_t res;
 
+#ifdef _WIN32
+  fprintf(stderr, "Skipping ecma tests on windows\n");
+  return NULL;
+#endif
+
   ASSERT((r = fopen(".ecma_report.txt", "wb")) != NULL);
 
   ast_init(&a, 0);
@@ -1124,12 +1125,7 @@ static const char *test_ecmac(void) {
              (unsigned long) (current_case - db + 1),
              (unsigned long) (next_case - current_case));
 
-#if 0
-    printf("-- Parsing %d: \"%s\"\n", i, current_case);
-#endif
     v7 = v7_create();
-    ASSERT(parse(v7, &a, current_case, 1) == V7_OK);
-    ast_free(&a);
     if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
         i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
         i == 3400 || i == 3348 || i == 3349 || i == 3401 || i == 89 ||
@@ -1137,6 +1133,12 @@ static const char *test_ecmac(void) {
       fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
       continue;
     }
+
+#if V7_VERBOSE_ECMA
+    printf("-- Parsing %d: \"%s\"\n", i, current_case);
+#endif
+    ASSERT(parse(v7, &a, current_case, 1) == V7_OK);
+    ast_free(&a);
 
     if (v7_exec(v7, &res, driver) != V7_OK) {
       fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
