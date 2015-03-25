@@ -790,4 +790,4 @@ V7_PRIVATE void init_socket(struct v7 *v7) {
 #endif
 }
 
-#endif
+#endif /* V7_DISABLE_SOCKETS */
