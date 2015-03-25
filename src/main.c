@@ -5,6 +5,10 @@
 
 #include "internal.h"
 
+#if defined(_MSC_VER) && _MSC_VER >= 1800
+#define fileno _fileno
+#endif
+
 #ifdef V7_EXE
 
 static void show_usage(char *argv[]) {
