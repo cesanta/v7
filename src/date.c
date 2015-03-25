@@ -618,10 +618,11 @@ static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj, val_t args,
 
   if ((cargs = v7_array_length(v7, args)) >= 1 && objtime != V7_TAG_NAN) {
     int i;
-    struct dtimepartsarr a = {{INVALID_TIME, INVALID_TIME, INVALID_TIME,
-                               INVALID_TIME, INVALID_TIME, INVALID_TIME,
-                               INVALID_TIME}};
     etime_t new_part = INVALID_TIME;
+    struct dtimepartsarr a;
+    for (i = 0; i < 7; i++) {
+      a.args[i] = INVALID_TIME;
+    }
 
     for (i = 0; i < cargs && (i + start_pos < tpmax); i++) {
       new_part = i_as_num(v7, v7_array_get(v7, args, i));

@@ -23,6 +23,10 @@
 #include <arpa/inet.h>
 #endif
 
+#ifdef __WATCOM__
+#define SOMAXCONN 128
+#endif
+
 #define RECVTYPE_STRING 1
 #define RECVTYPE_RAW 2
 

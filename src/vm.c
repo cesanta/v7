@@ -7,18 +7,20 @@
 #include "gc.h"
 
 enum v7_type val_type(struct v7 *v7, val_t v) {
+  int tag;
   if (v7_is_double(v)) {
     return V7_TYPE_NUMBER;
   }
-  switch (v & V7_TAG_MASK) {
-    case V7_TAG_FOREIGN:
+  tag = (v & V7_TAG_MASK) >> 48;
+  switch (tag) {
+    case V7_TAG_FOREIGN >> 48:
       if (v7_is_null(v)) {
         return V7_TYPE_NULL;
       }
       return V7_TYPE_FOREIGN;
-    case V7_TAG_UNDEFINED:
+    case V7_TAG_UNDEFINED >> 48:
       return V7_TYPE_UNDEFINED;
-    case V7_TAG_OBJECT:
+    case V7_TAG_OBJECT >> 48:
       if (v7_to_object(v)->prototype == v7_to_object(v7->array_prototype)) {
         return V7_TYPE_ARRAY_OBJECT;
       } else if (v7_to_object(v)->prototype ==
@@ -39,18 +41,18 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
       } else {
         return V7_TYPE_GENERIC_OBJECT;
       }
-    case V7_TAG_STRING_I:
-    case V7_TAG_STRING_O:
-    case V7_TAG_STRING_F:
-    case V7_TAG_STRING_5:
+    case V7_TAG_STRING_I >> 48:
+    case V7_TAG_STRING_O >> 48:
+    case V7_TAG_STRING_F >> 48:
+    case V7_TAG_STRING_5 >> 48:
       return V7_TYPE_STRING;
-    case V7_TAG_BOOLEAN:
+    case V7_TAG_BOOLEAN >> 48:
       return V7_TYPE_BOOLEAN;
-    case V7_TAG_FUNCTION:
+    case V7_TAG_FUNCTION >> 48:
       return V7_TYPE_FUNCTION_OBJECT;
-    case V7_TAG_CFUNCTION:
+    case V7_TAG_CFUNCTION >> 48:
       return V7_TYPE_CFUNCTION;
-    case V7_TAG_REGEXP:
+    case V7_TAG_REGEXP >> 48:
       return V7_TYPE_REGEXP_OBJECT;
     default:
       /* TODO(mkm): or should we crash? */
@@ -115,10 +117,7 @@ V7_PRIVATE val_t v7_pointer_to_value(void *p) {
 }
 
 V7_PRIVATE void *v7_to_pointer(val_t v) {
-  struct {
-    uint64_t s : 48;
-  } h;
-  return (void *) (uintptr_t)(h.s = v);
+  return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
 val_t v7_object_to_value(struct v7_object *o) {
@@ -511,6 +510,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
   }
+  return 0; /* for compilers that don't know about abort() */
 }
 
 char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {

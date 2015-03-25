@@ -14,6 +14,14 @@
 #endif
 
 /*
+ * In some compilers (watcom) NAN == NAN (and other comparisons) don't follow
+ * the rules of IEEE 754. Since we don't know a priori which compilers
+ * will generate correct code, we disable the fallback on selected platforms.
+ * TODO(mkm): selectively disable on clang/gcc once we test this out.
+ */
+#define V7_BROKEN_NAN
+
+/*
  * DO NOT SUBMIT: remove this when adding support
  * for predefined strings as roots
  */
