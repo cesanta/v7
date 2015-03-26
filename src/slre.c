@@ -353,7 +353,7 @@ static enum slre_opcode re_countrep(struct slre_env *e) {
 }
 
 static enum slre_opcode re_lexset(struct slre_env *e) {
-  Rune ch;
+  Rune ch = 0;
   unsigned char esc, ch_fl = 0, dash_fl = 0;
   enum slre_opcode type = L_SET;
 

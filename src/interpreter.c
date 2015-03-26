@@ -1398,7 +1398,7 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       break;
     }
     case AST_TRY: {
-      int percolate = 0;
+      volatile int percolate = 0;
       jmp_buf old_jmp;
       char *name;
       size_t name_len;
@@ -1648,9 +1648,12 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
     fclose(fp);
   } else {
     rewind(fp);
-    fread(p, 1, (size_t) file_size, fp);
+    if (fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) {
+      if (ferror(fp)) goto cleanup;
+    }
     fclose(fp);
     err = v7_exec(v7, res, p);
+  cleanup:
     free(p);
   }
 
