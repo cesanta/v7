@@ -13687,7 +13687,7 @@ static int Socket_get_addrCstr(struct v7 *v7, val_t addr_val, char *buf,
  */
 static v7_val_t Socket_bind(struct v7 *v7, val_t this_obj, val_t args) {
   struct socket_internal *si = Socket_get_si(v7, this_obj);
-  int port;
+  int32_t port;
   union socket_address sa;
   int sa_size;
   char addr[ADDRESS_BUF_SIZE] = {0};
@@ -13830,7 +13830,7 @@ static v7_val_t Socket_connect(struct v7 *v7, val_t this_obj, val_t args) {
   char addr[ADDRESS_BUF_SIZE] = {0};
   union socket_address sa;
   int sa_size;
-  uint16_t port;
+  int32_t port;
 
   if (si == NULL) {
     return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
@@ -13880,7 +13880,7 @@ static v7_val_t Socket_close(struct v7 *v7, val_t this_obj, val_t args) {
 static v7_val_t Socket_sendto(struct v7 *v7, val_t this_obj, val_t args) {
   struct socket_internal *si = Socket_get_si(v7, this_obj);
   char addr[ADDRESS_BUF_SIZE] = {0};
-  uint16_t port;
+  int32_t port;
   union socket_address sa;
   int sa_size;
   uint8_t *buf = NULL, *ptr;
