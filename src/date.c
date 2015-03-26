@@ -11,6 +11,10 @@ int64_t strtoll(const char *, char **, int);
 extern long timezone;
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER >= 1800
+#define tzset _tzset
+#endif
+
 typedef double etime_t; /* double is suitable type for ECMA time */
 /* inernally we have to use 64-bit integer for some operations */
 typedef int64_t etimeint_t;
@@ -147,8 +151,12 @@ static int ecma_DaylightSavingTA(etime_t t) {
    * nixes don't have localtime_s
    * as result using localtime
    */
-  struct tm tm = *localtime(&time);
-  if (tm.tm_isdst > 0) {
+  struct tm *tm = localtime(&time);
+  if (tm == NULL) {
+    /* doesn't work on windows for times before epoch */
+    return 0;
+  }
+  if (tm->tm_isdst > 0) {
     return msPerHour;
   } else {
     return 0;

@@ -11704,6 +11704,10 @@ V7_PRIVATE void init_json(struct v7 *v7) {
  */
 
 
+#if defined(_MSC_VER) && _MSC_VER >= 1800
+#define fileno _fileno
+#endif
+
 #ifdef V7_EXE
 
 static void show_usage(char *argv[]) {
@@ -11822,6 +11826,10 @@ int main(int argc, char *argv[]) {
 int64_t strtoll(const char *, char **, int);
 #elif !defined(_WIN32)
 extern long timezone;
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER >= 1800
+#define tzset _tzset
 #endif
 
 typedef double etime_t; /* double is suitable type for ECMA time */
@@ -11960,8 +11968,12 @@ static int ecma_DaylightSavingTA(etime_t t) {
    * nixes don't have localtime_s
    * as result using localtime
    */
-  struct tm tm = *localtime(&time);
-  if (tm.tm_isdst > 0) {
+  struct tm *tm = localtime(&time);
+  if (tm == NULL) {
+    /* doesn't work on windows for times before epoch */
+    return 0;
+  }
+  if (tm->tm_isdst > 0) {
     return msPerHour;
   } else {
     return 0;
