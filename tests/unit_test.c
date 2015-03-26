@@ -1002,7 +1002,9 @@ static const char *test_parser(void) {
 
   ASSERT((fp = fopen(want_ast_db, "r")) != NULL);
   memset(want_ast, 0, sizeof(want_ast));
-  fread(want_ast, sizeof(want_ast), 1, fp);
+  if (fread(want_ast, sizeof(want_ast), 1, fp) < sizeof(want_ast)) {
+    ASSERT(ferror(fp) == 0);
+  }
   ASSERT(feof(fp));
   fclose(fp);
 
@@ -1030,7 +1032,9 @@ static const char *test_parser(void) {
 
     ASSERT((fp = fopen("/tmp/got_ast", "r")) != NULL);
     memset(got_ast, 0, sizeof(got_ast));
-    fread(got_ast, sizeof(got_ast), 1, fp);
+    if (fread(got_ast, sizeof(got_ast), 1, fp) < sizeof(got_ast)) {
+      ASSERT(ferror(fp) == 0);
+    }
     ASSERT(feof(fp));
     fclose(fp);
 #if !defined(_WIN32)
@@ -1038,7 +1042,7 @@ static const char *test_parser(void) {
       fp = fopen("/tmp/want_ast", "w");
       fwrite(current_want_ast, want_ast_len, 1, fp);
       fclose(fp);
-      system("diff -u /tmp/want_ast /tmp/got_ast");
+      ASSERT(system("diff -u /tmp/want_ast /tmp/got_ast") != -1);
     }
     ASSERT(strncmp(got_ast, current_want_ast, sizeof(got_ast)) == 0);
 #endif
@@ -1080,7 +1084,9 @@ static char *read_file(const char *path, size_t *size) {
     *size = st.st_size;
     data = (char *) malloc(*size + 1);
     if (data != NULL) {
-      fread(data, 1, *size, fp);
+      if (fread(data, 1, *size, fp) < *size) {
+        if (ferror(fp) == 0) return NULL;
+      }
       data[*size] = '\0';
     }
     fclose(fp);
