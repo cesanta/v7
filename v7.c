@@ -646,7 +646,6 @@ struct gc_arena {
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
 #else
-#error NO_NO_RETURN
 #define NORETURN
 #endif
 
