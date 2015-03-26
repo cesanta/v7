@@ -1,4 +1,4 @@
 #!/bin/sh
 
-export VC6=/vc6; export Path=Z:$VC6/bin; export INCLUDE=$VC6/include; export LIB=$VC6/lib
+export VC6=/opt/vc6; export Path=Z:$VC6/bin; export INCLUDE=$VC6/include; export LIB=$VC6/lib
 exec /usr/bin/make "$@"
