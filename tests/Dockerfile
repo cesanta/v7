@@ -11,6 +11,15 @@ RUN ln -s /usr/bin/clang-format-3.6 /usr/bin/clang-format
 ADD openwatcom-linux-cross-1.9.tar.xz /opt
 RUN echo 'export WATCOM=/opt/watcom' >>/root/.bashrc ; echo 'source $WATCOM/owsetenv.sh' >>/root/.bashrc; sed 's:/tmp:/opt:g' -i '/opt/watcom/owsetenv.sh'
 
-VOLUME ['/cesanta']
+RUN dpkg --add-architecture i386; apt-get update; apt-get install -y --no-install-recommends wine
+RUN apt-get install -y --no-install-recommends mingw-w64
+RUN apt-get install -y winetricks
 
-ENTRYPOINT ['/usr/bin/make', '-C', '/cesanta/v7', 'run', 'CFLAGS_EXTRA=-DTEST_UNDER_VIRTUALBOX']
+# this overrides the watcom INCLUDE define. TODO(mkm): remove owsetenv above (breaks docker caching)
+RUN echo 'export VC6=/vc6; export Path=Z:$VC6/bin; export INCLUDE=$VC6/include; export LIB=$VC6/lib' >>/root/.bashrc
+
+# warmup wine
+RUN wine dummy 2>/dev/null || true
+
+VOLUME ["/cesanta", "/vc6"]
+ENTRYPOINT ["/usr/bin/make", "-C", "/cesanta/v7", "run", "CFLAGS_EXTRA=-DTEST_UNDER_VIRTUALBOX"]
