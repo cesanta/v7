@@ -16,7 +16,8 @@ ifneq ("$(wildcard /usr/local/bin/llvm-symbolizer-3.5)","")
 endif
 
 # disable optimizations and sockets on windows
-CFLAGS_WINDOWS:=-O0 -DV7_DISABLE_SOCKETS
+DEFS_WINDOWS=-DV7_DISABLE_SOCKETS
+CFLAGS_WINDOWS:=-O0 $(DEFS_WINDOWS)
 CFLAGS_PLATFORM:=
 
 # not all environments set the same env vars

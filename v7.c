@@ -728,11 +728,15 @@ typedef unsigned long uintptr_t;
 #endif
 
 #ifndef NAN
-#define NAN atof("NAN")
+extern double _v7_nan;
+#define HAS_V7_NAN
+#define NAN (_v7_nan)
 #endif
 
 #ifndef INFINITY
-#define INFINITY atof("INFINITY") /* TODO: fix this */
+extern double _v7_infinity;
+#define HAS_V7_INFINITY
+#define INFINITY (_v7_infinity)
 #endif
 
 #ifndef EXIT_SUCCESS
@@ -5347,6 +5351,14 @@ V7_PRIVATE void ast_dump(FILE *fp, struct ast *a, ast_off_t pos) {
  */
 
 
+#ifdef HAS_V7_INFINITY
+double _v7_infinity;
+#endif
+
+#ifdef HAS_V7_NAN
+double _v7_nan;
+#endif
+
 enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_double(v)) {
@@ -6631,6 +6643,17 @@ struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
   val_t *p;
   char z = 0;
+
+#if defined(HAS_V7_INFINITY) || defined(HAS_V7_NAN)
+  double zero = 0.0;
+#endif
+
+#ifdef HAS_V7_INFINITY
+  _v7_infinity = 1.0 / zero;
+#endif
+#ifdef HAS_V7_NAN
+  _v7_nan = zero / zero;
+#endif
 
   if ((v7 = (struct v7 *) calloc(1, sizeof(*v7))) != NULL) {
     v7->cur_dense_prop =
@@ -8063,7 +8086,8 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
 /* Visual studio 2012+ has signbit() */
 #if defined(V7_WINDOWS) && _MSC_VER < 1700
 static int signbit(double x) {
-  return x > 0;
+  double s = _copysign(1, x);
+  return s < 0;
 }
 #endif
 
@@ -8083,6 +8107,7 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
       return a * b;
     case AST_DIV:
       if (b == 0) {
+        if (a == 0) return NAN;
         return (!signbit(a) == !signbit(b)) ? INFINITY : -INFINITY;
       }
       return a / b;
