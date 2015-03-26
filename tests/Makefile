@@ -13,11 +13,3 @@ save_want_ast:
 	@rm -f unit_test
 	$(MAKE) test_c99 TEST_FILTER=parser CFLAGS_EXTRA=-DSAVE_AST
 	@rm -f unit_test
-
-# Interactive:
-#   docker run -v $(CURDIR)/../..:/cesanta -t -i --entrypoint=/bin/bash cesanta/v7_test
-docker:
-	docker run --rm -v $(CURDIR)/../..:/cesanta cesanta/v7_test
-
-docker_msan:
-	@docker run --rm -v $(CURDIR)/../..:/cesanta -t -i --entrypoint=/bin/bash cesanta/v7_test -c "cd /cesanta/v7; make -C tests test_msan TEST_FILTER=$(TEST_FILTER)"

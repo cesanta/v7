@@ -21,5 +21,7 @@ RUN echo 'export VC6=/vc6; export Path=Z:$VC6/bin; export INCLUDE=$VC6/include; 
 # warmup wine
 RUN wine dummy 2>/dev/null || true
 
+ADD dobuild /usr/local/bin/
+
 VOLUME ["/cesanta", "/vc6"]
-ENTRYPOINT ["/usr/bin/make", "-C", "/cesanta/v7", "run", "CFLAGS_EXTRA=-DTEST_UNDER_VIRTUALBOX"]
+ENTRYPOINT ["/usr/local/bin/dobuild", "-C", "/cesanta/v7", "ONDOCKER=1"]
