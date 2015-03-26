@@ -9,7 +9,13 @@ TOP_HEADERS=$(addprefix $(SRC_DIR)/, $(HEADERS))
 include scripts/platform.mk
 include src/sources.mk
 
-.PHONY: cpplint format tidy docker
+.PHONY: cpplint format tidy
+
+ifneq ($(ONDOCKER),1)
+.DEFAULT_GOAL:=all
+else
+.DEFAULT_GOAL:=run
+endif
 
 all: v7 amalgamated_v7
 	@$(MAKE) -C examples
@@ -19,22 +25,8 @@ v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
 	@echo "AMALGAMATING\tv7.c"
 	@cat v7.h $(TOP_HEADERS) $(TOP_SOURCES) | sed -E "/#include .*(v7.h|`echo $(TOP_HEADERS) | sed -e 's,src/,,g' -e 's, ,|,g'`)/d" > $@
 
-v: unit_test
-	valgrind -q --leak-check=full --show-reachable=yes \
-	--leak-resolution=high --num-callers=100 ./unit_test
-#	valgrind -q --leak-check=full ./v7 tests/run_tests.js
-#	gcov -a unit_test.c
-
-xrun: unit_test
-	$(CC) -W -Wall -I. -I./src src/tokenizer.c -DTEST_RUN -DV7_EXPOSE_PRIVATE -o t
-	./t
-
 run:
 	@$(MAKE) -C tests compile test_c99
-
-all_warnings: v7.c
-	$(CC) v7.c tests/unit_test.c -o $@ -Weverything -Werror $(CFLAGS)
-	./$@
 
 v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
 	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
@@ -80,10 +72,7 @@ compile_commands.json: $(TOP_SOURCES) Makefile scripts/gen-llvm-json.sh
 
 tidy: compile_commands.json
 	@echo "CLANG-TIDY"
-	@docker run --rm -v $(PWD)/..:/cesanta -t -i --entrypoint=/bin/bash cesanta/v7_test -c "cd /cesanta/v7; clang-tidy-3.5 -p . $(TOP_SOURCES)"
+	@cd /cesanta/v7; $(CLANG_TIDY) -p . $(TOP_SOURCES)
 
 cpplint:
 	@$(MAKE) -C tests cpplint
-
-docker:
-	@$(MAKE) -C tests docker

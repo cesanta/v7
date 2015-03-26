@@ -15,11 +15,14 @@ RUN dpkg --add-architecture i386; apt-get update; apt-get install -y --no-instal
 RUN apt-get install -y --no-install-recommends mingw-w64
 RUN apt-get install -y winetricks
 
+ADD vc6.tar.xz /opt
 # this overrides the watcom INCLUDE define. TODO(mkm): remove owsetenv above (breaks docker caching)
 RUN echo 'export VC6=/vc6; export Path=Z:$VC6/bin; export INCLUDE=$VC6/include; export LIB=$VC6/lib' >>/root/.bashrc
 
 # warmup wine
 RUN wine dummy 2>/dev/null || true
 
-VOLUME ["/cesanta", "/vc6"]
-ENTRYPOINT ["/usr/bin/make", "-C", "/cesanta/v7", "run", "CFLAGS_EXTRA=-DTEST_UNDER_VIRTUALBOX"]
+ADD dobuild /usr/local/bin/
+
+VOLUME ["/cesanta"]
+ENTRYPOINT ["/usr/local/bin/dobuild", "-C", "/cesanta/v7", "ONDOCKER=1"]

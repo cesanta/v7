@@ -27,7 +27,6 @@
 # - test_valgrind: run with valgrind
 
 SRC = $(realpath $(PROG).c)
-CLANG:=clang
 
 include ../scripts/platform.mk
 
@@ -103,7 +102,7 @@ alltests: $(ALL_TESTS) lcov cpplint
 # but we don't enforce them for presubmit until they are stable again.
 presubmit: $(SHORT_TESTS) cpplint
 
-.PHONY: clean clean_coverage lcov valgrind docker cpplint
+.PHONY: clean clean_coverage lcov valgrind cpplint
 ifneq ($(V), 1)
 .SILENT: $(ALL_PROGS) $(ALL_TESTS)
 endif

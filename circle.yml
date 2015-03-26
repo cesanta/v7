@@ -13,6 +13,8 @@ machine:
 
 test:
   pre:
+    - make -C tests compile
+    - sudo docker run -v $PWD/..:/cesanta -t -i cesanta/v7_test w
     - make run
     - make -C benchmark build || echo FAILED
   post:

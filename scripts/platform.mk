@@ -1,19 +1,21 @@
 CLANG:=clang
+CLANG_FORMAT:=clang-format
+CLANG_TIDY:=clang-tidy
+LLVM_SYMBOLIZER:=llvm-symbolizer
+
+# Needed by presubmit hook, has to run on OSX as well
+
 # installable with: `brew install llvm36 --with-clang`
-CLANG_FORMAT:=/usr/bin/clang-format-3.6
 ifneq ("$(wildcard /usr/local/bin/clang-format-3.6)","")
 	CLANG_FORMAT:=/usr/local/bin/clang-format-3.6
 endif
 
+# might be useful to use lldb
 ifneq ("$(wildcard /usr/local/bin/clang-3.5)","")
 	CLANG:=/usr/local/bin/clang-3.5
 endif
 
-LLVM_SYMBOLIZER:=/usr/bin/llvm-symbolizer
-
-ifneq ("$(wildcard /usr/local/bin/llvm-symbolizer-3.5)","")
-  LLVM_SYMBOLIZER:=/usr/local/bin/llvm-symbolizer-3.5
-endif
+#### TODO(mkm): split
 
 # disable optimizations and sockets on windows
 DEFS_WINDOWS=-DV7_DISABLE_SOCKETS
