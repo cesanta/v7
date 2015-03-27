@@ -19,6 +19,30 @@
 #ifndef SLRE_HEADER_INCLUDED
 #define SLRE_HEADER_INCLUDED
 
+/* Return codes for slre_compile() */
+enum slre_error {
+  SLRE_OK,
+  SLRE_INVALID_DEC_DIGIT,
+  SLRE_INVALID_HEX_DIGIT,
+  SLRE_INVALID_ESC_CHAR,
+  SLRE_UNTERM_ESC_SEQ,
+  SLRE_SYNTAX_ERROR,
+  SLRE_UNMATCH_LBR,
+  SLRE_UNMATCH_RBR,
+  SLRE_NUM_OVERFLOW,
+  SLRE_INF_LOOP_M_EMP_STR,
+  SLRE_TOO_MANY_CHARSETS,
+  SLRE_INV_CHARSET_RANGE,
+  SLRE_CHARSET_TOO_LARGE,
+  SLRE_MALFORMED_CHARSET,
+  SLRE_INVALID_BACK_REFERENCE,
+  SLRE_TOO_MANY_CAPTURES,
+  SLRE_INVALID_QUANTIFIER,
+  SLRE_BAD_CHAR_AFTER_USD
+};
+
+#ifndef V7_DISABLE_REGEX
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -45,28 +69,6 @@ struct slre_loot {
 /* Opaque structure that holds compiled regular expression */
 struct slre_prog;
 
-/* Return codes for slre_compile() */
-enum slre_error {
-  SLRE_OK,
-  SLRE_INVALID_DEC_DIGIT,
-  SLRE_INVALID_HEX_DIGIT,
-  SLRE_INVALID_ESC_CHAR,
-  SLRE_UNTERM_ESC_SEQ,
-  SLRE_SYNTAX_ERROR,
-  SLRE_UNMATCH_LBR,
-  SLRE_UNMATCH_RBR,
-  SLRE_NUM_OVERFLOW,
-  SLRE_INF_LOOP_M_EMP_STR,
-  SLRE_TOO_MANY_CHARSETS,
-  SLRE_INV_CHARSET_RANGE,
-  SLRE_CHARSET_TOO_LARGE,
-  SLRE_MALFORMED_CHARSET,
-  SLRE_INVALID_BACK_REFERENCE,
-  SLRE_TOO_MANY_CAPTURES,
-  SLRE_INVALID_QUANTIFIER,
-  SLRE_BAD_CHAR_AFTER_USD
-};
-
 int slre_compile(const char *regexp, size_t regexp_len, const char *flags,
                  size_t flags_len, struct slre_prog **, int is_regex);
 int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
@@ -82,5 +84,7 @@ int slre_get_flags(struct slre_prog *);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* V7_DISABLE_REGEX */
 
 #endif /* SLRE_HEADER_INCLUDED */

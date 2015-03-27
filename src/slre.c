@@ -35,6 +35,53 @@
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
+static int hex(int c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -SLRE_INVALID_HEX_DIGIT;
+}
+
+int nextesc(const char **p) {
+  const unsigned char *s = (unsigned char *) (*p)++;
+  switch (*s) {
+    case 0:
+      return -SLRE_UNTERM_ESC_SEQ;
+    case 'c':
+      ++*p;
+      return *s & 31;
+    case 'f':
+      return '\f';
+    case 'n':
+      return '\n';
+    case 'r':
+      return '\r';
+    case 't':
+      return '\t';
+    case 'v':
+      return '\v';
+    case '\\':
+      return '\\';
+    case 'u':
+      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
+          isxdigit(s[4])) {
+        (*p) += 4;
+        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
+      }
+      return -SLRE_INVALID_HEX_DIGIT;
+    case 'x':
+      if (isxdigit(s[1]) && isxdigit(s[2])) {
+        (*p) += 2;
+        return (hex(s[1]) << 4) | hex(s[2]);
+      }
+      return -SLRE_INVALID_HEX_DIGIT;
+    default:
+      return -SLRE_INVALID_ESC_CHAR;
+  }
+}
+
+#ifndef V7_DISABLE_REGEX
+
 /* Parser Information */
 struct slre_node {
   unsigned char type;
@@ -183,51 +230,6 @@ static unsigned char re_dec_digit(struct slre_env *e, int c) {
     SLRE_THROW(e, SLRE_INVALID_DEC_DIGIT);
   }
   return ret;
-}
-
-static int hex(int c) {
-  if (c >= '0' && c <= '9') return c - '0';
-  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  return -SLRE_INVALID_HEX_DIGIT;
-}
-
-int nextesc(const char **p) {
-  const unsigned char *s = (unsigned char *) (*p)++;
-  switch (*s) {
-    case 0:
-      return -SLRE_UNTERM_ESC_SEQ;
-    case 'c':
-      ++*p;
-      return *s & 31;
-    case 'f':
-      return '\f';
-    case 'n':
-      return '\n';
-    case 'r':
-      return '\r';
-    case 't':
-      return '\t';
-    case 'v':
-      return '\v';
-    case '\\':
-      return '\\';
-    case 'u':
-      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
-          isxdigit(s[4])) {
-        (*p) += 4;
-        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
-      }
-      return -SLRE_INVALID_HEX_DIGIT;
-    case 'x':
-      if (isxdigit(s[1]) && isxdigit(s[2])) {
-        (*p) += 2;
-        return (hex(s[1]) << 4) | hex(s[2]);
-      }
-      return -SLRE_INVALID_HEX_DIGIT;
-    default:
-      return -SLRE_INVALID_ESC_CHAR;
-  }
 }
 
 static int re_nextc(Rune *r, const char **src, const char *src_end) {
@@ -1633,3 +1635,5 @@ int main(int argc, char **argv) {
   return err_code;
 }
 #endif /* SLRE_TEST */
+
+#endif /* V7_DISABLE_REGEX */

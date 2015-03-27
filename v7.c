@@ -1235,6 +1235,30 @@ V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *, val_t *);
 #ifndef SLRE_HEADER_INCLUDED
 #define SLRE_HEADER_INCLUDED
 
+/* Return codes for slre_compile() */
+enum slre_error {
+  SLRE_OK,
+  SLRE_INVALID_DEC_DIGIT,
+  SLRE_INVALID_HEX_DIGIT,
+  SLRE_INVALID_ESC_CHAR,
+  SLRE_UNTERM_ESC_SEQ,
+  SLRE_SYNTAX_ERROR,
+  SLRE_UNMATCH_LBR,
+  SLRE_UNMATCH_RBR,
+  SLRE_NUM_OVERFLOW,
+  SLRE_INF_LOOP_M_EMP_STR,
+  SLRE_TOO_MANY_CHARSETS,
+  SLRE_INV_CHARSET_RANGE,
+  SLRE_CHARSET_TOO_LARGE,
+  SLRE_MALFORMED_CHARSET,
+  SLRE_INVALID_BACK_REFERENCE,
+  SLRE_TOO_MANY_CAPTURES,
+  SLRE_INVALID_QUANTIFIER,
+  SLRE_BAD_CHAR_AFTER_USD
+};
+
+#ifndef V7_DISABLE_REGEX
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -1261,28 +1285,6 @@ struct slre_loot {
 /* Opaque structure that holds compiled regular expression */
 struct slre_prog;
 
-/* Return codes for slre_compile() */
-enum slre_error {
-  SLRE_OK,
-  SLRE_INVALID_DEC_DIGIT,
-  SLRE_INVALID_HEX_DIGIT,
-  SLRE_INVALID_ESC_CHAR,
-  SLRE_UNTERM_ESC_SEQ,
-  SLRE_SYNTAX_ERROR,
-  SLRE_UNMATCH_LBR,
-  SLRE_UNMATCH_RBR,
-  SLRE_NUM_OVERFLOW,
-  SLRE_INF_LOOP_M_EMP_STR,
-  SLRE_TOO_MANY_CHARSETS,
-  SLRE_INV_CHARSET_RANGE,
-  SLRE_CHARSET_TOO_LARGE,
-  SLRE_MALFORMED_CHARSET,
-  SLRE_INVALID_BACK_REFERENCE,
-  SLRE_TOO_MANY_CAPTURES,
-  SLRE_INVALID_QUANTIFIER,
-  SLRE_BAD_CHAR_AFTER_USD
-};
-
 int slre_compile(const char *regexp, size_t regexp_len, const char *flags,
                  size_t flags_len, struct slre_prog **, int is_regex);
 int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
@@ -1298,6 +1300,8 @@ int slre_get_flags(struct slre_prog *);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* V7_DISABLE_REGEX */
 
 #endif /* SLRE_HEADER_INCLUDED */
 /*
@@ -5606,6 +5610,7 @@ V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   return a;
 }
 
+#ifndef V7_DISABLE_REGEX
 v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
                           const char *flags, size_t flags_len) {
   struct slre_prog *p = NULL;
@@ -5624,6 +5629,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
   }
 }
+#endif /* V7_DISABLE_REGEX */
 
 v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
@@ -5725,6 +5731,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         return v_sprintf_s(buf, size, "%.*s", (int) n, str);
       }
     }
+#ifndef V7_DISABLE_REGEX
     case V7_TYPE_REGEXP_OBJECT: {
       size_t n1, n2 = 0;
       char s2[3] = {0};
@@ -5736,6 +5743,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
       return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
     }
+#endif
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
       return v_sprintf_s(buf, size, "cfunc_xxxxxx", v7_to_pointer(v));
@@ -8170,7 +8178,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
    * or use alloca.
    */
   char buf[512];
-  char *name, *p;
+  char *name;
   size_t name_len;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
@@ -8557,13 +8565,19 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       res = v7_create_string(v7, name, name_len, 1);
       break;
-    case AST_REGEX:
+#ifdef V7_DISABLE_REGEX
+      throw_exception(v7, INTERNAL_ERROR, "Regexp support is disabled");
+#else
+    case AST_REGEX: {
+      char *p;
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       for (p = name + name_len - 1; *p != '/';) p--;
       res = v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
                              (name + name_len) - p - 1);
       break;
+    }
+#endif
     case AST_IDENT: {
       struct v7_property *p;
       name = ast_get_inlined_data(a, *pos, &name_len);
@@ -9644,6 +9658,53 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
+static int hex(int c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -SLRE_INVALID_HEX_DIGIT;
+}
+
+int nextesc(const char **p) {
+  const unsigned char *s = (unsigned char *) (*p)++;
+  switch (*s) {
+    case 0:
+      return -SLRE_UNTERM_ESC_SEQ;
+    case 'c':
+      ++*p;
+      return *s & 31;
+    case 'f':
+      return '\f';
+    case 'n':
+      return '\n';
+    case 'r':
+      return '\r';
+    case 't':
+      return '\t';
+    case 'v':
+      return '\v';
+    case '\\':
+      return '\\';
+    case 'u':
+      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
+          isxdigit(s[4])) {
+        (*p) += 4;
+        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
+      }
+      return -SLRE_INVALID_HEX_DIGIT;
+    case 'x':
+      if (isxdigit(s[1]) && isxdigit(s[2])) {
+        (*p) += 2;
+        return (hex(s[1]) << 4) | hex(s[2]);
+      }
+      return -SLRE_INVALID_HEX_DIGIT;
+    default:
+      return -SLRE_INVALID_ESC_CHAR;
+  }
+}
+
+#ifndef V7_DISABLE_REGEX
+
 /* Parser Information */
 struct slre_node {
   unsigned char type;
@@ -9792,51 +9853,6 @@ static unsigned char re_dec_digit(struct slre_env *e, int c) {
     SLRE_THROW(e, SLRE_INVALID_DEC_DIGIT);
   }
   return ret;
-}
-
-static int hex(int c) {
-  if (c >= '0' && c <= '9') return c - '0';
-  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-  return -SLRE_INVALID_HEX_DIGIT;
-}
-
-int nextesc(const char **p) {
-  const unsigned char *s = (unsigned char *) (*p)++;
-  switch (*s) {
-    case 0:
-      return -SLRE_UNTERM_ESC_SEQ;
-    case 'c':
-      ++*p;
-      return *s & 31;
-    case 'f':
-      return '\f';
-    case 'n':
-      return '\n';
-    case 'r':
-      return '\r';
-    case 't':
-      return '\t';
-    case 'v':
-      return '\v';
-    case '\\':
-      return '\\';
-    case 'u':
-      if (isxdigit(s[1]) && isxdigit(s[2]) && isxdigit(s[3]) &&
-          isxdigit(s[4])) {
-        (*p) += 4;
-        return hex(s[1]) << 12 | hex(s[2]) << 8 | hex(s[3]) << 4 | hex(s[4]);
-      }
-      return -SLRE_INVALID_HEX_DIGIT;
-    case 'x':
-      if (isxdigit(s[1]) && isxdigit(s[2])) {
-        (*p) += 2;
-        return (hex(s[1]) << 4) | hex(s[2]);
-      }
-      return -SLRE_INVALID_HEX_DIGIT;
-    default:
-      return -SLRE_INVALID_ESC_CHAR;
-  }
 }
 
 static int re_nextc(Rune *r, const char **src, const char *src_end) {
@@ -11242,6 +11258,8 @@ int main(int argc, char **argv) {
   return err_code;
 }
 #endif /* SLRE_TEST */
+
+#endif /* V7_DISABLE_REGEX */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved

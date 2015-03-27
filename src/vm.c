@@ -255,6 +255,7 @@ V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   return a;
 }
 
+#ifndef V7_DISABLE_REGEX
 v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
                           const char *flags, size_t flags_len) {
   struct slre_prog *p = NULL;
@@ -273,6 +274,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
   }
 }
+#endif /* V7_DISABLE_REGEX */
 
 v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
@@ -374,6 +376,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         return v_sprintf_s(buf, size, "%.*s", (int) n, str);
       }
     }
+#ifndef V7_DISABLE_REGEX
     case V7_TYPE_REGEXP_OBJECT: {
       size_t n1, n2 = 0;
       char s2[3] = {0};
@@ -385,6 +388,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
       return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
     }
+#endif
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
       return v_sprintf_s(buf, size, "cfunc_xxxxxx", v7_to_pointer(v));
