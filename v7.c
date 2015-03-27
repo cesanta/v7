@@ -10790,9 +10790,12 @@ void slre_free(struct slre_prog *prog) {
   }
 }
 
-static struct slre_thread *re_newthread(struct slre_thread *t, struct slre_instruction *pc,
-                         const char *start, struct slre_loot *loot) {
-  struct slre_thread *new_thread = (struct slre_thread *) SLRE_MALLOC(sizeof(struct slre_thread));
+static struct slre_thread *re_newthread(struct slre_thread *t,
+                                        struct slre_instruction *pc,
+                                        const char *start,
+                                        struct slre_loot *loot) {
+  struct slre_thread *new_thread =
+      (struct slre_thread *) SLRE_MALLOC(sizeof(struct slre_thread));
   if (new_thread != NULL) new_thread->prev = t;
   t->pc = pc;
   t->start = start;
@@ -10807,8 +10810,7 @@ static struct slre_thread *get_prev_thread(struct slre_thread *t) {
 }
 
 static void free_threads(struct slre_thread *t) {
-  while (t->prev != NULL)
-    t = get_prev_thread(t);
+  while (t->prev != NULL) t = get_prev_thread(t);
 }
 
 #define RE_NO_MATCH() \
@@ -10822,8 +10824,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
   struct slre_range *p;
   unsigned char thr;
   size_t i;
-  struct slre_thread thread, *curr_thread;
-  
+  struct slre_thread thread, *curr_thread, *tmp_thr;
 
   /* queue initial thread */
   thread.prev = NULL;
@@ -10951,10 +10952,12 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
           RE_NO_MATCH();
 
         case I_SPLIT:
-          curr_thread = re_newthread(curr_thread, pc->par.xy.y.y, current, &sub);
+          tmp_thr = curr_thread;
+          curr_thread =
+              re_newthread(curr_thread, pc->par.xy.y.y, current, &sub);
           if (curr_thread == NULL) {
             fprintf(stderr, "re_match: no memory for thread!\n");
-            free_threads(curr_thread);
+            free_threads(tmp_thr);
             return 0;
           }
           pc = pc->par.xy.x;
