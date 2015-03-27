@@ -9638,7 +9638,6 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
 #define SLRE_MAX_RANGES 32
 #define SLRE_MAX_SETS 16
 #define SLRE_MAX_REP 0xFFFF
-#define SLRE_MAX_THREADS 100
 
 #define SLRE_MALLOC malloc
 #define SLRE_FREE free
@@ -9726,6 +9725,7 @@ struct slre_env {
 };
 
 struct slre_thread {
+  struct slre_thread *prev;
   struct slre_instruction *pc;
   const char *start;
   struct slre_loot loot;
@@ -10790,11 +10790,25 @@ void slre_free(struct slre_prog *prog) {
   }
 }
 
-static void re_newthread(struct slre_thread *t, struct slre_instruction *pc,
+static struct slre_thread *re_newthread(struct slre_thread *t, struct slre_instruction *pc,
                          const char *start, struct slre_loot *loot) {
+  struct slre_thread *new_thread = (struct slre_thread *) SLRE_MALLOC(sizeof(struct slre_thread));
+  if (new_thread != NULL) new_thread->prev = t;
   t->pc = pc;
   t->start = start;
   t->loot = *loot;
+  return new_thread;
+}
+
+static struct slre_thread *get_prev_thread(struct slre_thread *t) {
+  struct slre_thread *tmp_thr = t->prev;
+  SLRE_FREE(t);
+  return tmp_thr;
+}
+
+static void free_threads(struct slre_thread *t) {
+  while (t->prev != NULL)
+    t = get_prev_thread(t);
 }
 
 #define RE_NO_MATCH() \
@@ -10806,23 +10820,26 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
   struct slre_loot sub, tmpsub;
   Rune c, r;
   struct slre_range *p;
-  unsigned short thr_num = 1;
   unsigned char thr;
   size_t i;
-  struct slre_thread threads[SLRE_MAX_THREADS];
+  struct slre_thread thread, *curr_thread;
+  
 
   /* queue initial thread */
-  re_newthread(threads, pc, current, loot);
+  thread.prev = NULL;
+  curr_thread = re_newthread(&thread, pc, current, loot);
 
   /* run threads in stack order */
   do {
-    pc = threads[--thr_num].pc;
-    current = threads[thr_num].start;
-    sub = threads[thr_num].loot;
+    curr_thread = get_prev_thread(curr_thread);
+    pc = curr_thread->pc;
+    current = curr_thread->start;
+    sub = curr_thread->loot;
     for (thr = 1; thr;) {
       switch (pc->opcode) {
         case I_END:
           memcpy(loot->caps, sub.caps, sizeof loot->caps);
+          free_threads(curr_thread);
           return 1;
         case I_ANY:
         case I_ANYNL:
@@ -10934,11 +10951,12 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
           RE_NO_MATCH();
 
         case I_SPLIT:
-          if (thr_num >= SLRE_MAX_THREADS) {
-            fprintf(stderr, "re_match: backtrack overflow!\n");
+          curr_thread = re_newthread(curr_thread, pc->par.xy.y.y, current, &sub);
+          if (curr_thread == NULL) {
+            fprintf(stderr, "re_match: no memory for thread!\n");
+            free_threads(curr_thread);
             return 0;
           }
-          re_newthread(&threads[thr_num++], pc->par.xy.y.y, current, &sub);
           pc = pc->par.xy.x;
           continue;
 
@@ -10955,7 +10973,7 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
       }
       pc++;
     }
-  } while (thr_num);
+  } while (curr_thread->prev != NULL);
   return 0;
 }
 
