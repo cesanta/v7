@@ -64,4 +64,5 @@ gnuplot ./render.gnuplot
 
 if [ -d graphs ]; then
     mv *.png graphs/
+    cp /tmp/v7-bench-{cpu,mem}.data graphs/
 fi

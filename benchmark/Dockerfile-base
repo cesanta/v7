@@ -2,6 +2,12 @@ FROM cesanta/fossa:latest
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl wget git gnuplot time nodejs && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y r-base r-cran-ggplot2 && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y r-cran-rjson r-cran-xtable r-cran-cairodevice && rm -rf /var/lib/apt/lists/*
+
+RUN Rscript --no-save --no-restore -e 'install.packages(c("shiny"), repos="http://cran.r-project.org" )'
+
 RUN mkdir -p /v7/graphs && mkdir -p /v7/build && \
     cd /v7/build; wget http://duktape.org/duktape-1.1.2.tar.xz && \
     tar xvfJ duktape-1.1.2.tar.xz && cd duktape-1.1.2 && make -f Makefile.cmdline && \
