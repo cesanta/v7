@@ -220,7 +220,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
    * or use alloca.
    */
   char buf[512];
-  char *name, *p;
+  char *name;
   size_t name_len;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
@@ -607,13 +607,19 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       res = v7_create_string(v7, name, name_len, 1);
       break;
-    case AST_REGEX:
+#ifdef V7_DISABLE_REGEX
+      throw_exception(v7, INTERNAL_ERROR, "Regexp support is disabled");
+#else
+    case AST_REGEX: {
+      char *p;
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
       for (p = name + name_len - 1; *p != '/';) p--;
       res = v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
                              (name + name_len) - p - 1);
       break;
+    }
+#endif
     case AST_IDENT: {
       struct v7_property *p;
       name = ast_get_inlined_data(a, *pos, &name_len);
