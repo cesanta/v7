@@ -4143,15 +4143,12 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
 static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t res, arg0 = v7_array_get(v7, args, 0);
+  val_t arg0 = v7_array_get(v7, args, 0), res = arg0;
 
-  if (v7_is_string(arg0)) {
-    res = arg0;
-  } else if (v7_is_undefined(arg0)) {
-    res = v7_create_string(v7, "", 0, 1);
-  } else {
+  if (v7_array_length(v7, args) == 0)
+    res = v7_create_string(v7, NULL, 0, 1);
+  else if (!v7_is_string(arg0))
     res = to_string(v7, arg0);
-  }
 
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     v7_to_object(this_obj)->prototype = v7_to_object(v7->string_prototype);
@@ -4409,8 +4406,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
                                      v7, loot.caps[i].start,
                                      loot.caps[i].end - loot.caps[i].start, 1));
         }
-        v7_array_push(v7, arr, v7_create_number(utfnlen(
-                                   (char *) s, loot.caps[0].start - s)));
+        v7_array_push(v7, arr, v7_create_number(
+                                   utfnlen((char *) s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);
