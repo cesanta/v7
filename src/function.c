@@ -6,40 +6,42 @@
 #include "internal.h"
 
 static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  long i, n = 0, num_args = v7_array_length(v7, args);
+  long i, num_args = v7_array_length(v7, args);
   size_t size;
-  char buf[200];
   const char *s;
-  val_t param, body, res = v7_create_undefined();
+  char *exec_str;
+  val_t fn, tmp, res, comma = v7_create_string(v7, ",", 1, 1);
 
-  (void) this_obj;
+  (void)this_obj;
 
-  if (num_args <= 0) return res;
+  if (num_args <= 0) return v7_create_undefined();
 
-  /* TODO(lsm): Constructing function source code here. Optimize this. */
-  n += snprintf(buf + n, sizeof(buf) - n, "%s", "(function(");
+  fn = v7_create_string(v7, "(function(", 10, 1);
 
   for (i = 0; i < num_args - 1; i++) {
-    param = i_value_of(v7, v7_array_get(v7, args, i));
-    if (v7_is_string(param)) {
-      s = v7_to_string(v7, &param, &size);
-      if (i > 0) {
-        n += snprintf(buf + n, sizeof(buf) - n, "%s", ",");
-      }
-      n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
+    tmp = i_value_of(v7, v7_array_get(v7, args, i));
+    if (v7_is_string(tmp)) {
+      if (i > 0) fn = s_concat(v7, fn, comma);
+      fn = s_concat(v7, fn, tmp);
     }
   }
-  n += snprintf(buf + n, sizeof(buf) - n, "%s", "){");
-  body = i_value_of(v7, v7_array_get(v7, args, num_args - 1));
-  if (v7_is_string(body)) {
-    s = v7_to_string(v7, &body, &size);
-    n += snprintf(buf + n, sizeof(buf) - n, "%.*s", (int) size, s);
-  }
-  n += snprintf(buf + n, sizeof(buf) - n, "%s", "})");
+  fn = s_concat(v7, fn, v7_create_string(v7, "){", 2, 1));
+  tmp = i_value_of(v7, v7_array_get(v7, args, num_args - 1));
+  if (v7_is_string(tmp)) fn = s_concat(v7, fn, tmp);
+  fn = s_concat(v7, fn, v7_create_string(v7, "})", 2, 1));
+  s = v7_to_string(v7, &fn, &size);
+  exec_str = (char *) malloc(size + 1);
+  if (exec_str == NULL)
+    throw_exception(v7, INTERNAL_ERROR,
+                    "not enough memory for construct function");
+  memcpy(exec_str, s, size);
+  exec_str[size] = '\0';
 
-  if (v7_exec_with(v7, &res, buf, V7_UNDEFINED) != V7_OK) {
-    throw_exception(v7, SYNTAX_ERROR, "Invalid function body");
+  if (v7_exec(v7, &res, exec_str) != V7_OK) {
+    free(exec_str);
+    throw_exception(v7, SYNTAX_ERROR, "Invalid function tmp");
   }
+  free(exec_str);
 
   return res;
 }
