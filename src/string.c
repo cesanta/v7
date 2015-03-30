@@ -271,8 +271,8 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
                                      v7, loot.caps[i].start,
                                      loot.caps[i].end - loot.caps[i].start, 1));
         }
-        v7_array_push(v7, arr, v7_create_number(
-                                   utfnlen((char *) s, loot.caps[0].start - s)));
+        v7_array_push(v7, arr, v7_create_number(utfnlen(
+                                   (char *) s, loot.caps[0].start - s)));
         v7_array_push(v7, arr, this_obj);
         out_str_o = to_string(v7, v7_apply(v7, str_func, this_obj, arr));
         rez_str = v7_to_string(v7, &out_str_o, &rez_len);

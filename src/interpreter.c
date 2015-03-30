@@ -209,7 +209,6 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
 static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
-  const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t end;
   val_t res = v7_create_undefined(), v1 = v7_create_undefined();
   val_t v2 = v7_create_undefined();
@@ -824,11 +823,18 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       i_eval_expr(v7, a, pos, scope);
       res = v7_create_undefined();
       break;
-    default:
+    default: {
+#ifndef V7_DISABLE_AST_TAG_NAMES
+      const struct ast_node_def *def = &ast_node_defs[tag];
       throw_exception(v7, INTERNAL_ERROR, "%s: %s", __func__,
                       def->name); /* LCOV_EXCL_LINE */
+#else
+      throw_exception(v7, INTERNAL_ERROR, "%s: TAG_%d", __func__,
+                      tag); /* LCOV_EXCL_LINE */
+#endif
       /* unreacheable */
       break;
+    }
   }
 
   tmp_frame_cleanup(&tf);
