@@ -134,14 +134,26 @@ struct ast {
 
 typedef unsigned long ast_off_t;
 
+#ifdef __GNUC__
+/*
+ * TODO(mkm): GCC complains that bitfields on char are not standard
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
 struct ast_node_def {
-  const char *name;           /* tag name, for debugging and serialization */
-  unsigned char has_varint;   /* has a varint body */
-  unsigned char has_inlined;  /* inlined data whose size is in varint field */
-  unsigned char num_skips;    /* number of skips */
-  unsigned char num_subtrees; /* number of fixed subtrees */
+#ifndef V7_DISABLE_AST_TAG_NAMES
+  const char *name; /* tag name, for debugging and serialization */
+#endif
+  unsigned char has_varint : 1;   /* has a varint body */
+  unsigned char has_inlined : 1;  /* inlined data whose size is in varint fld */
+  unsigned char num_skips : 3;    /* number of skips */
+  unsigned char num_subtrees : 3; /* number of fixed subtrees */
 };
 extern const struct ast_node_def ast_node_defs[];
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 enum ast_which_skip {
   AST_END_SKIP = 0,
