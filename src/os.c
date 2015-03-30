@@ -8,10 +8,11 @@
 #ifndef V7_NO_FS
 /*
  * File interface: a wrappers around open(), close(), read(), write().
- * OS.open(path, flags) -> fd.
+ * OS.open(path, flags[, mode]) -> fd.
  * OS.close(fd) -> undefined
  * OS.read(fd) -> string (empty string on EOF)
  * OS.write(fd, str) -> num_bytes_written
+ * OS.remove(str) -> errno
  */
 static val_t OS_read(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
@@ -93,8 +94,8 @@ V7_PRIVATE void init_os(struct v7 *v7) {
 #ifndef V7_NO_FS
   set_cfunc_obj_prop(v7, os_obj, "open", OS_open, 2);
   set_cfunc_obj_prop(v7, os_obj, "close", OS_close, 1);
-  set_cfunc_obj_prop(v7, os_obj, "read", OS_read, 0);
-  set_cfunc_obj_prop(v7, os_obj, "write", OS_write, 1);
+  set_cfunc_obj_prop(v7, os_obj, "read", OS_read, 1);
+  set_cfunc_obj_prop(v7, os_obj, "write", OS_write, 2);
   set_cfunc_obj_prop(v7, os_obj, "remove", OS_remove, 1);
 #endif
 }
