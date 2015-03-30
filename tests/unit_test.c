@@ -2093,30 +2093,30 @@ static const char *test_file(void) {
   char buf[100];
 
   /* Read file in C and Javascript, then compare respective strings */
-  ASSERT(v7_exec(v7, &v, "var fd = File.open('unit_test.c')") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "var fd = OS.open('unit_test.c')") == V7_OK);
   ASSERT(v7_exec(v7, &v,
-                 "var a = '', b; while ((b = File.read(fd)) != '') "
+                 "var a = '', b; while ((b = OS.read(fd)) != '') "
                  "{ a += b; }; a") == V7_OK);
   s = v7_to_string(v7, &v, &string_len);
   ASSERT(string_len == file_len);
   ASSERT(memcmp(s, file_data, string_len) == 0);
   free(file_data);
-  ASSERT(v7_exec(v7, &v, "File.close(fd)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "OS.close(fd)") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
 
   /* Create file, write into it, then remove it. 0x202 is O_RDWR | O_CREAT */
-  snprintf(buf, sizeof(buf), "fd = File.open('foo.txt', %d, %d);",
+  snprintf(buf, sizeof(buf), "fd = OS.open('foo.txt', %d, %d);",
            O_RDWR | O_CREAT, 0644);
   ASSERT(v7_exec(v7, &v, buf) == V7_OK);
-  ASSERT(v7_exec(v7, &v, "File.write(fd, 'hi there');") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "OS.write(fd, 'hi there');") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
-  ASSERT(v7_exec(v7, &v, "File.close(fd)") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "OS.close(fd)") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
   ASSERT((file_data = read_file("foo.txt", &file_len)) != NULL);
   ASSERT(file_len == 8);
   ASSERT(memcmp(file_data, "hi there", 8) == 0);
   free(file_data);
-  ASSERT(v7_exec(v7, &v, "File.remove('foo.txt')") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "OS.remove('foo.txt')") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
   ASSERT(fopen("foo.txt", "r") == NULL);
 
