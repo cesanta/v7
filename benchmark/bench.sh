@@ -39,7 +39,7 @@ for B in bench_*.js; do
         awk '{print $2}' /tmp/v7-bench-raw.data >/tmp/v7-bench-cpu-${N}.data
         awk '{print $3}' /tmp/v7-bench-raw.data >/tmp/v7-bench-mem-${N}.data
     done
-    # underscore triggers enhanced styling (subscript) in gnuplot
+
     S=$(echo ${B} | sed 's/bench_//' )
     (
         echo -n "\"${S}\""
@@ -50,7 +50,7 @@ for B in bench_*.js; do
         echo
     ) >>/tmp/v7-bench-cpu.data
     (
-        echo -n "\"${B}\""
+        echo -n "\"${S}\""
         for N in ${VMS}; do
             echo -ne "\t"
             echo -n $(cat /tmp/v7-bench-mem-${N}.data)
@@ -60,9 +60,6 @@ for B in bench_*.js; do
 
 done
 
-gnuplot ./render.gnuplot
-
 if [ -d graphs ]; then
-    mv *.png graphs/
     cp /tmp/v7-bench-{cpu,mem}.data graphs/
 fi
