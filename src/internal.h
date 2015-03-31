@@ -282,12 +282,19 @@ struct v7 {
 #define V7_STATIC_ASSERT(COND, MSG) \
   typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
 
+#ifndef NDEBUG
 #define V7_CHECK(v7, COND)                                            \
   do {                                                                \
     if (!(COND))                                                      \
       throw_exception(v7, INTERNAL_ERROR, "%s line %d: %s", __func__, \
                       __LINE__, #COND);                               \
   } while (0)
+#else
+#define V7_CHECK(v7, COND)                                                 \
+  do {                                                                     \
+    if (!(COND)) throw_exception(v7, INTERNAL_ERROR, "line %d", __LINE__); \
+  } while (0)
+#endif
 
 #define TRACE_VAL(v7, val)                                     \
   do {                                                         \

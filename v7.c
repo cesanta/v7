@@ -906,12 +906,19 @@ struct v7 {
 #define V7_STATIC_ASSERT(COND, MSG) \
   typedef char static_assertion_##MSG[2 * (!!(COND)) - 1]
 
+#ifndef NDEBUG
 #define V7_CHECK(v7, COND)                                            \
   do {                                                                \
     if (!(COND))                                                      \
       throw_exception(v7, INTERNAL_ERROR, "%s line %d: %s", __func__, \
                       __LINE__, #COND);                               \
   } while (0)
+#else
+#define V7_CHECK(v7, COND)                                                 \
+  do {                                                                     \
+    if (!(COND)) throw_exception(v7, INTERNAL_ERROR, "line %d", __LINE__); \
+  } while (0)
+#endif
 
 #define TRACE_VAL(v7, val)                                     \
   do {                                                         \
@@ -8812,11 +8819,9 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     default: {
 #ifndef V7_DISABLE_AST_TAG_NAMES
       const struct ast_node_def *def = &ast_node_defs[tag];
-      throw_exception(v7, INTERNAL_ERROR, "%s: %s", __func__,
-                      def->name); /* LCOV_EXCL_LINE */
+      throw_exception(v7, INTERNAL_ERROR, "%s", def->name); /* LCOV_EXCL_LINE */
 #else
-      throw_exception(v7, INTERNAL_ERROR, "%s: TAG_%d", __func__,
-                      tag); /* LCOV_EXCL_LINE */
+      throw_exception(v7, INTERNAL_ERROR, "TAG_%d", tag); /* LCOV_EXCL_LINE */
 #endif
       /* unreacheable */
       break;
