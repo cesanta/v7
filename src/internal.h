@@ -36,6 +36,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>

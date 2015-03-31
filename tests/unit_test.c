@@ -2104,7 +2104,7 @@ static const char *test_file(void) {
   ASSERT(v7_exec(v7, &v, "OS.close(fd)") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
 
-  /* Create file, write into it, then remove it. 0x202 is O_RDWR | O_CREAT */
+  /* Create file, write into it, rename it, then remove it. */
   snprintf(buf, sizeof(buf), "fd = OS.open('foo.txt', %d, %d);",
            O_RDWR | O_CREAT, 0644);
   ASSERT(v7_exec(v7, &v, buf) == V7_OK);
@@ -2116,11 +2116,35 @@ static const char *test_file(void) {
   ASSERT(file_len == 8);
   ASSERT(memcmp(file_data, "hi there", 8) == 0);
   free(file_data);
-  ASSERT(v7_exec(v7, &v, "OS.remove('foo.txt')") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "OS.rename('foo.txt', 'bar.txt')") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(v7_exec(v7, &v, "OS.remove('bar.txt')") == V7_OK);
   ASSERT(check_value(v7, v, "0"));
   ASSERT(fopen("foo.txt", "r") == NULL);
+  ASSERT(fopen("bar.txt", "r") == NULL);
 
   v7_destroy(v7);
+  return NULL;
+}
+
+static const char *test_os(void) {
+  v7_val_t v;
+  struct v7 *v7 = v7_create();
+
+  ASSERT(v7_exec(v7, &v, "var name = OS.uname()") == V7_OK);
+  ASSERT(v7_exec(v7, &v, "name.errno") == V7_OK);
+  ASSERT(check_value(v7, v, "0"));
+  ASSERT(v7_exec(v7, &v, "typeof name.sysname") == V7_OK);
+  ASSERT(check_value(v7, v, "\"string\""));
+  ASSERT(v7_exec(v7, &v, "typeof name.nodename") == V7_OK);
+  ASSERT(check_value(v7, v, "\"string\""));
+  ASSERT(v7_exec(v7, &v, "typeof name.release") == V7_OK);
+  ASSERT(check_value(v7, v, "\"string\""));
+  ASSERT(v7_exec(v7, &v, "typeof name.version") == V7_OK);
+  ASSERT(check_value(v7, v, "\"string\""));
+  ASSERT(v7_exec(v7, &v, "typeof name.machine") == V7_OK);
+  ASSERT(check_value(v7, v, "\"string\""));
+
   return NULL;
 }
 
@@ -2133,6 +2157,7 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_closure);
   RUN_TEST(test_native_functions);
   RUN_TEST(test_file);
+  RUN_TEST(test_os);
   RUN_TEST(test_stdlib);
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);
