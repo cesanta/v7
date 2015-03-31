@@ -8894,6 +8894,7 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
   val_t frame;
   enum ast_tag tag;
   ast_off_t fstart, fvar;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
 
   *pos = func->ast_off;
   fstart = *pos;
@@ -8908,7 +8909,9 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
   frame = v7_create_object(v7);
   v7_to_object(frame)->prototype = func->scope;
 
+  tmp_stack_push(&tf, &frame);
   i_populate_local_vars(v7, func->ast, fstart, fvar, frame);
+  tmp_frame_cleanup(&tf);
   return frame;
 }
 
@@ -12894,7 +12897,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t tmp;
   enum v7_err ret;
 
-  (void)this_obj;
+  (void) this_obj;
 
   if (num_args <= 0) return v7_create_undefined();
 
