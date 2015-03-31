@@ -6155,17 +6155,19 @@ v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
+  if (num_args >= 0) {
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
-  v7_set_property_v(
-      v7, obj, v7->predefined_strings[PREDEFINED_STR_LENGTH],
-      V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
-      v7_create_number(num_args));
+    v7_set_property_v(
+        v7, obj, v7->predefined_strings[PREDEFINED_STR_LENGTH],
+        V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
+        v7_create_number(num_args));
 #else
-  v7_set_property(
-      v7, obj, "length", 6,
-      V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
-      v7_create_number(num_args));
+    v7_set_property(
+        v7, obj, "length", 6,
+        V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
+        v7_create_number(num_args));
 #endif
+  }
   tmp_frame_cleanup(&tf);
   return obj;
 }
