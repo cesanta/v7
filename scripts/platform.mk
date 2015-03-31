@@ -1,7 +1,7 @@
 CLANG:=clang
 CLANG_FORMAT:=clang-format
 CLANG_TIDY:=clang-tidy
-LLVM_SYMBOLIZER:=llvm-symbolizer
+LLVM_SYMBOLIZER:=/usr/bin/llvm-symbolizer
 
 # Needed by presubmit hook, has to run on OSX as well
 
