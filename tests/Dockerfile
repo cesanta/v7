@@ -24,5 +24,8 @@ RUN wine dummy 2>/dev/null || true
 
 ADD dobuild /usr/local/bin/
 
+# misc tools to make it easier to work interactively within the image
+RUN apt-get update; apt-get install -y file less zile vim
+
 VOLUME ["/cesanta"]
 ENTRYPOINT ["/usr/local/bin/dobuild", "-C", "/cesanta/v7", "ONDOCKER=1"]

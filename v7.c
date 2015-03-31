@@ -12895,7 +12895,7 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t tmp;
   enum v7_err ret;
 
-  (void)this_obj;
+  (void) this_obj;
 
   if (num_args <= 0) return v7_create_undefined();
 
