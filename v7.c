@@ -1096,8 +1096,10 @@ v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int);
 V7_PRIVATE v7_val_t
 v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t, int);
 
+V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
+                                  v7_cfunction_t f);
 V7_PRIVATE int set_cfunc_obj_prop_n(struct v7 *, val_t obj, const char *name,
-                                  v7_cfunction_t f, int num_args);
+                                    v7_cfunction_t f, int num_args);
 
 V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
 V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
@@ -6193,6 +6195,12 @@ V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
 #endif
   return res;
+}
+
+V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
+                                  v7_cfunction_t f) {
+  return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
+                         v7_create_cfunction_object(v7, f, -1));
 }
 
 V7_PRIVATE int set_cfunc_obj_prop_n(struct v7 *v7, val_t o, const char *name,
