@@ -16,7 +16,7 @@ static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
 
 V7_PRIVATE void init_json(struct v7 *v7) {
   val_t o = v7_create_object(v7);
-  set_cfunc_obj_prop(v7, o, "stringify", Json_stringify, 1);
-  set_cfunc_obj_prop(v7, o, "parse", Std_eval, 1);
+  set_cfunc_obj_prop_n(v7, o, "stringify", Json_stringify, 1);
+  set_cfunc_obj_prop_n(v7, o, "parse", Std_eval, 1);
   v7_set_property(v7, v7->global_object, "JSON", 4, V7_PROPERTY_DONT_ENUM, o);
 }

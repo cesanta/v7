@@ -79,7 +79,7 @@ V7_PRIVATE void init_function(struct v7 *v7) {
   val_t ctor = v7_create_cfunction_object(v7, Function_ctor, 1);
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
-  set_cfunc_obj_prop(v7, v7->function_prototype, "apply", Function_apply, 1);
+  set_cfunc_obj_prop_n(v7, v7->function_prototype, "apply", Function_apply, 1);
   v7_set_property(v7, v7->function_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Function_length));
 }

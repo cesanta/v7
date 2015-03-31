@@ -428,17 +428,17 @@ V7_PRIVATE void init_array(struct v7 *v7) {
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
 
-  set_cfunc_obj_prop(v7, v7->array_prototype, "push", Array_push, 1);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "sort", Array_sort, 1);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "reverse", Array_reverse, 0);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "join", Array_join, 1);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "toString", Array_toString, 0);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "slice", Array_slice, 2);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "splice", Array_splice, 2);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "map", Array_map, 1);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "every", Array_every, 1);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "some", Array_some, 1);
-  set_cfunc_obj_prop(v7, v7->array_prototype, "filter", Array_filter, 1);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "push", Array_push, 1);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "sort", Array_sort, 1);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "reverse", Array_reverse, 0);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "join", Array_join, 1);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "toString", Array_toString, 0);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "slice", Array_slice, 2);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "splice", Array_splice, 2);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "map", Array_map, 1);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "every", Array_every, 1);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "some", Array_some, 1);
+  set_cfunc_obj_prop_n(v7, v7->array_prototype, "filter", Array_filter, 1);
 
   v7_array_set(v7, length, 0, v7_create_cfunction(Array_get_length));
   v7_array_set(v7, length, 1, v7_create_cfunction(Array_set_length));

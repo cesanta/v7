@@ -272,17 +272,17 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   v7_set(v7, object, "prototype", 9, v7->object_prototype);
   v7_set(v7, v7->object_prototype, "constructor", 11, object);
 
-  set_cfunc_obj_prop(v7, v7->object_prototype, "toString", Obj_toString, 0);
+  set_cfunc_obj_prop_n(v7, v7->object_prototype, "toString", Obj_toString, 0);
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
   set_cfunc_prop(v7, object, "getOwnPropertyDescriptor",
                  Obj_getOwnPropertyDescriptor);
-  set_cfunc_obj_prop(v7, object, "defineProperty", Obj_defineProperty, 3);
+  set_cfunc_obj_prop_n(v7, object, "defineProperty", Obj_defineProperty, 3);
   set_cfunc_prop(v7, object, "defineProperties", Obj_defineProperties);
   set_cfunc_prop(v7, object, "create", Obj_create);
   set_cfunc_prop(v7, object, "keys", Obj_keys);
   set_cfunc_prop(v7, object, "getOwnPropertyNames", Obj_getOwnPropertyNames);
-  set_cfunc_obj_prop(v7, object, "preventExtensions", Obj_preventExtensions, 1);
-  set_cfunc_obj_prop(v7, object, "isExtensible", Obj_isExtensible, 1);
+  set_cfunc_obj_prop_n(v7, object, "preventExtensions", Obj_preventExtensions, 1);
+  set_cfunc_obj_prop_n(v7, object, "isExtensible", Obj_isExtensible, 1);
 
   set_cfunc_prop(v7, v7->object_prototype, "propertyIsEnumerable",
                  Obj_propertyIsEnumerable);
