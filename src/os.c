@@ -92,10 +92,10 @@ V7_PRIVATE void init_os(struct v7 *v7) {
   val_t os_obj = v7_create_object(v7);
   v7_set_property(v7, v7->global_object, "OS", 2, 0, os_obj);
 #ifndef V7_NO_FS
-  set_cfunc_obj_prop_n(v7, os_obj, "open", OS_open, -1);
-  set_cfunc_obj_prop_n(v7, os_obj, "close", OS_close, -1);
-  set_cfunc_obj_prop_n(v7, os_obj, "read", OS_read, -1);
-  set_cfunc_obj_prop_n(v7, os_obj, "write", OS_write, -1);
-  set_cfunc_obj_prop_n(v7, os_obj, "remove", OS_remove, -1);
+  set_cfunc_obj_prop(v7, os_obj, "open", OS_open);
+  set_cfunc_obj_prop(v7, os_obj, "close", OS_close);
+  set_cfunc_obj_prop(v7, os_obj, "read", OS_read);
+  set_cfunc_obj_prop(v7, os_obj, "write", OS_write);
+  set_cfunc_obj_prop(v7, os_obj, "remove", OS_remove);
 #endif
 }
