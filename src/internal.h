@@ -11,6 +11,7 @@
 /* Check whether we're compiling in an environment with no filesystem */
 #if defined(ARDUINO) && (ARDUINO == 106)
 #define V7_NO_FS
+#define V7_NO_POSIX
 #endif
 
 /*
@@ -20,25 +21,6 @@
  * TODO(mkm): selectively disable on clang/gcc once we test this out.
  */
 #define V7_BROKEN_NAN
-
-/* Define platform info for systems that don't have POSIX uname() function. */
-#ifdef V7_NO_POSIX
-#ifndef V7_UNAME_SYSNAME
-#define V7_UNAME_SYSNAME "Unspecified OS"
-#endif
-#ifndef V7_UNAME_NODENAME
-#define V7_UNAME_NODENAME "Unspecified hostname"
-#endif
-#ifndef V7_UNAME_RELEASE
-#define V7_UNAME_RELEASE "Unspecified release"
-#endif
-#ifndef V7_UNAME_VERSION
-#define V7_UNAME_VERSION "Unspecified version"
-#endif
-#ifndef V7_UNAME_MACHINE
-#define V7_UNAME_MACHINE "Unspecified architecture"
-#endif
-#endif
 
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
@@ -55,9 +37,6 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <sys/stat.h>
-#ifndef V7_NO_POSIX
-#include <sys/utsname.h>
-#endif
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -77,6 +56,7 @@
 #include "../v7.h"
 
 #ifdef V7_WINDOWS
+#define V7_NO_POSIX
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)
@@ -94,6 +74,10 @@ typedef unsigned long uintptr_t;
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
+#endif
+
+#ifndef V7_NO_POSIX
+#include <sys/utsname.h>
 #endif
 
 /* Private API */

@@ -2084,6 +2084,7 @@ static const char *test_gc_sweep(void) {
 }
 #endif
 
+#ifndef V7_NO_FS
 static const char *test_file(void) {
   v7_val_t v;
   size_t file_len, string_len;
@@ -2126,7 +2127,9 @@ static const char *test_file(void) {
   v7_destroy(v7);
   return NULL;
 }
+#endif
 
+#ifndef V7_NO_POSIX
 static const char *test_os(void) {
   v7_val_t v;
   struct v7 *v7 = v7_create();
@@ -2147,6 +2150,7 @@ static const char *test_os(void) {
 
   return NULL;
 }
+#endif
 
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_unescape);
@@ -2156,8 +2160,12 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_is_true);
   RUN_TEST(test_closure);
   RUN_TEST(test_native_functions);
+#ifndef V7_NO_FS
   RUN_TEST(test_file);
+#endif
+#ifndef V7_NO_POSIX
   RUN_TEST(test_os);
+#endif
   RUN_TEST(test_stdlib);
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);
