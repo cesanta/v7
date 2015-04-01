@@ -21,6 +21,25 @@
  */
 #define V7_BROKEN_NAN
 
+/* Define platform info for systems that don't have POSIX uname() function. */
+#ifdef V7_NO_POSIX
+#ifndef V7_UNAME_SYSNAME
+#define V7_UNAME_SYSNAME "Unspecified OS"
+#endif
+#ifndef V7_UNAME_NODENAME
+#define V7_UNAME_NODENAME "Unspecified hostname"
+#endif
+#ifndef V7_UNAME_RELEASE
+#define V7_UNAME_RELEASE "Unspecified release"
+#endif
+#ifndef V7_UNAME_VERSION
+#define V7_UNAME_VERSION "Unspecified version"
+#endif
+#ifndef V7_UNAME_MACHINE
+#define V7_UNAME_MACHINE "Unspecified architecture"
+#endif
+#endif
+
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
 #else
@@ -36,6 +55,9 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <sys/stat.h>
+#ifndef V7_NO_POSIX
+#include <sys/utsname.h>
+#endif
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
