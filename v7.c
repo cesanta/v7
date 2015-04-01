@@ -645,7 +645,6 @@ struct gc_arena {
 /* Check whether we're compiling in an environment with no filesystem */
 #if defined(ARDUINO) && (ARDUINO == 106)
 #define V7_NO_FS
-#define V7_NO_POSIX
 #endif
 
 /*
@@ -689,7 +688,6 @@ struct gc_arena {
 /* Public API. Implemented in api.c */
 
 #ifdef V7_WINDOWS
-#define V7_NO_POSIX
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)
@@ -707,10 +705,6 @@ typedef unsigned long uintptr_t;
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
-#endif
-
-#ifndef V7_NO_POSIX
-#include <sys/utsname.h>
 #endif
 
 /* Private API */
@@ -14350,39 +14344,6 @@ static val_t OS_rename(struct v7 *v7, val_t this_obj, val_t args) {
 }
 #endif
 
-#ifndef V7_NO_POSIX
-static val_t OS_uname(struct v7 *v7, val_t this_obj, val_t args) {
-  int res = -1;
-  struct utsname name;
-  val_t ret = v7_create_object(v7);
-
-  (void) this_obj;
-  (void) args;
-  res = uname(&name);
-
-  v7_set_property(v7, ret, "errno", 5, 0,
-                  v7_create_number(res >= 0 ? 0 : errno));
-  if (res >= 0) {
-    v7_set_property(
-        v7, ret, "sysname", 7, 0,
-        v7_create_string(v7, name.sysname, strlen(name.sysname), 1));
-    v7_set_property(
-        v7, ret, "nodename", 8, 0,
-        v7_create_string(v7, name.nodename, strlen(name.nodename), 1));
-    v7_set_property(
-        v7, ret, "release", 7, 0,
-        v7_create_string(v7, name.release, strlen(name.release), 1));
-    v7_set_property(
-        v7, ret, "version", 7, 0,
-        v7_create_string(v7, name.version, strlen(name.version), 1));
-    v7_set_property(
-        v7, ret, "machine", 7, 0,
-        v7_create_string(v7, name.machine, strlen(name.machine), 1));
-  }
-  return ret;
-}
-#endif
-
 V7_PRIVATE void init_os(struct v7 *v7) {
   val_t os_obj = v7_create_object(v7);
   v7_set_property(v7, v7->global_object, "OS", 2, 0, os_obj);
@@ -14393,8 +14354,5 @@ V7_PRIVATE void init_os(struct v7 *v7) {
   set_cfunc_obj_prop(v7, os_obj, "write", OS_write);
   set_cfunc_obj_prop(v7, os_obj, "remove", OS_remove);
   set_cfunc_obj_prop(v7, os_obj, "rename", OS_rename);
-#endif
-#ifndef V7_NO_POSIX
-  set_cfunc_obj_prop(v7, os_obj, "uname", OS_uname);
 #endif
 }

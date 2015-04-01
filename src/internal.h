@@ -11,7 +11,6 @@
 /* Check whether we're compiling in an environment with no filesystem */
 #if defined(ARDUINO) && (ARDUINO == 106)
 #define V7_NO_FS
-#define V7_NO_POSIX
 #endif
 
 /*
@@ -56,7 +55,6 @@
 #include "../v7.h"
 
 #ifdef V7_WINDOWS
-#define V7_NO_POSIX
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)
@@ -74,10 +72,6 @@ typedef unsigned long uintptr_t;
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
-#endif
-
-#ifndef V7_NO_POSIX
-#include <sys/utsname.h>
 #endif
 
 /* Private API */
