@@ -645,6 +645,7 @@ struct gc_arena {
 /* Check whether we're compiling in an environment with no filesystem */
 #if defined(ARDUINO) && (ARDUINO == 106)
 #define V7_NO_FS
+#define V7_NO_POSIX
 #endif
 
 /*
@@ -654,25 +655,6 @@ struct gc_arena {
  * TODO(mkm): selectively disable on clang/gcc once we test this out.
  */
 #define V7_BROKEN_NAN
-
-/* Define platform info for systems that don't have POSIX uname() function. */
-#ifdef V7_NO_POSIX
-#ifndef V7_UNAME_SYSNAME
-#define V7_UNAME_SYSNAME "Unspecified OS"
-#endif
-#ifndef V7_UNAME_NODENAME
-#define V7_UNAME_NODENAME "Unspecified hostname"
-#endif
-#ifndef V7_UNAME_RELEASE
-#define V7_UNAME_RELEASE "Unspecified release"
-#endif
-#ifndef V7_UNAME_VERSION
-#define V7_UNAME_VERSION "Unspecified version"
-#endif
-#ifndef V7_UNAME_MACHINE
-#define V7_UNAME_MACHINE "Unspecified architecture"
-#endif
-#endif
 
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
@@ -689,9 +671,6 @@ struct gc_arena {
 #define _POSIX_C_SOURCE 200809L
 
 #include <sys/stat.h>
-#ifndef V7_NO_POSIX
-#include <sys/utsname.h>
-#endif
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -710,6 +689,7 @@ struct gc_arena {
 /* Public API. Implemented in api.c */
 
 #ifdef V7_WINDOWS
+#define V7_NO_POSIX
 #define vsnprintf _vsnprintf
 #define snprintf _snprintf
 #define isnan(x) _isnan(x)
@@ -727,6 +707,10 @@ typedef unsigned long uintptr_t;
 #include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
+#endif
+
+#ifndef V7_NO_POSIX
+#include <sys/utsname.h>
 #endif
 
 /* Private API */
@@ -14365,16 +14349,14 @@ static val_t OS_rename(struct v7 *v7, val_t this_obj, val_t args) {
 }
 #endif
 
-static val_t OS_uname(struct v7 *v7, val_t this_obj, val_t args) {
 #ifndef V7_NO_POSIX
+static val_t OS_uname(struct v7 *v7, val_t this_obj, val_t args) {
   int res = -1;
   struct utsname name;
-#endif
   val_t ret = v7_create_object(v7);
 
   (void) this_obj;
   (void) args;
-#ifndef V7_NO_POSIX
   res = uname(&name);
 
   v7_set_property(v7, ret, "errno", 5, 0, v7_create_number(res >= 0 ? 0 : errno));
@@ -14385,17 +14367,9 @@ static val_t OS_uname(struct v7 *v7, val_t this_obj, val_t args) {
     v7_set_property(v7, ret, "version", 7, 0, v7_create_string(v7, name.version, strlen(name.version), 1));
     v7_set_property(v7, ret, "machine", 7, 0, v7_create_string(v7, name.machine, strlen(name.machine), 1));
   }
-#else
-  v7_set_property(v7, ret, "errno", 5, 0, v7_create_number(0));
-  v7_set_property(v7, ret, "sysname", 7, 0, v7_create_string(v7, V7_UNAME_SYSNAME, strlen(V7_UNAME_SYSNAME), 1));
-  v7_set_property(v7, ret, "nodename", 8, 0, v7_create_string(v7, V7_UNAME_NODENAME, strlen(V7_UNAME_NODENAME), 1));
-  v7_set_property(v7, ret, "release", 7, 0, v7_create_string(v7, V7_UNAME_RELEASE, strlen(V7_UNAME_RELEASE), 1));
-  v7_set_property(v7, ret, "version", 7, 0, v7_create_string(v7, V7_UNAME_VERSION, strlen(V7_UNAME_VERSION), 1));
-  v7_set_property(v7, ret, "machine", 7, 0, v7_create_string(v7, V7_UNAME_MACHINE, strlen(V7_UNAME_MACHINE), 1));
-#endif
-
   return ret;
 }
+#endif
 
 V7_PRIVATE void init_os(struct v7 *v7) {
   val_t os_obj = v7_create_object(v7);
@@ -14408,5 +14382,7 @@ V7_PRIVATE void init_os(struct v7 *v7) {
   set_cfunc_obj_prop(v7, os_obj, "remove", OS_remove);
   set_cfunc_obj_prop(v7, os_obj, "rename", OS_rename);
 #endif
+#ifndef V7_NO_POSIX
   set_cfunc_obj_prop(v7, os_obj, "uname", OS_uname);
+#endif
 }
