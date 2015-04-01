@@ -819,7 +819,7 @@ V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
 }
 
 V7_PRIVATE int set_cfunc_obj_prop_n(struct v7 *v7, val_t o, const char *name,
-                                  v7_cfunction_t f, int num_args) {
+                                    v7_cfunction_t f, int num_args) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction_object(v7, f, num_args));
 }

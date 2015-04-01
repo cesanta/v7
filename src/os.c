@@ -114,13 +114,24 @@ static val_t OS_uname(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
   res = uname(&name);
 
-  v7_set_property(v7, ret, "errno", 5, 0, v7_create_number(res >= 0 ? 0 : errno));
+  v7_set_property(v7, ret, "errno", 5, 0,
+                  v7_create_number(res >= 0 ? 0 : errno));
   if (res >= 0) {
-    v7_set_property(v7, ret, "sysname", 7, 0, v7_create_string(v7, name.sysname, strlen(name.sysname), 1));
-    v7_set_property(v7, ret, "nodename", 8, 0, v7_create_string(v7, name.nodename, strlen(name.nodename), 1));
-    v7_set_property(v7, ret, "release", 7, 0, v7_create_string(v7, name.release, strlen(name.release), 1));
-    v7_set_property(v7, ret, "version", 7, 0, v7_create_string(v7, name.version, strlen(name.version), 1));
-    v7_set_property(v7, ret, "machine", 7, 0, v7_create_string(v7, name.machine, strlen(name.machine), 1));
+    v7_set_property(
+        v7, ret, "sysname", 7, 0,
+        v7_create_string(v7, name.sysname, strlen(name.sysname), 1));
+    v7_set_property(
+        v7, ret, "nodename", 8, 0,
+        v7_create_string(v7, name.nodename, strlen(name.nodename), 1));
+    v7_set_property(
+        v7, ret, "release", 7, 0,
+        v7_create_string(v7, name.release, strlen(name.release), 1));
+    v7_set_property(
+        v7, ret, "version", 7, 0,
+        v7_create_string(v7, name.version, strlen(name.version), 1));
+    v7_set_property(
+        v7, ret, "machine", 7, 0,
+        v7_create_string(v7, name.machine, strlen(name.machine), 1));
   }
   return ret;
 }

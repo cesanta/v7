@@ -6217,7 +6217,7 @@ V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
 }
 
 V7_PRIVATE int set_cfunc_obj_prop_n(struct v7 *v7, val_t o, const char *name,
-                                  v7_cfunction_t f, int num_args) {
+                                    v7_cfunction_t f, int num_args) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction_object(v7, f, num_args));
 }
@@ -11621,7 +11621,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, object, "create", Obj_create);
   set_cfunc_prop(v7, object, "keys", Obj_keys);
   set_cfunc_prop(v7, object, "getOwnPropertyNames", Obj_getOwnPropertyNames);
-  set_cfunc_obj_prop_n(v7, object, "preventExtensions", Obj_preventExtensions, 1);
+  set_cfunc_obj_prop_n(v7, object, "preventExtensions", Obj_preventExtensions,
+                       1);
   set_cfunc_obj_prop_n(v7, object, "isExtensible", Obj_isExtensible, 1);
 
   set_cfunc_prop(v7, v7->object_prototype, "propertyIsEnumerable",
@@ -14359,13 +14360,24 @@ static val_t OS_uname(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
   res = uname(&name);
 
-  v7_set_property(v7, ret, "errno", 5, 0, v7_create_number(res >= 0 ? 0 : errno));
+  v7_set_property(v7, ret, "errno", 5, 0,
+                  v7_create_number(res >= 0 ? 0 : errno));
   if (res >= 0) {
-    v7_set_property(v7, ret, "sysname", 7, 0, v7_create_string(v7, name.sysname, strlen(name.sysname), 1));
-    v7_set_property(v7, ret, "nodename", 8, 0, v7_create_string(v7, name.nodename, strlen(name.nodename), 1));
-    v7_set_property(v7, ret, "release", 7, 0, v7_create_string(v7, name.release, strlen(name.release), 1));
-    v7_set_property(v7, ret, "version", 7, 0, v7_create_string(v7, name.version, strlen(name.version), 1));
-    v7_set_property(v7, ret, "machine", 7, 0, v7_create_string(v7, name.machine, strlen(name.machine), 1));
+    v7_set_property(
+        v7, ret, "sysname", 7, 0,
+        v7_create_string(v7, name.sysname, strlen(name.sysname), 1));
+    v7_set_property(
+        v7, ret, "nodename", 8, 0,
+        v7_create_string(v7, name.nodename, strlen(name.nodename), 1));
+    v7_set_property(
+        v7, ret, "release", 7, 0,
+        v7_create_string(v7, name.release, strlen(name.release), 1));
+    v7_set_property(
+        v7, ret, "version", 7, 0,
+        v7_create_string(v7, name.version, strlen(name.version), 1));
+    v7_set_property(
+        v7, ret, "machine", 7, 0,
+        v7_create_string(v7, name.machine, strlen(name.machine), 1));
   }
   return ret;
 }

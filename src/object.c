@@ -281,7 +281,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
   set_cfunc_prop(v7, object, "create", Obj_create);
   set_cfunc_prop(v7, object, "keys", Obj_keys);
   set_cfunc_prop(v7, object, "getOwnPropertyNames", Obj_getOwnPropertyNames);
-  set_cfunc_obj_prop_n(v7, object, "preventExtensions", Obj_preventExtensions, 1);
+  set_cfunc_obj_prop_n(v7, object, "preventExtensions", Obj_preventExtensions,
+                       1);
   set_cfunc_obj_prop_n(v7, object, "isExtensible", Obj_isExtensible, 1);
 
   set_cfunc_prop(v7, v7->object_prototype, "propertyIsEnumerable",
