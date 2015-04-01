@@ -5,7 +5,7 @@ library(reshape2)
 
 server <- function(input, output) {
     cpu <- melt(read.table("/v7/graphs/v7-bench-cpu.data", header = TRUE), id=c("Title"), variable.name="VM",value.name="Time")
-    mem <- melt(read.table("/v7/graphs/v7-bench-mem.data", header = TRUE), id=c("Title"), variable.name="VM",value.name="Time")
+    mem <- melt(read.table("/v7/graphs/v7-bench-mem.data", header = TRUE), id=c("Title"), variable.name="VM",value.name="Bytes")
 
     output$cpu <- renderPlot({
         g <- cpu[grepl(input$filter,cpu$Title),]
@@ -14,7 +14,7 @@ server <- function(input, output) {
 
     output$mem <- renderPlot({
         g <- mem[grepl(input$filter,mem$Title),]
-        ggplot(data=g, aes(x=Title,y=Time,fill=VM)) + geom_bar(stat="identity", position=position_dodge())
+        ggplot(data=g, aes(x=Title,y=Bytes,fill=VM)) + geom_bar(stat="identity", position=position_dodge())
     })
 
 }
