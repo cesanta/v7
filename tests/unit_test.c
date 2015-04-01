@@ -2129,29 +2129,6 @@ static const char *test_file(void) {
 }
 #endif
 
-#ifndef V7_NO_POSIX
-static const char *test_os(void) {
-  v7_val_t v;
-  struct v7 *v7 = v7_create();
-
-  ASSERT(v7_exec(v7, &v, "var name = OS.uname()") == V7_OK);
-  ASSERT(v7_exec(v7, &v, "name.errno") == V7_OK);
-  ASSERT(check_value(v7, v, "0"));
-  ASSERT(v7_exec(v7, &v, "typeof name.sysname") == V7_OK);
-  ASSERT(check_value(v7, v, "\"string\""));
-  ASSERT(v7_exec(v7, &v, "typeof name.nodename") == V7_OK);
-  ASSERT(check_value(v7, v, "\"string\""));
-  ASSERT(v7_exec(v7, &v, "typeof name.release") == V7_OK);
-  ASSERT(check_value(v7, v, "\"string\""));
-  ASSERT(v7_exec(v7, &v, "typeof name.version") == V7_OK);
-  ASSERT(check_value(v7, v, "\"string\""));
-  ASSERT(v7_exec(v7, &v, "typeof name.machine") == V7_OK);
-  ASSERT(check_value(v7, v, "\"string\""));
-
-  return NULL;
-}
-#endif
-
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_unescape);
   RUN_TEST(test_to_json);
@@ -2162,9 +2139,6 @@ static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_native_functions);
 #ifndef V7_NO_FS
   RUN_TEST(test_file);
-#endif
-#ifndef V7_NO_POSIX
-  RUN_TEST(test_os);
 #endif
   RUN_TEST(test_stdlib);
   RUN_TEST(test_runtime);
