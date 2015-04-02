@@ -280,10 +280,12 @@ static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
   return ret;
 }
 
+#if V7_ENABLE_Date__parse || V7_ENABLE_Date__UTC
 static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
   /* TODO(alashkin): verify this statement */
   return is_prototype_of(v7, this_obj, v7->date_prototype);
 }
+#endif
 
 /*++++ from/to string helpers ++++*/
 
@@ -863,6 +865,7 @@ static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(g_gmtoffms / msPerMinute);
 }
 
+#if V7_ENABLE_Date__now
 static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
@@ -873,7 +876,9 @@ static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
 
   return v7_create_number(ret_time);
 }
+#endif /* V7_ENABLE_Date__now */
 
+#if V7_ENABLE_Date__parse
 static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   (void) args;
@@ -894,7 +899,9 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
 
   return v7_create_number(ret_time);
 }
+#endif /* V7_ENABLE_Date__parse */
 
+#if V7_ENABLE_Date__UTC
 static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
@@ -906,6 +913,7 @@ static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   ret_time = d_time_number_from_arr(v7, this_obj, args, tpyear, 0, d_gmktime);
   return v7_create_number(ret_time);
 }
+#endif /* V7_ENABLE_Date__UTC */
 
 /****** Initialization *******/
 
@@ -942,9 +950,15 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   DECLARE_GET_AND_SET(Milliseconds);
   DECLARE_GET(Day);
 
+#if V7_ENABLE_Date__now
   d_set_cfunc_prop(v7, date, "now", Date_now);
+#endif
+#if V7_ENABLE_Date__parse
   d_set_cfunc_prop(v7, date, "parse", Date_parse);
+#endif
+#if V7_ENABLE_Date__UTC
   d_set_cfunc_prop(v7, date, "UTC", Date_UTC);
+#endif
 
   d_set_cfunc_prop(v7, v7->date_prototype, "getTimezoneOffset",
                    Date_getTimezoneOffset);

@@ -21,6 +21,9 @@ all: v7 amalgamated_v7
 	@$(MAKE) -C examples
 	@$(MAKE) -C tests
 
+src/features_full.h:
+	perl -lne '/\b(V7_ENABLE_\S+__\S+)\b/ and print "#define $$1 1"' $(TOP_HEADERS) $(TOP_SOURCES) | sort | uniq > $@
+
 v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
 	@echo "AMALGAMATING\tv7.c"
 	@cat v7.h $(TOP_HEADERS) $(TOP_SOURCES) | sed -E "/#include .*(v7.h|`echo $(TOP_HEADERS) | sed -e 's,src/,,g' -e 's, ,|,g'`)/d" > $@
@@ -28,8 +31,14 @@ v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
 run:
 	@$(MAKE) -C tests compile test_c99
 
-v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
+v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h src/features_full.h
 	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
+
+medium_v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
+	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_BUILD_MEDIUM -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
+
+minimal_v7: $(TOP_HEADERS) $(TOP_SOURCES) v7.h
+	$(CC) $(TOP_SOURCES) -o $@ -DV7_EXE -DV7_BUILD_MINIMAL -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm
 
 asan_v7:
 	@$(CLANG) -fsanitize=address -fcolor-diagnostics -fno-common $(TOP_SOURCES) -o v7 -DV7_EXE -DV7_EXPOSE_PRIVATE $(CFLAGS) -lm

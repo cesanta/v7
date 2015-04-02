@@ -74,6 +74,14 @@ typedef unsigned long uintptr_t;
 #include <fcntl.h>
 #endif
 
+#if defined(V7_BUILD_MINIMAL)
+#include "features_minimal.h"
+#elif defined(V7_BUILD_MEDIUM)
+#include "features_medium.h"
+#else
+#include "features_full.h"
+#endif
+
 /* Private API */
 #include "utf.h"
 #include "mbuf.h"
