@@ -74,11 +74,16 @@ typedef unsigned long uintptr_t;
 #include <fcntl.h>
 #endif
 
-#if defined(V7_BUILD_MINIMAL)
+#define V7_BUILD_PROFILE_MINIMAL 1
+#define V7_BUILD_PROFILE_MEDIUM 2
+#define V7_BUILD_PROFILE_FULL 3
+
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
 #include "features_minimal.h"
-#elif defined(V7_BUILD_MEDIUM)
+#elif V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
 #include "features_medium.h"
 #else
+#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
 #include "features_full.h"
 #endif
 

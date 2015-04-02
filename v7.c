@@ -707,12 +707,14 @@ typedef unsigned long uintptr_t;
 #include <fcntl.h>
 #endif
 
-#if defined(V7_BUILD_MINIMAL)
-#include "features_minimal.h"
-#elif defined(V7_BUILD_MEDIUM)
-#include "features_medium.h"
+#define V7_BUILD_PROFILE_MINIMAL 1
+#define V7_BUILD_PROFILE_MEDIUM 2
+#define V7_BUILD_PROFILE_FULL 3
+
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
+#elif V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
 #else
-#include "features_full.h"
+#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
 #endif
 
 /* Private API */
@@ -1356,6 +1358,24 @@ V7_PRIVATE int calc_llen(size_t len);
 #endif /* __cplusplus */
 
 #endif /* V7_VARINT_H_INCLUDED */
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL
+
+#define V7_ENABLE_Date__UTC 1
+#define V7_ENABLE_Date__now 1
+#define V7_ENABLE_Date__parse 1
+
+#endif
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
+
+#define V7_ENABLE_Date__now 1
+#define V7_ENABLE_Date__UTC 1
+
+#endif
+#if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
+
+#define V7_ENABLE_Date__now 1
+
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
