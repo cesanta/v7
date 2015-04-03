@@ -9,7 +9,7 @@ abort() {
     exit 1
 }
 
-if [ "$(head -n 1 $TMP | wc -c)" -gt 50 ]; then
+if [ "$(head -n 1 $TMP | wc -c)" -gt 51 ]; then  # 51 because wc -c includes CR.
     echo "Summary max length is 50 cols"
     abort
 fi

@@ -22,8 +22,10 @@ all: v7 amalgamated_v7
 	@$(MAKE) -C tests
 
 src/features_full.h: $(TOP_SOURCES) scripts/gen-features-full.pl
-	@echo "GENERATING $@"
-	@perl scripts/gen-features-full.pl $(TOP_SOURCES) > $@
+ifdef PERL
+	@echo "GENERATING\t$@"
+	@$(PERL) scripts/gen-features-full.pl $(TOP_SOURCES) > $@
+endif
 
 v7.c: $(TOP_HEADERS) $(TOP_SOURCES) v7.h Makefile
 	@echo "AMALGAMATING\tv7.c"
