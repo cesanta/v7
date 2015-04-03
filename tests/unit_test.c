@@ -2129,6 +2129,47 @@ static const char *test_file(void) {
 }
 #endif
 
+#ifndef V7_DISABLE_CRYPTO
+static const char *test_crypto(void) {
+  v7_val_t v;
+  struct v7 *v7 = v7_create();
+
+  ASSERT(v7_exec(v7, &v, "Crypto.md5('hello')") == V7_OK);
+  ASSERT(check_str(
+      v7, v,
+      "\x5d\x41\x40\x2a\xbc\x4b\x2a\x76\xb9\x71\x9d\x91\x10\x17\xc5\x92"));
+  ASSERT(v7_exec(v7, &v, "Crypto.md5_hex('hello')") == V7_OK);
+  ASSERT(check_str(v7, v, "5d41402abc4b2a76b9719d911017c592"));
+  ASSERT(v7_exec(v7, &v, "Crypto.sha1('hello')") == V7_OK);
+  ASSERT(check_str(v7, v,
+                   "\xaa\xf4\xc6\x1d\xdc\xc5\xe8\xa2\xda\xbe\xde\x0f\x3b\x48"
+                   "\x2c\xd9\xae\xa9\x43\x4d"));
+  ASSERT(v7_exec(v7, &v, "Crypto.sha1_hex('hello')") == V7_OK);
+  ASSERT(check_str(v7, v, "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"));
+
+  ASSERT(v7_exec(v7, &v, "Crypto.md5()") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+  ASSERT(v7_exec(v7, &v, "Crypto.md5_hex()") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+  ASSERT(v7_exec(v7, &v, "Crypto.sha1()") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+  ASSERT(v7_exec(v7, &v, "Crypto.sha1_hex()") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+
+  ASSERT(v7_exec(v7, &v, "Crypto.md5(123)") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+  ASSERT(v7_exec(v7, &v, "Crypto.md5_hex([123])") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+  ASSERT(v7_exec(v7, &v, "Crypto.sha1(null)") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+  ASSERT(v7_exec(v7, &v, "Crypto.sha1_hex({})") == V7_OK);
+  ASSERT(check_value(v7, v, "null"));
+
+  v7_destroy(v7);
+  return NULL;
+}
+#endif
+
 static const char *run_all_tests(const char *filter) {
   RUN_TEST(test_unescape);
   RUN_TEST(test_to_json);
@@ -2151,6 +2192,9 @@ static const char *run_all_tests(const char *filter) {
 #ifndef V7_DISABLE_GC
   RUN_TEST(test_gc_mark);
   RUN_TEST(test_gc_sweep);
+#endif
+#ifndef V7_DISABLE_CRYPTO
+  RUN_TEST(test_crypto);
 #endif
   return NULL;
 }

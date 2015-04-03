@@ -219,4 +219,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_function(v7);
   init_js_stdlib(v7);
   init_os(v7);
+#ifndef V7_DISABLE_CRYPTO
+  init_crypto(v7);
+#endif
 }
