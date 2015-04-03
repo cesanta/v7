@@ -30,3 +30,5 @@ endif
 ifeq ($(OS),Windows_NT)
 	CFLAGS_PLATFORM:=$(CFLAGS_WINDOWS)
 endif
+
+IS_GCC:=$(shell echo "\#if defined(__GNUC__) && !defined(__clang__)\n\#error IS_GCC\n\#endif" | $(CC) -E - 2>&1 |grep -q IS_GCC && echo 1)
