@@ -23,8 +23,10 @@
 
 #ifdef __GNUC__
 #define NORETURN __attribute__((noreturn))
+#define UNUSED __attribute__((unused))
 #else
 #define NORETURN
+#define UNUSED
 #endif
 
 /*
@@ -73,6 +75,18 @@ typedef unsigned long uintptr_t;
 #include <unistd.h>
 #include <fcntl.h>
 #endif
+
+#define V7_BUILD_PROFILE_MINIMAL 1
+#define V7_BUILD_PROFILE_MEDIUM 2
+#define V7_BUILD_PROFILE_FULL 3
+
+#ifndef V7_BUILD_PROFILE
+#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
+#endif
+/* Only one will actually be chose based on V7_BUILD_PROFILE guards inside. */
+#include "features_minimal.h"
+#include "features_medium.h"
+#include "features_full.h"
 
 /* Private API */
 #include "utf.h"
