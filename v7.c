@@ -102,6 +102,20 @@ v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 #endif /* __cplusplus */
 
 #endif /* V7_HEADER_INCLUDED */
+#ifndef V7_FEATURES_H_INCLUDED
+#define V7_FEATURES_H_INCLUDED
+
+#define V7_BUILD_PROFILE_MINIMAL 1
+#define V7_BUILD_PROFILE_MEDIUM 2
+#define V7_BUILD_PROFILE_FULL 3
+
+#ifndef V7_BUILD_PROFILE
+#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
+#endif
+
+/* Only one will actually be used based on V7_BUILD_PROFILE. */
+
+#endif /* V7_FEATURES_H_INCLUDED */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL
 /*
  * DO NOT EDIT.
@@ -118,20 +132,20 @@ v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 #define V7_ENABLE__Date__toLocaleString 1
 #define V7_ENABLE__Date__toString 1
 
-#endif
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
 
 #define V7_ENABLE__Date 1
 #define V7_ENABLE__Date__now 1
 #define V7_ENABLE__Date__UTC 1
 
-#endif
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
 
 #define V7_ENABLE__Date 1
 #define V7_ENABLE__Date__now 1
 
-#endif
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL */
 /*
  * Copyright (c) 2013-2014 Cesanta Software Limited
  * All rights reserved
@@ -739,14 +753,6 @@ typedef unsigned long uintptr_t;
 #include <fcntl.h>
 #endif
 
-#define V7_BUILD_PROFILE_MINIMAL 1
-#define V7_BUILD_PROFILE_MEDIUM 2
-#define V7_BUILD_PROFILE_FULL 3
-
-#ifndef V7_BUILD_PROFILE
-#define V7_BUILD_PROFILE V7_BUILD_PROFILE_FULL
-#endif
-/* Only one will actually be chose based on V7_BUILD_PROFILE guards inside. */
 
 /* Private API */
 

@@ -14,4 +14,4 @@
 #define V7_ENABLE__Date__toLocaleString 1
 #define V7_ENABLE__Date__toString 1
 
-#endif
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */

@@ -21,5 +21,5 @@ print <<EOF
  */
 
 $feature_defs
-#endif
+#endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
 EOF
