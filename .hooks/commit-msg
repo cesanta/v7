@@ -1,5 +1,6 @@
-#!/bin/sh
-TMP=$(mktemp -t commit-msg)
+#!/bin/bash
+
+TMP=$(mktemp -t commit-msg.XXXXXX)
 grep -ve '^#' $1 >$TMP
 cat $TMP >/tmp/dumpmsg
 
