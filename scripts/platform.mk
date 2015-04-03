@@ -30,3 +30,5 @@ endif
 ifeq ($(OS),Windows_NT)
 	CFLAGS_PLATFORM:=$(CFLAGS_WINDOWS)
 endif
+
+CFLAGS_PLATFORM += $(shell echo -e "\#ifdef __GNUC__\n\#error IS_GCC\n\#endif" | $(CC) -E - 2>&1 | grep -q IS_GCC | echo -Wno-clobbered)
