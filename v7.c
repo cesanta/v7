@@ -11830,7 +11830,10 @@ static char *read_file(const char *path, size_t *size) {
     *size = st.st_size;
     data = (char *) malloc(*size + 1);
     if (data != NULL) {
-      fread(data, 1, *size, fp);
+      if (fread(data, 1, *size, fp) != *size) {
+        free(data);
+        return NULL;
+      }
       data[*size] = '\0';
     }
     fclose(fp);
