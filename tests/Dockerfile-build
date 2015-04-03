@@ -1,0 +1,20 @@
+FROM ubuntu:vivid
+
+RUN dpkg --add-architecture i386; apt-get update && apt-get install -y --no-install-recommends build-essential less file git vim zile libssl-dev clang llvm clang-format-3.6 libunwind8-dev g++-multilib libc6-dev-i386 wine winetricks mingw-w64 arduino-core simulavr gcc-arm-none-eabi gcc-arm-linux-gnueabi && rm -rf /usr/lib/gcc/*/*posix* /usr/bin/*posix*
+
+RUN ln -s /usr/bin/llvm-symbolizer-3.6 /usr/bin/llvm-symbolizer
+RUN ln -s /usr/bin/clang-format-3.6 /usr/bin/clang-format
+
+ADD openwatcom-linux-cross-1.9.tar.xz /opt
+RUN echo 'export WATCOM=/opt/watcom' >>/root/.bashrc ; echo 'source $WATCOM/owsetenv.sh' >>/root/.bashrc; sed 's:/tmp:/opt:g' -i '/opt/watcom/owsetenv.sh'
+
+ADD vc6.tar.xz /opt
+# this overrides the watcom INCLUDE define. TODO(mkm): remove owsetenv above (breaks docker caching)
+RUN echo 'export VC6=/vc6; export Path=Z:$VC6/bin; export INCLUDE=$VC6/include; export LIB=$VC6/lib' >>/root/.bashrc
+
+# warmup wine
+RUN wine dummy 2>/dev/null || true
+
+ADD dobuild /usr/local/bin/
+
+VOLUME ["/cesanta"]
