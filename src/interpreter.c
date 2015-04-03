@@ -1086,7 +1086,8 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = v7_create_undefined();
-  ast_off_t end, end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
+  volatile ast_off_t end; /* Only to pacify GCC. */
+  ast_off_t end_true, cond, iter_end, loop, iter, finally, acatch, fvar;
   int saved_strict_mode = v7->strict_mode;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &res);
