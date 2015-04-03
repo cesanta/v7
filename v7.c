@@ -154,6 +154,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math__sin 1
 #define V7_ENABLE__Math__sqrt 1
 #define V7_ENABLE__Math__tan 1
+#define V7_ENABLE__RegExp 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
@@ -163,6 +164,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Date__UTC 1
 #define V7_ENABLE__Math 1
 #define V7_ENABLE__Math__atan2 1
+#define V7_ENABLE__RegExp 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
@@ -1378,7 +1380,7 @@ enum slre_error {
   SLRE_BAD_CHAR_AFTER_USD
 };
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 
 #ifdef __cplusplus
 extern "C" {
@@ -1422,7 +1424,7 @@ int slre_get_flags(struct slre_prog *);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 
 #endif /* SLRE_HEADER_INCLUDED */
 /*
@@ -4521,7 +4523,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return to_string(v7, i_value_of(v7, this_obj));
 }
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   val_t so, ro, arr = v7_create_null();
   long previousLastIndex = 0;
@@ -4690,7 +4692,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(utf_shift);
 }
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 
 static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   long from = 0, to = 0;
@@ -4847,7 +4849,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 /* TODO(mkm): make an alternative implementation without regexps */
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
@@ -4903,7 +4905,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 
   return res;
 }
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str =
@@ -4921,7 +4923,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
   set_cfunc_prop(v7, v7->string_prototype, "lastIndexOf", Str_lastIndexOf);
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
   set_cfunc_prop(v7, v7->string_prototype, "match", Str_match);
   set_cfunc_prop(v7, v7->string_prototype, "replace", Str_replace);
   set_cfunc_prop(v7, v7->string_prototype, "search", Str_search);
@@ -5852,7 +5854,7 @@ V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   return a;
 }
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
                           const char *flags, size_t flags_len) {
   struct slre_prog *p = NULL;
@@ -5871,7 +5873,7 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
   }
 }
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 
 v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
@@ -5973,7 +5975,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         return v_sprintf_s(buf, size, "%.*s", (int) n, str);
       }
     }
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
     case V7_TYPE_REGEXP_OBJECT: {
       size_t n1, n2 = 0;
       char s2[3] = {0};
@@ -8814,10 +8816,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       ast_move_to_children(a, pos);
       res = v7_create_string(v7, name, name_len, 1);
       break;
-#ifdef V7_DISABLE_REGEX
-      throw_exception(v7, INTERNAL_ERROR, "Regexp support is disabled");
-#else
     case AST_REGEX: {
+#if V7_ENABLE__RegExp
       char *p;
       name = ast_get_inlined_data(a, *pos, &name_len);
       ast_move_to_children(a, pos);
@@ -8825,8 +8825,10 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       res = v7_create_regexp(v7, name + 1, p - (name + 1), p + 1,
                              (name + name_len) - p - 1);
       break;
-    }
+#else
+      throw_exception(v7, INTERNAL_ERROR, "Regexp support is disabled");
 #endif
+    }
     case AST_IDENT: {
       struct v7_property *p;
       name = ast_get_inlined_data(a, *pos, &name_len);
@@ -9899,6 +9901,7 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
  * license, as set out in <http://cesanta.com/>.
  */
 
+
 #include <setjmp.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -9960,7 +9963,7 @@ int nextesc(const char **p) {
   }
 }
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 
 /* Parser Information */
 struct slre_node {
@@ -11540,7 +11543,7 @@ int main(int argc, char **argv) {
 }
 #endif /* SLRE_TEST */
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -13164,11 +13167,6 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   g_tzname = tzname[0];
 }
 
-#else /* V7_ENABLE__Date */
-
-V7_PRIVATE void init_date(struct v7 *v7 UNUSED) {
-}
-
 #endif /* V7_ENABLE__Date */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -13464,12 +13462,14 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_math(v7);
 #endif
   init_string(v7);
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
   init_regex(v7);
 #endif
   init_number(v7);
   init_json(v7);
+#if V7_ENABLE__Date
   init_date(v7);
+#endif
 #ifndef V7_DISABLE_SOCKETS
   init_socket(v7);
 #endif
@@ -13558,7 +13558,7 @@ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
  */
 
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
@@ -13721,7 +13721,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, lastIndex);
 }
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 /*
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved

@@ -209,12 +209,14 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_math(v7);
 #endif
   init_string(v7);
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
   init_regex(v7);
 #endif
   init_number(v7);
   init_json(v7);
+#if V7_ENABLE__Date
   init_date(v7);
+#endif
 #ifndef V7_DISABLE_SOCKETS
   init_socket(v7);
 #endif

@@ -16,6 +16,8 @@
  * license, as set out in <http://cesanta.com/>.
  */
 
+#include "v7_features.h"
+
 #include <setjmp.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -79,7 +81,7 @@ int nextesc(const char **p) {
   }
 }
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 
 /* Parser Information */
 struct slre_node {
@@ -1659,4 +1661,4 @@ int main(int argc, char **argv) {
 }
 #endif /* SLRE_TEST */
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */

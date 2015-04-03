@@ -1031,9 +1031,4 @@ V7_PRIVATE void init_date(struct v7 *v7) {
   g_tzname = tzname[0];
 }
 
-#else /* V7_ENABLE__Date */
-
-V7_PRIVATE void init_date(struct v7 *v7 UNUSED) {
-}
-
 #endif /* V7_ENABLE__Date */
