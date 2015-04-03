@@ -13,6 +13,34 @@
 typedef uint64_t val_t;
 #endif
 
+/*
+ *  Double-precision floating-point number, IEEE 754
+ *
+ *  64 bit (8 bytes) in total
+ *  1  bit sign
+ *  11 bits exponent
+ *  52 bits mantissa
+ *      7         6        5        4        3        2        1        0
+ *  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
+ *
+ * If an exponent is all-1, and mantissa is all-0, then it is and INFINITY:
+ *  11111111|11110000|00000000|00000000|00000000|00000000|00000000|00000000
+ *
+ * If an exponent is all-1, and mantissa MSB is 1, it is a quiet NaN:
+ *  11111111|11111000|10000000|00000000|00000000|00000000|00000000|00000000
+ *
+ *  V7 NaN-packing:
+ *    sign and exponent is 0xfff
+ *    4 bits specify type (tag)
+ *    48 bits specify value
+ *
+ *  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
+ *   NaN marker |type|  48-bit placeholder for values: pointers, strings
+ *
+ * On 64-bit platforms, pointers are really 48 bit only, so they can fit,
+ * provided they are sign extended
+ */
+
 #define V7_TAG_OBJECT ((uint64_t) 0xFFFF << 48)
 #define V7_TAG_FOREIGN ((uint64_t) 0xFFFE << 48)
 #define V7_TAG_UNDEFINED ((uint64_t) 0xFFFD << 48)
