@@ -1096,7 +1096,7 @@ static void program_print(struct slre_prog *prog) {
 #endif
 
 int slre_compile(const char *pat, size_t pat_len, const char *flags,
-                 size_t fl_len, struct slre_prog **pr, int is_regex) {
+                 volatile size_t fl_len, struct slre_prog **pr, int is_regex) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
