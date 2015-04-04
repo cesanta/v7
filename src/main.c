@@ -41,20 +41,6 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void dump_ast(struct v7 *v7, const char *code, int binary) {
-  struct ast ast;
-
-  ast_init(&ast, 0);
-  if (parse(v7, &ast, code, 1) != V7_OK) {
-    fprintf(stderr, "%s\n", "parse error");
-  } else if (binary) {
-    fwrite(ast.mbuf.buf, ast.mbuf.len, 1, stdout);
-  } else {
-    ast_dump(stdout, &ast, 0);
-  }
-  ast_free(&ast);
-}
-
 static void print_error(struct v7 *v7, const char *f, val_t e) {
   char buf[512];
   char *s = v7_to_json(v7, e, buf, sizeof(buf));
@@ -73,7 +59,7 @@ int main(int argc, char *argv[]) {
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
-        dump_ast(v7, argv[i + 1], binary_ast);
+        v7_compile(stdout, v7, argv[i + 1], binary_ast);
       } else if (v7_exec(v7, &res, argv[i + 1]) != V7_OK) {
         print_error(v7, argv[i + 1], res);
         res = v7_create_undefined();
@@ -101,7 +87,7 @@ int main(int argc, char *argv[]) {
       if ((source_code = read_file(argv[i], &size)) == NULL) {
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
-        dump_ast(v7, source_code, binary_ast);
+        v7_compile(stdout, v7, source_code, binary_ast);
         free(source_code);
       }
     } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {

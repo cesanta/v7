@@ -633,7 +633,17 @@ V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
 }
 
-/* Dumps an AST to stdout. */
-V7_PRIVATE void ast_dump(FILE *fp, struct ast *a, ast_off_t pos) {
-  ast_dump_tree(fp, a, &pos, 0);
+void v7_compile(FILE *fp, struct v7 *v7, const char *code, int binary) {
+  struct ast ast;
+  ast_off_t pos = 0;
+
+  ast_init(&ast, 0);
+  if (parse(v7, &ast, code, 1) != V7_OK) {
+    fprintf(stderr, "%s\n", "parse error");
+  } else if (binary) {
+    fwrite(ast.mbuf.buf, ast.mbuf.len, 1, fp);
+  } else {
+    ast_dump_tree(fp, &ast, &pos, 0);
+  }
+  ast_free(&ast);
 }

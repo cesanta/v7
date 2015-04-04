@@ -1013,21 +1013,17 @@ static const char *test_parser(void) {
     ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
     want_ast_len = (size_t)(next_want_ast - current_want_ast - 1);
     ASSERT((fp = fopen("/tmp/got_ast", "w")) != NULL);
-    ast_free(&a);
 #if 0
       printf("-- Parsing \"%s\"\n", cases[i]);
 #endif
     ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
 
-#ifdef VERBOSE_AST
-    ast_dump(stdout, &a, 0);
-#endif
     if (want_ast_len == 0) {
       printf("Test case not found in %s:\n", want_ast_db);
-      ast_dump(stdout, &a, 0);
+      v7_compile(stdout, v7, cases[i], 0);
       abort();
     }
-    ast_dump(fp, &a, 0);
+    v7_compile(fp, v7, cases[i], 0);
     fclose(fp);
 
     ASSERT((fp = fopen("/tmp/got_ast", "r")) != NULL);
@@ -1057,7 +1053,7 @@ static const char *test_parser(void) {
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
     ast_free(&a);
     ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
-    ast_dump(fp, &a, 0);
+    v7_compile(fp, v7, cases[i], 0);
     fwrite("\0", 1, 1, fp);
   }
   fclose(fp);
