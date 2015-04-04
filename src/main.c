@@ -113,8 +113,11 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
 
   if (!show_ast) {
     char buf[2000];
-    v7_to_json(v7, res, buf, sizeof(buf));
-    printf("%s\n", buf);
+    char *s = v7_to_json(v7, res, buf, sizeof(buf));
+    printf("%s\n", s);
+    if (s != buf) {
+      free(s);
+    }
   }
 
   v7_destroy(v7);
