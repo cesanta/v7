@@ -33,7 +33,7 @@ endif
 
 IS_GCC:=$(shell echo "\#if defined(__GNUC__) && !defined(__clang__)\n\#error IS_GCC\n\#endif" | $(CC) -E - 2>&1 |grep -q IS_GCC && echo 1)
 
-PERL=$(shell perl -e 'print $$^X' 2>/dev/null)
-ifeq ("${PERL}","")
-	undefine PERL
+TMP_PERL:=$(shell perl -e 'print $$^X' 2>/dev/null)
+ifneq ("${TMP_PERL}","")
+	PERL:="${TMP_PERL}"
 endif
