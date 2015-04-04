@@ -81,7 +81,7 @@ CC_msan=$(CC_asan)
 CC_ubsan=$(CC_asan)
 CFLAGS_asan=-fsanitize=address -fcolor-diagnostics -fno-common -std=c99
 CFLAGS_msan=-fsanitize=memory -fcolor-diagnostics -fno-common -std=c99
-CFLAGS_ubsan=-fsanitize=undefined -fcolor-diagnostics -fno-common -std=c99
+CFLAGS_ubsan=-fsanitize=undefined
 CMD_asan=ASAN_SYMBOLIZER_PATH=$(LLVM_SYMBOLIZER) ASAN_OPTIONS=allocator_may_return_null=1,symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 $(CMD)
 CMD_msan=$(CMD_asan)
 
