@@ -22,6 +22,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <stddef.h> /* For size_t */
+#include <stdio.h>  /* For FILE */
 
 #define V7_VERSION "1.0"
 
@@ -96,6 +97,9 @@ unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
 int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
 v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
+
+void v7_compile(const char *code, int binary, FILE *fp);
+int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 
 #ifdef __cplusplus
 }
