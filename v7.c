@@ -22,6 +22,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <stddef.h> /* For size_t */
+#include <stdio.h>  /* For FILE */
 
 #define V7_VERSION "1.0"
 
@@ -96,6 +97,9 @@ unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
 int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
 v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
+
+void v7_compile(FILE *fp, const char *code, int binary);
+int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 
 #ifdef __cplusplus
 }
@@ -608,9 +612,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, size_t *);
 V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
-
 V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
-V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
 #if defined(__cplusplus)
 }
@@ -5464,9 +5466,28 @@ V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
 }
 
-/* Dumps an AST to stdout. */
-V7_PRIVATE void ast_dump(FILE *fp, struct ast *a, ast_off_t pos) {
-  ast_dump_tree(fp, a, &pos, 0);
+/*
+ * Generate Abstract Syntax Tree (AST) for the given JavaScript source code.
+ * If `binary` is 0, then generated AST is in text format, otherwise it is
+ * in the binary format. Binary AST is self-sufficient and can be executed
+ * by V7 with no extra input.
+ * `fp` must be an opened writable file stream to write compiled AST to.
+ */
+void v7_compile(FILE *fp, const char *code, int binary) {
+  struct ast ast;
+  struct v7 *v7 = v7_create();
+  ast_off_t pos = 0;
+
+  ast_init(&ast, 0);
+  if (parse(v7, &ast, code, 1) != V7_OK) {
+    fprintf(stderr, "%s\n", "parse error");
+  } else if (binary) {
+    fwrite(ast.mbuf.buf, ast.mbuf.len, 1, fp);
+  } else {
+    ast_dump_tree(fp, &ast, &pos, 0);
+  }
+  ast_free(&ast);
+  v7_destroy(v7);
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -11889,7 +11910,10 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 #endif
 
 #ifdef V7_EXE
+#define V7_MAIN
+#endif
 
+#ifdef V7_MAIN
 static void show_usage(char *argv[]) {
   fprintf(stderr, "V7 version %s (c) Cesanta Software, built on %s\n",
           V7_VERSION, __DATE__);
@@ -11920,20 +11944,6 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void dump_ast(struct v7 *v7, const char *code, int binary) {
-  struct ast ast;
-
-  ast_init(&ast, 0);
-  if (parse(v7, &ast, code, 1) != V7_OK) {
-    fprintf(stderr, "%s\n", "parse error");
-  } else if (binary) {
-    fwrite(ast.mbuf.buf, ast.mbuf.len, 1, stdout);
-  } else {
-    ast_dump(stdout, &ast, 0);
-  }
-  ast_free(&ast);
-}
-
 static void print_error(struct v7 *v7, const char *f, val_t e) {
   char buf[512];
   char *s = v7_to_json(v7, e, buf, sizeof(buf));
@@ -11943,16 +11953,25 @@ static void print_error(struct v7 *v7, const char *f, val_t e) {
   }
 }
 
-int main(int argc, char *argv[]) {
+/*
+ * V7 executable main function.
+ * `init_func()` is an optional intialization function, aimed to export any
+ * extra functionality into vanilla v7 engine.
+ */
+int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   struct v7 *v7 = v7_create();
   int i, show_ast = 0, binary_ast = 0;
   val_t res = v7_create_undefined();
+
+  if (init_func != NULL) {
+    init_func(v7);
+  }
 
   /* Execute inline code */
   for (i = 1; i < argc && argv[i][0] == '-'; i++) {
     if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) {
       if (show_ast) {
-        dump_ast(v7, argv[i + 1], binary_ast);
+        v7_compile(stdout, argv[i + 1], binary_ast);
       } else if (v7_exec(v7, &res, argv[i + 1]) != V7_OK) {
         print_error(v7, argv[i + 1], res);
         res = v7_create_undefined();
@@ -11980,7 +11999,7 @@ int main(int argc, char *argv[]) {
       if ((source_code = read_file(argv[i], &size)) == NULL) {
         fprintf(stderr, "Cannot read [%s]\n", argv[i]);
       } else {
-        dump_ast(v7, source_code, binary_ast);
+        v7_compile(stdout, source_code, binary_ast);
         free(source_code);
       }
     } else if (v7_exec_file(v7, &res, argv[i]) != V7_OK) {
@@ -11997,6 +12016,12 @@ int main(int argc, char *argv[]) {
 
   v7_destroy(v7);
   return EXIT_SUCCESS;
+}
+#endif
+
+#ifdef V7_EXE
+int main(int argc, char *argv[]) {
+  return v7_main(argc, argv, NULL);
 }
 #endif
 /*
