@@ -17,6 +17,7 @@ test:
     - make v7.c difftest
     - sudo docker run -v $PWD/..:/cesanta -t -i cesanta/v7_test w
     - make run
+    - make -C tests test_ubsan && ./tests/unit_test_ubsan
     - make -C benchmark build || echo FAILED
   post:
     - tests/update_hist_ecma_report.sh

@@ -25,6 +25,7 @@
 # - test_asan: run with AddressSanitizer
 # - test_msan: run with MemorySanitizer (linux only)
 # - test_valgrind: run with valgrind
+# - test_ubsan: compile with -fsanitize=undefined
 
 SRC = $(realpath $(PROG).c)
 
@@ -37,7 +38,7 @@ PEDANTIC=$(shell gcc --version 2>/dev/null | grep -q clang && echo -pedantic)
 # TODO(mkm) This file should be the same file used in fossa
 # and we should keep it in sync with subtree or something.
 DIALECTS=cxx ansi c99 c11
-SPECIALS=asan msan gcov valgrind m32
+SPECIALS=asan msan gcov valgrind m32 ubsan
 
 # Each test target might require either a different compiler name
 # a compiler flag, or a wrapper to be invoked before executing the test
@@ -77,8 +78,10 @@ SOURCES_m32=$(addprefix $(SRC_DIR)/, $(SOURCES))
 
 CC_asan=$(CLANG)
 CC_msan=$(CC_asan)
+CC_ubsan=$(CC_asan)
 CFLAGS_asan=-fsanitize=address -fcolor-diagnostics -fno-common -std=c99
 CFLAGS_msan=-fsanitize=memory -fcolor-diagnostics -fno-common -std=c99
+CFLAGS_ubsan=-fsanitize=undefined -fcolor-diagnostics -fno-common -std=c99
 CMD_asan=ASAN_SYMBOLIZER_PATH=$(LLVM_SYMBOLIZER) ASAN_OPTIONS=allocator_may_return_null=1,symbolize=1,detect_stack_use_after_return=1,strict_init_order=1 $(CMD)
 CMD_msan=$(CMD_asan)
 
