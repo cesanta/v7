@@ -188,9 +188,7 @@ V7_PRIVATE void ast_insert_inlined_node(struct ast *, ast_off_t, enum ast_tag,
 
 V7_PRIVATE char *ast_get_inlined_data(struct ast *, ast_off_t, size_t *);
 V7_PRIVATE void ast_get_num(struct ast *, ast_off_t, double *);
-
 V7_PRIVATE void ast_skip_tree(struct ast *, ast_off_t *);
-V7_PRIVATE void ast_dump(FILE *, struct ast *, ast_off_t);
 
 #if defined(__cplusplus)
 }

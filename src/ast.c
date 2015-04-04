@@ -633,7 +633,26 @@ V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
 }
 
-/* Dumps an AST to stdout. */
-V7_PRIVATE void ast_dump(FILE *fp, struct ast *a, ast_off_t pos) {
-  ast_dump_tree(fp, a, &pos, 0);
+/*
+ * Generate Abstract Syntax Tree (AST) for the given JavaScript source code.
+ * If `binary` is 0, then generated AST is in text format, otherwise it is
+ * in the binary format. Binary AST is self-sufficient and can be executed
+ * by V7 with no extra input.
+ * `fp` must be an opened writable file stream to write compiled AST to.
+ */
+void v7_compile(const char *code, int binary, FILE *fp) {
+  struct ast ast;
+  struct v7 *v7 = v7_create();
+  ast_off_t pos = 0;
+
+  ast_init(&ast, 0);
+  if (parse(v7, &ast, code, 1) != V7_OK) {
+    fprintf(stderr, "%s\n", "parse error");
+  } else if (binary) {
+    fwrite(ast.mbuf.buf, ast.mbuf.len, 1, fp);
+  } else {
+    ast_dump_tree(fp, &ast, &pos, 0);
+  }
+  ast_free(&ast);
+  v7_destroy(v7);
 }
