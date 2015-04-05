@@ -19,7 +19,9 @@
 #ifndef V7_HEADER_INCLUDED
 #define V7_HEADER_INCLUDED
 
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
+#endif
 
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For FILE */
@@ -68,6 +70,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *, size_t, int);
 v7_val_t v7_create_regexp(struct v7 *, const char *, size_t, const char *,
                           size_t);
 v7_val_t v7_create_foreign(void *);
+v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int nargs);
 
 int v7_is_object(v7_val_t);
 int v7_is_function(v7_val_t);
@@ -88,10 +91,22 @@ const char *v7_to_string(struct v7 *, v7_val_t *, size_t *);
 
 v7_val_t v7_get_global_object(struct v7 *);
 v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
-int v7_set(struct v7 *v7, v7_val_t obj, const char *, size_t, v7_val_t val);
 char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);
 int v7_is_true(struct v7 *v7, v7_val_t v);
 v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
+void v7_throw(struct v7 *, const char *, ...);
+
+#define V7_PROPERTY_READ_ONLY 1
+#define V7_PROPERTY_DONT_ENUM 2
+#define V7_PROPERTY_DONT_DELETE 4
+#define V7_PROPERTY_HIDDEN 8
+#define V7_PROPERTY_GETTER 16
+#define V7_PROPERTY_SETTER 32
+int v7_set(struct v7 *v7, v7_val_t obj, const char *, size_t,
+           unsigned int attrs, v7_val_t val);
+#define v7_set_method(v7, obj, name, func)                         \
+  v7_set((v7), (obj), (name), strlen(name), V7_PROPERTY_DONT_ENUM, \
+         v7_create_cfunction_object((v7), (func), -1))
 
 unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
@@ -914,9 +929,6 @@ struct v7 {
   val_t number_prototype;
   val_t date_prototype;
   val_t function_prototype;
-#ifndef V7_DISABLE_SOCKETS
-  val_t socket_prototype;
-#endif
 
   /*
    * Stack of execution contexts.
@@ -1090,14 +1102,7 @@ struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
   val_t name;               /* Property name (a string) */
   val_t value;              /* Property value */
-
   unsigned int attributes;
-#define V7_PROPERTY_READ_ONLY 1
-#define V7_PROPERTY_DONT_ENUM 2
-#define V7_PROPERTY_DONT_DELETE 4
-#define V7_PROPERTY_HIDDEN 8
-#define V7_PROPERTY_GETTER 16
-#define V7_PROPERTY_SETTER 32
 };
 
 /*
@@ -1199,14 +1204,9 @@ V7_PRIVATE void init_json(struct v7 *v7);
 V7_PRIVATE void init_date(struct v7 *v7);
 V7_PRIVATE void init_function(struct v7 *v7);
 V7_PRIVATE void init_stdlib(struct v7 *v7);
-V7_PRIVATE void init_socket(struct v7 *v7);
-V7_PRIVATE void init_os(struct v7 *v7);
-V7_PRIVATE void init_crypto(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
-V7_PRIVATE v7_val_t
-v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int);
-V7_PRIVATE v7_val_t
+V7_PRIVATE val_t
 v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t, int);
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,
@@ -3780,7 +3780,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     for (i = 2; i < num_args; i++) {
       char key[20];
       size_t n = snprintf(key, sizeof(key), "%ld", arg0 + i - 2);
-      v7_set(v7, this_obj, key, n, v7_array_get(v7, args, i));
+      v7_set(v7, this_obj, key, n, 0, v7_array_get(v7, args, i));
     }
   }
 
@@ -6130,11 +6130,12 @@ int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
   return -1;
 }
 
-int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
+int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
+           unsigned int attrs, val_t val) {
   struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes,
-                           val);
+    return v7_set_property(v7, obj, name, len,
+                           p == NULL ? attrs : p->attributes, val);
   }
   return -1;
 }
@@ -6231,7 +6232,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-V7_PRIVATE v7_val_t
+v7_val_t
 v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -6433,7 +6434,7 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
     } else {
       char buf[20];
       int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
-      res = v7_set(v7, arr, buf, n, v);
+      res = v7_set(v7, arr, buf, n, 0, v);
     }
   }
   return res;
@@ -8135,6 +8136,14 @@ V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
   throw_value(v7, create_exception(v7, ex, v7->error_msg));
 } /* LCOV_EXCL_LINE */
 
+void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
+}
+
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   val_t f;
   if (!v7_is_object(v)) {
@@ -9132,7 +9141,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
     v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS], args);
 #else
-    v7_set(v7, frame, "arguments", 9, args);
+    v7_set(v7, frame, "arguments", 9, 0, args);
 #endif
   }
 
@@ -9654,7 +9663,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
     v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
              arguments);
 #else
-    v7_set(v7, frame, "arguments", 9, arguments);
+    v7_set(v7, frame, "arguments", 9, 0, arguments);
 #endif
   }
 
@@ -11680,8 +11689,8 @@ V7_PRIVATE void init_object(struct v7 *v7) {
           "}");
 
   object = v7_get(v7, v7->global_object, "Object", 6);
-  v7_set(v7, object, "prototype", 9, v7->object_prototype);
-  v7_set(v7, v7->object_prototype, "constructor", 11, object);
+  v7_set(v7, object, "prototype", 9, 0, v7->object_prototype);
+  v7_set(v7, v7->object_prototype, "constructor", 11, 0, object);
 
   set_cfunc_obj_prop_n(v7, v7->object_prototype, "toString", Obj_toString, 0);
   set_cfunc_prop(v7, object, "getPrototypeOf", Obj_getPrototypeOf);
@@ -13124,13 +13133,13 @@ V7_PRIVATE void init_function(struct v7 *v7) {
  */
 
 
-V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
+V7_PRIVATE v7_val_t Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
 
   (void) this_obj;
   for (i = 0; i < num_args; i++) {
-    val_t arg = v7_array_get(v7, args, i);
+    v7_val_t arg = v7_array_get(v7, args, i);
     if (v7_is_string(arg)) {
       size_t n;
       const char *s = v7_to_string(v7, &arg, &n);
@@ -13148,8 +13157,8 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_null();
 }
 
-V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
-  val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
+V7_PRIVATE v7_val_t Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  v7_val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
   (void) t;
   if (arg != V7_UNDEFINED) {
     char buf[100], *p;
@@ -13167,123 +13176,12 @@ V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args) {
   return res;
 }
 
-static val_t Std_exit(struct v7 *v7, val_t t, val_t args) {
+static v7_val_t Std_exit(struct v7 *v7, v7_val_t t, v7_val_t args) {
   int exit_code = arg_long(v7, args, 0, 0);
   (void) t;
   exit(exit_code);
   return v7_create_undefined();
 }
-
-static void base64_encode(const unsigned char *src, int src_len, char *dst) {
-  V7_PRIVATE const char *b64 =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  int i, j, a, b, c;
-
-  for (i = j = 0; i < src_len; i += 3) {
-    a = src[i];
-    b = i + 1 >= src_len ? 0 : src[i + 1];
-    c = i + 2 >= src_len ? 0 : src[i + 2];
-
-    dst[j++] = b64[a >> 2];
-    dst[j++] = b64[((a & 3) << 4) | (b >> 4)];
-    if (i + 1 < src_len) {
-      dst[j++] = b64[(b & 15) << 2 | (c >> 6)];
-    }
-    if (i + 2 < src_len) {
-      dst[j++] = b64[c & 63];
-    }
-  }
-  while (j % 4 != 0) {
-    dst[j++] = '=';
-  }
-  dst[j++] = '\0';
-}
-
-/* Convert one byte of encoded base64 input stream to 6-bit chunk */
-static unsigned char from_b64(unsigned char ch) {
-  /* Inverse lookup map */
-  V7_PRIVATE const unsigned char tab[128] = {
-      255, 255, 255, 255, 255, 255, 255, 255, /* 0 */
-      255, 255, 255, 255, 255, 255, 255, 255, /* 8 */
-      255, 255, 255, 255, 255, 255, 255, 255, /* 16 */
-      255, 255, 255, 255, 255, 255, 255, 255, /* 24 */
-      255, 255, 255, 255, 255, 255, 255, 255, /* 32 */
-      255, 255, 255, 62,  255, 255, 255, 63,  /* 40 */
-      52,  53,  54,  55,  56,  57,  58,  59,  /* 48 */
-      60,  61,  255, 255, 255, 200, 255, 255, /* 56 '=' is 200, on index 61 */
-      255, 0,   1,   2,   3,   4,   5,   6,   /* 64 */
-      7,   8,   9,   10,  11,  12,  13,  14,  /* 72 */
-      15,  16,  17,  18,  19,  20,  21,  22,  /* 80 */
-      23,  24,  25,  255, 255, 255, 255, 255, /* 88 */
-      255, 26,  27,  28,  29,  30,  31,  32,  /* 96 */
-      33,  34,  35,  36,  37,  38,  39,  40,  /* 104 */
-      41,  42,  43,  44,  45,  46,  47,  48,  /* 112 */
-      49,  50,  51,  255, 255, 255, 255, 255, /* 120 */
-  };
-  return tab[ch & 127];
-}
-
-static void base64_decode(const unsigned char *s, int len, char *dst) {
-  unsigned char a, b, c, d;
-  while (len >= 4 && (a = from_b64(s[0])) != 255 &&
-         (b = from_b64(s[1])) != 255 && (c = from_b64(s[2])) != 255 &&
-         (d = from_b64(s[3])) != 255) {
-    if (a == 200 || b == 200) break; /* '=' can't be there */
-    *dst++ = a << 2 | b >> 4;
-    if (c == 200) break;
-    *dst++ = b << 4 | c >> 2;
-    if (d == 200) break;
-    *dst++ = c << 6 | d;
-    s += 4;
-    len -= 4;
-  }
-  *dst = 0;
-}
-
-static val_t b64_transform(struct v7 *v7, val_t this_obj, val_t args,
-                           void(func)(const unsigned char *, int, char *),
-                           double mult) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  val_t res = v7_create_undefined();
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t n;
-    const char *s = v7_to_string(v7, &arg0, &n);
-    char *buf = (char *) malloc(n * mult + 2);
-    if (buf != NULL) {
-      func((const unsigned char *) s, (int) n, buf);
-      res = v7_create_string(v7, buf, strlen(buf), 1);
-      free(buf);
-    }
-  }
-
-  return res;
-}
-
-static val_t Std_base64_decode(struct v7 *v7, val_t this_obj, val_t args) {
-  return b64_transform(v7, this_obj, args, base64_decode, 0.75);
-}
-
-static val_t Std_base64_encode(struct v7 *v7, val_t this_obj, val_t args) {
-  return b64_transform(v7, this_obj, args, base64_encode, 1.5);
-}
-
-#ifndef V7_NO_FS
-static val_t Std_load(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  val_t res = v7_create_undefined();
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t n;
-    const char *s = v7_to_string(v7, &arg0, &n);
-    v7_exec_file(v7, &res, s);
-  }
-
-  return res;
-}
-#endif
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
   /*
@@ -13301,20 +13199,10 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->this_object = v7->global_object;
   v7->date_prototype = v7_create_object(v7);
   v7->function_prototype = v7_create_object(v7);
-#ifndef V7_DISABLE_SOCKETS
-  v7->socket_prototype = v7_create_object(v7);
-#endif
 
   set_cfunc_prop(v7, v7->global_object, "print", Std_print);
   set_cfunc_prop(v7, v7->global_object, "eval", Std_eval);
   set_cfunc_prop(v7, v7->global_object, "exit", Std_exit);
-  set_cfunc_prop(v7, v7->global_object, "base64_encode", Std_base64_encode);
-  set_cfunc_prop(v7, v7->global_object, "base64_decode", Std_base64_decode);
-
-#ifndef V7_NO_FS
-  /* TODO(lsm): move to a File object */
-  set_cfunc_prop(v7, v7->global_object, "load", Std_load);
-#endif
 
   v7_set_property(v7, v7->global_object, "Infinity", 8, 0,
                   v7_create_number(INFINITY));
@@ -13336,15 +13224,8 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 #if V7_ENABLE__Date
   init_date(v7);
 #endif
-#ifndef V7_DISABLE_SOCKETS
-  init_socket(v7);
-#endif
   init_function(v7);
   init_js_stdlib(v7);
-  init_os(v7);
-#ifndef V7_DISABLE_CRYPTO
-  init_crypto(v7);
-#endif
 }
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -13588,1369 +13469,3 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 }
 
 #endif /* V7_ENABLE__RegExp */
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-
-#ifndef V7_DISABLE_SOCKETS
-
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-#define close(x) closesocket(x)
-#ifdef _MSC_VER
-#pragma comment(lib, "ws2_32.lib")
-#endif
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <signal.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#endif
-
-#ifdef __WATCOM__
-#define SOMAXCONN 128
-#endif
-
-#define RECVTYPE_STRING 1
-#define RECVTYPE_RAW 2
-
-#ifndef RECV_BUF_SIZE
-#define RECV_BUF_SIZE 1024
-#endif
-
-#ifndef ADDRESS_BUF_SIZE
-#define ADDRESS_BUF_SIZE 100
-#endif
-
-union socket_address {
-  struct sockaddr sa;
-  struct sockaddr_in sin4;
-#ifdef V7_ENABLE_IPV6
-  struct sockaddr_in6 sin6;
-#endif
-};
-
-struct socket_internal {
-  int socket;
-  int recvtype;
-  int family;
-};
-
-static int get_sockerror() {
-#ifdef _WIN32
-  return WSAGetLastError();
-#else
-  return errno;
-#endif
-}
-
-/*
- * Error codes will be different on diferent OS
- * Redefining a couple of them and exposing as Socket.XXX constants
- * TODO(alashkin): think about the rest of errors
- */
-#define ERR_SOCKET_CLOSED 30 /* Darwin's ENOTSOCK */
-#define ERR_INVALID_ARG 22   /* Darwin's EINVAL */
-#define ERR_BAD_ADDRESS 43   /* Darwin's EPROTONOSUPPORT */
-
-val_t Socket_set_last_error(struct v7 *v7, val_t obj, int err) {
-  val_t err_val = v7_create_number(err);
-  v7_set_property(v7, obj, "errno", 5, V7_PROPERTY_READ_ONLY, err_val);
-  return err_val;
-}
-
-/*
- * Socket(family, type, recvtype)
- * Defaults: family = AF_INET, type = SOCK_STREAM,
- * recvtype = STRING
- */
-static v7_val_t Socket_ctor(struct v7 *v7, val_t this_obj, val_t args) {
-  long arg_count;
-  struct socket_internal si;
-  int type;
-
-  if (!v7_is_object(this_obj) || this_obj == v7->global_object) {
-    throw_exception(v7, TYPE_ERROR, "Socket ctor called as function");
-  }
-
-  memset(&si, 0, sizeof(si));
-
-  arg_count = v7_array_length(v7, args);
-
-  si.family = AF_INET;
-  type = SOCK_STREAM;
-  si.recvtype = RECVTYPE_STRING;
-  si.socket = -1;
-
-  switch (arg_count) {
-    case 3:
-      si.recvtype = i_as_num(v7, v7_array_get(v7, args, 2));
-    case 2:
-      type = i_as_num(v7, v7_array_get(v7, args, 1));
-    case 1:
-      si.family = i_as_num(v7, v7_array_get(v7, args, 0));
-  }
-
-  /* checks only recvtype and let socket() return the rest of errors */
-  if (si.recvtype != RECVTYPE_STRING && si.recvtype != RECVTYPE_RAW) {
-    Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-  } else {
-    si.socket = socket(si.family, type, 0);
-  }
-
-  if (si.socket >= 0) {
-    val_t si_val;
-    struct socket_internal *psi =
-        (struct socket_internal *) malloc(sizeof(*psi));
-    memcpy(psi, &si, sizeof(*psi));
-
-    si_val = v7_create_foreign(psi);
-    v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN, si_val);
-    Socket_set_last_error(v7, this_obj, 0);
-  } else {
-    Socket_set_last_error(v7, this_obj, get_sockerror());
-  }
-
-  return this_obj;
-}
-
-static struct socket_internal *Socket_get_si(struct v7 *v7, val_t this_obj) {
-  struct socket_internal *si = NULL;
-  struct v7_property *si_prop =
-      v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
-
-  si = (struct socket_internal *) v7_to_foreign(
-      v7_property_value(v7, this_obj, si_prop));
-
-  return si;
-}
-
-#ifdef V7_ENABLE_GETADDRINFO
-static int Socket_getsockaddr(int *family, char *addr, void *dest) {
-  struct addrinfo *ai;
-  int retval = 0;
-
-  if (getaddrinfo(addr, 0, 0, &ai) != 0) {
-    return -1;
-  }
-
-  *family = ai->ai_family;
-
-  switch (*family) {
-    case AF_INET:
-      memcpy(dest, &((struct sockaddr_in *) ai[0].ai_addr)->sin_addr,
-             sizeof(struct in_addr));
-      break;
-#ifdef V7_ENABLE_IPV6
-    case AF_INET6:
-      memcpy(dest, &((struct sockaddr_in6 *) ai[0].ai_addr)->sin6_addr,
-             sizeof(struct in6_addr));
-      break;
-#endif
-    default:
-      retval = -1;
-      break;
-  }
-
-  freeaddrinfo(ai);
-
-  return retval;
-}
-#else
-static int Socket_getsockaddr(int *family, char *addr, void *dest) {
-  struct hostent *host = gethostbyname(addr);
-  if (host == NULL || (host->h_addrtype != AF_INET
-#ifdef V7_ENABLE_IPV6
-                       && host->h_addrtype != AF_INET6
-#endif
-                       )) {
-    return -1;
-  }
-  *family = host->h_addrtype;
-  memcpy(dest, host->h_addr_list[0],
-         *family == AF_INET ? sizeof(struct in_addr) : sizeof(struct in6_addr));
-
-  return 0;
-}
-#endif
-
-static int Socket_sa_compose(union socket_address *sa, int default_family,
-                             char *addr, int port, int *size) {
-  uint8_t addr_bin[sizeof(struct in6_addr)];
-  int family = default_family;
-  if (addr != NULL && Socket_getsockaddr(&family, addr, addr_bin) != 0) {
-    return -1;
-  }
-
-  memset(sa, 0, sizeof(*sa));
-
-  sa->sa.sa_family = family;
-
-  switch (family) {
-    case AF_INET: {
-      sa->sin4.sin_port = htons(port);
-      if (addr == NULL) {
-        sa->sin4.sin_addr.s_addr = INADDR_ANY;
-      } else {
-        memcpy(&sa->sin4.sin_addr, addr_bin, sizeof(sa->sin4.sin_addr));
-      }
-      *size = sizeof(sa->sin4);
-      break;
-    }
-#ifdef V7_ENABLE_IPV6
-    case AF_INET6: {
-      sa->sin6.sin6_port = htons(port);
-      if (addr == NULL) {
-        sa->sin6.sin6_addr = in6addr_any;
-      } else {
-        memcpy(&sa->sin6.sin6_addr, addr_bin, sizeof(sa->sin6.sin6_addr));
-      }
-      *size = sizeof(sa->sin6);
-      break;
-    }
-#endif
-    default:
-      return -1;
-  }
-
-  return 0;
-}
-
-int32_t Socket_get_port(struct v7 *v7, val_t port_val) {
-  double port_number = i_as_num(v7, port_val);
-
-  if (isnan(port_number) || port_number < 0 || port_number > 0xFFFF) {
-    return -1;
-  }
-  return (uint16_t) port_number;
-}
-
-static int Socket_get_addrCstr(struct v7 *v7, val_t addr_val, char *buf,
-                               size_t buf_size) {
-  size_t addr_size = 0;
-  const char *addr_pointer = NULL;
-
-  if (v7_is_string(addr_val)) {
-    addr_pointer = v7_to_string(v7, &addr_val, &addr_size);
-  }
-  if (addr_pointer == NULL || addr_size > buf_size) {
-    return -1;
-  }
-  strncpy(buf, addr_pointer, addr_size);
-
-  return 0;
-}
-
-/*
- * Associates a local address with a socket.
- * JS: var s = new Socket(); s.bind(80) or s.bind(80, "127.0.0.1")
- * TODO(alashkin): add address as second parameter
- */
-static v7_val_t Socket_bind(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  int32_t port;
-  union socket_address sa;
-  int sa_size;
-  char addr[ADDRESS_BUF_SIZE] = {0};
-  char *addr_ptr = NULL;
-
-  if (si == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-  }
-
-  if (v7_array_length(v7, args) == 2) {
-    if ((Socket_get_addrCstr(v7, v7_array_get(v7, args, 1), addr,
-                             sizeof(addr)) < 0)) {
-      return Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-    }
-
-    addr_ptr = addr;
-  }
-
-  if ((port = Socket_get_port(v7, v7_array_get(v7, args, 0))) < 0 ||
-      Socket_sa_compose(&sa, si->family, addr_ptr, port, &sa_size) < 0) {
-    return Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-  }
-
-  if (bind(si->socket, (struct sockaddr *) &sa, sa_size) != 0) {
-    return Socket_set_last_error(v7, this_obj, get_sockerror());
-  }
-
-  return Socket_set_last_error(v7, this_obj, 0);
-}
-
-/*
- * Places a socket in a state in which it is listening
- * for an incoming connection.
- * JS: var x = new Socket().... x.listen()
- */
-static v7_val_t Socket_listen(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  (void) args;
-
-  if (si == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-  }
-
-  if (listen(si->socket, SOMAXCONN) != 0) {
-    return Socket_set_last_error(v7, this_obj, get_sockerror());
-  }
-
-  return Socket_set_last_error(v7, this_obj, 0);
-}
-
-static uint8_t *Socket_JSarray_to_Carray(struct v7 *v7, val_t arr,
-                                         size_t *buf_size) {
-  uint8_t *retval, *ptr;
-  unsigned long i, elem_count = v7_array_length(v7, arr);
-  /* Support byte array only */
-  *buf_size = elem_count * sizeof(uint8_t);
-  retval = ptr = (uint8_t *) malloc(*buf_size);
-
-  for (i = 0; i < elem_count; i++) {
-    double elem = i_as_num(v7, v7_array_get(v7, arr, i));
-    if (isnan(elem) || elem < 0 || elem > 0xFF) {
-      break;
-    }
-    *ptr = (uint8_t) elem;
-    ptr++;
-  }
-
-  if (i != elem_count) {
-    free(retval);
-    return NULL;
-  }
-
-  return retval;
-}
-
-static uint8_t *Socket_get_sendbuf(struct v7 *v7, val_t buf_val,
-                                   size_t *buf_size, int *free_buf) {
-  uint8_t *retval = NULL;
-
-  if (v7_is_string(buf_val)) {
-    retval = (uint8_t *) v7_to_string(v7, &buf_val, buf_size);
-    *free_buf = 0;
-  } else if (is_prototype_of(v7, buf_val, v7->array_prototype)) {
-    retval = Socket_JSarray_to_Carray(v7, buf_val, buf_size);
-    *free_buf = 1;
-  }
-
-  return retval;
-}
-
-/*
- * Sends data on a connected socket.
- * JS: Socket.send(buf)
- * Ex: var x = new Socket().... x.send("Hello, world!")
- */
-static v7_val_t Socket_send(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  uint8_t *buf = NULL, *ptr = NULL;
-  size_t buf_size = 0;
-  long bytes_sent = 0;
-  int free_buf = 0;
-
-  if (si == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-  }
-
-  if ((ptr = buf = Socket_get_sendbuf(v7, v7_array_get(v7, args, 0), &buf_size,
-                                      &free_buf)) == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-  }
-
-  while (buf_size != 0) {
-    bytes_sent = send(si->socket, ptr, buf_size, 0);
-    if (bytes_sent < 0) {
-      break;
-    }
-
-    buf_size -= bytes_sent;
-    ptr += bytes_sent;
-  }
-
-  if (free_buf) {
-    free(buf);
-  }
-
-  if (buf_size != 0) {
-    return Socket_set_last_error(v7, this_obj, get_sockerror());
-  }
-
-  return Socket_set_last_error(v7, this_obj, 0);
-}
-
-/*
- * Establishes a connection.
- * JS: Socket.connect(addr, port)
- * Ex: var x = new Socket(); x.connect("www.hello.com",80);
- */
-static v7_val_t Socket_connect(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  char addr[ADDRESS_BUF_SIZE] = {0};
-  union socket_address sa;
-  int sa_size;
-  int32_t port;
-
-  if (si == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-  }
-
-  if ((Socket_get_addrCstr(v7, v7_array_get(v7, args, 0), /* */
-                           addr, sizeof(addr)) != 0) ||
-      (port = Socket_get_port(v7, v7_array_get(v7, args, 1))) < 0 ||
-      Socket_sa_compose(&sa, si->family, addr, port, &sa_size) < 0) {
-    return Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-  }
-
-  if (connect(si->socket, (struct sockaddr *) &sa, sa_size) != 0) {
-    return Socket_set_last_error(v7, this_obj, get_sockerror());
-  }
-
-  return Socket_set_last_error(v7, this_obj, 0);
-}
-
-/*
- * Closes a socket.
- * JS: Socket.close();
- * Ex: var x = new Socket(); .... x.close()
- */
-static v7_val_t Socket_close(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  (void) args;
-
-  if (si == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-  }
-
-  close(si->socket);
-  free(si);
-
-  v7_set_property(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN,
-                  v7_create_undefined());
-
-  return Socket_set_last_error(v7, this_obj, 0);
-}
-
-/*
- * Sends data to a specific destination.
- * JS: Socket.SendTo(address, port, buf)
- * Ex: var x = new Socket().... x.sendto("www.hello.com", 80, "Hello, world!")
- */
-static v7_val_t Socket_sendto(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  char addr[ADDRESS_BUF_SIZE] = {0};
-  int32_t port;
-  union socket_address sa;
-  int sa_size;
-  uint8_t *buf = NULL, *ptr;
-  size_t buf_size = 0;
-  long bytes_sent = 0;
-  int free_buf = 0;
-
-  if (si == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-  }
-
-  if (Socket_get_addrCstr(v7, v7_array_get(v7, args, 0), /* */
-                          addr, sizeof(addr)) != 0 ||
-      (port = Socket_get_port(v7, v7_array_get(v7, args, 1))) < 0 ||
-      Socket_sa_compose(&sa, si->family, addr, port, &sa_size) < 0 ||
-      (buf = ptr = Socket_get_sendbuf(v7, v7_array_get(v7, args, 2), &buf_size,
-                                      &free_buf)) == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-  }
-
-  while (buf_size != 0) {
-    bytes_sent =
-        sendto(si->socket, ptr, buf_size, 0, (struct sockaddr *) &sa, sa_size);
-
-    if (bytes_sent < 0) {
-      break;
-    }
-
-    buf_size -= bytes_sent;
-    ptr += bytes_sent;
-  }
-
-  if (free_buf) {
-    free(buf);
-  }
-
-  if (buf_size != 0) {
-    return Socket_set_last_error(v7, this_obj, get_sockerror());
-  }
-
-  return Socket_set_last_error(v7, this_obj, 0);
-}
-
-static int Socket_get_recvtype(struct socket_internal *si, struct v7 *v7,
-                               val_t args) {
-  int recvtype = -1;
-  if (v7_array_length(v7, args) > 0) {
-    double rt = i_as_num(v7, v7_array_get(v7, args, 0));
-    if (isnan(rt) || (rt != RECVTYPE_STRING && rt != RECVTYPE_RAW)) {
-      return -1;
-    }
-    recvtype = rt;
-  } else {
-    recvtype = si->recvtype;
-  }
-
-  return recvtype;
-}
-
-static val_t Socket_get_retdata(struct v7 *v7, int recvtype, char *buf,
-                                size_t buf_size) {
-  if (recvtype == RECVTYPE_STRING) {
-    return v7_create_string(v7, buf, buf_size, 1);
-  } else if (recvtype == RECVTYPE_RAW) {
-    size_t i;
-    val_t ret_arr = v7_create_array(v7);
-    char *ptr = buf;
-    for (i = 0; i < buf_size; i++) {
-      v7_array_push(v7, ret_arr, v7_create_number((uint8_t) *ptr));
-      ptr++;
-    }
-    return ret_arr;
-  } else {
-    return v7_create_string(v7, "", 0, 1);
-  }
-}
-
-/*
- * Receives data from a connected socket or a bound connectionless socket.
- * JS: Socket.recv(recvtype)
- * Ex: var x = new Socket() ... var r = s.recv()
- */
-static v7_val_t Socket_recv(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  char recv_buf[RECV_BUF_SIZE];
-  long bytes_received;
-  int recvtype;
-
-  /*
-   * we don't know recttype here, so - trying to return STRING
-   * This may cause an exception
-   * TODO(alashkin): think how to fix
-   */
-  if (si == NULL) {
-    Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-    return v7_create_string(v7, "", 0, 1);
-  }
-
-  if ((recvtype = Socket_get_recvtype(si, v7, args)) < 0) {
-    Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-    return v7_create_string(v7, "", 0, 1);
-  }
-
-  if ((bytes_received = recv(si->socket, recv_buf, sizeof(recv_buf), 0)) < 0) {
-    Socket_set_last_error(v7, this_obj, get_sockerror());
-    return Socket_get_retdata(v7, recvtype, recv_buf, 0);
-  }
-
-  Socket_set_last_error(v7, this_obj, 0);
-  return Socket_get_retdata(v7, recvtype, recv_buf, bytes_received);
-}
-
-static int Socket_sa_split(union socket_address *sa, int *family, char *addr,
-                           size_t addr_size, int *port) {
-  switch (sa->sa.sa_family) {
-    case AF_INET: {
-      *family = sa->sin4.sin_family;
-      *port = ntohs(sa->sin4.sin_port);
-      strncpy(addr, inet_ntoa(sa->sin4.sin_addr), addr_size);
-      break;
-    }
-#ifdef V7_ENABLE_IPV6
-    case AF_INET6:
-      *family = sa->sin6.sin6_family;
-      *port = ntohs(sa->sin6.sin6_port);
-      inet_ntop(AF_INET6, (void *) &sa->sin6.sin6_addr, addr,
-                (unsigned int) addr_size);
-      break;
-#endif
-    default:
-      return -1;
-  }
-
-  return 0;
-}
-
-/*
- * Object Socket.RecvFrom([recvtype])
- * Receives a datagram and the source address.
- * Returns Object with the following properties:
- * Object.data
- * String or Array, depends on recvtype parameter
- * Object.src.address : originator’s address
- * Object.src.port: originator’s port
- * Object.src.family : address family
- */
-static v7_val_t Socket_recvfrom(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj);
-  char recv_buf[RECV_BUF_SIZE] = {0};
-  long bytes_received;
-  int recvtype = RECVTYPE_STRING, family = 0, port = 0;
-  union socket_address sa;
-  unsigned int sa_len = sizeof(sa);
-  val_t ret_obj, src_val, ret_data;
-  char address[100] = {0};
-
-  if (si == NULL) {
-    Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-    return v7_create_string(v7, "", 0, 1);
-  }
-  if ((recvtype = Socket_get_recvtype(si, v7, args)) < 0) {
-    Socket_set_last_error(v7, this_obj, ERR_INVALID_ARG);
-    return v7_create_string(v7, "", 0, 1);
-  }
-
-  if ((bytes_received = recvfrom(si->socket, recv_buf, sizeof(recv_buf), 0,
-                                 (struct sockaddr *) &sa, &sa_len)) < 0) {
-    Socket_set_last_error(v7, this_obj, get_sockerror());
-  }
-
-  ret_obj = v7_create_object(v7);
-
-  src_val = v7_create_object(v7);
-
-  if (bytes_received >= 0 &&
-      Socket_sa_split(&sa, &family, address, sizeof(address), &port) < 0) {
-    ret_data = Socket_get_retdata(v7, recvtype, recv_buf, 0);
-    Socket_set_last_error(v7, this_obj, ERR_BAD_ADDRESS);
-  } else {
-    ret_data = Socket_get_retdata(v7, recvtype, recv_buf,
-                                  bytes_received < 0 ? 0 : bytes_received);
-  }
-
-  v7_set_property(v7, ret_obj, "data", 4, 0, ret_data);
-
-  /* set property even if Socket_sa_split returns error */
-  v7_set_property(v7, src_val, "port", 4, 0, v7_create_number(port));
-  v7_set_property(v7, src_val, "family", 6, 0, v7_create_number(family));
-  v7_set_property(v7, src_val, "address", 7, 0,
-                  v7_create_string(v7, address, strlen(address), 1));
-  v7_set_property(v7, ret_obj, "src", 3, 0, src_val);
-
-  Socket_set_last_error(v7, this_obj, 0);
-  return ret_obj;
-}
-
-/* Returns new Socket object which represents accepted connection. */
-static v7_val_t Socket_accept(struct v7 *v7, val_t this_obj, val_t args) {
-  struct socket_internal *si = Socket_get_si(v7, this_obj), *new_si;
-  union socket_address sa;
-  unsigned int sa_len = sizeof(sa);
-  int new_sock;
-  val_t ret_sock, new_si_val;
-  (void) args;
-
-  if (si == NULL) {
-    return Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);
-  }
-
-  new_sock = accept(si->socket, (struct sockaddr *) &sa, &sa_len);
-
-  ret_sock = v7_create_object(v7);
-  v7_to_object(ret_sock)->prototype = v7_to_object(v7->socket_prototype);
-
-  if (new_sock >= 0) {
-    new_si = (struct socket_internal *) malloc(sizeof(*new_si));
-
-    new_si->socket = new_sock;
-    new_si->family = si->family;
-    new_si->recvtype = si->recvtype;
-
-    new_si_val = v7_create_foreign(new_si);
-    v7_set_property(v7, ret_sock, "", 0, V7_PROPERTY_HIDDEN, new_si_val);
-  }
-
-  /* Set error in both objects */
-  Socket_set_last_error(v7, ret_sock, new_sock < 0 ? get_sockerror() : 0);
-  Socket_set_last_error(v7, this_obj, new_sock < 0 ? get_sockerror() : 0);
-
-  return ret_sock;
-}
-
-#define SOCKET_DEF_PROP(name, func, retval, error)                            \
-  static v7_val_t Socket_##name(struct v7 *v7, val_t this_obj, val_t args) {  \
-    struct socket_internal *si = Socket_get_si(v7, this_obj);                 \
-    union socket_address sa;                                                  \
-    unsigned int sa_len = sizeof(sa);                                         \
-    int family, port;                                                         \
-    char address[ADDRESS_BUF_SIZE] = {0};                                     \
-    (void) args;                                                              \
-    if (si == NULL) {                                                         \
-      Socket_set_last_error(v7, this_obj, ERR_SOCKET_CLOSED);                 \
-      return error;                                                           \
-    }                                                                         \
-    if (func(si->socket, (struct sockaddr *) &sa, &sa_len) < 0) {             \
-      Socket_set_last_error(v7, this_obj, get_sockerror());                   \
-      return error;                                                           \
-    }                                                                         \
-    if (Socket_sa_split(&sa, &family, address, sizeof(address), &port) < 0) { \
-      Socket_set_last_error(v7, this_obj, ERR_BAD_ADDRESS);                   \
-      return error;                                                           \
-    }                                                                         \
-    return retval;                                                            \
-  }
-
-SOCKET_DEF_PROP(localPort, getsockname, v7_create_number(port),
-                v7_create_number(-1))
-
-SOCKET_DEF_PROP(localAddress, getsockname,
-                v7_create_string(v7, address, strlen(address), 1),
-                v7_create_string(v7, "", 0, 1))
-SOCKET_DEF_PROP(remotePort, getpeername, v7_create_number(port),
-                v7_create_number(-1))
-SOCKET_DEF_PROP(remoteAddress, getpeername,
-                v7_create_string(v7, address, strlen(address), 1),
-                v7_create_string(v7, "", 0, 1))
-
-#undef SOCKET_DEF_PROP
-
-V7_PRIVATE void init_socket(struct v7 *v7) {
-  val_t socket =
-      v7_create_cfunction_ctor(v7, v7->socket_prototype, Socket_ctor, 3);
-  v7_set_property(v7, v7->global_object, "Socket", 6, V7_PROPERTY_DONT_ENUM,
-                  socket);
-
-  set_cfunc_prop(v7, v7->socket_prototype, "close", Socket_close);
-  set_cfunc_prop(v7, v7->socket_prototype, "bind", Socket_bind);
-  set_cfunc_prop(v7, v7->socket_prototype, "listen", Socket_listen);
-  set_cfunc_prop(v7, v7->socket_prototype, "send", Socket_send);
-  set_cfunc_prop(v7, v7->socket_prototype, "connect", Socket_connect);
-  set_cfunc_prop(v7, v7->socket_prototype, "sendto", Socket_sendto);
-  set_cfunc_prop(v7, v7->socket_prototype, "recv", Socket_recv);
-  set_cfunc_prop(v7, v7->socket_prototype, "recvfrom", Socket_recvfrom);
-  set_cfunc_prop(v7, v7->socket_prototype, "accept", Socket_accept);
-
-  v7_set_property(v7, v7->socket_prototype, "localPort", 9,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_READ_ONLY,
-                  v7_create_cfunction(Socket_localPort));
-  v7_set_property(v7, v7->socket_prototype, "localAddress", 12,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_READ_ONLY,
-                  v7_create_cfunction(Socket_localAddress));
-  v7_set_property(v7, v7->socket_prototype, "remotePort", 10,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_READ_ONLY,
-                  v7_create_cfunction(Socket_remotePort));
-  v7_set_property(v7, v7->socket_prototype, "remoteAddress", 13,
-                  V7_PROPERTY_GETTER | V7_PROPERTY_READ_ONLY,
-                  v7_create_cfunction(Socket_remoteAddress));
-
-  v7_set_property(v7, socket, "AF_INET", 7, 0, v7_create_number(AF_INET));
-#ifdef V7_ENABLE_IPV6
-  v7_set_property(v7, socket, "AF_INET6", 8, 0, v7_create_number(AF_INET6));
-#endif
-
-  v7_set_property(v7, socket, "ERR_SOCKET_CLOSED", 17, 0,
-                  v7_create_number(ERR_SOCKET_CLOSED));
-
-  v7_set_property(v7, socket, "ERR_INVALID_ARG", 15, 0,
-                  v7_create_number(ERR_INVALID_ARG));
-
-  v7_set_property(v7, socket, "ERR_BAD_ADDRESS", 15, 0,
-                  v7_create_number(ERR_BAD_ADDRESS));
-
-  v7_set_property(v7, socket, "SOCK_STREAM", 11, 0,
-                  v7_create_number(SOCK_STREAM));
-  v7_set_property(v7, socket, "SOCK_DGRAM", 10, 0,
-                  v7_create_number(SOCK_DGRAM));
-
-  v7_set_property(v7, socket, "RECV_STRING", 11, 0,
-                  v7_create_number(RECVTYPE_STRING));
-  v7_set_property(v7, socket, "RECV_RAW", 8, 0, v7_create_number(RECVTYPE_RAW));
-
-#ifdef _WIN32
-  {
-    WSADATA data;
-    WSAStartup(MAKEWORD(2, 2), &data);
-    /* TODO(alashkin): add WSACleanup call */
-  }
-#else
-  signal(SIGPIPE, SIG_IGN);
-#endif
-}
-
-#endif /* V7_DISABLE_SOCKETS */
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-
-#ifndef V7_NO_FS
-/*
- * File interface: a wrappers around open(), close(), read(), write().
- * OS.open(path, flags[, mode]) -> fd.
- * OS.close(fd) -> undefined
- * OS.read(fd) -> string (empty string on EOF)
- * OS.write(fd, str) -> num_bytes_written
- * OS.remove(str) -> errno
- */
-static val_t OS_read(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  char buf[BUFSIZ];
-
-  (void) this_obj;
-  if (v7_is_double(arg0)) {
-    int fd = v7_to_double(arg0);
-    int n = read(fd, buf, sizeof(buf));
-    if (n > 0) {
-      return v7_create_string(v7, buf, n, 1);
-    }
-  }
-
-  return v7_create_string(v7, "", 0, 1);
-}
-
-static val_t OS_write(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  val_t arg1 = v7_array_get(v7, args, 1);
-  size_t sent = 0, len = 0;
-
-  (void) this_obj;
-  if (v7_is_double(arg0) && v7_is_string(arg1)) {
-    const char *s = v7_to_string(v7, &arg1, &len);
-    int fd = v7_to_double(arg0), n;
-    while (sent < len && (n = write(fd, s + sent, len - sent)) > 0) {
-      sent += n;
-    }
-  }
-
-  return v7_create_number(sent == len ? 0 : errno);
-}
-
-static val_t OS_close(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  int res = -1;
-  (void) this_obj;
-  if (v7_is_double(arg0)) {
-    res = close((int) v7_to_double(arg0));
-  }
-  return v7_create_number(res);
-}
-
-static val_t OS_remove(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  int res = -1;
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t n;
-    const char *path = v7_to_string(v7, &arg0, &n);
-    res = remove(path);
-  }
-  return v7_create_number(res == 0 ? 0 : errno);
-}
-
-static val_t OS_open(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  val_t arg1 = v7_array_get(v7, args, 1);
-  val_t arg2 = v7_array_get(v7, args, 2);
-  int fd = -1;
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t n1;
-    const char *s = v7_to_string(v7, &arg0, &n1);
-    int flags = v7_is_double(arg1) ? (int) v7_to_double(arg1) : 0;
-    int mode = v7_is_double(arg2) ? (int) v7_to_double(arg2) : 0;
-    fd = open(s, flags, mode);
-  }
-
-  return v7_create_number(fd);
-}
-
-static val_t OS_rename(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  val_t arg1 = v7_array_get(v7, args, 1);
-  int res = -1;
-
-  (void) this_obj;
-  if (v7_is_string(arg0) && v7_is_string(arg1)) {
-    size_t n1, n2;
-    const char *from = v7_to_string(v7, &arg0, &n1);
-    const char *to = v7_to_string(v7, &arg1, &n2);
-    res = rename(from, to);
-  }
-
-  return v7_create_number(res == 0 ? 0 : errno);
-}
-#endif
-
-V7_PRIVATE void init_os(struct v7 *v7) {
-  val_t os_obj = v7_create_object(v7);
-  v7_set_property(v7, v7->global_object, "OS", 2, 0, os_obj);
-#ifndef V7_NO_FS
-  set_cfunc_obj_prop(v7, os_obj, "open", OS_open);
-  set_cfunc_obj_prop(v7, os_obj, "close", OS_close);
-  set_cfunc_obj_prop(v7, os_obj, "read", OS_read);
-  set_cfunc_obj_prop(v7, os_obj, "write", OS_write);
-  set_cfunc_obj_prop(v7, os_obj, "remove", OS_remove);
-  set_cfunc_obj_prop(v7, os_obj, "rename", OS_rename);
-#endif
-}
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-
-#ifndef V7_DISABLE_CRYPTO
-
-/*************************** START OF MD5 THIRD PARTY CODE */
-/*
- * This code implements the MD5 message-digest algorithm.
- * The algorithm is due to Ron Rivest.  This code was
- * written by Colin Plumb in 1993, no copyright is claimed.
- * This code is in the public domain; do with it what you wish.
- *
- * Equivalent code is available from RSA Data Security, Inc.
- * This code has been tested against that, and is equivalent,
- * except that you don't need to include two pages of legalese
- * with every copy.
- */
-
-#define	MD5_BLOCK_LENGTH		64
-#define	MD5_DIGEST_LENGTH		16
-
-typedef struct MD5Context {
-  uint32_t state[4];			/* state */
-  uint64_t count;			/* number of bits, mod 2^64 */
-  uint8_t buffer[MD5_BLOCK_LENGTH];	/* input buffer */
-} MD5_CTX;
-
-#define PUT_64BIT_LE(cp, value) do {					\
-(cp)[7] = (value) >> 56;					\
-(cp)[6] = (value) >> 48;					\
-(cp)[5] = (value) >> 40;					\
-(cp)[4] = (value) >> 32;					\
-(cp)[3] = (value) >> 24;					\
-(cp)[2] = (value) >> 16;					\
-(cp)[1] = (value) >> 8;						\
-(cp)[0] = (value); } while (0)
-
-#define PUT_32BIT_LE(cp, value) do {					\
-(cp)[3] = (value) >> 24;					\
-(cp)[2] = (value) >> 16;					\
-(cp)[1] = (value) >> 8;						\
-(cp)[0] = (value); } while (0)
-
-static uint8_t PADDING[MD5_BLOCK_LENGTH] = {
-  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-void MD5Init(MD5_CTX *ctx) {
-  ctx->count = 0;
-  ctx->state[0] = 0x67452301;
-  ctx->state[1] = 0xefcdab89;
-  ctx->state[2] = 0x98badcfe;
-  ctx->state[3] = 0x10325476;
-}
-
-/* #define F1(x, y, z) (x & y | ~x & z) */
-#define F1(x, y, z) (z ^ (x & (y ^ z)))
-#define F2(x, y, z) F1(z, x, y)
-#define F3(x, y, z) (x ^ y ^ z)
-#define F4(x, y, z) (y ^ (x | ~z))
-
-/* This is the central step in the MD5 algorithm. */
-#define MD5STEP(f, w, x, y, z, data, s) \
-( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
-
-static void MD5Transform(uint32_t state[4],
-                         const uint8_t block[MD5_BLOCK_LENGTH]) {
-  uint32_t a, b, c, d, in[MD5_BLOCK_LENGTH / 4];
-
-#if BYTE_ORDER == LITTLE_ENDIAN
-  memcpy(in, block, sizeof(in));
-#else
-  for (a = 0; a < MD5_BLOCK_LENGTH / 4; a++) {
-    in[a] = (u_int32_t)(
-                        (u_int32_t)(block[a * 4 + 0]) |
-                        (u_int32_t)(block[a * 4 + 1]) <<  8 |
-                        (u_int32_t)(block[a * 4 + 2]) << 16 |
-                        (u_int32_t)(block[a * 4 + 3]) << 24);
-  }
-#endif
-
-  a = state[0];
-  b = state[1];
-  c = state[2];
-  d = state[3];
-
-  MD5STEP(F1, a, b, c, d, in[ 0] + 0xd76aa478,  7);
-  MD5STEP(F1, d, a, b, c, in[ 1] + 0xe8c7b756, 12);
-  MD5STEP(F1, c, d, a, b, in[ 2] + 0x242070db, 17);
-  MD5STEP(F1, b, c, d, a, in[ 3] + 0xc1bdceee, 22);
-  MD5STEP(F1, a, b, c, d, in[ 4] + 0xf57c0faf,  7);
-  MD5STEP(F1, d, a, b, c, in[ 5] + 0x4787c62a, 12);
-  MD5STEP(F1, c, d, a, b, in[ 6] + 0xa8304613, 17);
-  MD5STEP(F1, b, c, d, a, in[ 7] + 0xfd469501, 22);
-  MD5STEP(F1, a, b, c, d, in[ 8] + 0x698098d8,  7);
-  MD5STEP(F1, d, a, b, c, in[ 9] + 0x8b44f7af, 12);
-  MD5STEP(F1, c, d, a, b, in[10] + 0xffff5bb1, 17);
-  MD5STEP(F1, b, c, d, a, in[11] + 0x895cd7be, 22);
-  MD5STEP(F1, a, b, c, d, in[12] + 0x6b901122,  7);
-  MD5STEP(F1, d, a, b, c, in[13] + 0xfd987193, 12);
-  MD5STEP(F1, c, d, a, b, in[14] + 0xa679438e, 17);
-  MD5STEP(F1, b, c, d, a, in[15] + 0x49b40821, 22);
-
-  MD5STEP(F2, a, b, c, d, in[ 1] + 0xf61e2562,  5);
-  MD5STEP(F2, d, a, b, c, in[ 6] + 0xc040b340,  9);
-  MD5STEP(F2, c, d, a, b, in[11] + 0x265e5a51, 14);
-  MD5STEP(F2, b, c, d, a, in[ 0] + 0xe9b6c7aa, 20);
-  MD5STEP(F2, a, b, c, d, in[ 5] + 0xd62f105d,  5);
-  MD5STEP(F2, d, a, b, c, in[10] + 0x02441453,  9);
-  MD5STEP(F2, c, d, a, b, in[15] + 0xd8a1e681, 14);
-  MD5STEP(F2, b, c, d, a, in[ 4] + 0xe7d3fbc8, 20);
-  MD5STEP(F2, a, b, c, d, in[ 9] + 0x21e1cde6,  5);
-  MD5STEP(F2, d, a, b, c, in[14] + 0xc33707d6,  9);
-  MD5STEP(F2, c, d, a, b, in[ 3] + 0xf4d50d87, 14);
-  MD5STEP(F2, b, c, d, a, in[ 8] + 0x455a14ed, 20);
-  MD5STEP(F2, a, b, c, d, in[13] + 0xa9e3e905,  5);
-  MD5STEP(F2, d, a, b, c, in[ 2] + 0xfcefa3f8,  9);
-  MD5STEP(F2, c, d, a, b, in[ 7] + 0x676f02d9, 14);
-  MD5STEP(F2, b, c, d, a, in[12] + 0x8d2a4c8a, 20);
-
-  MD5STEP(F3, a, b, c, d, in[ 5] + 0xfffa3942,  4);
-  MD5STEP(F3, d, a, b, c, in[ 8] + 0x8771f681, 11);
-  MD5STEP(F3, c, d, a, b, in[11] + 0x6d9d6122, 16);
-  MD5STEP(F3, b, c, d, a, in[14] + 0xfde5380c, 23);
-  MD5STEP(F3, a, b, c, d, in[ 1] + 0xa4beea44,  4);
-  MD5STEP(F3, d, a, b, c, in[ 4] + 0x4bdecfa9, 11);
-  MD5STEP(F3, c, d, a, b, in[ 7] + 0xf6bb4b60, 16);
-  MD5STEP(F3, b, c, d, a, in[10] + 0xbebfbc70, 23);
-  MD5STEP(F3, a, b, c, d, in[13] + 0x289b7ec6,  4);
-  MD5STEP(F3, d, a, b, c, in[ 0] + 0xeaa127fa, 11);
-  MD5STEP(F3, c, d, a, b, in[ 3] + 0xd4ef3085, 16);
-  MD5STEP(F3, b, c, d, a, in[ 6] + 0x04881d05, 23);
-  MD5STEP(F3, a, b, c, d, in[ 9] + 0xd9d4d039,  4);
-  MD5STEP(F3, d, a, b, c, in[12] + 0xe6db99e5, 11);
-  MD5STEP(F3, c, d, a, b, in[15] + 0x1fa27cf8, 16);
-  MD5STEP(F3, b, c, d, a, in[2 ] + 0xc4ac5665, 23);
-
-  MD5STEP(F4, a, b, c, d, in[ 0] + 0xf4292244,  6);
-  MD5STEP(F4, d, a, b, c, in[7 ] + 0x432aff97, 10);
-  MD5STEP(F4, c, d, a, b, in[14] + 0xab9423a7, 15);
-  MD5STEP(F4, b, c, d, a, in[5 ] + 0xfc93a039, 21);
-  MD5STEP(F4, a, b, c, d, in[12] + 0x655b59c3,  6);
-  MD5STEP(F4, d, a, b, c, in[3 ] + 0x8f0ccc92, 10);
-  MD5STEP(F4, c, d, a, b, in[10] + 0xffeff47d, 15);
-  MD5STEP(F4, b, c, d, a, in[1 ] + 0x85845dd1, 21);
-  MD5STEP(F4, a, b, c, d, in[8 ] + 0x6fa87e4f,  6);
-  MD5STEP(F4, d, a, b, c, in[15] + 0xfe2ce6e0, 10);
-  MD5STEP(F4, c, d, a, b, in[6 ] + 0xa3014314, 15);
-  MD5STEP(F4, b, c, d, a, in[13] + 0x4e0811a1, 21);
-  MD5STEP(F4, a, b, c, d, in[4 ] + 0xf7537e82,  6);
-  MD5STEP(F4, d, a, b, c, in[11] + 0xbd3af235, 10);
-  MD5STEP(F4, c, d, a, b, in[2 ] + 0x2ad7d2bb, 15);
-  MD5STEP(F4, b, c, d, a, in[9 ] + 0xeb86d391, 21);
-
-  state[0] += a;
-  state[1] += b;
-  state[2] += c;
-  state[3] += d;
-}
-
-static void MD5Update(MD5_CTX *ctx, const unsigned char *input, size_t len) {
-  size_t have, need;
-
-  /* Check how many bytes we already have and how many more we need. */
-  have = (size_t)((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
-  need = MD5_BLOCK_LENGTH - have;
-
-  /* Update bitcount */
-  ctx->count += (uint64_t)len << 3;
-
-  if (len >= need) {
-    if (have != 0) {
-      memcpy(ctx->buffer + have, input, need);
-      MD5Transform(ctx->state, ctx->buffer);
-      input += need;
-      len -= need;
-      have = 0;
-    }
-
-    /* Process data in MD5_BLOCK_LENGTH-byte chunks. */
-    while (len >= MD5_BLOCK_LENGTH) {
-      MD5Transform(ctx->state, input);
-      input += MD5_BLOCK_LENGTH;
-      len -= MD5_BLOCK_LENGTH;
-    }
-  }
-
-  /* Handle any remaining bytes of data. */
-  if (len != 0)
-    memcpy(ctx->buffer + have, input, len);
-}
-
-static void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
-  uint8_t count[8];
-  size_t padlen;
-  int i;
-
-  /* Convert count to 8 bytes in little endian order. */
-  PUT_64BIT_LE(count, ctx->count);
-
-  /* Pad out to 56 mod 64. */
-  padlen = MD5_BLOCK_LENGTH -
-  ((ctx->count >> 3) & (MD5_BLOCK_LENGTH - 1));
-  if (padlen < 1 + 8)
-    padlen += MD5_BLOCK_LENGTH;
-  MD5Update(ctx, PADDING, padlen - 8);		/* padlen - 8 <= 64 */
-  MD5Update(ctx, count, 8);
-
-  if (digest != NULL) {
-    for (i = 0; i < 4; i++)
-      PUT_32BIT_LE(digest + i * 4, ctx->state[i]);
-  }
-  memset(ctx, 0, sizeof(*ctx));	/* in case it's sensitive */
-}
-/********************************** END OF MD5 THIRD PARTY CODE */
-
-/********************************** START OF SHA-1 THIRD PARTY CODE */
-/*
- * SHA-1 in C
- * By Steve Reid <sreid@sea-to-sky.net>
- * 100% Public Domain
- */
-
-#define SHA1HANDSOFF
-#if defined(__sun)
-#include "solarisfixes.h"
-#endif
-
-union char64long16 {
-  unsigned char c[64];
-  uint32_t l[16];
-};
-
-static int is_big_endian(void) {
-  static const int n = 1;
-  return ((char *) &n)[0] == 0;
-}
-
-#define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
-
-static uint32_t blk0(union char64long16 *block, int i) {
-  /* Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN */
-  if (!is_big_endian()) {
-    block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) |
-    (rol(block->l[i], 8) & 0x00FF00FF);
-  }
-  return block->l[i];
-}
-
-#define blk(i) (block->l[i&15] = rol(block->l[(i+13)&15]^block->l[(i+8)&15] \
-^block->l[(i+2)&15]^block->l[i&15],1))
-#define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(block, i)+0x5A827999+rol(v,5);w=rol(w,30);
-#define R1(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
-#define R2(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
-#define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
-#define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
-
-typedef struct {
-  uint32_t state[5];
-  uint32_t count[2];
-  unsigned char buffer[64];
-} SHA1_CTX;
-
-static void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
-  uint32_t a, b, c, d, e;
-  union char64long16 block[1];
-
-  memcpy(block, buffer, 64);
-  a = state[0];
-  b = state[1];
-  c = state[2];
-  d = state[3];
-  e = state[4];
-  R0(a,b,c,d,e, 0); R0(e,a,b,c,d, 1); R0(d,e,a,b,c, 2); R0(c,d,e,a,b, 3);
-  R0(b,c,d,e,a, 4); R0(a,b,c,d,e, 5); R0(e,a,b,c,d, 6); R0(d,e,a,b,c, 7);
-  R0(c,d,e,a,b, 8); R0(b,c,d,e,a, 9); R0(a,b,c,d,e,10); R0(e,a,b,c,d,11);
-  R0(d,e,a,b,c,12); R0(c,d,e,a,b,13); R0(b,c,d,e,a,14); R0(a,b,c,d,e,15);
-  R1(e,a,b,c,d,16); R1(d,e,a,b,c,17); R1(c,d,e,a,b,18); R1(b,c,d,e,a,19);
-  R2(a,b,c,d,e,20); R2(e,a,b,c,d,21); R2(d,e,a,b,c,22); R2(c,d,e,a,b,23);
-  R2(b,c,d,e,a,24); R2(a,b,c,d,e,25); R2(e,a,b,c,d,26); R2(d,e,a,b,c,27);
-  R2(c,d,e,a,b,28); R2(b,c,d,e,a,29); R2(a,b,c,d,e,30); R2(e,a,b,c,d,31);
-  R2(d,e,a,b,c,32); R2(c,d,e,a,b,33); R2(b,c,d,e,a,34); R2(a,b,c,d,e,35);
-  R2(e,a,b,c,d,36); R2(d,e,a,b,c,37); R2(c,d,e,a,b,38); R2(b,c,d,e,a,39);
-  R3(a,b,c,d,e,40); R3(e,a,b,c,d,41); R3(d,e,a,b,c,42); R3(c,d,e,a,b,43);
-  R3(b,c,d,e,a,44); R3(a,b,c,d,e,45); R3(e,a,b,c,d,46); R3(d,e,a,b,c,47);
-  R3(c,d,e,a,b,48); R3(b,c,d,e,a,49); R3(a,b,c,d,e,50); R3(e,a,b,c,d,51);
-  R3(d,e,a,b,c,52); R3(c,d,e,a,b,53); R3(b,c,d,e,a,54); R3(a,b,c,d,e,55);
-  R3(e,a,b,c,d,56); R3(d,e,a,b,c,57); R3(c,d,e,a,b,58); R3(b,c,d,e,a,59);
-  R4(a,b,c,d,e,60); R4(e,a,b,c,d,61); R4(d,e,a,b,c,62); R4(c,d,e,a,b,63);
-  R4(b,c,d,e,a,64); R4(a,b,c,d,e,65); R4(e,a,b,c,d,66); R4(d,e,a,b,c,67);
-  R4(c,d,e,a,b,68); R4(b,c,d,e,a,69); R4(a,b,c,d,e,70); R4(e,a,b,c,d,71);
-  R4(d,e,a,b,c,72); R4(c,d,e,a,b,73); R4(b,c,d,e,a,74); R4(a,b,c,d,e,75);
-  R4(e,a,b,c,d,76); R4(d,e,a,b,c,77); R4(c,d,e,a,b,78); R4(b,c,d,e,a,79);
-  state[0] += a;
-  state[1] += b;
-  state[2] += c;
-  state[3] += d;
-  state[4] += e;
-  /*
-   * Erase working structures. The order of operations is important,
-   * used to ensure that compiler doesn't optimize those out.
-   */
-  memset(block, 0, sizeof(block));
-  a = b = c = d = e = 0;
-  (void) a; (void) b; (void) c; (void) d; (void) e;
-}
-
-static void SHA1Init(SHA1_CTX *context) {
-  context->state[0] = 0x67452301;
-  context->state[1] = 0xEFCDAB89;
-  context->state[2] = 0x98BADCFE;
-  context->state[3] = 0x10325476;
-  context->state[4] = 0xC3D2E1F0;
-  context->count[0] = context->count[1] = 0;
-}
-
-static void SHA1Update(SHA1_CTX *context, const unsigned char *data,
-                       uint32_t len) {
-  uint32_t i, j;
-
-  j = context->count[0];
-  if ((context->count[0] += len << 3) < j)
-    context->count[1]++;
-  context->count[1] += (len>>29);
-  j = (j >> 3) & 63;
-  if ((j + len) > 63) {
-    memcpy(&context->buffer[j], data, (i = 64-j));
-    SHA1Transform(context->state, context->buffer);
-    for ( ; i + 63 < len; i += 64) {
-      SHA1Transform(context->state, &data[i]);
-    }
-    j = 0;
-  }
-  else i = 0;
-  memcpy(&context->buffer[j], &data[i], len - i);
-}
-
-static void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
-  unsigned i;
-  unsigned char finalcount[8], c;
-
-  for (i = 0; i < 8; i++) {
-    finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
-                                     >> ((3-(i & 3)) * 8) ) & 255);
-  }
-  c = 0200;
-  SHA1Update(context, &c, 1);
-  while ((context->count[0] & 504) != 448) {
-    c = 0000;
-    SHA1Update(context, &c, 1);
-  }
-  SHA1Update(context, finalcount, 8);
-  for (i = 0; i < 20; i++) {
-    digest[i] = (unsigned char)
-    ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
-  }
-  memset(context, '\0', sizeof(*context));
-  memset(&finalcount, '\0', sizeof(finalcount));
-}
-/********************************** END OF SHA-1 THIRD PARTY CODE */
-
-static void v7_md5(const char *data, size_t len, char buf[16]) {
-  MD5_CTX ctx;
-  MD5Init(&ctx);
-  MD5Update(&ctx, (unsigned char *) data, len);
-  MD5Final((unsigned char *) buf, &ctx);
-}
-
-static void v7_sha1(const char *data, size_t len, char buf[20]) {
-  SHA1_CTX ctx;
-  SHA1Init(&ctx);
-  SHA1Update(&ctx, (unsigned char *) data, len);
-  SHA1Final((unsigned char *) buf, &ctx);
-}
-
-static void bin2str(char *to, const unsigned char *p, size_t len) {
-  static const char *hex = "0123456789abcdef";
-
-  for (; len--; p++) {
-    *to++ = hex[p[0] >> 4];
-    *to++ = hex[p[0] & 0x0f];
-  }
-  *to = '\0';
-}
-
-static val_t Crypto_md5(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t len;
-    const char *data = v7_to_string(v7, &arg0, &len);
-    char buf[16];
-    v7_md5(data, len, buf);
-    return v7_create_string(v7, buf, sizeof(buf), 1);
-  }
-  return v7_create_null();
-}
-
-static val_t Crypto_md5_hex(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t len;
-    const char *data = v7_to_string(v7, &arg0, &len);
-    char hash[16], buf[sizeof(hash) * 2];
-    v7_md5(data, len, hash);
-    bin2str(buf, (unsigned char *) hash, sizeof(hash));
-    return v7_create_string(v7, buf, sizeof(buf), 1);
-  }
-  return v7_create_null();
-}
-
-static val_t Crypto_sha1(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t len;
-    const char *data = v7_to_string(v7, &arg0, &len);
-    char buf[20];
-    v7_sha1(data, len, buf);
-    return v7_create_string(v7, buf, sizeof(buf), 1);
-  }
-  return v7_create_null();
-}
-
-static val_t Crypto_sha1_hex(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t len;
-    const char *data = v7_to_string(v7, &arg0, &len);
-    char hash[20], buf[sizeof(hash) * 2];
-    v7_sha1(data, len, hash);
-    bin2str(buf, (unsigned char *) hash, sizeof(hash));
-    return v7_create_string(v7, buf, sizeof(buf), 1);
-  }
-  return v7_create_null();
-}
-
-V7_PRIVATE void init_crypto(struct v7 *v7) {
-  val_t obj = v7_create_object(v7);
-  v7_set_property(v7, v7->global_object, "Crypto", 6, 0, obj);
-  set_cfunc_obj_prop(v7, obj, "md5", Crypto_md5);
-  set_cfunc_obj_prop(v7, obj, "md5_hex", Crypto_md5_hex);
-  set_cfunc_obj_prop(v7, obj, "sha1", Crypto_sha1);
-  set_cfunc_obj_prop(v7, obj, "sha1_hex", Crypto_sha1_hex);
-}
-#endif  /* V7_DISABLE_CRYPTO */

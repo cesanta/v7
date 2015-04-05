@@ -217,9 +217,6 @@ struct v7 {
   val_t number_prototype;
   val_t date_prototype;
   val_t function_prototype;
-#ifndef V7_DISABLE_SOCKETS
-  val_t socket_prototype;
-#endif
 
   /*
    * Stack of execution contexts.

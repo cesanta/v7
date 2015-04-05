@@ -299,7 +299,7 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
     for (i = 2; i < num_args; i++) {
       char key[20];
       size_t n = snprintf(key, sizeof(key), "%ld", arg0 + i - 2);
-      v7_set(v7, this_obj, key, n, v7_array_get(v7, args, i));
+      v7_set(v7, this_obj, key, n, 0, v7_array_get(v7, args, i));
     }
   }
 

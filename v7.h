@@ -19,7 +19,9 @@
 #ifndef V7_HEADER_INCLUDED
 #define V7_HEADER_INCLUDED
 
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
+#endif
 
 #include <stddef.h> /* For size_t */
 #include <stdio.h>  /* For FILE */
@@ -68,6 +70,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *, size_t, int);
 v7_val_t v7_create_regexp(struct v7 *, const char *, size_t, const char *,
                           size_t);
 v7_val_t v7_create_foreign(void *);
+v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int nargs);
 
 int v7_is_object(v7_val_t);
 int v7_is_function(v7_val_t);
@@ -88,10 +91,22 @@ const char *v7_to_string(struct v7 *, v7_val_t *, size_t *);
 
 v7_val_t v7_get_global_object(struct v7 *);
 v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t len);
-int v7_set(struct v7 *v7, v7_val_t obj, const char *, size_t, v7_val_t val);
 char *v7_to_json(struct v7 *, v7_val_t, char *, size_t);
 int v7_is_true(struct v7 *v7, v7_val_t v);
 v7_val_t v7_apply(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
+void v7_throw(struct v7 *, const char *, ...);
+
+#define V7_PROPERTY_READ_ONLY 1
+#define V7_PROPERTY_DONT_ENUM 2
+#define V7_PROPERTY_DONT_DELETE 4
+#define V7_PROPERTY_HIDDEN 8
+#define V7_PROPERTY_GETTER 16
+#define V7_PROPERTY_SETTER 32
+int v7_set(struct v7 *v7, v7_val_t obj, const char *, size_t,
+           unsigned int attrs, v7_val_t val);
+#define v7_set_method(v7, obj, name, func)                         \
+  v7_set((v7), (obj), (name), strlen(name), V7_PROPERTY_DONT_ENUM, \
+         v7_create_cfunction_object((v7), (func), -1))
 
 unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
 int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
