@@ -72,6 +72,15 @@ extern long timezone;
 #define isnan(x) _isnan(x)
 #endif
 
+static enum v7_err parse_js(struct v7 *v7, const char *src, struct ast *a) {
+  enum v7_err parse_result = parse(v7, a, src, 1 /* verbose */);
+  if (parse_result != V7_OK) {
+    fprintf(stderr, "Parse error. Expression:\n  %s\nMessage:\n  %s\n", src,
+            v7->error_msg);
+  }
+  return parse_result;
+}
+
 static int static_num_tests = 0;
 int STOP = 0; /* For xcode breakpoints conditions */
 
@@ -918,72 +927,208 @@ static const char *test_parser(void) {
   struct ast a;
   struct v7 *v7 = v7_create();
   const char *cases[] = {
-      "1", "true", "false", "null", "undefined", "1+2", "1-2", "1*2", "1/2",
-      "1%2", "1/-2", "(1 + 2) * x + 3", "1 + (2, 3) * 4, 5", "(a=1 + 2) + 3",
-      "1 ? 2 : 3", "1 ? 2 : 3 ? 4 : 5", "1 ? 2 : (3 ? 4 : 5)", "1 || 2 + 2",
-      "1 && 2 || 3 && 4 + 5", "1|2 && 3|3", "1^2|3^4", "1&2^2&4|5&6", "1==2&3",
-      "1<2", "1<=2", "1>=2", "1>2", "1==1<2", "a instanceof b", "1 in b",
-      "1!=2&3", "1!==2&3", "1===2", "1<<2", "1>>2", "1>>>2", "1<<2<3", "1/2/2",
-      "(1/2)/2", "1 + + 1", "1- -2", "!1", "~0", "void x()", "delete x",
-      "typeof x", "++x", "--i", "x++", "i--", "a.b", "a.b.c", "a[0]", "a[0].b",
-      "a[0][1]", "a[b[0].c]", "a()", "a(0)", "a(0, 1)", "a(0, (1, 2))",
-      "1 + a(0, (1, 2)) + 2", "new x", "new x(0, 1)", "new x.y(0, 1)",
-      "new x.y", "1;", "1;2;", "1;2", "1\nx", "p()\np()\np();p()", ";1",
-      "if (1) 2", "if (1) 2; else 3", "if (1) {2;3}", "if (1) {2;3}; 4",
-      "if (1) {2;3} else {4;5}", "while (1);", "while(1) {}", "while (1) 2;",
-      "while (1) {2;3}", "for (i = 0; i < 3; i++) i++", "for (i=0; i<3;) i++",
-      "for (i=0;;) i++", "for (;i<3;) i++", "for (;;) i++", "debugger",
-      "while(1) break", "while(1) break loop", "while(1) continue",
-      "while(1) continue loop", "function f() {return}",
-      "function f() {return 1+2}", "function f() {if (1) {return;}}",
-      "function f() {if (1) {return 2}}", "throw 1+2", "try { 1 }",
-      "try { 1 } catch (e) { 2 }", "try {1} finally {3}",
-      "try {1} catch (e) {2} finally {3}", "var x", "var x, y", "var x=1, y",
-      "var y, x=y=1", "function x(a) {return a}", "function x() {return 1}",
-      "[1,2,3]", "[1+2,3+4,5+6]", "[1,[2,[[3]]]]", "({a: 1})", "({a: 1, b: 2})",
-      "({})", "(function(a) { return a + 1 })",
-      "(function f(a) { return a + 1 })", "(function f() { return; 1;})",
-      "function f() {while (1) {return;2}}", "switch(a) {case 1: break;}",
-      "switch(a) {case 1: p(); break;}", "switch(a) {case 1: a; case 2: b; c;}",
-      "switch(a) {case 1: a; b; default: c;}",
-      "switch(a) {case 1: p(); break; break; }",
-      "switch(a) {case 1: break; case 2: 1; case 3:}",
-      "switch(a) {case 1: break; case 2: 1; case 3: default: break}",
-      "switch(a) {case 1: break; case 3: default: break; case 2: 1}",
-      "for (var i = 0; i < 3; i++) i++",
-      "for (var i=0, j=i; i < 3; i++, j++) i++", "a%=1", "a*=1", "a/=1", "a+=1",
-      "a-=1", "a|=1", "a&=1", "a<<=1", "a>>2", "a>>=1", "a>>>=1", "a=b=c+=1",
-      "a=(b=(c+=1))", "\"foo\"", "var undefined = 1", "undefined",
-      "{var x=1;2;}", "({get a() { return 1 }})", "({set a(b) { this.x = b }})",
-      "({get a() { return 1 }, set b(c) { this.x = c }, d: 0})",
-      "({get: function() {return 42;}})",
-      "Object.defineProperty(o, \"foo\", {get: function() {return 42;}});",
-      "({a: 0, \"b\": 1})", "({a: 0, 42: 1})", "({a: 0, 42.99: 1})",
-      "({a: 0, })", "({true: 0, null: 1, undefined: 2, this: 3})", "[]", "[,2]",
-      "[,]", "[,2]", "[,,,1,2]", "delete z", "delete (1+2)",
-      "delete (delete z)", "delete delete z", "+ + + 2", "throw 'ex'",
-      "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {}; break}",
-      "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break}",
-      "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break; "
-      "default: 1; break;}",
-      "try {1} catch(e){}\n1", "try {1} catch(e){} 1",
-      "switch(v) {case 0: break;} 1",
-      "switch(a) {case 1: break; case 3: default: break; case 2: 1; default: "
-      "2}",
-      "do { i-- } while (i > 0)", "if (false) 1; 1;", "while(true) 1; 1;",
-      "while(true) {} 1;", "do {} while(false) 1;", "with (a) 1; 2;",
-      "with (a) {1} 2;", "for(var i in a) {1}", "for(i in a) {1}",
-      "!function(){function d(){}var x}();",
-      "({get a() { function d(){} return 1 }})",
-      "({set a(v) { function d(a){} d(v) }})", "{function d(){}var x}",
-      "try{function d(){}var x}catch(e){function d(){}var x}finally{function "
-      "d(){}var x}",
-      "{} {}", "if(1){function d(){}var x}",
-      "if(1){} else {function d(){}var x}",
-      "var \\u0076, _\\u0077, a\\u0078b, жабоскрипт;", "a.in + b.for",
-      "var x = { null: 5, else: 4 }", "lab: x=1",
-      "'use strict';0;'use strict';", "'use strict';if(0){'use strict';}",
-      "(function(){'use strict';0;'use strict';})()"};
+    "1",
+    "true",
+    "false",
+    "null",
+    "undefined",
+    "1+2",
+    "1-2",
+    "1*2",
+    "1/2",
+    "1%2",
+    "1/-2",
+    "(1 + 2) * x + 3",
+    "1 + (2, 3) * 4, 5",
+    "(a=1 + 2) + 3",
+    "1 ? 2 : 3",
+    "1 ? 2 : 3 ? 4 : 5",
+    "1 ? 2 : (3 ? 4 : 5)",
+    "1 || 2 + 2",
+    "1 && 2 || 3 && 4 + 5",
+    "1|2 && 3|3",
+    "1^2|3^4",
+    "1&2^2&4|5&6",
+    "1==2&3",
+    "1<2",
+    "1<=2",
+    "1>=2",
+    "1>2",
+    "1==1<2",
+    "a instanceof b",
+    "1 in b",
+    "1!=2&3",
+    "1!==2&3",
+    "1===2",
+    "1<<2",
+    "1>>2",
+    "1>>>2",
+    "1<<2<3",
+    "1/2/2",
+    "(1/2)/2",
+    "1 + + 1",
+    "1- -2",
+    "!1",
+    "~0",
+    "void x()",
+    "delete x",
+    "typeof x",
+    "++x",
+    "--i",
+    "x++",
+    "i--",
+    "a.b",
+    "a.b.c",
+    "a[0]",
+    "a[0].b",
+    "a[0][1]",
+    "a[b[0].c]",
+    "a()",
+    "a(0)",
+    "a(0, 1)",
+    "a(0, (1, 2))",
+    "1 + a(0, (1, 2)) + 2",
+    "new x",
+    "new x(0, 1)",
+    "new x.y(0, 1)",
+    "new x.y",
+    "1;",
+    "1;2;",
+    "1;2",
+    "1\nx",
+    "p()\np()\np();p()",
+    ";1",
+    "if (1) 2",
+    "if (1) 2; else 3",
+    "if (1) {2;3}",
+    "if (1) {2;3}; 4",
+    "if (1) {2;3} else {4;5}",
+    "while (1);",
+    "while(1) {}",
+    "while (1) 2;",
+    "while (1) {2;3}",
+    "for (i = 0; i < 3; i++) i++",
+    "for (i=0; i<3;) i++",
+    "for (i=0;;) i++",
+    "for (;i<3;) i++",
+    "for (;;) i++",
+    "debugger",
+    "while(1) break",
+    "while(1) break loop",
+    "while(1) continue",
+    "while(1) continue loop",
+    "function f() {return}",
+    "function f() {return 1+2}",
+    "function f() {if (1) {return;}}",
+    "function f() {if (1) {return 2}}",
+    "throw 1+2",
+    "try { 1 }",
+    "try { 1 } catch (e) { 2 }",
+    "try {1} finally {3}",
+    "try {1} catch (e) {2} finally {3}",
+    "var x",
+    "var x, y",
+    "var x=1, y",
+    "var y, x=y=1",
+    "function x(a) {return a}",
+    "function x() {return 1}",
+    "[1,2,3]",
+    "[1+2,3+4,5+6]",
+    "[1,[2,[[3]]]]",
+    "({a: 1})",
+    "({a: 1, b: 2})",
+    "({})",
+    "(function(a) { return a + 1 })",
+    "(function f(a) { return a + 1 })",
+    "(function f() { return; 1;})",
+    "function f() {while (1) {return;2}}",
+    "switch(a) {case 1: break;}",
+    "switch(a) {case 1: p(); break;}",
+    "switch(a) {case 1: a; case 2: b; c;}",
+    "switch(a) {case 1: a; b; default: c;}",
+    "switch(a) {case 1: p(); break; break; }",
+    "switch(a) {case 1: break; case 2: 1; case 3:}",
+    "switch(a) {case 1: break; case 2: 1; case 3: default: break}",
+    "switch(a) {case 1: break; case 3: default: break; case 2: 1}",
+    "for (var i = 0; i < 3; i++) i++",
+    "for (var i=0, j=i; i < 3; i++, j++) i++",
+    "a%=1",
+    "a*=1",
+    "a/=1",
+    "a+=1",
+    "a-=1",
+    "a|=1",
+    "a&=1",
+    "a<<=1",
+    "a>>2",
+    "a>>=1",
+    "a>>>=1",
+    "a=b=c+=1",
+    "a=(b=(c+=1))",
+    "\"foo\"",
+    "var undefined = 1",
+    "undefined",
+    "{var x=1;2;}",
+    "({get a() { return 1 }})",
+    "({set a(b) { this.x = b }})",
+    "({get a() { return 1 }, set b(c) { this.x = c }, d: 0})",
+    "({get: function() {return 42;}})",
+    "Object.defineProperty(o, \"foo\", {get: function() {return 42;}});",
+    "({a: 0, \"b\": 1})",
+    "({a: 0, 42: 1})",
+    "({a: 0, 42.99: 1})",
+    "({a: 0, })",
+    "({true: 0, null: 1, undefined: 2, this: 3})",
+    "[]",
+    "[,2]",
+    "[,]",
+    "[,2]",
+    "[,,,1,2]",
+    "delete z",
+    "delete (1+2)",
+    "delete (delete z)",
+    "delete delete z",
+    "+ + + 2",
+    "throw 'ex'",
+    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {}; break}",
+    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break}",
+    "switch(a) {case 1: try { 1; } catch (e) { 2; } finally {break}; break; "
+    "default: 1; break;}",
+    "try {1} catch(e){}\n1",
+    "try {1} catch(e){} 1",
+    "switch(v) {case 0: break;} 1",
+    "switch(a) {case 1: break; case 3: default: break; case 2: 1; default: "
+    "2}",
+    "do { i-- } while (i > 0)",
+    "if (false) 1; 1;",
+    "while(true) 1; 1;",
+    "while(true) {} 1;",
+    "do {} while(false) 1;",
+    "with (a) 1; 2;",
+    "with (a) {1} 2;",
+    "for(var i in a) {1}",
+    "for(i in a) {1}",
+    "!function(){function d(){}var x}();",
+    "({get a() { function d(){} return 1 }})",
+    "({set a(v) { function d(a){} d(v) }})",
+    "{function d(){}var x}",
+    "try{function d(){}var x}catch(e){function d(){}var x}finally{function "
+    "d(){}var x}",
+    "{} {}",
+    "if(1){function d(){}var x}",
+    "if(1){} else {function d(){}var x}",
+#if V7_ENABLE__UTF
+    "var \\u0076, _\\u0077, a\\u0078b, жабоскрипт;",
+#else
+    "",
+#endif
+    "a.in + b.for",
+    "var x = { null: 5, else: 4 }",
+    "lab: x=1",
+    "'use strict';0;'use strict';",
+    "'use strict';if(0){'use strict';}",
+    "(function(){'use strict';0;'use strict';})()"
+  };
   const char *invalid[] = {
       "function(a) { return 1 }", "i\n++", "{a: 1, b: 2}", "({, a: 0})",
       "break", "break loop", "continue", "continue loop", "return",
@@ -1011,12 +1156,13 @@ static const char *test_parser(void) {
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
     char *current_want_ast = next_want_ast;
     ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
+    if (cases[i][0] == '\0') continue;
     want_ast_len = (size_t)(next_want_ast - current_want_ast - 1);
     ASSERT((fp = fopen("/tmp/got_ast", "w")) != NULL);
 #if 0
       printf("-- Parsing \"%s\"\n", cases[i]);
 #endif
-    ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
+    ASSERT(parse_js(v7, cases[i], &a) == V7_OK);
 
     if (want_ast_len == 0) {
       printf("Test case not found in %s:\n", want_ast_db);
@@ -1052,7 +1198,7 @@ static const char *test_parser(void) {
   ASSERT((fp = fopen(want_ast_db, "w")) != NULL);
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
     ast_free(&a);
-    ASSERT(parse(v7, &a, cases[i], 1) == V7_OK);
+    ASSERT(parse_js(v7, cases[i], &a) == V7_OK);
     v7_compile(cases[i], 0, fp);
     fwrite("\0", 1, 1, fp);
   }
@@ -1141,7 +1287,7 @@ static const char *test_ecmac(void) {
 #if V7_VERBOSE_ECMA
     printf("-- Parsing %d: \"%s\"\n", i, current_case);
 #endif
-    ASSERT(parse(v7, &a, current_case, 1) == V7_OK);
+    ASSERT(parse_js(v7, current_case, &a) == V7_OK);
     ast_free(&a);
 
     if (v7_exec(v7, &res, driver) != V7_OK) {
