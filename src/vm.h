@@ -65,14 +65,7 @@ struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
   val_t name;               /* Property name (a string) */
   val_t value;              /* Property value */
-
   unsigned int attributes;
-#define V7_PROPERTY_READ_ONLY 1
-#define V7_PROPERTY_DONT_ENUM 2
-#define V7_PROPERTY_DONT_DELETE 4
-#define V7_PROPERTY_HIDDEN 8
-#define V7_PROPERTY_GETTER 16
-#define V7_PROPERTY_SETTER 32
 };
 
 /*
@@ -174,14 +167,9 @@ V7_PRIVATE void init_json(struct v7 *v7);
 V7_PRIVATE void init_date(struct v7 *v7);
 V7_PRIVATE void init_function(struct v7 *v7);
 V7_PRIVATE void init_stdlib(struct v7 *v7);
-V7_PRIVATE void init_socket(struct v7 *v7);
-V7_PRIVATE void init_os(struct v7 *v7);
-V7_PRIVATE void init_crypto(struct v7 *v7);
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
-V7_PRIVATE v7_val_t
-v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int);
-V7_PRIVATE v7_val_t
+V7_PRIVATE val_t
 v7_create_cfunction_ctor(struct v7 *, val_t, v7_cfunction_t, int);
 
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *, val_t obj, const char *name,

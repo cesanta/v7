@@ -59,6 +59,14 @@ V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
   throw_value(v7, create_exception(v7, ex, v7->error_msg));
 } /* LCOV_EXCL_LINE */
 
+void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
+  va_list ap;
+  va_start(ap, err_fmt);
+  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  va_end(ap);
+  throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
+}
+
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   val_t f;
   if (!v7_is_object(v)) {
@@ -1056,7 +1064,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
     v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS], args);
 #else
-    v7_set(v7, frame, "arguments", 9, args);
+    v7_set(v7, frame, "arguments", 9, 0, args);
 #endif
   }
 
@@ -1578,7 +1586,7 @@ val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
     v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
              arguments);
 #else
-    v7_set(v7, frame, "arguments", 9, arguments);
+    v7_set(v7, frame, "arguments", 9, 0, arguments);
 #endif
   }
 
