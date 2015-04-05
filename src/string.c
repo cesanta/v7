@@ -178,7 +178,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return to_string(v7, i_value_of(v7, this_obj));
 }
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   val_t so, ro, arr = v7_create_null();
   long previousLastIndex = 0;
@@ -347,7 +347,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(utf_shift);
 }
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 
 static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   long from = 0, to = 0;
@@ -504,7 +504,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 /* TODO(mkm): make an alternative implementation without regexps */
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
@@ -560,7 +560,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 
   return res;
 }
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str =
@@ -578,7 +578,7 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
   set_cfunc_prop(v7, v7->string_prototype, "lastIndexOf", Str_lastIndexOf);
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
   set_cfunc_prop(v7, v7->string_prototype, "match", Str_match);
   set_cfunc_prop(v7, v7->string_prototype, "replace", Str_replace);
   set_cfunc_prop(v7, v7->string_prototype, "search", Str_search);

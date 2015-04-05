@@ -5,7 +5,7 @@
 
 #include "internal.h"
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
@@ -168,4 +168,4 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
                   V7_PROPERTY_GETTER | V7_PROPERTY_SETTER, lastIndex);
 }
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */

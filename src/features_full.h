@@ -32,5 +32,6 @@
 #define V7_ENABLE__Math__sin 1
 #define V7_ENABLE__Math__sqrt 1
 #define V7_ENABLE__Math__tan 1
+#define V7_ENABLE__RegExp 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */

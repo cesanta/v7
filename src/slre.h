@@ -41,7 +41,7 @@ enum slre_error {
   SLRE_BAD_CHAR_AFTER_USD
 };
 
-#ifndef V7_DISABLE_REGEX
+#if V7_ENABLE__RegExp
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,6 +85,6 @@ int slre_get_flags(struct slre_prog *);
 }
 #endif /* __cplusplus */
 
-#endif /* V7_DISABLE_REGEX */
+#endif /* V7_ENABLE__RegExp */
 
 #endif /* SLRE_HEADER_INCLUDED */
