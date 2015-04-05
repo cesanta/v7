@@ -6,5 +6,6 @@
 #define V7_ENABLE__Math 1
 #define V7_ENABLE__Math__atan2 1
 #define V7_ENABLE__RegExp 1
+#define V7_ENABLE__UTF 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */

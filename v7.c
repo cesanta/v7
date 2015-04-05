@@ -155,6 +155,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math__sqrt 1
 #define V7_ENABLE__Math__tan 1
 #define V7_ENABLE__RegExp 1
+#define V7_ENABLE__UTF 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
@@ -165,6 +166,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math 1
 #define V7_ENABLE__Math__atan2 1
 #define V7_ENABLE__RegExp 1
+#define V7_ENABLE__UTF 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
@@ -237,7 +239,6 @@ int isupperrune(Rune c);
 int runetochar(char *str, Rune *rune);
 Rune tolowerrune(Rune c);
 Rune toupperrune(Rune c);
-int utflen(char *s);
 int utfnlen(char *s, long m);
 char *utfnshift(char *s, long m);
 
@@ -259,6 +260,7 @@ Rune *runestrrchr(Rune *s, Rune c);
 Rune *runestrstr(Rune *s1, Rune *s2);
 Rune totitlerune(Rune c);
 char *utfecpy(char *to, char *e, char *from);
+int utflen(char *s);
 char *utfrrune(char *s, long c);
 char *utfrune(char *s, long c);
 char *utfutf(char *s1, char *s2);
@@ -1554,8 +1556,11 @@ mbuf_insert(struct mbuf *a, size_t off, const char *buf, size_t len) {
  * ANY REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
+#include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
+
+#if V7_ENABLE__UTF
 
 enum
 {
@@ -2896,6 +2901,54 @@ isspacerune(Rune c)
 		return 1;
 	return 0;
 }
+
+#else /* V7_ENABLE__UTF */
+
+int chartorune(Rune *rune, const char *str) {
+	*rune = *(uchar*)str;
+	return 1;
+}
+
+int fullrune(char *str UNUSED, int n) {
+	return (n <= 0) ? 0 : 1;
+}
+
+int isdigitrune(Rune c) {
+  return isdigit(c);
+}
+
+int isnewline(Rune c) {
+  return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;
+}
+
+int iswordchar(Rune c) {
+  return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+int isalpharune(Rune c) { return isalpha(c); }
+int islowerrune(Rune c) { return islower(c); }
+int isspacerune(Rune c) { return isspace(c); }
+int isupperrune(Rune c) { return isupper(c); }
+
+int runetochar(char *str, Rune *rune) {
+  str[0] = (char) *rune;
+  return 1;
+}
+
+Rune tolowerrune(Rune c) { return tolower(c); }
+Rune toupperrune(Rune c) { return toupper(c); }
+int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
+  long n;
+  for (n = 0; n < m && *s != '\0'; n++);
+  return n;
+}
+
+char *utfnshift(char *s, long m) {
+  for (; m > 0 && *s != '\0'; m--, s++);
+  return s;
+}
+
+#endif /* V7_ENABLE__UTF */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved

@@ -37,7 +37,6 @@ int isupperrune(Rune c);
 int runetochar(char *str, Rune *rune);
 Rune tolowerrune(Rune c);
 Rune toupperrune(Rune c);
-int utflen(char *s);
 int utfnlen(char *s, long m);
 char *utfnshift(char *s, long m);
 
@@ -59,6 +58,7 @@ Rune *runestrrchr(Rune *s, Rune c);
 Rune *runestrstr(Rune *s1, Rune *s2);
 Rune totitlerune(Rune c);
 char *utfecpy(char *to, char *e, char *from);
+int utflen(char *s);
 char *utfrrune(char *s, long c);
 char *utfrune(char *s, long c);
 char *utfutf(char *s1, char *s2);
