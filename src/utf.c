@@ -11,9 +11,13 @@
  * ANY REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
+#include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
+#include "internal.h"
 #include "utf.h"
+
+#if V7_ENABLE__UTF
 
 enum
 {
@@ -1355,3 +1359,51 @@ isspacerune(Rune c)
 		return 1;
 	return 0;
 }
+
+#else /* V7_ENABLE__UTF */
+
+int chartorune(Rune *rune, const char *str) {
+	*rune = *(uchar*)str;
+	return 1;
+}
+
+int fullrune(char *str UNUSED, int n) {
+	return (n <= 0) ? 0 : 1;
+}
+
+int isdigitrune(Rune c) {
+  return isdigit(c);
+}
+
+int isnewline(Rune c) {
+  return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;
+}
+
+int iswordchar(Rune c) {
+  return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+int isalpharune(Rune c) { return isalpha(c); }
+int islowerrune(Rune c) { return islower(c); }
+int isspacerune(Rune c) { return isspace(c); }
+int isupperrune(Rune c) { return isupper(c); }
+
+int runetochar(char *str, Rune *rune) {
+  str[0] = (char) *rune;
+  return 1;
+}
+
+Rune tolowerrune(Rune c) { return tolower(c); }
+Rune toupperrune(Rune c) { return toupper(c); }
+int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
+  long n;
+  for (n = 0; n < m && *s != '\0'; n++);
+  return n;
+}
+
+char *utfnshift(char *s, long m) {
+  for (; m > 0 && *s != '\0'; m--, s++);
+  return s;
+}
+
+#endif /* V7_ENABLE__UTF */
