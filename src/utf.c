@@ -166,49 +166,6 @@ runetochar(char *str, Rune *rune)
 	return 4; */
 }
 
-/* int
-runelen(long c)
-{
-	Rune rune;
-	char str[10];
-
-	rune = c;
-	return runetochar(str, &rune);
-} */
-int runelen(Rune c){
-	if(c <= Rune1)					return 1;
-	if(c <= Rune2)					return 2;
-	/* if(c <= Rune3 || c > Runemax) */	return 3;
-	/* return 4; */
-}
-
-/* int
-runenlen(Rune *r, int nrune)
-{
-	int nb, c;
-
-	nb = 0;
-	while(nrune--) {
-		c = *r++;
-		if(c <= Rune1)
-			nb++;
-		else
-		if(c <= Rune2)
-			nb += 2;
-		else
-		if(c <= Rune3 || c > Runemax)
-			nb += 3;
-		else
-			nb += 4;
-	}
-	return nb;
-} */
-int runenlen(Rune *r, int nrune){
-	int nb = 0;
-	while(nrune--) nb += runelen(*r++);
-	return nb;
-}
-
 int
 fullrune(char *str, int n)
 {
@@ -270,125 +227,6 @@ utfnshift(char *s, long m)
 	return s;
 }
 
-#if 0
-
-char*
-utfecpy(char *to, char *e, char *from)
-{
-	char *end;
-
-	if(to >= e)
-		return to;
-	end = memccpy(to, from, '\0', e - to);
-	if(end == NULL){
-		end = e-1;
-		while(end>to && (*--end&0xC0)==0x80)
-			;
-		*end = '\0';
-	}else{
-		end--;
-	}
-	return end;
-}
-
-int
-utflen(char *s)
-{
-	int c;
-	long n;
-	Rune rune;
-
-	n = 0;
-	for(;;) {
-		c = *(uchar*)s;
-		if(c < Runeself) {
-			if(c == 0)
-				return n;
-			s++;
-		} else
-			s += chartorune(&rune, s);
-		n++;
-	}
-}
-
-char*
-utfrrune(char *s, long c)
-{
-	long c1;
-	Rune r;
-	char *s1;
-
-	if(c < Runesync)		/* not part of utf sequence */
-		return strrchr(s, c);
-
-	s1 = 0;
-	for(;;) {
-		c1 = *(uchar*)s;
-		if(c1 < Runeself) {	/* one byte rune */
-			if(c1 == 0)
-				return s1;
-			if(c1 == c)
-				s1 = s;
-			s++;
-			continue;
-		}
-		c1 = chartorune(&r, s);
-		if(r == c)
-			s1 = s;
-		s += c1;
-	}
-}
-
-char*
-utfrune(char *s, long c)
-{
-	long c1;
-	Rune r;
-	int n;
-
-	if(c < Runesync)		/* not part of utf sequence */
-		return strchr(s, c);
-
-	for(;;) {
-		c1 = *(uchar*)s;
-		if(c1 < Runeself) {	/* one byte rune */
-			if(c1 == 0)
-				return 0;
-			if(c1 == c)
-				return s;
-			s++;
-			continue;
-		}
-		n = chartorune(&r, s);
-		if(r == c)
-			return s;
-		s += n;
-	}
-}
-
-/*
- * Return pointer to first occurrence of s2 in s1,
- * 0 if none
- */
-char*
-utfutf(char *s1, char *s2)
-{
-	char *p;
-	long f, n1, n2;
-	Rune r;
-
-	n1 = chartorune(&r, s2);
-	f = r;
-	if(f <= Runesync)		/* represents self */
-		return strstr(s1, s2);
-
-	n2 = strlen(s2);
-	for(p=s1; NULL != (p=utfrune(p, f)); p+=n1)
-		if(strncmp(p, s2, n2) == 0)
-			return p;
-	return 0;
-}
-#endif
 /*
  * The authors of this software are Rob Pike and Ken Thompson.
  *              Copyright (c) 2002 by Lucent Technologies.
@@ -1403,23 +1241,6 @@ Rune	__tolower1[] =
 	0x1ffc, 491,	/* ῼ ῳ */
 };
 
-/*
- * title characters are those between
- * upper and lower case. ie DZ Dz dz
- */
-static
-Rune	__totitle1[] =
-{
-	0x01c4, 501,	/* Ǆ ǅ */
-	0x01c6, 499,	/* ǆ ǅ */
-	0x01c7, 501,	/* Ǉ ǈ */
-	0x01c9, 499,	/* ǉ ǈ */
-	0x01ca, 501,	/* Ǌ ǋ */
-	0x01cc, 499,	/* ǌ ǋ */
-	0x01f1, 501,	/* Ǳ ǲ */
-	0x01f3, 499,	/* ǳ ǲ */
-};
-
 static Rune*
 rune_bsearch(Rune c, Rune *t, int n, int ne)
 {
@@ -1468,17 +1289,6 @@ toupperrune(Rune c)
 	return c;
 }
 
-Rune
-totitlerune(Rune c)
-{
-	Rune *p;
-
-	p = rune_bsearch(c, __totitle1, nelem(__totitle1)/2, 2);
-	if(p && c == p[0])
-		return c + p[1] - 500;
-	return c;
-}
-
 int
 islowerrune(Rune c)
 {
@@ -1507,11 +1317,17 @@ isupperrune(Rune c)
 	return 0;
 }
 
-int isdigitrune(Rune c){return c >= '0' && c <= '9';}
+int isdigitrune(Rune c) {
+  return c >= '0' && c <= '9';
+}
 
-int isnewline(Rune c){return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;}
+int isnewline(Rune c) {
+  return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;
+}
 
-int iswordchar(Rune c){return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');}
+int iswordchar(Rune c) {
+  return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
 
 int
 isalpharune(Rune c)
@@ -1527,12 +1343,6 @@ isalpharune(Rune c)
 	if(p && c == p[0])
 		return 1;
 	return 0;
-}
-
-int
-istitlerune(Rune c)
-{
-	return isupperrune(c) && islowerrune(c);
 }
 
 int
