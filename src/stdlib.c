@@ -205,7 +205,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   init_array(v7);
   init_error(v7);
   init_boolean(v7);
+#if V7_ENABLE__Math
   init_math(v7);
+#endif
   init_string(v7);
 #ifndef V7_DISABLE_REGEX
   init_regex(v7);

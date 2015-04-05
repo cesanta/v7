@@ -5,7 +5,9 @@ use warnings;
 
 my %F;
 while (<>) {
-  $F{$1}++ if (/\b(V7_ENABLE__\S+(__\S+)?)\b/);
+  while (/\b(V7_ENABLE__[^_]+(__[a-zA-Z]\S+)?)\b/g) {
+    $F{$1}++;
+  }
 }
 
 my $feature_defs = '';
