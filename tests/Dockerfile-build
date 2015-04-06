@@ -1,6 +1,6 @@
 FROM ubuntu:vivid
 
-RUN dpkg --add-architecture i386; apt-get update && apt-get install -y --no-install-recommends build-essential less file git vim zile libssl-dev clang llvm clang-format-3.6 libunwind8-dev g++-multilib libc6-dev-i386 wine winetricks mingw-w64 arduino-core simulavr gcc-arm-none-eabi gcc-arm-linux-gnueabi && rm -rf /usr/lib/gcc/*/*posix* /usr/bin/*posix*
+RUN dpkg --add-architecture i386; apt-get update && apt-get install -y --no-install-recommends build-essential less file git vim zile libssl-dev clang llvm clang-format-3.6 libunwind8-dev g++-multilib libc6-dev-i386 wine wine1.6-amd64 winetricks mingw-w64 arduino-core simulavr gcc-arm-none-eabi gcc-arm-linux-gnueabi && apt-get install -y wine-development
 
 RUN ln -s /usr/bin/llvm-symbolizer-3.6 /usr/bin/llvm-symbolizer
 RUN ln -s /usr/bin/clang-format-3.6 /usr/bin/clang-format
