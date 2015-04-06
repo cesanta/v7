@@ -5,8 +5,21 @@
 
 #include "internal.h"
 
-#ifndef V7_DISABLE_CRYPTO
+#if V7_ENABLE__Crypto
 
+#if V7_ENABLE__Crypto__md5 || V7_ENABLE__Crypto__sha1
+static void bin2str(char *to, const unsigned char *p, size_t len) {
+  static const char *hex = "0123456789abcdef";
+
+  for (; len--; p++) {
+    *to++ = hex[p[0] >> 4];
+    *to++ = hex[p[0] & 0x0f];
+  }
+  *to = '\0';
+}
+#endif /* V7_ENABLE__Crypto__md5 || V7_ENABLE__Crypto__sha1 */
+
+#if V7_ENABLE__Crypto__md5
 /*************************** START OF MD5 THIRD PARTY CODE */
 /*
  * This code implements the MD5 message-digest algorithm.
@@ -220,6 +233,44 @@ static void MD5Final(unsigned char digest[MD5_DIGEST_LENGTH], MD5_CTX *ctx) {
 }
 /********************************** END OF MD5 THIRD PARTY CODE */
 
+static void v7_md5(const char *data, size_t len, char buf[16]) {
+  MD5_CTX ctx;
+  MD5Init(&ctx);
+  MD5Update(&ctx, (unsigned char *) data, len);
+  MD5Final((unsigned char *) buf, &ctx);
+}
+
+static val_t Crypto_md5(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_get(v7, args, 0);
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t len;
+    const char *data = v7_to_string(v7, &arg0, &len);
+    char buf[16];
+    v7_md5(data, len, buf);
+    return v7_create_string(v7, buf, sizeof(buf), 1);
+  }
+  return v7_create_null();
+}
+
+static val_t Crypto_md5_hex(struct v7 *v7, val_t this_obj, val_t args) {
+  val_t arg0 = v7_array_get(v7, args, 0);
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t len;
+    const char *data = v7_to_string(v7, &arg0, &len);
+    char hash[16], buf[sizeof(hash) * 2];
+    v7_md5(data, len, hash);
+    bin2str(buf, (unsigned char *) hash, sizeof(hash));
+    return v7_create_string(v7, buf, sizeof(buf), 1);
+  }
+  return v7_create_null();
+}
+#endif /* V7_ENABLE__Crypto__md5 */
+
+#if V7_ENABLE__Crypto__sha1
 /********************************** START OF SHA-1 THIRD PARTY CODE */
 /*
  * SHA-1 in C
@@ -365,57 +416,11 @@ static void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
 }
 /********************************** END OF SHA-1 THIRD PARTY CODE */
 
-static void v7_md5(const char *data, size_t len, char buf[16]) {
-  MD5_CTX ctx;
-  MD5Init(&ctx);
-  MD5Update(&ctx, (unsigned char *) data, len);
-  MD5Final((unsigned char *) buf, &ctx);
-}
-
 static void v7_sha1(const char *data, size_t len, char buf[20]) {
   SHA1_CTX ctx;
   SHA1Init(&ctx);
   SHA1Update(&ctx, (unsigned char *) data, len);
   SHA1Final((unsigned char *) buf, &ctx);
-}
-
-static void bin2str(char *to, const unsigned char *p, size_t len) {
-  static const char *hex = "0123456789abcdef";
-
-  for (; len--; p++) {
-    *to++ = hex[p[0] >> 4];
-    *to++ = hex[p[0] & 0x0f];
-  }
-  *to = '\0';
-}
-
-static val_t Crypto_md5(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t len;
-    const char *data = v7_to_string(v7, &arg0, &len);
-    char buf[16];
-    v7_md5(data, len, buf);
-    return v7_create_string(v7, buf, sizeof(buf), 1);
-  }
-  return v7_create_null();
-}
-
-static val_t Crypto_md5_hex(struct v7 *v7, val_t this_obj, val_t args) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t len;
-    const char *data = v7_to_string(v7, &arg0, &len);
-    char hash[16], buf[sizeof(hash) * 2];
-    v7_md5(data, len, hash);
-    bin2str(buf, (unsigned char *) hash, sizeof(hash));
-    return v7_create_string(v7, buf, sizeof(buf), 1);
-  }
-  return v7_create_null();
 }
 
 static val_t Crypto_sha1(struct v7 *v7, val_t this_obj, val_t args) {
@@ -446,13 +451,18 @@ static val_t Crypto_sha1_hex(struct v7 *v7, val_t this_obj, val_t args) {
   }
   return v7_create_null();
 }
+#endif /* V7_ENABLE__Crypto__sha1 */
 
 V7_PRIVATE void init_crypto(struct v7 *v7) {
   val_t obj = v7_create_object(v7);
   v7_set_property(v7, v7->global_object, "Crypto", 6, 0, obj);
+#if V7_ENABLE__Crypto__md5
   set_cfunc_obj_prop(v7, obj, "md5", Crypto_md5);
   set_cfunc_obj_prop(v7, obj, "md5_hex", Crypto_md5_hex);
+#endif
+#if V7_ENABLE__Crypto__sha1
   set_cfunc_obj_prop(v7, obj, "sha1", Crypto_sha1);
   set_cfunc_obj_prop(v7, obj, "sha1_hex", Crypto_sha1_hex);
+#endif
 }
-#endif  /* V7_DISABLE_CRYPTO */
+#endif  /* V7_ENABLE__Crypto */
