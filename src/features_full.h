@@ -34,5 +34,7 @@
 #define V7_ENABLE__Math__tan 1
 #define V7_ENABLE__RegExp 1
 #define V7_ENABLE__UTF 1
+#define V7_ENABLE__base64__decode 1
+#define V7_ENABLE__base64__encode 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
