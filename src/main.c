@@ -14,6 +14,9 @@
 #endif
 
 #ifdef V7_MAIN
+
+#include <sys/stat.h>
+
 static void show_usage(char *argv[]) {
   fprintf(stderr, "V7 version %s (c) Cesanta Software, built on %s\n",
           V7_VERSION, __DATE__);

@@ -767,8 +767,8 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-v7_val_t
-v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
+v7_val_t v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f,
+                                    int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
