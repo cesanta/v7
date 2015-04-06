@@ -128,6 +128,13 @@ V7_PRIVATE void *v7_to_pointer(val_t v) {
   return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
+v7_cfunction_t v7_to_cfunction(val_t v) {
+  /* Implementation is identical to v7_to_pointer but is separate since
+   * object pointers are not directly convertible to function pointers
+   * according to ISO C and generates a warning in -Wpedantic mode. */
+  return (v7_cfunction_t)(v & 0xFFFFFFFFFFFFUL);
+}
+
 val_t v7_object_to_value(struct v7_object *o) {
   if (o == NULL) {
     return V7_NULL;
@@ -145,10 +152,6 @@ val_t v7_function_to_value(struct v7_function *o) {
 
 struct v7_function *v7_to_function(val_t v) {
   return (struct v7_function *) v7_to_pointer(v);
-}
-
-v7_cfunction_t v7_to_cfunction(val_t v) {
-  return (v7_cfunction_t) v7_to_pointer(v);
 }
 
 v7_val_t v7_create_cfunction(v7_cfunction_t f) {
@@ -767,8 +770,8 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-v7_val_t
-v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
+v7_val_t v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f,
+                                    int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
