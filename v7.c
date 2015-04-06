@@ -156,6 +156,8 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math__tan 1
 #define V7_ENABLE__RegExp 1
 #define V7_ENABLE__UTF 1
+#define V7_ENABLE__base64__decode 1
+#define V7_ENABLE__base64__encode 1
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_FULL */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM
@@ -13174,6 +13176,30 @@ static val_t Std_exit(struct v7 *v7, val_t t, val_t args) {
   return v7_create_undefined();
 }
 
+#if V7_ENABLE__base64__encode || V7_ENABLE__base64__decode
+static val_t b64_transform(struct v7 *v7, val_t this_obj, val_t args,
+                           void(func)(const unsigned char *, int, char *),
+                           double mult) {
+  val_t arg0 = v7_array_get(v7, args, 0);
+  val_t res = v7_create_undefined();
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *s = v7_to_string(v7, &arg0, &n);
+    char *buf = (char *) malloc(n * mult + 2);
+    if (buf != NULL) {
+      func((const unsigned char *) s, (int) n, buf);
+      res = v7_create_string(v7, buf, strlen(buf), 1);
+      free(buf);
+    }
+  }
+
+  return res;
+}
+#endif /* V7_ENABLE__base64__encode || V7_ENABLE__base64__decode */
+
+#if V7_ENABLE__base64__encode
 static void base64_encode(const unsigned char *src, int src_len, char *dst) {
   V7_PRIVATE const char *b64 =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -13199,6 +13225,12 @@ static void base64_encode(const unsigned char *src, int src_len, char *dst) {
   dst[j++] = '\0';
 }
 
+static val_t Std_base64_encode(struct v7 *v7, val_t this_obj, val_t args) {
+  return b64_transform(v7, this_obj, args, base64_encode, 1.5);
+}
+#endif /* V7_ENABLE__base64__encode */
+
+#if V7_ENABLE__base64__decode
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
 static unsigned char from_b64(unsigned char ch) {
   /* Inverse lookup map */
@@ -13240,34 +13272,10 @@ static void base64_decode(const unsigned char *s, int len, char *dst) {
   *dst = 0;
 }
 
-static val_t b64_transform(struct v7 *v7, val_t this_obj, val_t args,
-                           void(func)(const unsigned char *, int, char *),
-                           double mult) {
-  val_t arg0 = v7_array_get(v7, args, 0);
-  val_t res = v7_create_undefined();
-
-  (void) this_obj;
-  if (v7_is_string(arg0)) {
-    size_t n;
-    const char *s = v7_to_string(v7, &arg0, &n);
-    char *buf = (char *) malloc(n * mult + 2);
-    if (buf != NULL) {
-      func((const unsigned char *) s, (int) n, buf);
-      res = v7_create_string(v7, buf, strlen(buf), 1);
-      free(buf);
-    }
-  }
-
-  return res;
-}
-
 static val_t Std_base64_decode(struct v7 *v7, val_t this_obj, val_t args) {
   return b64_transform(v7, this_obj, args, base64_decode, 0.75);
 }
-
-static val_t Std_base64_encode(struct v7 *v7, val_t this_obj, val_t args) {
-  return b64_transform(v7, this_obj, args, base64_encode, 1.5);
-}
+#endif /* V7_ENABLE__base64__decode */
 
 #ifndef V7_NO_FS
 static val_t Std_load(struct v7 *v7, val_t this_obj, val_t args) {
@@ -13308,8 +13316,12 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   set_cfunc_prop(v7, v7->global_object, "print", Std_print);
   set_cfunc_prop(v7, v7->global_object, "eval", Std_eval);
   set_cfunc_prop(v7, v7->global_object, "exit", Std_exit);
+#if V7_ENABLE__base64__encode
   set_cfunc_prop(v7, v7->global_object, "base64_encode", Std_base64_encode);
+#endif
+#if V7_ENABLE__base64__decode
   set_cfunc_prop(v7, v7->global_object, "base64_decode", Std_base64_decode);
+#endif
 
 #ifndef V7_NO_FS
   /* TODO(lsm): move to a File object */
