@@ -665,11 +665,12 @@ int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
   return -1;
 }
 
-int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len, val_t val) {
+int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
+           unsigned int attrs, val_t val) {
   struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
-    return v7_set_property(v7, obj, name, len, p == NULL ? 0 : p->attributes,
-                           val);
+    return v7_set_property(v7, obj, name, len,
+                           p == NULL ? attrs : p->attributes, val);
   }
   return -1;
 }
@@ -766,7 +767,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-V7_PRIVATE v7_val_t
+v7_val_t
 v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -968,7 +969,7 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
     } else {
       char buf[20];
       int n = v_sprintf_s(buf, sizeof(buf), "%lu", index);
-      res = v7_set(v7, arr, buf, n, v);
+      res = v7_set(v7, arr, buf, n, 0, v);
     }
   }
   return res;
