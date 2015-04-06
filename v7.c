@@ -186,8 +186,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MEDIUM */
 #if V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL
 
-#define V7_ENABLE__Date 1
-#define V7_ENABLE__Date__now 1
+/* This space is intentionally left blank. */
 
 #endif /* V7_BUILD_PROFILE == V7_BUILD_PROFILE_MINIMAL */
 /*
@@ -760,13 +759,11 @@ struct gc_arena {
 
 #define _POSIX_C_SOURCE 200809L
 
-#include <sys/stat.h>
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
-#include <locale.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -774,7 +771,6 @@ struct gc_arena {
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
-#include <time.h>
 
 /* Public API. Implemented in api.c */
 
@@ -792,10 +788,7 @@ typedef unsigned char uint8_t;
 typedef unsigned long uintptr_t;
 #define __func__ ""
 #else
-#include <sys/time.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <fcntl.h>
 #endif
 
 
@@ -6232,8 +6225,8 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-v7_val_t
-v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f, int num_args) {
+v7_val_t v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f,
+                                    int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
@@ -11900,6 +11893,9 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 #endif
 
 #ifdef V7_MAIN
+
+#include <sys/stat.h>
+
 static void show_usage(char *argv[]) {
   fprintf(stderr, "V7 version %s (c) Cesanta Software, built on %s\n",
           V7_VERSION, __DATE__);
@@ -12017,6 +12013,9 @@ int main(int argc, char *argv[]) {
 
 
 #if V7_ENABLE__Date
+
+#include <locale.h>
+#include <time.h>
 
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);

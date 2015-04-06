@@ -7,6 +7,9 @@
 
 #if V7_ENABLE__Date
 
+#include <locale.h>
+#include <time.h>
+
 #ifdef __APPLE__
 int64_t strtoll(const char *, char **, int);
 #elif !defined(_WIN32)
