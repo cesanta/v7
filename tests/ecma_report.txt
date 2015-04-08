@@ -910,9 +910,9 @@
 907	FAIL ch10/10.2/10.2.3/S10.2.3_A1.2_T2.js (tail -c +697322 tests/ecmac.db|head -c 1101): [{"message":"[parseInt] is not defined"}]
 908	FAIL ch10/10.2/10.2.3/S10.2.3_A1.2_T3.js (tail -c +698424 tests/ecmac.db|head -c 1582): [{"message":"[EvalError] is not defined"}]
 909	PASS ch10/10.2/10.2.3/S10.2.3_A1.2_T4.js (tail -c +700007 tests/ecmac.db|head -c 388)
-910	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T1.js (tail -c +700396 tests/ecmac.db|head -c 593): [{"message":"parse error at at line 6 col 24: [if ( Infinity === null  ]"}]
-911	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T2.js (tail -c +700990 tests/ecmac.db|head -c 1214): [{"message":"parse error at at line 6 col 22: [if ( parseInt === nul ]"}]
-912	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T3.js (tail -c +702205 tests/ecmac.db|head -c 1767): [{"message":"parse error at at line 6 col 15: [if ( Function  ]"}]
+910	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T1.js (tail -c +700396 tests/ecmac.db|head -c 593)
+911	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T2.js (tail -c +700990 tests/ecmac.db|head -c 1214): [{"message":"parse error at at line 27 col 9: [  $ERROR(]"}]
+912	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T3.js (tail -c +702205 tests/ecmac.db|head -c 1767)
 913	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T4.js (tail -c +703973 tests/ecmac.db|head -c 405)
 914	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T1.js (tail -c +704379 tests/ecmac.db|head -c 527): [{"message":"#1: 'Infinity' have attribute DontEnum"}]
 915	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T2.js (tail -c +704907 tests/ecmac.db|head -c 1106): [{"message":"#1: 'eval' have attribute DontEnum"}]
@@ -922,10 +922,10 @@
 919	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T2.js (tail -c +708548 tests/ecmac.db|head -c 1181): [{"message":"#1: 'eval' have attribute DontEnum"}]
 920	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T3.js (tail -c +709730 tests/ecmac.db|head -c 1705): [{"message":"#1: 'Function' have attribute DontEnum"}]
 921	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T4.js (tail -c +711436 tests/ecmac.db|head -c 391): [{"message":"#1: 'Math' have attribute DontEnum"}]
-922	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T1.js (tail -c +711828 tests/ecmac.db|head -c 619): [{"message":"parse error at at line 4 col 11: [    $ERROR(]"}]
-923	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T2.js (tail -c +712448 tests/ecmac.db|head -c 1282): [{"message":"parse error at at line 4 col 11: [    $ERROR(]"}]
-924	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T3.js (tail -c +713731 tests/ecmac.db|head -c 1856): [{"message":"parse error at at line 4 col 11: [    $ERROR(]"}]
-925	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T4.js (tail -c +715588 tests/ecmac.db|head -c 413): [{"message":"parse error at at line 4 col 11: [    $ERROR(]"}]
+922	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T1.js (tail -c +711828 tests/ecmac.db|head -c 619): [{"message":"#1: 'Infinity' have attribute DontEnum"}]
+923	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T2.js (tail -c +712448 tests/ecmac.db|head -c 1282): [{"message":"parse error at at line 14 col 11: [    $ERROR(]"}]
+924	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T3.js (tail -c +713731 tests/ecmac.db|head -c 1856): [{"message":"parse error at at line 14 col 11: [    $ERROR(]"}]
+925	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T4.js (tail -c +715588 tests/ecmac.db|head -c 413): [{"message":"#1: 'Math' have attribute DontEnum"}]
 926	PASS ch10/10.4/S10.4_A1.1_T1.js (tail -c +716002 tests/ecmac.db|head -c 424)
 927	PASS ch10/10.4/S10.4A1.1_T2.js (tail -c +716427 tests/ecmac.db|head -c 476)
 928	FAIL ch10/10.4/10.4.1/S10.4.1_A1_T1.js (tail -c +716904 tests/ecmac.db|head -c 536): [{"message":"#2: variable x has property attribute DontDelete"}]
@@ -2822,7 +2822,7 @@ try
 2815	PASS ch12/12.6/12.6.1/S12.6.1_A4_T5.js (tail -c +3082551 tests/ecmac.db|head -c 496)
 2816	FAIL ch12/12.6/12.6.1/S12.6.1_A5.js (tail -c +3083048 tests/ecmac.db|head -c 1262): [{"message":"#3: __evaluated === 1. Actual:  __evaluated ===undefined"}]
 2817	PASS ch12/12.6/12.6.1/S12.6.1_A7.js (tail -c +3084311 tests/ecmac.db|head -c 871)
-2818	FAIL ch12/12.6/12.6.1/S12.6.1_A8.js (tail -c +3085183 tests/ecmac.db|head -c 901): [{"message":"parse error at at line 1 col 99: [ do { __condition++; if ("}]
+2818	PASS ch12/12.6/12.6.1/S12.6.1_A8.js (tail -c +3085183 tests/ecmac.db|head -c 901)
 2819	PASS ch12/12.6/12.6.1/S12.6.1_A9.js
  * @description Throwing system exception whithin a "do-while" loop
 
@@ -2840,7 +2840,7 @@ try
 2831	PASS ch12/12.6/12.6.2/S12.6.2_A4_T5.js (tail -c +3096903 tests/ecmac.db|head -c 494)
 2832	FAIL ch12/12.6/12.6.2/S12.6.2_A5.js (tail -c +3097398 tests/ecmac.db|head -c 1307): [{"message":"#3: __evaluated === 1. Actual:  __evaluated ===undefined"}]
 2833	PASS ch12/12.6/12.6.2/S12.6.2_A7.js (tail -c +3098706 tests/ecmac.db|head -c 862)
-2834	FAIL ch12/12.6/12.6.2/S12.6.2_A8.js (tail -c +3099569 tests/ecmac.db|head -c 895): [{"message":"parse error at at line 1 col 99: [ while(__condition < 10) "}]
+2834	PASS ch12/12.6/12.6.2/S12.6.2_A8.js (tail -c +3099569 tests/ecmac.db|head -c 895)
 2835	PASS ch12/12.6/12.6.2/S12.6.2_A9.js
  * @description Throwing system exception inside "while" loop
  */
@@ -9744,7 +9744,7 @@ line 2. Actual: undefined"}]
 9658	PASS ch15/15.5/15.5.1/S15.5.1.1_A1_T6.js (tail -c +8798892 tests/ecmac.db|head -c 915)
 9659	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T7.js (tail -c +8799808 tests/ecmac.db|head -c 892): [{"message":"#2: __str = String({}); __str === "[object Object]". Actual: __str ==={}"}]
 9660	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T8.js (tail -c +8800701 tests/ecmac.db|head -c 1191): [{"message":"#2: Array.prototype.toString=function(){return "__ARRAY__";}; __str = String(new Array); __str === "__ARRAY__". Actual: __str ===[]"}]
-9661	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T9.js (tail -c +8801893 tests/ecmac.db|head -c 967): [{"message":"#2: toString=function(){return "__THIS__";}; __str = String(this); __str === "__THIS__". Actual: __str ==={"__str":undefined,"toString":[function()],"runTestCase":[function runTestCase(testcase)],"Construc"}]
+9661	FAIL ch15/15.5/15.5.1/S15.5.1.1_A1_T9.js (tail -c +8801893 tests/ecmac.db|head -c 967): [{"message":"#2: toString=function(){return "__THIS__";}; __str = String(this); __str === "__THIS__". Actual: __str ==={"__str":undefined,"toString":[function()],"runTestCase":[function runTestCase(testcase)],"ConstructDate":[function ConstructDate(year,month,date,hours,minutes,seconds,ms){var r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,retVal}],"TimeClip":[function TimeClip(time)],"MakeDate":[function MakeDate(day,time)],"MakeDay":[function MakeDay(year,month,date){var result5,result6,sign,t,y,leap,m}],"MakeTime":[function MakeTime(hour,min,sec,ms)],"msFromTime":[function msFromTime(t)],"SecFromTime":[function SecFromTime(t)],"Min"}]
 9662	PASS ch15/15.5/15.5.1/S15.5.1.1_A2_T1.js (tail -c +8802861 tests/ecmac.db|head -c 810)
 9663	PASS ch15/15.5/15.5.2/S15.5.2.1_A1_T1.js (tail -c +8803672 tests/ecmac.db|head -c 1618)
 9664	FAIL ch15/15.5/15.5.2/S15.5.2.1_A1_T10.js (tail -c +8805291 tests/ecmac.db|head -c 1595): [{"message":"#2: __str = new String(__obj); __str =="tostr". Actual: __str =={}"}]

@@ -5786,7 +5786,7 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   return n;
 }
 
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define BUF_LEFT(size, used) (((size_t)(used) < (size)) ? ((size) - (used)) : 0)
 
 V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json) {
@@ -5797,44 +5797,44 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
        vp += sizeof(val_t)) {
     if (*(val_t *) vp == v) {
       strncpy(buf, "[Circular]", size);
-      return MIN(10, size);
+      return 10;
     }
   }
 
   switch (val_type(v7, v)) {
     case V7_TYPE_NULL:
       strncpy(buf, "null", size);
-      return MIN(4, size);
+      return 4;
     case V7_TYPE_UNDEFINED:
       strncpy(buf, "undefined", size);
-      return MIN(9, size);
+      return 9;
     case V7_TYPE_BOOLEAN:
       if (v7_to_boolean(v)) {
         strncpy(buf, "true", size);
-        return MIN(4, size);
+        return 4;
       } else {
         strncpy(buf, "false", size);
-        return MIN(5, size);
+        return 5;
       }
     case V7_TYPE_NUMBER:
       if (v == V7_TAG_NAN) {
-        return v_sprintf_s(buf, size, "NaN");
+        return snprintf(buf, size, "NaN");
       }
       num = v7_to_double(v);
       if (isinf(num)) {
-        return v_sprintf_s(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
+        return snprintf(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
       }
       {
         const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
-        return v_sprintf_s(buf, size, fmt, num);
+        return snprintf(buf, size, fmt, num);
       }
     case V7_TYPE_STRING: {
       size_t n;
       const char *str = v7_to_string(v7, &v, &n);
       if (as_json) {
-        return v_sprintf_s(buf, size, "\"%.*s\"", (int) n, str);
+        return snprintf(buf, size, "\"%.*s\"", (int) n, str);
       } else {
-        return v_sprintf_s(buf, size, "%.*s", (int) n, str);
+        return snprintf(buf, size, "%.*s", (int) n, str);
       }
     }
 #if V7_ENABLE__RegExp
@@ -5847,43 +5847,43 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (flags & SLRE_FLAG_G) s2[n2++] = 'g';
       if (flags & SLRE_FLAG_I) s2[n2++] = 'i';
       if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
-      return v_sprintf_s(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
+      return snprintf(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
     }
 #endif
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
-      return v_sprintf_s(buf, size, "cfunc_xxxxxx", v7_to_pointer(v));
+      return snprintf(buf, size, "cfunc_xxxxxx");
 #else
-      return v_sprintf_s(buf, size, "cfunc_%p", v7_to_pointer(v));
+      return snprintf(buf, size, "cfunc_%p", v7_to_pointer(v));
 #endif
     case V7_TYPE_CFUNCTION_OBJECT:
       v = i_value_of(v7, v);
-      return v_sprintf_s(buf, size, "Function cfunc_%p", v7_to_pointer(v));
+      return snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
     case V7_TYPE_NUMBER_OBJECT:
     case V7_TYPE_DATE_OBJECT:
     case V7_TYPE_ERROR_OBJECT: {
+      /* TODO(imax): make it return the desired size of the buffer */
       char *b = buf;
       struct v7_property *p;
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-      b += v_sprintf_s(b, size - (b - buf), "{");
-      for (p = v7_to_object(v)->properties; p && (size - (b - buf));
-           p = p->next) {
+      b += snprintf(b, BUF_LEFT(size, b - buf), "{");
+      for (p = v7_to_object(v)->properties; p; p = p->next) {
         size_t n;
         const char *s;
         if (p->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)) {
           continue;
         }
         s = v7_to_string(v7, &p->name, &n);
-        b += v_sprintf_s(b, size - (b - buf), "\"%.*s\":", (int) n, s);
-        b += to_str(v7, p->value, b, size - (b - buf), 1);
+        b += snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
+        b += to_str(v7, p->value, b, BUF_LEFT(size, b - buf), 1);
         if (p->next) {
-          b += v_sprintf_s(b, size - (b - buf), ",");
+          b += snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
-      b += v_sprintf_s(b, size - (b - buf), "}");
+      b += snprintf(b, BUF_LEFT(size, b - buf), "}");
       v7->json_visited_stack.len -= sizeof(v);
       return b - buf;
     }
@@ -5894,19 +5894,19 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       size_t i, len = v7_array_length(v7, v);
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       if (as_json) {
-        b += v_sprintf_s(b, size - (b - buf), "[");
+        b += snprintf(b, BUF_LEFT(size, b - buf), "[");
       }
       for (i = 0; i < len; i++) {
         el = v7_array_get2(v7, v, i, &has);
         if (has) {
-          b += to_str(v7, el, b, size - (b - buf), 1);
+          b += to_str(v7, el, b, BUF_LEFT(size, b - buf), 1);
         }
         if (i != len - 1) {
-          b += v_sprintf_s(b, size - (b - buf), ",");
+          b += snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
       if (as_json) {
-        b += v_sprintf_s(b, size - (b - buf), "]");
+        b += snprintf(b, BUF_LEFT(size, b - buf), "]");
       }
       v7->json_visited_stack.len -= sizeof(v);
       return b - buf;
@@ -5919,7 +5919,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       ast_off_t body, var, var_end, start, pos = func->ast_off;
       struct ast *a = func->ast;
 
-      b += v_sprintf_s(b, size - (b - buf), "[function");
+      b += snprintf(b, BUF_LEFT(size, b - buf), "[function");
 
       V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
       start = pos - 1;
@@ -5931,22 +5931,23 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (ast_fetch_tag(a, &pos) == AST_IDENT) {
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
-        b += v_sprintf_s(b, size - (b - buf), " %.*s", (int) name_len, name);
+        b +=
+            snprintf(b, BUF_LEFT(size, b - buf), " %.*s", (int) name_len, name);
       }
-      b += v_sprintf_s(b, size - (b - buf), "(");
+      b += snprintf(b, BUF_LEFT(size, b - buf), "(");
       while (pos < body) {
         V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_IDENT);
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
-        b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
+        b += snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len, name);
         if (pos < body) {
-          b += v_sprintf_s(b, size - (b - buf), ",");
+          b += snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
-      b += v_sprintf_s(b, size - (b - buf), ")");
+      b += snprintf(b, BUF_LEFT(size, b - buf), ")");
       if (var != start) {
         ast_off_t next;
-        b += v_sprintf_s(b, size - (b - buf), "{var ");
+        b += snprintf(b, BUF_LEFT(size, b - buf), "{var ");
 
         do {
           V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR);
@@ -5963,22 +5964,23 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
             ast_move_to_children(a, &var);
             ast_skip_tree(a, &var);
 
-            b += v_sprintf_s(b, size - (b - buf), "%.*s", (int) name_len, name);
+            b += snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len,
+                          name);
             if (var < var_end || next) {
-              b += v_sprintf_s(b, size - (b - buf), ",");
+              b += snprintf(b, BUF_LEFT(size, b - buf), ",");
             }
           }
           if (next > 0) {
             var = next - 1; /* TODO(mkm): cleanup */
           }
         } while (next != 0);
-        b += v_sprintf_s(b, size - (b - buf), "}");
+        b += snprintf(b, BUF_LEFT(size, b - buf), "}");
       }
-      b += v_sprintf_s(b, size - (b - buf), "]");
+      b += snprintf(b, BUF_LEFT(size, b - buf), "]");
       return b - buf;
     }
     case V7_TYPE_FOREIGN:
-      return v_sprintf_s(buf, size, "[foreign]");
+      return snprintf(buf, size, "[foreign]");
     default:
       printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
@@ -5986,6 +5988,12 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
   return 0; /* for compilers that don't know about abort() */
 }
 
+#undef BUF_LEFT
+
+/*
+ * v7_to_json allocates a new buffer if value representation doesn't fit into
+ * buf. Caller is responsible for freeing that buffer.
+ */
 char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   int len = to_str(v7, v, buf, size, 1);
 
@@ -6011,7 +6019,8 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
     buf[n] = '\0';
     return n;
   } else {
-    return to_str(v7, v, buf, size, 1);
+    size_t len = (size_t) to_str(v7, v, buf, size, 1);
+    return len < size ? len : size;
   }
 }
 
@@ -11995,8 +12004,11 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
 
   if (!show_ast) {
     char buf[2000];
-    v7_to_json(v7, res, buf, sizeof(buf));
-    printf("%s\n", buf);
+    char *s = v7_to_json(v7, res, buf, sizeof(buf));
+    printf("%s\n", s);
+    if (s != buf) {
+      free(s);
+    }
   }
 
   v7_destroy(v7);
