@@ -5,5 +5,5 @@ function oo() {
     }
 }
 
-for (var i=0; i<1000; i++) oo();
+for (var i=0; i<500; i++) oo();
 

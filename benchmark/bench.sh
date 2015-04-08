@@ -20,6 +20,21 @@ if [ -e /usr/local/bin/gtime ]; then
     TIME=/usr/local/bin/gtime
 fi
 
+function massif() {
+    V="$1"
+    N="$2"
+    B="$3"
+    valgrind --tool=massif --massif-out-file=/tmp/msf ${V} ${B}
+    grep mem_heap_B /tmp/msf | sed 's/mem_heap_B=//' | sort -n | tail -n 1 >/tmp/v7-bench-mem-${N}.data
+}
+
+function gtime() {
+    V="$1"
+    N="$2"
+    B="$3"
+    ${TIME} -o /tmp/v7-bench-cpu-${N}.data --format="%U" ${V} ${B}
+}
+
 function header() {
     echo -en "Title"
     for N in ${VMS}; do
@@ -35,9 +50,8 @@ for B in bench_*.js; do
     for N in ${VMS}; do
         eval V=\$${N}
         echo "Running ${B} with ${N}"
-        ${TIME} -o /tmp/v7-bench-raw.data --format="\"${B}\"\t%U\t%M" ${V} ${B}
-        awk '{print $2}' /tmp/v7-bench-raw.data >/tmp/v7-bench-cpu-${N}.data
-        awk '{print $3}' /tmp/v7-bench-raw.data >/tmp/v7-bench-mem-${N}.data
+        gtime ${V} ${N} ${B}
+        massif ${V} ${N} ${B}
     done
 
     S=$(echo ${B} | sed 's/bench_//' )

@@ -13,3 +13,5 @@ RUN mkdir -p /v7/graphs && mkdir -p /v7/build && \
     mv /v7/build/mujs/build/mujs /v7/ && \
     rm -rf /v7/build && \
     strip /v7/duk /v7/mujs
+
+RUN apt-get update && apt-get install -y valgrind && rm -rf /var/lib/apt/lists/*
