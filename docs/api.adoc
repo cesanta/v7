@@ -1,5 +1,87 @@
 = API Reference
 
+== C/C++ / JavaScript API
+
+=== `struct v7 *v7_create(void);`
+
+Create new V7 instance. Note: V7 internal data structures are not
+mutex-protected, therefore it is a user responsibility to serialize access
+for multi-treaded usage.
+
+=== `void v7_destroy(struct v7 *);`
+
+Destroy V7 instance and deallocate all associated data.
+
+=== `enum v7_err v7_exec(struct v7 *, v7_val_t *res, const char *str);`
+
+Execute JavaScript code `str`, put result into `res`. `str` must be a
+0-terminated UTF-8 string. Return value is one of:
+`V7_OK`, `V7_SYNTAX_ERROR`, `V7_EXEC_EXCEPTION`. In case of exception,
+`res` contains an exception object.
+
+=== `enum v7_err v7_exec_file(struct v7 *, v7_val_t *res, const char *path);`
+
+Same as `v7_exec()`, but reads code from a file `path`.
+
+=== `enum v7_err v7_exec_with(struct v7 *, v7_val_t *res, const char *str, v7_val_t ctx);`
+
+Same as `v7_exec()`, but executes in a `ctx` object context instead of a
+global context.
+
+=== `v7_val_t v7_create_object(struct v7 *v7);`
+
+Create new object.
+
+=== `v7_val_t v7_create_array(struct v7 *v7);`
+
+Create new array.
+
+=== C-to-Javascript conversions
+- `v7_val_t v7_create_cfunction(v7_cfunction_t func);`
+- `v7_val_t v7_create_number(double num);`
+- `v7_val_t v7_create_boolean(int is_true);`
+- `v7_val_t v7_create_null(void);`
+- `v7_val_t v7_create_undefined(void);`
+- `v7_val_t v7_create_string(struct v7 *v7, const char *str, size_t str_len, int copy);`
+- `v7_val_t v7_create_regexp(struct v7 *, const char *re, size_t re_len, const char *flags, size_t flags_len);`
+- `v7_val_t v7_create_foreign(void *);`
+- `v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int nargs);`
+
+=== Javascript-to-C conversions
+
+- `void *v7_to_foreign(v7_val_t);`
+- `int v7_to_boolean(v7_val_t);`
+- `double v7_to_double(v7_val_t);`
+- `v7_cfunction_t v7_to_cfunction(v7_val_t);`
+- `const char *v7_to_string(struct v7 *, v7_val_t *, size_t *str_len);`
+
+=== Type checking functions
+- `int v7_is_object(v7_val_t);`
+- `int v7_is_function(v7_val_t);`
+- `int v7_is_cfunction(v7_val_t);`
+- `int v7_is_string(v7_val_t);`
+- `int v7_is_boolean(v7_val_t);`
+- `int v7_is_double(v7_val_t);`
+- `int v7_is_null(v7_val_t);`
+- `int v7_is_undefined(v7_val_t);`
+- `int v7_is_regexp(v7_val_t);`
+- `int v7_is_foreign(v7_val_t);`
+
+=== `v7_val_t v7_get_global_object(struct v7 *);`
+=== `v7_val_t v7_get(struct v7 *, v7_val_t obj, const char *name, size_t len);`
+=== `char *v7_to_json(struct v7 *, v7_val_t, char *buf, size_t buf_len);`
+=== `int v7_is_true(struct v7 *, v7_val_t v);`
+=== `v7_val_t v7_apply(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);`
+=== `void v7_throw(struct v7 *, const char *, ...);`
+=== `int v7_set(struct v7 *, v7_val_t obj, const char *, size_t, unsigned int attrs, v7_val_t val);`
+=== `int v7_set_method(struct v7 *, v7_val_t obj, const char *name, v7_cfunction_t func);`
+=== `unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);`
+=== `int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);`
+=== `int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);`
+=== `v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);`
+=== `void v7_compile(const char *code, int binary, FILE *fp);`
+=== `int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));`
+
 == File
 
 File API is a simple wrapper around POSIX file API. File object is not a

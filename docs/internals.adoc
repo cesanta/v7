@@ -1,0 +1,91 @@
+= V7 internals
+
+V7 has four loosely coupled layers:
+
+1. Tokenizer. Reads input source and returns next token.
+2. Parser. Calls tokenizer to parse the source code, and builds an AST
+3. Abstract Syntax Tree (AST) - a representation of a program's syntax tree
+   in portable binary form
+4. Interpreter - an actual VM that executes AST
+
+Each layer is described in a respective section below.
+
+
+=== NaN packing
+
+V7 uses well-known NaN packing technique for values. This is a method of
+storing values in the IEEE 754 double-precision floating-point number.
+`double` type is 64-bit, comprised of 1 sign bit, 11 exponent bits and
+52 mantissa bits:
+
+```
+      7         6        5        4        3        2        1        0
+  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
+```
+
+If an exponent is all-1 and mantissa is non-0, then `double` value represents
+NaN (not-a-number). V7 uses first 4 bits of mantissa to store value type,
+and the rest 48 bits of mantissa goes to storing values:
+
+```
+  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
+   NaN marker |type|  48-bit placeholder for values: pointers, strings
+```
+
+On 64-bit platforms, pointers occupy only 48 bits, so they can fit into the
+48-bit placeholder - provided they are sign extended.
+
+=== Strings
+
+== Tokenizer
+
+Tokenizer reads input source and returns next token. V7 uses hand-written
+tokenizer. All possible tokens are described as `enum v7_tok`. Tokenizer
+exports following interface:
+
+=== `int skip_to_next_tok(const char **ptr);`
+
+Move source code pointer `ptr` to the next token, skipping whitespaces
+and comments. Return number of new lines skipped.
+
+=== `enum v7_tok get_tok(const char **s, double *n, enum v7_tok prev_tok);`
+
+Return a token pointed by source code pointer `s`. `get_tok()` expects
+`skip_to_next_tok()` called, i.e. that `s` points to the valid next token.
+If returned token is `TOK_NUMBER`, then `n` will contain parsed number.
+`prev_tok` is required to parse RegExp literals, otherwise it would be
+impossible to correctly parse strings like this: `a /= b; c /= d;`: when
+tokenizer sees first `/`, it wouldn't know if it is a division or a
+regexp literal.
+
+`get_tok()` is basically a giant `switch` statement that looks at the first
+character of the input string. For each letter, there is a short number of
+tokens that begins with that letter, and `get_tok()` iterates over all of them.
+Usually compilers generate jump table for the `switch` statement, which makes
+`get_tok()` quite fast.
+
+
+=== `int is_reserved_word_token(enum v7_tok tok);`
+
+Return non-zero if the token is one of the reserved words. To make this
+function fast, all reserved words tokens are grouped together in
+alphabetical order, thus enabling this implementation:
+
+```
+int is_reserved_word_token(enum v7_tok tok) {
+  return tok >= TOK_BREAK && tok <= TOK_WITH;
+}
+```
+
+== Parser
+
+V7 parser is a hand-written recursive-descent parser. It calls tokenizer
+to get the next token in the stream, and generates an abstract syntax tree
+(AST) that is represented as contiguous chunk of memory. All functions
+that start with `parse_` prefix belong to parser.
+
+== AST
+
+AST represents program's syntax tree in portable binary form.
+
+== VM
