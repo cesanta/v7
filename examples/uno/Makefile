@@ -1,2 +1,2 @@
 # No-op for now.
-all:
+all clean:
