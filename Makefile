@@ -18,6 +18,7 @@ else
 endif
 
 all: v7 medium_v7 minimal_v7 amalgamated_v7 amalgamated_medium_v7 amalgamated_minimal_v7
+	@$(MAKE) -C docs
 	@$(MAKE) -C examples
 	@$(MAKE) -C tests
 

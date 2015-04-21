@@ -13,6 +13,7 @@ machine:
 
 test:
   pre:
+    - make -C docs
     - make -C tests compile
     - make v7.c difftest
     - sudo docker run -v $PWD/..:/cesanta -t -i cesanta/v7_test w
@@ -27,3 +28,4 @@ deployment:
     commands:
       - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || echo FAILED
       - make -C benchmark push || echo FAILED
+      - scp docs/index.html circleci@cesanta.com://var/www/cesanta.com/docs/v7/
