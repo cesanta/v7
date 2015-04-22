@@ -154,8 +154,6 @@ v7_val_t v7_create_regexp(struct v7 *, const char *regex, size_t regex_len,
  */
 v7_val_t v7_create_foreign(void *ptr);
 
-// v7_val_t v7_create_cfunction_object(struct v7 *, v7_cfunction_t, int nargs);
-
 /* Return true if given value is a JavaScript object */
 int v7_is_object(v7_val_t);
 
