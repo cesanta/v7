@@ -283,7 +283,7 @@ v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
-v7_val_t v7_create_function(struct v7 *v7) {
+v7_val_t create_function(struct v7 *v7) {
   struct v7_function *f = new_function(v7);
   val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -779,8 +779,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-v7_val_t v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f,
-                                    int num_args) {
+v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
@@ -804,7 +803,7 @@ v7_val_t v7_create_cfunction_object(struct v7 *v7, v7_cfunction_t f,
 
 V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
                                              v7_cfunction_t f, int num_args) {
-  val_t res = v7_create_cfunction_object(v7, f, num_args);
+  val_t res = v7_create_function(v7, f, num_args);
 
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
   v7_set_property_v(
@@ -828,13 +827,13 @@ V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
 V7_PRIVATE int set_cfunc_obj_prop(struct v7 *v7, val_t o, const char *name,
                                   v7_cfunction_t f) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
-                         v7_create_cfunction_object(v7, f, -1));
+                         v7_create_function(v7, f, -1));
 }
 
 V7_PRIVATE int set_cfunc_obj_prop_n(struct v7 *v7, val_t o, const char *name,
                                     v7_cfunction_t f, int num_args) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
-                         v7_create_cfunction_object(v7, f, num_args));
+                         v7_create_function(v7, f, num_args));
 }
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,

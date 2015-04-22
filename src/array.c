@@ -422,7 +422,7 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 V7_PRIVATE void init_array(struct v7 *v7) {
-  val_t ctor = v7_create_cfunction_object(v7, Array_ctor, 1);
+  val_t ctor = v7_create_function(v7, Array_ctor, 1);
   val_t length = v7_create_dense_array(v7);
 
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->array_prototype);

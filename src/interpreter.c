@@ -641,7 +641,7 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_FUNC: {
       ast_off_t fbody;
       struct v7_function *funcp;
-      res = v7_create_function(v7);
+      res = create_function(v7);
       funcp = v7_to_function(res);
       tmp_stack_push(&tf, &res);
       funcp->scope = v7_to_object(scope);
