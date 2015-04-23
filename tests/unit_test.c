@@ -35,13 +35,9 @@
 #endif
 #endif
 
-#ifdef V7_UNAMALGAMATED_UNIT_TEST
 #include "../v7.h"
 #include "../src/internal.h"
 #include "../src/gc.h"
-#else
-#include "../v7.c"
-#endif
 
 #ifdef _WIN32
 #define isinf(x) (!_finite(x))
