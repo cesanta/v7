@@ -9869,8 +9869,7 @@ enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
     goto cleanup;
   }
   if (parse(v7, a, src, 1) != V7_OK) {
-    v7_exec_with(v7, &r, "new SyntaxError(this)",
-                 v7_create_string(v7, v7->error_msg, strlen(v7->error_msg), 1));
+    r = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
     err = V7_SYNTAX_ERROR;
     goto cleanup;
   }
