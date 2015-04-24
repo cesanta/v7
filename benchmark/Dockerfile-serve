@@ -1,8 +1,0 @@
-FROM cesanta/v7_benchmark_base:latest
-
-ADD serve.sh serve.R /v7/
-
-WORKDIR /v7
-ENTRYPOINT ["/v7/serve.sh"]
-EXPOSE 3838
-VOLUME ["/v7/graphs"]

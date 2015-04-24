@@ -1,31 +1,3 @@
-general:
-  artifacts:
-    - "v7.c"
-    - "v7.h"
-    - "tests/hist_ecma_report.svg"
-
-machine:
-  services:
-    - docker
-  pre:
-    - sudo apt-get install -y --no-install-recommends g++-multilib libc6-dev-i386
-    - sudo pip install cpp-coveralls
-
 test:
   pre:
-    - make -C docs
-    - make -C tests compile
-    - make v7.c difftest
-    - sudo docker run -v $PWD/..:/cesanta -t -i cesanta/v7_test w
-    - make run
-    - make -C benchmark build || echo FAILED
-  post:
-    - tests/update_hist_ecma_report.sh
-
-deployment:
-  hub:
-    branch: master
-    commands:
-      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || echo FAILED
-      - make -C benchmark push || echo FAILED
-      - scp docs/index.html circleci@cesanta.com://var/www/cesanta.com/docs/v7/
+    - make
