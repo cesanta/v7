@@ -22,10 +22,10 @@
  * V7 uses 64-bit `v7_val_t` type to store JavaScript values. There are
  * several families of functions V7 provides:
  *
+ * - `v7_exec_*()` execute a piece of JavaScript code, put result in `v7_val_t`
  * - `v7_create_*()` convert C/C++ values into JavaScript `v7_val_t` values
  * - `v7_to_*()` convert JavaScript `v7_val_t` values into C/C++ values
  * - `v7_is_*()` test whether JavaScript `v7_val_t` value is of given type
- * - `v7_exec_*()` execute a piece of JavaScript code, put result in `v7_val_t`
  * - misc functions that throw exceptions, operate on arrays & objects,
  *   call JS functions, etc
  *
@@ -241,7 +241,7 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  * Call function `func` with arguments `args`, using `this_obj` as `this`.
  * `args` could be either undefined value, or be an array with arguments.
  */
-v7_val_t v7_apply(struct v7 *, v7_val_t func, v7_val_t args, v7_val_t this_obj);
+v7_val_t v7_apply(struct v7 *, v7_val_t func, v7_val_t this_obj, v7_val_t args);
 
 /* Throw an exception (Error object) with given formatted message. */
 void v7_throw(struct v7 *, const char *msg_fmt, ...);
@@ -262,7 +262,7 @@ int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
            unsigned int attrs, v7_val_t val);
 #define v7_set_method(v7, obj, name, func)                         \
   v7_set((v7), (obj), (name), strlen(name), V7_PROPERTY_DONT_ENUM, \
-         v7_create_cfunction_object((v7), (func), -1))
+         v7_create_function((v7), (func), -1))
 
 /* Return array length */
 unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
