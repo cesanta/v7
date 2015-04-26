@@ -22,7 +22,7 @@ static v7_val_t js_sum(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 int main(void) {
   struct v7 *v7 = v7_create();
   v7_val_t result;
-  v7_set_method(v7, v7_get_global_object(v7), "sum", &js_sum);
+  v7_set_method(v7, v7_get_global_object(v7), "sum", &js_sum, 2);
   v7_exec(v7, &result, "print(sum(1.2, 3.4))");
   v7_destroy(v7);
   return 0;

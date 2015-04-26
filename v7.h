@@ -260,9 +260,16 @@ void v7_throw(struct v7 *, const char *msg_fmt, ...);
  */
 int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
            unsigned int attrs, v7_val_t val);
-#define v7_set_method(v7, obj, name, func)                         \
-  v7_set((v7), (obj), (name), strlen(name), V7_PROPERTY_DONT_ENUM, \
-         v7_create_function((v7), (func), -1))
+
+/*
+ * A helper function to set property which is a function.
+ * `f` is a C function to use, `num_args` is a number of arguments that
+ * function expects. `num_args` will become `length` property of the returned
+ * object.
+ * Return value is the same as for `v7_set()`.
+ */
+int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                  v7_cfunction_t f, int num_args);
 
 /* Return array length */
 unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
