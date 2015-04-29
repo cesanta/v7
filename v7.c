@@ -595,12 +595,21 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
  * All rights reserved
  */
 
+/*
+ * === Memory Buffers
+ *
+ * Mbufs are mutable/growing memory buffers, like C++ strings.
+ * Mbuf can append data to the end of a buffer, or insert data into arbitrary
+ * position in the middle of a buffer. The buffer grows automatically when
+ * needed.
+ */
+
 #ifndef MBUF_H_INCLUDED
 #define MBUF_H_INCLUDED
 
 #if defined(__cplusplus)
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 #include <stdlib.h>
 
@@ -608,26 +617,52 @@ extern "C" {
 #define MBUF_SIZE_MULTIPLIER 1.5
 #endif
 
+/* Memory buffer descriptor */
 struct mbuf {
-  char *buf;
-  size_t len;
-  size_t size;
+  char *buf;   /* Buffer pointer */
+  size_t len;  /* Data length. Data is located between offset 0 and len. */
+  size_t size; /* Buffer size allocated by realloc(1). Must be >= len */
 };
 
-#ifdef V7_EXPOSE_PRIVATE
-#define V7_PRIVATE
-#define V7_EXTERN extern
-#else
-#define V7_PRIVATE static
-#define V7_EXTERN static
-#endif
+/*
+ * Initialize an Mbuf.
+ * `initial_capacity` specifies the initial capacity of the mbuf.
+ */
+void mbuf_init(struct mbuf *, size_t initial_capacity);
 
-V7_PRIVATE void mbuf_init(struct mbuf *, size_t);
-V7_PRIVATE void mbuf_free(struct mbuf *);
-V7_PRIVATE void mbuf_resize(struct mbuf *, size_t);
-V7_PRIVATE void mbuf_trim(struct mbuf *);
-V7_PRIVATE size_t mbuf_insert(struct mbuf *, size_t, const char *, size_t);
-V7_PRIVATE size_t mbuf_append(struct mbuf *, const char *, size_t);
+/* Free the space allocated for the mbuffer and resets the mbuf structure. */
+void mbuf_free(struct mbuf *);
+
+/*
+ * Appends data to the Mbuf.
+ *
+ * Return the number of bytes appended, or 0 if out of memory.
+ */
+size_t mbuf_append(struct mbuf *, const void *data, size_t data_size);
+
+/*
+ * Insert data at a specified offset in the Mbuf.
+ *
+ * Existing data will be shifted forwards and the buffer will
+ * be grown if necessary.
+ * Return the number of bytes inserted.
+ */
+size_t mbuf_insert(struct mbuf *, size_t, const void *, size_t);
+
+/* Remove `data_size` bytes from the beginning of the buffer. */
+void mbuf_remove(struct mbuf *, size_t data_size);
+
+/*
+ * Resize an Mbuf.
+ *
+ * If `new_size` is smaller than buffer's `len`, the
+ * resize is not performed.
+ */
+void mbuf_resize(struct mbuf *, size_t new_size);
+
+/* Shrink an Mbuf by resizing its `size` to `len`. */
+void mbuf_trim(struct mbuf *);
+
 
 #if defined(__cplusplus)
 }
@@ -1620,29 +1655,23 @@ V7_PRIVATE int calc_llen(size_t len);
  * All rights reserved
  */
 
+#include <assert.h>
+#include <string.h>
 
-/* Initializes mbuf. */
-V7_PRIVATE void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
+void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
   mbuf->len = mbuf->size = 0;
   mbuf->buf = NULL;
   mbuf_resize(mbuf, initial_size);
 }
 
-/* Frees the space allocated for the iobuffer and resets the iobuf structure. */
-V7_PRIVATE void mbuf_free(struct mbuf *mbuf) {
+void mbuf_free(struct mbuf *mbuf) {
   if (mbuf->buf != NULL) {
     free(mbuf->buf);
     mbuf_init(mbuf, 0);
   }
 }
 
-/*
- * Resize mbuf.
- *
- * If `new_size` is smaller than buffer's `len`, the
- * resize is not performed.
- */
-V7_PRIVATE void mbuf_resize(struct mbuf *a, size_t new_size) {
+void mbuf_resize(struct mbuf *a, size_t new_size) {
   char *p;
   if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
       (p = (char *) realloc(a->buf, new_size)) != NULL) {
@@ -1651,29 +1680,11 @@ V7_PRIVATE void mbuf_resize(struct mbuf *a, size_t new_size) {
   }
 }
 
-/* Shrinks mbuf size to just fit it's length. */
-V7_PRIVATE void mbuf_trim(struct mbuf *mbuf) {
+void mbuf_trim(struct mbuf *mbuf) {
   mbuf_resize(mbuf, mbuf->len);
 }
 
-/*
- * Appends data to the mbuf.
- *
- * It returns the amount of bytes appended.
- */
-V7_PRIVATE size_t mbuf_append(struct mbuf *a, const char *buf, size_t len) {
-  return mbuf_insert(a, a->len, buf, len);
-}
-
-/*
- * Inserts data at a specified offset in the mbuf.
- *
- * Existing data will be shifted forwards and the buffer will
- * be grown if necessary.
- * It returns the amount of bytes inserted.
- */
-V7_PRIVATE size_t
-mbuf_insert(struct mbuf *a, size_t off, const char *buf, size_t len) {
+size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   char *p = NULL;
 
   assert(a != NULL);
@@ -1703,6 +1714,17 @@ mbuf_insert(struct mbuf *a, size_t off, const char *buf, size_t len) {
   }
 
   return len;
+}
+
+size_t mbuf_append(struct mbuf *a, const void *buf, size_t len) {
+  return mbuf_insert(a, a->len, buf, len);
+}
+
+void mbuf_remove(struct mbuf *mb, size_t n) {
+  if (n > 0 && n <= mb->len) {
+    memmove(mb->buf, mb->buf + n, mb->len - n);
+    mb->len -= n;
+  }
 }
 /*
  * The authors of this software are Rob Pike and Ken Thompson.
