@@ -13509,7 +13509,7 @@ V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   if (argnum > 0) {
     val_t ro = to_string(v7, v7_array_get(v7, args, 0));
     size_t re_len, flags_len = 0;
-    const char *re = v7_to_string(v7, &ro, &re_len), *flags = NULL;
+    const char *re, *flags = NULL;
     struct slre_prog *p = NULL;
     struct v7_regexp *rp;
 
@@ -13518,6 +13518,7 @@ V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       val_t fl = to_string(v7, v7_array_get(v7, args, 1));
       flags = v7_to_string(v7, &fl, &flags_len);
     }
+    re = v7_to_string(v7, &ro, &re_len);
     if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
         p == NULL) {
       throw_exception(v7, TYPE_ERROR, "Invalid regex");
@@ -13612,13 +13613,18 @@ V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
     if (!slre_exec(rp->compiled_regexp, 0, begin, end, &sub)) {
       int i;
       val_t arr = v7_create_array(v7);
+      char *old_mbuf_base = v7->owned_strings.buf;
+      ptrdiff_t rel = 0; /* creating strings might relocate the mbuf */
 
-      for (i = 0; i < sub.num_captures; i++, ptok++)
-        v7_array_push(v7, arr, v7_create_string(v7, ptok->start,
+      for (i = 0; i < sub.num_captures; i++, ptok++) {
+        rel = v7->owned_strings.buf - old_mbuf_base;
+        v7_array_push(v7, arr, v7_create_string(v7, ptok->start + rel,
                                                 ptok->end - ptok->start, 1));
-      if (flag_g) rp->lastIndex = utfnlen(str, sub.caps->end - str);
-      v7_set_property(v7, arr, "index", 5, V7_PROPERTY_READ_ONLY,
-                      v7_create_number(utfnlen(str, sub.caps->start - str)));
+      }
+      if (flag_g) rp->lastIndex = utfnlen(str, sub.caps->end + rel - str);
+      v7_set_property(
+          v7, arr, "index", 5, V7_PROPERTY_READ_ONLY,
+          v7_create_number(utfnlen(str + rel, sub.caps->start - str)));
       return arr;
     } else
       rp->lastIndex = 0;
