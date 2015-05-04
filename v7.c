@@ -283,6 +283,9 @@ int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
  */
 v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 
+/* Set object's prototype. Return old prototype or undefined on error. */
+v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
+
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 
 #ifdef __cplusplus
@@ -669,6 +672,355 @@ char *utfutf(char *s1, char *s2);
 }
 #endif /* __cplusplus */
 #endif /* _UTF_H_ */
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef OSDEP_HEADER_INCLUDED
+#define OSDEP_HEADER_INCLUDED
+
+#if !defined(NS_DISABLE_FILESYSTEM) && defined(AVR_NOFS)
+#define NS_DISABLE_FILESYSTEM
+#endif
+
+#undef UNICODE                  /* Use ANSI WinAPI functions */
+#undef _UNICODE                 /* Use multibyte encoding on Windows */
+#define _MBCS                   /* Use multibyte encoding on Windows */
+#define _INTEGRAL_MAX_BITS 64   /* Enable _stati64() on Windows */
+#define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005+ */
+#undef WIN32_LEAN_AND_MEAN      /* Let windows.h always include winsock2.h */
+#undef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600    /* For flockfile() on Linux */
+#define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
+#define __STDC_LIMIT_MACROS  /* C++ wants that for INT64_MAX */
+#ifndef _LARGEFILE_SOURCE
+#define _LARGEFILE_SOURCE /* Enable fseeko() and ftello() functions */
+#endif
+#define _FILE_OFFSET_BITS 64 /* Enable 64-bit file offsets */
+
+#ifndef BYTE_ORDER
+#define LITTLE_ENDIAN 0x41424344
+#define BIG_ENDIAN 0x44434241
+#define PDP_ENDIAN 0x42414443
+/* TODO(lsm): fix for big-endian machines. 'ABCD' is not portable */
+/*#define BYTE_ORDER 'ABCD'*/
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
+
+/*
+ * MSVC++ 12.0 _MSC_VER == 1800 (Visual Studio 2013)
+ * MSVC++ 11.0 _MSC_VER == 1700 (Visual Studio 2012)
+ * MSVC++ 10.0 _MSC_VER == 1600 (Visual Studio 2010)
+ * MSVC++ 9.0  _MSC_VER == 1500 (Visual Studio 2008)
+ * MSVC++ 8.0  _MSC_VER == 1400 (Visual Studio 2005)
+ * MSVC++ 7.1  _MSC_VER == 1310 (Visual Studio 2003)
+ * MSVC++ 7.0  _MSC_VER == 1300
+ * MSVC++ 6.0  _MSC_VER == 1200
+ * MSVC++ 5.0  _MSC_VER == 1100
+ */
+#ifdef _MSC_VER
+#pragma warning(disable : 4127) /* FD_SET() emits warning, disable it */
+#pragma warning(disable : 4204) /* missing c99 support */
+#endif
+
+#ifndef AVR_LIBC
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+#include <signal.h>
+#endif
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifndef va_copy
+#ifdef __va_copy
+#define va_copy __va_copy
+#else
+#define va_copy(x, y) (x) = (y)
+#endif
+#endif
+
+#ifdef _WIN32
+#ifdef _MSC_VER
+#pragma comment(lib, "ws2_32.lib") /* Linking with winsock library */
+#endif
+#include <windows.h>
+#include <process.h>
+#ifndef EINPROGRESS
+#define EINPROGRESS WSAEINPROGRESS
+#endif
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
+#ifndef __func__
+#define STRX(x) #x
+#define STR(x) STRX(x)
+#define __func__ __FILE__ ":" STR(__LINE__)
+#endif
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#define sleep(x) Sleep((x) *1000)
+#define to64(x) _atoi64(x)
+#define popen(x, y) _popen((x), (y))
+#define pclose(x) _pclose(x)
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define fseeko(x, y, z) _fseeki64((x), (y), (z))
+#else
+#define fseeko(x, y, z) fseek((x), (y), (z))
+#endif
+typedef int socklen_t;
+typedef unsigned char uint8_t;
+typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
+typedef unsigned __int64 uint64_t;
+typedef __int64 int64_t;
+typedef SOCKET sock_t;
+typedef uint32_t in_addr_t;
+#ifndef pid_t
+#define pid_t HANDLE
+#endif
+#define INT64_FMT "I64d"
+#ifdef __MINGW32__
+typedef struct stat ns_stat_t;
+#else
+typedef struct _stati64 ns_stat_t;
+#endif
+#ifndef S_ISDIR
+#define S_ISDIR(x) ((x) &_S_IFDIR)
+#endif
+#define DIRSEP '\\'
+#else /* not _WIN32 */
+#ifndef AVR_LIBC
+#include <dirent.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <arpa/inet.h> /* For inet_pton() when NS_ENABLE_IPV6 is defined */
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#endif
+#include <errno.h>
+#include <inttypes.h>
+#include <stdarg.h>
+#ifndef AVR_LIBC
+#define closesocket(x) close(x)
+#define __cdecl
+#define INVALID_SOCKET (-1)
+#define INT64_FMT PRId64
+#define to64(x) strtoll(x, NULL, 10)
+typedef int sock_t;
+typedef struct stat ns_stat_t;
+#define DIRSEP '/'
+#endif
+#ifdef __APPLE__
+int64_t strtoll(const char* str, char** endptr, int base);
+#endif
+#endif /* _WIN32 */
+
+#ifdef NS_ENABLE_DEBUG
+#define DBG(x)                  \
+  do {                          \
+    printf("%-20s ", __func__); \
+    printf x;                   \
+    putchar('\n');              \
+    fflush(stdout);             \
+  } while (0)
+#else
+#define DBG(x)
+#endif
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
+
+#endif /* OSDEP_HEADER_INCLUDED */
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#if !defined(BASE64_H_INCLUDED) && !defined(DISABLE_BASE64)
+#define BASE64_H_INCLUDED
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void base64_encode(const unsigned char *src, int src_len, char *dst);
+int base64_decode(const unsigned char *s, int len, char *dst);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef MD5_HEADER_DEFINED
+#define MD5_HEADER_DEFINED
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+typedef struct MD5Context {
+  uint32_t buf[4];
+  uint32_t bits[2];
+  unsigned char in[64];
+} MD5_CTX;
+
+void MD5_Init(MD5_CTX *c);
+void MD5_Update(MD5_CTX *c, const unsigned char *data, size_t len);
+void MD5_Final(unsigned char *md, MD5_CTX *c);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#if !defined(NS_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
+#define NS_SHA1_HEADER_INCLUDED
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+typedef struct {
+  uint32_t state[5];
+  uint32_t count[2];
+  unsigned char buffer[64];
+} SHA1_CTX;
+
+void SHA1Init(SHA1_CTX *);
+void SHA1Update(SHA1_CTX *, const unsigned char *data, uint32_t len);
+void SHA1Final(unsigned char digest[20], SHA1_CTX *);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* NS_SHA1_HEADER_INCLUDED */
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Builtin API
+ *
+ * Builtin API provides additional JavaScript interfaces available for V7
+ * scripts.
+ * File API is a wrapper around standard C calls `fopen()`, `fclose()`,
+ * `fread()`, `fwrite()`, `rename()`, `remove()`.
+ * Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
+ * Socket API provides low-level socket API.
+ *
+ * ==== File.open(file_name [, mode]) -> file_object or null
+ * Open a file `path`. For
+ * list of valid `mode` values, see `fopen()` documentation. If `mode` is
+ * not specified, mode `rb` is used, i.e. file is opened in read-only mode.
+ * Return an opened file object, or null on error. Example:
+ * `var f = File.open('/etc/passwd'); f.close();`
+ *
+ * ==== file_obj.close() -> undefined
+ * Close opened file object.
+ * NOTE: it is user's responsibility to close all opened file streams. V7
+ * does not do that automatically.
+ *
+ * ==== file_obj.read() -> string
+ * Read portion of data from
+ * an opened file stream. Return string with data, or empty string on EOF
+ * or error.
+ *
+ * ==== file_obj.readAll() -> string
+ * Same as `read()`, but keeps reading data until EOF.
+ *
+ * ==== file_obj.write(str) -> num_bytes_written
+ * Write string `str` to the opened file object. Return number of bytes written.
+ *
+ * ==== File.rename(old_name, new_name) -> errno
+ * Rename file `old_name` to
+ * `new_name`. Return 0 on success, or `errno` value on error.
+ *
+ * ==== File.remove(file_name) -> errno
+ * Delete file `file_name`.
+ * Return 0 on success, or `errno` value on error.
+ *
+ * ==== Crypto.base64_encode(str)
+ * Base64-encode input string `str` and return encoded string.
+ *
+ * ==== Crypto.base64_decode(str)
+ * Base64-decode input string `str` and return decoded string.
+ *
+ * ==== Crypto.md5(str), Crypto.md5_hex(str)
+ * Generate MD5 hash from input string `str`. Return 16-byte hash (`md5()`),
+ * or stringified hexadecimal representation of the hash (`md5_hex`).
+ *
+ * ==== Crypto.sha1(str), Crypto.sha1_hex(str)
+ * Generate SHA1 hash from input string `str`. Return 20-byte hash (`sha1()`),
+ * or stringified hexadecimal representation of the hash (`sha1_hex`).
+ *
+ * ==== Socket.connect(host, port [, is_udp]) -> socket_obj
+ * Connect to a given host. `host` can be a string IP address, or a host name.
+ * Optional `is_udp` parameter, if true, indicates that socket should be UDP.
+ * Return socket object on success, null on error.
+ *
+ * ==== Socket.listen(port [, ip_address [,is_udp]]) -> socket_obj
+ * Create a listening socket on a given port. Optional `ip_address` argument
+ * specifies and IP address to bind to. Optional `is_udp` parameter, if true,
+ * indicates that socket should be UDP. Return socket object on success,
+ * null on error.
+ *
+ * ==== socket_obj.accept() -> socket_obj
+ * Sleep until new incoming connection is arrived. Return accepted socket
+ * object on success, or `null` on error.
+ *
+ * ==== socket_obj.close() -> numeric_errno
+ * Close socket object. Return 0 on success, or system errno on error.
+ *
+ * ==== socket_obj.recv() -> string
+ * Read data from socket. Return data string, or empty string if peer has
+ * disconnected, or `null` on error.
+ *
+ * ==== socket_obj.recvAll() -> string
+ * Same as `recv()`, but keeps reading data until socket is closed.
+ *
+ * ==== sock.send(string) -> num_bytes_sent
+ * Send string to the socket. Return number of bytes sent, or 0 on error.
+ * Simple HTTP client example:
+ *
+ *    var s = Socket.connect("google.com", 80);
+ *    s.send("GET / HTTP/1.0\n\n");
+ *    var reply = s.recv();
+ */
+
+#ifndef BUILTIN_HEADER_DEFINED
+#define BUILTIN_HEADER_DEFINED
+
+void init_file(struct v7 *);
+void init_socket(struct v7 *);
+void init_crypto(struct v7 *);
+
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -3138,6 +3490,959 @@ char *utfnshift(char *s, long m) {
  */
 
 
+void base64_encode(const unsigned char *src, int src_len, char *dst) {
+  static const char *b64 =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  int i, j, a, b, c;
+
+  for (i = j = 0; i < src_len; i += 3) {
+    a = src[i];
+    b = i + 1 >= src_len ? 0 : src[i + 1];
+    c = i + 2 >= src_len ? 0 : src[i + 2];
+
+    dst[j++] = b64[a >> 2];
+    dst[j++] = b64[((a & 3) << 4) | (b >> 4)];
+    if (i + 1 < src_len) {
+      dst[j++] = b64[(b & 15) << 2 | (c >> 6)];
+    }
+    if (i + 2 < src_len) {
+      dst[j++] = b64[c & 63];
+    }
+  }
+  while (j % 4 != 0) {
+    dst[j++] = '=';
+  }
+  dst[j++] = '\0';
+}
+
+/* Convert one byte of encoded base64 input stream to 6-bit chunk */
+static unsigned char from_b64(unsigned char ch) {
+  /* Inverse lookup map */
+  static const unsigned char tab[128] = {
+      255, 255, 255, 255,
+      255, 255, 255, 255, /*  0 */
+      255, 255, 255, 255,
+      255, 255, 255, 255, /*  8 */
+      255, 255, 255, 255,
+      255, 255, 255, 255, /*  16 */
+      255, 255, 255, 255,
+      255, 255, 255, 255, /*  24 */
+      255, 255, 255, 255,
+      255, 255, 255, 255, /*  32 */
+      255, 255, 255, 62,
+      255, 255, 255, 63, /*  40 */
+      52,  53,  54,  55,
+      56,  57,  58,  59, /*  48 */
+      60,  61,  255, 255,
+      255, 200, 255, 255, /*  56   '=' is 200, on index 61 */
+      255, 0,   1,   2,
+      3,   4,   5,   6, /*  64 */
+      7,   8,   9,   10,
+      11,  12,  13,  14, /*  72 */
+      15,  16,  17,  18,
+      19,  20,  21,  22, /*  80 */
+      23,  24,  25,  255,
+      255, 255, 255, 255, /*  88 */
+      255, 26,  27,  28,
+      29,  30,  31,  32, /*  96 */
+      33,  34,  35,  36,
+      37,  38,  39,  40, /*  104 */
+      41,  42,  43,  44,
+      45,  46,  47,  48, /*  112 */
+      49,  50,  51,  255,
+      255, 255, 255, 255, /*  120 */
+  };
+  return tab[ch & 127];
+}
+
+int base64_decode(const unsigned char *s, int len, char *dst) {
+  unsigned char a, b, c, d;
+  int orig_len = len;
+  while (len >= 4 && (a = from_b64(s[0])) != 255 &&
+         (b = from_b64(s[1])) != 255 && (c = from_b64(s[2])) != 255 &&
+         (d = from_b64(s[3])) != 255) {
+    s += 4;
+    len -= 4;
+    if (a == 200 || b == 200) break; /* '=' can't be there */
+    *dst++ = a << 2 | b >> 4;
+    if (c == 200) break;
+    *dst++ = b << 4 | c >> 2;
+    if (d == 200) break;
+    *dst++ = c << 6 | d;
+  }
+  *dst = 0;
+  return orig_len - len;
+}
+/*
+ * This code implements the MD5 message-digest algorithm.
+ * The algorithm is due to Ron Rivest.  This code was
+ * written by Colin Plumb in 1993, no copyright is claimed.
+ * This code is in the public domain; do with it what you wish.
+ *
+ * Equivalent code is available from RSA Data Security, Inc.
+ * This code has been tested against that, and is equivalent,
+ * except that you don't need to include two pages of legalese
+ * with every copy.
+ *
+ * To compute the message digest of a chunk of bytes, declare an
+ * MD5Context structure, pass it to MD5Init, call MD5Update as
+ * needed on buffers full of bytes, and then call MD5Final, which
+ * will fill a supplied 16-byte array with the digest.
+ */
+
+#ifndef DISABLE_MD5
+
+
+static void byteReverse(unsigned char *buf, unsigned longs) {
+
+  /* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
+#if BYTE_ORDER == BIG_ENDIAN
+  do {
+  uint32_t t = (uint32_t) ((unsigned) buf[3] << 8 | buf[2]) << 16 |
+      ((unsigned) buf[1] << 8 | buf[0]);
+    * (uint32_t *) buf = t;
+    buf += 4;
+  } while (--longs);
+#else
+  (void) buf;
+  (void) longs;
+#endif
+}
+
+#define F1(x, y, z) (z ^ (x & (y ^ z)))
+#define F2(x, y, z) F1(z, x, y)
+#define F3(x, y, z) (x ^ y ^ z)
+#define F4(x, y, z) (y ^ (x | ~z))
+
+#define MD5STEP(f, w, x, y, z, data, s) \
+  ( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
+
+/*
+ * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
+ * initialization constants.
+ */
+void MD5_Init(MD5_CTX *ctx) {
+  ctx->buf[0] = 0x67452301;
+  ctx->buf[1] = 0xefcdab89;
+  ctx->buf[2] = 0x98badcfe;
+  ctx->buf[3] = 0x10325476;
+
+  ctx->bits[0] = 0;
+  ctx->bits[1] = 0;
+}
+
+static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
+  register uint32_t a, b, c, d;
+
+  a = buf[0];
+  b = buf[1];
+  c = buf[2];
+  d = buf[3];
+
+  MD5STEP(F1, a, b, c, d, in[0] + 0xd76aa478, 7);
+  MD5STEP(F1, d, a, b, c, in[1] + 0xe8c7b756, 12);
+  MD5STEP(F1, c, d, a, b, in[2] + 0x242070db, 17);
+  MD5STEP(F1, b, c, d, a, in[3] + 0xc1bdceee, 22);
+  MD5STEP(F1, a, b, c, d, in[4] + 0xf57c0faf, 7);
+  MD5STEP(F1, d, a, b, c, in[5] + 0x4787c62a, 12);
+  MD5STEP(F1, c, d, a, b, in[6] + 0xa8304613, 17);
+  MD5STEP(F1, b, c, d, a, in[7] + 0xfd469501, 22);
+  MD5STEP(F1, a, b, c, d, in[8] + 0x698098d8, 7);
+  MD5STEP(F1, d, a, b, c, in[9] + 0x8b44f7af, 12);
+  MD5STEP(F1, c, d, a, b, in[10] + 0xffff5bb1, 17);
+  MD5STEP(F1, b, c, d, a, in[11] + 0x895cd7be, 22);
+  MD5STEP(F1, a, b, c, d, in[12] + 0x6b901122, 7);
+  MD5STEP(F1, d, a, b, c, in[13] + 0xfd987193, 12);
+  MD5STEP(F1, c, d, a, b, in[14] + 0xa679438e, 17);
+  MD5STEP(F1, b, c, d, a, in[15] + 0x49b40821, 22);
+
+  MD5STEP(F2, a, b, c, d, in[1] + 0xf61e2562, 5);
+  MD5STEP(F2, d, a, b, c, in[6] + 0xc040b340, 9);
+  MD5STEP(F2, c, d, a, b, in[11] + 0x265e5a51, 14);
+  MD5STEP(F2, b, c, d, a, in[0] + 0xe9b6c7aa, 20);
+  MD5STEP(F2, a, b, c, d, in[5] + 0xd62f105d, 5);
+  MD5STEP(F2, d, a, b, c, in[10] + 0x02441453, 9);
+  MD5STEP(F2, c, d, a, b, in[15] + 0xd8a1e681, 14);
+  MD5STEP(F2, b, c, d, a, in[4] + 0xe7d3fbc8, 20);
+  MD5STEP(F2, a, b, c, d, in[9] + 0x21e1cde6, 5);
+  MD5STEP(F2, d, a, b, c, in[14] + 0xc33707d6, 9);
+  MD5STEP(F2, c, d, a, b, in[3] + 0xf4d50d87, 14);
+  MD5STEP(F2, b, c, d, a, in[8] + 0x455a14ed, 20);
+  MD5STEP(F2, a, b, c, d, in[13] + 0xa9e3e905, 5);
+  MD5STEP(F2, d, a, b, c, in[2] + 0xfcefa3f8, 9);
+  MD5STEP(F2, c, d, a, b, in[7] + 0x676f02d9, 14);
+  MD5STEP(F2, b, c, d, a, in[12] + 0x8d2a4c8a, 20);
+
+  MD5STEP(F3, a, b, c, d, in[5] + 0xfffa3942, 4);
+  MD5STEP(F3, d, a, b, c, in[8] + 0x8771f681, 11);
+  MD5STEP(F3, c, d, a, b, in[11] + 0x6d9d6122, 16);
+  MD5STEP(F3, b, c, d, a, in[14] + 0xfde5380c, 23);
+  MD5STEP(F3, a, b, c, d, in[1] + 0xa4beea44, 4);
+  MD5STEP(F3, d, a, b, c, in[4] + 0x4bdecfa9, 11);
+  MD5STEP(F3, c, d, a, b, in[7] + 0xf6bb4b60, 16);
+  MD5STEP(F3, b, c, d, a, in[10] + 0xbebfbc70, 23);
+  MD5STEP(F3, a, b, c, d, in[13] + 0x289b7ec6, 4);
+  MD5STEP(F3, d, a, b, c, in[0] + 0xeaa127fa, 11);
+  MD5STEP(F3, c, d, a, b, in[3] + 0xd4ef3085, 16);
+  MD5STEP(F3, b, c, d, a, in[6] + 0x04881d05, 23);
+  MD5STEP(F3, a, b, c, d, in[9] + 0xd9d4d039, 4);
+  MD5STEP(F3, d, a, b, c, in[12] + 0xe6db99e5, 11);
+  MD5STEP(F3, c, d, a, b, in[15] + 0x1fa27cf8, 16);
+  MD5STEP(F3, b, c, d, a, in[2] + 0xc4ac5665, 23);
+
+  MD5STEP(F4, a, b, c, d, in[0] + 0xf4292244, 6);
+  MD5STEP(F4, d, a, b, c, in[7] + 0x432aff97, 10);
+  MD5STEP(F4, c, d, a, b, in[14] + 0xab9423a7, 15);
+  MD5STEP(F4, b, c, d, a, in[5] + 0xfc93a039, 21);
+  MD5STEP(F4, a, b, c, d, in[12] + 0x655b59c3, 6);
+  MD5STEP(F4, d, a, b, c, in[3] + 0x8f0ccc92, 10);
+  MD5STEP(F4, c, d, a, b, in[10] + 0xffeff47d, 15);
+  MD5STEP(F4, b, c, d, a, in[1] + 0x85845dd1, 21);
+  MD5STEP(F4, a, b, c, d, in[8] + 0x6fa87e4f, 6);
+  MD5STEP(F4, d, a, b, c, in[15] + 0xfe2ce6e0, 10);
+  MD5STEP(F4, c, d, a, b, in[6] + 0xa3014314, 15);
+  MD5STEP(F4, b, c, d, a, in[13] + 0x4e0811a1, 21);
+  MD5STEP(F4, a, b, c, d, in[4] + 0xf7537e82, 6);
+  MD5STEP(F4, d, a, b, c, in[11] + 0xbd3af235, 10);
+  MD5STEP(F4, c, d, a, b, in[2] + 0x2ad7d2bb, 15);
+  MD5STEP(F4, b, c, d, a, in[9] + 0xeb86d391, 21);
+
+  buf[0] += a;
+  buf[1] += b;
+  buf[2] += c;
+  buf[3] += d;
+}
+
+void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
+  uint32_t t;
+
+  t = ctx->bits[0];
+  if ((ctx->bits[0] = t + ((uint32_t) len << 3)) < t)
+    ctx->bits[1]++;
+  ctx->bits[1] += (uint32_t) len >> 29;
+
+  t = (t >> 3) & 0x3f;
+
+  if (t) {
+    unsigned char *p = (unsigned char *) ctx->in + t;
+
+    t = 64 - t;
+    if (len < t) {
+      memcpy(p, buf, len);
+      return;
+    }
+    memcpy(p, buf, t);
+    byteReverse(ctx->in, 16);
+    MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    buf += t;
+    len -= t;
+  }
+
+  while (len >= 64) {
+    memcpy(ctx->in, buf, 64);
+    byteReverse(ctx->in, 16);
+    MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    buf += 64;
+    len -= 64;
+  }
+
+  memcpy(ctx->in, buf, len);
+}
+
+void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
+  unsigned count;
+  unsigned char *p;
+  uint32_t *a;
+
+  count = (ctx->bits[0] >> 3) & 0x3F;
+
+  p = ctx->in + count;
+  *p++ = 0x80;
+  count = 64 - 1 - count;
+  if (count < 8) {
+    memset(p, 0, count);
+    byteReverse(ctx->in, 16);
+    MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    memset(ctx->in, 0, 56);
+  } else {
+    memset(p, 0, count - 8);
+  }
+  byteReverse(ctx->in, 14);
+
+  a = (uint32_t *)ctx->in;
+  a[14] = ctx->bits[0];
+  a[15] = ctx->bits[1];
+
+  MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+  byteReverse((unsigned char *) ctx->buf, 4);
+  memcpy(digest, ctx->buf, 16);
+  memset((char *) ctx, 0, sizeof(*ctx));
+}
+#endif
+/* Copyright(c) By Steve Reid <steve@edmweb.com> */
+/* 100% Public Domain */
+
+#ifndef ISABLE_SHA1
+
+
+#define SHA1HANDSOFF
+#if defined(__sun)
+#endif
+
+union char64long16 { unsigned char c[64]; uint32_t l[16]; };
+
+#define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
+
+static uint32_t blk0(union char64long16 *block, int i) {
+  /* Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN */
+#if BYTE_ORDER == LITTLE_ENDIAN
+    block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) |
+      (rol(block->l[i], 8) & 0x00FF00FF);
+#endif
+  return block->l[i];
+}
+
+/* Avoid redefine warning (ARM /usr/include/sys/ucontext.h define R0~R4) */
+#undef blk
+#undef R0
+#undef R1
+#undef R2
+#undef R3
+#undef R4
+
+#define blk(i) (block->l[i&15] = rol(block->l[(i+13)&15]^block->l[(i+8)&15] \
+    ^block->l[(i+2)&15]^block->l[i&15],1))
+#define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(block, i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R1(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R2(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
+#define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
+#define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
+
+void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
+  uint32_t a, b, c, d, e;
+  union char64long16 block[1];
+
+  memcpy(block, buffer, 64);
+  a = state[0];
+  b = state[1];
+  c = state[2];
+  d = state[3];
+  e = state[4];
+  R0(a,b,c,d,e, 0); R0(e,a,b,c,d, 1); R0(d,e,a,b,c, 2); R0(c,d,e,a,b, 3);
+  R0(b,c,d,e,a, 4); R0(a,b,c,d,e, 5); R0(e,a,b,c,d, 6); R0(d,e,a,b,c, 7);
+  R0(c,d,e,a,b, 8); R0(b,c,d,e,a, 9); R0(a,b,c,d,e,10); R0(e,a,b,c,d,11);
+  R0(d,e,a,b,c,12); R0(c,d,e,a,b,13); R0(b,c,d,e,a,14); R0(a,b,c,d,e,15);
+  R1(e,a,b,c,d,16); R1(d,e,a,b,c,17); R1(c,d,e,a,b,18); R1(b,c,d,e,a,19);
+  R2(a,b,c,d,e,20); R2(e,a,b,c,d,21); R2(d,e,a,b,c,22); R2(c,d,e,a,b,23);
+  R2(b,c,d,e,a,24); R2(a,b,c,d,e,25); R2(e,a,b,c,d,26); R2(d,e,a,b,c,27);
+  R2(c,d,e,a,b,28); R2(b,c,d,e,a,29); R2(a,b,c,d,e,30); R2(e,a,b,c,d,31);
+  R2(d,e,a,b,c,32); R2(c,d,e,a,b,33); R2(b,c,d,e,a,34); R2(a,b,c,d,e,35);
+  R2(e,a,b,c,d,36); R2(d,e,a,b,c,37); R2(c,d,e,a,b,38); R2(b,c,d,e,a,39);
+  R3(a,b,c,d,e,40); R3(e,a,b,c,d,41); R3(d,e,a,b,c,42); R3(c,d,e,a,b,43);
+  R3(b,c,d,e,a,44); R3(a,b,c,d,e,45); R3(e,a,b,c,d,46); R3(d,e,a,b,c,47);
+  R3(c,d,e,a,b,48); R3(b,c,d,e,a,49); R3(a,b,c,d,e,50); R3(e,a,b,c,d,51);
+  R3(d,e,a,b,c,52); R3(c,d,e,a,b,53); R3(b,c,d,e,a,54); R3(a,b,c,d,e,55);
+  R3(e,a,b,c,d,56); R3(d,e,a,b,c,57); R3(c,d,e,a,b,58); R3(b,c,d,e,a,59);
+  R4(a,b,c,d,e,60); R4(e,a,b,c,d,61); R4(d,e,a,b,c,62); R4(c,d,e,a,b,63);
+  R4(b,c,d,e,a,64); R4(a,b,c,d,e,65); R4(e,a,b,c,d,66); R4(d,e,a,b,c,67);
+  R4(c,d,e,a,b,68); R4(b,c,d,e,a,69); R4(a,b,c,d,e,70); R4(e,a,b,c,d,71);
+  R4(d,e,a,b,c,72); R4(c,d,e,a,b,73); R4(b,c,d,e,a,74); R4(a,b,c,d,e,75);
+  R4(e,a,b,c,d,76); R4(d,e,a,b,c,77); R4(c,d,e,a,b,78); R4(b,c,d,e,a,79);
+  state[0] += a;
+  state[1] += b;
+  state[2] += c;
+  state[3] += d;
+  state[4] += e;
+  /* Erase working structures. The order of operations is important,
+   * used to ensure that compiler doesn't optimize those out. */
+  memset(block, 0, sizeof(block));
+  a = b = c = d = e = 0;
+  (void) a; (void) b; (void) c; (void) d; (void) e;
+}
+
+void SHA1Init(SHA1_CTX *context) {
+  context->state[0] = 0x67452301;
+  context->state[1] = 0xEFCDAB89;
+  context->state[2] = 0x98BADCFE;
+  context->state[3] = 0x10325476;
+  context->state[4] = 0xC3D2E1F0;
+  context->count[0] = context->count[1] = 0;
+}
+
+void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
+  uint32_t i, j;
+
+  j = context->count[0];
+  if ((context->count[0] += len << 3) < j)
+    context->count[1]++;
+  context->count[1] += (len>>29);
+  j = (j >> 3) & 63;
+  if ((j + len) > 63) {
+    memcpy(&context->buffer[j], data, (i = 64-j));
+    SHA1Transform(context->state, context->buffer);
+    for ( ; i + 63 < len; i += 64) {
+      SHA1Transform(context->state, &data[i]);
+    }
+    j = 0;
+  }
+  else i = 0;
+  memcpy(&context->buffer[j], &data[i], len - i);
+}
+
+void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
+  unsigned i;
+  unsigned char finalcount[8], c;
+
+  for (i = 0; i < 8; i++) {
+    finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
+                                     >> ((3-(i & 3)) * 8) ) & 255);
+  }
+  c = 0200;
+  SHA1Update(context, &c, 1);
+  while ((context->count[0] & 504) != 448) {
+    c = 0000;
+    SHA1Update(context, &c, 1);
+  }
+  SHA1Update(context, finalcount, 8);
+  for (i = 0; i < 20; i++) {
+    digest[i] = (unsigned char)
+      ((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
+  }
+  memset(context, '\0', sizeof(*context));
+  memset(&finalcount, '\0', sizeof(finalcount));
+}
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+#ifdef V7_ENABLE_FILE
+
+static v7_val_t s_file_ctor;
+static const char s_fd_prop[] = "__fd";
+
+static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t res = v7_create_undefined();
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *s = v7_to_string(v7, &arg0, &n);
+    v7_exec_file(v7, &res, s);
+  }
+
+  return res;
+}
+
+static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
+  v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
+  (void) a;
+  if (v7_is_foreign(arg0)) {
+    struct mbuf m;
+    char buf[BUFSIZ];
+    int n;
+    FILE *fp = (FILE *) v7_to_foreign(arg0);
+
+    /* Read file contents into mbuf */
+    mbuf_init(&m, 0);
+    while ((n = fread(buf, 1, sizeof(buf), fp)) > 0) {
+      mbuf_append(&m, buf, n);
+      if (!all) {
+        break;
+      }
+    }
+
+    /* Proactively close the file on EOF or read error */
+    if (n <= 0) {
+      fclose(fp);
+    }
+
+    if (m.len > 0) {
+      v7_val_t res = v7_create_string(v7, m.buf, m.len, 1);
+      mbuf_free(&m);
+      return res;
+    }
+  }
+  return v7_create_string(v7, "", 0, 1);
+}
+
+static v7_val_t File_readAll(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  return f_read(v7, this_obj, args, 1);
+}
+
+static v7_val_t File_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  return f_read(v7, this_obj, args, 0);
+}
+
+static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
+  v7_val_t arg1 = v7_array_get(v7, args, 0);
+  size_t n, sent = 0, len = 0;
+
+  if (v7_is_foreign(arg0) && v7_is_string(arg1)) {
+    const char *s = v7_to_string(v7, &arg1, &len);
+    FILE *fp = (FILE *) v7_to_foreign(arg0);
+    while (sent < len && (n = fwrite(s + sent, 1, len - sent, fp)) > 0) {
+      sent += n;
+    }
+  }
+
+  return v7_create_number(sent);
+}
+
+static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t prop = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
+  int res = -1;
+  (void) args;
+  if (v7_is_foreign(prop)) {
+    res = fclose((FILE *) v7_to_foreign(prop));
+  }
+  return v7_create_number(res);
+}
+
+static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t arg1 = v7_array_get(v7, args, 1);
+  FILE *fp = NULL;
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n1, n2;
+    const char *s1 = v7_to_string(v7, &arg0, &n1);
+    const char *s2 = "rb";  /* Open files in read mode by default */
+    if (v7_is_string(arg1)) {
+      s2 = v7_to_string(v7, &arg1, &n2);
+    }
+    fp = fopen(s1, s2);
+    if (fp != NULL) {
+      v7_val_t obj = v7_create_object(v7);
+      v7_set_proto(obj, s_file_ctor);
+      v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
+             v7_create_foreign(fp));
+      return obj;
+    }
+  }
+
+  return v7_create_null();
+}
+
+static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t arg1 = v7_array_get(v7, args, 1);
+  int res = -1;
+
+  (void) this_obj;
+  if (v7_is_string(arg0) && v7_is_string(arg1)) {
+    size_t n1, n2;
+    const char *from = v7_to_string(v7, &arg0, &n1);
+    const char *to = v7_to_string(v7, &arg1, &n2);
+    res = rename(from, to);
+  }
+
+  return v7_create_number(res == 0 ? 0 : errno);
+}
+
+static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  int res = -1;
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *path = v7_to_string(v7, &arg0, &n);
+    res = remove(path);
+  }
+  return v7_create_number(res == 0 ? 0 : errno);
+}
+
+void init_file(struct v7 *v7) {
+  v7_val_t file_obj = v7_create_object(v7);
+  s_file_ctor = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "File", 4, 0, file_obj);
+
+  v7_set_method(v7, file_obj, "load", File_load);
+  v7_set_method(v7, file_obj, "remove", File_remove);
+  v7_set_method(v7, file_obj, "rename", File_rename);
+  v7_set_method(v7, file_obj, "open", File_open);
+
+  v7_set_method(v7, s_file_ctor, "close", File_close);
+  v7_set_method(v7, s_file_ctor, "read", File_read);
+  v7_set_method(v7, s_file_ctor, "readAll", File_readAll);
+  v7_set_method(v7, s_file_ctor, "write", File_write);
+}
+#else
+void init_file(struct v7 *v7) {
+  (void) v7;
+}
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+#ifdef V7_ENABLE_SOCKET
+
+#ifdef __WATCOM__
+#define SOMAXCONN 128
+#endif
+
+#ifndef RECV_BUF_SIZE
+#define RECV_BUF_SIZE 1024
+#endif
+
+static v7_val_t s_sock_proto;
+static const char s_sock_prop[] = "__sock";
+
+static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
+  size_t n;
+  const char *s = v7_to_string(v7, &ip_address, &n);
+  struct hostent *he = gethostbyname(s);
+  return he == NULL ? 0 : * (uint32_t *) he->h_addr_list[0];
+}
+
+static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
+  v7_val_t obj = v7_create_object(v7);
+  v7_set_proto(obj, s_sock_proto);
+  v7_set(v7, obj, s_sock_prop, sizeof(s_sock_prop) - 1, V7_PROPERTY_DONT_ENUM,
+         v7_create_number(fd));
+  return obj;
+}
+
+/* Socket.connect(host, port [, is_udp]) -> socket_object */
+static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t arg1 = v7_array_get(v7, args, 1);
+  v7_val_t arg2 = v7_array_get(v7, args, 2);
+
+  (void) t;
+  if (v7_is_double(arg1) && v7_is_string(arg0)) {
+    struct sockaddr_in sin;
+    sock_t sock = socket(AF_INET,
+                         v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = s_resolve(v7, arg0);
+    sin.sin_port = htons((uint16_t) v7_to_double(arg1));
+    if (connect(sock, (struct sockaddr *) &sin, sizeof(sin)) != 0) {
+      closesocket(sock);
+    } else {
+      return s_fd_to_sock_obj(v7, sock);
+    }
+  }
+
+  return v7_create_null();
+}
+
+/* Socket.listen(port [, ip_address [,is_udp]]) -> sock */
+static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t arg1 = v7_array_get(v7, args, 1);
+  v7_val_t arg2 = v7_array_get(v7, args, 2);
+
+  (void) this_obj;
+  if (v7_is_double(arg0)) {
+    struct sockaddr_in sin;
+    int on = 1;
+    sock_t sock = socket(AF_INET,
+                         v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons((uint16_t) v7_to_double(arg0));
+    if (v7_is_string(arg1)) {
+      sin.sin_addr.s_addr = s_resolve(v7, arg1);
+    }
+
+#if defined(_WIN32) && defined(SO_EXCLUSIVEADDRUSE)
+    /* "Using SO_REUSEADDR and SO_EXCLUSIVEADDRUSE" http://goo.gl/RmrFTm */
+    setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (void *) &on, sizeof(on));
+#endif
+
+#if !defined(_WIN32) || defined(SO_EXCLUSIVEADDRUSE)
+    /*
+     * SO_RESUSEADDR is not enabled on Windows because the semantics of
+     * SO_REUSEADDR on UNIX and Windows is different. On Windows,
+     * SO_REUSEADDR allows to bind a socket to a port without error even if
+     * the port is already open by another program. This is not the behavior
+     * SO_REUSEADDR was designed for, and leads to hard-to-track failure
+     * scenarios. Therefore, SO_REUSEADDR was disabled on Windows unless
+     * SO_EXCLUSIVEADDRUSE is supported and set on a socket.
+     */
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
+#endif
+
+    if (bind(sock, (struct sockaddr *) &sin, sizeof(sin)) == 0) {
+      listen(sock, SOMAXCONN);
+      return s_fd_to_sock_obj(v7, sock);
+    } else {
+      closesocket(sock);
+    }
+  }
+
+  return v7_create_null();
+}
+
+static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
+  (void) args;
+  if (v7_is_double(prop)) {
+    struct sockaddr_in sin;
+    socklen_t len = sizeof(sin);
+    sock_t sock = (sock_t) v7_to_double(prop);
+    sock_t fd = accept(sock, (struct sockaddr *) &sin, &len);
+    if (fd != INVALID_SOCKET) {
+      return s_fd_to_sock_obj(v7, fd);
+    }
+  }
+  return v7_create_null();
+}
+
+/* sock.close() -> errno */
+static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
+  (void) args;
+  return v7_create_number(closesocket((sock_t) v7_to_double(prop)));
+}
+
+/* sock.recv() -> string */
+static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
+  v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
+  (void) a;
+  if (v7_is_double(prop)) {
+    char buf[RECV_BUF_SIZE];
+    sock_t sock = (sock_t) v7_to_double(prop);
+    struct mbuf m;
+    int n;
+
+    mbuf_init(&m, 0);
+    while ((n = recv(sock, buf, sizeof(buf), 0)) > 0) {
+      mbuf_append(&m, buf, n);
+      if (!all) {
+        break;
+      }
+    }
+
+    if (n <= 0) {
+      closesocket(sock);
+      v7_set(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1,
+             V7_PROPERTY_DONT_ENUM, v7_create_number(INVALID_SOCKET));
+    }
+
+    if (m.len > 0) {
+      v7_val_t res = v7_create_string(v7, m.buf, m.len, 1);
+      mbuf_free(&m);
+      return res;
+    }
+  }
+
+  return v7_create_null();
+}
+
+static v7_val_t Socket_recvAll(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  return s_recv(v7, t, args, 1);
+}
+
+static v7_val_t Socket_recv(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  return s_recv(v7, t, args, 0);
+}
+
+static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
+  size_t len, sent = 0;
+
+  if (v7_is_double(prop) && v7_is_string(arg0)) {
+    const char *s = v7_to_string(v7, &arg0, &len);
+    sock_t sock = (sock_t) v7_to_double(prop);
+    int n;
+
+    while (sent < len && (n = send(sock, s + sent, len - sent, 0)) > 0) {
+      sent += n;
+    }
+  }
+
+  return v7_create_number(sent);
+}
+
+void init_socket(struct v7 *v7) {
+  v7_val_t socket_obj = v7_create_object(v7);
+
+  s_sock_proto = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "Socket", 6, 0, socket_obj);
+
+  v7_set_method(v7, socket_obj, "connect", Socket_connect);
+  v7_set_method(v7, socket_obj, "listen", Socket_listen);
+
+  v7_set_method(v7, s_sock_proto, "accept", Socket_accept);
+  v7_set_method(v7, s_sock_proto, "send", Socket_send);
+  v7_set_method(v7, s_sock_proto, "recv", Socket_recv);
+  v7_set_method(v7, s_sock_proto, "recvAll", Socket_recvAll);
+  v7_set_method(v7, s_sock_proto, "close", Socket_close);
+
+#ifdef _WIN32
+  {
+    WSADATA data;
+    WSAStartup(MAKEWORD(2, 2), &data);
+    /* TODO(alashkin): add WSACleanup call */
+  }
+#else
+  signal(SIGPIPE, SIG_IGN);
+#endif
+}
+#else
+void init_socket(struct v7 *v7) {
+  (void) v7;
+}
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#include <stdlib.h>
+#include <string.h>
+
+
+#ifdef V7_ENABLE_CRYPTO
+
+typedef void (*b64_func_t)(const unsigned char *, int, char *);
+
+static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
+                              b64_func_t func, double mult) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t res = v7_create_undefined();
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t n;
+    const char *s = v7_to_string(v7, &arg0, &n);
+    char *buf = (char *) malloc(n * mult + 2);
+    if (buf != NULL) {
+      func((const unsigned char *) s, (int) n, buf);
+      res = v7_create_string(v7, buf, strlen(buf), 1);
+      free(buf);
+    }
+  }
+
+  return res;
+}
+
+static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
+                                  v7_val_t args) {
+  return b64_transform(v7, this_obj, args, (b64_func_t) base64_decode, 0.75);
+}
+
+static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
+                                  v7_val_t args) {
+  return b64_transform(v7, this_obj, args, base64_encode, 1.5);
+}
+
+static void v7_md5(const char *data, size_t len, char buf[16]) {
+  MD5_CTX ctx;
+  MD5_Init(&ctx);
+  MD5_Update(&ctx, (unsigned char *) data, len);
+  MD5_Final((unsigned char *) buf, &ctx);
+}
+
+static void v7_sha1(const char *data, size_t len, char buf[20]) {
+  SHA1_CTX ctx;
+  SHA1Init(&ctx);
+  SHA1Update(&ctx, (unsigned char *) data, len);
+  SHA1Final((unsigned char *) buf, &ctx);
+}
+
+static void bin2str(char *to, const unsigned char *p, size_t len) {
+  static const char *hex = "0123456789abcdef";
+
+  for (; len--; p++) {
+    *to++ = hex[p[0] >> 4];
+    *to++ = hex[p[0] & 0x0f];
+  }
+}
+
+static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t len;
+    const char *data = v7_to_string(v7, &arg0, &len);
+    char buf[16];
+    v7_md5(data, len, buf);
+    return v7_create_string(v7, buf, sizeof(buf), 1);
+  }
+  return v7_create_null();
+}
+
+static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
+                               v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t len;
+    const char *data = v7_to_string(v7, &arg0, &len);
+    char hash[16], buf[sizeof(hash) * 2];
+    v7_md5(data, len, hash);
+    bin2str(buf, (unsigned char *) hash, sizeof(hash));
+    return v7_create_string(v7, buf, sizeof(buf), 1);
+  }
+  return v7_create_null();
+}
+
+static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t len;
+    const char *data = v7_to_string(v7, &arg0, &len);
+    char buf[20];
+    v7_sha1(data, len, buf);
+    return v7_create_string(v7, buf, sizeof(buf), 1);
+  }
+  return v7_create_null();
+}
+
+static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
+                                v7_val_t args) {
+  v7_val_t arg0 = v7_array_get(v7, args, 0);
+
+  (void) this_obj;
+  if (v7_is_string(arg0)) {
+    size_t len;
+    const char *data = v7_to_string(v7, &arg0, &len);
+    char hash[20], buf[sizeof(hash) * 2];
+    v7_sha1(data, len, hash);
+    bin2str(buf, (unsigned char *) hash, sizeof(hash));
+    return v7_create_string(v7, buf, sizeof(buf), 1);
+  }
+  return v7_create_null();
+}
+#endif
+
+void init_crypto(struct v7 *v7) {
+#ifdef V7_ENABLE_CRYPTO
+  v7_val_t obj = v7_create_object(v7);
+  v7_set(v7, v7_get_global_object(v7), "Crypto", 6, 0, obj);
+  v7_set_method(v7, obj, "md5", Crypto_md5);
+  v7_set_method(v7, obj, "md5_hex", Crypto_md5_hex);
+  v7_set_method(v7, obj, "sha1", Crypto_sha1);
+  v7_set_method(v7, obj, "sha1_hex", Crypto_sha1_hex);
+  v7_set_method(v7, obj, "base64_encode", Crypto_base64_encode);
+  v7_set_method(v7, obj, "base64_decode", Crypto_base64_decode);
+#else
+  (void) v7;
+#endif
+}
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
 /*
  * Strings in AST are encoded as tuples (length, string).
  * Length is variable-length: if high bit is set in a byte, next byte is used.
@@ -4842,7 +6147,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       return b - buf;
     }
     case V7_TYPE_FOREIGN:
-      return snprintf(buf, size, "[foreign]");
+      return snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
     default:
       printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
@@ -5681,6 +6986,10 @@ struct v7 *v7_create(void) {
     v7->thrown_error = v7_create_undefined();
   }
 
+  init_file(v7);
+  init_crypto(v7);
+  init_socket(v7);
+
   return v7;
 }
 
@@ -5709,6 +7018,16 @@ void v7_destroy(struct v7 *v7) {
 
     free(v7->cur_dense_prop);
     free(v7);
+  }
+}
+
+v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
+  if (v7_is_object(obj)) {
+    v7_val_t old_proto = v7_object_to_value(v7_to_object(obj)->prototype);
+    v7_to_object(obj)->prototype = v7_to_object(proto);
+    return old_proto;
+  } else {
+    return v7_create_undefined();
   }
 }
 /*
