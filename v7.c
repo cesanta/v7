@@ -293,6 +293,14 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #endif /* __cplusplus */
 
 #endif /* V7_HEADER_INCLUDED */
+#ifndef ONFLASH_HEADER_INCLUDED
+#define ONFLASH_HEADER_INCLUDED
+
+#ifndef ON_FLASH
+#define ON_FLASH
+#endif
+
+#endif
 #ifndef V7_FEATURES_H_INCLUDED
 #define V7_FEATURES_H_INCLUDED
 
@@ -610,6 +618,7 @@ void mbuf_trim(struct mbuf *);
 #ifndef _UTF_H_
 #define _UTF_H_ 1
 
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -627,22 +636,27 @@ enum {
   Runeerror = 0xFFFD        /* decoding error in UTF */
   /* Runemax    = 0xFFFC */ /* maximum rune value */
 };
-
+ 
+/* 
+ * For unknown (yet) reasons these functions
+ * should be marked ON_FLASH in headers too
+ * TODO(alashkin): fix this
+ */
 /* Edit .+1,/^$/ | cfn $PLAN9/src/lib9/utf/?*.c | grep -v static |grep -v __ */
-int chartorune(Rune *rune, const char *str);
-int fullrune(char *str, int n);
-int isdigitrune(Rune c);
-int isnewline(Rune c);
-int iswordchar(Rune c);
-int isalpharune(Rune c);
-int islowerrune(Rune c);
-int isspacerune(Rune c);
-int isupperrune(Rune c);
-int runetochar(char *str, Rune *rune);
-Rune tolowerrune(Rune c);
-Rune toupperrune(Rune c);
-int utfnlen(char *s, long m);
-char *utfnshift(char *s, long m);
+ON_FLASH int chartorune(Rune *rune, const char *str);
+ON_FLASH int fullrune(char *str, int n);
+ON_FLASH int isdigitrune(Rune c);
+ON_FLASH int isnewline(Rune c);
+ON_FLASH int iswordchar(Rune c);
+ON_FLASH int isalpharune(Rune c);
+ON_FLASH int islowerrune(Rune c);
+ON_FLASH int isspacerune(Rune c);
+ON_FLASH int isupperrune(Rune c);
+ON_FLASH int runetochar(char *str, Rune *rune);
+ON_FLASH Rune tolowerrune(Rune c);
+ON_FLASH Rune toupperrune(Rune c);
+ON_FLASH int utfnlen(char *s, long m);
+ON_FLASH char *utfnshift(char *s, long m);
 
 #if 0 /* Not implemented. */
 int istitlerune(Rune c);
@@ -733,7 +747,9 @@ char *utfutf(char *s1, char *s2);
 #endif
 
 #include <assert.h>
+#ifndef NO_LIBC
 #include <ctype.h>
+#endif
 #include <errno.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -799,7 +815,7 @@ typedef struct _stati64 ns_stat_t;
 #endif
 #define DIRSEP '\\'
 #else /* not _WIN32 */
-#ifndef AVR_LIBC
+#ifndef NO_LIBC
 #include <dirent.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -852,6 +868,7 @@ int64_t strtoll(const char* str, char** endptr, int base);
 
 #if !defined(BASE64_H_INCLUDED) && !defined(DISABLE_BASE64)
 #define BASE64_H_INCLUDED
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -1291,6 +1308,10 @@ struct gc_arena {
 #define V7_NO_FS
 #endif
 
+#ifndef ON_FLASH
+#define ON_FLASH
+#endif
+
 /*
  * In some compilers (watcom) NAN == NAN (and other comparisons) don't follow
  * the rules of IEEE 754. Since we don't know a priori which compilers
@@ -1316,7 +1337,9 @@ struct gc_arena {
 #define _POSIX_C_SOURCE 200809L
 
 #include <assert.h>
+#ifndef NO_LIBC
 #include <ctype.h>
+#endif
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
@@ -2010,20 +2033,20 @@ V7_PRIVATE int calc_llen(size_t len);
 #include <assert.h>
 #include <string.h>
 
-void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
+ON_FLASH void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
   mbuf->len = mbuf->size = 0;
   mbuf->buf = NULL;
   mbuf_resize(mbuf, initial_size);
 }
 
-void mbuf_free(struct mbuf *mbuf) {
+ON_FLASH void mbuf_free(struct mbuf *mbuf) {
   if (mbuf->buf != NULL) {
     free(mbuf->buf);
     mbuf_init(mbuf, 0);
   }
 }
 
-void mbuf_resize(struct mbuf *a, size_t new_size) {
+ON_FLASH void mbuf_resize(struct mbuf *a, size_t new_size) {
   char *p;
   if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
       (p = (char *) realloc(a->buf, new_size)) != NULL) {
@@ -2032,16 +2055,18 @@ void mbuf_resize(struct mbuf *a, size_t new_size) {
   }
 }
 
-void mbuf_trim(struct mbuf *mbuf) {
+ON_FLASH void mbuf_trim(struct mbuf *mbuf) {
   mbuf_resize(mbuf, mbuf->len);
 }
 
-size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
+ON_FLASH size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   char *p = NULL;
 
+#ifndef NO_LIBC
   assert(a != NULL);
   assert(a->len <= a->size);
   assert(off <= a->len);
+#endif
 
   /* check overflow */
   if (~(size_t) 0 - (size_t) a->buf < len) return 0;
@@ -2068,11 +2093,11 @@ size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   return len;
 }
 
-size_t mbuf_append(struct mbuf *a, const void *buf, size_t len) {
+ON_FLASH size_t mbuf_append(struct mbuf *a, const void *buf, size_t len) {
   return mbuf_insert(a, a->len, buf, len);
 }
 
-void mbuf_remove(struct mbuf *mb, size_t n) {
+ON_FLASH void mbuf_remove(struct mbuf *mb, size_t n) {
   if (n > 0 && n <= mb->len) {
     memmove(mb->buf, mb->buf + n, mb->len - n);
     mb->len -= n;
@@ -2091,7 +2116,9 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
  * ANY REPRESENTATION OR WARRANTY OF ANY KIND CONCERNING THE MERCHANTABILITY
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
+#ifndef NO_LIBC
 #include <ctype.h>
+#endif
 #include <stdarg.h>
 #include <string.h>
 
@@ -2124,7 +2151,7 @@ enum
 	Bad	= Runeerror
 };
 
-int
+ON_FLASH int
 chartorune(Rune *rune, const char *str)
 {
 	int c, c1, c2/* , c3 */;
@@ -2199,7 +2226,7 @@ bad:
 	return 1;
 }
 
-int
+ON_FLASH int
 runetochar(char *str, Rune *rune)
 {
 	unsigned short c;
@@ -2248,7 +2275,7 @@ runetochar(char *str, Rune *rune)
 	return 4; */
 }
 
-int
+ON_FLASH int
 fullrune(char *str, int n)
 {
 	int c;
@@ -2265,7 +2292,7 @@ fullrune(char *str, int n)
 	return n >= 4;
 }
 
-int
+ON_FLASH int
 utfnlen(char *s, long m)
 {
 	int c;
@@ -2289,7 +2316,7 @@ utfnlen(char *s, long m)
 	return n;
 }
 
-char*
+ON_FLASH char*
 utfnshift(char *s, long m)
 {
 	int c;
@@ -3322,7 +3349,7 @@ Rune	__tolower1[] =
 	0x1ffc, 491,	/* ῼ ῳ */
 };
 
-static Rune*
+ON_FLASH static Rune*
 rune_bsearch(Rune c, Rune *t, int n, int ne)
 {
 	Rune *p;
@@ -3342,7 +3369,7 @@ rune_bsearch(Rune c, Rune *t, int n, int ne)
 	return 0;
 }
 
-Rune
+ON_FLASH Rune
 tolowerrune(Rune c)
 {
 	Rune *p;
@@ -3356,7 +3383,7 @@ tolowerrune(Rune c)
 	return c;
 }
 
-Rune
+ON_FLASH Rune
 toupperrune(Rune c)
 {
 	Rune *p;
@@ -3370,7 +3397,7 @@ toupperrune(Rune c)
 	return c;
 }
 
-int
+ON_FLASH int
 islowerrune(Rune c)
 {
 	Rune *p;
@@ -3384,7 +3411,7 @@ islowerrune(Rune c)
 	return 0;
 }
 
-int
+ON_FLASH int
 isupperrune(Rune c)
 {
 	Rune *p;
@@ -3398,19 +3425,19 @@ isupperrune(Rune c)
 	return 0;
 }
 
-int isdigitrune(Rune c) {
+ON_FLASH int isdigitrune(Rune c) {
   return c >= '0' && c <= '9';
 }
 
-int isnewline(Rune c) {
+ON_FLASH int isnewline(Rune c) {
   return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;
 }
 
-int iswordchar(Rune c) {
+ON_FLASH int iswordchar(Rune c) {
   return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-int
+ON_FLASH int
 isalpharune(Rune c)
 {
 	Rune *p;
@@ -3426,7 +3453,7 @@ isalpharune(Rune c)
 	return 0;
 }
 
-int
+ON_FLASH int
 isspacerune(Rune c)
 {
 	Rune *p;
@@ -3439,24 +3466,24 @@ isspacerune(Rune c)
 
 #else /* V7_ENABLE__UTF */
 
-int chartorune(Rune *rune, const char *str) {
+ON_FLASH int chartorune(Rune *rune, const char *str) {
 	*rune = *(uchar*)str;
 	return 1;
 }
 
-int fullrune(char *str UNUSED, int n) {
+ON_FLASH int fullrune(char *str UNUSED, int n) {
 	return (n <= 0) ? 0 : 1;
 }
 
-int isdigitrune(Rune c) {
+ON_FLASH int isdigitrune(Rune c) {
   return isdigit(c);
 }
 
-int isnewline(Rune c) {
+ON_FLASH int isnewline(Rune c) {
   return c == 0xA || c == 0xD || c == 0x2028 || c == 0x2029;
 }
 
-int iswordchar(Rune c) {
+ON_FLASH int iswordchar(Rune c) {
   return c == '_' || isdigitrune(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
@@ -3465,20 +3492,20 @@ int islowerrune(Rune c) { return islower(c); }
 int isspacerune(Rune c) { return isspace(c); }
 int isupperrune(Rune c) { return isupper(c); }
 
-int runetochar(char *str, Rune *rune) {
+ON_FLASH int runetochar(char *str, Rune *rune) {
   str[0] = (char) *rune;
   return 1;
 }
 
 Rune tolowerrune(Rune c) { return tolower(c); }
 Rune toupperrune(Rune c) { return toupper(c); }
-int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
+ON_FLASH int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
   long n;
   for (n = 0; n < m && *s != '\0'; n++);
   return n;
 }
 
-char *utfnshift(char *s, long m) {
+ON_FLASH char *utfnshift(char *s, long m) {
   for (; m > 0 && *s != '\0'; m--, s++);
   return s;
 }
@@ -3490,7 +3517,7 @@ char *utfnshift(char *s, long m) {
  */
 
 
-void base64_encode(const unsigned char *src, int src_len, char *dst) {
+ON_FLASH void base64_encode(const unsigned char *src, int src_len, char *dst) {
   static const char *b64 =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   int i, j, a, b, c;
@@ -3516,7 +3543,7 @@ void base64_encode(const unsigned char *src, int src_len, char *dst) {
 }
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
-static unsigned char from_b64(unsigned char ch) {
+ON_FLASH static unsigned char from_b64(unsigned char ch) {
   /* Inverse lookup map */
   static const unsigned char tab[128] = {
       255, 255, 255, 255,
@@ -3555,7 +3582,7 @@ static unsigned char from_b64(unsigned char ch) {
   return tab[ch & 127];
 }
 
-int base64_decode(const unsigned char *s, int len, char *dst) {
+ON_FLASH int base64_decode(const unsigned char *s, int len, char *dst) {
   unsigned char a, b, c, d;
   int orig_len = len;
   while (len >= 4 && (a = from_b64(s[0])) != 255 &&
@@ -3593,7 +3620,7 @@ int base64_decode(const unsigned char *s, int len, char *dst) {
 #ifndef DISABLE_MD5
 
 
-static void byteReverse(unsigned char *buf, unsigned longs) {
+ON_FLASH static void byteReverse(unsigned char *buf, unsigned longs) {
 
   /* Forrest: MD5 expect LITTLE_ENDIAN, swap if BIG_ENDIAN */
 #if BYTE_ORDER == BIG_ENDIAN
@@ -3621,7 +3648,7 @@ static void byteReverse(unsigned char *buf, unsigned longs) {
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
  * initialization constants.
  */
-void MD5_Init(MD5_CTX *ctx) {
+ON_FLASH void MD5_Init(MD5_CTX *ctx) {
   ctx->buf[0] = 0x67452301;
   ctx->buf[1] = 0xefcdab89;
   ctx->buf[2] = 0x98badcfe;
@@ -3631,7 +3658,7 @@ void MD5_Init(MD5_CTX *ctx) {
   ctx->bits[1] = 0;
 }
 
-static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
+ON_FLASH static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
   register uint32_t a, b, c, d;
 
   a = buf[0];
@@ -3713,7 +3740,7 @@ static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
   buf[3] += d;
 }
 
-void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
+ON_FLASH void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
   uint32_t t;
 
   t = ctx->bits[0];
@@ -3749,7 +3776,7 @@ void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
   memcpy(ctx->in, buf, len);
 }
 
-void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
+ON_FLASH void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   unsigned count;
   unsigned char *p;
   uint32_t *a;
@@ -3793,7 +3820,7 @@ union char64long16 { unsigned char c[64]; uint32_t l[16]; };
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
-static uint32_t blk0(union char64long16 *block, int i) {
+ON_FLASH static uint32_t blk0(union char64long16 *block, int i) {
   /* Forrest: SHA expect BIG_ENDIAN, swap if LITTLE_ENDIAN */
 #if BYTE_ORDER == LITTLE_ENDIAN
     block->l[i] = (rol(block->l[i], 24) & 0xFF00FF00) |
@@ -3818,7 +3845,7 @@ static uint32_t blk0(union char64long16 *block, int i) {
 #define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
 #define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
 
-void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
+ON_FLASH void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
   uint32_t a, b, c, d, e;
   union char64long16 block[1];
 
@@ -3860,7 +3887,7 @@ void SHA1Transform(uint32_t state[5], const unsigned char buffer[64]) {
   (void) a; (void) b; (void) c; (void) d; (void) e;
 }
 
-void SHA1Init(SHA1_CTX *context) {
+ON_FLASH void SHA1Init(SHA1_CTX *context) {
   context->state[0] = 0x67452301;
   context->state[1] = 0xEFCDAB89;
   context->state[2] = 0x98BADCFE;
@@ -3869,7 +3896,7 @@ void SHA1Init(SHA1_CTX *context) {
   context->count[0] = context->count[1] = 0;
 }
 
-void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
+ON_FLASH void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
   uint32_t i, j;
 
   j = context->count[0];
@@ -3889,7 +3916,7 @@ void SHA1Update(SHA1_CTX *context, const unsigned char *data, uint32_t len) {
   memcpy(&context->buffer[j], &data[i], len - i);
 }
 
-void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
+ON_FLASH void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
   unsigned i;
   unsigned char finalcount[8], c;
 
@@ -3923,7 +3950,7 @@ void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
 static v7_val_t s_file_ctor;
 static const char s_fd_prop[] = "__fd";
 
-static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t res = v7_create_undefined();
 
@@ -3937,7 +3964,7 @@ static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return res;
 }
 
-static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
+ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   (void) a;
   if (v7_is_foreign(arg0)) {
@@ -3969,15 +3996,15 @@ static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
   return v7_create_string(v7, "", 0, 1);
 }
 
-static v7_val_t File_readAll(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_readAll(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return f_read(v7, this_obj, args, 1);
 }
 
-static v7_val_t File_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return f_read(v7, this_obj, args, 0);
 }
 
-static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   v7_val_t arg1 = v7_array_get(v7, args, 0);
   size_t n, sent = 0, len = 0;
@@ -3993,7 +4020,7 @@ static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(sent);
 }
 
-static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   int res = -1;
   (void) args;
@@ -4003,7 +4030,7 @@ static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(res);
 }
 
-static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   FILE *fp = NULL;
@@ -4029,7 +4056,7 @@ static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_null();
 }
 
-static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   int res = -1;
@@ -4045,7 +4072,7 @@ static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
-static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   int res = -1;
   (void) this_obj;
@@ -4057,7 +4084,7 @@ static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
-void init_file(struct v7 *v7) {
+ON_FLASH void init_file(struct v7 *v7) {
   v7_val_t file_obj = v7_create_object(v7);
   s_file_ctor = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "File", 4, 0, file_obj);
@@ -4073,7 +4100,7 @@ void init_file(struct v7 *v7) {
   v7_set_method(v7, s_file_ctor, "write", File_write);
 }
 #else
-void init_file(struct v7 *v7) {
+ON_FLASH void init_file(struct v7 *v7) {
   (void) v7;
 }
 #endif
@@ -4096,14 +4123,14 @@ void init_file(struct v7 *v7) {
 static v7_val_t s_sock_proto;
 static const char s_sock_prop[] = "__sock";
 
-static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
+ON_FLASH static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
   size_t n;
   const char *s = v7_to_string(v7, &ip_address, &n);
   struct hostent *he = gethostbyname(s);
   return he == NULL ? 0 : * (uint32_t *) he->h_addr_list[0];
 }
 
-static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
+ON_FLASH static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
   v7_val_t obj = v7_create_object(v7);
   v7_set_proto(obj, s_sock_proto);
   v7_set(v7, obj, s_sock_prop, sizeof(s_sock_prop) - 1, V7_PROPERTY_DONT_ENUM,
@@ -4112,7 +4139,7 @@ static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
 }
 
 /* Socket.connect(host, port [, is_udp]) -> socket_object */
-static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   v7_val_t arg2 = v7_array_get(v7, args, 2);
@@ -4137,7 +4164,7 @@ static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args) {
 }
 
 /* Socket.listen(port [, ip_address [,is_udp]]) -> sock */
-static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   v7_val_t arg2 = v7_array_get(v7, args, 2);
@@ -4184,7 +4211,7 @@ static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_null();
 }
 
-static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
   if (v7_is_double(prop)) {
@@ -4200,14 +4227,14 @@ static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 /* sock.close() -> errno */
-static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
   return v7_create_number(closesocket((sock_t) v7_to_double(prop)));
 }
 
 /* sock.recv() -> string */
-static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
+ON_FLASH static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) a;
   if (v7_is_double(prop)) {
@@ -4240,15 +4267,15 @@ static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
   return v7_create_null();
 }
 
-static v7_val_t Socket_recvAll(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_recvAll(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return s_recv(v7, t, args, 1);
 }
 
-static v7_val_t Socket_recv(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_recv(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return s_recv(v7, t, args, 0);
 }
 
-static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   size_t len, sent = 0;
@@ -4266,7 +4293,7 @@ static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_number(sent);
 }
 
-void init_socket(struct v7 *v7) {
+ON_FLASH void init_socket(struct v7 *v7) {
   v7_val_t socket_obj = v7_create_object(v7);
 
   s_sock_proto = v7_create_object(v7);
@@ -4292,7 +4319,7 @@ void init_socket(struct v7 *v7) {
 #endif
 }
 #else
-void init_socket(struct v7 *v7) {
+ON_FLASH void init_socket(struct v7 *v7) {
   (void) v7;
 }
 #endif
@@ -4309,7 +4336,7 @@ void init_socket(struct v7 *v7) {
 
 typedef void (*b64_func_t)(const unsigned char *, int, char *);
 
-static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
+ON_FLASH static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
                               b64_func_t func, double mult) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t res = v7_create_undefined();
@@ -4329,31 +4356,31 @@ static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
   return res;
 }
 
-static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
+ON_FLASH static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
                                   v7_val_t args) {
   return b64_transform(v7, this_obj, args, (b64_func_t) base64_decode, 0.75);
 }
 
-static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
+ON_FLASH static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
                                   v7_val_t args) {
   return b64_transform(v7, this_obj, args, base64_encode, 1.5);
 }
 
-static void v7_md5(const char *data, size_t len, char buf[16]) {
+ON_FLASH static void v7_md5(const char *data, size_t len, char buf[16]) {
   MD5_CTX ctx;
   MD5_Init(&ctx);
   MD5_Update(&ctx, (unsigned char *) data, len);
   MD5_Final((unsigned char *) buf, &ctx);
 }
 
-static void v7_sha1(const char *data, size_t len, char buf[20]) {
+ON_FLASH static void v7_sha1(const char *data, size_t len, char buf[20]) {
   SHA1_CTX ctx;
   SHA1Init(&ctx);
   SHA1Update(&ctx, (unsigned char *) data, len);
   SHA1Final((unsigned char *) buf, &ctx);
 }
 
-static void bin2str(char *to, const unsigned char *p, size_t len) {
+ON_FLASH static void bin2str(char *to, const unsigned char *p, size_t len) {
   static const char *hex = "0123456789abcdef";
 
   for (; len--; p++) {
@@ -4362,7 +4389,7 @@ static void bin2str(char *to, const unsigned char *p, size_t len) {
   }
 }
 
-static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -4376,7 +4403,7 @@ static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_null();
 }
 
-static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
+ON_FLASH static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
                                v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
@@ -4392,7 +4419,7 @@ static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
   return v7_create_null();
 }
 
-static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -4406,7 +4433,7 @@ static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   return v7_create_null();
 }
 
-static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
+ON_FLASH static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
                                 v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
@@ -4423,7 +4450,7 @@ static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
 }
 #endif
 
-void init_crypto(struct v7 *v7) {
+ON_FLASH void init_crypto(struct v7 *v7) {
 #ifdef V7_ENABLE_CRYPTO
   v7_val_t obj = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "Crypto", 6, 0, obj);
@@ -4450,7 +4477,7 @@ void init_crypto(struct v7 *v7) {
  * assuming that sizeof(size_t) == 4.
  * Small string length (less then 128 bytes) is encoded in 1 byte.
  */
-V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen) {
+ON_FLASH V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen) {
   size_t i = 0, string_len = 0;
 
   do {
@@ -4470,19 +4497,21 @@ V7_PRIVATE size_t decode_varint(const unsigned char *p, int *llen) {
 }
 
 /* Return number of bytes to store length */
-V7_PRIVATE int calc_llen(size_t len) {
+ON_FLASH V7_PRIVATE int calc_llen(size_t len) {
   int n = 0;
 
   do {
     n++;
   } while (len >>= 7);
 
+#ifndef NO_LIBC
   assert(n <= (int) sizeof(len));
+#endif
 
   return n;
 }
 
-V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
+ON_FLASH V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
   int i, llen = calc_llen(len);
 
   for (i = 0; i < llen; i++) {
@@ -4522,7 +4551,7 @@ static struct v7_vec s_keywords[] = {
     V7_VEC("typeof"),     V7_VEC("var"),      V7_VEC("void"),
     V7_VEC("while"),      V7_VEC("with")};
 
-V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
+ON_FLASH V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
   return tok >= TOK_BREAK && tok <= TOK_WITH;
 }
 
@@ -4530,7 +4559,7 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok) {
  * Move ptr to the next token, skipping comments and whitespaces.
  * Return number of new line characters detected.
  */
-V7_PRIVATE int skip_to_next_tok(const char **ptr) {
+ON_FLASH V7_PRIVATE int skip_to_next_tok(const char **ptr) {
   const char *s = *ptr, *p = NULL;
   int num_lines = 0;
 
@@ -4558,7 +4587,7 @@ V7_PRIVATE int skip_to_next_tok(const char **ptr) {
 }
 
 /* Advance `s` pointer to the end of identifier  */
-static void ident(const char **s) {
+ON_FLASH static void ident(const char **s) {
   const unsigned char *p = (unsigned char *) *s;
   int n;
   Rune r;
@@ -4582,7 +4611,8 @@ static void ident(const char **s) {
   *s = (char *) p;
 }
 
-static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
+ON_FLASH static enum v7_tok kw(const char *s, int len, int ntoks,
+                               enum v7_tok tok) {
   int i;
 
   for (i = 0; i < ntoks; i++) {
@@ -4594,8 +4624,8 @@ static enum v7_tok kw(const char *s, int len, int ntoks, enum v7_tok tok) {
   return i == ntoks ? TOK_IDENTIFIER : (enum v7_tok)(tok + i);
 }
 
-static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
-                          enum v7_tok tok2) {
+ON_FLASH static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
+                                   enum v7_tok tok2) {
   (*s)++;
   if (s[0][0] == ch1) {
     (*s)++;
@@ -4605,8 +4635,9 @@ static enum v7_tok punct1(const char **s, int ch1, enum v7_tok tok1,
   }
 }
 
-static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1, int ch2,
-                          enum v7_tok tok2, enum v7_tok tok3) {
+ON_FLASH static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1,
+                                   int ch2, enum v7_tok tok2,
+                                   enum v7_tok tok3) {
   if (s[0][1] == ch1 && s[0][2] == ch2) {
     (*s) += 3;
     return tok2;
@@ -4615,8 +4646,9 @@ static enum v7_tok punct2(const char **s, int ch1, enum v7_tok tok1, int ch2,
   return punct1(s, ch1, tok1, tok3);
 }
 
-static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
-                          enum v7_tok tok2, enum v7_tok tok3) {
+ON_FLASH static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1,
+                                   int ch2, enum v7_tok tok2,
+                                   enum v7_tok tok3) {
   (*s)++;
   if (s[0][0] == ch1) {
     (*s)++;
@@ -4629,11 +4661,12 @@ static enum v7_tok punct3(const char **s, int ch1, enum v7_tok tok1, int ch2,
   }
 }
 
-static void parse_number(const char *s, const char **end, double *num) {
+ON_FLASH static void parse_number(const char *s, const char **end,
+                                  double *num) {
   *num = strtod(s, (char **) end);
 }
 
-static enum v7_tok parse_str_literal(const char **p) {
+ON_FLASH static enum v7_tok parse_str_literal(const char **p) {
   const char *s = *p;
   int quote = *s++;
 
@@ -4682,8 +4715,8 @@ static enum v7_tok parse_str_literal(const char **p) {
  * NOTE(lsm): `prev_tok` is a previously parsed token. It is needed for
  * correctly parsing regex literals.
  */
-V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
-                               enum v7_tok prev_tok) {
+ON_FLASH V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
+                                        enum v7_tok prev_tok) {
   const char *p = *s;
 
   switch (*p) {
@@ -4949,7 +4982,7 @@ V7_PRIVATE enum v7_tok get_tok(const char **s, double *n,
 }
 
 #ifdef TEST_RUN
-int main(void) {
+ON_FLASH int main(void) {
   const char *src =
       "for (var fo++ = -1; /= <= 1.17; x<<) { == <<=, 'x')} "
       "Infinity %=x<<=2";
@@ -5363,24 +5396,27 @@ V7_STATIC_ASSERT(AST_MAX_TAG == ARRAY_SIZE(ast_node_defs), bad_node_defs);
  * Returns the offset of the node payload (one byte after the tag).
  * This offset can be passed to `ast_set_skip`.
  */
-V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
+ON_FLASH V7_PRIVATE ast_off_t ast_add_node(struct ast *a, enum ast_tag tag) {
   ast_off_t start = a->mbuf.len;
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
+#ifndef NO_LIBC
   assert(tag < AST_MAX_TAG);
-
+#endif
   mbuf_append(&a->mbuf, (char *) &t, sizeof(t));
   mbuf_append(&a->mbuf, NULL, sizeof(ast_skip_t) * d->num_skips);
   return start + 1;
 }
 
-V7_PRIVATE ast_off_t
+ON_FLASH V7_PRIVATE ast_off_t
 ast_insert_node(struct ast *a, ast_off_t start, enum ast_tag tag) {
   uint8_t t = (uint8_t) tag;
   const struct ast_node_def *d = &ast_node_defs[tag];
 
+#ifndef NO_LIBC
   assert(tag < AST_MAX_TAG);
+#endif
 
   mbuf_insert(&a->mbuf, start, NULL, sizeof(ast_skip_t) * d->num_skips);
   mbuf_insert(&a->mbuf, start, (char *) &t, sizeof(t));
@@ -5410,7 +5446,7 @@ V7_STATIC_ASSERT(sizeof(ast_skip_t) == 2, ast_skip_t_len_should_be_2);
  *
  * Every tree reader can assume this and safely skip unknown nodes.
  */
-V7_PRIVATE ast_off_t
+ON_FLASH V7_PRIVATE ast_off_t
 ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
   return ast_modify_skip(a, start, a->mbuf.len, skip);
 }
@@ -5419,32 +5455,39 @@ ast_set_skip(struct ast *a, ast_off_t start, enum ast_which_skip skip) {
  * Patches a given skip slot for an already emitted node with the value
  * (stored as delta relative to the `start` node) of the `where` argument.
  */
-V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
-                                     ast_off_t where,
-                                     enum ast_which_skip skip) {
+ON_FLASH V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
+                                              ast_off_t where,
+                                              enum ast_which_skip skip) {
   uint8_t *p = (uint8_t *) a->mbuf.buf + start + skip * sizeof(ast_skip_t);
   uint16_t delta = where - start;
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
 
+#ifndef NO_LIBC
   /* assertion, to be optimizable out */
   assert((int) skip < def->num_skips);
+#endif
 
   p[0] = delta >> 8;
   p[1] = delta & 0xff;
   return where;
 }
 
-V7_PRIVATE ast_off_t
+ON_FLASH V7_PRIVATE ast_off_t
 ast_get_skip(struct ast *a, ast_off_t pos, enum ast_which_skip skip) {
   uint8_t *p;
+#ifndef NO_LIBC
   assert(pos + skip * sizeof(ast_skip_t) < a->mbuf.len);
+#endif
+
   p = (uint8_t *) a->mbuf.buf + pos + skip * sizeof(ast_skip_t);
   return pos + (p[1] | p[0] << 8);
 }
 
-V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
+ON_FLASH V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
+#ifndef NO_LIBC
   assert(*pos < a->mbuf.len);
+#endif
   return (enum ast_tag)(uint8_t) * (a->mbuf.buf + (*pos)++);
 }
 
@@ -5453,10 +5496,12 @@ V7_PRIVATE enum ast_tag ast_fetch_tag(struct ast *a, ast_off_t *pos) {
  *
  * TODO(mkm): add doc, find better name.
  */
-V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
+ON_FLASH V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + *pos - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
+#ifndef NO_LIBC
   assert(*pos - 1 < a->mbuf.len);
+#endif
   if (def->has_varint) {
     int llen;
     size_t slen = decode_varint((unsigned char *) a->mbuf.buf + *pos, &llen);
@@ -5470,28 +5515,36 @@ V7_PRIVATE void ast_move_to_children(struct ast *a, ast_off_t *pos) {
 }
 
 /* Helper to add a node with inlined data. */
-V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
-                                     const char *name, size_t len) {
+ON_FLASH V7_PRIVATE void ast_add_inlined_node(struct ast *a, enum ast_tag tag,
+                                              const char *name, size_t len) {
+#ifndef NO_LIBC
   assert(ast_node_defs[tag].has_inlined);
+#endif
   embed_string(&a->mbuf, ast_add_node(a, tag), name, len, 0, 1);
 }
 
 /* Helper to add a node with inlined data. */
-V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
-                                        enum ast_tag tag, const char *name,
-                                        size_t len) {
+ON_FLASH V7_PRIVATE void ast_insert_inlined_node(struct ast *a, ast_off_t start,
+                                                 enum ast_tag tag,
+                                                 const char *name, size_t len) {
+#ifndef NO_LIBC
   assert(ast_node_defs[tag].has_inlined);
+#endif
   embed_string(&a->mbuf, ast_insert_node(a, start, tag), name, len, 0, 1);
 }
 
-V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos, size_t *n) {
+ON_FLASH V7_PRIVATE char *ast_get_inlined_data(struct ast *a, ast_off_t pos,
+                                               size_t *n) {
   int llen;
+#ifndef NO_LIBC
   assert(pos < a->mbuf.len);
+#endif
   *n = decode_varint((unsigned char *) a->mbuf.buf + pos, &llen);
   return a->mbuf.buf + pos + llen;
 }
 
-V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
+ON_FLASH V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos,
+                                     double *val) {
   char buf[512];
   char *str;
   size_t str_len;
@@ -5504,7 +5557,9 @@ V7_PRIVATE void ast_get_num(struct ast *a, ast_off_t pos, double *val) {
   *val = strtod(buf, NULL);
 }
 
-static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
+#ifndef V7_NO_FS
+ON_FLASH static void comment_at_depth(FILE *fp, const char *fmt, int depth,
+                                      ...) {
   int i;
   char buf[265];
   va_list ap;
@@ -5517,8 +5572,9 @@ static void comment_at_depth(FILE *fp, const char *fmt, int depth, ...) {
   }
   fprintf(fp, "/* [%s] */\n", buf);
 }
+#endif
 
-V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
+ON_FLASH V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
@@ -5538,7 +5594,9 @@ V7_PRIVATE void ast_skip_tree(struct ast *a, ast_off_t *pos) {
   }
 }
 
-static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
+#ifndef V7_NO_FS
+ON_FLASH static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
+                                   int depth) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const struct ast_node_def *def = &ast_node_defs[tag];
   ast_off_t skips = *pos;
@@ -5589,19 +5647,21 @@ static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos, int depth) {
     }
   }
 }
+#endif
 
-V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
+ON_FLASH V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
   mbuf_init(&ast->mbuf, len);
 }
 
-V7_PRIVATE void ast_optimize(struct ast *ast) {
+ON_FLASH V7_PRIVATE void ast_optimize(struct ast *ast) {
   mbuf_trim(&ast->mbuf);
 }
 
-V7_PRIVATE void ast_free(struct ast *ast) {
+ON_FLASH V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
 }
 
+#ifndef V7_NO_FS
 /*
  * Generate Abstract Syntax Tree (AST) for the given JavaScript source code.
  * If `binary` is 0, then generated AST is in text format, otherwise it is
@@ -5609,7 +5669,7 @@ V7_PRIVATE void ast_free(struct ast *ast) {
  * by V7 with no extra input.
  * `fp` must be an opened writable file stream to write compiled AST to.
  */
-void v7_compile(const char *code, int binary, FILE *fp) {
+ON_FLASH void v7_compile(const char *code, int binary, FILE *fp) {
   struct ast ast;
   struct v7 *v7 = v7_create();
   ast_off_t pos = 0;
@@ -5625,6 +5685,7 @@ void v7_compile(const char *code, int binary, FILE *fp) {
   ast_free(&ast);
   v7_destroy(v7);
 }
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
@@ -5639,7 +5700,7 @@ double _v7_infinity;
 double _v7_nan;
 #endif
 
-enum v7_type val_type(struct v7 *v7, val_t v) {
+ON_FLASH enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
   if (v7_is_double(v)) {
     return V7_TYPE_NUMBER;
@@ -5693,93 +5754,93 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
   }
 }
 
-int v7_is_double(val_t v) {
+ON_FLASH int v7_is_double(val_t v) {
   return v == V7_TAG_NAN || !isnan(v7_to_double(v));
 }
 
-int v7_is_object(val_t v) {
+ON_FLASH int v7_is_object(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_OBJECT ||
          (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
-int v7_is_function(val_t v) {
+ON_FLASH int v7_is_function(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FUNCTION;
 }
 
-int v7_is_string(val_t v) {
+ON_FLASH int v7_is_string(val_t v) {
   uint64_t t = v & V7_TAG_MASK;
   return t == V7_TAG_STRING_I || t == V7_TAG_STRING_F || t == V7_TAG_STRING_O ||
          t == V7_TAG_STRING_5;
 }
 
-int v7_is_boolean(val_t v) {
+ON_FLASH int v7_is_boolean(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN;
 }
 
-int v7_is_regexp(val_t v) {
+ON_FLASH int v7_is_regexp(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_REGEXP;
 }
 
-int v7_is_foreign(val_t v) {
+ON_FLASH int v7_is_foreign(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FOREIGN;
 }
 
-V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t v) {
+ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t v) {
   return (struct v7_regexp *) v7_to_pointer(v);
 }
 
-int v7_is_null(val_t v) {
+ON_FLASH int v7_is_null(val_t v) {
   return v == V7_NULL;
 }
 
-int v7_is_undefined(val_t v) {
+ON_FLASH int v7_is_undefined(val_t v) {
   return v == V7_UNDEFINED;
 }
 
-int v7_is_cfunction(val_t v) {
+ON_FLASH int v7_is_cfunction(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_CFUNCTION;
 }
 
 /* A convenience function to check exec result */
-int v7_is_error(struct v7 *v7, val_t v) {
+ON_FLASH int v7_is_error(struct v7 *v7, val_t v) {
   return is_prototype_of(v7, v, v7->error_prototype);
 }
 
-V7_PRIVATE val_t v7_pointer_to_value(void *p) {
+ON_FLASH V7_PRIVATE val_t v7_pointer_to_value(void *p) {
   return ((uint64_t)(uintptr_t) p) & ~V7_TAG_MASK;
 }
 
-V7_PRIVATE void *v7_to_pointer(val_t v) {
+ON_FLASH V7_PRIVATE void *v7_to_pointer(val_t v) {
   return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-v7_cfunction_t v7_to_cfunction(val_t v) {
+ON_FLASH v7_cfunction_t v7_to_cfunction(val_t v) {
   /* Implementation is identical to v7_to_pointer but is separate since
    * object pointers are not directly convertible to function pointers
    * according to ISO C and generates a warning in -Wpedantic mode. */
   return (v7_cfunction_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-val_t v7_object_to_value(struct v7_object *o) {
+ON_FLASH val_t v7_object_to_value(struct v7_object *o) {
   if (o == NULL) {
     return V7_NULL;
   }
   return v7_pointer_to_value(o) | V7_TAG_OBJECT;
 }
 
-struct v7_object *v7_to_object(val_t v) {
+ON_FLASH struct v7_object *v7_to_object(val_t v) {
   return (struct v7_object *) v7_to_pointer(v);
 }
 
-val_t v7_function_to_value(struct v7_function *o) {
+ON_FLASH val_t v7_function_to_value(struct v7_function *o) {
   return v7_pointer_to_value(o) | V7_TAG_FUNCTION;
 }
 
-struct v7_function *v7_to_function(val_t v) {
+ON_FLASH struct v7_function *v7_to_function(val_t v) {
   return (struct v7_function *) v7_to_pointer(v);
 }
 
-v7_val_t v7_create_cfunction(v7_cfunction_t f) {
+ON_FLASH v7_val_t v7_create_cfunction(v7_cfunction_t f) {
   union {
     void *p;
     v7_cfunction_t f;
@@ -5788,19 +5849,19 @@ v7_val_t v7_create_cfunction(v7_cfunction_t f) {
   return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
 }
 
-void *v7_to_foreign(val_t v) {
+ON_FLASH void *v7_to_foreign(val_t v) {
   return v7_to_pointer(v);
 }
 
-v7_val_t v7_create_boolean(int v) {
+ON_FLASH v7_val_t v7_create_boolean(int v) {
   return (!!v) | V7_TAG_BOOLEAN;
 }
 
-int v7_to_boolean(val_t v) {
+ON_FLASH int v7_to_boolean(val_t v) {
   return v & 1;
 }
 
-v7_val_t v7_create_number(double v) {
+ON_FLASH v7_val_t v7_create_number(double v) {
   val_t res;
   /* not every NaN is a JS NaN */
   if (isnan(v)) {
@@ -5816,7 +5877,7 @@ v7_val_t v7_create_number(double v) {
   return res;
 }
 
-double v7_to_double(val_t v) {
+ON_FLASH double v7_to_double(val_t v) {
   union {
     double d;
     val_t v;
@@ -5825,14 +5886,14 @@ double v7_to_double(val_t v) {
   return u.d;
 }
 
-V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
+ON_FLASH V7_PRIVATE val_t v_get_prototype(struct v7 *v7, val_t obj) {
   if (v7_is_function(obj)) {
     return v7->function_prototype;
   }
   return v7_object_to_value(v7_to_object(obj)->prototype);
 }
 
-V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
+ON_FLASH V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   struct v7_object *o = new_object(v7);
   if (o == NULL) {
     return V7_NULL;
@@ -5843,19 +5904,19 @@ V7_PRIVATE val_t create_object(struct v7 *v7, val_t prototype) {
   return v7_object_to_value(o);
 }
 
-v7_val_t v7_create_object(struct v7 *v7) {
+ON_FLASH v7_val_t v7_create_object(struct v7 *v7) {
   return create_object(v7, v7->object_prototype);
 }
 
-v7_val_t v7_create_null(void) {
+ON_FLASH v7_val_t v7_create_null(void) {
   return V7_NULL;
 }
 
-v7_val_t v7_create_undefined(void) {
+ON_FLASH v7_val_t v7_create_undefined(void) {
   return V7_UNDEFINED;
 }
 
-v7_val_t v7_create_array(struct v7 *v7) {
+ON_FLASH v7_val_t v7_create_array(struct v7 *v7) {
   val_t a = create_object(v7, v7->array_prototype);
 #if 0
   v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
@@ -5876,7 +5937,7 @@ v7_val_t v7_create_array(struct v7 *v7) {
  *            (key iteration).
  * TODO(mkm): change the interpreter so it can set elements in dense arrays
  */
-V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
+ON_FLASH V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
   val_t a = v7_create_array(v7);
   v7_set_property(v7, a, "", 0, V7_PROPERTY_HIDDEN, V7_NULL);
   v7_to_object(a)->attributes |= V7_OBJ_DENSE_ARRAY;
@@ -5884,8 +5945,8 @@ V7_PRIVATE val_t v7_create_dense_array(struct v7 *v7) {
 }
 
 #if V7_ENABLE__RegExp
-v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
-                          const char *flags, size_t flags_len) {
+ON_FLASH v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
+                                   const char *flags, size_t flags_len) {
   struct slre_prog *p = NULL;
   struct v7_regexp *rp;
 
@@ -5904,11 +5965,11 @@ v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
 }
 #endif /* V7_ENABLE__RegExp */
 
-v7_val_t v7_create_foreign(void *p) {
+ON_FLASH v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
-v7_val_t create_function(struct v7 *v7) {
+ON_FLASH v7_val_t create_function(struct v7 *v7) {
   struct v7_function *f = new_function(v7);
   val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -5942,7 +6003,7 @@ cleanup:
 }
 
 /* like snprintf but returns `size` if write is truncated */
-static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
+ON_FLASH static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   size_t n;
   va_list ap;
   va_start(ap, fmt);
@@ -5955,8 +6016,8 @@ static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
 
 #define BUF_LEFT(size, used) (((size_t)(used) < (size)) ? ((size) - (used)) : 0)
 
-V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
-                      int as_json) {
+ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
+                               int as_json) {
   char *vp;
   double num;
   for (vp = v7->json_visited_stack.buf;
@@ -6149,8 +6210,11 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
     case V7_TYPE_FOREIGN:
       return snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
     default:
+#ifndef NO_LIBC
       printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
       abort();
+#endif
+      ;
   }
   return 0; /* for compilers that don't know about abort() */
 }
@@ -6161,7 +6225,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
  * v7_to_json allocates a new buffer if value representation doesn't fit into
  * buf. Caller is responsible for freeing that buffer.
  */
-char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
+ON_FLASH char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   int len = to_str(v7, v, buf, size, 1);
 
   if (len > (int) size) {
@@ -6175,7 +6239,8 @@ char *v7_to_json(struct v7 *v7, val_t v, char *buf, size_t size) {
   }
 }
 
-int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
+ON_FLASH int v7_stringify_value(struct v7 *v7, val_t v, char *buf,
+                                size_t size) {
   if (v7_is_string(v)) {
     size_t n;
     const char *str = v7_to_string(v7, &v, &n);
@@ -6191,7 +6256,7 @@ int v7_stringify_value(struct v7 *v7, val_t v, char *buf, size_t size) {
   }
 }
 
-V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
+ON_FLASH V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   struct v7_property *p = new_property(v7);
   p->next = NULL;
   p->name = v7_create_undefined();
@@ -6200,10 +6265,9 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
   return p;
 }
 
-V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
-                                                    const char *name,
-                                                    size_t len,
-                                                    unsigned int attrs) {
+ON_FLASH V7_PRIVATE struct v7_property *v7_get_own_property2(
+    struct v7 *v7, val_t obj, const char *name, size_t len,
+    unsigned int attrs) {
   struct v7_property *p;
   struct v7_object *o;
   val_t ss;
@@ -6249,14 +6313,15 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
   return NULL;
 }
 
-V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7, val_t obj,
-                                                   const char *name,
-                                                   size_t len) {
+ON_FLASH V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *v7,
+                                                            val_t obj,
+                                                            const char *name,
+                                                            size_t len) {
   return v7_get_own_property2(v7, obj, name, len, 0);
 }
 
-struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
-                                    size_t len) {
+ON_FLASH struct v7_property *v7_get_property(struct v7 *v7, val_t obj,
+                                             const char *name, size_t len) {
   if (!v7_is_object(obj)) {
     return NULL;
   }
@@ -6269,7 +6334,8 @@ struct v7_property *v7_get_property(struct v7 *v7, val_t obj, const char *name,
   return NULL;
 }
 
-v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
+ON_FLASH v7_val_t
+v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   val_t v = obj;
   if (v7_is_string(obj)) {
     v = v7->string_prototype;
@@ -6288,11 +6354,11 @@ v7_val_t v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
 }
 
-V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
+ON_FLASH V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
-int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
+ON_FLASH int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
   size_t len;
   const char *n = v7_to_string(v7, &name, &len);
   struct v7_property *p = v7_get_own_property(v7, obj, n, len);
@@ -6302,8 +6368,8 @@ int v7_set_v(struct v7 *v7, val_t obj, val_t name, val_t val) {
   return -1;
 }
 
-int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
-           unsigned int attrs, val_t val) {
+ON_FLASH int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
+                    unsigned int attrs, val_t val) {
   struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
     return v7_set_property(v7, obj, name, len,
@@ -6312,8 +6378,9 @@ int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
   return -1;
 }
 
-V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
-                                 val_t obj, val_t val) {
+ON_FLASH V7_PRIVATE void v7_invoke_setter(struct v7 *v7,
+                                          struct v7_property *prop, val_t obj,
+                                          val_t val) {
   val_t setter = prop->value, args = v7_create_dense_array(v7);
   if (prop->attributes & V7_PROPERTY_GETTER) {
     setter = v7_array_get(v7, prop->value, 1);
@@ -6322,8 +6389,10 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_apply(v7, setter, obj, args);
 }
 
-V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
-                                           unsigned int attributes, val_t val) {
+ON_FLASH V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj,
+                                                    val_t name,
+                                                    unsigned int attributes,
+                                                    val_t val) {
   struct v7_property *prop;
   size_t len;
   const char *n = v7_to_string(v7, &name, &len);
@@ -6361,14 +6430,15 @@ V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
   return prop;
 }
 
-int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
-                      unsigned int attributes, v7_val_t val) {
+ON_FLASH int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
+                               unsigned int attributes, v7_val_t val) {
   struct v7_property *prop = v7_set_prop(v7, obj, name, attributes, val);
   return prop == NULL ? -1 : 0;
 }
 
-int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
-                    unsigned int attributes, v7_val_t val) {
+ON_FLASH int v7_set_property(struct v7 *v7, val_t obj, const char *name,
+                             size_t len, unsigned int attributes,
+                             v7_val_t val) {
   val_t n;
   if (len == (size_t) ~0) {
     len = strlen(name);
@@ -6378,7 +6448,8 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   return v7_set_property_v(v7, obj, n, attributes, val);
 }
 
-int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
+ON_FLASH int v7_del_property(struct v7 *v7, val_t obj, const char *name,
+                             size_t len) {
   struct v7_property *prop, *prev;
 
   if (!v7_is_object(obj)) {
@@ -6404,7 +6475,8 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
   return -1;
 }
 
-v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
+ON_FLASH v7_val_t
+v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &obj);
@@ -6426,8 +6498,9 @@ v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   return obj;
 }
 
-V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
-                                             v7_cfunction_t f, int num_args) {
+ON_FLASH V7_PRIVATE v7_val_t
+v7_create_cfunction_ctor(struct v7 *v7, val_t proto, v7_cfunction_t f,
+                         int num_args) {
   val_t res = v7_create_function(v7, f, num_args);
 
 #ifndef V7_DISABLE_PREDEFINED_STRINGS
@@ -6449,23 +6522,24 @@ V7_PRIVATE v7_val_t v7_create_cfunction_ctor(struct v7 *v7, val_t proto,
   return res;
 }
 
-V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                          v7_cfunction_t func, int num_args) {
+ON_FLASH V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj,
+                                   const char *name, v7_cfunction_t func,
+                                   int num_args) {
   return v7_set_property(v7, obj, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_function(v7, func, num_args));
 }
 
-int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                  v7_cfunction_t func) {
+ON_FLASH int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
+                           v7_cfunction_t func) {
   return set_method(v7, obj, name, func, -1);
 }
 
-V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                              v7_cfunction_t f) {
+ON_FLASH V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                                       v7_cfunction_t f) {
   return v7_set_property(v7, o, name, strlen(name), 0, v7_create_cfunction(f));
 }
 
-V7_PRIVATE val_t
+ON_FLASH V7_PRIVATE val_t
 v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   if (p == NULL) {
     return V7_UNDEFINED;
@@ -6494,8 +6568,8 @@ v7_property_value(struct v7 *v7, val_t obj, struct v7_property *p) {
 #define UNPACK_ITER_IDX(p) ((((uintptr_t) p) >> 1) & 0x7FFF)
 #define IS_PACKED_ITER(p) ((uintptr_t) p & 1)
 
-V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
-                                            struct v7_property *p) {
+ON_FLASH V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
+                                                     struct v7_property *p) {
   if (p == NULL && v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
     unsigned long len = v7_array_length(v7, obj);
     return PACK_ITER(len, 0);
@@ -6508,18 +6582,20 @@ V7_PRIVATE struct v7_property *v7_next_prop(struct v7 *v7, val_t obj,
   return p == NULL ? v7_to_object(obj)->properties : p->next;
 }
 
-V7_PRIVATE
-val_t v7_iter_get_value(struct v7 *v7, val_t obj, struct v7_property *p) {
+ON_FLASH V7_PRIVATE val_t
+v7_iter_get_value(struct v7 *v7, val_t obj, struct v7_property *p) {
   return IS_PACKED_ITER(p) ? v7_array_get(v7, obj, UNPACK_ITER_IDX(p))
                            : p->value;
 }
 
-V7_PRIVATE val_t v7_iter_get_name(struct v7 *v7, struct v7_property *p) {
+ON_FLASH V7_PRIVATE val_t
+v7_iter_get_name(struct v7 *v7, struct v7_property *p) {
   return IS_PACKED_ITER(p) ? ulong_to_str(v7, UNPACK_ITER_IDX(p)) : p->name;
 }
 
 /* return array index as number or undefined. works with iterators */
-V7_PRIVATE val_t v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
+ON_FLASH V7_PRIVATE val_t
+v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
   int ok;
   unsigned long res;
   if (IS_PACKED_ITER(p)) {
@@ -6530,7 +6606,7 @@ V7_PRIVATE val_t v7_iter_get_index(struct v7 *v7, struct v7_property *p) {
   return v7_create_number(res);
 }
 
-unsigned long v7_array_length(struct v7 *v7, val_t v) {
+ON_FLASH unsigned long v7_array_length(struct v7 *v7, val_t v) {
   struct v7_property *p;
   unsigned long key, len = 0;
   char *end;
@@ -6562,7 +6638,8 @@ unsigned long v7_array_length(struct v7 *v7, val_t v) {
   return len;
 }
 
-int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
+ON_FLASH int v7_array_set(struct v7 *v7, val_t arr, unsigned long index,
+                          val_t v) {
   int res = -1;
   if (v7_is_object(arr)) {
     if (v7_to_object(arr)->attributes & V7_OBJ_DENSE_ARRAY) {
@@ -6570,7 +6647,9 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
           v7_get_own_property2(v7, arr, "", 0, V7_PROPERTY_HIDDEN);
       struct mbuf *abuf;
       unsigned long len;
+#ifndef NO_LIBC
       assert(p != NULL);
+#endif
       abuf = (struct mbuf *) v7_to_foreign(p->value);
 
       if (v7_to_object(arr)->attributes & V7_OBJ_NOT_EXTENSIBLE) {
@@ -6610,15 +6689,16 @@ int v7_array_set(struct v7 *v7, val_t arr, unsigned long index, val_t v) {
   return res;
 }
 
-int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
+ON_FLASH int v7_array_push(struct v7 *v7, v7_val_t arr, v7_val_t v) {
   return v7_array_set(v7, arr, v7_array_length(v7, arr), v);
 }
 
-val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
+ON_FLASH val_t v7_array_get(struct v7 *v7, val_t arr, unsigned long index) {
   return v7_array_get2(v7, arr, index, NULL);
 }
 
-val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
+ON_FLASH val_t
+v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
   if (has != NULL) {
     *has = 0;
   }
@@ -6660,7 +6740,7 @@ val_t v7_array_get2(struct v7 *v7, val_t arr, unsigned long index, int *has) {
 }
 
 int nextesc(const char **p); /* from SLRE */
-V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
+ON_FLASH V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
   const char *end = s + len;
   size_t n = 0;
   char tmp[4];
@@ -6703,8 +6783,9 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to) {
 }
 
 /* Insert a string into mbuf at specified offset */
-V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t len, int zero_term, int unesc) {
+ON_FLASH V7_PRIVATE void embed_string(struct mbuf *m, size_t offset,
+                                      const char *p, size_t len, int zero_term,
+                                      int unesc) {
   char *old_base = m->buf;
   int p_backed_by_mbuf = p >= old_base && p < old_base + m->len;
   size_t n = unesc ? unescape(p, len, NULL) : len;
@@ -6728,7 +6809,8 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
 }
 
 /* Create a string */
-v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
+ON_FLASH v7_val_t
+v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
 
@@ -6755,7 +6837,7 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   return (offset & ~V7_TAG_MASK) | tag;
 }
 
-V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
+ON_FLASH V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
   char buf[100], *p, *s;
   val_t res;
   if (v7_is_string(v)) {
@@ -6780,7 +6862,7 @@ V7_PRIVATE val_t to_string(struct v7 *v7, val_t v) {
  *
  * Beware that V7 strings are not null terminated!
  */
-const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
+ON_FLASH const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   uint64_t tag = v[0] & V7_TAG_MASK;
   char *p;
   int llen;
@@ -6808,7 +6890,7 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   return p;
 }
 
-V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
+ON_FLASH V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   size_t a_len, b_len;
   const char *a_ptr, *b_ptr;
 
@@ -6827,7 +6909,7 @@ V7_PRIVATE int s_cmp(struct v7 *v7, val_t a, val_t b) {
   }
 }
 
-V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
+ON_FLASH V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
   size_t a_len, b_len;
   const char *a_ptr, *b_ptr;
   char *s = NULL;
@@ -6870,7 +6952,7 @@ V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 }
 
 /* Create V7 strings for integers such as array indices */
-V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
+ON_FLASH V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
   char buf[100];
   int len;
   len = snprintf(buf, sizeof(buf), "%lu", n);
@@ -6882,7 +6964,8 @@ V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
  * `ok` will be set to true if the string conforms to
  * an unsigned long.
  */
-V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
+ON_FLASH V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len,
+                                                int *ok) {
   char *e;
   unsigned long res = strtoul(s, &e, 10);
   *ok = (e == s + len) && len != 0;
@@ -6894,13 +6977,14 @@ V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok) {
  * `ok` will be set to true if the string conforms to
  * an unsigned long.
  */
-V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v, int *ok) {
+ON_FLASH V7_PRIVATE unsigned long str_to_ulong(struct v7 *v7, val_t v,
+                                               int *ok) {
   char buf[100];
   size_t len = v7_stringify_value(v7, v, buf, sizeof(buf));
   return cstr_to_ulong(buf, len, ok);
 }
 
-V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
+ON_FLASH V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   struct v7_object *obj, *proto;
   if (!v7_is_object(o) || !v7_is_object(p)) {
     return 0;
@@ -6918,7 +7002,7 @@ V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p) {
   return 0;
 }
 
-int v7_is_true(struct v7 *v7, val_t v) {
+ON_FLASH int v7_is_true(struct v7 *v7, val_t v) {
   size_t len;
   return ((v7_is_boolean(v) && v7_to_boolean(v)) ||
           (v7_is_double(v) && v7_to_double(v) != 0.0) ||
@@ -6927,7 +7011,7 @@ int v7_is_true(struct v7 *v7, val_t v) {
          v != V7_TAG_NAN;
 }
 
-static void object_destructor(struct v7 *v7, void *ptr) {
+ON_FLASH static void object_destructor(struct v7 *v7, void *ptr) {
   struct v7_object *o = (struct v7_object *) ptr;
   struct v7_property *p;
   struct mbuf *abuf;
@@ -6942,7 +7026,7 @@ static void object_destructor(struct v7 *v7, void *ptr) {
   }
 }
 
-struct v7 *v7_create(void) {
+ON_FLASH struct v7 *v7_create(void) {
   struct v7 *v7 = NULL;
   val_t *p;
   char z = 0;
@@ -6993,11 +7077,11 @@ struct v7 *v7_create(void) {
   return v7;
 }
 
-val_t v7_get_global_object(struct v7 *v7) {
+ON_FLASH val_t v7_get_global_object(struct v7 *v7) {
   return v7->global_object;
 }
 
-void v7_destroy(struct v7 *v7) {
+ON_FLASH void v7_destroy(struct v7 *v7) {
   struct ast **a;
   if (v7 != NULL) {
     mbuf_free(&v7->owned_strings);
@@ -7021,7 +7105,7 @@ void v7_destroy(struct v7 *v7) {
   }
 }
 
-v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
+ON_FLASH v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
   if (v7_is_object(obj)) {
     v7_val_t old_proto = v7_object_to_value(v7_to_object(obj)->prototype);
     v7_to_object(obj)->prototype = v7_to_object(proto);
@@ -7040,26 +7124,26 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto) {
 void gc_mark_string(struct v7 *, val_t *);
 #endif
 
-V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
+ON_FLASH V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
 }
 
-V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
+ON_FLASH V7_PRIVATE struct v7_property *new_property(struct v7 *v7) {
   return (struct v7_property *) gc_alloc_cell(v7, &v7->property_arena);
 }
 
-V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
+ON_FLASH V7_PRIVATE struct v7_function *new_function(struct v7 *v7) {
   return (struct v7_function *) gc_alloc_cell(v7, &v7->function_arena);
 }
 
-V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
+ON_FLASH V7_PRIVATE struct gc_tmp_frame new_tmp_frame(struct v7 *v7) {
   struct gc_tmp_frame frame;
   frame.v7 = v7;
   frame.pos = v7->tmp_stack.len;
   return frame;
 }
 
-V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
+ON_FLASH V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
   tf->v7->tmp_stack.len = tf->pos;
 }
 
@@ -7068,27 +7152,33 @@ V7_PRIVATE void tmp_frame_cleanup(struct gc_tmp_frame *tf) {
  * roots stack, instead of keeping val_t*, in order to be better
  * able to debug the relocating GC.
  */
-V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
+ON_FLASH V7_PRIVATE void tmp_stack_push(struct gc_tmp_frame *tf, val_t *vp) {
   mbuf_append(&tf->v7->tmp_stack, (char *) &vp, sizeof(val_t *));
 }
 
 /* Initializes a new arena. */
-V7_PRIVATE void gc_arena_init(struct v7 *v7, struct gc_arena *a,
-                              size_t cell_size, size_t size, const char *name) {
+ON_FLASH V7_PRIVATE void gc_arena_init(struct v7 *v7, struct gc_arena *a,
+                                       size_t cell_size, size_t size,
+                                       const char *name) {
+#ifndef NO_LIBC
   assert(cell_size >= sizeof(uintptr_t));
+#endif
+
   memset(a, 0, sizeof(*a));
   a->cell_size = cell_size;
   a->name = name;
 /* Avoid arena initialization cost when GC is disabled */
 #ifndef V7_DISABLE_GC
   gc_arena_grow(v7, a, size);
+#ifndef NO_LIBC
   assert(a->free != NULL);
+#endif
 #else
   (void) size;
 #endif
 }
 
-V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
+ON_FLASH V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
   if (a->base != NULL) {
     if (a->destructor != NULL) {
       gc_sweep(v7, a, 0);
@@ -7107,8 +7197,8 @@ V7_PRIVATE void gc_arena_destroy(struct v7 *v7, struct gc_arena *a) {
  * have a smaller memory spike footprint, but it’s slightly more
  * complicated, and can be implemented in a second phase.
  */
-V7_PRIVATE void gc_arena_grow(struct v7 *v7, struct gc_arena *a,
-                              size_t new_size) {
+ON_FLASH V7_PRIVATE void gc_arena_grow(struct v7 *v7, struct gc_arena *a,
+                                       size_t new_size) {
   size_t free_adjust = a->free ? a->free - a->base : 0;
   size_t old_size = a->size;
   uint32_t old_alive = a->alive;
@@ -7123,7 +7213,7 @@ V7_PRIVATE void gc_arena_grow(struct v7 *v7, struct gc_arena *a,
   a->alive = old_alive; /* sweeping will decrement `alive` */
 }
 
-V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
+ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #ifdef V7_DISABLE_GC
   (void) v7;
   return calloc(1, a->cell_size);
@@ -7164,7 +7254,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 /*
  * Scans the arena and add all unmarked cells to the free list.
  */
-void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
+ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
   char *cur;
   a->alive = 0;
   a->free = NULL;
@@ -7184,7 +7274,7 @@ void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
   }
 }
 
-V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
+ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   struct v7_object *obj;
   struct v7_property *prop;
   struct v7_property *next;
@@ -7204,10 +7294,12 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
     next = prop->next;
 
+#ifndef NO_LIBC
     assert((char *) prop >= v7->property_arena.base &&
            (char *) prop <
                (v7->property_arena.base +
                 v7->property_arena.size * v7->property_arena.cell_size));
+#endif
     MARK(prop);
   }
 
@@ -7215,25 +7307,27 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   gc_mark(v7, v7_object_to_value(obj->prototype));
 }
 
-static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
+ON_FLASH static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
+#ifndef NO_LIBC
   if (a->verbose) {
     fprintf(stderr, "%s: total allocations %lu, max %lu, alive %lu\n", msg,
             a->allocations, a->size, a->alive);
   }
+#endif
 }
 
 #ifdef V7_ENABLE_COMPACTING_GC
 
-uint64_t gc_string_val_to_offset(val_t v) {
+ON_FLASH uint64_t gc_string_val_to_offset(val_t v) {
   return ((uint64_t) v7_to_pointer(v)) & ~V7_TAG_MASK;
 }
 
-val_t gc_string_val_from_offset(uint64_t s) {
+ON_FLASH val_t gc_string_val_from_offset(uint64_t s) {
   return s | V7_TAG_STRING_O;
 }
 
 /* Mark a string value */
-void gc_mark_string(struct v7 *v7, val_t *v) {
+ON_FLASH void gc_mark_string(struct v7 *v7, val_t *v) {
   val_t h, tmp = 0;
   char *s;
 
@@ -7278,7 +7372,7 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   memcpy(v, &tmp, sizeof(tmp));
 }
 
-void gc_compact_strings(struct v7 *v7) {
+ON_FLASH void gc_compact_strings(struct v7 *v7) {
   char *p = v7->owned_strings.buf + 1;
   uint64_t h, next, head = 1;
   int len, llen;
@@ -7333,7 +7427,7 @@ void gc_compact_strings(struct v7 *v7) {
   v7->owned_strings.len = head;
 }
 
-void gc_dump_owned_strings(struct v7 *v7) {
+ON_FLASH void gc_dump_owned_strings(struct v7 *v7) {
   size_t i;
 #if 0
   for (i = 0; i < v7->owned_strings.len; i++) {
@@ -7362,7 +7456,7 @@ void gc_dump_owned_strings(struct v7 *v7) {
 #endif
 
 /* Perform garbage collection */
-void v7_gc(struct v7 *v7) {
+ON_FLASH void v7_gc(struct v7 *v7) {
   val_t **vp;
 
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
@@ -7447,13 +7541,13 @@ static enum v7_err parse_block(struct v7 *, struct ast *);
 static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
 static enum v7_err parse_use_strict(struct v7 *, struct ast *);
 
-static enum v7_tok lookahead(const struct v7 *v7) {
+ON_FLASH static enum v7_tok lookahead(const struct v7 *v7) {
   const char *s = v7->pstate.pc;
   double d;
   return get_tok(&s, &d, v7->cur_tok);
 }
 
-static enum v7_tok next_tok(struct v7 *v7) {
+ON_FLASH static enum v7_tok next_tok(struct v7 *v7) {
   int prev_line_no = v7->pstate.prev_line_no;
   v7->pstate.prev_line_no = v7->pstate.line_no;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
@@ -7465,7 +7559,7 @@ static enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
-static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER) {
     ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
     next_tok(v7);
@@ -7474,8 +7568,8 @@ static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
   return V7_SYNTAX_ERROR;
 }
 
-static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
-                                                    struct ast *a) {
+ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
+                                                             struct ast *a) {
   /* Allow reserved words as property names. */
   if (is_reserved_word_token(v7->cur_tok)) {
     ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
@@ -7486,7 +7580,7 @@ static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
   return V7_OK;
 }
 
-static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
     next_tok(v7);
@@ -7515,7 +7609,7 @@ static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_OPEN_PAREN:
@@ -7593,7 +7687,7 @@ static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok != TOK_CLOSE_PAREN) {
     do {
       PARSE(assign);
@@ -7602,7 +7696,7 @@ static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
   ast_off_t start;
   switch (v7->cur_tok) {
     case TOK_NEW:
@@ -7626,7 +7720,8 @@ static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
+ON_FLASH static enum v7_err parse_member(struct v7 *v7, struct ast *a,
+                                         ast_off_t pos) {
   switch (v7->cur_tok) {
     case TOK_DOT:
       next_tok(v7);
@@ -7651,7 +7746,7 @@ static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
   return V7_OK;
 }
 
-static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   PARSE(newexpr);
 
@@ -7667,7 +7762,7 @@ static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
   }
 }
 
-static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   PARSE(newexpr);
 
@@ -7689,7 +7784,7 @@ static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
   }
 }
 
-static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   PARSE(callexpr);
 
@@ -7711,7 +7806,7 @@ static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
+ON_FLASH enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
   for (;;) {
     switch (v7->cur_tok) {
       case TOK_PLUS:
@@ -7756,8 +7851,8 @@ enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
   }
 }
 
-static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
-                                ast_off_t pos) {
+ON_FLASH static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
+                                         int level, ast_off_t pos) {
 #define NONE \
   { (enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0 }
 
@@ -7828,11 +7923,11 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
   return V7_OK;
 }
 
-static enum v7_err parse_assign(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_assign(struct v7 *v7, struct ast *a) {
   return parse_binary(v7, a, 0, a->mbuf.len);
 }
 
-static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
   ast_off_t pos = a->mbuf.len;
   int group = 0;
   do {
@@ -7844,7 +7939,7 @@ static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err end_of_statement(struct v7 *v7) {
+ON_FLASH static enum v7_err end_of_statement(struct v7 *v7) {
   if (v7->cur_tok == TOK_SEMICOLON || v7->cur_tok == TOK_END_OF_INPUT ||
       v7->cur_tok == TOK_CLOSE_CURLY || v7->after_newline) {
     return V7_OK;
@@ -7852,7 +7947,7 @@ static enum v7_err end_of_statement(struct v7 *v7) {
   return V7_SYNTAX_ERROR;
 }
 
-static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_VAR);
   ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
   /* zero out var node pointer */
@@ -7871,8 +7966,8 @@ static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static int parse_optional(struct v7 *v7, struct ast *a,
-                          enum v7_tok terminator) {
+ON_FLASH static int parse_optional(struct v7 *v7, struct ast *a,
+                                   enum v7_tok terminator) {
   if (v7->cur_tok != terminator) {
     return 1;
   }
@@ -7880,7 +7975,7 @@ static int parse_optional(struct v7 *v7, struct ast *a,
   return 0;
 }
 
-static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_IF);
   EXPECT(TOK_OPEN_PAREN);
   PARSE(expression);
@@ -7894,7 +7989,7 @@ static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_WHILE);
   int saved_in_loop = v7->pstate.in_loop;
   EXPECT(TOK_OPEN_PAREN);
@@ -7907,7 +8002,7 @@ static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_DOWHILE);
   int saved_in_loop = v7->pstate.in_loop;
   v7->pstate.in_loop = 1;
@@ -7922,7 +8017,7 @@ static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
   /* TODO(mkm): for of, for each in */
   ast_off_t start = ast_add_node(a, AST_FOR);
   int saved_in_loop = v7->pstate.in_loop;
@@ -7974,7 +8069,7 @@ body:
   return V7_OK;
 }
 
-static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SWITCH);
   int saved_in_switch = v7->pstate.in_switch;
   ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
@@ -8018,7 +8113,7 @@ static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_TRY);
   PARSE(block);
   ast_set_skip(a, start, AST_TRY_CATCH_SKIP);
@@ -8036,7 +8131,7 @@ static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_WITH);
   if (v7->pstate.in_strict) {
     return V7_SYNTAX_ERROR;
@@ -8059,7 +8154,7 @@ static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
     }                                                \
   } while (0)
 
-static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
   switch (v7->cur_tok) {
     case TOK_SEMICOLON:
       next_tok(v7);
@@ -8140,8 +8235,9 @@ static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
-                                  int require_named, int reserved_name) {
+ON_FLASH static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
+                                           int require_named,
+                                           int reserved_name) {
   ast_off_t start = ast_add_node(a, AST_FUNC);
   ast_off_t outer_last_var_node = v7->last_var_node;
   int saved_in_function = v7->pstate.in_function;
@@ -8173,14 +8269,15 @@ static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
   return V7_OK;
 }
 
-static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
   EXPECT(TOK_OPEN_CURLY);
   PARSE_ARG(body, TOK_CLOSE_CURLY);
   EXPECT(TOK_CLOSE_CURLY);
   return V7_OK;
 }
 
-static enum v7_err parse_body(struct v7 *v7, struct ast *a, enum v7_tok end) {
+ON_FLASH static enum v7_err parse_body(struct v7 *v7, struct ast *a,
+                                       enum v7_tok end) {
   ast_off_t start;
   while (v7->cur_tok != end) {
     if (ACCEPT(TOK_FUNCTION)) {
@@ -8203,7 +8300,7 @@ static enum v7_err parse_body(struct v7 *v7, struct ast *a, enum v7_tok end) {
   return V7_OK;
 }
 
-static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
   if (v7->cur_tok == TOK_STRING_LITERAL &&
       (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
        strncmp(v7->tok, "'use strict'", v7->tok_len) == 0)) {
@@ -8214,7 +8311,7 @@ static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
   return V7_SYNTAX_ERROR;
 }
 
-static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
+ON_FLASH static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   ast_off_t start = ast_add_node(a, AST_SCRIPT);
   ast_off_t outer_last_var_node = v7->last_var_node;
   int saved_in_strict = v7->pstate.in_strict;
@@ -8230,7 +8327,7 @@ static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
   return V7_OK;
 }
 
-static unsigned long get_column(const char *code, const char *pos) {
+ON_FLASH static unsigned long get_column(const char *code, const char *pos) {
   const char *p = pos;
   while (p > code && *p != '\n') {
     p--;
@@ -8238,8 +8335,8 @@ static unsigned long get_column(const char *code, const char *pos) {
   return p == code ? pos - p : pos - (p + 1);
 }
 
-V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
-                             int verbose) {
+ON_FLASH V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a,
+                                      const char *src, int verbose) {
   enum v7_err err;
   v7->pstate.source_code = v7->pstate.pc = src;
   v7->pstate.file_name = "<stdin>";
@@ -8251,7 +8348,9 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   next_tok(v7);
   err = parse_script(v7, a);
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
+#ifndef NO_LIBC
     fprintf(stderr, "WARNING parse input not consumed\n");
+#endif
   }
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
@@ -8290,16 +8389,18 @@ static val_t i_eval_call(struct v7 *, struct ast *, ast_off_t *, val_t, val_t,
                          int);
 static val_t i_find_this(struct v7 *, struct ast *, ast_off_t, val_t);
 
-V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
+ON_FLASH V7_PRIVATE void throw_value(struct v7 *v7, val_t v) {
   v7->thrown_error = v;
   siglongjmp(v7->jmp_buf, THROW_JMP);
 } /* LCOV_EXCL_LINE */
 
-static val_t create_exception(struct v7 *v7, enum error_ctor ex,
-                              const char *msg) {
+ON_FLASH static val_t create_exception(struct v7 *v7, enum error_ctor ex,
+                                       const char *msg) {
   val_t e, args;
   if (v7->creating_exception) {
+#ifndef NO_LIBC
     fprintf(stderr, "Exception creation throws an exception %d: %s\n", ex, msg);
+#endif
     return V7_UNDEFINED;
   }
   args = v7_create_dense_array(v7);
@@ -8311,8 +8412,8 @@ static val_t create_exception(struct v7 *v7, enum error_ctor ex,
   return e;
 }
 
-V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
-                                const char *err_fmt, ...) {
+ON_FLASH V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
+                                         const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
@@ -8320,7 +8421,7 @@ V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
   throw_value(v7, create_exception(v7, ex, v7->error_msg));
 } /* LCOV_EXCL_LINE */
 
-void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
+ON_FLASH void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
   vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
@@ -8328,7 +8429,7 @@ void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
   throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
 }
 
-V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
+ON_FLASH V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
   val_t f;
   if (!v7_is_object(v)) {
     return v;
@@ -8347,7 +8448,7 @@ V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v) {
 }
 
 /* i_as_num expects callers to root temporary values passed as args */
-V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
+ON_FLASH V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   double res = 0.0;
 
   v = i_value_of(v7, v);
@@ -8372,7 +8473,8 @@ V7_PRIVATE double i_as_num(struct v7 *v7, val_t v) {
   return res;
 }
 
-static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
+ON_FLASH static double i_num_unary_op(struct v7 *v7, enum ast_tag tag,
+                                      double a) {
   switch (tag) {
     case AST_POSITIVE:
       return a;
@@ -8384,8 +8486,8 @@ static double i_num_unary_op(struct v7 *v7, enum ast_tag tag, double a) {
   }
 }
 
-static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
-                           double b) {
+ON_FLASH static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
+                                    double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
   int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
 
@@ -8410,14 +8512,14 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
 
 /* Visual studio 2012+ has signbit() */
 #if defined(V7_WINDOWS) && _MSC_VER < 1700
-static int signbit(double x) {
+ON_FLASH static int signbit(double x) {
   double s = _copysign(1, x);
   return s < 0;
 }
 #endif
 
-static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
-                           double b) {
+ON_FLASH static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
+                                    double b) {
   switch (tag) {
     case AST_ADD: /* simple fixed width nodes with no payload */
       return a + b;
@@ -8449,7 +8551,8 @@ static double i_num_bin_op(struct v7 *v7, enum ast_tag tag, double a,
   }
 }
 
-static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
+ON_FLASH static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a,
+                                  double b) {
 #ifdef V7_BROKEN_NAN
   if (isnan(a) || isnan(b)) return tag == AST_NE || tag == AST_NE_NE;
 #endif
@@ -8475,8 +8578,8 @@ static int i_bool_bin_op(struct v7 *v7, enum ast_tag tag, double a, double b) {
   }
 }
 
-static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope) {
+ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                  val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
   ast_off_t end;
   val_t res = v7_create_undefined(), v1 = v7_create_undefined();
@@ -9108,8 +9211,8 @@ static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return res;
 }
 
-static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
-                         val_t scope) {
+ON_FLASH static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
+                                  val_t scope) {
   enum ast_tag tag = ast_fetch_tag(a, &pos);
   switch (tag) {
     case AST_MEMBER:
@@ -9122,8 +9225,9 @@ static val_t i_find_this(struct v7 *v7, struct ast *a, ast_off_t pos,
   }
 }
 
-static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
-                                  ast_off_t fvar, val_t frame) {
+ON_FLASH static void i_populate_local_vars(struct v7 *v7, struct ast *a,
+                                           ast_off_t start, ast_off_t fvar,
+                                           val_t frame) {
   enum ast_tag tag;
   ast_off_t next, fvar_end;
   char *name;
@@ -9170,9 +9274,9 @@ static void i_populate_local_vars(struct v7 *v7, struct ast *a, ast_off_t start,
   tmp_frame_cleanup(&tf);
 }
 
-V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
-                                ast_off_t *pos, ast_off_t *body,
-                                ast_off_t *end) {
+ON_FLASH V7_PRIVATE val_t
+i_prepare_call(struct v7 *v7, struct v7_function *func, ast_off_t *pos,
+               ast_off_t *body, ast_off_t *end) {
   val_t frame;
   enum ast_tag tag;
   ast_off_t fstart, fvar;
@@ -9197,8 +9301,9 @@ V7_PRIVATE val_t i_prepare_call(struct v7 *v7, struct v7_function *func,
   return frame;
 }
 
-V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
-                                   val_t frame, ast_off_t body, ast_off_t end) {
+ON_FLASH V7_PRIVATE val_t
+i_invoke_function(struct v7 *v7, struct v7_function *func, val_t frame,
+                  ast_off_t body, ast_off_t end) {
   int saved_strict_mode = v7->strict_mode;
   enum i_break brk = B_RUN;
   val_t res = v7_create_undefined(), saved_call_stack = v7->call_stack;
@@ -9220,8 +9325,9 @@ V7_PRIVATE val_t i_invoke_function(struct v7 *v7, struct v7_function *func,
   return res;
 }
 
-static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope, val_t this_object, int is_constructor) {
+ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                  val_t scope, val_t this_object,
+                                  int is_constructor) {
   ast_off_t end, fpos, fend, fbody;
   val_t frame = v7_create_undefined(), res = v7_create_undefined();
   val_t v1 = v7_create_undefined(), args = v7_create_undefined();
@@ -9341,8 +9447,9 @@ cleanup:
 static val_t i_eval_stmt(struct v7 *, struct ast *, ast_off_t *, val_t,
                          enum i_break *);
 
-static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                          ast_off_t end, val_t scope, enum i_break *brk) {
+ON_FLASH static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                   ast_off_t end, val_t scope,
+                                   enum i_break *brk) {
   val_t res = v7_create_undefined();
   while (*pos < end && !*brk) {
     res = i_eval_stmt(v7, a, pos, scope, brk);
@@ -9350,8 +9457,8 @@ static val_t i_eval_stmts(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return res;
 }
 
-static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                         val_t scope, enum i_break *brk) {
+ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                  val_t scope, enum i_break *brk) {
   ast_off_t maybe_strict, start = *pos;
   enum ast_tag tag = ast_fetch_tag(a, pos);
   val_t res = v7_create_undefined();
@@ -9782,7 +9889,7 @@ cleanup:
 }
 
 /* Invoke a function applying the argument array */
-val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
+ON_FLASH val_t v7_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
   struct v7_function *func;
   ast_off_t pos, body, end;
   enum ast_tag tag;
@@ -9860,7 +9967,8 @@ cleanup:
   return res;
 }
 
-enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src, val_t w) {
+ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
+                                  val_t w) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t old_this = v7->this_object;
@@ -9904,11 +10012,12 @@ cleanup:
   return err;
 }
 
-enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
+ON_FLASH enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
   return v7_exec_with(v7, res, src, V7_UNDEFINED);
 }
 
-enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
+#ifndef V7_NO_FS
+ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
   FILE *fp;
   char *p;
   long file_size;
@@ -9941,13 +10050,16 @@ enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
 
   return err;
 }
+#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
 
-V7_PRIVATE v7_val_t Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+#ifndef NO_LIBC
+ON_FLASH V7_PRIVATE v7_val_t
+Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char *p, buf[1024];
   int i, num_args = v7_array_length(v7, args);
 
@@ -9970,8 +10082,10 @@ V7_PRIVATE v7_val_t Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 
   return v7_create_null();
 }
+#endif
 
-V7_PRIVATE v7_val_t Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH V7_PRIVATE v7_val_t
+Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
   (void) t;
   if (arg != V7_UNDEFINED) {
@@ -9990,7 +10104,8 @@ V7_PRIVATE v7_val_t Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return res;
 }
 
-V7_PRIVATE v7_val_t Std_parseInt(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH V7_PRIVATE v7_val_t
+Std_parseInt(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   v7_val_t arg1 = i_value_of(v7, v7_array_get(v7, args, 1));
   long sign = 1, base = v7_is_undefined(arg1) ? 0 : to_long(v7, arg1, 0), n;
@@ -10037,7 +10152,8 @@ V7_PRIVATE v7_val_t Std_parseInt(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return p == end ? V7_TAG_NAN : v7_create_number(n * sign);
 }
 
-V7_PRIVATE v7_val_t Std_parseFloat(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH V7_PRIVATE v7_val_t
+Std_parseFloat(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   char buf[20], *p = buf, *end;
   double result;
@@ -10061,27 +10177,31 @@ V7_PRIVATE v7_val_t Std_parseFloat(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return p == end ? V7_TAG_NAN : v7_create_number(result);
 }
 
-V7_PRIVATE v7_val_t Std_isNaN(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH V7_PRIVATE v7_val_t
+Std_isNaN(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   (void) t;
   return v7_create_boolean(arg0 == V7_TAG_NAN);
 }
 
-V7_PRIVATE v7_val_t Std_isFinite(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH V7_PRIVATE v7_val_t
+Std_isFinite(struct v7 *v7, v7_val_t t, v7_val_t args) {
   v7_val_t arg0 = i_value_of(v7, v7_array_get(v7, args, 0));
   (void) t;
   return v7_create_boolean(v7_is_double(arg0) && arg0 != V7_TAG_NAN &&
                            !isinf(v7_to_double(arg0)));
 }
 
-static v7_val_t Std_exit(struct v7 *v7, v7_val_t t, v7_val_t args) {
+#ifndef NO_LIBC
+ON_FLASH static v7_val_t Std_exit(struct v7 *v7, v7_val_t t, v7_val_t args) {
   int exit_code = arg_long(v7, args, 0, 0);
   (void) t;
   exit(exit_code);
   return v7_create_undefined();
 }
+#endif
 
-V7_PRIVATE void init_stdlib(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_stdlib(struct v7 *v7) {
   /*
    * Ensure the first call to v7_create_value will use a null proto:
    * {}.__proto__.__proto__ == null
@@ -10098,9 +10218,11 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->date_prototype = v7_create_object(v7);
   v7->function_prototype = v7_create_object(v7);
 
-  set_method(v7, v7->global_object, "print", Std_print, 1);
   set_method(v7, v7->global_object, "eval", Std_eval, 1);
+#ifndef NO_LIBC
+  set_method(v7, v7->global_object, "print", Std_print, 1);
   set_method(v7, v7->global_object, "exit", Std_exit, 1);
+#endif
   set_method(v7, v7->global_object, "parseInt", Std_parseInt, 2);
   set_method(v7, v7->global_object, "parseFloat", Std_parseFloat, 1);
   set_method(v7, v7->global_object, "isNaN", Std_isNaN, 1);
@@ -10137,7 +10259,7 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 
 #define STRINGIFY(x) #x
 
-V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   val_t res;
 
   v7_exec(v7, &res, STRINGIFY(
@@ -10224,7 +10346,10 @@ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifndef NO_LIBC
 #include <ctype.h>
+#endif
 
 
 /* Limitations */
@@ -10236,14 +10361,14 @@ V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
 #define SLRE_FREE free
 #define SLRE_THROW(e, err_code) longjmp((e)->jmp_buf, (err_code))
 
-static int hex(int c) {
+ON_FLASH static int hex(int c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'a' && c <= 'f') return c - 'a' + 10;
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;
   return -SLRE_INVALID_HEX_DIGIT;
 }
 
-int nextesc(const char **p) {
+ON_FLASH int nextesc(const char **p) {
   const unsigned char *s = (unsigned char *) (*p)++;
   switch (*s) {
     case 0:
@@ -10421,12 +10546,12 @@ enum slre_opcode {
   L_WORD_N  /* "\B" non-word boundary */
 };
 
-static signed char dec(int c) {
+ON_FLASH static signed char dec(int c) {
   if (isdigitrune(c)) return c - '0';
   return SLRE_INVALID_DEC_DIGIT;
 }
 
-static unsigned char re_dec_digit(struct slre_env *e, int c) {
+ON_FLASH static unsigned char re_dec_digit(struct slre_env *e, int c) {
   signed char ret = dec(c);
   if (ret < 0) {
     SLRE_THROW(e, SLRE_INVALID_DEC_DIGIT);
@@ -10434,7 +10559,7 @@ static unsigned char re_dec_digit(struct slre_env *e, int c) {
   return ret;
 }
 
-static int re_nextc(Rune *r, const char **src, const char *src_end) {
+ON_FLASH static int re_nextc(Rune *r, const char **src, const char *src_end) {
   *r = 0;
   if (*src >= src_end) return 0;
   *src += chartorune(r, *src);
@@ -10455,11 +10580,12 @@ static int re_nextc(Rune *r, const char **src, const char *src_end) {
   }
   return 0;
 }
-static int re_nextc_env(struct slre_env *e) {
+
+ON_FLASH static int re_nextc_env(struct slre_env *e) {
   return re_nextc(&e->curr_rune, &e->src, e->src_end);
 }
 
-static void re_nchset(struct slre_env *e) {
+ON_FLASH static void re_nchset(struct slre_env *e) {
   if (e->sets_num >= nelem(e->prog->charset)) {
     SLRE_THROW(e, SLRE_TOO_MANY_CHARSETS);
   }
@@ -10467,7 +10593,7 @@ static void re_nchset(struct slre_env *e) {
   e->curr_set->end = e->curr_set->spans;
 }
 
-static void re_rng2set(struct slre_env *e, Rune start, Rune end) {
+ON_FLASH static void re_rng2set(struct slre_env *e, Rune start, Rune end) {
   if (start > end) {
     SLRE_THROW(e, SLRE_INV_CHARSET_RANGE);
   }
@@ -10483,12 +10609,12 @@ static void re_rng2set(struct slre_env *e, Rune start, Rune end) {
 
 #define re_d_2set(e) re_rng2set(e, '0', '9')
 
-static void re_D_2set(struct slre_env *e) {
+ON_FLASH static void re_D_2set(struct slre_env *e) {
   re_rng2set(e, 0, '0' - 1);
   re_rng2set(e, '9' + 1, 0xFFFF);
 }
 
-static void re_s_2set(struct slre_env *e) {
+ON_FLASH static void re_s_2set(struct slre_env *e) {
   re_char2set(e, 0x9);
   re_rng2set(e, 0xA, 0xD);
   re_char2set(e, 0x20);
@@ -10497,7 +10623,7 @@ static void re_s_2set(struct slre_env *e) {
   re_char2set(e, 0xFEFF);
 }
 
-static void re_S_2set(struct slre_env *e) {
+ON_FLASH static void re_S_2set(struct slre_env *e) {
   re_rng2set(e, 0, 0x9 - 1);
   re_rng2set(e, 0xD + 1, 0x20 - 1);
   re_rng2set(e, 0x20 + 1, 0xA0 - 1);
@@ -10506,14 +10632,14 @@ static void re_S_2set(struct slre_env *e) {
   re_rng2set(e, 0xFEFF + 1, 0xFFFF);
 }
 
-static void re_w_2set(struct slre_env *e) {
+ON_FLASH static void re_w_2set(struct slre_env *e) {
   re_d_2set(e);
   re_rng2set(e, 'A', 'Z');
   re_char2set(e, '_');
   re_rng2set(e, 'a', 'z');
 }
 
-static void re_W_2set(struct slre_env *e) {
+ON_FLASH static void re_W_2set(struct slre_env *e) {
   re_rng2set(e, 0, '0' - 1);
   re_rng2set(e, '9' + 1, 'A' - 1);
   re_rng2set(e, 'Z' + 1, '_' - 1);
@@ -10521,7 +10647,7 @@ static void re_W_2set(struct slre_env *e) {
   re_rng2set(e, 'z' + 1, 0xFFFF);
 }
 
-static unsigned char re_endofcount(Rune c) {
+ON_FLASH static unsigned char re_endofcount(Rune c) {
   switch (c) {
     case ',':
     case '}':
@@ -10530,11 +10656,11 @@ static unsigned char re_endofcount(Rune c) {
   return 0;
 }
 
-static void re_ex_num_overfl(struct slre_env *e) {
+ON_FLASH static void re_ex_num_overfl(struct slre_env *e) {
   SLRE_THROW(e, SLRE_NUM_OVERFLOW);
 }
 
-static enum slre_opcode re_countrep(struct slre_env *e) {
+ON_FLASH static enum slre_opcode re_countrep(struct slre_env *e) {
   e->min_rep = 0;
   while (e->src < e->src_end && !re_endofcount(e->curr_rune = *e->src++)) {
     e->min_rep = e->min_rep * 10 + re_dec_digit(e, e->curr_rune);
@@ -10558,7 +10684,7 @@ static enum slre_opcode re_countrep(struct slre_env *e) {
   return L_COUNT;
 }
 
-static enum slre_opcode re_lexset(struct slre_env *e) {
+ON_FLASH static enum slre_opcode re_lexset(struct slre_env *e) {
   Rune ch = 0;
   unsigned char esc, ch_fl = 0, dash_fl = 0;
   enum slre_opcode type = L_SET;
@@ -10658,7 +10784,7 @@ static enum slre_opcode re_lexset(struct slre_env *e) {
   return type;
 }
 
-static int re_lexer(struct slre_env *e) {
+ON_FLASH static int re_lexer(struct slre_env *e) {
   if (re_nextc_env(e)) {
     switch (e->curr_rune) {
       case '0':
@@ -10743,13 +10869,13 @@ static int re_lexer(struct slre_env *e) {
 #define RE_NEXT(env) (env)->lookahead = re_lexer(env)
 #define RE_ACCEPT(env, t) ((env)->lookahead == (t) ? RE_NEXT(env), 1 : 0)
 
-static struct slre_node *re_nnode(struct slre_env *e, int type) {
+ON_FLASH static struct slre_node *re_nnode(struct slre_env *e, int type) {
   memset(e->pend, 0, sizeof(struct slre_node));
   e->pend->type = type;
   return e->pend++;
 }
 
-static unsigned char re_isemptynd(struct slre_node *nd) {
+ON_FLASH static unsigned char re_isemptynd(struct slre_node *nd) {
   if (!nd) return 1;
   switch (nd->type) {
     default:
@@ -10771,9 +10897,10 @@ static unsigned char re_isemptynd(struct slre_node *nd) {
   }
 }
 
-static struct slre_node *re_nrep(struct slre_env *e, struct slre_node *nd,
-                                 int ng, unsigned short min,
-                                 unsigned short max) {
+ON_FLASH static struct slre_node *re_nrep(struct slre_env *e,
+                                          struct slre_node *nd, int ng,
+                                          unsigned short min,
+                                          unsigned short max) {
   struct slre_node *rep = re_nnode(e, P_REP);
   if (max == SLRE_MAX_REP && re_isemptynd(nd)) {
     SLRE_THROW(e, SLRE_INF_LOOP_M_EMP_STR);
@@ -10787,7 +10914,7 @@ static struct slre_node *re_nrep(struct slre_env *e, struct slre_node *nd,
 
 static struct slre_node *re_parser(struct slre_env *e);
 
-static struct slre_node *re_parse_la(struct slre_env *e) {
+ON_FLASH static struct slre_node *re_parse_la(struct slre_env *e) {
   struct slre_node *nd;
   int min, max;
   switch (e->lookahead) {
@@ -10899,7 +11026,7 @@ static struct slre_node *re_parse_la(struct slre_env *e) {
   return nd;
 }
 
-static unsigned char re_endofcat(Rune c, int is_regex) {
+ON_FLASH static unsigned char re_endofcat(Rune c, int is_regex) {
   switch (c) {
     case 0:
       return 1;
@@ -10910,7 +11037,7 @@ static unsigned char re_endofcat(Rune c, int is_regex) {
   return 0;
 }
 
-static struct slre_node *re_parser(struct slre_env *e) {
+ON_FLASH static struct slre_node *re_parser(struct slre_env *e) {
   struct slre_node *alt = NULL, *cat, *nd;
   if (!re_endofcat(e->lookahead, e->is_regex)) {
     cat = re_parse_la(e);
@@ -10932,7 +11059,7 @@ static struct slre_node *re_parser(struct slre_env *e) {
   return alt;
 }
 
-static unsigned int re_nodelen(struct slre_node *nd) {
+ON_FLASH static unsigned int re_nodelen(struct slre_node *nd) {
   unsigned int n = 0;
   if (!nd) return 0;
   switch (nd->type) {
@@ -10965,13 +11092,14 @@ static unsigned int re_nodelen(struct slre_node *nd) {
   }
 }
 
-static struct slre_instruction *re_newinst(struct slre_prog *prog, int opcode) {
+ON_FLASH static struct slre_instruction *re_newinst(struct slre_prog *prog,
+                                                    int opcode) {
   memset(prog->end, 0, sizeof(struct slre_instruction));
   prog->end->opcode = opcode;
   return prog->end++;
 }
 
-static void re_compile(struct slre_env *e, struct slre_node *nd) {
+ON_FLASH static void re_compile(struct slre_env *e, struct slre_node *nd) {
   struct slre_instruction *inst, *split, *jump, *rep;
   unsigned int n;
 
@@ -11127,7 +11255,7 @@ static void re_compile(struct slre_env *e, struct slre_node *nd) {
 }
 
 #ifdef RE_TEST
-static void print_set(struct slre_class *cp) {
+ON_FLASH static void print_set(struct slre_class *cp) {
   struct slre_range *p;
   for (p = cp->spans; p < cp->end; p++) {
     printf("%s", p == cp->spans ? "'" : ",'");
@@ -11144,7 +11272,7 @@ static void print_set(struct slre_class *cp) {
   printf("]");
 }
 
-static void node_print(struct slre_node *nd) {
+ON_FLASH static void node_print(struct slre_node *nd) {
   if (!nd) {
     printf("Empty");
     return;
@@ -11219,7 +11347,7 @@ static void node_print(struct slre_node *nd) {
   }
 }
 
-static void program_print(struct slre_prog *prog) {
+ON_FLASH static void program_print(struct slre_prog *prog) {
   struct slre_instruction *inst;
   for (inst = prog->start; inst < prog->end; ++inst) {
     printf("%3d: ", inst - prog->start);
@@ -11299,8 +11427,9 @@ static void program_print(struct slre_prog *prog) {
 }
 #endif
 
-int slre_compile(const char *pat, size_t pat_len, const char *flags,
-                 volatile size_t fl_len, struct slre_prog **pr, int is_regex) {
+ON_FLASH int slre_compile(const char *pat, size_t pat_len, const char *flags,
+                          volatile size_t fl_len, struct slre_prog **pr,
+                          int is_regex) {
   struct slre_env e;
   struct slre_node *nd;
   struct slre_instruction *split, *jump;
@@ -11380,17 +11509,17 @@ int slre_compile(const char *pat, size_t pat_len, const char *flags,
   return err_code;
 }
 
-void slre_free(struct slre_prog *prog) {
+ON_FLASH void slre_free(struct slre_prog *prog) {
   if (prog) {
     SLRE_FREE(prog->start);
     SLRE_FREE(prog);
   }
 }
 
-static struct slre_thread *re_newthread(struct slre_thread *t,
-                                        struct slre_instruction *pc,
-                                        const char *start,
-                                        struct slre_loot *loot) {
+ON_FLASH static struct slre_thread *re_newthread(struct slre_thread *t,
+                                                 struct slre_instruction *pc,
+                                                 const char *start,
+                                                 struct slre_loot *loot) {
   struct slre_thread *new_thread =
       (struct slre_thread *) SLRE_MALLOC(sizeof(struct slre_thread));
   if (new_thread != NULL) new_thread->prev = t;
@@ -11400,22 +11529,23 @@ static struct slre_thread *re_newthread(struct slre_thread *t,
   return new_thread;
 }
 
-static struct slre_thread *get_prev_thread(struct slre_thread *t) {
+ON_FLASH static struct slre_thread *get_prev_thread(struct slre_thread *t) {
   struct slre_thread *tmp_thr = t->prev;
   SLRE_FREE(t);
   return tmp_thr;
 }
 
-static void free_threads(struct slre_thread *t) {
+ON_FLASH static void free_threads(struct slre_thread *t) {
   while (t->prev != NULL) t = get_prev_thread(t);
 }
 
 #define RE_NO_MATCH() \
   if (!(thr = 0)) continue
 
-static unsigned char re_match(struct slre_instruction *pc, const char *current,
-                              const char *end, const char *bol,
-                              unsigned int flags, struct slre_loot *loot) {
+ON_FLASH static unsigned char re_match(struct slre_instruction *pc,
+                                       const char *current, const char *end,
+                                       const char *bol, unsigned int flags,
+                                       struct slre_loot *loot) {
   struct slre_loot sub, tmpsub;
   Rune c, r;
   struct slre_range *p;
@@ -11577,8 +11707,8 @@ static unsigned char re_match(struct slre_instruction *pc, const char *current,
   return 0;
 }
 
-int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
-              const char *end, struct slre_loot *loot) {
+ON_FLASH int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
+                       const char *end, struct slre_loot *loot) {
   struct slre_loot tmpsub;
   const char *st = start;
 
@@ -11604,8 +11734,9 @@ int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
   return !loot->num_captures;
 }
 
-int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
-                 const char *rstr, size_t rstr_len, struct slre_loot *dstsub) {
+ON_FLASH int slre_replace(struct slre_loot *loot, const char *src,
+                          size_t src_len, const char *rstr, size_t rstr_len,
+                          struct slre_loot *dstsub) {
   int size = 0, n;
   Rune curr_rune;
   const char *const rstr_end = rstr + rstr_len;
@@ -11681,8 +11812,9 @@ int slre_replace(struct slre_loot *loot, const char *src, size_t src_len,
   return size;
 }
 
-int slre_match(const char *re, size_t re_len, const char *flags, size_t fl_len,
-               const char *str, size_t str_len, struct slre_loot *loot) {
+ON_FLASH int slre_match(const char *re, size_t re_len, const char *flags,
+                        size_t fl_len, const char *str, size_t str_len,
+                        struct slre_loot *loot) {
   struct slre_prog *prog = NULL;
   int res;
 
@@ -11724,7 +11856,7 @@ static const char *err_code_to_str(int err_code) {
 
 #define RE_TEST_STR_SIZE 2000
 
-static unsigned get_flags(const char *ch) {
+ON_FLASH static unsigned get_flags(const char *ch) {
   unsigned int flags = 0;
 
   while (*ch != '\0') {
@@ -11749,7 +11881,7 @@ static unsigned get_flags(const char *ch) {
   return flags;
 }
 
-static void show_usage_and_exit(char *argv[]) {
+ON_FLASH static void show_usage_and_exit(char *argv[]) {
   fprintf(stderr, "Usage: %s [OPTIONS]\n", argv[0]);
   fprintf(stderr, "%s\n", "OPTIONS:");
   fprintf(stderr, "%s\n", "  -p <regex_pattern>     Regex pattern");
@@ -11762,9 +11894,9 @@ static void show_usage_and_exit(char *argv[]) {
   exit(1);
 }
 
-static int process_line(struct slre_prog *pr, const char *flags,
-                        const char *line, const char *cap_no,
-                        const char *replace, const char *verbose) {
+ON_FLASH static int process_line(struct slre_prog *pr, const char *flags,
+                                 const char *line, const char *cap_no,
+                                 const char *replace, const char *verbose) {
   struct slre_loot loot;
   unsigned int fl = flags == NULL ? 0 : get_flags(flags);
   int i, n = cap_no == NULL ? -1 : atoi(cap_no), err_code = 0;
@@ -11795,7 +11927,7 @@ static int process_line(struct slre_prog *pr, const char *flags,
   return err_code;
 }
 
-int main(int argc, char **argv) {
+ON_FLASH int main(int argc, char **argv) {
   const char *str = NULL, *pattern = NULL, *replace = NULL;
   const char *flags = "", *file_name = NULL, *cap_no = NULL, *verbose = NULL;
   struct slre_prog *pr = NULL;
@@ -11868,7 +12000,8 @@ int main(int argc, char **argv) {
  */
 
 
-static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj,
+                                         val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
@@ -11878,7 +12011,8 @@ static val_t Obj_getPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
   return v_get_prototype(v7, arg);
 }
 
-static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj,
+                                        val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t proto = v7_array_get(v7, args, 1);
   (void) this_obj;
@@ -11888,8 +12022,9 @@ static val_t Obj_isPrototypeOf(struct v7 *v7, val_t this_obj, val_t args) {
 /* Hack to ensure that the iteration order of the keys array is consistent
  * with the iteration order if properties in `for in`
  * This will be obsoleted when arrays will have a special object type. */
-static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
-                                int i, unsigned int ignore_flags) {
+ON_FLASH static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p,
+                                         val_t res, int i,
+                                         unsigned int ignore_flags) {
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
   if (p->next) _Obj_append_reverse(v7, p->next, res, i + 1, ignore_flags);
@@ -11897,8 +12032,8 @@ static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
   v7_array_set(v7, res, i, p->name);
 }
 
-static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
-                          unsigned int ignore_flags) {
+ON_FLASH static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
+                                   unsigned int ignore_flags) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t res = v7_create_dense_array(v7);
   if (!v7_is_object(obj)) {
@@ -11909,27 +12044,27 @@ static val_t _Obj_ownKeys(struct v7 *v7, val_t args,
   return res;
 }
 
-static struct v7_property *_Obj_getOwnProperty(struct v7 *v7, val_t obj,
-                                               val_t name) {
+ON_FLASH static struct v7_property *_Obj_getOwnProperty(struct v7 *v7,
+                                                        val_t obj, val_t name) {
   char name_buf[512];
   int name_len;
   name_len = v7_stringify_value(v7, name, name_buf, sizeof(name_buf));
   return v7_get_own_property(v7, obj, name_buf, name_len);
 }
 
-static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_keys(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM);
 }
 
-static val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
-                                     val_t args) {
+ON_FLASH static val_t Obj_getOwnPropertyNames(struct v7 *v7, val_t this_obj,
+                                              val_t args) {
   (void) this_obj;
   return _Obj_ownKeys(v7, args, V7_PROPERTY_HIDDEN);
 }
 
-static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
-                                          val_t args) {
+ON_FLASH static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7,
+                                                   val_t this_obj, val_t args) {
   struct v7_property *prop;
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
@@ -11954,8 +12089,9 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7, val_t this_obj,
   return desc;
 }
 
-static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
-                       struct v7_property *prop, unsigned int attr) {
+ON_FLASH static void o_set_attr(struct v7 *v7, val_t desc, const char *name,
+                                size_t n, struct v7_property *prop,
+                                unsigned int attr) {
   val_t v = v7_get(v7, desc, name, n);
   if (v7_is_true(v7, v)) {
     prop->attributes &= ~attr;
@@ -11964,8 +12100,9 @@ static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
   }
 }
 
-static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
-                                 int name_len, val_t desc) {
+ON_FLASH static val_t _Obj_defineProperty(struct v7 *v7, val_t obj,
+                                          const char *name, int name_len,
+                                          val_t desc) {
   val_t val = v7_get(v7, desc, "value", 5);
   struct v7_property *prop = v7_get_own_property(v7, obj, name, name_len);
 
@@ -11988,7 +12125,8 @@ static val_t _Obj_defineProperty(struct v7 *v7, val_t obj, const char *name,
   return obj;
 }
 
-static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj,
+                                         val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t name = v7_array_get(v7, args, 1);
   val_t desc = v7_array_get(v7, args, 2);
@@ -12002,7 +12140,7 @@ static val_t Obj_defineProperty(struct v7 *v7, val_t this_obj, val_t args) {
   return _Obj_defineProperty(v7, obj, name_buf, name_len, desc);
 }
 
-static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
+ON_FLASH static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   struct v7_property *p;
   if (!v7_is_object(descs)) {
     throw_exception(v7, TYPE_ERROR, "object expected");
@@ -12017,7 +12155,8 @@ static void o_define_props(struct v7 *v7, val_t obj, val_t descs) {
   }
 }
 
-static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj,
+                                           val_t args) {
   val_t obj = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
   (void) this_obj;
@@ -12025,7 +12164,7 @@ static val_t Obj_defineProperties(struct v7 *v7, val_t this_obj, val_t args) {
   return obj;
 }
 
-static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res, proto = v7_array_get(v7, args, 0);
   val_t descs = v7_array_get(v7, args, 1);
   (void) this_obj;
@@ -12040,8 +12179,8 @@ static val_t Obj_create(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
-                                      val_t args) {
+ON_FLASH static val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
+                                               val_t args) {
   struct v7_property *prop;
   val_t name = v7_array_get(v7, args, 0);
   if ((prop = _Obj_getOwnProperty(v7, this_obj, name)) == NULL) {
@@ -12051,7 +12190,8 @@ static val_t Obj_propertyIsEnumerable(struct v7 *v7, val_t this_obj,
       !(prop->attributes & (V7_PROPERTY_HIDDEN | V7_PROPERTY_DONT_ENUM)));
 }
 
-static val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_hasOwnProperty(struct v7 *v7, val_t this_obj,
+                                         val_t args) {
   val_t name = v7_array_get(v7, args, 0);
   return v7_create_boolean(_Obj_getOwnProperty(v7, this_obj, name) != NULL);
 }
@@ -12076,7 +12216,8 @@ static enum v7_err Obj_keys(struct v7_c_func_arg *cfa) {
 }
 #endif
 
-V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH V7_PRIVATE val_t
+Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
@@ -12089,7 +12230,7 @@ V7_PRIVATE val_t Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   char buf[20];
   const char *type = "Object";
   (void) args;
@@ -12100,7 +12241,8 @@ static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
-static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj,
+                                            val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
@@ -12110,7 +12252,8 @@ static val_t Obj_preventExtensions(struct v7 *v7, val_t this_obj, val_t args) {
   return arg;
 }
 
-static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj,
+                                       val_t args) {
   val_t arg = v7_array_get(v7, args, 0);
   (void) this_obj;
   if (!v7_is_object(arg)) {
@@ -12120,7 +12263,7 @@ static val_t Obj_isExtensible(struct v7 *v7, val_t this_obj, val_t args) {
       !(v7_to_object(arg)->attributes & V7_OBJ_NOT_EXTENSIBLE));
 }
 
-V7_PRIVATE void init_object(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_object(struct v7 *v7) {
   val_t object, v;
   /* TODO(mkm): initialize global object without requiring a parser */
   v7_exec(v7, &v,
@@ -12160,7 +12303,7 @@ V7_PRIVATE void init_object(struct v7 *v7) {
  */
 
 
-static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Error_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t res;
 
@@ -12181,7 +12324,7 @@ static const char *error_names[] = {"TypeError", "SyntaxError",
 V7_STATIC_ASSERT(ARRAY_SIZE(error_names) == ERROR_CTOR_MAX,
                  error_name_count_mismatch);
 
-V7_PRIVATE void init_error(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_error(struct v7 *v7) {
   val_t error;
   size_t i;
 
@@ -12203,7 +12346,7 @@ V7_PRIVATE void init_error(struct v7 *v7) {
  */
 
 
-static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_length(v7, args) == 0 ? v7_create_number(0.0)
                                               : v7_array_get(v7, args, 0);
   val_t res = v7_is_double(arg0) ? arg0 : v7_create_number(i_as_num(v7, arg0));
@@ -12217,8 +12360,8 @@ static val_t Number_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-V7_PRIVATE
-val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
+ON_FLASH V7_PRIVATE val_t
+n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d = i_as_num(v7, arg0);
   int len, digits = d > 0 ? (int) d : 0;
@@ -12230,19 +12373,22 @@ val_t n_to_str(struct v7 *v7, val_t t, val_t args, const char *format) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-static val_t Number_toFixed(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Number_toFixed(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   return n_to_str(v7, this_obj, args, "%%.%dlf");
 }
 
-static val_t Number_toExp(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Number_toExp(struct v7 *v7, val_t this_obj, val_t args) {
   return n_to_str(v7, this_obj, args, "%%.%de");
 }
 
-static val_t Number_toPrecision(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Number_toPrecision(struct v7 *v7, val_t this_obj,
+                                         val_t args) {
   return Number_toExp(v7, this_obj, args);
 }
 
-static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Number_valueOf(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   if (!v7_is_double(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
@@ -12253,7 +12399,8 @@ static val_t Number_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
-static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Number_toString(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   char buf[512];
   (void) args;
 
@@ -12273,13 +12420,13 @@ static val_t Number_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
-static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t n_isNaN(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
   return v7_create_boolean(!v7_is_double(arg0) || arg0 == V7_TAG_NAN);
 }
 
-V7_PRIVATE void init_number(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_number(struct v7 *v7) {
   unsigned int attrs =
       V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
   val_t num =
@@ -12312,7 +12459,8 @@ V7_PRIVATE void init_number(struct v7 *v7) {
  */
 
 
-static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Json_stringify(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   char buf[100], *p = v7_to_json(v7, arg0, buf, sizeof(buf));
   val_t res = v7_create_string(v7, p, strlen(p), 1);
@@ -12321,7 +12469,7 @@ static val_t Json_stringify(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-V7_PRIVATE void init_json(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_json(struct v7 *v7) {
   val_t o = v7_create_object(v7);
   set_method(v7, o, "stringify", Json_stringify, 1);
   set_method(v7, o, "parse", Std_eval, 1);
@@ -12338,7 +12486,7 @@ struct a_sort_data {
   val_t sort_func;
 };
 
-static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 #if 0
   (void) v7;
   (void) this_obj;
@@ -12361,7 +12509,7 @@ static val_t Array_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 #endif
 }
 
-static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   val_t v = v7_create_undefined();
   int i, len = v7_array_length(v7, args);
   for (i = 0; i < len; i++) {
@@ -12371,7 +12519,8 @@ static val_t Array_push(struct v7 *v7, val_t this_obj, val_t args) {
   return v;
 }
 
-static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_get_length(struct v7 *v7, val_t this_obj,
+                                       val_t args) {
   long len = 0;
   (void) args;
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
@@ -12380,7 +12529,8 @@ static val_t Array_get_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
-static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_set_length(struct v7 *v7, val_t this_obj,
+                                       val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   long new_len = arg_long(v7, args, 0, -1);
 
@@ -12419,7 +12569,7 @@ static val_t Array_set_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(new_len);
 }
 
-static int a_cmp(void *user_data, const void *pa, const void *pb) {
+ON_FLASH static int a_cmp(void *user_data, const void *pa, const void *pb) {
   struct a_sort_data *sort_data = (struct a_sort_data *) user_data;
   struct v7 *v7 = sort_data->v7;
   val_t a = *(val_t *) pa, b = *(val_t *) pb, func = sort_data->sort_func;
@@ -12439,7 +12589,7 @@ static int a_cmp(void *user_data, const void *pa, const void *pb) {
   }
 }
 
-static int a_partition(val_t *a, int l, int r, void *user_data) {
+ON_FLASH static int a_partition(val_t *a, int l, int r, void *user_data) {
   val_t t, pivot = a[l];
   int i = l, j = r + 1;
 
@@ -12461,7 +12611,7 @@ static int a_partition(val_t *a, int l, int r, void *user_data) {
   return j;
 }
 
-static void a_qsort(val_t *a, int l, int r, void *user_data) {
+ON_FLASH static void a_qsort(val_t *a, int l, int r, void *user_data) {
   if (l < r) {
     int j = a_partition(a, l, r, user_data);
     a_qsort(a, l, j - 1, user_data);
@@ -12469,14 +12619,18 @@ static void a_qsort(val_t *a, int l, int r, void *user_data) {
   }
 }
 
-static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
-                    int (*sorting_func)(void *, const void *, const void *)) {
+ON_FLASH static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
+                             int (*sorting_func)(void *, const void *,
+                                                 const void *)) {
   int i = 0, len = v7_array_length(v7, obj);
   val_t *arr = (val_t *) malloc(len * sizeof(arr[0]));
   val_t arg0 = v7_array_get(v7, args, 0);
 
   if (!v7_is_object(obj)) return obj;
+
+#ifndef NO_LIBC
   assert(obj != v7->global_object);
+#endif
 
   for (i = 0; i < len; i++) {
     arr[i] = v7_array_get(v7, obj, i);
@@ -12498,15 +12652,15 @@ static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
   return obj;
 }
 
-static val_t Array_sort(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_sort(struct v7 *v7, val_t this_obj, val_t args) {
   return a_sort(v7, this_obj, args, a_cmp);
 }
 
-static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_reverse(struct v7 *v7, val_t this_obj, val_t args) {
   return a_sort(v7, this_obj, args, NULL);
 }
 
-static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t res = v7_create_undefined();
   size_t sep_size = 0;
@@ -12554,11 +12708,13 @@ static val_t Array_join(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Array_toString(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_toString(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   return Array_join(v7, this_obj, args);
 }
 
-static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
+ON_FLASH static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args,
+                               int mutate) {
   val_t res = v7_create_dense_array(v7);
   long i, len = v7_array_length(v7, this_obj);
   long num_args = v7_array_length(v7, args);
@@ -12634,15 +12790,16 @@ static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args, int mutate) {
   return res;
 }
 
-static val_t Array_slice(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_slice(struct v7 *v7, val_t this_obj, val_t args) {
   return a_splice(v7, this_obj, args, 0);
 }
 
-static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_splice(struct v7 *v7, val_t this_obj, val_t args) {
   return a_splice(v7, this_obj, args, 1);
 }
 
-static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
+ON_FLASH static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0,
+                             val_t *a1) {
   *a0 = v7_array_get(v7, args, 0);
   *a1 = v7_array_get(v7, args, 1);
   if (v7_is_undefined(*a1)) {
@@ -12650,7 +12807,8 @@ static void a_prep1(struct v7 *v7, val_t t, val_t args, val_t *a0, val_t *a1) {
   }
 }
 
-static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
+ON_FLASH static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n,
+                              val_t t) {
   val_t params = v7_create_dense_array(v7);
   v7_array_push(v7, params, v);
   v7_array_push(v7, params, n);
@@ -12658,7 +12816,7 @@ static val_t a_prep2(struct v7 *v7, val_t a, val_t v, val_t n, val_t t) {
   return v7_apply(v7, a, t, params);
 }
 
-static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v, res = v7_create_undefined();
   unsigned long len, i;
   int has;
@@ -12680,7 +12838,7 @@ static val_t Array_map(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v;
   unsigned long i, len;
   int has;
@@ -12703,7 +12861,7 @@ static val_t Array_every(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(1);
 }
 
-static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v;
   unsigned long i, len;
   int has;
@@ -12726,7 +12884,7 @@ static val_t Array_some(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(0);
 }
 
-static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0, arg1, el, v, res = v7_create_undefined();
   unsigned long len, i;
   int has;
@@ -12749,13 +12907,13 @@ static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Array_isArray(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Array_isArray(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
   return v7_create_boolean(is_prototype_of(v7, arg0, v7->array_prototype));
 }
 
-V7_PRIVATE void init_array(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_array(struct v7 *v7) {
   val_t ctor = v7_create_function(v7, Array_ctor, 1);
   val_t length = v7_create_dense_array(v7);
 
@@ -12786,7 +12944,8 @@ V7_PRIVATE void init_array(struct v7 *v7) {
  */
 
 
-V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH V7_PRIVATE val_t
+Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t v = v7_create_boolean(0); /* false by default */
 
   if (v7_is_true(v7, v7_array_get(v7, args, 0))) {
@@ -12803,7 +12962,8 @@ V7_PRIVATE val_t Boolean_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return v;
 }
 
-static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   if (!v7_is_boolean(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
@@ -12814,7 +12974,8 @@ static val_t Boolean_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
-static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Boolean_toString(struct v7 *v7, val_t this_obj,
+                                       val_t args) {
   char buf[512];
   (void) args;
 
@@ -12833,7 +12994,7 @@ static val_t Boolean_toString(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
-V7_PRIVATE void init_boolean(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_boolean(struct v7 *v7) {
   val_t ctor =
       v7_create_cfunction_ctor(v7, v7->boolean_prototype, Boolean_ctor, 1);
   v7_set_property(v7, v7->global_object, "Boolean", 7, 0, ctor);
@@ -12850,7 +13011,7 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
 #if V7_ENABLE__Math
 
 #ifdef __WATCOM__
-int matherr(struct _exception *exc) {
+ON_FLASH int matherr(struct _exception *exc) {
   if (exc->type == DOMAIN) {
     exc->retval = NAN;
     return 0;
@@ -12863,7 +13024,8 @@ int matherr(struct _exception *exc) {
     V7_ENABLE__Math__exp || V7_ENABLE__Math__floor || V7_ENABLE__Math__log ||  \
     V7_ENABLE__Math__round || V7_ENABLE__Math__sin || V7_ENABLE__Math__sqrt || \
     V7_ENABLE__Math__tan
-static val_t m_one_arg(struct v7 *v7, val_t args, double (*f)(double)) {
+ON_FLASH static val_t m_one_arg(struct v7 *v7, val_t args,
+                                double (*f)(double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
   double d0 = v7_to_double(arg0);
 #ifdef V7_BROKEN_NAN
@@ -12874,7 +13036,8 @@ static val_t m_one_arg(struct v7 *v7, val_t args, double (*f)(double)) {
 #endif /* V7_ENABLE__Math__* */
 
 #if V7_ENABLE__Math__pow || V7_ENABLE__Math__atan2
-static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
+ON_FLASH static val_t m_two_arg(struct v7 *v7, val_t args,
+                                double (*f)(double, double)) {
   val_t arg0 = v7_array_get(v7, args, 0);
   val_t arg1 = v7_array_get(v7, args, 1);
   double d0 = v7_to_double(arg0);
@@ -12887,16 +13050,17 @@ static val_t m_two_arg(struct v7 *v7, val_t args, double (*f)(double, double)) {
 }
 #endif /* V7_ENABLE__Math__pow || V7_ENABLE__Math__atan2 */
 
-#define DEFINE_WRAPPER(name, func)                                          \
-  V7_PRIVATE val_t Math_##name(struct v7 *v7, val_t this_obj, val_t args) { \
-    (void) this_obj;                                                        \
-    return func(v7, args, name);                                            \
+#define DEFINE_WRAPPER(name, func)                             \
+  ON_FLASH V7_PRIVATE val_t                                    \
+      Math_##name(struct v7 *v7, val_t this_obj, val_t args) { \
+    (void) this_obj;                                           \
+    return func(v7, args, name);                               \
   }
 
 /* Visual studio 2012+ has round() */
 #if V7_ENABLE__Math__round && \
     ((defined(V7_WINDOWS) && _MSC_VER < 1700) || defined(__WATCOM__))
-static double round(double n) {
+ON_FLASH static double round(double n) {
   return n;
 }
 #endif
@@ -12948,7 +13112,8 @@ DEFINE_WRAPPER(tan, m_one_arg)
 #endif
 
 #if V7_ENABLE__Math__random
-V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH V7_PRIVATE val_t
+Math_random(struct v7 *v7, val_t this_obj, val_t args) {
   static int srand_called = 0;
 
   if (!srand_called) {
@@ -12963,7 +13128,7 @@ V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Math__random */
 
 #if V7_ENABLE__Math__min || V7_ENABLE__Math__max
-static val_t min_max(struct v7 *v7, val_t args, int is_min) {
+ON_FLASH static val_t min_max(struct v7 *v7, val_t args, int is_min) {
   double res = NAN;
   int i, len = v7_array_length(v7, args);
 
@@ -12979,20 +13144,20 @@ static val_t min_max(struct v7 *v7, val_t args, int is_min) {
 #endif /* V7_ENABLE__Math__min || V7_ENABLE__Math__max */
 
 #if V7_ENABLE__Math__min
-V7_PRIVATE val_t Math_min(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH V7_PRIVATE val_t Math_min(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return min_max(v7, args, 1);
 }
 #endif
 
 #if V7_ENABLE__Math__max
-V7_PRIVATE val_t Math_max(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH V7_PRIVATE val_t Math_max(struct v7 *v7, val_t this_obj, val_t args) {
   (void) this_obj;
   return min_max(v7, args, 0);
 }
 #endif
 
-V7_PRIVATE void init_math(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_math(struct v7 *v7) {
   val_t math = v7_create_object(v7);
 
 #if V7_ENABLE__Math__abs
@@ -13072,7 +13237,7 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
-static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0), res = arg0;
 
   if (v7_array_length(v7, args) == 0)
@@ -13089,7 +13254,8 @@ static val_t String_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj,
+                                       val_t args) {
   int i, num_args = v7_array_length(v7, args);
   val_t res = v7_create_string(v7, "", 0, 1); /* Empty string */
 
@@ -13107,7 +13273,7 @@ static val_t Str_fromCharCode(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   size_t n;
   val_t s = to_string(v7, this_obj);
   const char *p = v7_to_string(v7, &s, &n);
@@ -13124,11 +13290,12 @@ static double s_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
   return NAN;
 }
 
-static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_charCodeAt(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   return v7_create_number(s_charCodeAt(v7, this_obj, args));
 }
 
-static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   double code = s_charCodeAt(v7, this_obj, args);
   char buf[10] = {0};
   int len = 0;
@@ -13140,7 +13307,7 @@ static val_t Str_charAt(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = to_string(v7, this_obj);
   int i, num_args = v7_array_length(v7, args);
 
@@ -13152,7 +13319,8 @@ static val_t Str_concat(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
-static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
+ON_FLASH static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args,
+                                 int last) {
   val_t arg0 = v7_array_get(v7, args, 0);
   size_t fromIndex = 0;
   double res = -1;
@@ -13201,7 +13369,7 @@ static val_t s_index_of(struct v7 *v7, val_t this_obj, val_t args, int last) {
   return v7_create_number(res);
 }
 
-static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   if (!v7_is_string(this_obj) &&
       (v7_is_object(this_obj) &&
        v7_object_to_value(v7_to_object(this_obj)->prototype) !=
@@ -13212,21 +13380,23 @@ static val_t Str_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   return Obj_valueOf(v7, this_obj, args);
 }
 
-static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_indexOf(struct v7 *v7, val_t this_obj, val_t args) {
   return s_index_of(v7, this_obj, args, 0);
 }
 
-static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_lastIndexOf(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   return s_index_of(v7, this_obj, args, 1);
 }
 
-static val_t Str_localeCompare(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_localeCompare(struct v7 *v7, val_t this_obj,
+                                        val_t args) {
   val_t arg0 = to_string(v7, v7_array_get(v7, args, 0));
   val_t s = to_string(v7, this_obj);
   return v7_create_number(s_cmp(v7, s, arg0));
 }
 
-static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
 
   if (this_obj == v7->string_prototype) {
@@ -13244,7 +13414,7 @@ static val_t Str_toString(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 #if V7_ENABLE__RegExp
-static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   val_t so, ro, arr = v7_create_null();
   long previousLastIndex = 0;
   int lastMatch = 1, n = 0, flag_g;
@@ -13286,7 +13456,7 @@ static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
   return arr;
 }
 
-static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
   const char *s;
   size_t s_len;
   val_t out_str_o;
@@ -13387,7 +13557,7 @@ static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
   return this_obj;
 }
 
-static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
   long utf_shift = -1;
 
   if (v7_array_length(v7, args) > 0) {
@@ -13414,7 +13584,7 @@ static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
 
 #endif /* V7_ENABLE__RegExp */
 
-static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   long from = 0, to = 0;
   size_t len;
   val_t so = to_string(v7, this_obj);
@@ -13444,8 +13614,8 @@ static val_t Str_slice(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, begin, end - begin, 1);
 }
 
-static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
-                         Rune (*func)(Rune)) {
+ON_FLASH static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
+                                  Rune (*func)(Rune)) {
   val_t s = to_string(v7, this_obj);
   size_t i, n, len;
   const char *p = v7_to_string(v7, &s, &len);
@@ -13464,19 +13634,21 @@ static val_t s_transform(struct v7 *v7, val_t this_obj, val_t args,
   return res;
 }
 
-static val_t Str_toLowerCase(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_toLowerCase(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   return s_transform(v7, this_obj, args, tolowerrune);
 }
 
-static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_toUpperCase(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   return s_transform(v7, this_obj, args, toupperrune);
 }
 
-static int s_isspace(Rune c) {
+ON_FLASH static int s_isspace(Rune c) {
   return isspacerune(c) || isnewline(c);
 }
 
-static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   val_t s = to_string(v7, this_obj);
   size_t i, n, len, start = 0, end, state = 0;
   const char *p = v7_to_string(v7, &s, &len);
@@ -13495,7 +13667,7 @@ static val_t Str_trim(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, p + start, end - start, 1);
 }
 
-static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   size_t len = 0;
   val_t s = i_value_of(v7, this_obj);
 
@@ -13508,7 +13680,7 @@ static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
-V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
+ON_FLASH V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
   char buf[40];
   size_t l;
   double d;
@@ -13552,12 +13724,13 @@ V7_PRIVATE double to_number(struct v7 *v7, val_t v) {
 }
 #endif
 
-V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n, long default_value) {
+ON_FLASH V7_PRIVATE long arg_long(struct v7 *v7, val_t args, int n,
+                                  long default_value) {
   val_t arg_n = i_value_of(v7, v7_array_get(v7, args, n));
   return to_long(v7, arg_n, default_value);
 }
 
-static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
+ON_FLASH static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   size_t n;
   const char *p;
   s = to_string(v7, s);
@@ -13578,13 +13751,13 @@ static val_t s_substr(struct v7 *v7, val_t s, long start, long len) {
   return v7_create_string(v7, p, len, 1);
 }
 
-static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_substr(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long len = arg_long(v7, args, 1, LONG_MAX);
   return s_substr(v7, this_obj, start, len);
 }
 
-static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
   long start = arg_long(v7, args, 0, 0);
   long end = arg_long(v7, args, 1, LONG_MAX);
   if (start < 0) start = 0;
@@ -13599,7 +13772,7 @@ static val_t Str_substring(struct v7 *v7, val_t this_obj, val_t args) {
 
 /* TODO(mkm): make an alternative implementation without regexps */
 #if V7_ENABLE__RegExp
-static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = v7_create_dense_array(v7);
   const char *s, *s_end;
   size_t s_len;
@@ -13656,7 +13829,7 @@ static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
 }
 #endif /* V7_ENABLE__RegExp */
 
-V7_PRIVATE void init_string(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str =
       v7_create_cfunction_ctor(v7, v7->string_prototype, String_ctor, 1);
   v7_set_property(v7, v7->global_object, "String", 6, V7_PROPERTY_DONT_ENUM,
@@ -13743,7 +13916,7 @@ static etimeint_t g_gmtoffms; /* timezone offset, ms, no DST */
 static const char *g_tzname;  /* current timezone name */
 
 /* Leap year formula copied from ECMA 5.1 standart as is */
-static int ecma_DaysInYear(int y) {
+ON_FLASH static int ecma_DaysInYear(int y) {
   if (y % 4 != 0) {
     return 365;
   } else if (y % 4 == 0 && y % 100 != 0) {
@@ -13757,20 +13930,20 @@ static int ecma_DaysInYear(int y) {
   }
 }
 
-static etimeint_t ecma_DayFromYear(etimeint_t y) {
+ON_FLASH static etimeint_t ecma_DayFromYear(etimeint_t y) {
   return 365 * (y - 1970) + floor((y - 1969) / 4) - floor((y - 1901) / 100) +
          floor((y - 1601) / 400);
 }
 
-static etimeint_t ecma_TimeFromYear(etimeint_t y) {
+ON_FLASH static etimeint_t ecma_TimeFromYear(etimeint_t y) {
   return msPerDay * ecma_DayFromYear(y);
 }
 
-static int ecma_IsLeapYear(int year) {
+ON_FLASH static int ecma_IsLeapYear(int year) {
   return ecma_DaysInYear(year) == 366;
 }
 
-static int *ecma_getfirstdays(int isleap) {
+ON_FLASH static int *ecma_getfirstdays(int isleap) {
   static int sdays[2][MonthsInYear + 1] = {
       {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
       {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366}};
@@ -13778,7 +13951,7 @@ static int *ecma_getfirstdays(int isleap) {
   return sdays[isleap];
 }
 
-static int ecma_DaylightSavingTA(etime_t t) {
+ON_FLASH static int ecma_DaylightSavingTA(etime_t t) {
   time_t time = t / 1000;
   /*
    * Win32 doesn't have locatime_r
@@ -13797,18 +13970,18 @@ static int ecma_DaylightSavingTA(etime_t t) {
   }
 }
 
-static int ecma_LocalTZA() {
+ON_FLASH static int ecma_LocalTZA() {
   return (int) -g_gmtoffms;
 }
 
-static etimeint_t ecma_UTC(etime_t t) {
+ON_FLASH static etimeint_t ecma_UTC(etime_t t) {
   return t - ecma_LocalTZA() - ecma_DaylightSavingTA(t - ecma_LocalTZA());
 }
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toLocaleString || \
     V7_ENABLE__Date__toJSON || V7_ENABLE__Date__getters ||          \
     V7_ENABLE__Date__setters
-static int ecma_YearFromTime_s(etime_t t) {
+ON_FLASH static int ecma_YearFromTime_s(etime_t t) {
   int first = floor((t / msPerDay) / 366) + 1970,
       last = floor((t / msPerDay) / 365) + 1970, middle = 0;
 
@@ -13836,15 +14009,15 @@ static int ecma_YearFromTime_s(etime_t t) {
   return first;
 }
 
-static etimeint_t ecma_Day(etime_t t) {
+ON_FLASH static etimeint_t ecma_Day(etime_t t) {
   return floor(t / msPerDay);
 }
 
-static int ecma_DayWithinYear(etime_t t, int year) {
+ON_FLASH static int ecma_DayWithinYear(etime_t t, int year) {
   return (int) (ecma_Day(t) - ecma_DayFromYear(year));
 }
 
-static int ecma_MonthFromTime(etime_t t, int year) {
+ON_FLASH static int ecma_MonthFromTime(etime_t t, int year) {
   int *days, i;
   etimeint_t dwy = ecma_DayWithinYear(t, year);
 
@@ -13859,7 +14032,7 @@ static int ecma_MonthFromTime(etime_t t, int year) {
   return -1;
 }
 
-static int ecma_DateFromTime(etime_t t, int year) {
+ON_FLASH static int ecma_DateFromTime(etime_t t, int year) {
   int *days, mft = ecma_MonthFromTime(t, year),
              dwy = ecma_DayWithinYear(t, year);
 
@@ -13872,13 +14045,13 @@ static int ecma_DateFromTime(etime_t t, int year) {
   return dwy - days[mft] + 1;
 }
 
-#define DEF_EXTRACT_TIMEPART(funcname, c1, c2) \
-  static int ecma_##funcname(etime_t t) {      \
-    int ret = (etimeint_t) floor(t / c1) % c2; \
-    if (ret < 0) {                             \
-      ret += c2;                               \
-    }                                          \
-    return ret;                                \
+#define DEF_EXTRACT_TIMEPART(funcname, c1, c2)     \
+  ON_FLASH static int ecma_##funcname(etime_t t) { \
+    int ret = (etimeint_t) floor(t / c1) % c2;     \
+    if (ret < 0) {                                 \
+      ret += c2;                                   \
+    }                                              \
+    return ret;                                    \
   }
 
 DEF_EXTRACT_TIMEPART(HourFromTime, msPerHour, HoursPerDay)
@@ -13886,7 +14059,7 @@ DEF_EXTRACT_TIMEPART(MinFromTime, msPerMinute, MinutesPerHour)
 DEF_EXTRACT_TIMEPART(SecFromTime, msPerSecond, SecondsPerMinute)
 DEF_EXTRACT_TIMEPART(msFromTime, 1, msPerSecond)
 
-static int ecma_WeekDay(etime_t t) {
+ON_FLASH static int ecma_WeekDay(etime_t t) {
   int ret = (ecma_Day(t) + 4) % 7;
   if (ret < 0) {
     ret += 7;
@@ -13895,7 +14068,7 @@ static int ecma_WeekDay(etime_t t) {
   return ret;
 }
 
-static void d_gmtime(const etime_t *t, struct timeparts *tp) {
+ON_FLASH static void d_gmtime(const etime_t *t, struct timeparts *tp) {
   tp->year = ecma_YearFromTime_s(*t);
   tp->month = ecma_MonthFromTime(*t, tp->year);
   tp->day = ecma_DateFromTime(*t, tp->year);
@@ -13910,24 +14083,24 @@ static void d_gmtime(const etime_t *t, struct timeparts *tp) {
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toLocaleString || \
     V7_ENABLE__Date__getters || V7_ENABLE__Date__setters
-static etimeint_t ecma_LocalTime(etime_t t) {
+ON_FLASH static etimeint_t ecma_LocalTime(etime_t t) {
   return t + ecma_LocalTZA() + ecma_DaylightSavingTA(t);
 }
 
-static void d_localtime(const etime_t *time, struct timeparts *tp) {
+ON_FLASH static void d_localtime(const etime_t *time, struct timeparts *tp) {
   etime_t local_time = ecma_LocalTime(*time);
   d_gmtime(&local_time, tp);
 }
 #endif
 
-static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min, etimeint_t sec,
-                                etimeint_t ms) {
+ON_FLASH static etimeint_t ecma_MakeTime(etimeint_t hour, etimeint_t min,
+                                         etimeint_t sec, etimeint_t ms) {
   return ((hour * MinutesPerHour + min) * SecondsPerMinute + sec) *
              msPerSecond +
          ms;
 }
 
-static etimeint_t ecma_MakeDay(int year, int month, int date) {
+ON_FLASH static etimeint_t ecma_MakeDay(int year, int month, int date) {
   int *days;
   etimeint_t yday, mday;
 
@@ -13940,26 +14113,26 @@ static etimeint_t ecma_MakeDay(int year, int month, int date) {
   return yday + mday + date - 1;
 }
 
-static etimeint_t ecma_MakeDate(etimeint_t day, etimeint_t time) {
+ON_FLASH static etimeint_t ecma_MakeDate(etimeint_t day, etimeint_t time) {
   return (day * msPerDay + time);
 }
 
-static void d_gettime(etime_t *t) {
+ON_FLASH static void d_gettime(etime_t *t) {
   *t = time(NULL);
 }
 
-static etime_t d_mktime_impl(const struct timeparts *tp) {
+ON_FLASH static etime_t d_mktime_impl(const struct timeparts *tp) {
   return ecma_MakeDate(ecma_MakeDay(tp->year, tp->month, tp->day),
                        ecma_MakeTime(tp->hour, tp->min, tp->sec, tp->msec));
 }
 
 #if V7_ENABLE__Date__setters
-static etime_t d_lmktime(const struct timeparts *tp) {
+ON_FLASH static etime_t d_lmktime(const struct timeparts *tp) {
   return ecma_UTC(d_mktime_impl(tp));
 }
 #endif
 
-static etime_t d_gmktime(const struct timeparts *tp) {
+ON_FLASH static etime_t d_gmktime(const struct timeparts *tp) {
   return d_mktime_impl(tp);
 }
 
@@ -13968,7 +14141,7 @@ typedef void (*fbreaktime_t)(const etime_t *, struct timeparts *);
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toLocaleString || \
     V7_ENABLE__Date__toJSON
-static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
+ON_FLASH static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
   val_t ret = i_value_of(v7, obj);
   if (ret == V7_TAG_NAN) {
     throw_exception(v7, TYPE_ERROR, "Date is invalid (for string)");
@@ -13978,7 +14151,7 @@ static val_t d_trytogetobjforstring(struct v7 *v7, val_t obj) {
 #endif
 
 #if V7_ENABLE__Date__parse || V7_ENABLE__Date__UTC
-static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
+ON_FLASH static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
   /* TODO(alashkin): verify this statement */
   return is_prototype_of(v7, this_obj, v7->date_prototype);
 }
@@ -13987,7 +14160,7 @@ static int d_iscalledasfunction(struct v7 *v7, val_t this_obj) {
 static const char *mon_name[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-int d_getnumbyname(const char **arr, int arr_size, const char *str) {
+ON_FLASH int d_getnumbyname(const char **arr, int arr_size, const char *str) {
   int i;
   for (i = 0; i < arr_size; i++) {
     if (strncmp(arr[i], str, 3) == 0) {
@@ -13998,8 +14171,8 @@ int d_getnumbyname(const char **arr, int arr_size, const char *str) {
   return -1;
 }
 
-int date_parse(const char *str, int *a1, int *a2, int *a3, char sep,
-               char *rest) {
+ON_FLASH int date_parse(const char *str, int *a1, int *a2, int *a3, char sep,
+                        char *rest) {
   char frmDate[] = " %d/%d/%d%[^\0]";
   frmDate[3] = frmDate[6] = sep;
   return sscanf(str, frmDate, a1, a2, a3, rest);
@@ -14011,8 +14184,8 @@ int date_parse(const char *str, int *a1, int *a2, int *a3, char sep,
  * not very smart but simple, and working according
  * to ECMA5.1 StringToDate function
  */
-static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
-                          int *tz) {
+ON_FLASH static int d_parsedatestr(const char *jstr, size_t len,
+                                   struct timeparts *tp, int *tz) {
   char gmt[4];
   char buf1[100] = {0}, buf2[100] = {0};
   int res = 0;
@@ -14096,7 +14269,8 @@ static int d_parsedatestr(const char *jstr, size_t len, struct timeparts *tp,
   return res <= 2;
 }
 
-static int d_timeFromString(etime_t *time, const char *str, size_t str_len) {
+ON_FLASH static int d_timeFromString(etime_t *time, const char *str,
+                                     size_t str_len) {
   struct timeparts tp;
   int tz;
 
@@ -14156,10 +14330,10 @@ enum detimepartsarr {
   tpmax
 };
 
-static etime_t d_changepartoftime(const etime_t *current,
-                                  struct dtimepartsarr *a,
-                                  fbreaktime_t breaktimefunc,
-                                  fmaketime_t maketimefunc) {
+ON_FLASH static etime_t d_changepartoftime(const etime_t *current,
+                                           struct dtimepartsarr *a,
+                                           fbreaktime_t breaktimefunc,
+                                           fmaketime_t maketimefunc) {
   /*
    * 0 = year, 1 = month , 2 = date , 3 = hours,
    * 4 = minutes, 5 = seconds, 6 = ms
@@ -14195,9 +14369,10 @@ static etime_t d_changepartoftime(const etime_t *current,
 }
 
 #if V7_ENABLE__Date__setters || V7_ENABLE__Date__UTC
-static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj, val_t args,
-                                      int start_pos, fbreaktime_t breaktimefunc,
-                                      fmaketime_t makefilefunc) {
+ON_FLASH static etime_t d_time_number_from_arr(struct v7 *v7, val_t this_obj,
+                                               val_t args, int start_pos,
+                                               fbreaktime_t breaktimefunc,
+                                               fmaketime_t makefilefunc) {
   etime_t ret_time = INVALID_TIME;
   long cargs;
 
@@ -14236,7 +14411,7 @@ static int d_tptostr(const struct timeparts *tp, char *buf, int addtz);
 #endif
 
 /* constructor */
-static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   if (v7_is_object(this_obj) && this_obj != v7->global_object) {
     long cargs = v7_array_length(v7, args);
@@ -14319,7 +14494,8 @@ static val_t Date_ctor(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 #if V7_ENABLE__Date__toString || V7_ENABLE__Date__toJSON
-static int d_timetoISOstr(const etime_t *time, char *buf, size_t buf_size) {
+ON_FLASH static int d_timetoISOstr(const etime_t *time, char *buf,
+                                   size_t buf_size) {
   /* ISO format: "+XXYYYY-MM-DDTHH:mm:ss.sssZ"; */
   struct timeparts tp;
   char use_ext = 0;
@@ -14339,7 +14515,8 @@ static int d_timetoISOstr(const etime_t *time, char *buf, size_t buf_size) {
          use_ext;
 }
 
-static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_toISOString(struct v7 *v7, val_t this_obj,
+                                       val_t args) {
   char buf[30];
   etime_t time;
   int len;
@@ -14355,8 +14532,9 @@ static val_t Date_toISOString(struct v7 *v7, val_t this_obj, val_t args) {
 #if V7_ENABLE__Date__toString
 typedef int (*ftostring_t)(const struct timeparts *, char *, int);
 
-static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime_t breaktimefunc,
-                        ftostring_t tostringfunc, int addtz) {
+ON_FLASH static val_t d_tostring(struct v7 *v7, val_t obj,
+                                 fbreaktime_t breaktimefunc,
+                                 ftostring_t tostringfunc, int addtz) {
   struct timeparts tp;
   int len;
   char buf[100];
@@ -14371,17 +14549,19 @@ static val_t d_tostring(struct v7 *v7, val_t obj, fbreaktime_t breaktimefunc,
 }
 
 /* using macros to avoid copy-paste technic */
-#define DEF_TOSTR(funcname, breaktimefunc, tostrfunc, addtz)                  \
-  static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) { \
-    (void) args;                                                              \
-    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc, addtz);         \
+#define DEF_TOSTR(funcname, breaktimefunc, tostrfunc, addtz)             \
+  ON_FLASH static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, \
+                                          val_t args) {                  \
+    (void) args;                                                         \
+    return d_tostring(v7, this_obj, breaktimefunc, tostrfunc, addtz);    \
   }
 
 /* non-locale function should always return in english and 24h-format */
 static const char *wday_name[] = {"Sun", "Mon", "Tue", "Wed",
                                   "Thu", "Fri", "Sat"};
 
-static int d_tptodatestr(const struct timeparts *tp, char *buf, int addtz) {
+ON_FLASH static int d_tptodatestr(const struct timeparts *tp, char *buf,
+                                  int addtz) {
   (void) addtz;
 
   return sprintf(buf, "%s %s %02d %d", wday_name[tp->dayofweek],
@@ -14390,11 +14570,12 @@ static int d_tptodatestr(const struct timeparts *tp, char *buf, int addtz) {
 
 DEF_TOSTR(DateString, d_localtime, d_tptodatestr, 1)
 
-static const char *d_gettzname() {
+ON_FLASH static const char *d_gettzname() {
   return g_tzname;
 }
 
-static int d_tptotimestr(const struct timeparts *tp, char *buf, int addtz) {
+ON_FLASH static int d_tptotimestr(const struct timeparts *tp, char *buf,
+                                  int addtz) {
   int len;
 
   len = sprintf(buf, "%02d:%02d:%02d GMT", tp->hour, tp->min, tp->sec);
@@ -14409,7 +14590,8 @@ static int d_tptotimestr(const struct timeparts *tp, char *buf, int addtz) {
 
 DEF_TOSTR(TimeString, d_localtime, d_tptotimestr, 1)
 
-static int d_tptostr(const struct timeparts *tp, char *buf, int addtz) {
+ON_FLASH static int d_tptostr(const struct timeparts *tp, char *buf,
+                              int addtz) {
   int len = d_tptodatestr(tp, buf, addtz);
   *(buf + len) = ' ';
   return d_tptotimestr(tp, buf + len + 1, addtz) + len + 1;
@@ -14424,16 +14606,16 @@ struct d_locale {
   char locale[50];
 };
 
-static void d_getcurrentlocale(struct d_locale *loc) {
+ON_FLASH static void d_getcurrentlocale(struct d_locale *loc) {
   strcpy(setlocale(LC_TIME, 0), loc->locale);
 }
 
-static void d_setlocale(const struct d_locale *loc) {
+ON_FLASH static void d_setlocale(const struct d_locale *loc) {
   setlocale(LC_TIME, loc ? loc->locale : "");
 }
 
 /* TODO(alashkin): check portability */
-static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
+ON_FLASH static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
   char buf[250];
   size_t len;
   struct tm t;
@@ -14463,10 +14645,11 @@ static val_t d_tolocalestr(struct v7 *v7, val_t obj, const char *frm) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-#define DEF_TOLOCALESTR(funcname, frm)                                        \
-  static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, val_t args) { \
-    (void) args;                                                              \
-    return d_tolocalestr(v7, this_obj, frm);                                  \
+#define DEF_TOLOCALESTR(funcname, frm)                                   \
+  ON_FLASH static val_t Date_to##funcname(struct v7 *v7, val_t this_obj, \
+                                          val_t args) {                  \
+    (void) args;                                                         \
+    return d_tolocalestr(v7, this_obj, frm);                             \
   }
 
 DEF_TOLOCALESTR(LocaleString, "%c")
@@ -14474,7 +14657,7 @@ DEF_TOLOCALESTR(LocaleDateString, "%x")
 DEF_TOLOCALESTR(LocaleTimeString, "%X")
 #endif /* V7_ENABLE__Date__toLocaleString */
 
-static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   (void) args;
   if (!v7_is_object(this_obj) ||
       (v7_is_object(this_obj) &&
@@ -14486,22 +14669,23 @@ static val_t Date_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
 }
 
 #if V7_ENABLE__Date__getters
-static struct timeparts *d_getTimePart(val_t val, struct timeparts *tp,
-                                       fbreaktime_t breaktimefunc) {
+ON_FLASH static struct timeparts *d_getTimePart(val_t val, struct timeparts *tp,
+                                                fbreaktime_t breaktimefunc) {
   etime_t time;
   time = v7_to_double(val);
   breaktimefunc(&time, tp);
   return tp;
 }
 
-#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                     \
-  static val_t Date_get##funcName(struct v7 *v7, val_t this_obj, val_t args) { \
-    struct timeparts tp;                                                       \
-    val_t v = i_value_of(v7, this_obj);                                        \
-    (void) args;                                                               \
-    return v7_create_number(                                                   \
-        v == V7_TAG_NAN ? NAN                                                  \
-                        : d_getTimePart(v, &tp, breaktimefunc)->tpmember);     \
+#define DEF_GET_TP_FUNC(funcName, tpmember, breaktimefunc)                 \
+  ON_FLASH static val_t Date_get##funcName(struct v7 *v7, val_t this_obj,  \
+                                           val_t args) {                   \
+    struct timeparts tp;                                                   \
+    val_t v = i_value_of(v7, this_obj);                                    \
+    (void) args;                                                           \
+    return v7_create_number(                                               \
+        v == V7_TAG_NAN ? NAN                                              \
+                        : d_getTimePart(v, &tp, breaktimefunc)->tpmember); \
   }
 
 #define DEF_GET_TP(funcName, tpmember)               \
@@ -14517,11 +14701,12 @@ DEF_GET_TP(Seconds, sec)
 DEF_GET_TP(Milliseconds, msec)
 DEF_GET_TP(Day, dayofweek)
 
-static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_getTime(struct v7 *v7, val_t this_obj, val_t args) {
   return Date_valueOf(v7, this_obj, args);
 }
 
-static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj,
+                                             val_t args) {
   (void) args;
   (void) v7;
   (void) this_obj;
@@ -14530,9 +14715,9 @@ static val_t Date_getTimezoneOffset(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Date__getters */
 
 #if V7_ENABLE__Date__setters
-static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args,
-                           int start_pos, fbreaktime_t breaktimefunc,
-                           fmaketime_t makefilefunc) {
+ON_FLASH static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args,
+                                    int start_pos, fbreaktime_t breaktimefunc,
+                                    fmaketime_t makefilefunc) {
   val_t n;
   etime_t ret_time = d_time_number_from_arr(v7, this_obj, args, start_pos,
                                             breaktimefunc, makefilefunc);
@@ -14544,10 +14729,12 @@ static val_t d_setTimePart(struct v7 *v7, val_t this_obj, val_t args,
 }
 
 #define DEF_SET_TP(name, start_pos)                                           \
-  static val_t Date_setUTC##name(struct v7 *v7, val_t this_obj, val_t args) { \
+  ON_FLASH static val_t Date_setUTC##name(struct v7 *v7, val_t this_obj,      \
+                                          val_t args) {                       \
     return d_setTimePart(v7, this_obj, args, start_pos, d_gmtime, d_gmktime); \
   }                                                                           \
-  static val_t Date_set##name(struct v7 *v7, val_t this_obj, val_t args) {    \
+  ON_FLASH static val_t Date_set##name(struct v7 *v7, val_t this_obj,         \
+                                       val_t args) {                          \
     return d_setTimePart(v7, this_obj, args, start_pos, d_localtime,          \
                          d_lmktime);                                          \
   }
@@ -14560,7 +14747,7 @@ DEF_SET_TP(Date, tpdate)
 DEF_SET_TP(Month, tpmonth)
 DEF_SET_TP(FullYear, tpyear)
 
-static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   val_t n;
   if (v7_array_length(v7, args) >= 1) {
@@ -14574,13 +14761,13 @@ static val_t Date_setTime(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Date__setters */
 
 #if V7_ENABLE__Date__toJSON
-static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_toJSON(struct v7 *v7, val_t this_obj, val_t args) {
   return Date_toISOString(v7, this_obj, args);
 }
 #endif /* V7_ENABLE__Date__toJSON */
 
 #if V7_ENABLE__Date__now
-static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
   (void) v7;
@@ -14593,7 +14780,7 @@ static val_t Date_now(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Date__now */
 
 #if V7_ENABLE__Date__parse
-static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time = INVALID_TIME;
   (void) args;
 
@@ -14616,7 +14803,7 @@ static val_t Date_parse(struct v7 *v7, val_t this_obj, val_t args) {
 #endif /* V7_ENABLE__Date__parse */
 
 #if V7_ENABLE__Date__UTC
-static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
   etime_t ret_time;
   (void) args;
 
@@ -14635,8 +14822,8 @@ static val_t Date_UTC(struct v7 *v7, val_t this_obj, val_t args) {
  * We should set V7_PROPERTY_DONT_ENUM for all Date props
  * TODO(mkm): check other objects
 */
-static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                            v7_cfunction_t f) {
+ON_FLASH static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
+                                     v7_cfunction_t f) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction(f));
 }
@@ -14649,7 +14836,7 @@ static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
   d_set_cfunc_prop(v7, v7->date_prototype, "setUTC" #func, Date_setUTC##func); \
   d_set_cfunc_prop(v7, v7->date_prototype, "set" #func, Date_set##func);
 
-V7_PRIVATE void init_date(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_date(struct v7 *v7) {
   val_t date = v7_create_cfunction_ctor(v7, v7->date_prototype, Date_ctor, 7);
   v7_set_property(v7, v7->global_object, "Date", 4, V7_PROPERTY_DONT_ENUM,
                   date);
@@ -14733,7 +14920,7 @@ V7_PRIVATE void init_date(struct v7 *v7) {
  */
 
 
-static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   long i, num_args = v7_array_length(v7, args);
   size_t size;
   const char *s;
@@ -14772,7 +14959,8 @@ static val_t Function_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return tmp;
 }
 
-static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Function_length(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   struct v7_function *func = v7_to_function(this_obj);
   ast_off_t body, pos = func->ast_off;
   struct ast *a = func->ast;
@@ -14798,14 +14986,15 @@ static val_t Function_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(argn);
 }
 
-static val_t Function_apply(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Function_apply(struct v7 *v7, val_t this_obj,
+                                     val_t args) {
   val_t f = i_value_of(v7, this_obj);
   val_t this_arg = v7_array_get(v7, args, 0);
   val_t func_args = v7_array_get(v7, args, 1);
   return v7_apply(v7, f, this_arg, func_args);
 }
 
-V7_PRIVATE void init_function(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_function(struct v7 *v7) {
   val_t ctor = v7_create_function(v7, Function_ctor, 1);
   v7_set_property(v7, ctor, "prototype", 9, 0, v7->function_prototype);
   v7_set_property(v7, v7->global_object, "Function", 8, 0, ctor);
@@ -14823,7 +15012,8 @@ V7_PRIVATE void init_function(struct v7 *v7) {
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
-V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH V7_PRIVATE val_t
+Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   long argnum = v7_array_length(v7, args);
   if (argnum > 0) {
     val_t ro = to_string(v7, v7_array_get(v7, args, 0));
@@ -14854,7 +15044,7 @@ V7_PRIVATE val_t Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_regexp(v7, "(?:)", 4, NULL, 0);
 }
 
-static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
@@ -14864,7 +15054,8 @@ static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(flags & SLRE_FLAG_G);
 }
 
-static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj,
+                                       val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
@@ -14874,7 +15065,8 @@ static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(flags & SLRE_FLAG_I);
 }
 
-static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_multiline(struct v7 *v7, val_t this_obj,
+                                      val_t args) {
   int flags = 0;
   val_t r = i_value_of(v7, this_obj);
 
@@ -14884,7 +15076,7 @@ static val_t Regex_multiline(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(flags & SLRE_FLAG_M);
 }
 
-static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
   const char *buf = 0;
   size_t len = 0;
@@ -14896,7 +15088,8 @@ static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_string(v7, buf, len, 1);
 }
 
-static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj,
+                                          val_t args) {
   long lastIndex = 0;
 
   (void) v7;
@@ -14906,7 +15099,8 @@ static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(lastIndex);
 }
 
-static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj,
+                                          val_t args) {
   long lastIndex = 0;
 
   if (v7_is_regexp(this_obj))
@@ -14915,7 +15109,8 @@ static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(lastIndex);
 }
 
-V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
+ON_FLASH V7_PRIVATE val_t
+rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
   if (v7_is_regexp(rx)) {
     val_t s = to_string(v7, str);
     size_t len;
@@ -14951,18 +15146,18 @@ V7_PRIVATE val_t rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
   return v7_create_null();
 }
 
-static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_exec(struct v7 *v7, val_t this_obj, val_t args) {
   if (v7_array_length(v7, args) > 0) {
     return rx_exec(v7, this_obj, v7_array_get(v7, args, 0), 0);
   }
   return v7_create_null();
 }
 
-static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
+ON_FLASH static val_t Regex_test(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_boolean(!v7_is_null(Regex_exec(v7, this_obj, args)));
 }
 
-V7_PRIVATE void init_regex(struct v7 *v7) {
+ON_FLASH V7_PRIVATE void init_regex(struct v7 *v7) {
   val_t ctor =
       v7_create_cfunction_ctor(v7, v7->regexp_prototype, Regex_ctor, 1);
   val_t lastIndex = v7_create_dense_array(v7);
@@ -15007,7 +15202,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 
 #include <sys/stat.h>
 
-static void show_usage(char *argv[]) {
+ON_FLASH static void show_usage(char *argv[]) {
   fprintf(stderr, "V7 version %s (c) Cesanta Software, built on %s\n",
           V7_VERSION, __DATE__);
   fprintf(stderr, "Usage: %s [OPTIONS] js_file ...\n", argv[0]);
@@ -15018,7 +15213,7 @@ static void show_usage(char *argv[]) {
   exit(EXIT_FAILURE);
 }
 
-static char *read_file(const char *path, size_t *size) {
+ON_FLASH static char *read_file(const char *path, size_t *size) {
   FILE *fp;
   struct stat st;
   char *data = NULL;
@@ -15037,7 +15232,7 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
-static void print_error(struct v7 *v7, const char *f, val_t e) {
+ON_FLASH static void print_error(struct v7 *v7, const char *f, val_t e) {
   char buf[512];
   char *s = v7_to_json(v7, e, buf, sizeof(buf));
   fprintf(stderr, "Exec error [%s]: %s\n", f, s);
@@ -15051,7 +15246,7 @@ static void print_error(struct v7 *v7, const char *f, val_t e) {
  * `init_func()` is an optional intialization function, aimed to export any
  * extra functionality into vanilla v7 engine.
  */
-int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
+ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   struct v7 *v7 = v7_create();
   int i, show_ast = 0, binary_ast = 0;
   val_t res = v7_create_undefined();
@@ -15116,7 +15311,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
 #endif
 
 #ifdef V7_EXE
-int main(int argc, char *argv[]) {
+ON_FLASH int main(int argc, char *argv[]) {
   return v7_main(argc, argv, NULL);
 }
 #endif
