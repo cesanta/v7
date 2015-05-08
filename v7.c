@@ -2033,14 +2033,6 @@ V7_PRIVATE int calc_llen(size_t len);
 #include <assert.h>
 #include <string.h>
 
-#ifndef MBUF_REALLOC
-#define MBUF_REALLOC realloc
-#endif
-
-#ifndef MBUF_FREE
-#define MBUF_FREE free
-#endif
-
 ON_FLASH void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
   mbuf->len = mbuf->size = 0;
   mbuf->buf = NULL;
@@ -2049,7 +2041,7 @@ ON_FLASH void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
 
 ON_FLASH void mbuf_free(struct mbuf *mbuf) {
   if (mbuf->buf != NULL) {
-    MBUF_FREE(mbuf->buf);
+    free(mbuf->buf);
     mbuf_init(mbuf, 0);
   }
 }
@@ -2057,7 +2049,7 @@ ON_FLASH void mbuf_free(struct mbuf *mbuf) {
 ON_FLASH void mbuf_resize(struct mbuf *a, size_t new_size) {
   char *p;
   if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
-      (p = (char *) MBUF_REALLOC(a->buf, new_size)) != NULL) {
+      (p = (char *) realloc(a->buf, new_size)) != NULL) {
     a->size = new_size;
     a->buf = p;
   }
@@ -2067,8 +2059,7 @@ ON_FLASH void mbuf_trim(struct mbuf *mbuf) {
   mbuf_resize(mbuf, mbuf->len);
 }
 
-ON_FLASH size_t
-mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
+ON_FLASH size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   char *p = NULL;
 
 #ifndef NO_LIBC
@@ -2086,7 +2077,7 @@ mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
       memcpy(a->buf + off, buf, len);
     }
     a->len += len;
-  } else if ((p = (char *) MBUF_REALLOC(
+  } else if ((p = (char *) realloc(
                   a->buf, (a->len + len) * MBUF_SIZE_MULTIPLIER)) != NULL) {
     a->buf = p;
     memmove(a->buf + off + len, a->buf + off, a->len - off);
@@ -6062,8 +6053,16 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         return snprintf(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
       }
       {
+/*
+ * ESP8266's sprintf doesn't support double & float.
+ * TODO(alashkin): fix this
+ */
+#ifndef V7_TEMP_OFF
         const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
         return snprintf(buf, size, fmt, num);
+#else
+        return snprintf(buf, size, "%d", (int) num);
+#endif
       }
     case V7_TYPE_STRING: {
       size_t n;
@@ -7860,31 +7859,36 @@ ON_FLASH enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
   }
 }
 
-ON_FLASH static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
-                                         int level, ast_off_t pos) {
+/*
+ * On ESP8266 'levels' declaration have to be outside of 'parse_binary'
+ * in order to prevent reboot on return from this function
+ * TODO(alashkin): understand why
+ */
 #define NONE \
   { (enum v7_tok) 0, (enum v7_tok) 0, (enum ast_tag) 0 }
 
+static struct {
+  int len, left_to_right;
   struct {
-    int len, left_to_right;
-    struct {
-      enum v7_tok start_tok, end_tok;
-      enum ast_tag start_ast;
-    } parts[2];
-  } levels[] = {
-      {1, 0, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, NONE}},
-      {1, 0, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, NONE}},
-      {1, 1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, NONE}},
-      {1, 1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, NONE}},
-      {1, 1, {{TOK_OR, TOK_OR, AST_OR}, NONE}},
-      {1, 1, {{TOK_XOR, TOK_XOR, AST_XOR}, NONE}},
-      {1, 1, {{TOK_AND, TOK_AND, AST_AND}, NONE}},
-      {1, 1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, NONE}},
-      {2, 1, {{TOK_LE, TOK_GT, AST_LE}, {TOK_IN, TOK_INSTANCEOF, AST_IN}}},
-      {1, 1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, NONE}},
-      {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, NONE}},
-      {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, NONE}}};
+    enum v7_tok start_tok, end_tok;
+    enum ast_tag start_ast;
+  } parts[2];
+} levels[] = {
+    {1, 0, {{TOK_ASSIGN, TOK_URSHIFT_ASSIGN, AST_ASSIGN}, NONE}},
+    {1, 0, {{TOK_QUESTION, TOK_QUESTION, AST_COND}, NONE}},
+    {1, 1, {{TOK_LOGICAL_OR, TOK_LOGICAL_OR, AST_LOGICAL_OR}, NONE}},
+    {1, 1, {{TOK_LOGICAL_AND, TOK_LOGICAL_AND, AST_LOGICAL_AND}, NONE}},
+    {1, 1, {{TOK_OR, TOK_OR, AST_OR}, NONE}},
+    {1, 1, {{TOK_XOR, TOK_XOR, AST_XOR}, NONE}},
+    {1, 1, {{TOK_AND, TOK_AND, AST_AND}, NONE}},
+    {1, 1, {{TOK_EQ, TOK_NE_NE, AST_EQ}, NONE}},
+    {2, 1, {{TOK_LE, TOK_GT, AST_LE}, {TOK_IN, TOK_INSTANCEOF, AST_IN}}},
+    {1, 1, {{TOK_LSHIFT, TOK_URSHIFT, AST_LSHIFT}, NONE}},
+    {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, NONE}},
+    {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, NONE}}};
 
+ON_FLASH static enum v7_err parse_binary(struct v7 *v7, struct ast *a,
+                                         int level, ast_off_t pos) {
   int i;
   enum v7_tok tok;
   enum ast_tag ast;
