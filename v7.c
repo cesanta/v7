@@ -2033,6 +2033,14 @@ V7_PRIVATE int calc_llen(size_t len);
 #include <assert.h>
 #include <string.h>
 
+#ifndef MBUF_REALLOC
+#define MBUF_REALLOC realloc
+#endif
+
+#ifndef MBUF_FREE
+#define MBUF_FREE free
+#endif
+
 ON_FLASH void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
   mbuf->len = mbuf->size = 0;
   mbuf->buf = NULL;
@@ -2041,7 +2049,7 @@ ON_FLASH void mbuf_init(struct mbuf *mbuf, size_t initial_size) {
 
 ON_FLASH void mbuf_free(struct mbuf *mbuf) {
   if (mbuf->buf != NULL) {
-    free(mbuf->buf);
+    MBUF_FREE(mbuf->buf);
     mbuf_init(mbuf, 0);
   }
 }
@@ -2049,7 +2057,7 @@ ON_FLASH void mbuf_free(struct mbuf *mbuf) {
 ON_FLASH void mbuf_resize(struct mbuf *a, size_t new_size) {
   char *p;
   if ((new_size > a->size || (new_size < a->size && new_size >= a->len)) &&
-      (p = (char *) realloc(a->buf, new_size)) != NULL) {
+      (p = (char *) MBUF_REALLOC(a->buf, new_size)) != NULL) {
     a->size = new_size;
     a->buf = p;
   }
@@ -2059,7 +2067,8 @@ ON_FLASH void mbuf_trim(struct mbuf *mbuf) {
   mbuf_resize(mbuf, mbuf->len);
 }
 
-ON_FLASH size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
+ON_FLASH size_t
+mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
   char *p = NULL;
 
 #ifndef NO_LIBC
@@ -2077,7 +2086,7 @@ ON_FLASH size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t 
       memcpy(a->buf + off, buf, len);
     }
     a->len += len;
-  } else if ((p = (char *) realloc(
+  } else if ((p = (char *) MBUF_REALLOC(
                   a->buf, (a->len + len) * MBUF_SIZE_MULTIPLIER)) != NULL) {
     a->buf = p;
     memmove(a->buf + off + len, a->buf + off, a->len - off);
