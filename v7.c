@@ -1560,6 +1560,8 @@ struct v7 {
   struct v7_property *cur_dense_prop;
 };
 
+enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
@@ -8440,8 +8442,6 @@ static enum ast_tag assign_op_map[] = {
 
 enum i_break { B_RUN, B_RETURN, B_BREAK, B_CONTINUE };
 
-enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
-
 static val_t i_eval_stmts(struct v7 *, struct ast *, ast_off_t *, ast_off_t,
                           val_t, enum i_break *);
 static val_t i_eval_expr(struct v7 *, struct ast *, ast_off_t *, val_t);
@@ -10155,6 +10155,9 @@ Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
       p[0] = p[strlen(p) - 1] = ' ';
     }
     if (v7_exec(v7, &res, p) != V7_OK) {
+      if (p != buf) {
+        free(p);
+      }
       throw_value(v7, res);
     }
     if (p != buf) {
@@ -12685,10 +12688,22 @@ ON_FLASH static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
                              int (*sorting_func)(void *, const void *,
                                                  const void *)) {
   int i = 0, len = v7_array_length(v7, obj);
-  val_t *arr = (val_t *) malloc(len * sizeof(arr[0]));
+  val_t *arr;
   val_t arg0 = v7_array_get(v7, args, 0);
+  jmp_buf saved_jmp_buf;
+  volatile enum jmp_type j;
 
   if (!v7_is_object(obj)) return obj;
+
+  /* TODO(mkm): guard against exceptions thrown by custom comparators */
+  arr = (val_t *) malloc(len * sizeof(arr[0]));
+
+  memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
+  if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) != 0) {
+    memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
+    free(arr);
+    siglongjmp(v7->jmp_buf, j);
+  }
 
 #ifndef NO_LIBC
   assert(obj != v7->global_object);
@@ -12709,8 +12724,8 @@ ON_FLASH static val_t a_sort(struct v7 *v7, val_t obj, val_t args,
     v7_array_set(v7, obj, i, arr[len - (i + 1)]);
   }
 
+  memcpy(&v7->jmp_buf, &saved_jmp_buf, sizeof(saved_jmp_buf));
   free(arr);
-
   return obj;
 }
 
