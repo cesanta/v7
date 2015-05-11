@@ -6102,7 +6102,8 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
         return snprintf(buf, size, fmt, num);
 #else
-        return snprintf(buf, size, "%d", (int) num);
+        const int prec = num > 1e10 ? 21 : 10;
+        return double_to_str(buf, num, prec);
 #endif
       }
     case V7_TYPE_STRING: {
