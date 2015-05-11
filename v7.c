@@ -3959,7 +3959,8 @@ ON_FLASH void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
 static v7_val_t s_file_ctor;
 static const char s_fd_prop[] = "__fd";
 
-ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj,
+                                   v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t res = v7_create_undefined();
 
@@ -3973,7 +3974,8 @@ ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj, v7_val_t ar
   return res;
 }
 
-ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
+ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
+                                int all) {
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   (void) a;
   if (v7_is_foreign(arg0)) {
@@ -4005,15 +4007,18 @@ ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a, in
   return v7_create_string(v7, "", 0, 1);
 }
 
-ON_FLASH static v7_val_t File_readAll(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_readAll(struct v7 *v7, v7_val_t this_obj,
+                                      v7_val_t args) {
   return f_read(v7, this_obj, args, 1);
 }
 
-ON_FLASH static v7_val_t File_read(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_read(struct v7 *v7, v7_val_t this_obj,
+                                   v7_val_t args) {
   return f_read(v7, this_obj, args, 0);
 }
 
-ON_FLASH static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj,
+                                    v7_val_t args) {
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   v7_val_t arg1 = v7_array_get(v7, args, 0);
   size_t n, sent = 0, len = 0;
@@ -4029,7 +4034,8 @@ ON_FLASH static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj, v7_val_t a
   return v7_create_number(sent);
 }
 
-ON_FLASH static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj,
+                                    v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   int res = -1;
   (void) args;
@@ -4039,7 +4045,8 @@ ON_FLASH static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj, v7_val_t a
   return v7_create_number(res);
 }
 
-ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj,
+                                   v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   FILE *fp = NULL;
@@ -4048,7 +4055,7 @@ ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t ar
   if (v7_is_string(arg0)) {
     size_t n1, n2;
     const char *s1 = v7_to_string(v7, &arg0, &n1);
-    const char *s2 = "rb";  /* Open files in read mode by default */
+    const char *s2 = "rb"; /* Open files in read mode by default */
     if (v7_is_string(arg1)) {
       s2 = v7_to_string(v7, &arg1, &n2);
     }
@@ -4065,7 +4072,8 @@ ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj, v7_val_t ar
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj,
+                                     v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   int res = -1;
@@ -4081,7 +4089,8 @@ ON_FLASH static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj, v7_val_t 
   return v7_create_number(res == 0 ? 0 : errno);
 }
 
-ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj,
+                                     v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   int res = -1;
   (void) this_obj;
@@ -4136,7 +4145,7 @@ ON_FLASH static uint32_t s_resolve(struct v7 *v7, v7_val_t ip_address) {
   size_t n;
   const char *s = v7_to_string(v7, &ip_address, &n);
   struct hostent *he = gethostbyname(s);
-  return he == NULL ? 0 : * (uint32_t *) he->h_addr_list[0];
+  return he == NULL ? 0 : *(uint32_t *) he->h_addr_list[0];
 }
 
 ON_FLASH static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
@@ -4148,7 +4157,8 @@ ON_FLASH static v7_val_t s_fd_to_sock_obj(struct v7 *v7, sock_t fd) {
 }
 
 /* Socket.connect(host, port [, is_udp]) -> socket_object */
-ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t,
+                                        v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   v7_val_t arg2 = v7_array_get(v7, args, 2);
@@ -4156,8 +4166,8 @@ ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args
   (void) t;
   if (v7_is_double(arg1) && v7_is_string(arg0)) {
     struct sockaddr_in sin;
-    sock_t sock = socket(AF_INET,
-                         v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
+    sock_t sock =
+        socket(AF_INET, v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = s_resolve(v7, arg0);
@@ -4173,7 +4183,8 @@ ON_FLASH static v7_val_t Socket_connect(struct v7 *v7, v7_val_t t, v7_val_t args
 }
 
 /* Socket.listen(port [, ip_address [,is_udp]]) -> sock */
-ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj,
+                                       v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
   v7_val_t arg2 = v7_array_get(v7, args, 2);
@@ -4182,8 +4193,8 @@ ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_
   if (v7_is_double(arg0)) {
     struct sockaddr_in sin;
     int on = 1;
-    sock_t sock = socket(AF_INET,
-                         v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
+    sock_t sock =
+        socket(AF_INET, v7_is_true(v7, arg2) ? SOCK_DGRAM : SOCK_STREAM, 0);
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = htons((uint16_t) v7_to_double(arg0));
@@ -4220,7 +4231,8 @@ ON_FLASH static v7_val_t Socket_listen(struct v7 *v7, v7_val_t this_obj, v7_val_
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj,
+                                       v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
   if (v7_is_double(prop)) {
@@ -4236,14 +4248,16 @@ ON_FLASH static v7_val_t Socket_accept(struct v7 *v7, v7_val_t this_obj, v7_val_
 }
 
 /* sock.close() -> errno */
-ON_FLASH static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_close(struct v7 *v7, v7_val_t this_obj,
+                                      v7_val_t args) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) args;
   return v7_create_number(closesocket((sock_t) v7_to_double(prop)));
 }
 
 /* sock.recv() -> string */
-ON_FLASH static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a, int all) {
+ON_FLASH static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
+                                int all) {
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   (void) a;
   if (v7_is_double(prop)) {
@@ -4276,7 +4290,8 @@ ON_FLASH static v7_val_t s_recv(struct v7 *v7, v7_val_t this_obj, v7_val_t a, in
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Socket_recvAll(struct v7 *v7, v7_val_t t, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_recvAll(struct v7 *v7, v7_val_t t,
+                                        v7_val_t args) {
   return s_recv(v7, t, args, 1);
 }
 
@@ -4284,7 +4299,8 @@ ON_FLASH static v7_val_t Socket_recv(struct v7 *v7, v7_val_t t, v7_val_t args) {
   return s_recv(v7, t, args, 0);
 }
 
-ON_FLASH static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj,
+                                     v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t prop = v7_get(v7, this_obj, s_sock_prop, sizeof(s_sock_prop) - 1);
   size_t len, sent = 0;
@@ -4345,8 +4361,9 @@ ON_FLASH void init_socket(struct v7 *v7) {
 
 typedef void (*b64_func_t)(const unsigned char *, int, char *);
 
-ON_FLASH static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_t args,
-                              b64_func_t func, double mult) {
+ON_FLASH static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj,
+                                       v7_val_t args, b64_func_t func,
+                                       double mult) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t res = v7_create_undefined();
 
@@ -4354,7 +4371,7 @@ ON_FLASH static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_
   if (v7_is_string(arg0)) {
     size_t n;
     const char *s = v7_to_string(v7, &arg0, &n);
-    char *buf = (char *) malloc(n * mult + 2);
+    char *buf = (char *) malloc(n * mult + 4);
     if (buf != NULL) {
       func((const unsigned char *) s, (int) n, buf);
       res = v7_create_string(v7, buf, strlen(buf), 1);
@@ -4366,12 +4383,12 @@ ON_FLASH static v7_val_t b64_transform(struct v7 *v7, v7_val_t this_obj, v7_val_
 }
 
 ON_FLASH static v7_val_t Crypto_base64_decode(struct v7 *v7, v7_val_t this_obj,
-                                  v7_val_t args) {
+                                              v7_val_t args) {
   return b64_transform(v7, this_obj, args, (b64_func_t) base64_decode, 0.75);
 }
 
 ON_FLASH static v7_val_t Crypto_base64_encode(struct v7 *v7, v7_val_t this_obj,
-                                  v7_val_t args) {
+                                              v7_val_t args) {
   return b64_transform(v7, this_obj, args, base64_encode, 1.5);
 }
 
@@ -4398,7 +4415,8 @@ ON_FLASH static void bin2str(char *to, const unsigned char *p, size_t len) {
   }
 }
 
-ON_FLASH static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj,
+                                    v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -4413,7 +4431,7 @@ ON_FLASH static v7_val_t Crypto_md5(struct v7 *v7, v7_val_t this_obj, v7_val_t a
 }
 
 ON_FLASH static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
-                               v7_val_t args) {
+                                        v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -4428,7 +4446,8 @@ ON_FLASH static v7_val_t Crypto_md5_hex(struct v7 *v7, v7_val_t this_obj,
   return v7_create_null();
 }
 
-ON_FLASH static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+ON_FLASH static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj,
+                                     v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
@@ -4443,7 +4462,7 @@ ON_FLASH static v7_val_t Crypto_sha1(struct v7 *v7, v7_val_t this_obj, v7_val_t 
 }
 
 ON_FLASH static v7_val_t Crypto_sha1_hex(struct v7 *v7, v7_val_t this_obj,
-                                v7_val_t args) {
+                                         v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
 
   (void) this_obj;
