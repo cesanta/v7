@@ -176,7 +176,7 @@ int v7_is_null(v7_val_t);
 int v7_is_undefined(v7_val_t);
 
 /* Return true if given value is a JavaScript RegExp object*/
-int v7_is_regexp(v7_val_t);
+int v7_is_regexp(struct v7 *, v7_val_t);
 
 /* Return true if given value holds C callback */
 int v7_is_cfunction(v7_val_t);

@@ -176,7 +176,7 @@ int v7_is_null(v7_val_t);
 int v7_is_undefined(v7_val_t);
 
 /* Return true if given value is a JavaScript RegExp object*/
-int v7_is_regexp(v7_val_t);
+int v7_is_regexp(struct v7 *, v7_val_t);
 
 /* Return true if given value holds C callback */
 int v7_is_cfunction(v7_val_t);
@@ -1756,7 +1756,7 @@ enum v7_type val_type(struct v7 *v7, val_t);
 int v7_is_error(struct v7 *v7, val_t);
 V7_PRIVATE val_t v7_pointer_to_value(void *);
 
-V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t);
+V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, val_t);
 val_t v7_object_to_value(struct v7_object *);
 val_t v7_function_to_value(struct v7_function *);
 
@@ -5805,16 +5805,24 @@ ON_FLASH int v7_is_boolean(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_BOOLEAN;
 }
 
-ON_FLASH int v7_is_regexp(val_t v) {
-  return (v & V7_TAG_MASK) == V7_TAG_REGEXP;
+ON_FLASH int v7_is_regexp(struct v7 *v7, val_t v) {
+  struct v7_property *p;
+  if (!v7_is_object(v)) return 0;
+  p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+  if (p == NULL) return 0;
+  return (p->value & V7_TAG_MASK) == V7_TAG_REGEXP;
 }
 
 ON_FLASH int v7_is_foreign(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FOREIGN;
 }
 
-ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(val_t v) {
-  return (struct v7_regexp *) v7_to_pointer(v);
+ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
+  struct v7_property *p;
+  assert(v7_is_regexp(v7, v));
+  p = v7_get_own_property2(v7, v, "", 0, V7_PROPERTY_HIDDEN);
+  assert(p != NULL);
+  return (struct v7_regexp *) v7_to_pointer(p->value);
 }
 
 ON_FLASH int v7_is_null(val_t v) {
@@ -5983,12 +5991,15 @@ ON_FLASH v7_val_t v7_create_regexp(struct v7 *v7, const char *re, size_t re_len,
     throw_exception(v7, TYPE_ERROR, "Invalid regex");
     return V7_UNDEFINED;
   } else {
+    val_t obj = create_object(v7, v7->regexp_prototype);
     rp = (struct v7_regexp *) malloc(sizeof(*rp));
     rp->regexp_string = v7_create_string(v7, re, re_len, 1);
     rp->compiled_regexp = p;
     rp->lastIndex = 0;
 
-    return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
+    v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN,
+                    v7_pointer_to_value(rp) | V7_TAG_REGEXP);
+    return obj;
   }
 }
 #endif /* V7_ENABLE__RegExp */
@@ -6375,8 +6386,6 @@ v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   val_t v = obj;
   if (v7_is_string(obj)) {
     v = v7->string_prototype;
-  } else if (v7_is_regexp(obj)) {
-    v = v7->regexp_prototype;
   } else if (v7_is_double(obj)) {
     v = v7->number_prototype;
   } else if (v7_is_boolean(obj)) {
@@ -7051,9 +7060,19 @@ ON_FLASH static void object_destructor(struct v7 *v7, void *ptr) {
   struct v7_object *o = (struct v7_object *) ptr;
   struct v7_property *p;
   struct mbuf *abuf;
+
+  p = v7_get_own_property2(v7, v7_object_to_value(o), "", 0,
+                           V7_PROPERTY_HIDDEN);
+
+#if V7_ENABLE__RegExp
+  if (p != NULL && (p->value & V7_TAG_MASK) == V7_TAG_REGEXP) {
+    struct v7_regexp *rp = (struct v7_regexp *) v7_to_foreign(p->value);
+    slre_free(rp->compiled_regexp);
+    free(rp);
+  }
+#endif
+
   if (o->attributes & V7_OBJ_DENSE_ARRAY) {
-    p = v7_get_own_property2(v7, v7_object_to_value(o), "", 0,
-                             V7_PROPERTY_HIDDEN);
     if (p != NULL &&
         ((abuf = (struct mbuf *) v7_to_foreign(p->value)) != NULL)) {
       mbuf_free(abuf);
@@ -12262,6 +12281,8 @@ Obj_valueOf(struct v7 *v7, val_t this_obj, val_t args) {
   val_t res = this_obj;
   struct v7_property *p;
 
+  if (v7_is_regexp(v7, this_obj)) return this_obj;
+
   (void) args;
   p = v7_get_own_property2(v7, this_obj, "", 0, V7_PROPERTY_HIDDEN);
   if (p != NULL) {
@@ -13466,13 +13487,13 @@ ON_FLASH static val_t Str_match(struct v7 *v7, val_t this_obj, val_t args) {
     ro = v7_create_regexp(v7, "", 0, "", 0);
   else
     ro = i_value_of(v7, v7_array_get(v7, args, 0));
-  if (!v7_is_regexp(ro)) {
+  if (!v7_is_regexp(v7, ro)) {
     val_t arg = v7_create_dense_array(v7);
     v7_array_push(v7, arg, ro);
     ro = Regex_ctor(v7, v7_create_null(), arg);
   }
 
-  rxp = v7_to_regexp(ro);
+  rxp = v7_to_regexp(v7, ro);
   flag_g = slre_get_flags(rxp->compiled_regexp) & SLRE_FLAG_G;
   if (!flag_g) return rx_exec(v7, ro, so, 0);
 
@@ -13517,12 +13538,12 @@ ON_FLASH static val_t Str_replace(struct v7 *v7, val_t this_obj, val_t args) {
     struct slre_loot loot;
     int flag_g;
 
-    if (!v7_is_regexp(ro)) {
+    if (!v7_is_regexp(v7, ro)) {
       val_t arg = v7_create_dense_array(v7);
       v7_array_push(v7, arg, ro);
       ro = Regex_ctor(v7, v7_create_null(), arg);
     }
-    prog = v7_to_regexp(ro)->compiled_regexp;
+    prog = v7_to_regexp(v7, ro)->compiled_regexp;
     flag_g = slre_get_flags(prog) & SLRE_FLAG_G;
 
     if (!v7_is_function(str_func)) str_func = to_string(v7, str_func);
@@ -13606,7 +13627,7 @@ ON_FLASH static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
     struct slre_loot sub;
     val_t so, ro = i_value_of(v7, v7_array_get(v7, args, 0));
     const char *s;
-    if (!v7_is_regexp(ro)) {
+    if (!v7_is_regexp(v7, ro)) {
       val_t arg = v7_create_dense_array(v7);
       v7_array_push(v7, arg, ro);
       ro = Regex_ctor(v7, v7_create_null(), arg);
@@ -13615,7 +13636,8 @@ ON_FLASH static val_t Str_search(struct v7 *v7, val_t this_obj, val_t args) {
     so = to_string(v7, this_obj);
     s = v7_to_string(v7, &so, &s_len);
 
-    if (!slre_exec(v7_to_regexp(ro)->compiled_regexp, 0, s, s + s_len, &sub))
+    if (!slre_exec(v7_to_regexp(v7, ro)->compiled_regexp, 0, s, s + s_len,
+                   &sub))
       utf_shift =
           utfnlen((char *) s, sub.caps[0].start - s); /* calc shift for UTF-8 */
   } else
@@ -13830,12 +13852,12 @@ ON_FLASH static val_t Str_split(struct v7 *v7, val_t this_obj, val_t args) {
     long len, elem = 0, limit = arg_long(v7, args, 1, LONG_MAX);
     size_t shift = 0;
     struct slre_loot loot;
-    if (!v7_is_regexp(ro)) {
+    if (!v7_is_regexp(v7, ro)) {
       val_t arg = v7_create_dense_array(v7);
       v7_array_push(v7, arg, ro);
       ro = Regex_ctor(v7, v7_create_null(), arg);
     }
-    prog = v7_to_regexp(ro)->compiled_regexp;
+    prog = v7_to_regexp(v7, ro)->compiled_regexp;
 
     for (; elem < limit && shift < s_len; elem++) {
       val_t tmp_s;
@@ -15060,8 +15082,6 @@ Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
     val_t ro = to_string(v7, v7_array_get(v7, args, 0));
     size_t re_len, flags_len = 0;
     const char *re, *flags = NULL;
-    struct slre_prog *p = NULL;
-    struct v7_regexp *rp;
 
     (void) this_obj;
     if (argnum > 1) {
@@ -15069,18 +15089,7 @@ Regex_ctor(struct v7 *v7, val_t this_obj, val_t args) {
       flags = v7_to_string(v7, &fl, &flags_len);
     }
     re = v7_to_string(v7, &ro, &re_len);
-    if (slre_compile(re, re_len, flags, flags_len, &p, 1) != SLRE_OK ||
-        p == NULL) {
-      throw_exception(v7, TYPE_ERROR, "Invalid regex");
-      return v7_create_undefined();
-    } else {
-      rp = (struct v7_regexp *) malloc(sizeof(*rp));
-      rp->regexp_string = v7_create_string(v7, re, re_len, 1);
-      rp->compiled_regexp = p;
-      rp->lastIndex = 0;
-
-      return v7_pointer_to_value(rp) | V7_TAG_REGEXP;
-    }
+    return v7_create_regexp(v7, re, re_len, flags, flags_len);
   }
   return v7_create_regexp(v7, "(?:)", 4, NULL, 0);
 }
@@ -15090,7 +15099,8 @@ ON_FLASH static val_t Regex_global(struct v7 *v7, val_t this_obj, val_t args) {
   val_t r = i_value_of(v7, this_obj);
 
   (void) args;
-  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(v7, r))
+    flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_G);
 }
@@ -15101,7 +15111,8 @@ ON_FLASH static val_t Regex_ignoreCase(struct v7 *v7, val_t this_obj,
   val_t r = i_value_of(v7, this_obj);
 
   (void) args;
-  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(v7, r))
+    flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_I);
 }
@@ -15112,7 +15123,8 @@ ON_FLASH static val_t Regex_multiline(struct v7 *v7, val_t this_obj,
   val_t r = i_value_of(v7, this_obj);
 
   (void) args;
-  if (v7_is_regexp(r)) flags = slre_get_flags(v7_to_regexp(r)->compiled_regexp);
+  if (v7_is_regexp(v7, r))
+    flags = slre_get_flags(v7_to_regexp(v7, r)->compiled_regexp);
 
   return v7_create_boolean(flags & SLRE_FLAG_M);
 }
@@ -15123,8 +15135,8 @@ ON_FLASH static val_t Regex_source(struct v7 *v7, val_t this_obj, val_t args) {
   size_t len = 0;
 
   (void) args;
-  if (v7_is_regexp(r))
-    buf = v7_to_string(v7, &v7_to_regexp(r)->regexp_string, &len);
+  if (v7_is_regexp(v7, r))
+    buf = v7_to_string(v7, &v7_to_regexp(v7, r)->regexp_string, &len);
 
   return v7_create_string(v7, buf, len, 1);
 }
@@ -15135,7 +15147,8 @@ ON_FLASH static val_t Regex_get_lastIndex(struct v7 *v7, val_t this_obj,
 
   (void) v7;
   (void) args;
-  if (v7_is_regexp(this_obj)) lastIndex = v7_to_regexp(this_obj)->lastIndex;
+  if (v7_is_regexp(v7, this_obj))
+    lastIndex = v7_to_regexp(v7, this_obj)->lastIndex;
 
   return v7_create_number(lastIndex);
 }
@@ -15144,15 +15157,16 @@ ON_FLASH static val_t Regex_set_lastIndex(struct v7 *v7, val_t this_obj,
                                           val_t args) {
   long lastIndex = 0;
 
-  if (v7_is_regexp(this_obj))
-    v7_to_regexp(this_obj)->lastIndex = lastIndex = arg_long(v7, args, 0, 0);
+  if (v7_is_regexp(v7, this_obj))
+    v7_to_regexp(v7, this_obj)->lastIndex = lastIndex =
+        arg_long(v7, args, 0, 0);
 
   return v7_create_number(lastIndex);
 }
 
 ON_FLASH V7_PRIVATE val_t
 rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
-  if (v7_is_regexp(rx)) {
+  if (v7_is_regexp(v7, rx)) {
     val_t s = to_string(v7, str);
     size_t len;
     struct slre_loot sub;
@@ -15160,7 +15174,7 @@ rx_exec(struct v7 *v7, val_t rx, val_t str, int lind) {
     char *const str = (char *) v7_to_string(v7, &s, &len);
     const char *const end = str + len;
     const char *begin = str;
-    struct v7_regexp *rp = v7_to_regexp(rx);
+    struct v7_regexp *rp = v7_to_regexp(v7, rx);
     int flag_g = slre_get_flags(rp->compiled_regexp) & SLRE_FLAG_G;
     if (rp->lastIndex < 0) rp->lastIndex = 0;
     if (flag_g || lind) begin = utfnshift(str, rp->lastIndex);
