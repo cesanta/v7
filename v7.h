@@ -68,6 +68,13 @@ typedef v7_val_t (*v7_cfunction_t)(struct v7 *, v7_val_t, v7_val_t);
 /* Create V7 instance */
 struct v7 *v7_create(void);
 
+struct v7_create_opts {
+  size_t object_arena_size;
+  size_t function_arena_size;
+  size_t property_arena_size;
+};
+struct v7 *v7_create_opt(struct v7_create_opts);
+
 /* Destroy V7 instance */
 void v7_destroy(struct v7 *);
 
