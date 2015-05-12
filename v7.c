@@ -1340,10 +1340,6 @@ struct gc_arena {
 #define ON_FLASH
 #endif
 
-#ifndef ENDL
-#define ENDL "\n"
-#endif
-
 /*
  * In some compilers (watcom) NAN == NAN (and other comparisons) don't follow
  * the rules of IEEE 754. Since we don't know a priori which compilers
@@ -10186,6 +10182,7 @@ ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
  */
 
 
+#ifndef NO_LIBC
 ON_FLASH V7_PRIVATE v7_val_t
 Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char *p, buf[1024];
@@ -10206,10 +10203,11 @@ Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
       }
     }
   }
-  printf(ENDL);
+  putchar('\n');
 
   return v7_create_null();
 }
+#endif
 
 ON_FLASH V7_PRIVATE v7_val_t
 Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
@@ -10349,8 +10347,8 @@ ON_FLASH V7_PRIVATE void init_stdlib(struct v7 *v7) {
   v7->function_prototype = v7_create_object(v7);
 
   set_method(v7, v7->global_object, "eval", Std_eval, 1);
-  set_method(v7, v7->global_object, "print", Std_print, 1);
 #ifndef NO_LIBC
+  set_method(v7, v7->global_object, "print", Std_print, 1);
   set_method(v7, v7->global_object, "exit", Std_exit, 1);
 #endif
   set_method(v7, v7->global_object, "parseInt", Std_parseInt, 2);
