@@ -1585,6 +1585,9 @@ struct v7 {
   int after_newline;       /* True if the cur_tok starts a new line */
   double cur_tok_dbl;      /* When tokenizing, parser stores TOK_NUMBER here */
 
+  /* TODO(mkm): remove when AST are GC-ed */
+  struct mbuf allocated_asts;
+
   val_t predefined_strings[PREDEFINED_STR_MAX];
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
@@ -7115,18 +7118,6 @@ ON_FLASH static void object_destructor(struct v7 *v7, void *ptr) {
   }
 }
 
-ON_FLASH static void function_destructor(struct v7 *v7, void *ptr) {
-  struct v7_function *f = (struct v7_function *) ptr;
-  (void) v7;
-  if (f == NULL || f->ast == NULL) return;
-
-  if (f->ast->refcnt != 0) f->ast->refcnt--;
-  if (f->ast->refcnt == 0) {
-    ast_free(f->ast);
-    free(f->ast);
-  }
-}
-
 ON_FLASH struct v7 *v7_create(void) {
   struct v7_create_opts opts;
   memset(&opts, 0, sizeof(opts));
@@ -7162,7 +7153,6 @@ ON_FLASH struct v7 *v7_create_opt(struct v7_create_opts opts) {
     v7->object_arena.destructor = object_destructor;
     gc_arena_init(v7, &v7->function_arena, sizeof(struct v7_function),
                   opts.function_arena_size, "function");
-    v7->function_arena.destructor = function_destructor;
     gc_arena_init(v7, &v7->property_arena, sizeof(struct v7_property),
                   opts.property_arena_size, "property");
 
@@ -7194,14 +7184,21 @@ ON_FLASH val_t v7_get_global_object(struct v7 *v7) {
 }
 
 ON_FLASH void v7_destroy(struct v7 *v7) {
-#if 0
   struct ast **a;
-#endif
   if (v7 != NULL) {
     mbuf_free(&v7->owned_strings);
     mbuf_free(&v7->foreign_strings);
     mbuf_free(&v7->json_visited_stack);
     mbuf_free(&v7->tmp_stack);
+
+    for (a = (struct ast **) v7->allocated_asts.buf;
+         (char *) a < v7->allocated_asts.buf + v7->allocated_asts.len; a++) {
+      if (*a != NULL) {
+        ast_free(*a);
+        free(*a);
+      }
+    }
+    mbuf_free(&v7->allocated_asts);
 
     gc_arena_destroy(v7, &v7->object_arena);
     gc_arena_destroy(v7, &v7->function_arena);
@@ -10115,13 +10112,14 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
   size_t saved_tmp_stack_pos = v7->tmp_stack.len;
   enum v7_err err = V7_OK;
   val_t r = v7_create_undefined();
+  size_t allocated_asts_pos = v7->allocated_asts.len;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
   memcpy(&saved_label_buf, &v7->label_jmp_buf, sizeof(saved_label_buf));
 
   ast_init(a, 0);
-  a->refcnt = 1;
+  mbuf_append(&v7->allocated_asts, (char *) &a, sizeof(a));
   if (sigsetjmp(v7->jmp_buf, 0) != 0) {
     v7->tmp_stack.len = saved_tmp_stack_pos;
     r = v7->thrown_error;
@@ -10139,10 +10137,10 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
   r = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
-  if (a->refcnt != 0) a->refcnt--;
   if (a->refcnt == 0) {
     ast_free(a);
     free(a);
+    memset(&v7->allocated_asts.buf[allocated_asts_pos], 0, sizeof(a));
   }
 
   if (res != NULL) {
