@@ -1194,6 +1194,7 @@ enum ast_tag {
 
 struct ast {
   struct mbuf mbuf;
+  int refcnt;
 };
 
 typedef unsigned long ast_off_t;
@@ -5713,6 +5714,7 @@ ON_FLASH static void ast_dump_tree(FILE *fp, struct ast *a, ast_off_t *pos,
 
 ON_FLASH V7_PRIVATE void ast_init(struct ast *ast, size_t len) {
   mbuf_init(&ast->mbuf, len);
+  ast->refcnt = 0;
 }
 
 ON_FLASH V7_PRIVATE void ast_optimize(struct ast *ast) {
@@ -7191,8 +7193,10 @@ ON_FLASH void v7_destroy(struct v7 *v7) {
 
     for (a = (struct ast **) v7->allocated_asts.buf;
          (char *) a < v7->allocated_asts.buf + v7->allocated_asts.len; a++) {
-      ast_free(*a);
-      free(*a);
+      if (*a != NULL) {
+        ast_free(*a);
+        free(*a);
+      }
     }
     mbuf_free(&v7->allocated_asts);
 
@@ -9139,6 +9143,7 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
       tmp_stack_push(&tf, &res);
       funcp->scope = v7_to_object(scope);
       funcp->ast = a;
+      funcp->ast->refcnt++;
       funcp->ast_off = *pos - 1;
       ast_move_to_children(a, pos);
       tag = ast_fetch_tag(a, pos);
@@ -10107,6 +10112,7 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
   size_t saved_tmp_stack_pos = v7->tmp_stack.len;
   enum v7_err err = V7_OK;
   val_t r = v7_create_undefined();
+  size_t allocated_asts_pos = v7->allocated_asts.len;
 
   /* Make v7_exec() reentrant: save exception environments */
   memcpy(&saved_jmp_buf, &v7->jmp_buf, sizeof(saved_jmp_buf));
@@ -10131,6 +10137,12 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
   r = i_eval_stmt(v7, a, &pos, v7->global_object, &brk);
 
 cleanup:
+  if (a->refcnt == 0) {
+    ast_free(a);
+    free(a);
+    memset(&v7->allocated_asts.buf[allocated_asts_pos], 0, sizeof(a));
+  }
+
   if (res != NULL) {
     *res = r;
   }
@@ -14036,6 +14048,7 @@ ON_FLASH V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "substr", Str_substr);
   set_cfunc_prop(v7, v7->string_prototype, "substring", Str_substring);
   set_cfunc_prop(v7, v7->string_prototype, "valueOf", Str_valueOf);
+  set_cfunc_prop(v7, v7->string_prototype, "lastIndexOf", Str_lastIndexOf);
 #if V7_ENABLE__String__localeCompare
   set_cfunc_prop(v7, v7->string_prototype, "localeCompare", Str_localeCompare);
 #endif
