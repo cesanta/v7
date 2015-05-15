@@ -1551,6 +1551,7 @@ struct v7 {
   struct mbuf foreign_strings; /* Sequence of (varint len, char *data) */
 
   struct mbuf tmp_stack; /* Stack of val_t* elements, used as root set */
+  int need_gc;           /* Set to true to trigger GC when safe */
 
   struct gc_arena object_arena;
   struct gc_arena function_arena;
@@ -6905,6 +6906,11 @@ v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
     memcpy(s, p, len);
     tag = V7_TAG_STRING_5;
   } else if (own) {
+#ifdef V7_ENABLE_COMPACTING_GC
+    if ((double) m->len / (double) m->size > 0.9) {
+      v7->need_gc = 1;
+    }
+#endif
     embed_string(m, m->len, p, len, 1, 0);
     tag = V7_TAG_STRING_O;
   } else {
@@ -9604,6 +9610,13 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   int saved_strict_mode = v7->strict_mode;
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &res);
+
+#ifdef V7_ENABLE_GC
+  if (v7->need_gc) {
+    v7_gc(v7);
+    v7->need_gc = 0;
+  }
+#endif
 
   switch (tag) {
     case AST_SCRIPT:
