@@ -293,6 +293,9 @@ v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
 /* Set object's prototype. Return old prototype or undefined on error. */
 v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
 
+/* Returns last parser error message. */
+const char *v7_get_parser_error(struct v7 *v7);
+
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 
 #ifdef __cplusplus
