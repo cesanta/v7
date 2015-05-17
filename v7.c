@@ -6443,15 +6443,16 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (ast_fetch_tag(a, &pos) == AST_IDENT) {
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
-        b +=
-            c_snprintf(b, BUF_LEFT(size, b - buf), " %.*s", (int) name_len, name);
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), " %.*s", (int) name_len,
+                        name);
       }
       b += c_snprintf(b, BUF_LEFT(size, b - buf), "(");
       while (pos < body) {
         V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_IDENT);
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
-        b += c_snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len, name);
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len,
+                        name);
         if (pos < body) {
           b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
@@ -6477,7 +6478,7 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
             ast_skip_tree(a, &var);
 
             b += c_snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len,
-                          name);
+                            name);
             if (var < var_end || next) {
               b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
             }
@@ -8703,7 +8704,7 @@ ON_FLASH V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a,
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
                "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
-               col, (int)(col + v7->tok_len), v7->tok - col);
+               col, (int) (col + v7->tok_len), v7->tok - col);
   }
   return err;
 }
@@ -13198,7 +13199,7 @@ ON_FLASH static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args,
         /* Modify indices of the elements past sub-array */
         char key[20];
         size_t n = c_snprintf(key, sizeof(key), "%ld",
-                            i - (arg1 - arg0) + elems_to_insert);
+                              i - (arg1 - arg0) + elems_to_insert);
         p[0]->name = v7_create_string(v7, key, n, 1);
       }
     }
@@ -15701,7 +15702,7 @@ ON_FLASH static void dump_mm_stats(struct v7 *v7) {
  */
 ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   struct v7 *v7;
-  struct v7_create_opts opts = { 0, 0, 0 };
+  struct v7_create_opts opts = {0, 0, 0};
   int i, j, show_ast = 0, binary_ast = 0, dump_stats = 0;
   val_t res = v7_create_undefined();
   const char *exprs[16];
