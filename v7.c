@@ -969,6 +969,28 @@ void SHA1Final(unsigned char digest[20], SHA1_CTX *);
  * All rights reserved
  */
 
+#ifndef STR_UTIL_H
+#define STR_UTIL_H
+
+#include <stdarg.h>
+#include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int c_snprintf(char *buf, size_t buf_size, const char *format, ...);
+int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
 /*
  * === Builtin API
  *
@@ -3985,6 +4007,183 @@ ON_FLASH void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
 }
 #endif
 /*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+
+#define C_SNPRINTF_APPEND_CHAR(ch)      \
+  do {                                  \
+    if (i < (int)buf_size) buf[i] = ch; \
+    i++;                                \
+  } while (0)
+
+#define C_SNPRINTF_FLAG_ZERO  1
+
+#ifdef C_DISABLE_BUILTIN_SNPRINTF
+ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
+                         va_list ap) {
+  return vsnprintf(buf, buf_size, fmt, ap);
+}
+#else
+ON_FLASH static int c_itoa(char *buf, size_t buf_size, int64_t num, int base,
+                           int flags, int field_width) {
+  char tmp[40];
+  int i = 0, k = 0, neg = 0;
+
+  if (num < 0) {
+    neg++;
+    num = -num;
+  }
+
+  /* Print into temporary buffer - in reverse order */
+  do {
+    int rem = num % base;
+    if (rem < 10) {
+      tmp[k++] = '0' + rem;
+    } else {
+      tmp[k++] = 'a' + (rem - 10);
+    }
+    num /= base;
+  } while (num > 0);
+
+  /* Zero padding */
+  if (flags && C_SNPRINTF_FLAG_ZERO) {
+    while (k < field_width && k < (int) sizeof(tmp) - 1) {
+      tmp[k++] = '0';
+    }
+  }
+
+  /* And sign */
+  if (neg) {
+    tmp[k++] = '-';
+  }
+
+  /* Now output */
+  while (--k >= 0) {
+    C_SNPRINTF_APPEND_CHAR(tmp[k]);
+  }
+
+  return i;
+}
+
+ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
+                         va_list ap) {
+  int ch, i = 0, len_mod, flags, precision, field_width;
+
+  while ((ch = *fmt++) != '\0') {
+    if (ch != '%') {
+      C_SNPRINTF_APPEND_CHAR(ch);
+    } else {
+      /*
+       * Conversion specification:
+       *   zero or more flags (one of: # 0 - <space> + ')
+       *   an optional minimum  field  width (digits)
+       *   an  optional precision (. followed by digits, or *)
+       *   an optional length modifier (one of: hh h l ll L q j z t)
+       *   conversion specifier (one of: d i o u x X e E f F g G a A c s p n)
+       */
+      flags = field_width = precision = len_mod = 0;
+
+      /* Flags. only zero-pad flag is supported. */
+      if (*fmt == '0') {
+        flags |= C_SNPRINTF_FLAG_ZERO;
+      }
+
+      /* Field width */
+      while (*fmt >= '0' && *fmt <= '9') {
+        field_width *= 10;
+        field_width += *fmt++ - '0';
+      }
+
+      /* Precision */
+      if (*fmt == '.') {
+        fmt++;
+        if (*fmt == '*') {
+          precision = va_arg(ap, int);
+          fmt++;
+        } else {
+          while (*fmt >= '0' && *fmt <= '9') {
+            precision *= 10;
+            precision += *fmt++ - '0';
+          }
+        }
+      }
+
+      /* Length modifier */
+      switch (*fmt) {
+        case 'h': case 'l': case 'L': case 'I':
+        case 'q': case 'j': case 'z': case 't':
+          len_mod = *fmt++;
+          if (*fmt == 'h') {
+            len_mod = 'H';
+            fmt++;
+          }
+          if (*fmt == 'l') {
+            len_mod = 'q';
+            fmt++;
+          }
+          break;
+      }
+
+      ch = *fmt++;
+      if (ch == 's') {
+        const char *s = va_arg(ap, const char *); /* Always fetch parameter */
+        int j;
+        /* Ignore negative and 0 precisions */
+        for (j = 0; s[j] != '\0' && (precision <= 0 || j < precision); j++) {
+          C_SNPRINTF_APPEND_CHAR(s[j]);
+        }
+      } else if (ch == 'c') {
+        ch = va_arg(ap, int);   /* Always fetch parameter */
+        C_SNPRINTF_APPEND_CHAR(ch);
+      } else if (ch == 'd' && len_mod == 0) {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, int), 10, flags,
+                    field_width);
+      } else if (ch == 'd' && len_mod == 'l') {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, long), 10, flags,
+                    field_width);
+      } else if ((ch == 'x' || ch == 'u') && len_mod == 0) {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, unsigned),
+                    ch == 'x' ? 16 : 10, flags, field_width);
+      } else if ((ch == 'x' || ch == 'u') && len_mod == 'l') {
+        i += c_itoa(buf + i, buf_size - i, va_arg(ap, unsigned long),
+                    ch == 'x' ? 16 : 10, flags, field_width);
+      } else if (ch == 'p') {
+        unsigned long num = (unsigned long) va_arg(ap, void *);
+        C_SNPRINTF_APPEND_CHAR('0');
+        C_SNPRINTF_APPEND_CHAR('x');
+        i += c_itoa(buf + i, buf_size - i, num, 16, flags, 0);
+      } else {
+#ifndef NO_LIBC
+        /*
+         * TODO(lsm): abort is not nice in a library, remove it
+         * Also, ESP8266 SDK doesn't have it
+         */
+        abort();
+#endif
+      }
+    }
+  }
+
+  /* Zero-terminate the result */
+  if (buf_size > 0) {
+    buf[i < (int) buf_size ? i : buf_size - 1] = '\0';
+  }
+
+  return i;
+}
+#endif
+
+ON_FLASH int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
+  int result;
+  va_list ap;
+  va_start(ap, fmt);
+  result = c_vsnprintf(buf, buf_size, fmt, ap);
+  va_end(ap);
+  return result;
+}
+/*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
@@ -5629,7 +5828,7 @@ ON_FLASH static void comment_at_depth(FILE *fp, const char *fmt, int depth,
   va_list ap;
   va_start(ap, depth);
 
-  vsnprintf(buf, sizeof(buf), fmt, ap);
+  c_vsnprintf(buf, sizeof(buf), fmt, ap);
 
   for (i = 0; i < depth; i++) {
     fprintf(fp, "  ");
@@ -6078,12 +6277,12 @@ cleanup:
   return fval;
 }
 
-/* like snprintf but returns `size` if write is truncated */
+/* like c_snprintf but returns `size` if write is truncated */
 ON_FLASH static int v_sprintf_s(char *buf, size_t size, const char *fmt, ...) {
   size_t n;
   va_list ap;
   va_start(ap, fmt);
-  n = vsnprintf(buf, size, fmt, ap);
+  n = c_vsnprintf(buf, size, fmt, ap);
   if (n > size) {
     return size;
   }
@@ -6122,11 +6321,11 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       }
     case V7_TYPE_NUMBER:
       if (v == V7_TAG_NAN) {
-        return snprintf(buf, size, "NaN");
+        return c_snprintf(buf, size, "NaN");
       }
       num = v7_to_double(v);
       if (isinf(num)) {
-        return snprintf(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
+        return c_snprintf(buf, size, "%sInfinity", num < 0.0 ? "-" : "");
       }
       {
 /*
@@ -6145,9 +6344,9 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       size_t n;
       const char *str = v7_to_string(v7, &v, &n);
       if (as_json) {
-        return snprintf(buf, size, "\"%.*s\"", (int) n, str);
+        return c_snprintf(buf, size, "\"%.*s\"", (int) n, str);
       } else {
-        return snprintf(buf, size, "%.*s", (int) n, str);
+        return c_snprintf(buf, size, "%.*s", (int) n, str);
       }
     }
 #if V7_ENABLE__RegExp
@@ -6160,18 +6359,18 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       if (flags & SLRE_FLAG_G) s2[n2++] = 'g';
       if (flags & SLRE_FLAG_I) s2[n2++] = 'i';
       if (flags & SLRE_FLAG_M) s2[n2++] = 'm';
-      return snprintf(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
+      return c_snprintf(buf, size, "/%.*s/%.*s", (int) n1, s1, (int) n2, s2);
     }
 #endif
     case V7_TYPE_CFUNCTION:
 #ifdef V7_UNIT_TEST
-      return snprintf(buf, size, "cfunc_xxxxxx");
+      return c_snprintf(buf, size, "cfunc_xxxxxx");
 #else
-      return snprintf(buf, size, "cfunc_%p", v7_to_pointer(v));
+      return c_snprintf(buf, size, "cfunc_%p", v7_to_pointer(v));
 #endif
     case V7_TYPE_CFUNCTION_OBJECT:
       v = i_value_of(v7, v);
-      return snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
+      return c_snprintf(buf, size, "Function cfunc_%p", v7_to_pointer(v));
     case V7_TYPE_GENERIC_OBJECT:
     case V7_TYPE_BOOLEAN_OBJECT:
     case V7_TYPE_STRING_OBJECT:
@@ -6182,7 +6381,7 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       char *b = buf;
       struct v7_property *p;
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
-      b += snprintf(b, BUF_LEFT(size, b - buf), "{");
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "{");
       for (p = v7_to_object(v)->properties; p; p = p->next) {
         size_t n;
         const char *s;
@@ -6190,13 +6389,13 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
           continue;
         }
         s = v7_to_string(v7, &p->name, &n);
-        b += snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "\"%.*s\":", (int) n, s);
         b += to_str(v7, p->value, b, BUF_LEFT(size, b - buf), 1);
         if (p->next) {
-          b += snprintf(b, BUF_LEFT(size, b - buf), ",");
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
-      b += snprintf(b, BUF_LEFT(size, b - buf), "}");
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
       v7->json_visited_stack.len -= sizeof(v);
       return b - buf;
     }
@@ -6207,7 +6406,7 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       size_t i, len = v7_array_length(v7, v);
       mbuf_append(&v7->json_visited_stack, (char *) &v, sizeof(v));
       if (as_json) {
-        b += snprintf(b, BUF_LEFT(size, b - buf), "[");
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "[");
       }
       for (i = 0; i < len; i++) {
         el = v7_array_get2(v7, v, i, &has);
@@ -6215,11 +6414,11 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
           b += to_str(v7, el, b, BUF_LEFT(size, b - buf), 1);
         }
         if (i != len - 1) {
-          b += snprintf(b, BUF_LEFT(size, b - buf), ",");
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
       if (as_json) {
-        b += snprintf(b, BUF_LEFT(size, b - buf), "]");
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
       }
       v7->json_visited_stack.len -= sizeof(v);
       return b - buf;
@@ -6232,7 +6431,7 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       ast_off_t body, var, var_end, start, pos = func->ast_off;
       struct ast *a = func->ast;
 
-      b += snprintf(b, BUF_LEFT(size, b - buf), "[function");
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "[function");
 
       V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_FUNC);
       start = pos - 1;
@@ -6245,22 +6444,22 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
         b +=
-            snprintf(b, BUF_LEFT(size, b - buf), " %.*s", (int) name_len, name);
+            c_snprintf(b, BUF_LEFT(size, b - buf), " %.*s", (int) name_len, name);
       }
-      b += snprintf(b, BUF_LEFT(size, b - buf), "(");
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "(");
       while (pos < body) {
         V7_CHECK(v7, ast_fetch_tag(a, &pos) == AST_IDENT);
         name = ast_get_inlined_data(a, pos, &name_len);
         ast_move_to_children(a, &pos);
-        b += snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len, name);
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len, name);
         if (pos < body) {
-          b += snprintf(b, BUF_LEFT(size, b - buf), ",");
+          b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
         }
       }
-      b += snprintf(b, BUF_LEFT(size, b - buf), ")");
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), ")");
       if (var != start) {
         ast_off_t next;
-        b += snprintf(b, BUF_LEFT(size, b - buf), "{var ");
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "{var ");
 
         do {
           V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR);
@@ -6277,23 +6476,23 @@ ON_FLASH V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
             ast_move_to_children(a, &var);
             ast_skip_tree(a, &var);
 
-            b += snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len,
+            b += c_snprintf(b, BUF_LEFT(size, b - buf), "%.*s", (int) name_len,
                           name);
             if (var < var_end || next) {
-              b += snprintf(b, BUF_LEFT(size, b - buf), ",");
+              b += c_snprintf(b, BUF_LEFT(size, b - buf), ",");
             }
           }
           if (next > 0) {
             var = next - 1; /* TODO(mkm): cleanup */
           }
         } while (next != 0);
-        b += snprintf(b, BUF_LEFT(size, b - buf), "}");
+        b += c_snprintf(b, BUF_LEFT(size, b - buf), "}");
       }
-      b += snprintf(b, BUF_LEFT(size, b - buf), "]");
+      b += c_snprintf(b, BUF_LEFT(size, b - buf), "]");
       return b - buf;
     }
     case V7_TYPE_FOREIGN:
-      return snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
+      return c_snprintf(buf, size, "[foreign_%p]", v7_to_foreign(v));
     default:
 #ifndef NO_LIBC
       printf("NOT IMPLEMENTED YET %d\n", val_type(v7, v)); /* LCOV_EXCL_LINE */
@@ -7043,7 +7242,7 @@ ON_FLASH V7_PRIVATE val_t s_concat(struct v7 *v7, val_t a, val_t b) {
 ON_FLASH V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
   char buf[100];
   int len;
-  len = snprintf(buf, sizeof(buf), "%lu", n);
+  len = c_snprintf(buf, sizeof(buf), "%lu", n);
   return v7_create_string(v7, buf, len, 1);
 }
 
@@ -7655,11 +7854,12 @@ ON_FLASH void v7_gc(struct v7 *v7) {
     CHECK(_e == V7_OK, _e); \
   } while (0)
 
-#define THROW(err_code)                                                       \
-  do {                                                                        \
-    snprintf(v7->error_msg, sizeof(v7->error_msg), "Parse error: %s line %d", \
-             v7->pstate.file_name, v7->pstate.line_no);                       \
-    return (err_code);                                                        \
+#define THROW(err_code)                                         \
+  do {                                                          \
+    c_snprintf(v7->error_msg, sizeof(v7->error_msg),            \
+               "Parse error: %s line %d", v7->pstate.file_name, \
+               v7->pstate.line_no);                             \
+    return (err_code);                                          \
   } while (0)
 
 #define CHECK(cond, code)     \
@@ -8501,9 +8701,9 @@ ON_FLASH V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a,
   }
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
-    snprintf(v7->error_msg, sizeof(v7->error_msg),
-             "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
-             col, (int) (col + v7->tok_len), v7->tok - col);
+    c_snprintf(v7->error_msg, sizeof(v7->error_msg),
+               "parse error at at line %d col %lu: [%.*s]", v7->pstate.line_no,
+               col, (int)(col + v7->tok_len), v7->tok - col);
   }
   return err;
 }
@@ -8565,7 +8765,7 @@ ON_FLASH V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
                                          const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
-  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   throw_value(v7, create_exception(v7, ex, v7->error_msg));
 } /* LCOV_EXCL_LINE */
@@ -8573,7 +8773,7 @@ ON_FLASH V7_PRIVATE void throw_exception(struct v7 *v7, enum error_ctor ex,
 ON_FLASH void v7_throw(struct v7 *v7, const char *err_fmt, ...) {
   va_list ap;
   va_start(ap, err_fmt);
-  vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
+  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
   throw_value(v7, create_exception(v7, TYPE_ERROR, v7->error_msg));
 }
@@ -12421,7 +12621,7 @@ ON_FLASH static val_t Obj_toString(struct v7 *v7, val_t this_obj, val_t args) {
   if (is_prototype_of(v7, this_obj, v7->array_prototype)) {
     type = "Array";
   }
-  snprintf(buf, sizeof(buf), "[object %s]", type);
+  c_snprintf(buf, sizeof(buf), "[object %s]", type);
   return v7_create_string(v7, buf, strlen(buf), 1);
 }
 
@@ -12774,7 +12974,7 @@ ON_FLASH static val_t Array_set_length(struct v7 *v7, val_t this_obj,
     /* If we have to expand, insert an item with appropriate index */
     if (new_len > 0 && max_index < new_len - 1) {
       char buf[40];
-      snprintf(buf, sizeof(buf), "%ld", new_len - 1);
+      c_snprintf(buf, sizeof(buf), "%ld", new_len - 1);
       v7_set_property(v7, this_obj, buf, strlen(buf), 0, V7_UNDEFINED);
     }
   }
@@ -12997,7 +13197,7 @@ ON_FLASH static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args,
       } else if (i >= arg1) {
         /* Modify indices of the elements past sub-array */
         char key[20];
-        size_t n = snprintf(key, sizeof(key), "%ld",
+        size_t n = c_snprintf(key, sizeof(key), "%ld",
                             i - (arg1 - arg0) + elems_to_insert);
         p[0]->name = v7_create_string(v7, key, n, 1);
       }
@@ -13006,7 +13206,7 @@ ON_FLASH static val_t a_splice(struct v7 *v7, val_t this_obj, val_t args,
     /* Insert optional extra elements */
     for (i = 2; i < num_args; i++) {
       char key[20];
-      size_t n = snprintf(key, sizeof(key), "%ld", arg0 + i - 2);
+      size_t n = c_snprintf(key, sizeof(key), "%ld", arg0 + i - 2);
       v7_set(v7, this_obj, key, n, 0, v7_array_get(v7, args, i));
     }
   }
@@ -14742,9 +14942,9 @@ ON_FLASH static int d_timetoISOstr(const etime_t *time, char *buf,
     use_ext = 1;
   }
 
-  return snprintf(buf + use_ext, buf_size - use_ext,
-                  use_ext ? ey_frm : simpl_frm, abs(tp.year), tp.month + 1,
-                  tp.day, tp.hour, tp.min, tp.sec, tp.msec) +
+  return c_snprintf(buf + use_ext, buf_size - use_ext,
+                    use_ext ? ey_frm : simpl_frm, abs(tp.year), tp.month + 1,
+                    tp.day, tp.hour, tp.min, tp.sec, tp.msec) +
          use_ext;
 }
 
@@ -15501,7 +15701,7 @@ ON_FLASH static void dump_mm_stats(struct v7 *v7) {
  */
 ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   struct v7 *v7;
-  struct v7_create_opts opts;
+  struct v7_create_opts opts = { 0, 0, 0 };
   int i, j, show_ast = 0, binary_ast = 0, dump_stats = 0;
   val_t res = v7_create_undefined();
   const char *exprs[16];
