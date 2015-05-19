@@ -296,6 +296,16 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
 
+/*
+ * Set an optional C stack limit.
+ *
+ * It sets a flag that will cause the interpreter
+ * to throw an InterruptedError.
+ * It's safe to call it from signal handlers and ISRs
+ * on single threaded environments.
+ */
+void v7_interrupt(struct v7 *v7);
+
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 
 #ifdef __cplusplus

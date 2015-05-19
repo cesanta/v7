@@ -296,6 +296,16 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
 
+/*
+ * Set an optional C stack limit.
+ *
+ * It sets a flag that will cause the interpreter
+ * to throw an InterruptedError.
+ * It's safe to call it from signal handlers and ISRs
+ * on single threaded environments.
+ */
+void v7_interrupt(struct v7 *v7);
+
 int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 
 #ifdef __cplusplus
@@ -1614,6 +1624,9 @@ struct v7 {
   val_t predefined_strings[PREDEFINED_STR_MAX];
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
+
+  volatile int interrupt;
+  void *sp_limit;
 };
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
@@ -8949,6 +8962,11 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   tmp_stack_push(&tf, &v1);
   tmp_stack_push(&tf, &v2);
 
+  if (v7->interrupt == 1) {
+    v7->interrupt = 0;
+    v7_throw(v7, "interrupted");
+  }
+
   switch (tag) {
     case AST_NEGATIVE:
     case AST_POSITIVE:
@@ -10374,6 +10392,10 @@ cleanup:
   memcpy(&v7->label_jmp_buf, &saved_label_buf, sizeof(saved_label_buf));
 
   return err;
+}
+
+ON_FLASH void v7_interrupt(struct v7 *v7) {
+  v7->interrupt = 1;
 }
 
 ON_FLASH enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
