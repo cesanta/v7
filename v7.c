@@ -4226,7 +4226,7 @@ ON_FLASH int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
 
 #ifdef V7_ENABLE_FILE
 
-static v7_val_t s_file_proto;
+static v7_val_t s_file_ctor;
 static const char s_fd_prop[] = "__fd";
 
 #ifndef NO_LIBC
@@ -4350,7 +4350,7 @@ ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj,
     fp = c_fopen(s1, s2);
     if (fp != INVALID_FILE) {
       v7_val_t obj = v7_create_object(v7);
-      v7_set_proto(obj, s_file_proto);
+      v7_set_proto(obj, s_file_ctor);
       v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
              v7_file_to_val(fp));
       return obj;
@@ -4392,19 +4392,18 @@ ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj,
 
 ON_FLASH void init_file(struct v7 *v7) {
   v7_val_t file_obj = v7_create_object(v7);
+  s_file_ctor = v7_create_object(v7);
   v7_set(v7, v7_get_global_object(v7), "File", 4, 0, file_obj);
-  s_file_proto = v7_create_object(v7);
-  v7_set(v7, file_obj, "prototype", 9, 0, s_file_proto);
 
   v7_set_method(v7, file_obj, "load", File_load);
   v7_set_method(v7, file_obj, "remove", File_remove);
   v7_set_method(v7, file_obj, "rename", File_rename);
   v7_set_method(v7, file_obj, "open", File_open);
 
-  v7_set_method(v7, s_file_proto, "close", File_close);
-  v7_set_method(v7, s_file_proto, "read", File_read);
-  v7_set_method(v7, s_file_proto, "readAll", File_readAll);
-  v7_set_method(v7, s_file_proto, "write", File_write);
+  v7_set_method(v7, s_file_ctor, "close", File_close);
+  v7_set_method(v7, s_file_ctor, "read", File_read);
+  v7_set_method(v7, s_file_ctor, "readAll", File_readAll);
+  v7_set_method(v7, s_file_ctor, "write", File_write);
 }
 #else
 ON_FLASH void init_file(struct v7 *v7) {
@@ -4610,9 +4609,8 @@ ON_FLASH static v7_val_t Socket_send(struct v7 *v7, v7_val_t this_obj,
 ON_FLASH void init_socket(struct v7 *v7) {
   v7_val_t socket_obj = v7_create_object(v7);
 
-  v7_set(v7, v7_get_global_object(v7), "Socket", 6, 0, socket_obj);
   s_sock_proto = v7_create_object(v7);
-  v7_set(v7, socket_obj, "prototype", 9, 0, s_sock_proto);
+  v7_set(v7, v7_get_global_object(v7), "Socket", 6, 0, socket_obj);
 
   v7_set_method(v7, socket_obj, "connect", Socket_connect);
   v7_set_method(v7, socket_obj, "listen", Socket_listen);
