@@ -898,6 +898,28 @@ int64_t strtoll(const char* str, char** endptr, int base);
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
+#ifndef NO_LIBC
+typedef FILE* c_file_t;
+/*
+ * Cannot use fopen & Co directly and
+ * override them with -D because
+ * these overrides conflicts with
+ * functions in stdio.h
+ */
+#define c_fopen fopen
+#define c_fread fread
+#define c_fwrite fwrite
+#define c_fclose fclose
+#define c_rename rename
+#define c_remove remove
+#define c_fseek fseek
+#define c_ftell ftell
+#define c_rewind rewind
+#define c_ferror ferror
+#define INVALID_FILE NULL
+
+#endif
+
 #endif /* OSDEP_HEADER_INCLUDED */
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -4207,6 +4229,20 @@ ON_FLASH int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
 static v7_val_t s_file_ctor;
 static const char s_fd_prop[] = "__fd";
 
+#ifndef NO_LIBC
+ON_FLASH static c_file_t v7_val_to_file(v7_val_t val) {
+  return (c_file_t) v7_to_foreign(val);
+}
+
+ON_FLASH static void v7_file_to_val(c_file_t file, v7_val_t *res) {
+  *res = v7_create_foreign(file);
+}
+
+ON_FLASH static int v7_is_file_type(v7_val_t val) {
+  return v7_is_foreign(val);
+}
+#endif
+
 ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj,
                                    v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
@@ -4226,15 +4262,15 @@ ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
                                 int all) {
   v7_val_t arg0 = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   (void) a;
-  if (v7_is_foreign(arg0)) {
+  if (v7_is_file_type(arg0)) {
     struct mbuf m;
     char buf[BUFSIZ];
     int n;
-    FILE *fp = (FILE *) v7_to_foreign(arg0);
+    c_file_t fp = v7_val_to_file(arg0);
 
     /* Read file contents into mbuf */
     mbuf_init(&m, 0);
-    while ((n = fread(buf, 1, sizeof(buf), fp)) > 0) {
+    while ((n = c_fread(buf, 1, sizeof(buf), fp)) > 0) {
       mbuf_append(&m, buf, n);
       if (!all) {
         break;
@@ -4243,7 +4279,7 @@ ON_FLASH static v7_val_t f_read(struct v7 *v7, v7_val_t this_obj, v7_val_t a,
 
     /* Proactively close the file on EOF or read error */
     if (n <= 0) {
-      fclose(fp);
+      c_fclose(fp);
     }
 
     if (m.len > 0) {
@@ -4271,10 +4307,10 @@ ON_FLASH static v7_val_t File_write(struct v7 *v7, v7_val_t this_obj,
   v7_val_t arg1 = v7_array_get(v7, args, 0);
   size_t n, sent = 0, len = 0;
 
-  if (v7_is_foreign(arg0) && v7_is_string(arg1)) {
+  if (v7_is_file_type(arg0) && v7_is_string(arg1)) {
     const char *s = v7_to_string(v7, &arg1, &len);
-    FILE *fp = (FILE *) v7_to_foreign(arg0);
-    while (sent < len && (n = fwrite(s + sent, 1, len - sent, fp)) > 0) {
+    c_file_t fp = v7_val_to_file(arg0);
+    while (sent < len && (n = c_fwrite(s + sent, 1, len - sent, fp)) > 0) {
       sent += n;
     }
   }
@@ -4287,8 +4323,8 @@ ON_FLASH static v7_val_t File_close(struct v7 *v7, v7_val_t this_obj,
   v7_val_t prop = v7_get(v7, this_obj, s_fd_prop, sizeof(s_fd_prop) - 1);
   int res = -1;
   (void) args;
-  if (v7_is_foreign(prop)) {
-    res = fclose((FILE *) v7_to_foreign(prop));
+  if (v7_is_file_type(prop)) {
+    res = c_fclose(v7_val_to_file(prop));
   }
   return v7_create_number(res);
 }
@@ -4297,7 +4333,7 @@ ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj,
                                    v7_val_t args) {
   v7_val_t arg0 = v7_array_get(v7, args, 0);
   v7_val_t arg1 = v7_array_get(v7, args, 1);
-  FILE *fp = NULL;
+  c_file_t fp = INVALID_FILE;
 
   (void) this_obj;
   if (v7_is_string(arg0)) {
@@ -4307,12 +4343,21 @@ ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj,
     if (v7_is_string(arg1)) {
       s2 = v7_to_string(v7, &arg1, &n2);
     }
-    fp = fopen(s1, s2);
-    if (fp != NULL) {
+    fp = c_fopen(s1, s2);
+    if (fp != INVALID_FILE) {
+      v7_val_t fp_val;
       v7_val_t obj = v7_create_object(v7);
       v7_set_proto(obj, s_file_ctor);
+      /*
+       * For unknown (yet) reason, when compiled for ESP
+       * void foo(int i) { return v7_create_number(i) };
+       * always returns 0 if foo placed in another compilation
+       * unit
+       * TODO(alashkin): understand & fix
+       */
+      v7_file_to_val(fp, &fp_val);
       v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
-             v7_create_foreign(fp));
+             fp_val);
       return obj;
     }
   }
@@ -4331,7 +4376,7 @@ ON_FLASH static v7_val_t File_rename(struct v7 *v7, v7_val_t this_obj,
     size_t n1, n2;
     const char *from = v7_to_string(v7, &arg0, &n1);
     const char *to = v7_to_string(v7, &arg1, &n2);
-    res = rename(from, to);
+    res = c_rename(from, to);
   }
 
   return v7_create_number(res == 0 ? 0 : errno);
@@ -4345,7 +4390,7 @@ ON_FLASH static v7_val_t File_remove(struct v7 *v7, v7_val_t this_obj,
   if (v7_is_string(arg0)) {
     size_t n;
     const char *path = v7_to_string(v7, &arg0, &n);
-    res = remove(path);
+    res = c_remove(path);
   }
   return v7_create_number(res == 0 ? 0 : errno);
 }
@@ -10402,33 +10447,47 @@ ON_FLASH enum v7_err v7_exec(struct v7 *v7, val_t *res, const char *src) {
   return v7_exec_with(v7, res, src, V7_UNDEFINED);
 }
 
-#ifndef V7_NO_FS
+#ifndef NO_LIBC
+/*
+ * Note: this function is intended only for v7_exec_file
+ * It is move file pointer to the end of file
+ */
+ON_FLASH static int v7_get_file_size(c_file_t fp) {
+  int res = -1;
+  if (c_fseek(fp, 0, SEEK_END) != 0) {
+    res = c_ftell(fp);
+  }
+
+  return res;
+}
+#endif
+
 ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
-  FILE *fp;
+  c_file_t fp;
   char *p;
   long file_size;
   enum v7_err err = V7_EXEC_EXCEPTION;
   *res = v7_create_undefined();
 
-  if ((fp = fopen(path, "r")) == NULL) {
+  if ((fp = c_fopen(path, "r")) == INVALID_FILE) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot open file [%s]",
              path);
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-  } else if (fseek(fp, 0, SEEK_END) != 0 || (file_size = ftell(fp)) <= 0) {
+  } else if ((file_size = v7_get_file_size(fp)) <= 0) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "fseek(%s): %s", path,
              strerror(errno));
     *res = create_exception(v7, SYNTAX_ERROR, v7->error_msg);
-    fclose(fp);
+    c_fclose(fp);
   } else if ((p = (char *) calloc(1, (size_t) file_size + 1)) == NULL) {
     snprintf(v7->error_msg, sizeof(v7->error_msg), "cannot allocate %ld bytes",
              file_size + 1);
-    fclose(fp);
+    c_fclose(fp);
   } else {
-    rewind(fp);
-    if (fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) {
-      if (ferror(fp)) goto cleanup;
+    c_rewind(fp);
+    if (c_fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) {
+      if (c_ferror(fp)) goto cleanup;
     }
-    fclose(fp);
+    c_fclose(fp);
     err = v7_exec(v7, res, p);
   cleanup:
     free(p);
@@ -10436,7 +10495,6 @@ ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
 
   return err;
 }
-#endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
