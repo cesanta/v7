@@ -4234,13 +4234,17 @@ ON_FLASH static c_file_t v7_val_to_file(v7_val_t val) {
   return (c_file_t) v7_to_foreign(val);
 }
 
-ON_FLASH static void v7_file_to_val(c_file_t file, v7_val_t *res) {
-  *res = v7_create_foreign(file);
+ON_FLASH static v7_val_t v7_file_to_val(c_file_t file) {
+  return v7_create_foreign(file);
 }
 
 ON_FLASH static int v7_is_file_type(v7_val_t val) {
   return v7_is_foreign(val);
 }
+#else
+c_file_t v7_val_to_file(v7_val_t val);
+v7_val_t v7_file_to_val(c_file_t file);
+int v7_is_file_type(v7_val_t val);
 #endif
 
 ON_FLASH static v7_val_t File_load(struct v7 *v7, v7_val_t this_obj,
@@ -4345,19 +4349,10 @@ ON_FLASH static v7_val_t File_open(struct v7 *v7, v7_val_t this_obj,
     }
     fp = c_fopen(s1, s2);
     if (fp != INVALID_FILE) {
-      v7_val_t fp_val;
       v7_val_t obj = v7_create_object(v7);
       v7_set_proto(obj, s_file_ctor);
-      /*
-       * For unknown (yet) reason, when compiled for ESP
-       * void foo(int i) { return v7_create_number(i) };
-       * always returns 0 if foo placed in another compilation
-       * unit
-       * TODO(alashkin): understand & fix
-       */
-      v7_file_to_val(fp, &fp_val);
       v7_set(v7, obj, s_fd_prop, sizeof(s_fd_prop) - 1, V7_PROPERTY_DONT_ENUM,
-             fp_val);
+             v7_file_to_val(fp));
       return obj;
     }
   }
