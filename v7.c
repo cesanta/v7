@@ -15834,7 +15834,7 @@ ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
     init_func(v7);
   }
 
-#if V7_ENABLE__Memory__stats
+#if V7_ENABLE__Memory__stats > 0 && !defined(V7_DISABLE_GC)
   if (dump_stats) {
     printf("Memory stats during init:\n");
     dump_mm_stats(v7);
