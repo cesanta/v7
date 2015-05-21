@@ -917,18 +917,7 @@ typedef FILE* c_file_t;
 #define c_rewind rewind
 #define c_ferror ferror
 #define INVALID_FILE NULL
-#else
-/*
- * TODO(alashkin): move to .h file (v7.h?)
- */
-c_file_t c_fopen(const char *filename, const char *mode);
-size_t c_fread(void *ptr, size_t size, size_t count, c_file_t fd);
-size_t c_fwrite(const void *ptr, size_t size, size_t count, c_file_t fd);
-int c_fclose(c_file_t fd);
-int c_rename(const char *oldname, const char *newname);
-int c_remove(const char *filename);
-void c_rewind(c_file_t fd);
-int c_ferror(c_file_t fd);
+
 #endif
 
 #endif /* OSDEP_HEADER_INCLUDED */
