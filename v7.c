@@ -1941,7 +1941,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                       int as_json);
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 V7_PRIVATE val_t i_value_of(struct v7 *v7, val_t v);
-V7_PRIVATE val_t Std_eval(struct v7 *v7, val_t t, val_t args);
+V7_PRIVATE val_t _std_eval(struct v7 *v7, val_t args, char before, char after);
 
 /* String API */
 V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
@@ -7994,12 +7994,12 @@ ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
-  if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
+  if (v7->cur_tok == TOK_IDENTIFIER &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
     next_tok(v7);
     ast_add_node(a, AST_GETTER);
     parse_funcdecl(v7, a, 1, 1);
-  } else if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
+  } else if (v7->cur_tok == TOK_IDENTIFIER &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
     next_tok(v7);
@@ -8088,7 +8088,7 @@ ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
       next_tok(v7);
       break;
     case TOK_IDENTIFIER:
-      if (v7->tok_len == 9 && strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
+      if (strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
         ast_add_node(a, AST_UNDEFINED);
         next_tok(v7);
         break;
@@ -10541,26 +10541,29 @@ Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
 }
 
 ON_FLASH V7_PRIVATE v7_val_t
-Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
+_std_eval(struct v7 *v7, v7_val_t args, char before, char after) {
+  enum v7_err err;
   v7_val_t res = v7_create_undefined(), arg = v7_array_get(v7, args, 0);
-  (void) t;
+
   if (arg != V7_UNDEFINED) {
     char buf[100], *p;
     p = v7_to_json(v7, arg, buf, sizeof(buf));
     if (p[0] == '"') {
-      p[0] = p[strlen(p) - 1] = ' ';
+      p[0] = before;
+      p[strlen(p) - 1] = after;
     }
-    if (v7_exec(v7, &res, p) != V7_OK) {
-      if (p != buf) {
-        free(p);
-      }
-      throw_value(v7, res);
-    }
-    if (p != buf) {
-      free(p);
-    }
+    err = v7_exec(v7, &res, p);
+
+    if (p != buf) free(p);
+    if (err != V7_OK) throw_value(v7, res);
   }
   return res;
+}
+
+ON_FLASH V7_PRIVATE v7_val_t
+Std_eval(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  (void) t;
+  return _std_eval(v7, args, ' ', ' ');
 }
 
 ON_FLASH V7_PRIVATE v7_val_t
@@ -12976,10 +12979,16 @@ ON_FLASH static val_t Json_stringify(struct v7 *v7, val_t this_obj,
   return res;
 }
 
+ON_FLASH V7_PRIVATE v7_val_t
+Json_parse(struct v7 *v7, v7_val_t t, v7_val_t args) {
+  (void) t;
+  return _std_eval(v7, args, '(', ')');
+}
+
 ON_FLASH V7_PRIVATE void init_json(struct v7 *v7) {
   val_t o = v7_create_object(v7);
   set_method(v7, o, "stringify", Json_stringify, 1);
-  set_method(v7, o, "parse", Std_eval, 1);
+  set_method(v7, o, "parse", Json_parse, 1);
   v7_set_property(v7, v7->global_object, "JSON", 4, V7_PROPERTY_DONT_ENUM, o);
 }
 /*
