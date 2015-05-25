@@ -1909,6 +1909,8 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
 /* If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated */
 V7_PRIVATE struct v7_property *v7_get_property(struct v7 *, val_t obj,
                                                const char *name, size_t);
+V7_PRIVATE v7_val_t v7_get_v(struct v7 *, v7_val_t, v7_val_t);
+
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
 V7_PRIVATE int v7_set_v(struct v7 *, v7_val_t, v7_val_t, v7_val_t);
@@ -6703,6 +6705,20 @@ v7_get(struct v7 *v7, val_t obj, const char *name, size_t name_len) {
   return v7_property_value(v7, obj, v7_get_property(v7, v, name, name_len));
 }
 
+ON_FLASH V7_PRIVATE v7_val_t
+v7_get_v(struct v7 *v7, v7_val_t obj, v7_val_t name) {
+  const char *s;
+  size_t name_len;
+  if (v7_is_string(name)) {
+    s = v7_to_string(v7, &name, &name_len);
+  } else {
+    char buf[512];
+    name_len = v7_stringify_value(v7, name, buf, sizeof(buf));
+    s = buf;
+  }
+  return v7_get(v7, obj, s, name_len);
+}
+
 ON_FLASH V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
@@ -7994,12 +8010,12 @@ ON_FLASH static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
 }
 
 ON_FLASH static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
-  if (v7->cur_tok == TOK_IDENTIFIER &&
+  if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
       strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
     next_tok(v7);
     ast_add_node(a, AST_GETTER);
     parse_funcdecl(v7, a, 1, 1);
-  } else if (v7->cur_tok == TOK_IDENTIFIER &&
+  } else if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
              strncmp(v7->tok, "set", v7->tok_len) == 0 &&
              lookahead(v7) != TOK_COLON) {
     next_tok(v7);
@@ -8088,7 +8104,7 @@ ON_FLASH static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
       next_tok(v7);
       break;
     case TOK_IDENTIFIER:
-      if (strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
+      if (v7->tok_len == 9 && strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
         ast_add_node(a, AST_UNDEFINED);
         next_tok(v7);
         break;
@@ -9298,8 +9314,7 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_INDEX:
       v1 = i_eval_expr(v7, a, pos, scope);
       v2 = i_eval_expr(v7, a, pos, scope);
-      v7_stringify_value(v7, v2, buf, sizeof(buf));
-      res = v7_get(v7, v1, buf, -1);
+      res = v7_get_v(v7, v1, v2);
       break;
     case AST_MEMBER:
       name = ast_get_inlined_data(a, *pos, &name_len);
