@@ -1002,7 +1002,9 @@ typedef struct {
 void SHA1Init(SHA1_CTX *);
 void SHA1Update(SHA1_CTX *, const unsigned char *data, uint32_t len);
 void SHA1Final(unsigned char digest[20], SHA1_CTX *);
-
+void hmac_sha1(const unsigned char *key, size_t key_len,
+               const unsigned char *text, size_t text_len,
+               unsigned char out[20]);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -4055,6 +4057,41 @@ ON_FLASH void SHA1Final(unsigned char digest[20], SHA1_CTX *context) {
   }
   memset(context, '\0', sizeof(*context));
   memset(&finalcount, '\0', sizeof(finalcount));
+}
+
+ON_FLASH void hmac_sha1(const unsigned char *key, size_t keylen,
+                        const unsigned char *data, size_t datalen,
+                        unsigned char out[20]) {
+  SHA1_CTX ctx;
+  unsigned char buf1[64], buf2[64], tmp_key[20], i;
+
+  if (keylen > sizeof(buf1)) {
+    SHA1Init(&ctx);
+    SHA1Update(&ctx, key, keylen);
+    SHA1Final(tmp_key, &ctx);
+    key = tmp_key;
+    keylen = sizeof(tmp_key);
+  }
+
+  memset(buf1, 0, sizeof(buf1));
+  memset(buf2, 0, sizeof(buf2));
+  memcpy(buf1, key, keylen);
+  memcpy(buf2, key, keylen);
+
+  for (i = 0; i < sizeof(buf1); i++) {
+    buf1[i] ^= 0x36;
+    buf2[i] ^= 0x5c;
+  }
+
+  SHA1Init(&ctx);
+  SHA1Update(&ctx, buf1, sizeof(buf1));
+  SHA1Update(&ctx, data, datalen);
+  SHA1Final(out, &ctx);
+
+  SHA1Init(&ctx);
+  SHA1Update(&ctx, buf2, sizeof(buf2));
+  SHA1Update(&ctx, out, 20);
+  SHA1Final(out, &ctx);
 }
 #endif
 /*
