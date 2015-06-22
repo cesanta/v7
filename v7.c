@@ -11095,27 +11095,24 @@ ON_FLASH V7_PRIVATE void init_stdlib(struct v7 *v7) {
 
 #define STRINGIFY(x) #x
 
-ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
-  val_t res;
-
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_indexOf[] = STRINGIFY(
     Array.prototype.indexOf = function(a, x) {
       var i; var r = -1; var b = +x;
       if (!b || b < 0) b = 0;
       for (i in this) if (i >= b && (r < 0 || i < r) && this[i] === a) r = +i;
       return r;
-    };));
+    };);
 
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_lastIndexOf[] = STRINGIFY(
     Array.prototype.lastIndexOf = function(a, x) {
       var i; var r = -1; var b = +x;
       if (isNaN(b) || b < 0 || b >= this.length) b = this.length - 1;
       for (i in this) if (i <= b && (r < 0 || i > r) && this[i] === a) r = +i;
       return r;
-    };));
+    };);
 
 #if V7_ENABLE__Array__reduce
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_reduce[] = STRINGIFY(
     Array.prototype.reduce = function(a, b) {
       var f = 0;
       if (typeof(a) != "function") {
@@ -11130,27 +11127,52 @@ ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
         }
       }
       return b;
-    };));
+    };);
 #endif
 
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_pop[] = STRINGIFY(
     Array.prototype.pop = function() {
       var i = this.length - 1;
       return this.splice(i, 1)[0];
-    };));
+    };);
 
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_array_shift[] = STRINGIFY(
     Array.prototype.shift = function() {
       return this.splice(0, 1)[0];
-    };));
+    };);
 
 #if V7_ENABLE__Function__call
-  v7_exec(v7, &res, STRINGIFY(
+RODATA static const char js_function_call[] = STRINGIFY(
     Function.prototype.call = function() {
       var t = arguments.splice(0, 1)[0];
       return this.apply(t, arguments);
-    };));
+    };);
 #endif
+
+RODATA static const char * const js_functions[] = {
+#if V7_ENABLE__Function__call
+  js_function_call,
+#endif
+#if V7_ENABLE__Array__reduce
+  js_array_reduce,
+#endif
+  js_array_indexOf,
+  js_array_lastIndexOf,
+  js_array_pop,
+  js_array_shift
+};
+
+ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
+  val_t res;
+  char *body;
+  int i;
+
+  for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
+    body = (char *) malloc(strlen(js_functions[i]) + 1);
+    strcpy(body, js_functions[i]);
+    v7_exec(v7, &res, body);
+    free(body);
+  }
 
   /* TODO(lsm): re-enable in a separate PR */
 #if 0
