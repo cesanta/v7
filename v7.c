@@ -1685,6 +1685,14 @@ struct v7 {
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
 
+/* Vector, describes some memory location pointed by 'p' with length 'len' */
+struct v7_vec {
+  const char *p;
+  int len;
+};
+#define V7_VEC(str) \
+  { (str), sizeof(str) - 1 }
+
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
@@ -4985,14 +4993,6 @@ ON_FLASH V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
  * All rights reserved
  */
 
-
-/* Vector, describes some memory location pointed by 'p' with length 'len' */
-struct v7_vec {
-  const char *p;
-  int len;
-};
-#define V7_VEC(str) \
-  { (str), sizeof(str) - 1 }
 
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
@@ -11223,17 +11223,17 @@ RODATA static const char js_function_call[] = STRINGIFY(
     };);
 #endif
 
-RODATA static const char * const js_functions[] = {
+RODATA static const struct v7_vec js_functions[] = {
 #if V7_ENABLE__Function__call
-  js_function_call,
+  V7_VEC(js_function_call),
 #endif
 #if V7_ENABLE__Array__reduce
-  js_array_reduce,
+  V7_VEC(js_array_reduce),
 #endif
-  js_array_indexOf,
-  js_array_lastIndexOf,
-  js_array_pop,
-  js_array_shift
+  V7_VEC(js_array_indexOf),
+  V7_VEC(js_array_lastIndexOf),
+  V7_VEC(js_array_pop),
+  V7_VEC(js_array_shift)
 };
 
 ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
@@ -11242,8 +11242,8 @@ ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   int i;
 
   for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
-    body = (char *) malloc(strlen(js_functions[i]) + 1);
-    strcpy(body, js_functions[i]);
+    body = (char *) malloc(js_functions[i].len + 1);
+    strcpy(body, js_functions[i].p);
     v7_exec(v7, &res, body);
     free(body);
   }
