@@ -4315,7 +4315,7 @@ ON_FLASH int c_vsnprintf(char *buf, size_t buf_size, const char *fmt,
         const char *s = va_arg(ap, const char *); /* Always fetch parameter */
         int j;
         /* Ignore negative and 0 precisions */
-        for (j = 0; s[j] != '\0' && (precision <= 0 || j < precision); j++) {
+        for (j = 0; (precision <= 0 || j < precision) && s[j] != '\0'; j++) {
           C_SNPRINTF_APPEND_CHAR(s[j]);
         }
       } else if (ch == 'c') {
