@@ -9975,6 +9975,7 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   val_t frame = v7_create_undefined(), res = v7_create_undefined();
   val_t v1 = v7_create_undefined(), args = v7_create_undefined();
   val_t cfunc = v7_create_undefined(), old_this = v7->this_object;
+  val_t fun_proto = v7_create_undefined();
   struct v7_function *func;
   enum ast_tag tag;
   char *name;
@@ -9987,6 +9988,7 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
   tmp_stack_push(&tf, &v1);
   tmp_stack_push(&tf, &args);
   tmp_stack_push(&tf, &old_this);
+  tmp_stack_push(&tf, &fun_proto);
 
   end = ast_get_skip(a, *pos, AST_END_SKIP);
   ast_move_to_children(a, pos);
@@ -10002,8 +10004,7 @@ ON_FLASH static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
   if (is_constructor) {
     if (!v7_is_cfunction(v1)) {
-      val_t fun_proto = v7_get(v7, v1, "prototype", 9);
-      tmp_stack_push(&tf, &fun_proto);
+      fun_proto = v7_get(v7, v1, "prototype", 9);
       if (!v7_is_object(fun_proto)) {
         /* TODO(mkm): box primitive value */
         throw_exception(v7, TYPE_ERROR,
@@ -10477,6 +10478,9 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       size_t name_len;
       size_t saved_tmp_stack_pos = v7->tmp_stack.len;
       volatile enum jmp_type j;
+      val_t catch_scope = v7_create_undefined();
+
+      tmp_stack_push(&tf, &catch_scope);
       memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
       end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -10486,10 +10490,8 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
-        val_t catch_scope;
         v7->tmp_stack.len = saved_tmp_stack_pos;
         catch_scope = create_object(v7, scope);
-        tmp_stack_push(&tf, &catch_scope);
         tag = ast_fetch_tag(a, &acatch);
         V7_CHECK(v7, tag == AST_IDENT);
         name = ast_get_inlined_data(a, acatch, &name_len);
