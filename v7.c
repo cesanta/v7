@@ -11238,14 +11238,22 @@ RODATA static const struct v7_vec js_functions[] = {
   V7_VEC(js_array_shift)
 };
 
+#define CEIL(x, y) ((x) / (y) + ((x) % (y) > 0))
+
 ON_FLASH V7_PRIVATE void init_js_stdlib(struct v7 *v7) {
   val_t res;
   char *body;
   int i;
 
   for(i = 0; i < (int) ARRAY_SIZE(js_functions); i++) {
+#ifdef __ets__
+    int size = CEIL(js_functions[i].len + 1, 4) * 4;
+    body = (char *) malloc(size);
+    memcpy(body, js_functions[i].p, size);
+#else
     body = (char *) malloc(js_functions[i].len + 1);
     strcpy(body, js_functions[i].p);
+#endif
     v7_exec(v7, &res, body);
     free(body);
   }
