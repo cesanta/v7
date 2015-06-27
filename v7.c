@@ -115,8 +115,11 @@ enum v7_err v7_exec_with(struct v7 *, v7_val_t *result, const char *js_code,
  */
 void v7_compile(const char *js_code, int generate_binary_output, FILE *fp);
 
-/* Call garbage collector */
-void v7_gc(struct v7 *);
+/*
+ * Perform garbage collection.
+ * Pass true to full in order to reclaim unused heap back to the OS.
+ */
+void v7_gc(struct v7 *, int full);
 
 /* Create an empty object */
 v7_val_t v7_create_object(struct v7 *v7);
@@ -305,7 +308,8 @@ const char *v7_get_parser_error(struct v7 *v7);
 enum v7_heap_stat_what {
   V7_HEAP_STAT_HEAP_SIZE,
   V7_HEAP_STAT_HEAP_USED,
-  V7_HEAP_STAT_STRING_HEAP_SIZE,
+  V7_HEAP_STAT_STRING_HEAP_RESERVED,
+  V7_HEAP_STAT_STRING_HEAP_USED,
   V7_HEAP_STAT_OBJ_HEAP_MAX,
   V7_HEAP_STAT_OBJ_HEAP_FREE,
   V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE,
@@ -7801,7 +7805,7 @@ ON_FLASH V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
 #if 0
     fprintf(stderr, "Exhausting arena %s, invoking GC.\n", a->name);
 #endif
-    v7_gc(v7);
+    v7_gc(v7, 0);
     if (a->free == NULL) {
 #if 1
 #ifndef NO_LIBC
@@ -7919,8 +7923,10 @@ ON_FLASH int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
       return v7->object_arena.alive * v7->object_arena.cell_size +
              v7->function_arena.alive * v7->function_arena.cell_size +
              v7->property_arena.alive * v7->property_arena.cell_size;
-    case V7_HEAP_STAT_STRING_HEAP_SIZE:
+    case V7_HEAP_STAT_STRING_HEAP_RESERVED:
       return v7->owned_strings.size;
+    case V7_HEAP_STAT_STRING_HEAP_USED:
+      return v7->owned_strings.len;
     case V7_HEAP_STAT_OBJ_HEAP_MAX:
       return v7->object_arena.size;
     case V7_HEAP_STAT_OBJ_HEAP_FREE:
@@ -8097,7 +8103,7 @@ ON_FLASH void gc_dump_owned_strings(struct v7 *v7) {
 
 #ifndef V7_DISABLE_GC
 /* Perform garbage collection */
-ON_FLASH void v7_gc(struct v7 *v7) {
+ON_FLASH void v7_gc(struct v7 *v7, int full) {
   val_t **vp;
 
   gc_dump_arena_stats("Before GC objects", &v7->object_arena);
@@ -8135,6 +8141,10 @@ ON_FLASH void v7_gc(struct v7 *v7) {
   gc_dump_arena_stats("After GC objects", &v7->object_arena);
   gc_dump_arena_stats("After GC functions", &v7->function_arena);
   gc_dump_arena_stats("After GC properties", &v7->property_arena);
+
+  if (full) {
+    mbuf_trim(&v7->owned_strings);
+  }
 }
 #endif
 /*
@@ -10222,7 +10232,7 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
 
 #ifdef V7_ENABLE_GC
   if (v7->need_gc) {
-    v7_gc(v7);
+    v7_gc(v7, 0);
     v7->need_gc = 0;
   }
 #endif
@@ -16438,7 +16448,7 @@ ON_FLASH int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *)) {
   if (dump_stats) {
     printf("Memory stats during init:\n");
     dump_mm_stats(v7);
-    v7_gc(v7);
+    v7_gc(v7, 0);
     printf("Memory stats before run:\n");
     dump_mm_stats(v7);
   }
