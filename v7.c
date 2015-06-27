@@ -6979,12 +6979,18 @@ ON_FLASH int v7_set_property(struct v7 *v7, val_t obj, const char *name,
                              size_t len, unsigned int attributes,
                              v7_val_t val) {
   val_t n;
+  int res;
+  /* set_property_v can trigger GC */
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
   if (len == (size_t) ~0) {
     len = strlen(name);
   }
 
   n = v7_create_string(v7, name, len, 1);
-  return v7_set_property_v(v7, obj, n, attributes, val);
+  res = v7_set_property_v(v7, obj, n, attributes, val);
+  tmp_frame_cleanup(&tf);
+  return res;
 }
 
 ON_FLASH int v7_del_property(struct v7 *v7, val_t obj, const char *name,
