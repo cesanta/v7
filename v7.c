@@ -194,6 +194,9 @@ int v7_is_cfunction(v7_val_t);
 /* Return true if given value holds `void *` pointer */
 int v7_is_foreign(v7_val_t);
 
+/* Return true if given value is an array object */
+int v7_is_array(struct v7 *, v7_val_t);
+
 /* Return `void *` pointer stored in `v7_val_t` */
 void *v7_to_foreign(v7_val_t);
 
@@ -6270,6 +6273,10 @@ ON_FLASH int v7_is_regexp(struct v7 *v7, val_t v) {
 
 ON_FLASH int v7_is_foreign(val_t v) {
   return (v & V7_TAG_MASK) == V7_TAG_FOREIGN;
+}
+
+ON_FLASH int v7_is_array(struct v7 *v7, val_t v) {
+  return v7_is_object(v) && is_prototype_of(v7, v, v7->array_prototype);
 }
 
 ON_FLASH V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *v7, val_t v) {
@@ -13546,6 +13553,7 @@ ON_FLASH V7_PRIVATE void init_json(struct v7 *v7) {
  */
 
 
+
 struct a_sort_data {
   struct v7 *v7;
   val_t sort_func;
@@ -13984,10 +13992,37 @@ ON_FLASH static val_t Array_filter(struct v7 *v7, val_t this_obj, val_t args) {
   return res;
 }
 
+ON_FLASH static val_t Array_concat(struct v7 *v7, val_t this_obj, val_t args) {
+  size_t i, j;
+  val_t res;
+  size_t len;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+  tmp_stack_push(&tf, &res);
+
+  if (!v7_is_array(v7, this_obj)) {
+    throw_exception(v7, TYPE_ERROR, "Array expected");
+  }
+
+  len = v7_array_length(v7, args);
+  res = a_splice(v7, this_obj, v7_create_undefined(), 1);
+  for (i = 0; i < len; i++) {
+    val_t a = v7_array_get(v7, args, i);
+    if (!v7_is_array(v7, a)) {
+      v7_array_push(v7, res, a);
+    } else {
+      size_t alen = v7_array_length(v7, a);
+      for (j = 0; j < alen; j++) {
+        v7_array_push(v7, res, v7_array_get(v7, a, j));
+      }
+    }
+  }
+  return res;
+}
+
 ON_FLASH static val_t Array_isArray(struct v7 *v7, val_t this_obj, val_t args) {
   val_t arg0 = v7_array_get(v7, args, 0);
   (void) this_obj;
-  return v7_create_boolean(is_prototype_of(v7, arg0, v7->array_prototype));
+  return v7_create_boolean(v7_is_array(v7, arg0));
 }
 
 ON_FLASH V7_PRIVATE void init_array(struct v7 *v7) {
@@ -13998,17 +14033,18 @@ ON_FLASH V7_PRIVATE void init_array(struct v7 *v7) {
   set_method(v7, ctor, "isArray", Array_isArray, 1);
   v7_set_property(v7, v7->global_object, "Array", 5, 0, ctor);
 
-  set_method(v7, v7->array_prototype, "push", Array_push, 1);
-  set_method(v7, v7->array_prototype, "sort", Array_sort, 1);
-  set_method(v7, v7->array_prototype, "reverse", Array_reverse, 0);
-  set_method(v7, v7->array_prototype, "join", Array_join, 1);
-  set_method(v7, v7->array_prototype, "toString", Array_toString, 0);
-  set_method(v7, v7->array_prototype, "slice", Array_slice, 2);
-  set_method(v7, v7->array_prototype, "splice", Array_splice, 2);
-  set_method(v7, v7->array_prototype, "map", Array_map, 1);
+  set_method(v7, v7->array_prototype, "concat", Array_concat, 1);
   set_method(v7, v7->array_prototype, "every", Array_every, 1);
-  set_method(v7, v7->array_prototype, "some", Array_some, 1);
   set_method(v7, v7->array_prototype, "filter", Array_filter, 1);
+  set_method(v7, v7->array_prototype, "join", Array_join, 1);
+  set_method(v7, v7->array_prototype, "map", Array_map, 1);
+  set_method(v7, v7->array_prototype, "push", Array_push, 1);
+  set_method(v7, v7->array_prototype, "reverse", Array_reverse, 0);
+  set_method(v7, v7->array_prototype, "slice", Array_slice, 2);
+  set_method(v7, v7->array_prototype, "some", Array_some, 1);
+  set_method(v7, v7->array_prototype, "sort", Array_sort, 1);
+  set_method(v7, v7->array_prototype, "splice", Array_splice, 2);
+  set_method(v7, v7->array_prototype, "toString", Array_toString, 0);
 
   v7_array_set(v7, length, 0, v7_create_cfunction(Array_get_length));
   v7_array_set(v7, length, 1, v7_create_cfunction(Array_set_length));
