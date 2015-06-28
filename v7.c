@@ -1471,12 +1471,6 @@ struct gc_arena {
 #define UNUSED
 #endif
 
-/*
- * DO NOT SUBMIT: remove this when adding support
- * for predefined strings as roots
- */
-#define V7_DISABLE_PREDEFINED_STRINGS
-
 #define _POSIX_C_SOURCE 200809L
 
 #include <assert.h>
@@ -8150,9 +8144,20 @@ ON_FLASH void v7_gc(struct v7 *v7, int full) {
   for (vp = (val_t **) v7->tmp_stack.buf;
        (char *) vp < v7->tmp_stack.buf + v7->tmp_stack.len; vp++) {
     gc_mark(v7, **vp);
+#ifdef V7_ENABLE_COMPACTING_GC
+    gc_mark_string(v7, *vp);
+#endif
   }
 
 #ifdef V7_ENABLE_COMPACTING_GC
+#ifndef V7_DISABLE_PREDEFINED_STRINGS
+  {
+    int i;
+    for (i = 0; i < PREDEFINED_STR_MAX; i++) {
+      gc_mark_string(v7, &v7->predefined_strings[i]);
+    }
+  }
+#endif
   gc_compact_strings(v7);
 #endif
 
