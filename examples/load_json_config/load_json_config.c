@@ -24,7 +24,7 @@ int main(void) {
   domain_str = v7_to_string(v7, &domain, &n);
 
   printf("Domain: [%.*s], port 0: [%d]\n",
-         (int) n, domain_str, (int) v7_to_double(port0));
+         (int) n, domain_str, (int) v7_to_number(port0));
 
   v7_destroy(v7);
   return 0;
