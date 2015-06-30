@@ -394,6 +394,7 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math__atan 1
 #define V7_ENABLE__Math__atan2 1
 #define V7_ENABLE__Math__ceil 1
+#define V7_ENABLE__Math__constants 1
 #define V7_ENABLE__Math__cos 1
 #define V7_ENABLE__Math__exp 1
 #define V7_ENABLE__Math__floor 1
@@ -407,6 +408,8 @@ int v7_main(int argc, char *argv[], void (*init_func)(struct v7 *));
 #define V7_ENABLE__Math__sqrt 1
 #define V7_ENABLE__Math__tan 1
 #define V7_ENABLE__Memory__stats 1
+#define V7_ENABLE__NUMBER__NEGATIVE_INFINITY 1
+#define V7_ENABLE__NUMBER__POSITIVE_INFINITY 1
 #define V7_ENABLE__Object__create 1
 #define V7_ENABLE__Object__defineProperties 1
 #define V7_ENABLE__Object__defineProperty 1
@@ -13545,10 +13548,14 @@ ON_FLASH V7_PRIVATE void init_number(struct v7 *v7) {
   v7_set_property(v7, num, "MAX_VALUE", 9, attrs,
                   v7_create_number(1.7976931348623157e+308));
   v7_set_property(v7, num, "MIN_VALUE", 9, attrs, v7_create_number(5e-324));
+#if V7_ENABLE__NUMBER__NEGATIVE_INFINITY
   v7_set_property(v7, num, "NEGATIVE_INFINITY", 17, attrs,
                   v7_create_number(-INFINITY));
+#endif
+#if V7_ENABLE__NUMBER__POSITIVE_INFINITY
   v7_set_property(v7, num, "POSITIVE_INFINITY", 17, attrs,
                   v7_create_number(INFINITY));
+#endif
   v7_set_property(v7, num, "NaN", 3, attrs, V7_TAG_NAN);
 
   v7_set_property(v7, v7->global_object, "NaN", 3, attrs, V7_TAG_NAN);
@@ -14364,6 +14371,7 @@ ON_FLASH V7_PRIVATE void init_math(struct v7 *v7) {
   set_cfunc_prop(v7, math, "tan", Math_tan);
 #endif
 
+#if V7_ENABLE__Math__constants
   v7_set_property(v7, math, "E", 1, 0, v7_create_number(M_E));
   v7_set_property(v7, math, "PI", 2, 0, v7_create_number(M_PI));
   v7_set_property(v7, math, "LN2", 3, 0, v7_create_number(M_LN2));
@@ -14372,9 +14380,9 @@ ON_FLASH V7_PRIVATE void init_math(struct v7 *v7) {
   v7_set_property(v7, math, "LOG10E", 6, 0, v7_create_number(M_LOG10E));
   v7_set_property(v7, math, "SQRT1_2", 7, 0, v7_create_number(M_SQRT1_2));
   v7_set_property(v7, math, "SQRT2", 5, 0, v7_create_number(M_SQRT2));
+#endif
 
   v7_set_property(v7, v7->global_object, "Math", 4, 0, math);
-  v7_set_property(v7, v7->global_object, "NaN", 3, 0, V7_TAG_NAN);
 }
 
 #endif /* V7_ENABLE__Math */
