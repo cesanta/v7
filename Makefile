@@ -4,13 +4,13 @@ CFLAGS = $(WARNS) -g -O3 -lm $(V7_FLAGS) $(CFLAGS_PLATFORM) $(CFLAGS_EXTRA)
 
 .PHONY: examples test
 
-all: examples test v7
+all: v7 examples test
 
 examples:
 	@$(MAKE) -C examples
 
-tests/unit_test: tests/unit_test.c v7.c Makefile
-		$(CC) tests/unit_test.c -DV7_EXPOSE_PRIVATE -DV7_UNIT_TEST $(CFLAGS) -lm -o tests/unit_test
+tests/unit_test: tests/unit_test.c tests/test_util.c tests/test_util.h v7.c v7.h Makefile
+		$(CC) tests/unit_test.c tests/test_util.c -DV7_EXPOSE_PRIVATE -DV7_UNIT_TEST $(CFLAGS) -lm -o tests/unit_test
 
 test: tests/unit_test
 	cd tests; ./unit_test $(TEST_FILTER)
