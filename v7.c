@@ -10966,8 +10966,10 @@ cleanup:
   return res;
 }
 
-ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
-                                  val_t w) {
+/* like v7_exec_with but frees src if fr is true */
+ON_FLASH
+V7_PRIVATE enum v7_err v7_exec_with2(struct v7 *v7, val_t *res, const char *src,
+                                     val_t w, int fr) {
   /* TODO(mkm): use GC pool */
   struct ast *a = (struct ast *) malloc(sizeof(struct ast));
   val_t old_this = v7->this_object;
@@ -10990,7 +10992,12 @@ ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
     err = V7_EXEC_EXCEPTION;
     goto cleanup;
   }
-  if ((err = parse(v7, a, src, 1)) != V7_OK) {
+  err = parse(v7, a, src, 1);
+  if (fr) {
+    free((void *) src);
+  }
+
+  if (err != V7_OK) {
     /*
      * The actual error might not be syntax error but there is no need to
      * add more overhead to the runtime by creating a specific exception for
@@ -11018,6 +11025,11 @@ cleanup:
   memcpy(&v7->label_jmp_buf, &saved_label_buf, sizeof(saved_label_buf));
 
   return err;
+}
+
+ON_FLASH enum v7_err v7_exec_with(struct v7 *v7, val_t *res, const char *src,
+                                  val_t w) {
+  return v7_exec_with2(v7, res, src, w, 0);
 }
 
 ON_FLASH void v7_interrupt(struct v7 *v7) {
@@ -11066,13 +11078,14 @@ ON_FLASH enum v7_err v7_exec_file(struct v7 *v7, val_t *res, const char *path) {
     c_fclose(fp);
   } else {
     c_rewind(fp);
-    if (c_fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) {
-      if (c_ferror(fp)) goto cleanup;
+    if ((c_fread(p, 1, (size_t) file_size, fp) < (size_t) file_size) &&
+        c_ferror(fp)) {
+      c_fclose(fp);
+      return err;
     }
     c_fclose(fp);
-    err = v7_exec(v7, res, p);
-  cleanup:
-    free(p);
+    /* v7_exec_with2 will free sources after parse */
+    err = v7_exec_with2(v7, res, p, V7_UNDEFINED, 1);
   }
 
   return err;
