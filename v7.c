@@ -11409,6 +11409,10 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
  */
 
 
+#ifdef NO_LIBC
+void print_str(const char *str);
+#endif
+
 ON_FLASH V7_PRIVATE v7_val_t
 Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
   char *p, buf[1024];
@@ -11420,10 +11424,18 @@ Std_print(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
     if (v7_is_string(arg)) {
       size_t n;
       const char *s = v7_to_string(v7, &arg, &n);
+#ifndef NO_LIBC
       printf("%s", s);
+#else
+      print_str(s);
+#endif
     } else {
       p = v7_to_json(v7, arg, buf, sizeof(buf));
+#ifndef NO_LIBC
       printf("%s", p);
+#else
+      print_str(p);
+#endif
       if (p != buf) {
         free(p);
       }
