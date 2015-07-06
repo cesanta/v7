@@ -3553,7 +3553,7 @@ err
 3505	FAIL ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A4.1_T1.js (tail -c +3786549 tests/ecmac.db|head -c 1466): [{"message":"#0: var arr = /\u0000/.exec(\u0000); arr[0] === "\u0000". Actual. "}]
 3506	FAIL ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A4.1_T2.js (tail -c +3788016 tests/ecmac.db|head -c 1767): [{"message":"#1: ENGLISH CAPITAL ALPHABET"}]
 3507	PASS ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A4.1_T3.js (tail -c +3789784 tests/ecmac.db|head -c 2361)
-3508	FAIL ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A5.1_T1.js (tail -c +3792146 tests/ecmac.db|head -c 625): [{"message":"#1: IdentityEscapeSequence :: SourceCharacter but not IdentifierPart"}]
+3508	PASS ch15/15.10/15.10.2/15.10.2.10/S15.10.2.10_A5.1_T1.js (tail -c +3792146 tests/ecmac.db|head -c 625)
 3509	FAIL ch15/15.10/15.10.2/15.10.2.11/S15.10.2.11_A1_T1.js (tail -c +3792772 tests/ecmac.db|head -c 738): [{"message":"#1: var arr = /\0/.exec(\u0000); arr[0] === "\u0000". Actual. null"}]
 3510	PASS ch15/15.10/15.10.2/15.10.2.11/S15.10.2.11_A1_T4.js (tail -c +3793511 tests/ecmac.db|head -c 587)
 3511	FAIL ch15/15.10/15.10.2/15.10.2.11/S15.10.2.11_A1_T5.js (tail -c +3794099 tests/ecmac.db|head -c 585): [{"message":"Invalid regex"}]
@@ -11166,8 +11166,8 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11058	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T2.js (tail -c +10073066 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.toUTCString.length property has the attributes DontDelete"}]
 11059	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T3.js (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
 11060	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-10.js (tail -c +10074246 tests/ecmac.db|head -c 941): [{"message":"Test case returned non-true value!"}]
-11061	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-11.js (tail -c +10075188 tests/ecmac.db|head -c 622): [{"message":"Test case returned non-true value!"}]
-11062	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-12.js (tail -c +10075811 tests/ecmac.db|head -c 620): [{"message":"Test case returned non-true value!"}]
+11061	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-11.js (tail -c +10075188 tests/ecmac.db|head -c 622)
+11062	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-12.js (tail -c +10075811 tests/ecmac.db|head -c 620)
 11063	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-13.js (tail -c +10076432 tests/ecmac.db|head -c 921): [{"message":"Test case returned non-true value!"}]
 11064	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-14.js (tail -c +10077354 tests/ecmac.db|head -c 504): [{"message":"Test case returned non-true value!"}]
 11065	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-15.js (tail -c +10077859 tests/ecmac.db|head -c 497): [{"message":"Test case returned non-true value!"}]
@@ -11175,7 +11175,7 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11067	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-2.js (tail -c +10078954 tests/ecmac.db|head -c 335): [{"message":"Test case returned non-true value!"}]
 11068	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-3.js (tail -c +10079290 tests/ecmac.db|head -c 326)
 11069	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-4.js (tail -c +10079617 tests/ecmac.db|head -c 535): [{"message":"Test case returned non-true value!"}]
-11070	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-5.js (tail -c +10080153 tests/ecmac.db|head -c 383): [{"message":"Test case returned non-true value!"}]
+11070	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-5.js (tail -c +10080153 tests/ecmac.db|head -c 383)
 11071	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483)
 11072	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463)
 11073	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-8.js (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"Test case returned non-true value!"}]
