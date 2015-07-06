@@ -1609,6 +1609,39 @@ static const char *test_gc_sweep(void) {
   v7_destroy(v7);
   return NULL;
 }
+
+static const char *test_gc_own(void) {
+  struct v7 *v7 = v7_create();
+  val_t v1, v2;
+  const char *s;
+  size_t len;
+
+  v1 = v7_create_string(v7, "foobar", 6, 1);
+  v2 = v7_create_string(v7, "barfoo", 6, 1);
+
+  v7_own(v7, &v1);
+  v7_own(v7, &v2);
+
+  /*
+   * fully gc will shrink the mbuf. given that v2 is the last entry
+   * if it were not correctly rooted, it will now lie outside realloced
+   * area and ASAN will complain.
+   */
+  v7_gc(v7, 1);
+  s = v7_to_string(v7, &v2, &len);
+  ASSERT_STREQ(s, "barfoo");
+
+  ASSERT_EQ(v7_disown(v7, &v2), 1);
+
+  v7_gc(v7, 1);
+  s = v7_to_string(v7, &v1, &len);
+  ASSERT_STREQ(s, "foobar");
+
+  ASSERT_EQ(v7_disown(v7, &v2), 0);
+
+  v7_destroy(v7);
+  return NULL;
+}
 #endif
 
 #ifdef V7_ENABLE_FILE
@@ -1798,6 +1831,7 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 #ifndef V7_DISABLE_GC
   RUN_TEST(test_gc_mark);
   RUN_TEST(test_gc_sweep);
+  RUN_TEST(test_gc_own);
 #endif
   RUN_TEST(test_ecmac);
 #ifdef V7_ENABLE_BCODE
