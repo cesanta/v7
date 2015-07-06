@@ -295,6 +295,11 @@ static const char *test_stdlib(void) {
 #endif /* V7_ENABLE__RegExp */
   ASSERT_EVAL_STR_EQ(v7, "String('hi')", "hi");
   ASSERT_EVAL_OK(v7, "new String('blah')");
+  ASSERT_EVAL_NUM_EQ(v7, "(String.fromCharCode(0,1) + '\\x00\\x01').length", 4);
+  ASSERT_EVAL_NUM_EQ(
+      v7, "(String.fromCharCode(1,0) + '\\x00\\x01').charCodeAt(1)", 0);
+  ASSERT_EVAL_NUM_EQ(
+      v7, "(String.fromCharCode(0,1) + '\\x00\\x01').charCodeAt(1)", 1);
 
   /* Date() tests interact with external object (local date & time), so
       if host have strange date/time setting it won't be work */
