@@ -10936,9 +10936,7 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       size_t name_len;
       size_t saved_tmp_stack_pos = v7->tmp_stack.len;
       volatile enum jmp_type j;
-      val_t catch_scope = v7_create_undefined();
 
-      tmp_stack_push(&tf, &catch_scope);
       memcpy(old_jmp, v7->jmp_buf, sizeof(old_jmp));
 
       end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -10948,8 +10946,11 @@ ON_FLASH static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
       if ((j = (enum jmp_type) sigsetjmp(v7->jmp_buf, 0)) == 0) {
         res = i_eval_stmts(v7, a, pos, acatch, scope, brk);
       } else if (j == THROW_JMP && acatch != finally) {
+        val_t catch_scope;
         v7->tmp_stack.len = saved_tmp_stack_pos;
         catch_scope = create_object(v7, scope);
+        tmp_stack_push(&tf, &catch_scope);
+
         tag = ast_fetch_tag(a, &acatch);
         V7_CHECK(v7, tag == AST_IDENT);
         name = ast_get_inlined_data(a, acatch, &name_len);
