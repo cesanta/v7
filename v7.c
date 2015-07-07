@@ -2457,7 +2457,6 @@ ON_FLASH void mbuf_remove(struct mbuf *mb, size_t n) {
 #include <string.h>
 
 #if V7_ENABLE__UTF
-
 enum
 {
 	Bit1	= 7,
@@ -3830,14 +3829,12 @@ ON_FLASH int runetochar(char *str, Rune *rune) {
 Rune tolowerrune(Rune c) { return tolower(c); }
 Rune toupperrune(Rune c) { return toupper(c); }
 ON_FLASH int utfnlen(char *s, long m) { /* Could use strnlen but it's from POSIX 2008. */
-  long n;
-  for (n = 0; n < m && *s != '\0'; n++);
-  return n;
+  (void) s;
+  return m;
 }
 
 ON_FLASH char *utfnshift(char *s, long m) {
-  for (; m > 0 && *s != '\0'; m--, s++);
-  return s;
+  return s + m;
 }
 
 #endif /* V7_ENABLE__UTF */
