@@ -10112,7 +10112,8 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_CALL: {
       ast_off_t pp = *pos;
       ast_move_to_children(a, &pp);
-      res = i_eval_call(v7, a, pos, scope, i_find_this(v7, a, pp, scope), 0);
+      v1 = i_find_this(v7, a, pp, scope);
+      res = i_eval_call(v7, a, pos, scope, v1, 0);
       break;
     }
     case AST_NEW:
