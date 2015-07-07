@@ -245,6 +245,14 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23)", 1.23);
   ASSERT_EVAL_OK(v7, "new Number(21.23)");
 
+  /* Cesanta-specific String API */
+  ASSERT_EVAL_NUM_EQ(v7, "'ы'.length", 1);
+  ASSERT_EVAL_NUM_EQ(v7, "'ы'.charCodeAt(0)", 1099);
+  ASSERT_EVAL_NUM_EQ(v7, "'ы'.blen", 2);
+  ASSERT_EVAL_NUM_EQ(v7, "'ы'.at(0)", 0xd1);
+  ASSERT_EVAL_NUM_EQ(v7, "'ы'.at(1)", 0x8b);
+  ASSERT_EVAL_NUM_EQ(v7, "'ы'.at(2)", NAN);
+
   /* String */
   ASSERT_EVAL_NUM_EQ(v7, "'hello'.charCodeAt(1)", 'e');
   ASSERT_EVAL_NUM_EQ(v7, "'hello'.charCodeAt(4)", 'o');

@@ -15174,6 +15174,31 @@ ON_FLASH static val_t Str_length(struct v7 *v7, val_t this_obj, val_t args) {
   return v7_create_number(len);
 }
 
+ON_FLASH static val_t Str_at(struct v7 *v7, val_t this_obj, val_t args) {
+  long arg0 = arg_long(v7, args, 0, -1);
+  val_t s = i_value_of(v7, this_obj);
+
+  if (v7_is_string(s)) {
+    size_t n;
+    const unsigned char *p = (unsigned char *) v7_to_string(v7, &s, &n);
+    if (arg0 >= 0 && (size_t) arg0 < n) {
+      return v7_create_number(p[arg0]);
+    }
+  }
+
+  return v7_create_number(NAN);
+}
+
+ON_FLASH static val_t Str_blen(struct v7 *v7, val_t this_obj, val_t args) {
+  size_t len = 0;
+  val_t s = i_value_of(v7, this_obj);
+  (void) args;
+  if (v7_is_string(s)) {
+    v7_to_string(v7, &s, &len);
+  }
+  return v7_create_number(len);
+}
+
 ON_FLASH V7_PRIVATE long to_long(struct v7 *v7, val_t v, long default_value) {
   char buf[40];
   size_t l;
@@ -15362,6 +15387,11 @@ ON_FLASH V7_PRIVATE void init_string(struct v7 *v7) {
 
   v7_set_property(v7, v7->string_prototype, "length", 6, V7_PROPERTY_GETTER,
                   v7_create_cfunction(Str_length));
+
+  /* Non-standard Cesanta extension */
+  set_cfunc_prop(v7, v7->string_prototype, "at", Str_at);
+  v7_set_property(v7, v7->string_prototype, "blen", 4, V7_PROPERTY_GETTER,
+                  v7_create_cfunction(Str_blen));
 }
 /*
  * Copyright (c) 2015 Cesanta Software Limited

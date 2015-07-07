@@ -11165,7 +11165,7 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11057	PASS ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T1.js (tail -c +10072579 tests/ecmac.db|head -c 486)
 11058	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T2.js (tail -c +10073066 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.toUTCString.length property has the attributes DontDelete"}]
 11059	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T3.js (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
-11060	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-10.js (tail -c +10074246 tests/ecmac.db|head -c 941): [{"message":"Test case returned non-true value!"}]
+11060	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-10.js (tail -c +10074246 tests/ecmac.db|head -c 941)
 11061	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-11.js (tail -c +10075188 tests/ecmac.db|head -c 622)
 11062	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-12.js (tail -c +10075811 tests/ecmac.db|head -c 620)
 11063	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-13.js (tail -c +10076432 tests/ecmac.db|head -c 921): [{"message":"Test case returned non-true value!"}]
@@ -11179,7 +11179,7 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11071	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483)
 11072	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463)
 11073	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-8.js (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"Test case returned non-true value!"}]
-11074	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-9.js (tail -c +10082327 tests/ecmac.db|head -c 940): [{"message":"Test case returned non-true value!"}]
+11074	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-9.js (tail -c +10082327 tests/ecmac.db|head -c 940)
 11075	PASS ch15/15.9/15.9.5/15.9.5.44/15.9.5.44-0-1.js (tail -c +10083268 tests/ecmac.db|head -c 342)
 11076	FAIL ch15/15.9/15.9.5/15.9.5.44/15.9.5.44-0-2.js (tail -c +10083611 tests/ecmac.db|head -c 337): [{"message":"Test case returned non-true value!"}]
 11077	PASS ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A1_T1.js (tail -c +10083949 tests/ecmac.db|head -c 513)
