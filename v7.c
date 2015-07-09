@@ -8234,6 +8234,7 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
     next = prop->next;
 
 #ifndef NO_LIBC
+    /* This usually triggers when marking an already free object */
     assert((char *) prop >= v7->property_arena.base &&
            (char *) prop <
                (v7->property_arena.base +
@@ -10261,7 +10262,8 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
         default:
           *pos = start;
           i_eval_expr(v7, a, pos, scope);
-          return v7_create_boolean(1);
+          res = v7_create_boolean(1);
+          goto cleanup;
       }
 
       if (v7_is_object(lval) &&
@@ -10315,6 +10317,7 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
     }
   }
 
+cleanup:
   tmp_frame_cleanup(&tf);
   return res;
 }
