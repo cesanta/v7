@@ -8191,6 +8191,24 @@ ON_FLASH void gc_sweep(struct v7 *v7, struct gc_arena *a, size_t start) {
   }
 }
 
+/*
+ * dense arrays contain only one property pointing to an mbuf with array values.
+ */
+ON_FLASH V7_PRIVATE void gc_mark_dense_array(struct v7 *v7,
+                                             struct v7_object *obj) {
+  val_t v = obj->properties->value;
+  struct mbuf *mbuf = (struct mbuf *) v7_to_foreign(v);
+  val_t *vp;
+
+  if (mbuf == NULL) return;
+  for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
+    gc_mark(v7, *vp);
+#ifdef V7_ENABLE_COMPACTING_GC
+    gc_mark_string(v7, vp);
+#endif
+  }
+}
+
 ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   struct v7_object *obj;
   struct v7_property *prop;
@@ -8201,6 +8219,10 @@ ON_FLASH V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
   }
   obj = v7_to_object(v);
   if (MARKED(obj)) return;
+
+  if (obj->attributes & V7_OBJ_DENSE_ARRAY) {
+    gc_mark_dense_array(v7, obj);
+  }
 
   for ((prop = obj->properties), MARK(obj); prop != NULL; prop = next) {
 #ifdef V7_ENABLE_COMPACTING_GC
