@@ -849,12 +849,22 @@ char *utfutf(char *s1, char *s2);
 #pragma warning(disable : 4204) /* missing c99 support */
 #endif
 
-#ifndef AVR_LIBC
+#if !(defined (AVR_LIBC) || defined (PICOTCP))
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
 #include <signal.h>
+#endif
+
+#ifdef PICOTCP
+#define time(x) PICO_TIME()
+#ifndef SOMAXCONN
+#define SOMAXCONN (16)
+#endif
+#ifdef _POSIX_VERSION
+#define signal(...)
+#endif
 #endif
 
 #include <assert.h>
@@ -987,7 +997,7 @@ int64_t strtoll(const char* str, char** endptr, int base);
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 #endif
 
-#ifndef NO_LIBC
+#if !defined(NO_LIBC) && !defined(NS_DISABLE_FILESYSTEM)
 typedef FILE* c_file_t;
 /*
  * Cannot use fopen & Co directly and
