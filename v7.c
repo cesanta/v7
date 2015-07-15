@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cesanta Software Limited
+ * Copyright (c) 2013-2014 Cesanta Software Limited
  * All rights reserved
  *
  * This software is dual-licensed: you can redistribute it and/or modify
@@ -9747,6 +9747,12 @@ ON_FLASH static val_t i_eval_expr(struct v7 *v7, struct ast *a, ast_off_t *pos,
   tmp_stack_push(&tf, &res);
   tmp_stack_push(&tf, &v1);
   tmp_stack_push(&tf, &v2);
+
+#if defined(V7_STACK_SIZE) && !defined(V7_DISABLE_INTERPRETER_STACK_CHECK)
+  if ((void *) &v7 <= v7->sp_limit) {
+    v7_throw(v7, "stack overflow");
+  }
+#endif
 
   if (v7->interrupt == 1) {
     v7->interrupt = 0;
