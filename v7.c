@@ -7050,7 +7050,7 @@ void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
     fprint_str(f, s);
 #endif
   } else {
-    char *s = v7_to_json(v7, v, buf, 0);
+    char *s = v7_to_json(v7, v, buf, sizeof(buf));
 #ifndef NO_LIBC
     fprintf(f, "%s", s);
 #else
