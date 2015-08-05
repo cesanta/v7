@@ -14675,13 +14675,7 @@ DEFINE_WRAPPER(tan, m_one_arg)
 
 #if V7_ENABLE__Math__random
 V7_PRIVATE val_t Math_random(struct v7 *v7, val_t this_obj, val_t args) {
-  static int srand_called = 0;
-
-  if (!srand_called) {
-    srand((unsigned) (unsigned long) v7);
-    srand_called++;
-  }
-
+  (void) v7;
   (void) this_obj;
   (void) args;
   return v7_create_number((double) rand() / RAND_MAX);
@@ -14761,6 +14755,11 @@ V7_PRIVATE void init_math(struct v7 *v7) {
   set_cfunc_prop(v7, math, "pow", Math_pow);
 #endif
 #if V7_ENABLE__Math__random
+  /* Incorporate our pointer into the RNG.
+   * If srand() has not been called before, this will provide some randomness.
+   * If it has, it will hopefully not make things worse.
+   */
+  srand(rand() ^ ((intptr_t) v7));
   set_cfunc_prop(v7, math, "random", Math_random);
 #endif
 #if V7_ENABLE__Math__round
