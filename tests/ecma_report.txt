@@ -3931,19 +3931,19 @@ line 2. Actual: undefined"}]
 3848	FAIL ch15/15.10/15.10.4/S15.10.4.1_A6_T1.js (tail -c +4340931 tests/ecmac.db|head -c 554): [{"message":"#1: __re = new RegExp; __re.toString = Object.prototype.toString; __re.toString() === "[object "+"RegExp"+"]". Actual: [object Object]"}]
 3849	PASS ch15/15.10/15.10.4/S15.10.4.1_A7_T1.js (tail -c +4341486 tests/ecmac.db|head -c 612)
 3850	FAIL ch15/15.10/15.10.4/S15.10.4.1_A7_T2.js (tail -c +4342099 tests/ecmac.db|head -c 588): [{"message":"#1: __re = new RegExp(); RegExp.prototype.isPrototypeOf(__re) === true. Actual: false"}]
-3851	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T1.js (tail -c +4342688 tests/ecmac.db|head -c 962)
-3852	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T10.js (tail -c +4343651 tests/ecmac.db|head -c 956)
+3851	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T1.js (tail -c +4342688 tests/ecmac.db|head -c 962): [{"message":"#1: __re = new RegExp("a|b","i"); __re.ignoreCase === true. Actual: false"}]
+3852	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T10.js (tail -c +4343651 tests/ecmac.db|head -c 956): [{"message":"#2: __re = new RegExp(true,"m"); __re.multiline === true. Actual: false"}]
 3853	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T11.js (tail -c +4344608 tests/ecmac.db|head -c 1060): [{"message":"Invalid regex"}]
 3854	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T12.js (tail -c +4345669 tests/ecmac.db|head -c 684)
 3855	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T13.js (tail -c +4346354 tests/ecmac.db|head -c 598): [{"message":"#1.2: new RegExp("1", {toString:function(){throw "intostr";}}) throw "intostr". Actual: {"message":"#1.1: new RegExp("1", {toString:function(){throw "intostr";}}) throw "intostr". Actual: {}"}"}]
-3856	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T2.js (tail -c +4346953 tests/ecmac.db|head -c 1092)
+3856	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T2.js (tail -c +4346953 tests/ecmac.db|head -c 1092): [{"message":"#1: __re = new RegExp(function(){return "a|b|[]"; __re.ignoreCase === true. Actual: false"}]
 3857	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T3.js (tail -c +4348046 tests/ecmac.db|head -c 1202): [{"message":"Invalid regex"}]
-3858	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T4.js (tail -c +4349249 tests/ecmac.db|head -c 1351)
+3858	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T4.js (tail -c +4349249 tests/ecmac.db|head -c 1351): [{"message":"#1: __re = new RegExp({toString:void 0,valueOf:function(){return "[z-z]"; __re.ignoreCase === true. Actual: false"}]
 3859	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T5.js (tail -c +4350601 tests/ecmac.db|head -c 1265): [{"message":"#1: __re = new RegExp(new Object("abc{1}"), {toString:function(){return ""; __re.ignoreCase === false. Actual: true"}]
 3860	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T6.js (tail -c +4351867 tests/ecmac.db|head -c 597): [{"message":"#1.2: new RegExp({toString:function(){throw "intostr";}}, "i") throw "intostr". Actual: {"message":"Invalid regex"}"}]
 3861	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T7.js (tail -c +4352465 tests/ecmac.db|head -c 646)
 3862	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T8.js (tail -c +4353112 tests/ecmac.db|head -c 613): [{"message":"#1.2: new RegExp({toString:function(){throw "intostr";}}, "error") throw "intostr". Actual: {"message":"Invalid regex"}"}]
-3863	PASS ch15/15.10/15.10.4/S15.10.4.1_A8_T9.js (tail -c +4353726 tests/ecmac.db|head -c 1029)
+3863	FAIL ch15/15.10/15.10.4/S15.10.4.1_A8_T9.js (tail -c +4353726 tests/ecmac.db|head -c 1029): [{"message":"#1: __re = new RegExp(1, new Object("gi")); __re.ignoreCase === true. Actual: false"}]
 3864	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T1.js (tail -c +4354756 tests/ecmac.db|head -c 474): [{"message":"#1.2: new RegExp("??") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
 3865	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T2.js (tail -c +4355231 tests/ecmac.db|head -c 486): [{"message":"#1.2: new RegExp("[{-z]") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
 3866	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T3.js (tail -c +4355718 tests/ecmac.db|head -c 490): [{"message":"#1.2: new RegExp("[a--z]") throw SyntaxError. Actual: {"message":"Invalid regex"}"}]
@@ -11165,7 +11165,7 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11057	PASS ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T1.js (tail -c +10072579 tests/ecmac.db|head -c 486)
 11058	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T2.js (tail -c +10073066 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.toUTCString.length property has the attributes DontDelete"}]
 11059	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T3.js (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
-11060	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-10.js (tail -c +10074246 tests/ecmac.db|head -c 941): [{"message":"Test case returned non-true value!"}]
+11060	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-10.js (tail -c +10074246 tests/ecmac.db|head -c 941)
 11061	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-11.js (tail -c +10075188 tests/ecmac.db|head -c 622)
 11062	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-12.js (tail -c +10075811 tests/ecmac.db|head -c 620)
 11063	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-13.js (tail -c +10076432 tests/ecmac.db|head -c 921): [{"message":"Test case returned non-true value!"}]
@@ -11179,7 +11179,7 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11071	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483)
 11072	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463)
 11073	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-8.js (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"Test case returned non-true value!"}]
-11074	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-9.js (tail -c +10082327 tests/ecmac.db|head -c 940): [{"message":"Test case returned non-true value!"}]
+11074	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-9.js (tail -c +10082327 tests/ecmac.db|head -c 940)
 11075	PASS ch15/15.9/15.9.5/15.9.5.44/15.9.5.44-0-1.js (tail -c +10083268 tests/ecmac.db|head -c 342)
 11076	FAIL ch15/15.9/15.9.5/15.9.5.44/15.9.5.44-0-2.js (tail -c +10083611 tests/ecmac.db|head -c 337): [{"message":"Test case returned non-true value!"}]
 11077	PASS ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A1_T1.js (tail -c +10083949 tests/ecmac.db|head -c 513)
