@@ -22,13 +22,13 @@ in JavaScript. V7 features are:
 
 ## Examples & Documentation
 
-- [User Guide](http://cesanta.com/docs/v7) - Detailed User Guide and API reference
+- [User Guide](https://docs.cesanta.com/v7/) - Detailed User Guide and API reference
 - [examples](examples) - Collection of well-commented examples
 
 # Contributions
 
 People who have agreed to the
-[Cesanta CLA](http://cesanta.com/contributors_la.html)
+[Cesanta CLA](https://docs.cesanta.com/contributors_la.shtml)
 can make contributions. Note that the CLA isn't a copyright
 _assigment_ but rather a copyright _license_.
 You retain the copyright on your contributions.
@@ -41,6 +41,6 @@ source licenses. The GPLv2 open source License does not generally permit
 incorporating this software into non-open source programs.
 For those customers who do not wish to comply with the GPLv2 open
 source license requirements,
-[Cesanta](http://cesanta.com) offers a full,
+[Cesanta](https://www.cesanta.com) offers a full,
 royalty-free commercial license and professional support
 without any of the GPL restrictions.

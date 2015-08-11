@@ -6,7 +6,7 @@
 - Implemented AST-based VM runtime
 - Implemented mark-and-sweep garbage collector
 - Published examples
-- Published [documentation with API reference](http://cesanta.com/docs/v7)
+- Published [documentation with API reference](https://docs.cesanta.com/v7/)
 - Standard Library is partially implemented. Unimplemented API:
     + global: `decodeURI()`, `decodeURIComponent()`
     + Object: `seal()`, `freeze()`, `isSealed()`, `isFrozen()`
