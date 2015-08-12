@@ -1415,6 +1415,11 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "a=[1,2,3];a.slice(2,3)", "[3]");
   ASSERT_EVAL_EQ(v7, "a=[1,2,3];a.slice(1,3)", "[2,3]");
 
+  ASSERT_EVAL_EQ(v7,
+                 "function foo(){}; foo.prototype={a:1}; f=new foo; f.b=2; "
+                 "r=[];for(p in f) r.push(p); r",
+                 "[\"b\",\"a\"]");
+
   /* here temporarily because test_stdlib has memory violations */
   ASSERT_EVAL_EQ(v7, "a=[2,1];a.sort();a", "[1,2]");
 
