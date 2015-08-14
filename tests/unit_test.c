@@ -89,7 +89,7 @@ static int check_num(struct v7 *v7, val_t v, double num) {
   int ret = isnan(num) ? isnan(v7_to_number(v)) : v7_to_number(v) == num;
   (void) v7;
   if (!ret) {
-    printf("Num: want %lf got %lf\n", num, v7_to_number(v));
+    printf("Num: want %f got %f\n", num, v7_to_number(v));
   }
 
   return ret;
@@ -943,7 +943,7 @@ static const char *test_ecmac(void) {
            execution_time / (double) CLOCKS_PER_SEC, i, tail_cmd);
 #endif
   }
-  printf("ECMA tests coverage: %.2lf%% (%d of %d)\n",
+  printf("ECMA tests coverage: %.2f%% (%d of %d)\n",
          (double) passed / i * 100.0, passed, i);
 
   free(db);
@@ -1862,7 +1862,7 @@ int main(int argc, char *argv[]) {
   const char *filter = argc > 1 ? argv[1] : "";
   double total_elapsed = 0.0;
   const char *fail_msg = run_all_tests(filter, &total_elapsed);
-  printf("%s, run %d in %.3lfs\n", fail_msg ? "FAIL" : "PASS", num_tests,
+  printf("%s, run %d in %.3fs\n", fail_msg ? "FAIL" : "PASS", num_tests,
          total_elapsed);
   return fail_msg == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
 }
