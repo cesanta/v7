@@ -16,7 +16,7 @@ static char *_escape(const char *s, size_t n) {
   size_t i, j;
   char *res = (char *) malloc(n * 4 + 1);
   for (i = j = 0; s[i] != '\0' && i < n; i++) {
-    if (!iscntrl(s[i])) {
+    if (!iscntrl((int)s[i])) {
       res[j++] = s[i];
     } else {
       j += sprintf(res + j, "\\x%02x", s[i]);

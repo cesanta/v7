@@ -54,7 +54,7 @@ double _now();
       double elapsed = _now();                  \
       msg = test();                             \
       elapsed = _now() - elapsed;               \
-      printf("  [%.3lf] %s\n", elapsed, #test); \
+      printf("  [%.3f] %s\n", elapsed, #test); \
       *total_elapsed += elapsed;                \
     }                                           \
     if (msg) return msg;                        \
@@ -75,7 +75,7 @@ double _now();
   do {                                                                \
     num_tests++;                                                      \
     if (!(actual == expected)) {                                      \
-      printf("%lf != %lf\n", AS_DOUBLE(actual), AS_DOUBLE(expected)); \
+      printf("%f != %f\n", AS_DOUBLE(actual), AS_DOUBLE(expected)); \
       FAIL(#actual " == " #expected, __LINE__);                       \
     }                                                                 \
   } while (0)
