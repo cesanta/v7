@@ -1533,6 +1533,7 @@ static const char *test_to_json(void) {
 
 static const char *test_json_parse(void) {
   struct v7 *v7 = v7_create();
+  const char *c1, *c2;
 
   ASSERT_EVAL_NUM_EQ(v7, "JSON.parse(42)", 42);
   ASSERT_EVAL_EQ(v7, "JSON.parse('\"foo\"')", "\"foo\"");
@@ -1540,13 +1541,17 @@ static const char *test_json_parse(void) {
   ASSERT_EVAL_EQ(v7, "JSON.parse(JSON.stringify({'foo':'bar'}))",
                  "{\"foo\":\"bar\"}");
 
+  c1 =
+      "JSON.parse(JSON.stringify('"
+      "foooooooooooooooooooooooooooooooooooooooooooooooo"
+      "ooooooooooooooooooooooooooooooooooooooooooooooooo'))",
+
+  c2 =
+      "\"foooooooooooooooooooooooooooooooooooooooooooooooo"
+      "ooooooooooooooooooooooooooooooooooooooooooooooooo\"";
+
   /* big string, will cause malloc */
-  ASSERT_EVAL_EQ(v7,
-                 "JSON.parse(JSON.stringify('"
-                 "foooooooooooooooooooooooooooooooooooooooooooooooo"
-                 "ooooooooooooooooooooooooooooooooooooooooooooooooo'))",
-                 "\"foooooooooooooooooooooooooooooooooooooooooooooooo"
-                 "ooooooooooooooooooooooooooooooooooooooooooooooooo\"");
+  ASSERT_EVAL_EQ(v7, c1, c2);
 
   v7_destroy(v7);
   return NULL;
