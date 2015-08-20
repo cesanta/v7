@@ -1511,12 +1511,42 @@ static const char *test_to_json(void) {
   v7_exec(v7, &v, "123.45");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, "123.45");
+
+  v7_exec(v7, &v, "'foo'");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, "\"foo\"");
+
+  v7_exec(v7, &v, "'\"foo\"'");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, "\"\\\"foo\\\"\"");
+
 /* TODO(mkm): fix to_json alloc */
 #if 0
   ASSERT((p = v7_to_json(v7, v, buf, 3)) != buf);
   ASSERT_EQ(strcmp(p, "123.45"), 0);
   free(p);
 #endif
+
+  v7_destroy(v7);
+  return NULL;
+}
+
+static const char *test_json_parse(void) {
+  struct v7 *v7 = v7_create();
+
+  ASSERT_EVAL_NUM_EQ(v7, "JSON.parse(42)", 42);
+  ASSERT_EVAL_EQ(v7, "JSON.parse('\"foo\"')", "\"foo\"");
+  ASSERT_EVAL_EQ(v7, "JSON.parse(JSON.stringify('foo'))", "\"foo\"");
+  ASSERT_EVAL_EQ(v7, "JSON.parse(JSON.stringify({'foo':'bar'}))",
+                 "{\"foo\":\"bar\"}");
+
+  /* big string, will cause malloc */
+  ASSERT_EVAL_EQ(v7,
+                 "JSON.parse(JSON.stringify('"
+                 "foooooooooooooooooooooooooooooooooooooooooooooooo"
+                 "ooooooooooooooooooooooooooooooooooooooooooooooooo'))",
+                 "\"foooooooooooooooooooooooooooooooooooooooooooooooo"
+                 "ooooooooooooooooooooooooooooooooooooooooooooooooo\"");
 
   v7_destroy(v7);
   return NULL;
@@ -1826,6 +1856,7 @@ static const char *test_bcode(void) {
 static const char *run_all_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_unescape);
   RUN_TEST(test_to_json);
+  RUN_TEST(test_json_parse);
   RUN_TEST(test_tokenizer);
   RUN_TEST(test_string_encoding);
   RUN_TEST(test_is_true);
