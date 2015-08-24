@@ -1452,7 +1452,7 @@ static const char *test_strings(void) {
   ASSERT_EQ(v7->owned_strings.len, off);
   ASSERT_EQ(memcmp(&s, "\x6c\x65\x6e\x67\x74\x00\xf9\xff", sizeof(s)), 0);
 
-  s = v7_create_string(v7, "longer one", 10, 1);
+  s = v7_create_string(v7, "longer one", ~0 /* use strlen */, 1);
   ASSERT(v7->owned_strings.len == off + 12);
   ASSERT_EQ(memcmp(v7->owned_strings.buf + off, "\x0alonger one\x00", 12), 0);
 
