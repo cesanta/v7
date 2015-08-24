@@ -1505,6 +1505,7 @@ static const char *test_interp_unescape(void) {
 
 static const char *test_to_json(void) {
   char buf[10], *p;
+  const char *c;
   struct v7 *v7 = v7_create();
   val_t v;
 
@@ -1514,11 +1515,13 @@ static const char *test_to_json(void) {
 
   v7_exec(v7, &v, "'foo'");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
-  ASSERT_STREQ(p, "\"foo\"");
+  c = "\"foo\"";
+  ASSERT_STREQ(p, c);
 
   v7_exec(v7, &v, "'\"foo\"'");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
-  ASSERT_STREQ(p, "\"\\\"foo\\\"\"");
+  c = "\"\\\"foo\\\"\"";
+  ASSERT_STREQ(p, c);
 
 /* TODO(mkm): fix to_json alloc */
 #if 0
@@ -1536,10 +1539,13 @@ static const char *test_json_parse(void) {
   const char *c1, *c2;
 
   ASSERT_EVAL_NUM_EQ(v7, "JSON.parse(42)", 42);
-  ASSERT_EVAL_EQ(v7, "JSON.parse('\"foo\"')", "\"foo\"");
-  ASSERT_EVAL_EQ(v7, "JSON.parse(JSON.stringify('foo'))", "\"foo\"");
-  ASSERT_EVAL_EQ(v7, "JSON.parse(JSON.stringify({'foo':'bar'}))",
-                 "{\"foo\":\"bar\"}");
+  c1 = "JSON.parse('\"foo\"')";
+  c2 = "\"foo\"";
+  ASSERT_EVAL_EQ(v7, c1, c2);
+  c2 = "\"foo\"";
+  ASSERT_EVAL_EQ(v7, "JSON.parse(JSON.stringify('foo'))", c2);
+  c2 = "{\"foo\":\"bar\"}";
+  ASSERT_EVAL_EQ(v7, "JSON.parse(JSON.stringify({'foo':'bar'}))", c2);
 
   c1 =
       "JSON.parse(JSON.stringify('"
