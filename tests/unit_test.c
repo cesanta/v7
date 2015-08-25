@@ -755,7 +755,6 @@ static const char *test_parser(void) {
   char want_ast[102400];
   char *next_want_ast = want_ast;
   size_t want_ast_len;
-  ast_init(&a, 0);
 
 /* Save with `make save_want_ast` */
 #ifndef SAVE_AST
@@ -769,6 +768,7 @@ static const char *test_parser(void) {
   fclose(fp);
 
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
+    ast_init(&a, 0);
     char *current_want_ast = next_want_ast;
     ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
     if (cases[i][0] == '\0') continue;
@@ -803,6 +803,7 @@ static const char *test_parser(void) {
     }
     ASSERT_EQ(strncmp(got_ast, current_want_ast, sizeof(got_ast)), 0);
 #endif
+    ast_free(&a);
   }
 
 #else /* SAVE_AST */
@@ -812,24 +813,25 @@ static const char *test_parser(void) {
   (void) want_ast_len;
   ASSERT((fp = fopen(want_ast_db, "w")) != NULL);
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
-    ast_free(&a);
+    ast_init(&a, 0);
     ASSERT_EQ(parse_js(v7, cases[i], &a), V7_OK);
     v7_compile(cases[i], 0, fp);
     fwrite("\0", 1, 1, fp);
+    ast_free(&a);
   }
   fclose(fp);
 
 #endif /* SAVE_AST */
 
   for (i = 0; i < (int) ARRAY_SIZE(invalid); i++) {
-    ast_free(&a);
+    ast_init(&a, 0);
 #if 0
     printf("-- Parsing \"%s\"\n", invalid[i]);
 #endif
     ASSERT_EQ(parse(v7, &a, invalid[i], 0), V7_SYNTAX_ERROR);
+    ast_free(&a);
   }
 
-  ast_free(&a);
   v7_destroy(v7);
   return NULL;
 }
