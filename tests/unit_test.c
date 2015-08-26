@@ -769,6 +769,7 @@ static const char *test_parser(void) {
   fclose(fp);
 
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
+    ast_free(&a);
     char *current_want_ast = next_want_ast;
     ast_free(&a);
     ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
