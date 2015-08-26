@@ -5804,8 +5804,10 @@ int main(void) {
 
 #ifdef V7_LARGE_AST
 typedef uint32_t ast_skip_t;
+#define AST_SKIP_MAX UINT32_MAX
 #else
 typedef uint16_t ast_skip_t;
+#define AST_SKIP_MAX UINT16_MAX
 #endif
 
 #ifndef V7_DISABLE_AST_TAG_NAMES
@@ -9651,6 +9653,12 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
 #ifndef NO_LIBC
     fprintf(stderr, "WARNING parse input not consumed\n");
+#endif
+  }
+  if (err == V7_OK && a->mbuf.len > AST_SKIP_MAX) {
+#ifndef NO_LIBC
+    /* If you get this worning, consider building v7 with V7_LARGE_AST. */
+    fprintf(stderr, "WARNING script too large\n");
 #endif
   }
   if (verbose && err != V7_OK) {
