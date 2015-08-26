@@ -770,6 +770,7 @@ static const char *test_parser(void) {
 
   for (i = 0; i < (int) ARRAY_SIZE(cases); i++) {
     char *current_want_ast = next_want_ast;
+    ast_free(&a);
     ASSERT((next_want_ast = strchr(current_want_ast, '\0') + 1) != NULL);
     if (cases[i][0] == '\0') continue;
     want_ast_len = (size_t)(next_want_ast - current_want_ast - 1);
