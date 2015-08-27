@@ -853,6 +853,17 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
+static const char *test_parser_large_ast(void) {
+  struct ast a;
+  struct v7 *v7 = v7_create();
+  size_t script_len;
+  char *script = read_file("large_ast.js", &script_len);
+
+  ast_init(&a, 0);
+  ASSERT_EQ(parse(v7, &a, script, 0), V7_AST_TOO_LARGE);
+  return NULL;
+}
+
 static const char *test_ecmac(void) {
   struct ast a;
   int i, passed = 0;
@@ -1877,6 +1888,9 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_stdlib);
   RUN_TEST(test_runtime);
   RUN_TEST(test_parser);
+#ifndef V7_LARGE_AST
+  RUN_TEST(test_parser_large_ast);
+#endif
   RUN_TEST(test_interpreter);
   RUN_TEST(test_interp_unescape);
   RUN_TEST(test_strings);
