@@ -1712,6 +1712,10 @@ static int check_file(struct v7 *v7, v7_val_t s, const char *file_name) {
   const char *s2 = v7_to_string(v7, &s, &n2);
   int result = n1 == n2 && memcmp(s1, s2, n1) == 0;
   free(s1);
+  if (result == 0) {
+    printf("want '%.*s' (len %d), got '%.*s' (len %d)\n", (int) n2, s2,
+           (int) n2, (int) n1, s1, (int) n1);
+  }
   return result;
 }
 
@@ -1720,6 +1724,7 @@ static const char *test_file(void) {
   struct v7 *v7 = v7_create();
   v7_val_t v, data_str = v7_create_string(v7, data, strlen(data), 1);
 
+  v7_own(v7, &data_str);
   v7_set(v7, v7_get_global_object(v7), "ts", 2, 0, data_str);
   ASSERT(v7_exec(v7, &v,
                  "f = File.open('ft.txt', 'w+'); "
@@ -1733,6 +1738,8 @@ static const char *test_file(void) {
   ASSERT_EQ(v7_exec(v7, &v, "l = File.list('.');"), V7_OK);
   ASSERT(v7_is_array(v7, v));
   ASSERT_EVAL_EQ(v7, "l.indexOf('unit_test.c') >= 0", "true");
+
+  v7_disown(v7, &data_str);
   v7_destroy(v7);
   return NULL;
 }
