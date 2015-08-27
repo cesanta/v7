@@ -6455,6 +6455,8 @@ V7_PRIVATE void ast_optimize(struct ast *ast) {
 
 V7_PRIVATE void ast_free(struct ast *ast) {
   mbuf_free(&ast->mbuf);
+  ast->refcnt = 0;
+  ast->has_overflow = 0;
 }
 
 #ifndef NO_LIBC
