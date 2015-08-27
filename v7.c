@@ -5805,7 +5805,6 @@ int main(void) {
 
 #ifdef V7_LARGE_AST
 typedef uint32_t ast_skip_t;
-#define AST_SKIP_MAX UINT32_MAX
 #else
 typedef uint16_t ast_skip_t;
 #define AST_SKIP_MAX UINT16_MAX
@@ -6258,9 +6257,13 @@ V7_PRIVATE ast_off_t ast_modify_skip(struct ast *a, ast_off_t start,
   enum ast_tag tag = (enum ast_tag)(uint8_t) * (a->mbuf.buf + start - 1);
   const struct ast_node_def *def = &ast_node_defs[tag];
   assert(start <= where);
+
+#ifndef V7_LARGE_AST
+  /* the value of delta overflowed, therefore the ast is not useable */
   if (where - start > AST_SKIP_MAX) {
     a->has_overflow = 1;
   }
+#endif
 
   /* assertion, to be optimizable out */
   assert((int) skip < def->num_skips);
