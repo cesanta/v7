@@ -1217,6 +1217,10 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "o.x", "2");
 
   c = "\"undefined\"";
+  ASSERT_EVAL_EQ(v7, "x=undefined; typeof x", c);
+  c = "\"undefined\"";
+  ASSERT_EVAL_EQ(v7, "typeof undefined", c);
+  c = "\"undefined\"";
   ASSERT_EVAL_EQ(v7, "typeof dummyx", c);
   c = "\"object\"";
   ASSERT_EVAL_EQ(v7, "typeof null", c);
