@@ -455,8 +455,7 @@
 454	FAIL ch07/7.8/7.8.5/S7.8.5_A1.3_T6.js (tail -c +317360 tests/ecmac.db|head -c 561): [{"message":"#1.2: RegularExpressionFirstChar :: Paragraph separator is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionFirstChar :: Paragraph separator is incorrect. Actual:  \"}"}]
 455	FAIL ch07/7.8/7.8.5/S7.8.5_A1.4_T1.js (tail -c +317922 tests/ecmac.db|head -c 579): [{"message":"Invalid regex"}]
 456	FAIL ch07/7.8/7.8.5/S7.8.5_A1.4_T2.js (tail -c +318502 tests/ecmac.db|head -c 1838): [{"message":"#0000 "}]
-457	FAIL ch07/7.8/7.8.5/S7.8.5_A1.5_T2.js (tail -c +320341 tests/ecmac.db|head -c 612): [{"message":"#1.2: RegularExpressionFirstChar :: BackslashSequence :: \Line Feed is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionFirstChar :: BackslashSequence :: \Line Feed is incorrect. Actual: 
-\"}"}]
+457	FAIL ch07/7.8/7.8.5/S7.8.5_A1.5_T2.js (tail -c +320341 tests/ecmac.db|head -c 612): [{"message":"#1.2: RegularExpressionFirstChar :: BackslashSequence :: \Line Feed is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionFirstChar :: BackslashSequence :: \Line Feed is incorrect. Actual: \n}"}]
 458	FAIL ch07/7.8/7.8.5/S7.8.5_A1.5_T4.js (tail -c +320954 tests/ecmac.db|head -c 621): [{"message":"#1.2: RegularExpressionFirstChar :: BackslashSequence :: \Carriage Return is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionFirstChar :: BackslashSequence :: \Carriage Return is incorrect. Actual: \\"}"}]
 459	FAIL ch07/7.8/7.8.5/S7.8.5_A1.5_T5.js (tail -c +321576 tests/ecmac.db|head -c 618): [{"message":"#1.2: RegularExpressionFirstChar :: BackslashSequence :: \Line separator is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionFirstChar :: BackslashSequence :: \Line separator is incorrect. Actual: \ \"}"}]
 460	FAIL ch07/7.8/7.8.5/S7.8.5_A1.5_T6.js (tail -c +322195 tests/ecmac.db|head -c 633): [{"message":"#1.2: RegularExpressionFirstChar :: BackslashSequence :: \Paragraph separator is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionFirstChar :: BackslashSequence :: \Paragraph separator is incorrect. Actual: \ \"}"}]
@@ -468,8 +467,7 @@
 466	FAIL ch07/7.8/7.8.5/S7.8.5_A2.3_T6.js (tail -c +326794 tests/ecmac.db|head -c 548): [{"message":"#1.2: RegularExpressionChar :: Paragraph separator is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionChar :: Paragraph separator is incorrect. Actual: s \"}"}]
 467	FAIL ch07/7.8/7.8.5/S7.8.5_A2.4_T1.js (tail -c +327343 tests/ecmac.db|head -c 553): [{"message":"Invalid regex"}]
 468	FAIL ch07/7.8/7.8.5/S7.8.5_A2.4_T2.js (tail -c +327897 tests/ecmac.db|head -c 1799): [{"message":"#0000 "}]
-469	FAIL ch07/7.8/7.8.5/S7.8.5_A2.5_T2.js (tail -c +329697 tests/ecmac.db|head -c 596): [{"message":"#1.2: RegularExpressionChar :: BackslashSequence :: \Line Feed is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionChar :: BackslashSequence :: \Line Feed is incorrect. Actual: a
-\"}"}]
+469	FAIL ch07/7.8/7.8.5/S7.8.5_A2.5_T2.js (tail -c +329697 tests/ecmac.db|head -c 596): [{"message":"#1.2: RegularExpressionChar :: BackslashSequence :: \Line Feed is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionChar :: BackslashSequence :: \Line Feed is incorrect. Actual: a\n}"}]
 470	FAIL ch07/7.8/7.8.5/S7.8.5_A2.5_T4.js (tail -c +330294 tests/ecmac.db|head -c 608): [{"message":"#1.2: RegularExpressionChar :: BackslashSequence :: \Carriage Return is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionChar :: BackslashSequence :: \Carriage Return is incorrect. Actual: a\\"}"}]
 471	FAIL ch07/7.8/7.8.5/S7.8.5_A2.5_T5.js (tail -c +330903 tests/ecmac.db|head -c 605): [{"message":"#1.2: RegularExpressionChar :: BackslashSequence :: \Line separator is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionChar :: BackslashSequence :: \Line separator is incorrect. Actual: a\ \"}"}]
 472	FAIL ch07/7.8/7.8.5/S7.8.5_A2.5_T6.js (tail -c +331509 tests/ecmac.db|head -c 620): [{"message":"#1.2: RegularExpressionChar :: BackslashSequence :: \Paragraph separator is incorrect. Actual: {\"message\":\"#1.1: RegularExpressionChar :: BackslashSequence :: \Paragraph separator is incorrect. Actual: a\ \"}"}]
@@ -2955,7 +2953,7 @@ try
 2942	FAIL ch13/13.0/S13_A15_T3.js (tail -c +3195532 tests/ecmac.db|head -c 1095): [{"message":"#1: typeof __func() === \"undefined\". Actual: typeof __func() ===object"}]
 2943	PASS ch13/13.0/S13_A15_T4.js (tail -c +3196628 tests/ecmac.db|head -c 734)
 2944	PASS ch13/13.0/S13_A15_T5.js (tail -c +3197363 tests/ecmac.db|head -c 944)
-2945	FAIL ch13/13.0/S13_A16.js (tail -c +3198308 tests/ecmac.db|head -c 549): [{"message":"parse error at at line 1 col 10: [ function	]"}]
+2945	FAIL ch13/13.0/S13_A16.js (tail -c +3198308 tests/ecmac.db|head -c 549): [{"message":"parse error at at line 1 col 10: [ function\t]}]
 2946	PASS ch13/13.0/S13_A17_T1.js (tail -c +3198858 tests/ecmac.db|head -c 1337)
 2947	PASS ch13/13.0/S13_A17_T2.js (tail -c +3200196 tests/ecmac.db|head -c 1457)
 2948	FAIL ch13/13.0/S13_A18.js (tail -c +3201654 tests/ecmac.db|head -c 946): [{"message":"#2: typeof sinx === 'undefined'. Actual: typeof sinx ===function"}]
@@ -3595,22 +3593,19 @@ err
 3547	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T12.js (tail -c +3989055 tests/ecmac.db|head -c 1291): [{"message":"#3: __executed = /a[b]c/.exec(\"abc\"); __executed.input === abc. Actual: undefined"}]
 3548	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T13.js (tail -c +3990347 tests/ecmac.db|head -c 1498): [{"message":"#3: __executed = /[a-z][^1-9][a-z]/.exec(\"a1b  b2c  c3d  def  f4g\"); __executed.input === a1b  b2c  c3d  def  f4g. Actual: undefined"}]
 3549	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T14.js (tail -c +3991846 tests/ecmac.db|head -c 1351): [{"message":"#3: __executed = /[*&$]{3}/.exec(\"123*&$abc\"); __executed.input === 123*&$abc. Actual: undefined"}]
-3550	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T15.js (tail -c +3993198 tests/ecmac.db|head -c 1419): [{"message":"#3: __executed = /[\d][\n][^\d]/.exec(\"line1\nline2\"); __executed.input === line1
-line2. Actual: undefined"}]
+3550	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T15.js (tail -c +3993198 tests/ecmac.db|head -c 1419): [{"message":"#3: __executed = /[\d][\n][^\d]/.exec(\"line1\nline2\"); __executed.input === line1\nline2. Actual: undefined}]
 3551	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T16.js (tail -c +3994618 tests/ecmac.db|head -c 1557): [{"message":"Invalid regex"}]
 3552	PASS ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T17.js (tail -c +3996176 tests/ecmac.db|head -c 518)
 3553	PASS ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T2.js (tail -c +3996695 tests/ecmac.db|head -c 494)
 3554	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T3.js (tail -c +3997190 tests/ecmac.db|head -c 1367): [{"message":"#3: __executed = /q[ax-zb](?=\s+)/.exec(\"qYqy \"); __executed.input === qYqy . Actual: undefined"}]
 3555	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T4.js (tail -c +3998558 tests/ecmac.db|head -c 1374): [{"message":"#3: __executed = /q[ax-zb](?=\s+)/.exec(\"tqaqy \"); __executed.input === tqaqy . Actual: undefined"}]
-3556	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T5.js (tail -c +3999933 tests/ecmac.db|head -c 1406): [{"message":"#3: __executed = /q[ax-zb](?=\s+)/.exec(\"tqa\t  qy \"); __executed.input === tqa	  qy . Actual: undefined"}]
+3556	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T5.js (tail -c +3999933 tests/ecmac.db|head -c 1406): [{"message":"#3: __executed = /q[ax-zb](?=\s+)/.exec(\"tqa\t  qy \"); __executed.input === tqa\t  qy . Actual: undefined}]
 3557	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T6.js (tail -c +4001340 tests/ecmac.db|head -c 1342): [{"message":"#3: __executed = /ab[ercst]de/.exec(\"abcde\"); __executed.input === abcde. Actual: undefined"}]
 3558	PASS ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T7.js (tail -c +4002683 tests/ecmac.db|head -c 509)
 3559	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T8.js (tail -c +4003193 tests/ecmac.db|head -c 1361): [{"message":"#3: __executed = /[d-h]+/.exec(\"abcdefghijkl\"); __executed.input === abcdefghijkl. Actual: undefined"}]
 3560	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A1_T9.js (tail -c +4004555 tests/ecmac.db|head -c 1408): [{"message":"#3: __executed = /[1234567].{2}/.exec(\"abc6defghijkl\"); __executed.input === abc6defghijkl. Actual: undefined"}]
-3561	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A2_T1.js (tail -c +4005964 tests/ecmac.db|head -c 1294): [{"message":"#3: __executed = /[^]a/m.exec(\"a\naba\"); __executed.input === a
-aba. Actual: undefined"}]
-3562	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A2_T2.js (tail -c +4007259 tests/ecmac.db|head -c 1306): [{"message":"#3: __executed = /a[^]/.exec(\"   a\t\n\"); __executed.input ===    a	
-. Actual: undefined"}]
+3561	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A2_T1.js (tail -c +4005964 tests/ecmac.db|head -c 1294): [{"message":"#3: __executed = /[^]a/m.exec(\"a\naba\"); __executed.input === a\naba. Actual: undefined}]
+3562	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A2_T2.js (tail -c +4007259 tests/ecmac.db|head -c 1306): [{"message":"#3: __executed = /a[^]/.exec(\"   a\t\n\"); __executed.input ===    a\t\n. Actual: undefine}]
 3563	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A2_T3.js (tail -c +4008566 tests/ecmac.db|head -c 1373): [{"message":"#3: __executed = /a[^b-z]\s+/.exec(\"ab an az aY n\"); __executed.input === ab an az aY n. Actual: undefined"}]
 3564	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A2_T4.js (tail -c +4009940 tests/ecmac.db|head -c 1399): [{"message":"#3: __executed = /[^\b]+/g.exec(\"easy\bto\u0008ride\"); __executed.input === easy\btoride. Actual: undefined"}]
 3565	FAIL ch15/15.10/15.10.2/15.10.2.13/S15.10.2.13_A2_T5.js (tail -c +4011340 tests/ecmac.db|head -c 1287): [{"message":"#3: __executed = /a[^1-9]c/.exec(\"abc\"); __executed.input === abc. Actual: undefined"}]
@@ -3685,72 +3680,43 @@ aba. Actual: undefined"}]
 3634	FAIL ch15/15.10/15.10.2/15.10.2.5/S15.10.2.5_A1_T4.js (tail -c +4078791 tests/ecmac.db|head -c 1377): [{"message":"#3: __executed = /(z)((a+)?(b+)?(c))*/.exec(\"zaacbbbcac\"); __executed.input === zaacbbbcac. Actual: undefined"}]
 3635	FAIL ch15/15.10/15.10.2/15.10.2.5/S15.10.2.5_A1_T5.js (tail -c +4080169 tests/ecmac.db|head -c 1249): [{"message":"Invalid regex"}]
 3636	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T1.js (tail -c +4081419 tests/ecmac.db|head -c 493)
-3637	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T2.js (tail -c +4081913 tests/ecmac.db|head -c 1359): [{"message":"#3: __executed = /e$/.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs
-makes	double. Actual: undefined"}]
-3638	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T3.js (tail -c +4083273 tests/ecmac.db|head -c 1364): [{"message":"#3: __executed = /s$/m.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs
-makes	double. Actual: undefined"}]
-3639	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T4.js (tail -c +4084638 tests/ecmac.db|head -c 1388): [{"message":"#3: __executed = /[^e]$/mg.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs
-makes	double. Actual: undefined"}]
-3640	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T5.js (tail -c +4086027 tests/ecmac.db|head -c 1419): [{"message":"#3: __executed = /es$/mg.exec(\"pairs\nmakes\tdoubl\u0065s\"); __executed.input === pairs
-makes	doubles. Actual: undefined"}]
+3637	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T2.js (tail -c +4081913 tests/ecmac.db|head -c 1359): [{"message":"#3: __executed = /e$/.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs\nmakes\tdouble. Actual: undefine}]
+3638	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T3.js (tail -c +4083273 tests/ecmac.db|head -c 1364): [{"message":"#3: __executed = /s$/m.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs\nmakes\tdouble. Actual: undefine}]
+3639	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T4.js (tail -c +4084638 tests/ecmac.db|head -c 1388): [{"message":"#3: __executed = /[^e]$/mg.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs\nmakes\tdouble. Actual: undefine}]
+3640	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A1_T5.js (tail -c +4086027 tests/ecmac.db|head -c 1419): [{"message":"#3: __executed = /es$/mg.exec(\"pairs\nmakes\tdoubl\u0065s\"); __executed.input === pairs\nmakes\tdoubles. Actual: undefine}]
 3641	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T1.js (tail -c +4087447 tests/ecmac.db|head -c 493)
-3642	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T10.js (tail -c +4087941 tests/ecmac.db|head -c 1316): [{"message":"#3: __executed = /^\d+/m.exec(\"abc\n123xyz\"); __executed.input === abc
-123xyz. Actual: undefined"}]
-3643	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T2.js (tail -c +4089258 tests/ecmac.db|head -c 1364): [{"message":"#3: __executed = /^m/m.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs
-makes	double. Actual: undefined"}]
-3644	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T3.js (tail -c +4090623 tests/ecmac.db|head -c 1442): [{"message":"#3: __executed = /^p[a-z]/.exec(\"pairs\nmakes\tdouble\npesos\"); __executed.input === pairs
-makes	double
-pesos. Actual: undefined"}]
-3645	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T4.js (tail -c +4092066 tests/ecmac.db|head -c 1449): [{"message":"#3: __executed = /^p[b-z]/m.exec(\"pairs\nmakes\tdouble\npesos\"); __executed.input === pairs
-makes	double
-pesos. Actual: undefined"}]
-3646	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T5.js (tail -c +4093516 tests/ecmac.db|head -c 1435): [{"message":"#3: __executed = /^[^p]/m.exec(\"pairs\nmakes\tdouble\npesos\"); __executed.input === pairs
-makes	double
-pesos. Actual: undefined"}]
+3642	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T10.js (tail -c +4087941 tests/ecmac.db|head -c 1316): [{"message":"#3: __executed = /^\d+/m.exec(\"abc\n123xyz\"); __executed.input === abc\n123xyz. Actual: undefined}]
+3643	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T2.js (tail -c +4089258 tests/ecmac.db|head -c 1364): [{"message":"#3: __executed = /^m/m.exec(\"pairs\nmakes\tdouble\"); __executed.input === pairs\nmakes\tdouble. Actual: undefine}]
+3644	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T3.js (tail -c +4090623 tests/ecmac.db|head -c 1442): [{"message":"#3: __executed = /^p[a-z]/.exec(\"pairs\nmakes\tdouble\npesos\"); __executed.input === pairs\nmakes\tdouble\npesos. Actual: undefin}]
+3645	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T4.js (tail -c +4092066 tests/ecmac.db|head -c 1449): [{"message":"#3: __executed = /^p[b-z]/m.exec(\"pairs\nmakes\tdouble\npesos\"); __executed.input === pairs\nmakes\tdouble\npesos. Actual: undefin}]
+3646	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T5.js (tail -c +4093516 tests/ecmac.db|head -c 1435): [{"message":"#3: __executed = /^[^p]/m.exec(\"pairs\nmakes\tdouble\npesos\"); __executed.input === pairs\nmakes\tdouble\npesos. Actual: undefin}]
 3647	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T6.js (tail -c +4094952 tests/ecmac.db|head -c 1252): [{"message":"#3: __executed = /^ab/.exec(\"abcde\"); __executed.input === abcde. Actual: undefined"}]
 3648	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T7.js (tail -c +4096205 tests/ecmac.db|head -c 462)
 3649	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T8.js (tail -c +4096668 tests/ecmac.db|head -c 452)
 3650	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A2_T9.js (tail -c +4097121 tests/ecmac.db|head -c 1256): [{"message":"#3: __executed = /^\^+/.exec(\"^^^x\"); __executed.input === ^^^x. Actual: undefined"}]
-3651	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T1.js (tail -c +4098378 tests/ecmac.db|head -c 1446): [{"message":"#3: __executed = /\bp/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
-3652	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T10.js (tail -c +4099825 tests/ecmac.db|head -c 1492): [{"message":"#3: __executed = /\brobot\b/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
-3653	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T11.js (tail -c +4101318 tests/ecmac.db|head -c 1495): [{"message":"#3: __executed = /\b\w{5}\b/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
-3654	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T12.js (tail -c +4102814 tests/ecmac.db|head -c 1455): [{"message":"#3: __executed = /\bop/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
+3651	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T1.js (tail -c +4098378 tests/ecmac.db|head -c 1446): [{"message":"#3: __executed = /\bp/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
+3652	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T10.js (tail -c +4099825 tests/ecmac.db|head -c 1492): [{"message":"#3: __executed = /\brobot\b/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
+3653	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T11.js (tail -c +4101318 tests/ecmac.db|head -c 1495): [{"message":"#3: __executed = /\b\w{5}\b/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
+3654	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T12.js (tail -c +4102814 tests/ecmac.db|head -c 1455): [{"message":"#3: __executed = /\bop/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
 3655	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T13.js (tail -c +4104270 tests/ecmac.db|head -c 535)
-3656	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T14.js (tail -c +4104806 tests/ecmac.db|head -c 1482): [{"message":"#3: __executed = /e\b/.exec(\"pilot\nsoviet robot\topenoffic\u0065\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
+3656	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T14.js (tail -c +4104806 tests/ecmac.db|head -c 1482): [{"message":"#3: __executed = /e\b/.exec(\"pilot\nsoviet robot\topenoffic\u0065\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
 3657	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T15.js (tail -c +4106289 tests/ecmac.db|head -c 548)
-3658	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T2.js (tail -c +4106838 tests/ecmac.db|head -c 1453): [{"message":"#3: __executed = /ot\b/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
+3658	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T2.js (tail -c +4106838 tests/ecmac.db|head -c 1453): [{"message":"#3: __executed = /ot\b/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
 3659	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T3.js (tail -c +4108292 tests/ecmac.db|head -c 534)
-3660	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T4.js (tail -c +4108827 tests/ecmac.db|head -c 1453): [{"message":"#3: __executed = /\bso/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
+3660	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T4.js (tail -c +4108827 tests/ecmac.db|head -c 1453): [{"message":"#3: __executed = /\bso/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
 3661	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T5.js (tail -c +4110281 tests/ecmac.db|head -c 534)
-3662	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T6.js (tail -c +4110816 tests/ecmac.db|head -c 1471): [{"message":"#3: __executed = /[^o]t\b/.exec(\"pilOt\nsoviet robot\topenoffice\"); __executed.input === pilOt
-soviet robot	openoffice. Actual: undefined"}]
-3663	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T7.js (tail -c +4112288 tests/ecmac.db|head -c 1478): [{"message":"#3: __executed = /[^o]t\b/i.exec(\"pilOt\nsoviet robot\topenoffice\"); __executed.input === pilOt
-soviet robot	openoffice. Actual: undefined"}]
-3664	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T8.js (tail -c +4113767 tests/ecmac.db|head -c 1454): [{"message":"#3: __executed = /\bro/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot
-soviet robot	openoffice. Actual: undefined"}]
+3662	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T6.js (tail -c +4110816 tests/ecmac.db|head -c 1471): [{"message":"#3: __executed = /[^o]t\b/.exec(\"pilOt\nsoviet robot\topenoffice\"); __executed.input === pilOt\nsoviet robot\topenoffice. Actual: undefine}]
+3663	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T7.js (tail -c +4112288 tests/ecmac.db|head -c 1478): [{"message":"#3: __executed = /[^o]t\b/i.exec(\"pilOt\nsoviet robot\topenoffice\"); __executed.input === pilOt\nsoviet robot\topenoffice. Actual: undefine}]
+3664	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T8.js (tail -c +4113767 tests/ecmac.db|head -c 1454): [{"message":"#3: __executed = /\bro/.exec(\"pilot\nsoviet robot\topenoffice\"); __executed.input === pilot\nsoviet robot\topenoffice. Actual: undefine}]
 3665	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A3_T9.js (tail -c +4115222 tests/ecmac.db|head -c 531)
-3666	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T1.js (tail -c +4115754 tests/ecmac.db|head -c 1427): [{"message":"#3: __executed = /\Bevil\B/.exec(\"devils arise\tfor\nevil\"); __executed.input === devils arise	for
-evil. Actual: undefined"}]
-3667	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T2.js (tail -c +4117182 tests/ecmac.db|head -c 1428): [{"message":"#3: __executed = /[f-z]e\B/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise	for
-revil. Actual: undefined"}]
-3668	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T3.js (tail -c +4118611 tests/ecmac.db|head -c 1418): [{"message":"#3: __executed = /\Bo\B/i.exec(\"devils arise\tfOr\nrevil\"); __executed.input === devils arise	fOr
-revil. Actual: undefined"}]
-3669	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T4.js (tail -c +4120030 tests/ecmac.db|head -c 1422): [{"message":"#3: __executed = /\B\w\B/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise	for
-revil. Actual: undefined"}]
-3670	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T5.js (tail -c +4121453 tests/ecmac.db|head -c 1406): [{"message":"#3: __executed = /\w\B/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise	for
-revil. Actual: undefined"}]
-3671	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T6.js (tail -c +4122860 tests/ecmac.db|head -c 1406): [{"message":"#3: __executed = /\B\w/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise	for
-revil. Actual: undefined"}]
+3666	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T1.js (tail -c +4115754 tests/ecmac.db|head -c 1427): [{"message":"#3: __executed = /\Bevil\B/.exec(\"devils arise\tfor\nevil\"); __executed.input === devils arise\tfor\nevil. Actual: undefine}]
+3667	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T2.js (tail -c +4117182 tests/ecmac.db|head -c 1428): [{"message":"#3: __executed = /[f-z]e\B/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise\tfor\nrevil. Actual: undefine}]
+3668	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T3.js (tail -c +4118611 tests/ecmac.db|head -c 1418): [{"message":"#3: __executed = /\Bo\B/i.exec(\"devils arise\tfOr\nrevil\"); __executed.input === devils arise\tfOr\nrevil. Actual: undefine}]
+3669	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T4.js (tail -c +4120030 tests/ecmac.db|head -c 1422): [{"message":"#3: __executed = /\B\w\B/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise\tfor\nrevil. Actual: undefine}]
+3670	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T5.js (tail -c +4121453 tests/ecmac.db|head -c 1406): [{"message":"#3: __executed = /\w\B/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise\tfor\nrevil. Actual: undefine}]
+3671	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T6.js (tail -c +4122860 tests/ecmac.db|head -c 1406): [{"message":"#3: __executed = /\B\w/.exec(\"devils arise\tfor\nrevil\"); __executed.input === devils arise\tfor\nrevil. Actual: undefine}]
 3672	PASS ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T7.js (tail -c +4124267 tests/ecmac.db|head -c 545)
-3673	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T8.js (tail -c +4124813 tests/ecmac.db|head -c 1459): [{"message":"#3: __executed = /\B\w{4}\B/.exec(\"devil arise\tforzzx\nevils\"); __executed.input === devil arise	forzzx
-evils. Actual: undefined"}]
+3673	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A4_T8.js (tail -c +4124813 tests/ecmac.db|head -c 1459): [{"message":"#3: __executed = /\B\w{4}\B/.exec(\"devil arise\tforzzx\nevils\"); __executed.input === devil arise\tforzzx\nevils. Actual: undefine}]
 3674	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A5_T1.js (tail -c +4126273 tests/ecmac.db|head -c 1288): [{"message":"#3: __executed = /^^^^^^^robot$$$$/.exec(\"robot\"); __executed.input === robot. Actual: undefined"}]
 3675	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A5_T2.js (tail -c +4127562 tests/ecmac.db|head -c 1465): [{"message":"#3: __executed = /\B\B\B\B\B\Bbot\b\b\b\b\b\b\b/.exec(\"robot wall-e\"); __executed.input === robot wall-e. Actual: undefined"}]
 3676	FAIL ch15/15.10/15.10.2/15.10.2.6/S15.10.2.6_A6_T1.js (tail -c +4129028 tests/ecmac.db|head -c 1226): [{"message":"#3: __executed = /^.*?$/.exec(\"Hello World\"); __executed.input === Hello World. Actual: undefined"}]
@@ -3773,14 +3739,13 @@ evils. Actual: undefined"}]
 3693	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A2_T2.js (tail -c +4149540 tests/ecmac.db|head -c 1392): [{"message":"#3: __executed = /\w{3}\d?/.exec(\"CELL\uFFDDbox127\"); __executed.input === CELL￝box127. Actual: undefined"}]
 3694	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A2_T3.js (tail -c +4150933 tests/ecmac.db|head -c 1397): [{"message":"#3: __executed = /b{2}c/.exec(\"aaabbbbcccddeeeefffff\"); __executed.input === aaabbbbcccddeeeefffff. Actual: undefined"}]
 3695	PASS ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A2_T4.js (tail -c +4152331 tests/ecmac.db|head -c 521)
-3696	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T1.js (tail -c +4152853 tests/ecmac.db|head -c 1338): [{"message":"#3: __executed = /\s+java\s+/.exec(\"language  java\n\"); __executed.input === language  java
-. Actual: undefined"}]
+3696	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T1.js (tail -c +4152853 tests/ecmac.db|head -c 1338): [{"message":"#3: __executed = /\s+java\s+/.exec(\"language  java\n\"); __executed.input === language  java\n. Actual: undefined}]
 3697	PASS ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T10.js (tail -c +4154192 tests/ecmac.db|head -c 402)
 3698	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T11.js (tail -c +4154595 tests/ecmac.db|head -c 1209): [{"message":"#3: __executed = /d+/.exec(\"abcdefg\"); __executed.input === abcdefg. Actual: undefined"}]
 3699	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T12.js (tail -c +4155805 tests/ecmac.db|head -c 1305): [{"message":"#3: __executed = /(b+)(b+)(b+)/.exec(\"abbbbbbbc\"); __executed.input === abbbbbbbc. Actual: undefined"}]
 3700	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T13.js (tail -c +4157111 tests/ecmac.db|head -c 1278): [{"message":"#3: __executed = /(b+)(b*)/.exec(\"abbbbbbbc\"); __executed.input === abbbbbbbc. Actual: undefined"}]
 3701	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T14.js (tail -c +4158390 tests/ecmac.db|head -c 1241): [{"message":"#3: __executed = /b*b+/.exec(\"abbbbbbbc\"); __executed.input === abbbbbbbc. Actual: undefined"}]
-3702	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T2.js (tail -c +4159632 tests/ecmac.db|head -c 1324): [{"message":"#3: __executed = /\s+java\s+/.exec(\"\t java object\"); __executed.input === 	 java object. Actual: undefined"}]
+3702	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T2.js (tail -c +4159632 tests/ecmac.db|head -c 1324): [{"message":"#3: __executed = /\s+java\s+/.exec(\"\t java object\"); __executed.input === \t java object. Actual: undefined}]
 3703	PASS ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T3.js (tail -c +4160957 tests/ecmac.db|head -c 455)
 3704	PASS ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T4.js (tail -c +4161413 tests/ecmac.db|head -c 450)
 3705	FAIL ch15/15.10/15.10.2/15.10.2.7/S15.10.2.7_A3_T5.js (tail -c +4161864 tests/ecmac.db|head -c 1403): [{"message":"#3: __executed = /[a-z]+\d+/.exec(\"x 2 ff 55 x2 as1 z12 abc12.0\"); __executed.input === x 2 ff 55 x2 as1 z12 abc12.0. Actual: undefined"}]
@@ -3877,9 +3842,7 @@ evils. Actual: undefined"}]
 3796	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T8.js (tail -c +4289009 tests/ecmac.db|head -c 1549): [{"message":"#3: __executed = /(aa).+\1/.exec(\"aabcdaabcd\"); __executed.input === aabcdaabcd. Actual: undefined"}]
 3797	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T9.js (tail -c +4290559 tests/ecmac.db|head -c 1561): [{"message":"#3: __executed = /(.{2}).+\1/.exec(\"aabcdaabcd\"); __executed.input === aabcdaabcd. Actual: undefined"}]
 3798	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A4_T1.js (tail -c +4292121 tests/ecmac.db|head -c 1462): [{"message":"#3: __string = \"abcde\"; __executed = /ab.de/.exec(__string); __executed.input === abcde. Actual: undefined"}]
-3799	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A4_T2.js (tail -c +4293584 tests/ecmac.db|head -c 1499): [{"message":"#3: __string = \"line 1
-line 2\"; __executed = /.+/.exec(__string); __executed.input === line 1
-line 2. Actual: undefined"}]
+3799	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A4_T2.js (tail -c +4293584 tests/ecmac.db|head -c 1499): [{"message":"#3: __string = \"line 1\nline 2\"; __executed = /.+/.exec(__string); __executed.input === line 1\nline 2. Actual: undefine}]
 3800	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A4_T3.js (tail -c +4295084 tests/ecmac.db|head -c 1526): [{"message":"#3: __string = \"this is a test\"; __executed = /.*a.*/.exec(__string); __executed.input === this is a test. Actual: undefined"}]
 3801	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A4_T4.js (tail -c +4296611 tests/ecmac.db|head -c 1556): [{"message":"#3: __string = \"this is a *&^%$# test\"; __executed = /.+/.exec(__string); __executed.input === this is a *&^%$# test. Actual: undefined"}]
 3802	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A4_T5.js (tail -c +4298168 tests/ecmac.db|head -c 1437): [{"message":"#3: __string = \"....\"; __executed = /.+/.exec(__string); __executed.input === ..... Actual: undefined"}]
