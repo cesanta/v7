@@ -509,6 +509,9 @@ static const char *test_apply(void) {
             V7_OK);
   ASSERT(check_num(v7, v, 1));
 
+  ASSERT_EQ(v7_apply(v7, NULL, fn, v7->global_object, v7_create_undefined()),
+            V7_OK);
+
   ASSERT_EQ(v7_exec(v7, &v, "function test2(){throw 2}"), V7_OK);
   fn = v7_get(v7, v7->global_object, "test2", 5);
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
