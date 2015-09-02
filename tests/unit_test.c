@@ -495,6 +495,30 @@ static const char *test_runtime(void) {
   return NULL;
 }
 
+static const char *test_apply(void) {
+  struct v7 *v7 = v7_create();
+  val_t v, fn;
+
+  fn = v7_get(v7, v7->global_object, "test0", 5); /* no such function */
+  ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
+            V7_EXEC_EXCEPTION);
+
+  ASSERT_EQ(v7_exec(v7, &v, "function test1(){return 1}"), V7_OK);
+  fn = v7_get(v7, v7->global_object, "test1", 5);
+  ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
+            V7_OK);
+  ASSERT(check_num(v7, v, 1));
+
+  ASSERT_EQ(v7_exec(v7, &v, "function test2(){throw 2}"), V7_OK);
+  fn = v7_get(v7, v7->global_object, "test2", 5);
+  ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
+            V7_EXEC_EXCEPTION);
+  ASSERT(check_num(v7, v, 2));
+
+  v7_destroy(v7);
+  return NULL;
+}
+
 static const char *test_dense_arrays(void) {
   struct v7 *v7 = v7_create();
   val_t a;
@@ -1919,6 +1943,7 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_native_functions);
   RUN_TEST(test_stdlib);
   RUN_TEST(test_runtime);
+  RUN_TEST(test_apply);
   RUN_TEST(test_parser);
 #ifndef V7_LARGE_AST
   RUN_TEST(test_parser_large_ast);
