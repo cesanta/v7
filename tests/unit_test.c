@@ -779,7 +779,7 @@ static const char *test_parser(void) {
       "break", "break loop", "continue", "continue loop", "return",
       "return 1+2", "if (1) {return;}", "if (1) {return 2}", "({g x() {}})'",
       "({s x() {}})'", "(function(){'use strict'; with({}){}})", "v = [",
-      "var v = ["};
+      "var v = [", "\n1a"};
   FILE *fp;
   const char *want_ast_db = "want_ast.db";
   char got_ast[102400];
