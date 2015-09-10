@@ -1221,6 +1221,18 @@ static const char *test_interpreter(void) {
                  "42");
   ASSERT_EVAL_EQ(v7, "x=66;o={x:42,f:function(){return this.x}};o.f()", "42");
 
+  ASSERT_EVAL_NUM_EQ(
+      v7,
+      "x=0; function foo() { x++; return {bar: function() {}}}; foo().bar(); "
+      "x;",
+      1);
+
+  ASSERT_EVAL_NUM_EQ(
+      v7,
+      "x=0; function foo() { x++; return [0,function() {}]}; foo()[0+1](); "
+      "x;",
+      1);
+
   ASSERT_EVAL_EQ(v7, "o={};o.x=24", "24");
   ASSERT_EVAL_EQ(v7, "o.a={};o.a.b={c:66};o.a.b.c", "66");
   ASSERT_EVAL_EQ(v7, "o['a']['b'].c", "66");
