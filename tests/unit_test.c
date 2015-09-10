@@ -1606,9 +1606,19 @@ static const char *test_json_parse(void) {
   /* big string, will cause malloc */
   ASSERT_EVAL_EQ(v7, c1, c2);
 
-  c1 = "\"\\n\"";
+  c1 = "\"\\b\"";
   ASSERT_EVAL_EQ(v7, c1, c1);
   c1 = "\"\\t\"";
+  ASSERT_EVAL_EQ(v7, c1, c1);
+  c1 = "\"\\n\"";
+  ASSERT_EVAL_EQ(v7, c1, c1);
+  c1 = "\"\\v\"";
+  ASSERT_EVAL_EQ(v7, c1, c1);
+  c1 = "\"\\f\"";
+  ASSERT_EVAL_EQ(v7, c1, c1);
+  c1 = "\"\\r\"";
+  ASSERT_EVAL_EQ(v7, c1, c1);
+  c1 = "\"\\\\\"";
   ASSERT_EVAL_EQ(v7, c1, c1);
 
   {
