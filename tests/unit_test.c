@@ -1618,6 +1618,9 @@ static const char *test_json_parse(void) {
   /* big string, will cause malloc */
   ASSERT_EVAL_EQ(v7, c1, c2);
 
+  c2 = "\"{\\\"a\\\":\\\"\\\\n\\\"}\"";
+  ASSERT_EVAL_EQ(v7, "JSON.stringify({a:'\n'})", c2);
+
   c1 = "\"\\b\"";
   ASSERT_EVAL_EQ(v7, c1, c1);
   c1 = "\"\\t\"";
