@@ -223,6 +223,7 @@ static const char *test_native_functions(void) {
 static const char *test_stdlib(void) {
   v7_val_t v;
   struct v7 *v7 = v7_create();
+  const char *c;
 
   ASSERT_EVAL_EQ(v7, "Boolean()", "false");
   ASSERT_EVAL_EQ(v7, "Boolean(0)", "false");
@@ -300,6 +301,8 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_STR_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]", "b");
   ASSERT_EVAL_NUM_EQ(
       v7, "({z: '123456'}).z.toString().substr(0, 3).split('').length", 3.0);
+  c = "\"a\\nb\".replace(/\\n/g, \"\\\\\");";
+  ASSERT_EVAL_STR_EQ(v7, c, "a\\b");
 #endif /* V7_ENABLE__RegExp */
   ASSERT_EVAL_STR_EQ(v7, "String('hi')", "hi");
   ASSERT_EVAL_OK(v7, "new String('blah')");
