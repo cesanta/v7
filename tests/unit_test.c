@@ -1874,6 +1874,37 @@ static const char *test_crypto(void) {
 }
 #endif
 
+#ifdef V7_ENABLE_UBJSON
+static const char *test_ubjson(void) {
+  struct v7 *v7 = v7_create();
+  const char *c;
+
+  ASSERT_EVAL_OK(v7, "o = {a:1,b:2}");
+  ASSERT_EVAL_OK(v7, "b='';UBJSON.render(o, function(v) {b+=v},function(){})");
+  c = "{i\001bi\002i\001ai\001}";
+  ASSERT_EVAL_STR_EQ(v7, "b", c);
+
+  ASSERT_EVAL_OK(v7,
+                 "var c, o = {x:new "
+                 "UBJSON.Bin(3,function(){c=this;this.send('')}),a:1,b:2}");
+  ASSERT_EVAL_OK(
+      v7, "b='';UBJSON.render(o, function(v) {b+=v},function(e){print(e)})");
+  c = "{i\001bi\002i\001ai\001i\001x[$U#i\003";
+  ASSERT_EVAL_STR_EQ(v7, "b", c);
+
+  ASSERT_EVAL_OK(v7, "c.send('f')");
+  c = "{i\001bi\002i\001ai\001i\001x[$U#i\003f";
+  ASSERT_EVAL_STR_EQ(v7, "b", c);
+
+  ASSERT_EVAL_OK(v7, "c.send('oo')");
+  c = "{i\001bi\002i\001ai\001i\001x[$U#i\003foo}";
+  ASSERT_EVAL_STR_EQ(v7, "b", c);
+
+  v7_destroy(v7);
+  return NULL;
+}
+#endif
+
 #define MK_OP_PUSH_LIT(n) OP_PUSH_LIT, (enum opcode)(n)
 #define MK_OP_PUSH_VAR_NAME(n) OP_PUSH_VAR_NAME, (enum opcode)(n)
 #define MK_OP_GET_VAR(n) OP_GET_VAR, (enum opcode)(n)
@@ -1991,6 +2022,9 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 #endif
 #ifdef V7_ENABLE_CRYPTO
   RUN_TEST(test_crypto);
+#endif
+#ifdef V7_ENABLE_UBJSON
+  RUN_TEST(test_ubjson);
 #endif
 #ifndef V7_DISABLE_GC
   RUN_TEST(test_gc_mark);
