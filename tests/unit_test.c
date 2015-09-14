@@ -494,6 +494,10 @@ static const char *test_runtime(void) {
     v7_create_string(v7, s, 8, 1);
   }
 
+  v = v7_create_array(v7);
+  ASSERT(v7_is_instanceof_v(v7, v, v7_get(v7, v7->global_object, "Array", ~0)));
+  ASSERT(v7_is_instanceof(v7, v, "Array"));
+
   v7_destroy(v7);
   return NULL;
 }
@@ -1885,10 +1889,10 @@ static const char *test_ubjson(void) {
   ASSERT_EVAL_STR_EQ(v7, "b", c);
 
   ASSERT_EVAL_OK(v7,
-                 "var c, o = {x:new "
-                 "UBJSON.Bin(3,function(){c=this;this.send('')}),a:1,b:2}");
-  ASSERT_EVAL_OK(
-      v7, "b='';UBJSON.render(o, function(v) {b+=v},function(e){print(e)})");
+                 "var c, o = {x:new UBJSON.Bin(3,function(){"
+                 "  c=this;this.send('')"
+                 "}),a:1,b:2}");
+  ASSERT_EVAL_OK(v7, "b='';UBJSON.render(o, function(v) {b+=v},function(e){})");
   c = "{i\001bi\002i\001ai\001i\001x[$U#i\003";
   ASSERT_EVAL_STR_EQ(v7, "b", c);
 
