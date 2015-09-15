@@ -440,7 +440,7 @@
 439	FAIL ch07/7.8/7.8.4/S7.8.4_A6.1_T1.js (tail -c +300966 tests/ecmac.db|head -c 1996): [{"message":"#1: \"\\x01\" === String.fromCharCode(\"1\")"}]
 440	PASS ch07/7.8/7.8.4/S7.8.4_A6.1_T2.js (tail -c +302963 tests/ecmac.db|head -c 754)
 441	PASS ch07/7.8/7.8.4/S7.8.4_A6.1_T3.js (tail -c +303718 tests/ecmac.db|head -c 752)
-442	FAIL ch07/7.8/7.8.4/S7.8.4_A6.3_T1.js (tail -c +304471 tests/ecmac.db|head -c 2096): [{"message":"#1: 'F' === String.fromCharCode('1') + 'F'"}]
+442	FAIL ch07/7.8/7.8.4/S7.8.4_A6.3_T1.js (tail -c +304471 tests/ecmac.db|head -c 2096): [{"message":"#1: '\u0001F' === String.fromCharCode('1') }]
 443	FAIL ch07/7.8/7.8.4/S7.8.4_A7.1_T1.js (tail -c +306568 tests/ecmac.db|head -c 2108): [{"message":"#1: \"\\u0001\" === String.fromCharCode(\"1\")"}]
 444	PASS ch07/7.8/7.8.4/S7.8.4_A7.1_T2.js (tail -c +308677 tests/ecmac.db|head -c 840)
 445	PASS ch07/7.8/7.8.4/S7.8.4_A7.1_T3.js (tail -c +309518 tests/ecmac.db|head -c 838)
@@ -1162,7 +1162,7 @@
 1161	FAIL ch10/10.4/10.4.3/10.4.3-1-99-s.js (tail -c +825671 tests/ecmac.db|head -c 455): [{"message":"value is not a function"}]
 1162	FAIL ch10/10.4/10.4.3/10.4.3-1-99gs.js (tail -c +826127 tests/ecmac.db|head -c 465): [{"message":"value is not a function"}]
 1163	FAIL ch10/10.4/10.4.3/10.4.3-1-9gs.js (tail -c +826593 tests/ecmac.db|head -c 385): ["'this' had incorrect value!"]
-1164	FAIL ch10/10.4/10.4.3/S10.4.3_A1.js (tail -c +826979 tests/ecmac.db|head -c 359): [{"message":"#1: \"this\" leaked as: {\"that\":[Circular],\"runTestCase\":[function runTestCase(testcase)],\"ConstructDate\":[function ConstructDate(year,month,date,hours,minutes,seconds,ms){var r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,retVal}],\"TimeClip\":[function TimeClip(time)],\"MakeDate\":[function MakeDate(day,time)],\"MakeDay\":[function MakeDay(year,month,date){var result5,result6,sign,t,y,leap,m}],\"MakeTime\":[function MakeTime(hour,min,sec,ms)],\"msFromTime\":[function msFromTime(t)],\"SecFromTime\":[function SecFromTime(t)],\"MinFromTime\":[function MinF]
+1164	FAIL ch10/10.4/10.4.3/S10.4.3_A1.js (tail -c +826979 tests/ecmac.db|head -c 359): [{"message":"#1: \"this\" leaked as: {\"that\":[Circular],\"runTestCase\":[function runTestCase(testcase)],\"ConstructDate\":[function ConstructDate(year,month,date,hours,minutes,seconds,ms){var r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,retVal}],\"TimeClip\":[function TimeClip(time)],\"MakeDate\":[function MakeDate(day,time)],\"MakeDay\":[function MakeDay(year,month,date){var result5,result6,sign,t,y,leap,m}],\"MakeTime\":[function MakeTime(hour,min,sec,ms)],\"msFromTime\":[function msFromTime(t)],\"SecFromTime\":[function SecFromTime(t)],\"MinFromTime\":[function MinF\}]
 1165	FAIL ch10/10.5/10.5-1-s.js (tail -c +827339 tests/ecmac.db|head -c 484): [{"message":"Test case returned non-true value!"}]
 1166	FAIL ch10/10.5/10.5-7-b-1-s.js (tail -c +827824 tests/ecmac.db|head -c 490): [{"message":"Test case returned non-true value!"}]
 1167	PASS ch10/10.5/10.5-7-b-2-s.js (tail -c +828315 tests/ecmac.db|head -c 450)
@@ -9816,7 +9816,7 @@ err
 9765	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T2.js (tail -c +8924889 tests/ecmac.db|head -c 833)
 9766	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T4.js (tail -c +8925723 tests/ecmac.db|head -c 801): [{"message":"#1: function(){return \"gnulluna\"}().replace(null,function(a1,a2,a3){return a2+\"\";}) === \"g1una\". Actual: gguna"}]
 9767	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T5.js (tail -c +8926525 tests/ecmac.db|head -c 728)
-9768	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T6.js (tail -c +8927254 tests/ecmac.db|head -c 809): [{"message":"#1: var x; new String(\"undefined\").replace(x,Function(\"return arguments[1]+42;\")) === \"42\". Actual: ]
+9768	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T6.js (tail -c +8927254 tests/ecmac.db|head -c 809): [{"message":"#1: var x; new String(\"undefined\").replace(x,Function(\"return arguments[1]+42;\")) === \"42\". Actual: \}]
 9769	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T7.js (tail -c +8928064 tests/ecmac.db|head -c 675)
 9770	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T8.js (tail -c +8928740 tests/ecmac.db|head -c 762): [{"message":"#1: __obj = {toString:function(){}}; String(__obj).replace(/e/g,void 0) === \"undundefinedfinundefinedd\". Actual: {\"toString\":[function()]}"}]
 9771	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T9.js (tail -c +8929503 tests/ecmac.db|head -c 909)
@@ -9833,10 +9833,10 @@ err
 9782	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T1.js (tail -c +8939662 tests/ecmac.db|head -c 646)
 9783	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T2.js (tail -c +8940309 tests/ecmac.db|head -c 656)
 9784	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T3.js (tail -c +8940966 tests/ecmac.db|head -c 664)
-9785	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T1.js (tail -c +8941631 tests/ecmac.db|head -c 852): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc def34'. Actual: ]
-9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: ]
-9787	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T3.js (tail -c +8943340 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"aBc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/i; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc def34'. Actual: ]
-9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = \"aBc12 dEf34\"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: ]
+9785	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T1.js (tail -c +8941631 tests/ecmac.db|head -c 852): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc def34'. Actual: \u0000\}]
+9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: \u}]
+9787	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T3.js (tail -c +8943340 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"aBc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/i; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc def34'. Actual: \u0000\}]
+9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = \"aBc12 dEf34\"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: \u}]
 9789	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A5_T1.js (tail -c +8945055 tests/ecmac.db|head -c 795)
 9790	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A6.js (tail -c +8945851 tests/ecmac.db|head -c 584)
 9791	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A7.js
