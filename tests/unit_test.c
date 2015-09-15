@@ -498,6 +498,14 @@ static const char *test_runtime(void) {
   ASSERT(v7_is_instanceof_v(v7, v, v7_get(v7, v7->global_object, "Array", ~0)));
   ASSERT(v7_is_instanceof(v7, v, "Array"));
 
+  v = v7_create_number(42);
+  ASSERT(!v7_is_instanceof(v7, v, "Object"));
+  ASSERT(!v7_is_instanceof(v7, v, "Number"));
+
+  v = v7_create_string(v7, "fooakbar", 8, 1);
+  ASSERT(!v7_is_instanceof(v7, v, "Object"));
+  ASSERT(!v7_is_instanceof(v7, v, "String"));
+
   v7_destroy(v7);
   return NULL;
 }
