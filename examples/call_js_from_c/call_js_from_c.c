@@ -22,7 +22,7 @@ static void call_sum(struct v7 *v7) {
 int main(void) {
   v7_val_t result;
   struct v7 *v7 = v7_create();
-  v7_exec(v7, &result, "var sum = function(a, b) { return a + b; };");
+  v7_exec(v7, "var sum = function(a, b) { return a + b; };", &result);
   call_sum(v7);
   v7_destroy(v7);
   return 0;

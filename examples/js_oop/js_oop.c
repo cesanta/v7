@@ -35,12 +35,13 @@ int main(void) {
   v7_set_method(v7, proto, "myMethod", &MyThing_myMethod);
   v7_set(v7, v7_get_global_object(v7), "MyThing", ~0, 0, ctor_func);
 
-  v7_exec(v7, &eval_result, "\
+  v7_exec(v7, "\
       print('MyThing.MY_CONST = ', MyThing.MY_CONST); \
       var t = new MyThing(456); \
       print('t.MY_CONST = ', t.MY_CONST); \
       print('t.myMethod = ', t.myMethod); \
-      print('t.myMethod() = ', t.myMethod());");
+      print('t.myMethod() = ', t.myMethod());",
+      &eval_result);
   v7_destroy(v7);
   return 0;
 }

@@ -60,8 +60,12 @@ extern long timezone;
 #define isnan(x) _isnan(x)
 #endif
 
+static enum v7_err eval(struct v7 *v7, v7_val_t *result, const char *code) {
+  return v7_exec(v7, code, result);
+}
+
 static enum v7_err parse_js(struct v7 *v7, const char *src, struct ast *a) {
-  enum v7_err parse_result = parse(v7, a, src, 1 /* verbose */);
+  enum v7_err parse_result = parse(v7, a, src, 1 /* verbose */, 0);
   if (parse_result != V7_OK) {
     fprintf(stderr, "Parse error. Expression:\n  %s\nMessage:\n  %s\n", src,
             v7->error_msg);
@@ -112,7 +116,7 @@ static int check_str(struct v7 *v7, val_t v, const char *expected) {
 
 static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   val_t v;
-  if (v7_exec(v7, &v, expr) != V7_OK) return 0;
+  if (v7_exec(v7, expr, &v) != V7_OK) return 0;
   return result == (v7_is_true(v7, v) ? 1 : 0);
 }
 
@@ -121,7 +125,7 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
     v7_val_t v;                                         \
     enum v7_err e;                                      \
     num_tests++;                                        \
-    e = v7_exec(v7, &v, js_expr);                       \
+    e = v7_exec(v7, js_expr, &v);                       \
     if (e != V7_OK) {                                   \
       printf("Exec '%s' failed, err=%d\n", js_expr, e); \
       FAIL("ASSERT_EVAL_OK(" #js_expr ")", __LINE__);   \
@@ -134,7 +138,7 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
     enum v7_err e;                                                   \
     int r = 1;                                                       \
     num_tests++;                                                     \
-    e = v7_exec(v7, &v, js_expr);                                    \
+    e = v7_exec(v7, js_expr, &v);                                    \
     if (e != V7_OK) {                                                \
       printf("Exec '%s' failed, err=%d\n", js_expr, e);              \
       r = 0;                                                         \
@@ -237,11 +241,11 @@ static const char *test_stdlib(void) {
   /* Number */
   ASSERT_EVAL_NUM_EQ(v7, "Math.PI", M_PI);
   ASSERT_EVAL_NUM_EQ(v7, "Number.NaN", NAN);
-  ASSERT_EQ(v7_exec(v7, &v, "1 == 2"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "1 == 2"), V7_OK);
   ASSERT(check_bool(v, 0));
-  ASSERT_EQ(v7_exec(v7, &v, "1 + 2 * 7 === 15"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "1 + 2 * 7 === 15"), V7_OK);
   ASSERT(check_bool(v, 1));
-  ASSERT_EQ(v7_exec(v7, &v, "Number(1.23) === 1.23"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "Number(1.23) === 1.23"), V7_OK);
   ASSERT(check_bool(v, 1));
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23)", 1.23);
   ASSERT_EVAL_OK(v7, "new Number(21.23)");
@@ -275,13 +279,13 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_STR_EQ(v7, "'hi there'.substr(NaN)", "hi there");
   ASSERT_EVAL_STR_EQ(v7, "'hi there'.substr(0, 300)", "hi there");
 #if V7_ENABLE__RegExp
-  ASSERT_EQ(v7_exec(v7, &v, "'dew dee'.match(/\\d+/)"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "'dew dee'.match(/\\d+/)"), V7_OK);
   ASSERT_EQ(v, v7_create_null());
   ASSERT_EVAL_OK(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)");
   ASSERT_EVAL_NUM_EQ(v7, "m.length", 2.0);
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "foo 1234");
   ASSERT_EVAL_STR_EQ(v7, "m[1]", "1234");
-  ASSERT_EQ(v7_exec(v7, &v, "m[2]"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "m[2]"), V7_OK);
   ASSERT(v7_is_undefined(v));
   ASSERT_EVAL_OK(v7, "m = 'should match empty string at index 0'.match(/x*/)");
   ASSERT_EVAL_NUM_EQ(v7, "m.length", 1.0);
@@ -292,7 +296,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/x*/); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/(x)*/); m.length", 16.0);
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "a");
-  ASSERT_EQ(v7_exec(v7, &v, "m[1]"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "m[1]"), V7_OK);
   ASSERT(v7_is_undefined(v));
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
@@ -518,7 +522,7 @@ static const char *test_apply(void) {
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
             V7_EXEC_EXCEPTION);
 
-  ASSERT_EQ(v7_exec(v7, &v, "function test1(){return 1}"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "function test1(){return 1}"), V7_OK);
   fn = v7_get(v7, v7->global_object, "test1", 5);
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
             V7_OK);
@@ -527,7 +531,7 @@ static const char *test_apply(void) {
   ASSERT_EQ(v7_apply(v7, NULL, fn, v7->global_object, v7_create_undefined()),
             V7_OK);
 
-  ASSERT_EQ(v7_exec(v7, &v, "function test2(){throw 2}"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "function test2(){throw 2}"), V7_OK);
   fn = v7_get(v7, v7->global_object, "test2", 5);
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
             V7_EXEC_EXCEPTION);
@@ -873,7 +877,7 @@ static const char *test_parser(void) {
 #if 0
     printf("-- Parsing \"%s\"\n", invalid[i]);
 #endif
-    ASSERT_EQ(parse(v7, &a, invalid[i], 0), V7_SYNTAX_ERROR);
+    ASSERT_EQ(parse(v7, &a, invalid[i], 0, 0), V7_SYNTAX_ERROR);
   }
 
   ast_free(&a);
@@ -906,7 +910,7 @@ static const char *test_parser_large_ast(void) {
   char *script = read_file("large_ast.js", &script_len);
 
   ast_init(&a, 0);
-  ASSERT_EQ(parse(v7, &a, script, 0), V7_AST_TOO_LARGE);
+  ASSERT_EQ(parse(v7, &a, script, 0, 0), V7_AST_TOO_LARGE);
   return NULL;
 }
 
@@ -979,10 +983,10 @@ static const char *test_ecmac(void) {
     ASSERT_EQ(parse_js(v7, current_case, &a), V7_OK);
     ast_free(&a);
 
-    if (v7_exec(v7, &res, driver) != V7_OK) {
+    if (eval(v7, &res, driver) != V7_OK) {
       fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
     } else {
-      if (v7_exec(v7, &res, current_case) != V7_OK) {
+      if (eval(v7, &res, current_case) != V7_OK) {
         char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
         fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
         if (err_str != buf) {
@@ -1109,7 +1113,7 @@ static const char *test_interpreter(void) {
 
   ASSERT_EVAL_EQ(v7, "+'1'", "1");
   ASSERT_EVAL_EQ(v7, "-'-1'", "1");
-  ASSERT_EQ(v7_exec(v7, &v, "v=[10+1,20*2,30/3]"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "v=[10+1,20*2,30/3]"), V7_OK);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_ARRAY_OBJECT);
   ASSERT_EQ(v7_array_length(v7, v), 3);
   ASSERT(check_value(v7, v, "[11,40,10]"));
@@ -1117,11 +1121,11 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "v[1]", "40");
   ASSERT_EVAL_EQ(v7, "v[2]", "10");
 
-  ASSERT_EQ(v7_exec(v7, &v, "v=[10+1,undefined,30/3]"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "v=[10+1,undefined,30/3]"), V7_OK);
   ASSERT_EQ(v7_array_length(v7, v), 3);
   ASSERT(check_value(v7, v, "[11,undefined,10]"));
 
-  ASSERT_EQ(v7_exec(v7, &v, "v=[10+1,,30/3]"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "v=[10+1,,30/3]"), V7_OK);
   ASSERT_EQ(v7_array_length(v7, v), 3);
   ASSERT(check_value(v7, v, "[11,,10]"));
 
@@ -1133,7 +1137,7 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "x=42; x", "42");
   ASSERT_EVAL_EQ(v7, "x=y=42; x+y", "84");
 
-  ASSERT_EQ(v7_exec(v7, &v, "o={a: 1, b: 2}"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "o={a: 1, b: 2}"), V7_OK);
   ASSERT_EVAL_EQ(v7, "o['a'] + o['b']", "3");
 
   ASSERT_EVAL_EQ(v7, "o.a + o.b", "3");
@@ -1221,8 +1225,8 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "(function(){i=0;do{if(i==5)return i}while(++i)})()", "5");
 
   ASSERT_EQ(
-      v7_exec(v7, &v,
-              "(function(x,y){return x+y})(40,2,(function(){return fail})())"),
+      eval(v7, &v,
+           "(function(x,y){return x+y})(40,2,(function(){return fail})())"),
       V7_EXEC_EXCEPTION);
 
   ASSERT_EVAL_EQ(v7, "x=42; (function(){return x})()", "42");
@@ -1319,7 +1323,7 @@ static const char *test_interpreter(void) {
   /* TODO(mkm): fix parser: should not require parenthesis */
   ASSERT_EVAL_EQ(v7, "({}) instanceof Object", "true");
 
-  ASSERT_EQ(v7_exec(v7, &v, ""), V7_OK);
+  ASSERT_EQ(eval(v7, &v, ""), V7_OK);
   ASSERT(v7_is_undefined(v));
 #if 0
   ASSERT_EVAL_EQ(v7, "x=0;a=1;o={a:2};with(o){x=a};x", "2");
@@ -1400,10 +1404,10 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "r=1;for(var i in undefined){r=0};r", "1");
   ASSERT_EVAL_EQ(v7, "r=1;for(var i in 42){r=0};r", "1");
 
-  ASSERT_EQ(v7_exec_with(v7, &v, "this", v7_create_number(42)), V7_OK);
+  ASSERT_EQ(v7_exec_with(v7, "this", v7_create_number(42), &v), V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec_with(v7, &v, "a=666;(function(a){return a})(this)",
-                      v7_create_number(42)) == V7_OK);
+  ASSERT(v7_exec_with(v7, "a=666;(function(a){return a})(this)",
+                      v7_create_number(42), &v) == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
   c = "\"aa bb\"";
@@ -1476,7 +1480,7 @@ static const char *test_interpreter(void) {
   c = "\"\"";
   ASSERT_EVAL_EQ(v7, "'' && {}", c);
 
-  ASSERT_EQ(v7_exec_with(v7, &v, "a=this;a", v7_create_foreign((void *) "foo")),
+  ASSERT_EQ(v7_exec_with(v7, "a=this;a", v7_create_foreign((void *) "foo"), &v),
             V7_OK);
   ASSERT(v7_is_foreign(v));
   ASSERT_EQ(strcmp((char *) v7_to_foreign(v), "foo"), 0);
@@ -1499,7 +1503,7 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "a=[2,1];a.sort();a", "[1,2]");
 
   /* check execution failure caused by bad parsing */
-  ASSERT_EQ(v7_exec(v7, &v, "function"), V7_SYNTAX_ERROR);
+  ASSERT_EQ(eval(v7, &v, "function"), V7_SYNTAX_ERROR);
 
   v7_destroy(v7);
   return NULL;
@@ -1547,11 +1551,11 @@ static const char *test_interp_unescape(void) {
   struct v7 *v7 = v7_create();
   val_t v;
 
-  ASSERT_EQ(v7_exec(v7, &v, "'1234'"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "'1234'"), V7_OK);
   ASSERT_EQ((v & V7_TAG_MASK), V7_TAG_STRING_I);
-  ASSERT_EQ(v7_exec(v7, &v, "'12345'"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "'12345'"), V7_OK);
   ASSERT_EQ((v & V7_TAG_MASK), V7_TAG_STRING_5);
-  ASSERT_EQ(v7_exec(v7, &v, "'123456'"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "'123456'"), V7_OK);
   ASSERT_EQ((v & V7_TAG_MASK), V7_TAG_STRING_O);
 
   ASSERT_EVAL_NUM_EQ(v7, "'123'.length", 3);
@@ -1570,7 +1574,7 @@ static const char *test_interp_unescape(void) {
   ASSERT_EVAL_NUM_EQ(v7, "'123\\\\\\\\\\\\\\\\'.length", 7);
   ASSERT_EVAL_NUM_EQ(v7, "'123\\\\\\\\\\\\\\\\\\\\'.length", 8);
 
-  ASSERT_EQ(v7_exec(v7, &v, "'1234\\\\\\\\'"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "'1234\\\\\\\\'"), V7_OK);
   ASSERT_EQ((v & V7_TAG_MASK), V7_TAG_STRING_O);
 
   v7_destroy(v7);
@@ -1583,16 +1587,16 @@ static const char *test_to_json(void) {
   struct v7 *v7 = v7_create();
   val_t v;
 
-  v7_exec(v7, &v, "123.45");
+  eval(v7, &v, "123.45");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, "123.45");
 
-  v7_exec(v7, &v, "'foo'");
+  eval(v7, &v, "'foo'");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   c = "\"foo\"";
   ASSERT_STREQ(p, c);
 
-  v7_exec(v7, &v, "'\"foo\"'");
+  eval(v7, &v, "'\"foo\"'");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   c = "\"\\\"foo\\\"\"";
   ASSERT_STREQ(p, c);
@@ -1656,7 +1660,7 @@ static const char *test_json_parse(void) {
     const char *s;
     size_t len;
 
-    v7_exec(v7, &res, "JSON.stringify('\"\\n\"')");
+    eval(v7, &res, "JSON.stringify('\"\\n\"')");
     s = v7_to_string(v7, &res, &len);
 
     c1 = "\"\\\"\\n\\\"\"";
@@ -1689,43 +1693,43 @@ static const char *test_gc_mark(void) {
   struct v7 *v7 = v7_create();
   val_t v;
 
-  v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
+  eval(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
   gc_mark(v7, v);
   ASSERT(MARKED(v7_to_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
+  eval(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
   gc_mark(v7, v7->global_object);
   ASSERT(MARKED(v7_to_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v, "function f() {}; o=new f;o");
+  eval(v7, &v, "function f() {}; o=new f;o");
   gc_mark(v7, v);
   ASSERT(MARKED(v7_to_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v, "function f() {}; Object.getPrototypeOf(new f)");
+  eval(v7, &v, "function f() {}; Object.getPrototypeOf(new f)");
   gc_mark(v7, v7->global_object);
   ASSERT(MARKED(v7_to_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v, "({a:1})");
+  eval(v7, &v, "({a:1})");
   gc_mark(v7, v7->global_object);
   ASSERT(!MARKED(v7_to_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v,
-          "var f;(function() {var x={a:1};f=function(){return x};return x})()");
+  eval(v7, &v,
+       "var f;(function() {var x={a:1};f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `x` is reachable through `f`'s closure scope */
   ASSERT(MARKED(v7_to_object(v)));
@@ -1733,8 +1737,8 @@ static const char *test_gc_mark(void) {
   v7_destroy(v7);
   v7 = v7_create();
 
-  v7_exec(v7, &v,
-          "(function() {var x={a:1};var f=function(){return x};return x})()");
+  eval(v7, &v,
+       "(function() {var x={a:1};var f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `f` is unreachable, hence `x` is not marked through the scope */
   ASSERT(!MARKED(v7_to_object(v)));
@@ -1751,7 +1755,7 @@ static const char *test_gc_sweep(void) {
 
   v7_gc(v7, 0);
   alive = v7->object_arena.alive;
-  v7_exec(v7, &v, "x=({a:1})");
+  eval(v7, &v, "x=({a:1})");
   v7_to_object(v);
   v7_gc(v7, 0);
   ASSERT(v7->object_arena.alive > alive);
@@ -1829,16 +1833,16 @@ static const char *test_file(void) {
 
   v7_own(v7, &data_str);
   v7_set(v7, v7_get_global_object(v7), "ts", 2, 0, data_str);
-  ASSERT(v7_exec(v7, &v,
-                 "f = File.open('ft.txt', 'w+'); "
-                 " f.write(ts); f.close();") == V7_OK);
+  ASSERT(eval(v7, &v,
+              "f = File.open('ft.txt', 'w+'); "
+              " f.write(ts); f.close();") == V7_OK);
   ASSERT(check_file(v7, data_str, test_file_name));
   ASSERT_EQ(remove(test_file_name), 0);
-  ASSERT_EQ(v7_exec(v7, &v, "f = File.open('test.mk'); f.readAll()"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "f = File.open('test.mk'); f.readAll()"), V7_OK);
   ASSERT(check_file(v7, v, "test.mk"));
-  ASSERT_EQ(v7_exec(v7, &v, "l = File.list('non existent directory')"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "l = File.list('non existent directory')"), V7_OK);
   ASSERT(v7_is_undefined(v));
-  ASSERT_EQ(v7_exec(v7, &v, "l = File.list('.');"), V7_OK);
+  ASSERT_EQ(eval(v7, &v, "l = File.list('.');"), V7_OK);
   ASSERT(v7_is_array(v7, v));
   ASSERT_EVAL_EQ(v7, "l.indexOf('unit_test.c') >= 0", "true");
 
