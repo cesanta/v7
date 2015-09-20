@@ -307,6 +307,8 @@ static const char *test_stdlib(void) {
       v7, "({z: '123456'}).z.toString().substr(0, 3).split('').length", 3.0);
   c = "\"a\\nb\".replace(/\\n/g, \"\\\\\");";
   ASSERT_EVAL_STR_EQ(v7, c, "a\\b");
+  c = "\"\"";
+  ASSERT_EVAL_EQ(v7, "'abc'.replace(/.+/, '')", c);
 #endif /* V7_ENABLE__RegExp */
   ASSERT_EVAL_STR_EQ(v7, "String('hi')", "hi");
   ASSERT_EVAL_OK(v7, "new String('blah')");
