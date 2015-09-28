@@ -384,6 +384,8 @@ static const char *test_runtime(void) {
   v = v7_create_null();
   ASSERT(v7_is_null(v));
 
+  v7_own(v7, &v);
+
   v = v7_create_undefined();
   ASSERT(v7_is_undefined(v));
 
@@ -1587,7 +1589,8 @@ static const char *test_to_json(void) {
   char buf[10], *p;
   const char *c;
   struct v7 *v7 = v7_create();
-  val_t v;
+  val_t v = v7_create_undefined();
+  v7_own(v7, &v);
 
   eval(v7, &v, "123.45");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
