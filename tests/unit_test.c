@@ -225,9 +225,11 @@ static const char *test_native_functions(void) {
 }
 
 static const char *test_stdlib(void) {
-  v7_val_t v;
+  v7_val_t v = v7_create_undefined();
   struct v7 *v7 = v7_create();
   const char *c;
+
+  v7_own(v7, &v);
 
   ASSERT_EVAL_EQ(v7, "Boolean()", "false");
   ASSERT_EVAL_EQ(v7, "Boolean(0)", "false");
@@ -520,7 +522,9 @@ static const char *test_runtime(void) {
 
 static const char *test_apply(void) {
   struct v7 *v7 = v7_create();
-  val_t v, fn;
+  val_t v = v7_create_undefined(), fn = v7_create_undefined();
+  v7_own(v7, &v);
+  v7_own(v7, &fn);
 
   fn = v7_get(v7, v7->global_object, "test0", 5); /* no such function */
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
@@ -1753,6 +1757,7 @@ static const char *test_gc_mark(void) {
   return NULL;
 }
 
+#ifndef V7_MALLOC_GC
 static const char *test_gc_sweep(void) {
   struct v7 *v7 = v7_create();
   val_t v;
@@ -1782,6 +1787,7 @@ static const char *test_gc_sweep(void) {
   v7_destroy(v7);
   return NULL;
 }
+#endif
 
 static const char *test_gc_own(void) {
   struct v7 *v7 = v7_create();
@@ -2049,7 +2055,9 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 #endif
 #ifndef V7_DISABLE_GC
   RUN_TEST(test_gc_mark);
+#ifndef V7_MALLOC_GC
   RUN_TEST(test_gc_sweep);
+#endif
   RUN_TEST(test_gc_own);
 #endif
   RUN_TEST(test_ecmac);
