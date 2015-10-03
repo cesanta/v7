@@ -215,7 +215,7 @@ static val_t adder(struct v7 *v7, val_t this_obj, val_t args) {
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
 
-  ASSERT_EQ(v7_set_property(v7, v7_get_global_object(v7), "adder", 5, 0,
+  ASSERT_EQ(v7_set_property(v7, v7_get_global(v7), "adder", 5, 0,
                             v7_create_cfunction(adder)),
             0);
   ASSERT_EVAL_EQ(v7, "adder(1, 2, 3 + 4);", "10");
@@ -1843,7 +1843,7 @@ static const char *test_file(void) {
   v7_val_t v, data_str = v7_create_string(v7, data, strlen(data), 1);
 
   v7_own(v7, &data_str);
-  v7_set(v7, v7_get_global_object(v7), "ts", 2, 0, data_str);
+  v7_set(v7, v7_get_global(v7), "ts", 2, 0, data_str);
   ASSERT(eval(v7, &v,
               "f = File.open('ft.txt', 'w+'); "
               " f.write(ts); f.close();") == V7_OK);
@@ -1968,21 +1968,20 @@ static const char *test_bcode(void) {
   char buf[512];
 
   v7->call_stack = v7_create_object(v7);
-  v7_to_object(v7->call_stack)->prototype =
-      v7_to_object(v7_get_global_object(v7));
+  v7_to_object(v7->call_stack)->prototype = v7_to_object(v7_get_global(v7));
 
-  v7_set(v7, v7_get_global_object(v7), "x", 1, 0, v7_create_number(666));
+  v7_set(v7, v7_get_global(v7), "x", 1, 0, v7_create_number(666));
   y_proto = v7_create_object(v7);
   y = create_object(v7, y_proto);
   v7_set(v7, y_proto, "b", 1, 0, v7_create_number(10));
   v7_set(v7, y, "a", 1, 0, v7_create_number(20));
   v7_set(v7, v7->call_stack, "y", 1, 0, y);
 #if 0
-  v7_set(v7, v7_get_global_object(v7), "r", 1, 0, v7_create_undefined());
+  v7_set(v7, v7_get_global(v7), "r", 1, 0, v7_create_undefined());
 #endif
-  v7_set(v7, v7_get_global_object(v7), "gy", 2, 0, y);
-  v7_set(v7, v7_get_global_object(v7), "gyp", 3, 0, y_proto);
-  v7_set(v7, v7_get_global_object(v7), "scope", 5, 0, v7->call_stack);
+  v7_set(v7, v7_get_global(v7), "gy", 2, 0, y);
+  v7_set(v7, v7_get_global(v7), "gyp", 3, 0, y_proto);
+  v7_set(v7, v7_get_global(v7), "scope", 5, 0, v7->call_stack);
 
   memset(&bcode, 0, sizeof(bcode));
   bcode.ops = ops;

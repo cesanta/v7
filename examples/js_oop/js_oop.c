@@ -33,7 +33,7 @@ int main(void) {
          V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
          v7_create_number(123));
   v7_set_method(v7, proto, "myMethod", &MyThing_myMethod);
-  v7_set(v7, v7_get_global_object(v7), "MyThing", ~0, 0, ctor_func);
+  v7_set(v7, v7_get_global(v7), "MyThing", ~0, 0, ctor_func);
 
   v7_exec(v7, "\
       print('MyThing.MY_CONST = ', MyThing.MY_CONST); \

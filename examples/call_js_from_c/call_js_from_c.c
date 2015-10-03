@@ -9,7 +9,7 @@
 static void call_sum(struct v7 *v7) {
   v7_val_t func, result, args;
 
-  func = v7_get(v7, v7_get_global_object(v7), "sum", 3);
+  func = v7_get(v7, v7_get_global(v7), "sum", 3);
 
   args = v7_create_array(v7);
   v7_array_push(v7, args, v7_create_number(123.0));
