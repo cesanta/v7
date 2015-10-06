@@ -13,7 +13,7 @@
 
 static v7_val_t MyThing_ctor(struct v7 *v7, v7_val_t args) {
   v7_val_t this_obj = v7_get_this(v7);
-  v7_val_t arg0 = v7_array_get(v7, args, 0);
+  v7_val_t arg0 = v7_arg(v7, 0);
   v7_set(v7, this_obj, "__arg", ~0 /* = strlen */, V7_PROPERTY_DONT_ENUM, arg0);
   return this_obj;
 }
@@ -21,7 +21,6 @@ static v7_val_t MyThing_ctor(struct v7 *v7, v7_val_t args) {
 static v7_val_t MyThing_myMethod(
     struct v7 *v7, v7_val_t args) {
   v7_val_t this_obj = v7_get_this(v7);
-  (void) args;
   return v7_get(v7, this_obj, "__arg", ~0);
 }
 

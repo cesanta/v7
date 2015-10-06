@@ -201,12 +201,12 @@ static const char *test_closure(void) {
   return NULL;
 }
 
-static val_t adder(struct v7 *v7, val_t args) {
+static val_t adder(struct v7 *v7) {
   double sum = 0;
   unsigned long i;
 
-  for (i = 0; i < v7_array_length(v7, args); i++) {
-    sum += v7_to_number(v7_array_get(v7, args, i));
+  for (i = 0; i < v7_argc(v7); i++) {
+    sum += v7_to_number(v7_arg(v7, i));
   }
   return v7_create_number(sum);
 }
