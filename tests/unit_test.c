@@ -584,6 +584,10 @@ static const char *test_dense_arrays(void) {
 
   ASSERT_EVAL_NUM_EQ(v7, "a=mka(1,2,3);a.indexOf(3)", 2);
 
+  ASSERT_EVAL_NUM_EQ(v7, "(function(){return arguments})(1,2,3).length", 3);
+  ASSERT_EVAL_NUM_EQ(
+      v7, "(function(){return arguments}).apply(this, [1,2,3]).length", 3);
+
   /* ensure that a zero length dense arrays is correctly recognized */
   a = v7_create_dense_array(v7);
   ASSERT(v7_next_prop(v7, a, NULL) == NULL);
