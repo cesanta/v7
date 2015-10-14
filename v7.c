@@ -8416,6 +8416,7 @@ int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
   }
 
   n = v7_create_string(v7, name, len, 1);
+  tmp_stack_push(&tf, &n);
   res = v7_set_property_v(v7, obj, n, attributes, val);
   tmp_frame_cleanup(&tf);
   return res;
@@ -9625,10 +9626,10 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *     since we need to be able to distinguish real values from
    *     the saved first 6 bytes of the string, we need to tag the chunk
    *     as V7_TAG_STRING_C
-   *  2. encode value's address (v) into the first bytes of the string.
-   *     the first byte is set to 0 to serve as a mark.
-   *     The remaining 6 bytes are taken from v's least significant bytes.
+   *  2. encode value's address (v) into the first 6 bytes of the string.
    *  3. put the saved 8 bytes (tag + chunk) back into the value.
+   *  4. mark the string by putting '\1' in the NUL terminator of the previous
+   *     string chunk.
    *
    * If a value points to an already marked string we shall:
    *     (0, <6 bytes of a pointer to a val_t>), hence we have to skip
