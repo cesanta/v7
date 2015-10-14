@@ -132,23 +132,26 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
     }                                                   \
   } while (0)
 
-#define _ASSERT_EVAL_EQ(v7, js_expr, expected, check_fun)            \
-  do {                                                               \
-    v7_val_t v;                                                      \
-    enum v7_err e;                                                   \
-    int r = 1;                                                       \
-    num_tests++;                                                     \
-    e = v7_exec(v7, js_expr, &v);                                    \
-    if (e != V7_OK) {                                                \
-      printf("Exec '%s' failed, err=%d\n", js_expr, e);              \
-      r = 0;                                                         \
-    } else {                                                         \
-      r = check_fun(v7, v, expected);                                \
-    }                                                                \
-    if (r == 0) {                                                    \
-      FAIL("ASSERT_EVAL_EQ(" #js_expr ", " #expected ")", __LINE__); \
-    }                                                                \
+#define _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, eval_fun) \
+  do {                                                                  \
+    v7_val_t v;                                                         \
+    enum v7_err e;                                                      \
+    int r = 1;                                                          \
+    num_tests++;                                                        \
+    e = eval_fun(v7, js_expr, &v);                                      \
+    if (e != V7_OK) {                                                   \
+      printf("Exec '%s' failed, err=%d\n", js_expr, e);                 \
+      r = 0;                                                            \
+    } else {                                                            \
+      r = check_fun(v7, v, expected);                                   \
+    }                                                                   \
+    if (r == 0) {                                                       \
+      FAIL("ASSERT_EVAL_EQ(" #js_expr ", " #expected ")", __LINE__);    \
+    }                                                                   \
   } while (0)
+
+#define _ASSERT_EVAL_EQ(v7, js_expr, expected, check_fun) \
+  _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, v7_exec)
 
 #define ASSERT_EVAL_EQ(v7, js_expr, expected) \
   _ASSERT_EVAL_EQ(v7, js_expr, expected, check_value)
@@ -1942,6 +1945,99 @@ static const char *test_ubjson(void) {
 
 #ifdef V7_ENABLE_BCODE
 
+static int check_ops(struct bcode *bcode, uint8_t *ops, size_t len) {
+  size_t i;
+  if (bcode->ops.len != len) return 0;
+  for (i = 0; i < len; i++) {
+    if (bcode->ops.buf[i] != ops[i]) return 0;
+  }
+  return 1;
+}
+
+#define BEGIN_CHECK_OPS(expr)                         \
+  do {                                                \
+    ASSERT_EQ(parse_js(v7, expr, &a), V7_OK);         \
+    ASSERT_EQ(compile_script(v7, &a, &bcode), V7_OK); \
+    {                                                 \
+    uint8_t o[] =
+
+#define END_CHECK_OPS()                        \
+  ASSERT(check_ops(&bcode, o, ARRAY_SIZE(o))); \
+  }                                            \
+  bcode_free(&bcode);                          \
+  ast_free(&a);                                \
+  }                                            \
+  while (0)
+
+static const char *test_compiler(void) {
+  struct v7 *v7 = v7_create();
+  struct bcode bcode;
+  struct ast a;
+
+  bcode_init(&bcode);
+  ast_init(&a, 0);
+
+  BEGIN_CHECK_OPS("0+1"){OP_PUSH_ZERO, OP_PUSH_ONE, OP_ADD};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("-(1)"){OP_PUSH_ONE, OP_NEG};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("1+2*3"){OP_PUSH_ONE, OP_PUSH_LIT, 0,     OP_PUSH_LIT,
+                           1,           OP_MUL,      OP_ADD};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("x"){OP_GET_VAR, 0};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("x=1"){OP_PUSH_ONE, OP_SET_VAR, 0};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("a.b"){OP_GET_VAR, 1, OP_PUSH_LIT, 0, OP_GET};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("(0+1)[1-0]"){OP_PUSH_ZERO, OP_PUSH_ONE, OP_ADD, OP_PUSH_ONE,
+                                OP_PUSH_ZERO, OP_SUB,      OP_GET};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("a['b']"){OP_GET_VAR, 0, OP_PUSH_LIT, 1, OP_GET};
+  END_CHECK_OPS();
+
+  v7_destroy(v7);
+  return NULL;
+}
+
+#define _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_fun) \
+  _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, v7_exec_bcode)
+
+#define ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected) \
+  _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_value)
+#define ASSERT_BCODE_EVAL_NUM_EQ(v7, js_expr, expected) \
+  _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_num)
+#define ASSERT_BCODE_EVAL_STR_EQ(v7, js_expr, expected) \
+  _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_str)
+
+static const char *test_exec_bcode(void) {
+  struct v7 *v7 = v7_create();
+
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "0+1", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "2+3", 5);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1+2*3", 7);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "(1+2)*3", 9);
+
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x=42", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "42+42", 84);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x+x", 84);
+
+  ASSERT_EVAL_OK(v7, "x={a:42}");
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 42);
+
+  v7_destroy(v7);
+  return NULL;
+}
+
 static const char *test_bcode(void) {
   struct v7 *v7 = v7_create();
   uint8_t ops[] = {
@@ -1969,6 +2065,7 @@ static const char *test_bcode(void) {
   struct bcode bcode;
   val_t y, y_proto;
   char buf[512];
+  val_t lit[7];
 
   v7->call_stack = v7_create_object(v7);
   v7_to_object(v7->call_stack)->prototype = v7_to_object(v7_get_global(v7));
@@ -1986,16 +2083,16 @@ static const char *test_bcode(void) {
   v7_set(v7, v7_get_global(v7), "gyp", 3, 0, y_proto);
   v7_set(v7, v7_get_global(v7), "scope", 5, 0, v7->call_stack);
 
-  memset(&bcode, 0, sizeof(bcode));
-  bcode.ops = ops;
-  bcode.ops_len = ARRAY_SIZE(ops);
-  bcode.lit[0] = v7_create_number(42);
-  bcode.lit[1] = v7_create_string(v7, "x", 1, 1);
-  bcode.lit[2] = v7_create_string(v7, "y", 1, 1);
-  bcode.lit[3] = v7_create_string(v7, "a", 1, 1);
-  bcode.lit[4] = v7_create_string(v7, "b", 1, 1);
-  bcode.lit[5] = v7_create_string(v7, "r", 1, 1);
-  bcode.lit[6] = v7_create_number((42 + 1 - 42 + 666) * 20);
+  bcode_init(&bcode);
+  mbuf_append(&bcode.ops, ops, ARRAY_SIZE(ops));
+  lit[0] = v7_create_number(42);
+  lit[1] = v7_create_string(v7, "x", 1, 1);
+  lit[2] = v7_create_string(v7, "y", 1, 1);
+  lit[3] = v7_create_string(v7, "a", 1, 1);
+  lit[4] = v7_create_string(v7, "b", 1, 1);
+  lit[5] = v7_create_string(v7, "r", 1, 1);
+  lit[6] = v7_create_number((42 + 1 - 42 + 666) * 20);
+  mbuf_append(&bcode.lit, lit, ARRAY_SIZE(ops) * sizeof(val_t));
 
   ASSERT_EQ(v7->sp, 0);
   eval_bcode(v7, &bcode);
@@ -2017,6 +2114,7 @@ static const char *test_bcode(void) {
   ASSERT_EVAL_EQ(v7, "scope.r", "13340");
   ASSERT_EVAL_EQ(v7, "r", "13340");
 
+  bcode_free(&bcode);
   v7_destroy(v7);
   return NULL;
 }
@@ -2064,6 +2162,8 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 #endif
   RUN_TEST(test_ecmac);
 #ifdef V7_ENABLE_BCODE
+  RUN_TEST(test_compiler);
+  RUN_TEST(test_exec_bcode);
   RUN_TEST(test_bcode);
 #endif
   return NULL;
