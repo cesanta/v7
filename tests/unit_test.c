@@ -2014,6 +2014,14 @@ static const char *test_compiler(void) {
   BEGIN_CHECK_OPS("a['b']"){OP_GET_VAR, 0, OP_PUSH_LIT, 1, OP_GET};
   END_CHECK_OPS();
 
+  BEGIN_CHECK_OPS("a.b=0"){OP_GET_VAR, 1, OP_PUSH_LIT, 0, OP_PUSH_ZERO, OP_SET};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("a.b+=1"){OP_GET_VAR,  1,       OP_PUSH_LIT,
+                            0,           OP_2DUP, OP_GET,
+                            OP_PUSH_ONE, OP_ADD,  OP_SET};
+  END_CHECK_OPS();
+
   v7_destroy(v7);
   return NULL;
 }
@@ -2044,9 +2052,21 @@ static const char *test_exec_bcode(void) {
   ASSERT_EVAL_OK(v7, "x={a:42}");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a", 42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a=0", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a+=1", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a", 1);
 
   v7_destroy(v7);
   return NULL;
+}
+
+static void _eval_bcode_op(struct v7 *v7, uint8_t op) {
+  struct bcode bcode;
+  bcode_init(&bcode);
+  mbuf_append(&bcode.ops, &op, sizeof(op));
+  eval_bcode(v7, &bcode);
+  bcode_free(&bcode);
 }
 
 static const char *test_bcode(void) {
@@ -2126,6 +2146,24 @@ static const char *test_bcode(void) {
   ASSERT_EVAL_EQ(v7, "r", "13340");
 
   bcode_free(&bcode);
+
+  /* test primitive opcodes */
+
+  _eval_bcode_op(v7, OP_PUSH_ZERO);
+  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 0));
+  _eval_bcode_op(v7, OP_DUP);
+  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 0));
+  ASSERT(check_num(v7, v7->stack[v7->sp - 2], 0));
+  _eval_bcode_op(v7, OP_PUSH_ONE);
+  _eval_bcode_op(v7, OP_POP);
+  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 0));
+  _eval_bcode_op(v7, OP_PUSH_ONE);
+  _eval_bcode_op(v7, OP_2DUP);
+  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 1));
+  ASSERT(check_num(v7, v7->stack[v7->sp - 2], 0));
+  ASSERT(check_num(v7, v7->stack[v7->sp - 3], 1));
+  ASSERT(check_num(v7, v7->stack[v7->sp - 4], 0));
+
   v7_destroy(v7);
   return NULL;
 }
