@@ -524,9 +524,11 @@ static const char *test_runtime(void) {
 
 static const char *test_apply(void) {
   struct v7 *v7 = v7_create();
-  val_t v = v7_create_undefined(), fn = v7_create_undefined();
+  val_t v = v7_create_undefined(), fn = v7_create_undefined(),
+        args = v7_create_undefined();
   v7_own(v7, &v);
   v7_own(v7, &fn);
+  v7_own(v7, &args);
 
   fn = v7_get(v7, v7->global_object, "test0", 5); /* no such function */
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
@@ -546,6 +548,15 @@ static const char *test_apply(void) {
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, v7_create_undefined()),
             V7_EXEC_EXCEPTION);
   ASSERT(check_num(v7, v, 2));
+
+  ASSERT_EQ(eval(v7, &v, "function test1(){return arguments}"), V7_OK);
+  fn = v7_get(v7, v7->global_object, "test1", 5);
+  args = v7_create_array(v7);
+  v7_array_push(v7, args, v7_create_number(1));
+  v7_array_push(v7, args, v7_create_number(2));
+  v7_array_push(v7, args, v7_create_number(3));
+  ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, args), V7_OK);
+  ASSERT(v7_array_length(v7, v) == 3);
 
   v7_destroy(v7);
   return NULL;
