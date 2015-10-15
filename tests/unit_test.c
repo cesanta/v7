@@ -2022,6 +2022,15 @@ static const char *test_compiler(void) {
                             OP_PUSH_ONE, OP_ADD,  OP_SET};
   END_CHECK_OPS();
 
+  BEGIN_CHECK_OPS("a['b']=0"){OP_GET_VAR, 0, OP_PUSH_LIT, 1, OP_PUSH_ZERO,
+                              OP_SET};
+  END_CHECK_OPS();
+
+  BEGIN_CHECK_OPS("a['b']+=1"){OP_GET_VAR,  0,       OP_PUSH_LIT,
+                               1,           OP_2DUP, OP_GET,
+                               OP_PUSH_ONE, OP_ADD,  OP_SET};
+  END_CHECK_OPS();
+
   v7_destroy(v7);
   return NULL;
 }
@@ -2056,6 +2065,10 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a", 0);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a+=1", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']=0", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']+=1", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 1);
 
   v7_destroy(v7);
   return NULL;
