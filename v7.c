@@ -16411,6 +16411,77 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
+/*
+ * Substring context: currently, used in Str_split() only, but will probably
+ * be used in Str_replace() and other functions as well.
+ *
+ * Needed to provide different implementation for RegExp or String arguments,
+ * keeping common parts reusable.
+ */
+struct _str_split_ctx {
+  /* implementation-specific data */
+  union {
+    struct {
+      struct slre_prog *prog;
+      struct slre_loot loot;
+    } regexp;
+  } impl;
+
+  /* start and end of previous match (by `p_exec()`) */
+  const char *match_start;
+  const char *match_end;
+
+  /* pointers to implementation functions */
+  void (*p_init)(struct _str_split_ctx *ctx, struct v7 *v7, val_t sep);
+  int  (*p_exec)(struct _str_split_ctx *ctx, const char *start, const char *end);
+  void (*p_add_caps)(struct _str_split_ctx *ctx, struct v7 *v7, val_t res);
+};
+
+/*
+ * Substring regexp: initializes context
+ */
+static void subs_regexp_init(
+    struct _str_split_ctx *ctx, struct v7 *v7, val_t sep)
+{
+  ctx->impl.regexp.prog = v7_to_regexp(v7, sep)->compiled_regexp;
+}
+
+/*
+ * Substring regexp: Looks for the next match
+ */
+static int subs_regexp_exec(
+    struct _str_split_ctx *ctx, const char *start, const char *end)
+{
+  int ret =
+    slre_exec(ctx->impl.regexp.prog, 0, start, end, &ctx->impl.regexp.loot);
+
+  ctx->match_start = ctx->impl.regexp.loot.caps[0].start;
+  ctx->match_end   = ctx->impl.regexp.loot.caps[0].end;
+
+  return ret;
+}
+
+/*
+ * Substring regexp: for Str_split() only: add captured data to resulting array
+ */
+static void subs_regexp_split_add_caps(
+    struct _str_split_ctx *ctx, struct v7 *v7, val_t res)
+{
+  int i;
+  for (i = 1; i < ctx->impl.regexp.loot.num_captures; i++) {
+    v7_array_push(
+        v7, res,
+        (ctx->impl.regexp.loot.caps[i].start != NULL)
+        ? v7_create_string(v7, ctx->impl.regexp.loot.caps[i].start,
+          ctx->impl.regexp.loot.caps[i].end - ctx->impl.regexp.loot.caps[i].start, 1)
+        : v7_create_undefined());
+  }
+}
+
+
+
+
+
 static val_t String_ctor(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   val_t arg0 = v7_arg(v7, 0), res = arg0;
@@ -16966,7 +17037,6 @@ static val_t Str_split(struct v7 *v7) {
   const char *s, *s_end;
   size_t s_len;
   long num_args = v7_argc(v7);
-  struct slre_prog *prog = NULL;
   this_obj = to_string(v7, this_obj);
   s = v7_to_string(v7, &this_obj, &s_len);
   s_end = s + s_len;
@@ -16979,14 +17049,27 @@ static val_t Str_split(struct v7 *v7) {
     val_t ro = i_value_of(v7, v7_arg(v7, 0));
     long len, elem, limit = arg_long(v7, 1, LONG_MAX);
     size_t shift = 0;
-    struct slre_loot loot;
-    if (!v7_is_regexp(v7, ro)) {
-      ro = call_regex_ctor(v7, ro);
-    }
-    prog = v7_to_regexp(v7, ro)->compiled_regexp;
+    struct _str_split_ctx ctx;
+    int matches_empty;
 
-    /* Specs oblige us to determine whether the pattern matches an empty string */
-    int matches_empty = !slre_exec(prog, 0, s, s, NULL);
+    /* Initialize substring context depending on the argument type */
+    if (v7_is_regexp(v7, ro)) {
+      ctx.p_init = subs_regexp_init;
+      ctx.p_exec = subs_regexp_exec;
+      ctx.p_add_caps = subs_regexp_split_add_caps;
+    } else {
+      /*TODO: string */
+      ro = call_regex_ctor(v7, ro);
+
+      ctx.p_init = subs_regexp_init;
+      ctx.p_exec = subs_regexp_exec;
+      ctx.p_add_caps = subs_regexp_split_add_caps;
+    }
+    ctx.p_init(&ctx, v7, ro);
+
+    /* Specs oblige us to determine whether the pattern matches
+     * an empty string */
+    matches_empty = !ctx.p_exec(&ctx, s, s);
 
     if (s_len == 0){
       /* if `this` is (or converts to) an empty string, resulting array should
@@ -16998,27 +17081,22 @@ static val_t Str_split(struct v7 *v7) {
     } else {
       for (elem = 0; elem < limit && shift < s_len; elem++) {
         val_t tmp_s;
-        int i;
-        if (slre_exec(prog, 0, s + shift, s_end, &loot)) break;
-        if (loot.caps[0].end - loot.caps[0].start == 0) {
+        if (ctx.p_exec(&ctx, s + shift, s_end)) break;
+        if (ctx.match_start == ctx.match_end)
+        {
           tmp_s = v7_create_string(v7, s + shift, 1, 1);
           shift++;
         } else {
           tmp_s =
-              v7_create_string(v7, s + shift, loot.caps[0].start - s - shift, 1);
-          shift = loot.caps[0].end - s;
+            v7_create_string(v7, s + shift, ctx.match_start - s - shift, 1);
+          shift = ctx.match_end - s;
         }
         v7_array_push(v7, res, tmp_s);
 
-        for (i = 1; i < loot.num_captures; i++) {
-          v7_array_push(
-              v7, res,
-              (loot.caps[i].start != NULL)
-                  ? v7_create_string(v7, loot.caps[i].start,
-                                     loot.caps[i].end - loot.caps[i].start, 1)
-                  : v7_create_undefined());
-        }
+        /* Add captures (for RegExp only) */
+        ctx.p_add_caps(&ctx, v7, res);
       }
+
       len = s_len - shift;
       /* Provided we're not out of the limit requested by the caller,
        * we should add the rest of the string in two cases:
