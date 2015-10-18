@@ -16971,11 +16971,13 @@ static val_t Str_split(struct v7 *v7) {
   s = v7_to_string(v7, &this_obj, &s_len);
   s_end = s + s_len;
 
-  if (num_args == 0 || s_len == 0) {
+  if (num_args == 0) {
+    /* No arguments were given: resulting array will contain just a single
+     * element: the source string */
     v7_array_push(v7, res, this_obj);
   } else {
     val_t ro = i_value_of(v7, v7_arg(v7, 0));
-    long len, elem = 0, limit = arg_long(v7, 1, LONG_MAX);
+    long len, elem, limit = arg_long(v7, 1, LONG_MAX);
     size_t shift = 0;
     struct slre_loot loot;
     if (!v7_is_regexp(v7, ro)) {
@@ -16983,32 +16985,49 @@ static val_t Str_split(struct v7 *v7) {
     }
     prog = v7_to_regexp(v7, ro)->compiled_regexp;
 
-    for (; elem < limit && shift < s_len; elem++) {
-      val_t tmp_s;
-      int i;
-      if (slre_exec(prog, 0, s + shift, s_end, &loot)) break;
-      if (loot.caps[0].end - loot.caps[0].start == 0) {
-        tmp_s = v7_create_string(v7, s + shift, 1, 1);
-        shift++;
-      } else {
-        tmp_s =
-            v7_create_string(v7, s + shift, loot.caps[0].start - s - shift, 1);
-        shift = loot.caps[0].end - s;
-      }
-      v7_array_push(v7, res, tmp_s);
+    /* Specs oblige us to determine whether the pattern matches an empty string */
+    int matches_empty = !slre_exec(prog, 0, s, s, NULL);
 
-      for (i = 1; i < loot.num_captures; i++) {
-        v7_array_push(
-            v7, res,
-            (loot.caps[i].start != NULL)
-                ? v7_create_string(v7, loot.caps[i].start,
-                                   loot.caps[i].end - loot.caps[i].start, 1)
-                : v7_create_undefined());
+    if (s_len == 0){
+      /* if `this` is (or converts to) an empty string, resulting array should
+       * contain empty string if only separator matches empty string.
+       * Otherwise, the array is left empty */
+      if (!matches_empty){
+        v7_array_push(v7, res, this_obj);
       }
-    }
-    len = s_len - shift;
-    if (len > 0 && elem < limit) {
-      v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));
+    } else {
+      for (elem = 0; elem < limit && shift < s_len; elem++) {
+        val_t tmp_s;
+        int i;
+        if (slre_exec(prog, 0, s + shift, s_end, &loot)) break;
+        if (loot.caps[0].end - loot.caps[0].start == 0) {
+          tmp_s = v7_create_string(v7, s + shift, 1, 1);
+          shift++;
+        } else {
+          tmp_s =
+              v7_create_string(v7, s + shift, loot.caps[0].start - s - shift, 1);
+          shift = loot.caps[0].end - s;
+        }
+        v7_array_push(v7, res, tmp_s);
+
+        for (i = 1; i < loot.num_captures; i++) {
+          v7_array_push(
+              v7, res,
+              (loot.caps[i].start != NULL)
+                  ? v7_create_string(v7, loot.caps[i].start,
+                                     loot.caps[i].end - loot.caps[i].start, 1)
+                  : v7_create_undefined());
+        }
+      }
+      len = s_len - shift;
+      /* Provided we're not out of the limit requested by the caller,
+       * we should add the rest of the string in two cases:
+       * - It is not empty;
+       * - It is empty, and the pattern does not match an empty string
+       */
+      if ((len > 0 || !matches_empty) && elem < limit) {
+        v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));
+      }
     }
   }
 

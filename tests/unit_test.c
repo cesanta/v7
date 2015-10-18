@@ -299,6 +299,9 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "a");
   ASSERT_EQ(eval(v7, &v, "m[1]"), V7_OK);
   ASSERT(v7_is_undefined(v));
+  ASSERT_EVAL_NUM_EQ(v7, "m = '123'.split(RegExp('.')); m.length", 4.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = ''.split(RegExp('')); m.length", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = ''.split(RegExp('.')); m.length", 1.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/ /, 2); m.length", 2.0);
