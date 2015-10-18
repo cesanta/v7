@@ -337,6 +337,11 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "a");
   ASSERT_EQ(eval(v7, &v, "m[1]"), V7_OK);
   ASSERT(v7_is_undefined(v));
+
+  /* TODO(dfrank): if we remove this test, then other tests start behave
+   * in a weird way: for example, "'123'.split('23');" evaluates to "{}" */
+  ASSERT_EVAL_EQ(v7, "'123'.split('123');", "[\"\",\"\"]");
+
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('.'));", "['','','','']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp(''));", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('1'));", "['','23']");
@@ -346,6 +351,16 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'));", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp(''));", "[]");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp('.'));", "['']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1');", "['','23']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('2');", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('3');", "['12','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('12');", "['','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('23');", "['1','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('123');", "['','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1234');", "['123']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('');", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'111'.split('1');", "['','','','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'12.34.56'.split('.');", "['12','34','56']");
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/ /, 2); m.length", 2.0);
