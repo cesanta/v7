@@ -17148,7 +17148,7 @@ static val_t Str_split(struct v7 *v7) {
 
     if (s_len == 0){
       /* if `this` is (or converts to) an empty string, resulting array should
-       * contain empty string if only separator matches empty string.
+       * contain empty string if only separator does not match an empty string.
        * Otherwise, the array is left empty */
       if (!matches_empty){
         v7_array_push(v7, res, this_obj);
