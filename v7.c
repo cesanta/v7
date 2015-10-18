@@ -17155,8 +17155,15 @@ static val_t Str_split(struct v7 *v7) {
         if (ctx.p_exec(&ctx, s + shift, s_end)) break;
         if (ctx.match_start == ctx.match_end)
         {
-          tmp_s = v7_create_string(v7, s + shift, 1, 1);
-          shift++;
+          /* empty match: add one-symbol string */
+          size_t symb_width = 1;
+          {
+            const char *next = utfnshift((char *)(s + shift), 1);
+            symb_width = next - (s + shift);
+          }
+
+          tmp_s = v7_create_string(v7, s + shift, symb_width, 1);
+          shift += symb_width;
         } else {
           tmp_s =
             v7_create_string(v7, s + shift, ctx.match_start - s - shift, 1);
