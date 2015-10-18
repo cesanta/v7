@@ -16535,7 +16535,7 @@ static int subs_string_exec(
  * This is an empty stub function; only RegExp has an implementation (see above)
  */
 static void subs_string_split_add_caps(
-    struct _str_split_ctx *ctx, val_t res)
+    struct _str_split_ctx UNUSED *ctx, val_t UNUSED res)
 {
 }
 
