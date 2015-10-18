@@ -16425,7 +16425,13 @@ struct _str_split_ctx {
       struct slre_prog *prog;
       struct slre_loot loot;
     } regexp;
+
+    struct {
+      val_t sep;
+    } string;
   } impl;
+
+  struct v7 *v7;
 
   /* start and end of previous match (by `p_exec()`) */
   const char *match_start;
@@ -16434,7 +16440,7 @@ struct _str_split_ctx {
   /* pointers to implementation functions */
   void (*p_init)(struct _str_split_ctx *ctx, struct v7 *v7, val_t sep);
   int  (*p_exec)(struct _str_split_ctx *ctx, const char *start, const char *end);
-  void (*p_add_caps)(struct _str_split_ctx *ctx, struct v7 *v7, val_t res);
+  void (*p_add_caps)(struct _str_split_ctx *ctx, val_t res);
 };
 
 /*
@@ -16443,6 +16449,7 @@ struct _str_split_ctx {
 static void subs_regexp_init(
     struct _str_split_ctx *ctx, struct v7 *v7, val_t sep)
 {
+  ctx->v7 = v7;
   ctx->impl.regexp.prog = v7_to_regexp(v7, sep)->compiled_regexp;
 }
 
@@ -16465,17 +16472,71 @@ static int subs_regexp_exec(
  * Substring regexp: for Str_split() only: add captured data to resulting array
  */
 static void subs_regexp_split_add_caps(
-    struct _str_split_ctx *ctx, struct v7 *v7, val_t res)
+    struct _str_split_ctx *ctx, val_t res)
 {
   int i;
   for (i = 1; i < ctx->impl.regexp.loot.num_captures; i++) {
     v7_array_push(
-        v7, res,
+        ctx->v7, res,
         (ctx->impl.regexp.loot.caps[i].start != NULL)
-        ? v7_create_string(v7, ctx->impl.regexp.loot.caps[i].start,
+        ? v7_create_string(ctx->v7, ctx->impl.regexp.loot.caps[i].start,
           ctx->impl.regexp.loot.caps[i].end - ctx->impl.regexp.loot.caps[i].start, 1)
         : v7_create_undefined());
   }
+}
+
+/*
+ * Substring String: initializes context
+ */
+static void subs_string_init(
+    struct _str_split_ctx *ctx, struct v7 *v7, val_t sep)
+{
+  ctx->v7 = v7;
+  ctx->impl.string.sep = sep;
+}
+
+/*
+ * Substring String: Looks for the next match
+ */
+static int subs_string_exec(
+    struct _str_split_ctx *ctx, const char *start, const char *end)
+{
+  int ret = 1;
+  size_t sep_len;
+  const char *psep = v7_to_string(ctx->v7, &ctx->impl.string.sep, &sep_len);
+
+  if (sep_len == 0){
+    /* separator is an empty string: match empty string */
+    ctx->match_start = start;
+    ctx->match_end   = start;
+    ret = 0;
+  } else {
+    size_t i;
+    for (
+        i = 0;
+        start <= (end - sep_len);
+        ++i, start = utfnshift((char *) start, 1)
+        )
+    {
+      if (memcmp(start, psep, sep_len) == 0) {
+        ret = 0;
+        ctx->match_start = start;
+        ctx->match_end   = start + sep_len;
+        break;
+      }
+    }
+  }
+
+  return ret;
+}
+
+/*
+ * Substring String: for Str_split() only: add captured data to resulting array.
+ * This is an empty stub function; only RegExp has an implementation (see above)
+ */
+static void subs_string_split_add_caps(
+    struct _str_split_ctx *ctx, val_t res)
+{
 }
 
 
@@ -17054,17 +17115,20 @@ static val_t Str_split(struct v7 *v7) {
 
     /* Initialize substring context depending on the argument type */
     if (v7_is_regexp(v7, ro)) {
+      /* use RegExp implementation */
       ctx.p_init = subs_regexp_init;
       ctx.p_exec = subs_regexp_exec;
       ctx.p_add_caps = subs_regexp_split_add_caps;
     } else {
-      /*TODO: string */
-      ro = call_regex_ctor(v7, ro);
+      /* use String implementation: first of all, convert to String
+       * (if it's not already a String) */
+      ro = to_string(v7, ro);
 
-      ctx.p_init = subs_regexp_init;
-      ctx.p_exec = subs_regexp_exec;
-      ctx.p_add_caps = subs_regexp_split_add_caps;
+      ctx.p_init = subs_string_init;
+      ctx.p_exec = subs_string_exec;
+      ctx.p_add_caps = subs_string_split_add_caps;
     }
+    /* initialize context */
     ctx.p_init(&ctx, v7, ro);
 
     /* Specs oblige us to determine whether the pattern matches
@@ -17094,7 +17158,7 @@ static val_t Str_split(struct v7 *v7) {
         v7_array_push(v7, res, tmp_s);
 
         /* Add captures (for RegExp only) */
-        ctx.p_add_caps(&ctx, v7, res);
+        ctx.p_add_caps(&ctx, res);
       }
 
       len = s_len - shift;
