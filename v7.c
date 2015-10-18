@@ -16411,6 +16411,8 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 
 V7_PRIVATE val_t to_string(struct v7 *, val_t);
 
+/* Substring implementations: RegExp-based and String-based {{{ */
+
 /*
  * Substring context: currently, used in Str_split() only, but will probably
  * be used in Str_replace() and other functions as well.
@@ -16435,20 +16437,33 @@ struct _str_split_ctx {
 
   struct v7 *v7;
 
-  /* start and end of previous match (by `p_exec()`) */
+  /* start and end of previous match (set by `p_exec()`) */
   const char *match_start;
   const char *match_end;
 
   /* pointers to implementation functions */
+
+  /*
+   * Initialize context
+   */
   void (*p_init)(struct _str_split_ctx *ctx, struct v7 *v7, val_t sep);
+
+  /*
+   * Look for the next match, set `match_start` and `match_end` to appropriate
+   * values.
+   *
+   * Returns 0 if match found, 1 otherwise (in accordance with `slre_exec()`)
+   */
   int  (*p_exec)(struct _str_split_ctx *ctx, const char *start, const char *end);
+
+  /*
+   * Add captured data to resulting array (for RegExp-based implementation only)
+   */
   void (*p_add_caps)(struct _str_split_ctx *ctx, val_t res);
 };
 
 #if V7_ENABLE__RegExp
-/*
- * Substring regexp: initializes context
- */
+/* RegExp-based implementation of `p_init` in `struct _str_split_ctx` */
 static void subs_regexp_init(
     struct _str_split_ctx *ctx, struct v7 *v7, val_t sep)
 {
@@ -16456,9 +16471,7 @@ static void subs_regexp_init(
   ctx->impl.regexp.prog = v7_to_regexp(v7, sep)->compiled_regexp;
 }
 
-/*
- * Substring regexp: Looks for the next match
- */
+/* RegExp-based implementation of `p_exec` in `struct _str_split_ctx` */
 static int subs_regexp_exec(
     struct _str_split_ctx *ctx, const char *start, const char *end)
 {
@@ -16471,9 +16484,7 @@ static int subs_regexp_exec(
   return ret;
 }
 
-/*
- * Substring regexp: for Str_split() only: add captured data to resulting array
- */
+/* RegExp-based implementation of `p_add_caps` in `struct _str_split_ctx` */
 static void subs_regexp_split_add_caps(
     struct _str_split_ctx *ctx, val_t res)
 {
@@ -16489,9 +16500,7 @@ static void subs_regexp_split_add_caps(
 }
 #endif
 
-/*
- * Substring String: initializes context
- */
+/* String-based implementation of `p_init` in `struct _str_split_ctx` */
 static void subs_string_init(
     struct _str_split_ctx *ctx, struct v7 *v7, val_t sep)
 {
@@ -16499,9 +16508,7 @@ static void subs_string_init(
   ctx->impl.string.sep = sep;
 }
 
-/*
- * Substring String: Looks for the next match
- */
+/* String-based implementation of `p_exec` in `struct _str_split_ctx` */
 static int subs_string_exec(
     struct _str_split_ctx *ctx, const char *start, const char *end)
 {
@@ -16534,16 +16541,14 @@ static int subs_string_exec(
   return ret;
 }
 
-/*
- * Substring String: for Str_split() only: add captured data to resulting array.
- * This is an empty stub function; only RegExp has an implementation (see above)
- */
+/* String-based implementation of `p_add_caps` in `struct _str_split_ctx` */
 static void subs_string_split_add_caps(
     struct _str_split_ctx UNUSED *ctx, val_t UNUSED res)
 {
+  /* this is a stub function */
 }
 
-
+/* }}} */
 
 
 
@@ -17094,7 +17099,6 @@ static val_t Str_substring(struct v7 *v7) {
   return s_substr(v7, this_obj, start, end - start);
 }
 
-/* TODO(mkm): make an alternative implementation without regexps */
 static val_t Str_split(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   val_t res = v7_create_dense_array(v7);
