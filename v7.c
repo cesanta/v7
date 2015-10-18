@@ -16421,10 +16421,12 @@ V7_PRIVATE val_t to_string(struct v7 *, val_t);
 struct _str_split_ctx {
   /* implementation-specific data */
   union {
+#if V7_ENABLE__RegExp
     struct {
       struct slre_prog *prog;
       struct slre_loot loot;
     } regexp;
+#endif
 
     struct {
       val_t sep;
@@ -16443,6 +16445,7 @@ struct _str_split_ctx {
   void (*p_add_caps)(struct _str_split_ctx *ctx, val_t res);
 };
 
+#if V7_ENABLE__RegExp
 /*
  * Substring regexp: initializes context
  */
@@ -16484,6 +16487,7 @@ static void subs_regexp_split_add_caps(
         : v7_create_undefined());
   }
 }
+#endif
 
 /*
  * Substring String: initializes context
@@ -17091,7 +17095,6 @@ static val_t Str_substring(struct v7 *v7) {
 }
 
 /* TODO(mkm): make an alternative implementation without regexps */
-#if V7_ENABLE__RegExp
 static val_t Str_split(struct v7 *v7) {
   val_t this_obj = v7_get_this(v7);
   val_t res = v7_create_dense_array(v7);
@@ -17116,9 +17119,13 @@ static val_t Str_split(struct v7 *v7) {
     /* Initialize substring context depending on the argument type */
     if (v7_is_regexp(v7, ro)) {
       /* use RegExp implementation */
+#if V7_ENABLE__RegExp
       ctx.p_init = subs_regexp_init;
       ctx.p_exec = subs_regexp_exec;
       ctx.p_add_caps = subs_regexp_split_add_caps;
+#else
+      assert(0);
+#endif
     } else {
       /* use String implementation: first of all, convert to String
        * (if it's not already a String) */
@@ -17175,7 +17182,6 @@ static val_t Str_split(struct v7 *v7) {
 
   return res;
 }
-#endif /* V7_ENABLE__RegExp */
 
 V7_PRIVATE void init_string(struct v7 *v7) {
   val_t str = v7_create_constructor(v7, v7->string_prototype, String_ctor, 1);
@@ -17198,8 +17204,8 @@ V7_PRIVATE void init_string(struct v7 *v7) {
   set_cfunc_prop(v7, v7->string_prototype, "match", Str_match);
   set_cfunc_prop(v7, v7->string_prototype, "replace", Str_replace);
   set_cfunc_prop(v7, v7->string_prototype, "search", Str_search);
-  set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
 #endif
+  set_cfunc_prop(v7, v7->string_prototype, "split", Str_split);
   set_cfunc_prop(v7, v7->string_prototype, "slice", Str_slice);
   set_cfunc_prop(v7, v7->string_prototype, "trim", Str_trim);
   set_cfunc_prop(v7, v7->string_prototype, "toLowerCase", Str_toLowerCase);
