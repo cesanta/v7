@@ -93,10 +93,14 @@ static int check_js_expr(struct v7 *v7, val_t v_actual,
                          const char *expect_js_expr) {
   int res = 1;
 
+  v7_own(v7, &v_actual);
+
   /* execute expected value */
   v7_val_t v_expect;
   enum v7_err e;
   e = v7_exec(v7, expect_js_expr, &v_expect);
+  v7_own(v7, &v_expect);
+
   if (e != V7_OK) {
     /* failed to execute expected value */
     printf("Exec expected '%s' failed, err=%d\n", expect_js_expr, e);
@@ -122,6 +126,10 @@ static int check_js_expr(struct v7 *v7, val_t v_actual,
       free(p_expect);
     }
   }
+
+  v7_disown(v7, v_expect);
+  v7_disown(v7, v_actual);
+
   return res;
 }
 
@@ -337,11 +345,6 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "a");
   ASSERT_EQ(eval(v7, &v, "m[1]"), V7_OK);
   ASSERT(v7_is_undefined(v));
-
-  /* TODO(dfrank): if we remove this test, then other tests start behave
-   * in a weird way: for example, "'123'.split('23');" evaluates to "{}" */
-  ASSERT_EVAL_EQ(v7, "'123'.split('123');", "[\"\",\"\"]");
-
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('.'));", "['','','','']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp(''));", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('1'));", "['','23']");
