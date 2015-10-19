@@ -337,8 +337,6 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_OK(v7, "m = 'should match empty string at index 0'.match(/x*/)");
   ASSERT_EVAL_NUM_EQ(v7, "m.length", 1.0);
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "");
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(); m.length", 1.0);
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(''); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(RegExp('')); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/x*/); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/(x)*/); m.length", 15.0);
@@ -368,19 +366,6 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123456'.split(/.*/);", "['', '']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp(''));", "[]");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp('.'));", "['']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1');", "['','23']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('2');", "['1','3']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('3');", "['12','']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('12');", "['','3']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('23');", "['1','']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('123');", "['','']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1234');", "['123']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('');", "['1','2','3']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'111'.split('1');", "['','','','']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('б');", "['а','в']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('');", "['а','б','в']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'rбв'.split('');", "['r','б','в']");
-  ASSERT_EVAL_JS_EXPR_EQ(v7, "'12.34.56'.split('.');", "['12','34','56']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/);",
       "['1', undefined, '2', undefined, '3', undefined, '4']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(2)*/);",
@@ -409,11 +394,7 @@ static const char *test_stdlib(void) {
       "['1', undefined, '2', undefined, '3', undefined, '4']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 8);",
       "['1', undefined, '2', undefined, '3', undefined, '4']");
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/ /, 2); m.length", 2.0);
-  ASSERT_EVAL_NUM_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ').length", 2.0);
-  ASSERT_EVAL_STR_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]", "b");
   ASSERT_EVAL_NUM_EQ(
       v7, "({z: '123456'}).z.toString().substr(0, 3).split('').length", 3.0);
   c = "\"a\\nb\".replace(/\\n/g, \"\\\\\");";
@@ -421,6 +402,27 @@ static const char *test_stdlib(void) {
   c = "\"\"";
   ASSERT_EVAL_EQ(v7, "'abc'.replace(/.+/, '')", c);
 #endif /* V7_ENABLE__RegExp */
+
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(); m.length", 1.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(''); m.length", 8.0);
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1');", "['','23']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('2');", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('3');", "['12','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('12');", "['','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('23');", "['1','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('123');", "['','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1234');", "['123']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('');", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'111'.split('1');", "['','','','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('б');", "['а','в']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('');", "['а','б','в']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'rбв'.split('');", "['r','б','в']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'12.34.56'.split('.');", "['12','34','56']");
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ').length", 2.0);
+  ASSERT_EVAL_STR_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]", "b");
+
   ASSERT_EVAL_STR_EQ(v7, "String('hi')", "hi");
   ASSERT_EVAL_OK(v7, "new String('blah')");
   ASSERT_EVAL_NUM_EQ(v7, "(String.fromCharCode(0,1) + '\\x00\\x01').length", 4);
