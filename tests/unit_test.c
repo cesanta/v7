@@ -89,6 +89,50 @@ static int check_value(struct v7 *v7, val_t v, const char *str) {
   return res;
 }
 
+static int check_js_expr(struct v7 *v7, val_t v_actual,
+                         const char *expect_js_expr) {
+  int res = 1;
+
+  v7_own(v7, &v_actual);
+
+  /* execute expected value */
+  v7_val_t v_expect;
+  enum v7_err e;
+  e = v7_exec(v7, expect_js_expr, &v_expect);
+  v7_own(v7, &v_expect);
+
+  if (e != V7_OK) {
+    /* failed to execute expected value */
+    printf("Exec expected '%s' failed, err=%d\n", expect_js_expr, e);
+    res = 0;
+  } else {
+    /* now, stringify both values (actual and expected) and compare them */
+
+    char buf_actual[2048];
+    char *p_actual = v7_to_json(v7, v_actual, buf_actual, sizeof(buf_actual));
+
+    char buf_expect[2048];
+    char *p_expect = v7_to_json(v7, v_expect, buf_expect, sizeof(buf_expect));
+
+    if (strcmp(p_actual, p_expect) != 0) {
+      _strfail(p_actual, p_expect, -1);
+      res = 0;
+    }
+    if (p_actual != buf_actual) {
+      free(p_actual);
+    }
+
+    if (p_expect != buf_expect) {
+      free(p_expect);
+    }
+  }
+
+  v7_disown(v7, v_expect);
+  v7_disown(v7, v_actual);
+
+  return res;
+}
+
 static int check_num(struct v7 *v7, val_t v, double num) {
   int ret = isnan(num) ? isnan(v7_to_number(v)) : v7_to_number(v) == num;
   (void) v7;
@@ -155,6 +199,8 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
 
 #define ASSERT_EVAL_EQ(v7, js_expr, expected) \
   _ASSERT_EVAL_EQ(v7, js_expr, expected, check_value)
+#define ASSERT_EVAL_JS_EXPR_EQ(v7, js_expr, expected) \
+  _ASSERT_EVAL_EQ(v7, js_expr, expected, check_js_expr)
 #define ASSERT_EVAL_NUM_EQ(v7, js_expr, expected) \
   _ASSERT_EVAL_EQ(v7, js_expr, expected, check_num)
 #define ASSERT_EVAL_STR_EQ(v7, js_expr, expected) \
@@ -294,19 +340,64 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_OK(v7, "m = 'should match empty string at index 0'.match(/x*/)");
   ASSERT_EVAL_NUM_EQ(v7, "m.length", 1.0);
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "");
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(); m.length", 1.0);
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(''); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(RegExp('')); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/x*/); m.length", 8.0);
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/(x)*/); m.length", 16.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/(x)*/); m.length", 15.0);
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "a");
   ASSERT_EQ(eval(v7, &v, "m[1]"), V7_OK);
   ASSERT(v7_is_undefined(v));
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('.'));", "['','','','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp(''));", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('1'));", "['','23']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2'));", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('3'));", "['12','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('1*'));", "['','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('3*'));", "['1','2','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'));", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'));", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 1);", "['1']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 2);", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 3);", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 4);", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 1);", "['1']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 2);", "['1','2']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 3);", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 4);", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(/.*/);", "['', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/.*/);", "['', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'12345'.split(/.*/);", "['', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123456'.split(/.*/);", "['', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp(''));", "[]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp('.'));", "['']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/);",
+      "['1', undefined, '2', undefined, '3', undefined, '4']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(2)*/);",
+      "['1', '2', '3', undefined, '4']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(\\d)/);",
+      "['', '1', '', '2', '', '3', '', '4', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(\\d)*/);",
+      "['', '4', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'ab12 cd34'.split(/([a-z]*)(\\d*)/);",
+      "['', 'ab', '12', ' ', 'cd', '34', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 0);",
+      "[]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 1);",
+      "['1']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 2);",
+      "['1', undefined]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 3);",
+      "['1', undefined, '2']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 4);",
+      "['1', undefined, '2', undefined]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 5);",
+      "['1', undefined, '2', undefined, '3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 6);",
+      "['1', undefined, '2', undefined, '3', undefined]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 7);",
+      "['1', undefined, '2', undefined, '3', undefined, '4']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 8);",
+      "['1', undefined, '2', undefined, '3', undefined, '4']");
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/ /, 2); m.length", 2.0);
-  ASSERT_EVAL_NUM_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ').length", 2.0);
-  ASSERT_EVAL_STR_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]", "b");
   ASSERT_EVAL_NUM_EQ(
       v7, "({z: '123456'}).z.toString().substr(0, 3).split('').length", 3.0);
   c = "\"a\\nb\".replace(/\\n/g, \"\\\\\");";
@@ -314,6 +405,27 @@ static const char *test_stdlib(void) {
   c = "\"\"";
   ASSERT_EVAL_EQ(v7, "'abc'.replace(/.+/, '')", c);
 #endif /* V7_ENABLE__RegExp */
+
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(); m.length", 1.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(''); m.length", 8.0);
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1');", "['','23']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('2');", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('3');", "['12','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('12');", "['','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('23');", "['1','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('123');", "['','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1234');", "['123']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('');", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'111'.split('1');", "['','','','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('б');", "['а','в']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('');", "['а','б','в']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'rбв'.split('');", "['r','б','в']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'12.34.56'.split('.');", "['12','34','56']");
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ').length", 2.0);
+  ASSERT_EVAL_STR_EQ(v7, "'aa bb cc'.substr(0, 4).split(' ')[1]", "b");
+
   ASSERT_EVAL_STR_EQ(v7, "String('hi')", "hi");
   ASSERT_EVAL_OK(v7, "new String('blah')");
   ASSERT_EVAL_NUM_EQ(v7, "(String.fromCharCode(0,1) + '\\x00\\x01').length", 4);
