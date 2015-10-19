@@ -354,6 +354,14 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('3*'));", "['1','2','']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'));", "['1','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'));", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 1);", "['1']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 2);", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 3);", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'), 4);", "['1','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 1);", "['1']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 2);", "['1','2']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 3);", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'), 4);", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(/.*/);", "['', '']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/.*/);", "['', '']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'12345'.split(/.*/);", "['', '']");
@@ -383,6 +391,24 @@ static const char *test_stdlib(void) {
       "['', '4', '']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'ab12 cd34'.split(/([a-z]*)(\\d*)/);",
       "['', 'ab', '12', ' ', 'cd', '34', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 0);",
+      "[]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 1);",
+      "['1']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 2);",
+      "['1', undefined]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 3);",
+      "['1', undefined, '2']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 4);",
+      "['1', undefined, '2', undefined]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 5);",
+      "['1', undefined, '2', undefined, '3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 6);",
+      "['1', undefined, '2', undefined, '3', undefined]");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 7);",
+      "['1', undefined, '2', undefined, '3', undefined, '4']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/, 8);",
+      "['1', undefined, '2', undefined, '3', undefined, '4']");
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/ /, 2); m.length", 2.0);

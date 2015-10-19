@@ -16459,8 +16459,11 @@ struct _str_split_ctx {
 
   /*
    * Add captured data to resulting array (for RegExp-based implementation only)
+   *
+   * Returns updated `elem` value
    */
-  void (*p_add_caps)(struct _str_split_ctx *ctx, val_t res);
+  long (*p_add_caps)(struct _str_split_ctx *ctx, val_t res,
+                     long elem, long limit);
 };
 
 #if V7_ENABLE__RegExp
@@ -16486,11 +16489,12 @@ static int subs_regexp_exec(
 }
 
 /* RegExp-based implementation of `p_add_caps` in `struct _str_split_ctx` */
-static void subs_regexp_split_add_caps(
-    struct _str_split_ctx *ctx, val_t res)
+static long subs_regexp_split_add_caps(
+    struct _str_split_ctx *ctx, val_t res,
+    long elem, long limit)
 {
   int i;
-  for (i = 1; i < ctx->impl.regexp.loot.num_captures; i++) {
+  for (i = 1; i < ctx->impl.regexp.loot.num_captures && elem < limit; i++) {
     size_t cap_len =
       ctx->impl.regexp.loot.caps[i].end - ctx->impl.regexp.loot.caps[i].start;
     v7_array_push(
@@ -16500,7 +16504,9 @@ static void subs_regexp_split_add_caps(
                               cap_len, 1)
            : v7_create_undefined()
         );
+    elem++;
   }
+  return elem;
 }
 #endif
 
@@ -16546,10 +16552,12 @@ static int subs_string_exec(
 }
 
 /* String-based implementation of `p_add_caps` in `struct _str_split_ctx` */
-static void subs_string_split_add_caps(
-    struct _str_split_ctx UNUSED *ctx, val_t UNUSED res)
+static long subs_string_split_add_caps(
+    struct _str_split_ctx UNUSED *ctx, val_t UNUSED res,
+    long elem, long UNUSED limit)
 {
   /* this is a stub function */
+  return elem;
 }
 
 /* }}} */
@@ -17157,7 +17165,7 @@ static val_t Str_split(struct v7 *v7) {
     } else {
       size_t last_match_len = 0;
 
-      for (elem = 0; elem < limit && lookup_idx < s_len; elem++) {
+      for (elem = 0; elem < limit && lookup_idx < s_len; ) {
         size_t substr_len;
         /* find next match, and break if there's no match */
         if (ctx.p_exec(&ctx, s + lookup_idx, s_end)) break;
@@ -17170,9 +17178,10 @@ static val_t Str_split(struct v7 *v7) {
           v7_array_push(
               v7, res, v7_create_string(v7, s + substr_idx, substr_len, 1)
               );
+          elem++;
 
           /* Add captures (for RegExp only) */
-          ctx.p_add_caps(&ctx, res);
+          elem = ctx.p_add_caps(&ctx, res, elem, limit);
         }
 
         /* advance lookup_idx appropriately */
