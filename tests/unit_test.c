@@ -354,6 +354,10 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('3*'));", "['1','2','']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'));", "['1','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'));", "['1','2','3']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(/.*/);", "['', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/.*/);", "['', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'12345'.split(/.*/);", "['', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123456'.split(/.*/);", "['', '']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp(''));", "[]");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp('.'));", "['']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1');", "['','23']");
