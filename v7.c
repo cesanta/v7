@@ -16454,7 +16454,8 @@ struct _str_split_ctx {
    *
    * Returns 0 if match found, 1 otherwise (in accordance with `slre_exec()`)
    */
-  int  (*p_exec)(struct _str_split_ctx *ctx, const char *start, const char *end);
+  int  (*p_exec)(struct _str_split_ctx *ctx,
+                 const char *start, const char *end);
 
   /*
    * Add captured data to resulting array (for RegExp-based implementation only)
@@ -16490,12 +16491,15 @@ static void subs_regexp_split_add_caps(
 {
   int i;
   for (i = 1; i < ctx->impl.regexp.loot.num_captures; i++) {
+    size_t cap_len =
+      ctx->impl.regexp.loot.caps[i].end - ctx->impl.regexp.loot.caps[i].start;
     v7_array_push(
         ctx->v7, res,
         (ctx->impl.regexp.loot.caps[i].start != NULL)
-        ? v7_create_string(ctx->v7, ctx->impl.regexp.loot.caps[i].start,
-          ctx->impl.regexp.loot.caps[i].end - ctx->impl.regexp.loot.caps[i].start, 1)
-        : v7_create_undefined());
+           ? v7_create_string(ctx->v7, ctx->impl.regexp.loot.caps[i].start,
+                              cap_len, 1)
+           : v7_create_undefined()
+        );
   }
 }
 #endif
@@ -17115,10 +17119,9 @@ static val_t Str_split(struct v7 *v7) {
     v7_array_push(v7, res, this_obj);
   } else {
     val_t ro = i_value_of(v7, v7_arg(v7, 0));
-    long len, elem, limit = arg_long(v7, 1, LONG_MAX);
-    size_t shift = 0;
+    long elem, limit = arg_long(v7, 1, LONG_MAX);
+    size_t lookup_idx = 0, substr_idx = 0;
     struct _str_split_ctx ctx;
-    int matches_empty;
 
     /* Initialize substring context depending on the argument type */
     if (v7_is_regexp(v7, ro)) {
@@ -17142,52 +17145,61 @@ static val_t Str_split(struct v7 *v7) {
     /* initialize context */
     ctx.p_init(&ctx, v7, ro);
 
-    /* Specs oblige us to determine whether the pattern matches
-     * an empty string */
-    matches_empty = !ctx.p_exec(&ctx, s, s);
 
     if (s_len == 0){
       /* if `this` is (or converts to) an empty string, resulting array should
        * contain empty string if only separator does not match an empty string.
        * Otherwise, the array is left empty */
+      int matches_empty = !ctx.p_exec(&ctx, s, s);
       if (!matches_empty){
         v7_array_push(v7, res, this_obj);
       }
     } else {
-      for (elem = 0; elem < limit && shift < s_len; elem++) {
-        val_t tmp_s;
-        if (ctx.p_exec(&ctx, s + shift, s_end)) break;
-        if (ctx.match_start == ctx.match_end)
-        {
-          /* empty match: add one-symbol string */
-          size_t symb_width = 1;
-          {
-            const char *next = utfnshift((char *)(s + shift), 1);
-            symb_width = next - (s + shift);
-          }
+      size_t last_match_len = 0;
 
-          tmp_s = v7_create_string(v7, s + shift, symb_width, 1);
-          shift += symb_width;
-        } else {
-          tmp_s =
-            v7_create_string(v7, s + shift, ctx.match_start - s - shift, 1);
-          shift = ctx.match_end - s;
+      for (elem = 0; elem < limit && lookup_idx < s_len; elem++) {
+        size_t substr_len;
+        /* find next match, and break if there's no match */
+        if (ctx.p_exec(&ctx, s + lookup_idx, s_end)) break;
+
+        last_match_len = ctx.match_end - ctx.match_start;
+        substr_len = ctx.match_start - s - substr_idx;
+
+        /* add next substring to the resulting array, if needed */
+        if (substr_len > 0 || last_match_len > 0) {
+          v7_array_push(
+              v7, res, v7_create_string(v7, s + substr_idx, substr_len, 1)
+              );
+
+          /* Add captures (for RegExp only) */
+          ctx.p_add_caps(&ctx, res);
         }
-        v7_array_push(v7, res, tmp_s);
 
-        /* Add captures (for RegExp only) */
-        ctx.p_add_caps(&ctx, res);
+        /* advance lookup_idx appropriately */
+        if (ctx.match_start == ctx.match_end){
+          /* empty match: advance to the next char */
+          const char *next = utfnshift((char *)(s + lookup_idx), 1);
+          lookup_idx += (next - (s + lookup_idx));
+        } else {
+          /* non-empty match: advance to the end of match */
+          lookup_idx = ctx.match_end - s;
+        }
+
+        /* always remember the end of the match, so that next time we will
+         * take substring from that position */
+        substr_idx = ctx.match_end - s;
       }
 
-      len = s_len - shift;
-      /* Provided we're not out of the limit requested by the caller,
-       * we should add the rest of the string in two cases:
-       * - It is not empty;
-       * - It is empty, and the pattern does not match an empty string
-       */
-      if ((len > 0 || !matches_empty) && elem < limit) {
-        v7_array_push(v7, res, v7_create_string(v7, s + shift, len, 1));
+      /* add the last substring to the resulting array, if needed */
+      if (elem < limit){
+        size_t substr_len = s_len - substr_idx;
+        if (substr_len > 0 || last_match_len > 0) {
+          v7_array_push(
+              v7, res, v7_create_string(v7, s + substr_idx, substr_len, 1)
+              );
+        }
       }
+
     }
   }
 

@@ -341,16 +341,18 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(''); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(RegExp('')); m.length", 8.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/x*/); m.length", 8.0);
-  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/(x)*/); m.length", 16.0);
+  ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/(x)*/); m.length", 15.0);
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "a");
   ASSERT_EQ(eval(v7, &v, "m[1]"), V7_OK);
   ASSERT(v7_is_undefined(v));
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('.'));", "['','','','']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp(''));", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('1'));", "['','23']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2'));", "['1','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('3'));", "['12','']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('1*'));", "['','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('3*'));", "['1','2','']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('2*'));", "['1','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split(RegExp('4*'));", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp(''));", "[]");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "''.split(RegExp('.'));", "['']");
@@ -367,6 +369,16 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('');", "['а','б','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'rбв'.split('');", "['r','б','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'12.34.56'.split('.');", "['12','34','56']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(x)*/);",
+      "['1', undefined, '2', undefined, '3', undefined, '4']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(2)*/);",
+      "['1', '2', '3', undefined, '4']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(\\d)/);",
+      "['', '1', '', '2', '', '3', '', '4', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'1234'.split(/(\\d)*/);",
+      "['', '4', '']");
+  ASSERT_EVAL_JS_EXPR_EQ(v7, "'ab12 cd34'.split(/([a-z]*)(\\d*)/);",
+      "['', 'ab', '12', ' ', 'cd', '34', '']");
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(/ /, 2); m.length", 2.0);
