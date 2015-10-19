@@ -17176,7 +17176,7 @@ static val_t Str_split(struct v7 *v7) {
         }
 
         /* advance lookup_idx appropriately */
-        if (ctx.match_start == ctx.match_end){
+        if (last_match_len == 0){
           /* empty match: advance to the next char */
           const char *next = utfnshift((char *)(s + lookup_idx), 1);
           lookup_idx += (next - (s + lookup_idx));
