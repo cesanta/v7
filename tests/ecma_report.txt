@@ -3569,7 +3569,7 @@ err
 3523	PASS ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A2_T3.js (tail -c +3862760 tests/ecmac.db|head -c 931)
 3524	PASS ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A2_T4.js (tail -c +3863692 tests/ecmac.db|head -c 930)
 3525	PASS ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A2_T5.js (tail -c +3864623 tests/ecmac.db|head -c 792)
-3526	FAIL ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A3_T1.js (tail -c +3865416 tests/ecmac.db|head -c 59710): [{"message":"#0: Error matching character class \\w between character 0 and ff"}]
+3526	FAIL ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A3_T1.js (tail -c +3865416 tests/ecmac.db|head -c 59710): [{"message":"Invalid ASN: 1666"}]
 3527	PASS ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A3_T2.js (tail -c +3925127 tests/ecmac.db|head -c 603)
 3528	PASS ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A3_T3.js (tail -c +3925731 tests/ecmac.db|head -c 789)
 3529	PASS ch15/15.10/15.10.2/15.10.2.12/S15.10.2.12_A3_T4.js (tail -c +3926521 tests/ecmac.db|head -c 825)
@@ -9788,7 +9788,7 @@ err
 9738	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T17.js (tail -c +8894488 tests/ecmac.db|head -c 1535): [{"message":"#4: __num.match(__re).input ===String(__num). Actual: undefined"}]
 9739	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T18.js (tail -c +8896024 tests/ecmac.db|head -c 1595): [{"message":"#4: __num.match(__re).input ===String(__num). Actual: undefined"}]
 9740	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T2.js (tail -c +8897620 tests/ecmac.db|head -c 1049)
-9741	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T3.js (tail -c +8898670 tests/ecmac.db|head -c 1160)
+9741	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T3.js (tail -c +8898670 tests/ecmac.db|head -c 1160): [{"message":"Invalid ASN: 514"}]
 9742	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T4.js (tail -c +8899831 tests/ecmac.db|head -c 1118)
 9743	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T5.js (tail -c +8900950 tests/ecmac.db|head -c 1082)
 9744	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T6.js (tail -c +8902033 tests/ecmac.db|head -c 2783): [{"message":"#3: __string = \"Boston, Mass. 02134\"; __string.match(/([\\d]{5})([-\\ ]?[\\d]{4})?$/)[2]=== void 0. Actual: "}]
@@ -9834,9 +9834,9 @@ err
 9783	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T2.js (tail -c +8940309 tests/ecmac.db|head -c 656)
 9784	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T3.js (tail -c +8940966 tests/ecmac.db|head -c 664)
 9785	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T1.js (tail -c +8941631 tests/ecmac.db|head -c 852): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc def34'. Actual: \u0000\}]
-9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: \u000}]
+9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: \u0000\}]
 9787	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T3.js (tail -c +8943340 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"aBc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/i; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc def34'. Actual: \u0000\}]
-9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = \"aBc12 dEf34\"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: \u000}]
+9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = \"aBc12 dEf34\"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: \u0000\}]
 9789	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A5_T1.js (tail -c +8945055 tests/ecmac.db|head -c 795)
 9790	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A6.js (tail -c +8945851 tests/ecmac.db|head -c 584)
 9791	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A7.js
