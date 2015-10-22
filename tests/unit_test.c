@@ -911,6 +911,7 @@ static const char *test_parser(void) {
     "!function(){function d(){}var x}();",
     "({get a() { function d(){} return 1 }})",
     "({set a(v) { function d(a){} d(v) }})",
+    "({a:1, b() { return 2 }, c(d) {}})",
     "{function d(){}var x}",
     "try{function d(){}var x}catch(e){function d(){}var x}finally{function "
     "d(){}var x}",
@@ -1582,6 +1583,8 @@ static const char *test_interpreter(void) {
                  "g=0;function O() {}; O.prototype = {set x(v) {g=v}};o=new "
                  "O;o.x=42;[g,Object.keys(o)]",
                  "[42,[]]");
+
+  ASSERT_EVAL_EQ(v7, "({foo(x){return x*2}}).foo(21)", "42");
 
   c = "\"42\"";
   ASSERT_EVAL_EQ(v7, "String(new Number(42))", c);
