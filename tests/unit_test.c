@@ -2181,6 +2181,11 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']+=1", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 1);
 
+  ASSERT_BCODE_EVAL_EQ(v7, "while(0) 1", "undefined");
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=1;while(a) a-=1", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=3;b=0;while(a) {a-=1;b+=1}", 3);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=3;b=0;while(a) {a-=1;b+=1};b", 3);
+
   v7_destroy(v7);
   return NULL;
 }
