@@ -322,6 +322,51 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "'hi there'.indexOf('e', 8)", -1.0);
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', false)", 0.0);
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', true)", 1.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д')", 2.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 2)", 2.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 3)", 9.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 9)", 9.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 10)", -1.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д')", 9.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 10)", 9.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 9)", 9.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 8)", 2.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 2)", 2.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 1)", -1.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('')", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('', 0)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('', -100)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('', 100)", 3.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('')", 3.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('', 0)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('', -100)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('', 100)", 3.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "''.indexOf('')", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "''.indexOf('', 100)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "''.indexOf('', -100)", 0.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "''.lastIndexOf('')", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "''.lastIndexOf('', 100)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "''.lastIndexOf('', -100)", 0.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "''.indexOf('a')", -1.0);
+  ASSERT_EVAL_NUM_EQ(v7, "''.lastIndexOf('a')", -1.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('23', 100)", -1.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('23', -100)", 1.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('23', 100)", 1.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('23', -100)", -1.0);
+
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('12', 100)", -1.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('12', -100)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('12', 100)", 0.0);
+  ASSERT_EVAL_NUM_EQ(v7, "'123'.lastIndexOf('12', -100)", 0.0);
+
   ASSERT_EVAL_STR_EQ(v7, "'hi there'.substr(3, 2)", "th");
   ASSERT_EVAL_STR_EQ(v7, "'hi there'.substring(3, 5)", "th");
   ASSERT_EVAL_STR_EQ(v7, "'hi there'.substr(3)", "there");

@@ -9778,8 +9778,8 @@ err
 9728	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T8.js (tail -c +8879890 tests/ecmac.db|head -c 2149): [{"message":"#1: __obj = {toString:function(){}}; __matched = String(__obj).match(void 0); __expected = RegExp(void 0).exec(\"undefined\"); __matched.length === __expected.length. Actual: undefined"}]
 9729	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T9.js (tail -c +8882040 tests/ecmac.db|head -c 2321)
 9730	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T1.js (tail -c +8884362 tests/ecmac.db|head -c 1523): [{"message":"#4: __string = \"1234567890\"; __string.match(3).input ===__string. Actual: undefined"}]
-9731	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T10.js (tail -c +8885886 tests/ecmac.db|head -c 1562): [{"message":"#2: __string.match(__re).index ===__string.lastIndexOf(\"0\"). Actual: 11"}]
-9732	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T11.js (tail -c +8887449 tests/ecmac.db|head -c 1566): [{"message":"#2: __string.match(__re).index ===__string.lastIndexOf(\"0\"). Actual: 11"}]
+9731	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T10.js (tail -c +8885886 tests/ecmac.db|head -c 1562): [{"message":"#3.2: __string.match(__re)[2]===__matches[2]. Actual: "}]
+9732	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T11.js (tail -c +8887449 tests/ecmac.db|head -c 1566): [{"message":"#3.2: __string.match(__re)[2]===__matches[2]. Actual: "}]
 9733	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T12.js (tail -c +8889016 tests/ecmac.db|head -c 1019)
 9734	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T13.js (tail -c +8890036 tests/ecmac.db|head -c 1076)
 9735	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T14.js (tail -c +8891113 tests/ecmac.db|head -c 1110)
@@ -9793,8 +9793,8 @@ err
 9743	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T5.js (tail -c +8900950 tests/ecmac.db|head -c 1082)
 9744	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T6.js (tail -c +8902033 tests/ecmac.db|head -c 2783): [{"message":"#3: __string = \"Boston, Mass. 02134\"; __string.match(/([\\d]{5})([-\\ ]?[\\d]{4})?$/)[2]=== void 0. Actual: "}]
 9745	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T7.js (tail -c +8904817 tests/ecmac.db|head -c 1168)
-9746	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T8.js (tail -c +8905986 tests/ecmac.db|head -c 1772): [{"message":"#2: __string = \"Boston, MA 02134\"; __re = /([\\d]{5})([-\\ ]?[\\d]{4})?$/; __re.lastIndex = 0; __string.match(__re).index ===__string.lastIndexOf(\"0\"). Actual: 11"}]
-9747	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T9.js (tail -c +8907759 tests/ecmac.db|head -c 1820): [{"message":"#2: __string = \"Boston, MA 02134\"; __re = /([\\d]{5})([-\\ ]?[\\d]{4})?$/; __re.lastIndex = __string.length; __string.match(__re).index ===__string.lastIndexOf(\"0\"). Actual: 11"}]
+9746	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T8.js (tail -c +8905986 tests/ecmac.db|head -c 1772): [{"message":"#3.2: __string = \"Boston, MA 02134\"; __re = /([\\d]{5})([-\\ ]?[\\d]{4})?$/; __matches=[\"02134\", \"02134\", undefined]; __string.match(__re)[2]===__matches[2]. Actual: "}]
+9747	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A2_T9.js (tail -c +8907759 tests/ecmac.db|head -c 1820): [{"message":"#3.2: __string = \"Boston, MA 02134\"; __re = /([\\d]{5})([-\\ ]?[\\d]{4})?$/; __matches=[\"02134\", \"02134\", undefined]; __string.match(__re)[2]===__matches[2]. Actual: "}]
 9748	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A6.js (tail -c +8909580 tests/ecmac.db|head -c 573)
 9749	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A7.js
  * @description Checking if creating "String.prototype.: [{"message":"#1: __FACTORY = String.prototype.match; __FACTORY = String.prototype.match; __instance = new __FACTORY lead to throwing exception"}]
@@ -10359,12 +10359,12 @@ err
 10304	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A9.js (tail -c +9432995 tests/ecmac.db|head -c 1368): [{"message":"value is not a function"}]
 10305	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A10.js (tail -c +9434364 tests/ecmac.db|head -c 1252): [{"message":"value is not a function"}]
 10306	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A11.js (tail -c +9435617 tests/ecmac.db|head -c 954): [{"message":"value is not a function"}]
-10307	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T1.js (tail -c +9436572 tests/ecmac.db|head -c 760): [{"message":"#1: __instance = new Object(true); __instance.lastIndexOf = String.prototype.lastIndexOf;  __instance.lastIndexOf(true, false) === 0. Actual: -1"}]
+10307	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T1.js (tail -c +9436572 tests/ecmac.db|head -c 760)
 10308	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T10.js (tail -c +9437333 tests/ecmac.db|head -c 872): [{"message":"with statement is not really implemented yet"}]
 10309	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T12.js (tail -c +9438206 tests/ecmac.db|head -c 1031)
-10310	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T2.js (tail -c +9439238 tests/ecmac.db|head -c 879): [{"message":"#1: __instance = new Boolean; __instance.lastIndexOf = String.prototype.lastIndexOf;  __instance.lastIndexOf(\"A\"!==\"\\u0041\", function(){return 0;}(),null) === 0. Actual: -1"}]
+10310	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T2.js (tail -c +9439238 tests/ecmac.db|head -c 879)
 10311	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T4.js (tail -c +9440118 tests/ecmac.db|head -c 633)
-10312	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T5.js (tail -c +9440752 tests/ecmac.db|head -c 773): [{"message":"#1: function(){return \"gnullunazzgnull\"}().lastIndexOf(null) === 11. Actual: -1"}]
+10312	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T5.js (tail -c +9440752 tests/ecmac.db|head -c 773)
 10313	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T6.js (tail -c +9441526 tests/ecmac.db|head -c 768): [{"message":"#1: var x; new String(\"undefined\").lastIndexOf(x) === 0. Actual: -1"}]
 10314	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T7.js (tail -c +9442295 tests/ecmac.db|head -c 756): [{"message":"#1: String(\"undefined\").lastIndexOf(undefined) === 0. Actual: -1"}]
 10315	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T8.js (tail -c +9443052 tests/ecmac.db|head -c 791): [{"message":"#1: __obj = {toString:function(){}}; String(__obj).lastIndexOf(void 0) === 0. Actual: -1"}]
