@@ -914,10 +914,14 @@ static const char *test_parser(void) {
     "undefined",
     "u",
     "{var x=1;2;}",
+#ifdef V7_ENABLE_JS_GETTERS
     "({get a() { return 1 }})",
-    "({set a(b) { this.x = b }})",
     "({get a() { return 1 }, set b(c) { this.x = c }, d: 0})",
+#endif
     "({get: function() {return 42;}})",
+#ifdef V7_ENABLE_JS_SETTERS
+    "({set a(b) { this.x = b }})",
+#endif
     "Object.defineProperty(o, \"foo\", {get: function() {return 42;}});",
     "({a: 0, \"b\": 1})",
     "({a: 0, 42: 1})",
@@ -954,8 +958,12 @@ static const char *test_parser(void) {
     "for(var i in a) {1}",
     "for(i in a) {1}",
     "!function(){function d(){}var x}();",
+#ifdef V7_ENABLE_JS_GETTERS
     "({get a() { function d(){} return 1 }})",
+#endif
+#ifdef V7_ENABLE_JS_SETTERS
     "({set a(v) { function d(a){} d(v) }})",
+#endif
     "({a:1, b() { return 2 }, c(d) {}})",
     "{function d(){}var x}",
     "try{function d(){}var x}catch(e){function d(){}var x}finally{function "
@@ -1136,6 +1144,10 @@ static const char *test_ecmac(void) {
              (unsigned long) (current_case - db + 1),
              (unsigned long) (next_case - current_case));
 
+#if 0
+    if (i != 1070) continue;
+#endif
+
     if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
         i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
         i == 3400 || i == 3348 || i == 3349 || i == 3401 || i == 89 ||
@@ -1156,6 +1168,14 @@ static const char *test_ecmac(void) {
       fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
       continue;
     }
+
+#if !defined(V7_ENABLE_JS_GETTERS) || !defined(V7_ENABLE_JS_SETTERS)
+    if ((i >= 189 && i <= 204) || (i >= 253 && i <= 268) ||
+        (i >= 568 && i <= 573) || (i >= 1066 && i <= 1083) || i == 1855) {
+      fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
+      continue;
+    }
+#endif
 
     v7 = v7_create();
 
@@ -1618,16 +1638,24 @@ static const char *test_interpreter(void) {
                  "case 3: o.three=1; break; default: o.def=1};o",
                  c);
 
+#ifdef V7_ENABLE_JS_GETTERS
   ASSERT_EVAL_EQ(v7, "o={get x(){return 42}};o.x", "42");
-  ASSERT_EVAL_EQ(v7, "o={set x(a){this.y=a}};o.x=42;o.y", "42");
   ASSERT_EVAL_EQ(v7, "o={get x(){return 10},set x(v){}};o.x", "10");
+#endif
+#ifdef V7_ENABLE_JS_SETTERS
+  ASSERT_EVAL_EQ(v7, "o={set x(a){this.y=a}};o.x=42;o.y", "42");
   ASSERT_EVAL_EQ(v7, "o={set x(v){},get x(){return 10}};o.x", "10");
+#endif
+#if defined(V7_ENABLE_JS_GETTERS) && defined(V7_ENABLE_JS_SETTERS)
   ASSERT_EVAL_EQ(v7, "r=0;o={get x() {return 10}, set x(v){r=v}};o.x=10;r",
                  "10");
+#endif
+#ifdef V7_ENABLE_JS_GETTERS
   ASSERT_EVAL_EQ(v7,
                  "g=0;function O() {}; O.prototype = {set x(v) {g=v}};o=new "
                  "O;o.x=42;[g,Object.keys(o)]",
                  "[42,[]]");
+#endif
 
   ASSERT_EVAL_EQ(v7, "({foo(x){return x*2}}).foo(21)", "42");
 
