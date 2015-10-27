@@ -718,6 +718,7 @@ static const char *test_apply(void) {
   return NULL;
 }
 
+#ifdef V7_ENABLE_DENSE_ARRAYS
 static const char *test_dense_arrays(void) {
   struct v7 *v7 = v7_create();
   val_t a;
@@ -765,6 +766,7 @@ static const char *test_dense_arrays(void) {
   v7_destroy(v7);
   return NULL;
 }
+#endif
 
 static const char *test_parser(void) {
   int i;
@@ -2403,7 +2405,9 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_interpreter);
   RUN_TEST(test_interp_unescape);
   RUN_TEST(test_strings);
+#ifdef V7_ENABLE_DENSE_ARRAYS
   RUN_TEST(test_dense_arrays);
+#endif
 #ifdef V7_ENABLE_FILE
   RUN_TEST(test_file);
 #endif
