@@ -1923,7 +1923,9 @@ static const char *test_gc_ptr_check(void) {
   eval(v7, &v, "o=({})");
   assert(gc_check_val(v7, v));
   ASSERT(gc_check_ptr(&v7->object_arena, v7_to_object(v)));
+#ifndef V7_MALLOC_GC
   ASSERT(!gc_check_ptr(&v7->object_arena, "foo"));
+#endif
 
   v7_destroy(v7);
   return NULL;
