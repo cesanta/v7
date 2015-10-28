@@ -275,7 +275,9 @@ static const char *test_native_functions(void) {
 static const char *test_stdlib(void) {
   v7_val_t v = v7_create_undefined();
   struct v7 *v7 = v7_create();
+#if V7_ENABLE__RegExp
   const char *c;
+#endif
 
   v7_own(v7, &v);
 
@@ -285,11 +287,13 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_EQ(v7, "Boolean([])", "true");
   ASSERT_EVAL_EQ(v7, "new Boolean([])", "{}");
 
-  /* Math */
+/* Math */
+#if V7_BUILD_PROFILE > 1
   ASSERT_EVAL_EQ(v7, "Math.sqrt(144)", "12");
 
   /* Number */
   ASSERT_EVAL_NUM_EQ(v7, "Math.PI", M_PI);
+#endif
   ASSERT_EVAL_NUM_EQ(v7, "Number.NaN", NAN);
   ASSERT_EQ(eval(v7, &v, "1 == 2"), V7_OK);
   ASSERT(check_bool(v, 0));
@@ -300,9 +304,11 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23)", 1.23);
   ASSERT_EVAL_OK(v7, "new Number(21.23)");
 
-  /* Cesanta-specific String API */
+/* Cesanta-specific String API */
+#ifdef V7_ENABLE__UTF
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.length", 1);
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.charCodeAt(0)", 1099);
+#endif
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.blen", 2);
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.at(0)", 0xd1);
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.at(1)", 0x8b);
@@ -323,6 +329,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', false)", 0.0);
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', true)", 1.0);
 
+#ifdef V7_ENABLE__UTF
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д')", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 2)", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 3)", 9.0);
@@ -335,6 +342,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 8)", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 2)", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.lastIndexOf('34д', 1)", -1.0);
+#endif
 
   ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('')", 0.0);
   ASSERT_EVAL_NUM_EQ(v7, "'123'.indexOf('', 0)", 0.0);
@@ -461,9 +469,16 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1234');", "['123']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('');", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'111'.split('1');", "['','','','']");
+#ifdef V7_ENABLE__UTF
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('б');", "['а','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('');", "['а','б','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'rбв'.split('');", "['r','б','в']");
+  ASSERT_EVAL_NUM_EQ(v7, "(String.fromCharCode(0,1) + '\\x00\\x01').length", 4);
+  ASSERT_EVAL_NUM_EQ(
+      v7, "(String.fromCharCode(1,0) + '\\x00\\x01').charCodeAt(1)", 0);
+  ASSERT_EVAL_NUM_EQ(
+      v7, "(String.fromCharCode(0,1) + '\\x00\\x01').charCodeAt(1)", 1);
+#endif
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'12.34.56'.split('.');", "['12','34','56']");
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' '); m.length", 3.0);
   ASSERT_EVAL_NUM_EQ(v7, "m = 'aa bb cc'.split(' ', 2); m.length", 2.0);
@@ -472,17 +487,14 @@ static const char *test_stdlib(void) {
 
   ASSERT_EVAL_STR_EQ(v7, "String('hi')", "hi");
   ASSERT_EVAL_OK(v7, "new String('blah')");
-  ASSERT_EVAL_NUM_EQ(v7, "(String.fromCharCode(0,1) + '\\x00\\x01').length", 4);
-  ASSERT_EVAL_NUM_EQ(
-      v7, "(String.fromCharCode(1,0) + '\\x00\\x01').charCodeAt(1)", 0);
-  ASSERT_EVAL_NUM_EQ(
-      v7, "(String.fromCharCode(0,1) + '\\x00\\x01').charCodeAt(1)", 1);
 
-  /* Date() tests interact with external object (local date & time), so
-      if host have strange date/time setting it won't be work */
+/* Date() tests interact with external object (local date & time), so
+    if host have strange date/time setting it won't be work */
 
+#ifdef V7_ENABLE__Date
   ASSERT_EVAL_EQ(v7, "Number(new Date('IncDec 01 2015 00:00:00'))", "NaN");
   ASSERT_EVAL_EQ(v7, "Number(new Date('My Jul 01 2015 00:00:00'))", "NaN");
+#endif
 
   v7_destroy(v7);
   return NULL;
@@ -1980,19 +1992,28 @@ static const char *test_gc_mark(void) {
 static const char *test_gc_sweep(void) {
   struct v7 *v7 = v7_create();
   val_t v;
+#if V7_ENABLE__Memory__stats
   uint32_t alive;
+#endif
 
   v7_gc(v7, 0);
+#if V7_ENABLE__Memory__stats
   alive = v7->object_arena.alive;
+#endif
   eval(v7, &v, "x=({a:1})");
   v7_to_object(v);
   v7_gc(v7, 0);
+#if V7_ENABLE__Memory__stats
   ASSERT(v7->object_arena.alive > alive);
+#endif
   ASSERT_EVAL_EQ(v7, "x.a", "1");
 
   ASSERT_EVAL_OK(v7, "x=null");
   v7_gc(v7, 0);
+#if V7_ENABLE__Memory__stats
   ASSERT_EQ(v7->object_arena.alive, alive);
+#endif
+
   v7_destroy(v7);
 
   v7 = v7_create();
