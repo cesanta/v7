@@ -1904,6 +1904,19 @@ static const char *test_unescape(void) {
 }
 
 #ifndef V7_DISABLE_GC
+static const char *test_gc_ptr_check(void) {
+  struct v7 *v7 = v7_create();
+  val_t v;
+
+  eval(v7, &v, "o=({})");
+  assert(gc_check_val(v7, v));
+  ASSERT(gc_check_ptr(&v7->object_arena, v7_to_object(v)));
+  ASSERT(!gc_check_ptr(&v7->object_arena, "foo"));
+
+  v7_destroy(v7);
+  return NULL;
+}
+
 static const char *test_gc_mark(void) {
   struct v7 *v7 = v7_create();
   val_t v;
@@ -2421,6 +2434,7 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_ubjson);
 #endif
 #ifndef V7_DISABLE_GC
+  RUN_TEST(test_gc_ptr_check);
   RUN_TEST(test_gc_mark);
 #ifndef V7_MALLOC_GC
   RUN_TEST(test_gc_sweep);
