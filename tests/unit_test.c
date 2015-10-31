@@ -306,10 +306,10 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23e+5)", 123000);
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23e5)", 123000);
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23e-5)", 1.23e-5);
-  /*
-   * TODO(dfrank) : uncomment when we polish `strtod` from `esp_libc.c`
-   * and put it to `common/str_util.c` as `cs_strtod`
-   */
+/*
+ * TODO(dfrank) : uncomment when we polish `strtod` from `esp_libc.c`
+ * and put it to `common/str_util.c` as `cs_strtod`
+ */
 #if 0
   ASSERT_EVAL_NUM_EQ(v7, "Number(010)", 8);
   ASSERT_EVAL_NUM_EQ(v7, "Number(0777)", 511);
