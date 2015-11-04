@@ -2274,6 +2274,10 @@ static const char *test_compiler(void) {
                           OP_PUSH_ZERO};
   END_CHECK_OPS();
 
+  BEGIN_CHECK_OPS("1||0"){OP_PUSH_ONE, OP_DUP, OP_JMP_TRUE, 9,           0,
+                          0,           0,      OP_POP,      OP_PUSH_ZERO};
+  END_CHECK_OPS();
+
   v7_destroy(v7);
   return NULL;
 }
@@ -2333,6 +2337,12 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1&&2", 2);
   ASSERT_BCODE_EVAL_EQ(v7, "false&&1", "false");
   ASSERT_BCODE_EVAL_EQ(v7, "1&&false", "false");
+
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "0||1", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1||0", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1||2", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "false||2", 2);
+  ASSERT_BCODE_EVAL_EQ(v7, "0||false", "false");
 
   v7_destroy(v7);
   return NULL;
