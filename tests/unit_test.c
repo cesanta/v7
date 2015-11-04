@@ -2318,6 +2318,8 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 0);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']+=1", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a={};a[0]=1;a[0]", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a={};a[0]=1;a['0']", 1);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(true) 1; else 2", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(false) 1; else 2", 2);
@@ -2347,6 +2349,10 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_EQ(v7, "0||false", "false");
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x={a:1,b:2};x.a+x.b", 3);
+
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=[42];a[0]", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=[41,42];a[1]", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=[41,,42];a[2]", 42);
 
   v7_destroy(v7);
   return NULL;
