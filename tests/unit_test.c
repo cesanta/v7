@@ -39,6 +39,7 @@
 #include "../v7.h"
 #include "../src/internal.h"
 #include "../src/gc.h"
+#include "../src/bcode.h"
 #include "../src/compiler.h"
 #else
 #include "../v7.c"
