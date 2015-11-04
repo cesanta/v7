@@ -2300,6 +2300,7 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "2+3", 5);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1+2*3", 7);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "(1+2)*3", 9);
+  ASSERT_BCODE_EVAL_EQ(v7, "1+'2'", "\"12\"");
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x=42", 42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x", 42);
