@@ -1554,6 +1554,9 @@ static const char *test_interpreter(void) {
   /* TODO(mkm): fix parser: should not require parenthesis */
   ASSERT_EVAL_EQ(v7, "({}) instanceof Object", "true");
 
+  c = "\"Error: foo\"";
+  ASSERT_EVAL_EQ(v7, "(new Error('foo'))+''", c);
+
   ASSERT_EQ(eval(v7, &v, ""), V7_OK);
   ASSERT(v7_is_undefined(v));
 #if 0
