@@ -1823,32 +1823,77 @@ static const char *test_interp_unescape(void) {
 }
 
 static const char *test_to_json(void) {
-  char buf[10], *p;
+  char buf[100], *p;
   const char *c;
   struct v7 *v7 = v7_create();
   val_t v = v7_create_undefined();
   v7_own(v7, &v);
 
+  c = "123.45";
   eval(v7, &v, "123.45");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
-  ASSERT_STREQ(p, "123.45");
-
-  eval(v7, &v, "'foo'");
-  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
-  c = "\"foo\"";
   ASSERT_STREQ(p, c);
-
-  eval(v7, &v, "'\"foo\"'");
+#if TODO
+  eval(v7, &v, "({a: new Number(123.45)})");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
-  c = "\"\\\"foo\\\"\"";
   ASSERT_STREQ(p, c);
-
-/* TODO(mkm): fix to_json alloc */
-#if 0
+#endif
   ASSERT((p = v7_to_json(v7, v, buf, 3)) != buf);
   ASSERT_EQ(strcmp(p, "123.45"), 0);
   free(p);
+
+  c = "\"foo\"";
+  eval(v7, &v, "'foo'");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, c);
+#if TODO
+  eval(v7, &v, "new String('foo')");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, c);
 #endif
+
+  ASSERT((p = v7_to_json(v7, v7_create_null(), buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, "null");
+
+  c = "{\"a\":null}";
+  eval(v7, &v, "({a: null})");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, c);
+
+  c = "\"\\\"foo\\\"\"";
+  eval(v7, &v, "'\"foo\"'");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, c);
+
+  eval(v7, &v, "[\"foo\"]");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  c = "[\"foo\"]";
+  ASSERT_STREQ(p, c);
+
+  c = "{\"a\":true}";
+  eval(v7, &v, "({a: true})");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, c);
+#if TODO
+  eval(v7, &v, "({a: new Boolean(true)})");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  ASSERT_STREQ(p, c);
+#endif
+
+  eval(v7, &v, "({a: [\"foo\"]})");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  c = "{\"a\":[\"foo\"]}";
+  ASSERT_STREQ(p, c);
+
+  eval(v7, &v, "({a: function(){}, b: 123.45})");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  c = "{\"b\":123.45}";
+  ASSERT_STREQ(p, c);
+
+  eval(v7, &v, "({a: new Date(2015, 10, 3)})");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  c = "{\"a\":\"2015-11-03T00:00:00.000Z\"}";
+  ASSERT_STREQ(p, c);
 
   v7_destroy(v7);
   return NULL;
@@ -2428,7 +2473,6 @@ static const char *test_bcode(void) {
   eval_bcode(v7, &bcode);
 
   v7_stringify_value(v7, v7->stack[v7->sp - 1], buf, sizeof(buf));
-  printf("TOS: '%s'\n", buf);
 
   ASSERT_EQ(v7->sp, 1);
 
