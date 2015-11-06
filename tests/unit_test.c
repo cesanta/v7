@@ -2327,6 +2327,12 @@ static const char *test_compiler(void) {
                           0,           0,      OP_POP,      OP_PUSH_ZERO};
   END_CHECK_OPS();
 
+  ASSERT_EQ(parse_js(v7, "(function foo(a,b){var c,d})", &a), V7_OK);
+  {
+    ast_off_t pos = 5;
+    assert(compile_function(v7, &a, &pos, &bcode) == V7_OK);
+  }
+
   v7_destroy(v7);
   return NULL;
 }
