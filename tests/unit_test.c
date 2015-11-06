@@ -2404,6 +2404,8 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "Object.keys({a:1,b:2}).length", 2);
 
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "var x=2; 2", 2);
+
   v7_destroy(v7);
   return NULL;
 }
