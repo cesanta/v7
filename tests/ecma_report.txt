@@ -1214,7 +1214,7 @@
 1213	PASS ch11/11.1/11.1.1/S11.1.1_A3.1.js (tail -c +856787 tests/ecmac.db|head -c 677)
 1214	PASS ch11/11.1/11.1.1/S11.1.1_A3.2.js (tail -c +857465 tests/ecmac.db|head -c 877)
 1215	PASS ch11/11.1/11.1.1/S11.1.1_A4.1.js (tail -c +858343 tests/ecmac.db|head -c 699)
-1216	FAIL ch11/11.1/11.1.1/S11.1.1_A4.2.js (tail -c +859043 tests/ecmac.db|head -c 1013): [{"message":"#1: var MyFunction = new Function(\"this.THIS = this\"); var MyObject = new MyFunction(); MyObject.THIS.toString() === \"[object Object]\". Actual: [object ]"}]
+1216	PASS ch11/11.1/11.1.1/S11.1.1_A4.2.js (tail -c +859043 tests/ecmac.db|head -c 1013)
 1217	PASS ch11/11.1/11.1.2/S11.1.2_A1_T1.js (tail -c +860057 tests/ecmac.db|head -c 628)
 1218	PASS ch11/11.1/11.1.2/S11.1.2_A1_T2.js (tail -c +860686 tests/ecmac.db|head -c 505)
 1219	FAIL ch11/11.1/11.1.4/11.1.4-0.js (tail -c +861192 tests/ecmac.db|head -c 323): [{"message":"Test case returned non-true value!"}]
@@ -3857,22 +3857,22 @@ err
 3811	FAIL ch15/15.10/15.10.2/15.10.2.9/S15.10.2.9_A1_T3.js (tail -c +4311817 tests/ecmac.db|head -c 1600): [{"message":"#3: __executed = /([xu]\\d{2}([A-H]{2})?)\\1/.exec(\"x09x12x01x05u00FFu00FFx04x04x23\"); __executed.input === x09x12x01x05u00FFu00FFx04x04x23. Actual: undefined"}]
 3812	FAIL ch15/15.10/15.10.2/15.10.2.9/S15.10.2.9_A1_T4.js (tail -c +4313418 tests/ecmac.db|head -c 551): [{"message":"Invalid regex"}]
 3813	FAIL ch15/15.10/15.10.2/15.10.2.9/S15.10.2.9_A1_T5.js (tail -c +4313970 tests/ecmac.db|head -c 1297): [{"message":"Invalid regex"}]
-3814	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T1.js (tail -c +4315268 tests/ecmac.db|head -c 534): [{"message":"#1: __re = /x/i; __instance = RegExp(__re); __re.indicator = 1; __instance.indicator === 1. Actual: undefined"}]
-3815	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T2.js (tail -c +4315803 tests/ecmac.db|head -c 599): [{"message":"#1: __re = new RegExp; __instance = RegExp(__re, function(){}()); __re.indicator = 1; __instance.indicator === 1. Actual: undefined"}]
-3816	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T3.js (tail -c +4316403 tests/ecmac.db|head -c 605): [{"message":"#1: __re = new RegExp(); __instance = RegExp(__re, x); __re.indicator = 1; __instance.indicator === 1. Actual: undefined"}]
-3817	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T4.js (tail -c +4317009 tests/ecmac.db|head -c 574): [{"message":"#1: __re = RegExp(); __instance = RegExp(__re, void 0); __re.indicator = 1; __instance.indicator === 1. Actual: undefined"}]
-3818	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T5.js (tail -c +4317584 tests/ecmac.db|head -c 571): [{"message":"#1: __re = /\\b/m; __instance = RegExp(__re, undefined); __re.indicator = 1; __instance.indicator === 1. Actual: undefined"}]
-3819	FAIL ch15/15.10/15.10.3/S15.10.3.1_A2_T1.js (tail -c +4318156 tests/ecmac.db|head -c 714): [{"message":"#1.2: RegExp(new RegExp(\"\\d\"), \"1\")) throw TypeError. Actual: Test262 Error: #1.1: RegExp(new RegExp(\"\\d\"), \"1\")) throw TypeError. Actual: [object Object]"}]
-3820	FAIL ch15/15.10/15.10.3/S15.10.3.1_A2_T2.js (tail -c +4318871 tests/ecmac.db|head -c 736): [{"message":"#1.2: var x = 1; RegExp(/[a-b]?/, x) throw TypeError. Actual: Test262 Error: #1.1: var x = 1; RegExp(/[a-b]?/, x) throw TypeError. Actual: [object Object]"}]
+3814	PASS ch15/15.10/15.10.3/S15.10.3.1_A1_T1.js (tail -c +4315268 tests/ecmac.db|head -c 534)
+3815	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T2.js (tail -c +4315803 tests/ecmac.db|head -c 599): [{"message":"invalid flags"}]
+3816	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T3.js (tail -c +4316403 tests/ecmac.db|head -c 605): [{"message":"invalid flags"}]
+3817	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T4.js (tail -c +4317009 tests/ecmac.db|head -c 574): [{"message":"invalid flags"}]
+3818	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T5.js (tail -c +4317584 tests/ecmac.db|head -c 571): [{"message":"invalid flags"}]
+3819	PASS ch15/15.10/15.10.3/S15.10.3.1_A2_T1.js (tail -c +4318156 tests/ecmac.db|head -c 714)
+3820	PASS ch15/15.10/15.10.3/S15.10.3.1_A2_T2.js (tail -c +4318871 tests/ecmac.db|head -c 736)
 3821	PASS ch15/15.10/15.10.3/S15.10.3.1_A3_T1.js (tail -c +4319608 tests/ecmac.db|head -c 759)
 3822	PASS ch15/15.10/15.10.3/S15.10.3.1_A3_T2.js (tail -c +4320368 tests/ecmac.db|head -c 872)
-3823	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T1.js (tail -c +4321241 tests/ecmac.db|head -c 1161): [{"message":"#1: __pattern = /./i; __re = new RegExp(__pattern); __re.source === __pattern.source. Actual: [object Object]"}]
-3824	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T2.js (tail -c +4322403 tests/ecmac.db|head -c 1250): [{"message":"#1: __pattern = /\\t/m; _re = new RegExp(__pattern, x); var x; __re.source === __pattern.source. Actual: [object Object]"}]
-3825	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T3.js (tail -c +4323654 tests/ecmac.db|head -c 1233): [{"message":"#1: __pattern = /[a-b]/g; __re = new RegExp(__pattern, void 0); __re.source === __pattern.source. Actual: [object Object]"}]
-3826	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T4.js (tail -c +4324888 tests/ecmac.db|head -c 1262): [{"message":"#1: __pattern = new RegExp; __re = new RegExp(__pattern, undefined); __re.source === __pattern.source. Actual: [object Object]"}]
-3827	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T5.js (tail -c +4326151 tests/ecmac.db|head -c 1353): [{"message":"#1: __pattern = RegExp(\"1?\",\"mig\"); __re = new RegExp(__pattern, (function(){})()); __re.source === __pattern.source. Actual: [object Object]"}]
-3828	FAIL ch15/15.10/15.10.4/S15.10.4.1_A2_T1.js (tail -c +4327505 tests/ecmac.db|head -c 619): [{"message":"#1.2: new RegExp(/\\u0042/i, \"i\") throw TypeError. Actual: Test262 Error: #1.1: new RegExp(/\\u0042/i, \"i\") throw TypeError. Actual: [object Object]"}]
-3829	FAIL ch15/15.10/15.10.4/S15.10.4.1_A2_T2.js (tail -c +4328125 tests/ecmac.db|head -c 614): [{"message":"#1.2: new RegExp(/1?1/mig, {}) throw TypeError. Actual: Test262 Error: #1.1: new RegExp(/1?1/mig, {}) throw TypeError. Actual: [object Object]"}]
+3823	PASS ch15/15.10/15.10.4/S15.10.4.1_A1_T1.js (tail -c +4321241 tests/ecmac.db|head -c 1161)
+3824	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T2.js (tail -c +4322403 tests/ecmac.db|head -c 1250): [{"message":"invalid flags"}]
+3825	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T3.js (tail -c +4323654 tests/ecmac.db|head -c 1233): [{"message":"invalid flags"}]
+3826	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T4.js (tail -c +4324888 tests/ecmac.db|head -c 1262): [{"message":"invalid flags"}]
+3827	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T5.js (tail -c +4326151 tests/ecmac.db|head -c 1353): [{"message":"invalid flags"}]
+3828	PASS ch15/15.10/15.10.4/S15.10.4.1_A2_T1.js (tail -c +4327505 tests/ecmac.db|head -c 619)
+3829	PASS ch15/15.10/15.10.4/S15.10.4.1_A2_T2.js (tail -c +4328125 tests/ecmac.db|head -c 614)
 3830	PASS ch15/15.10/15.10.4/S15.10.4.1_A3_T1.js (tail -c +4328740 tests/ecmac.db|head -c 632)
 3831	PASS ch15/15.10/15.10.4/S15.10.4.1_A3_T2.js (tail -c +4329373 tests/ecmac.db|head -c 671)
 3832	PASS ch15/15.10/15.10.4/S15.10.4.1_A3_T3.js (tail -c +4330045 tests/ecmac.db|head -c 706)
@@ -3910,7 +3910,7 @@ err
 3864	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T1.js (tail -c +4354756 tests/ecmac.db|head -c 474): [{"message":"#1.2: new RegExp(\"??\") throw SyntaxError. Actual: Error: Invalid regex"}]
 3865	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T2.js (tail -c +4355231 tests/ecmac.db|head -c 486): [{"message":"#1.2: new RegExp(\"[{-z]\") throw SyntaxError. Actual: Error: Invalid regex"}]
 3866	FAIL ch15/15.10/15.10.4/S15.10.4.1_A9_T3.js (tail -c +4355718 tests/ecmac.db|head -c 490): [{"message":"#1.2: new RegExp(\"[a--z]\") throw SyntaxError. Actual: Error: Invalid regex"}]
-3867	FAIL ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-1.js (tail -c +4356209 tests/ecmac.db|head -c 572): [{"message":"Test case returned non-true value!"}]
+3867	PASS ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-1.js (tail -c +4356209 tests/ecmac.db|head -c 572)
 3868	FAIL ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-2.js (tail -c +4356782 tests/ecmac.db|head -c 507): [{"message":"Test case returned non-true value!"}]
 3869	FAIL ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-3.js (tail -c +4357290 tests/ecmac.db|head -c 508): [{"message":"Test case returned non-true value!"}]
 3870	PASS ch15/15.10/15.10.4/15.10.4.1/15.10.4.1-4.js (tail -c +4357799 tests/ecmac.db|head -c 424)
@@ -7182,7 +7182,7 @@ err
 7133	PASS ch15/15.3/15.3.4/15.3.4.4/15.3.4.4-3-s.js (tail -c +6885352 tests/ecmac.db|head -c 504)
 7134	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A10.js (tail -c +6885857 tests/ecmac.db|head -c 679): [{"message":"#1: the Function.prototype.call has length property."}]
 7135	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A11.js (tail -c +6886537 tests/ecmac.db|head -c 753): [{"message":"#0: the Function.prototype.call has length property."}]
-7136	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A12.js (tail -c +6887291 tests/ecmac.db|head -c 443): [{"message":"#1: Function.prototype.call has not prototype property[object ]"}]
+7136	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A12.js (tail -c +6887291 tests/ecmac.db|head -c 443): [{"message":"#1: Function.prototype.call has not prototype property[object Object]"}]
 7137	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A16.js (tail -c +6887735 tests/ecmac.db|head -c 760): [{"message":"#1: TypeError expected. Actual: Test262 Error: #1: If IsCallable(func) is false, then (bind should) throw a TypeError exception"}]
 7138	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A1_T1.js (tail -c +6888496 tests/ecmac.db|head -c 898): [{"message":"Cannot set a primitive value as object prototype"}]
 7139	PASS ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A1_T2.js (tail -c +6889395 tests/ecmac.db|head -c 895)
@@ -9611,7 +9611,7 @@ err
 9562	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.3.js (tail -c +8660380 tests/ecmac.db|head -c 549): [{"message":"#1: x = Array.prototype.pop.length; Array.prototype.pop.length = Infinity; Array.prototype.pop.length === x. Actual: Infinity"}]
 9563	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.4.js (tail -c +8660930 tests/ecmac.db|head -c 339)
 9564	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.5.js (tail -c +8661270 tests/ecmac.db|head -c 647)
-9565	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.6.js (tail -c +8661918 tests/ecmac.db|head -c 406): [{"message":"#1: Array.prototype.pop.prototype === undefined. Actual: [object ]"}]
+9565	FAIL ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.6.js (tail -c +8661918 tests/ecmac.db|head -c 406): [{"message":"#1: Array.prototype.pop.prototype === undefined. Actual: [object Object]"}]
 9566	PASS ch15/15.4/15.4.4/15.4.4.6/S15.4.4.6_A5.7.js (tail -c +8662325 tests/ecmac.db|head -c 584)
 9567	FAIL ch15/15.4/15.4.4/15.4.4.7/S15.4.4.7_A1_T1.js (tail -c +8662910 tests/ecmac.db|head -c 1287): [{"message":"#3: x = new Array(); x.push(1); x.push() === 1. Actual: undefined"}]
 9568	FAIL ch15/15.4/15.4.4/15.4.4.7/S15.4.4.7_A1_T2.js (tail -c +8664198 tests/ecmac.db|head -c 1833): [{"message":"#2: x = []; x[0] = 0; x.push(true, Number.POSITIVE_INFINITY, \"NaN\", \"1\", -1) === 6. Actual: -1"}]
@@ -9664,7 +9664,7 @@ err
 9615	FAIL ch15/15.4/15.4.4/15.4.4.9/S15.4.4.9_A5.3.js (tail -c +8750518 tests/ecmac.db|head -c 565): [{"message":"#1: x = Array.prototype.shift.length; Array.prototype.shift.length = Infinity; Array.prototype.shift.length === x. Actual: Infinity"}]
 9616	PASS ch15/15.4/15.4.4/15.4.4.9/S15.4.4.9_A5.4.js (tail -c +8751084 tests/ecmac.db|head -c 349)
 9617	PASS ch15/15.4/15.4.4/15.4.4.9/S15.4.4.9_A5.5.js (tail -c +8751434 tests/ecmac.db|head -c 657)
-9618	FAIL ch15/15.4/15.4.4/15.4.4.9/S15.4.4.9_A5.6.js (tail -c +8752092 tests/ecmac.db|head -c 416): [{"message":"#1: Array.prototype.shift.prototype === undefined. Actual: [object ]"}]
+9618	FAIL ch15/15.4/15.4.4/15.4.4.9/S15.4.4.9_A5.6.js (tail -c +8752092 tests/ecmac.db|head -c 416): [{"message":"#1: Array.prototype.shift.prototype === undefined. Actual: [object Object]"}]
 9619	PASS ch15/15.4/15.4.4/15.4.4.9/S15.4.4.9_A5.7.js (tail -c +8752509 tests/ecmac.db|head -c 594)
 9620	PASS ch15/15.4/15.4.5/15.4.5-1.js (tail -c +8753104 tests/ecmac.db|head -c 351)
 9621	FAIL ch15/15.4/15.4.5/15.4.5.1/15.4.5.1-3.d-1.js (tail -c +8753456 tests/ecmac.db|head -c 389): [{"message":"Test case returned non-true value!"}]
