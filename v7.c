@@ -1839,10 +1839,6 @@ struct gc_arena {
 
 /* Amalgamated: #include "license.h" */
 
-#ifdef V7_ENABLE_DICTIONARY_STRINGS
-#define V7_DISABLE_PREDEFINED_STRINGS
-#endif
-
 /* Check whether we're compiling in an environment with no filesystem */
 #if defined(ARDUINO) && (ARDUINO == 106)
 #define V7_NO_FS
@@ -2039,15 +2035,6 @@ enum v7_type {
   V7_NUM_TYPES
 };
 
-enum cached_strings {
-  PREDEFINED_STR_LENGTH,
-  PREDEFINED_STR_PROTOTYPE,
-  PREDEFINED_STR_CONSTRUCTOR,
-  PREDEFINED_STR_ARGUMENTS,
-
-  PREDEFINED_STR_MAX
-};
-
 enum error_ctor {
   TYPE_ERROR,
   SYNTAX_ERROR,
@@ -2135,7 +2122,6 @@ struct v7 {
   int after_newline;       /* True if the cur_tok starts a new line */
   double cur_tok_dbl;      /* When tokenizing, parser stores TOK_NUMBER here */
 
-  val_t predefined_strings[PREDEFINED_STR_MAX];
   /* singleton, pointer because of amalgamation */
   struct v7_property *cur_dense_prop;
 
@@ -7944,7 +7930,6 @@ double _v7_nan;
 struct v7 *v7_head = NULL;
 #endif
 
-#ifdef V7_ENABLE_DICTIONARY_STRINGS
 /*
  * Dictionary of read-only strings with length > 5.
  * NOTE(lsm): must be sorted alphabetically, because
@@ -8018,7 +8003,6 @@ static int v_find_string_in_dictionary(const char *s, size_t len) {
   }
   return -1;
 }
-#endif
 
 enum v7_type val_type(struct v7 *v7, val_t v) {
   int tag;
@@ -8058,9 +8042,7 @@ enum v7_type val_type(struct v7 *v7, val_t v) {
     case V7_TAG_STRING_I >> 48:
     case V7_TAG_STRING_O >> 48:
     case V7_TAG_STRING_F >> 48:
-#ifdef V7_ENABLE_DICTIONARY_STRINGS
     case V7_TAG_STRING_D >> 48:
-#endif
     case V7_TAG_STRING_5 >> 48:
       return V7_TYPE_STRING;
     case V7_TAG_BOOLEAN >> 48:
@@ -8334,17 +8316,9 @@ v7_val_t create_function(struct v7 *v7) {
   f->attributes = 0;
   /* TODO(mkm): lazily create these properties on first access */
   proto = v7_create_object(v7);
-#ifndef V7_DISABLE_PREDEFINED_STRINGS
-  v7_set_property_v(v7, proto,
-                    v7->predefined_strings[PREDEFINED_STR_CONSTRUCTOR],
-                    V7_PROPERTY_DONT_ENUM, fval);
-  v7_set_property_v(v7, fval, v7->predefined_strings[PREDEFINED_STR_PROTOTYPE],
-                    V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE, proto);
-#else
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9,
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE, proto);
-#endif
 
 cleanup:
   tmp_frame_cleanup(&tf);
@@ -9055,17 +9029,10 @@ v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f, int num_args) {
   tmp_stack_push(&tf, &obj);
   v7_set_property(v7, obj, "", 0, V7_PROPERTY_HIDDEN, v7_create_cfunction(f));
   if (num_args >= 0) {
-#ifndef V7_DISABLE_PREDEFINED_STRINGS
-    v7_set_property_v(
-        v7, obj, v7->predefined_strings[PREDEFINED_STR_LENGTH],
-        V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
-        v7_create_number(num_args));
-#else
     v7_set_property(
         v7, obj, "length", 6,
         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE,
         v7_create_number(num_args));
-#endif
   }
   tmp_frame_cleanup(&tf);
   return obj;
@@ -9075,22 +9042,11 @@ v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f,
                                int num_args) {
   v7_val_t res = v7_create_function(v7, f, num_args);
 
-#ifndef V7_DISABLE_PREDEFINED_STRINGS
-  v7_set_property_v(
-      v7, res, v7->predefined_strings[PREDEFINED_STR_PROTOTYPE],
-      V7_PROPERTY_DONT_ENUM | V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
-      proto);
-
-  v7_set_property_v(v7, proto,
-                    v7->predefined_strings[PREDEFINED_STR_CONSTRUCTOR],
-                    V7_PROPERTY_DONT_ENUM, res);
-#else
   v7_set_property(
       v7, res, "prototype", 9,
       V7_PROPERTY_DONT_ENUM | V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
       proto);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, res);
-#endif
   return res;
 }
 
@@ -9416,9 +9372,7 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
 v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
   struct mbuf *m = own ? &v7->owned_strings : &v7->foreign_strings;
   val_t offset = m->len, tag = V7_TAG_STRING_F;
-#ifdef V7_ENABLE_DICTIONARY_STRINGS
   int dict_index;
-#endif
 
 #ifdef V7_GC_AFTER_STRING_ALLOC
   v7->need_gc = 1;
@@ -9441,12 +9395,10 @@ v7_val_t v7_create_string(struct v7 *v7, const char *p, size_t len, int own) {
       memcpy(s, p, len);
     }
     tag = V7_TAG_STRING_5;
-#ifdef V7_ENABLE_DICTIONARY_STRINGS
   } else if ((dict_index = v_find_string_in_dictionary(p, len)) >= 0) {
     offset = 0;
     GET_VAL_NAN_PAYLOAD(offset)[0] = dict_index;
     tag = V7_TAG_STRING_D;
-#endif
   } else if (own) {
 #ifndef V7_DISABLE_COMPACTING_GC
     compute_need_gc(v7);
@@ -9501,12 +9453,10 @@ const char *v7_to_string(struct v7 *v7, val_t *v, size_t *sizep) {
   } else if (tag == V7_TAG_STRING_5) {
     p = GET_VAL_NAN_PAYLOAD(*v);
     *sizep = 5;
-#ifdef V7_ENABLE_DICTIONARY_STRINGS
   } else if (tag == V7_TAG_STRING_D) {
     int index = ((unsigned char *) GET_VAL_NAN_PAYLOAD(*v))[0];
     *sizep = v_dictionary_strings[index].len;
     p = v_dictionary_strings[index].p;
-#endif
   } else {
     struct mbuf *m =
         (tag == V7_TAG_STRING_O) ? &v7->owned_strings : &v7->foreign_strings;
@@ -9693,7 +9643,6 @@ struct v7 *v7_create(void) {
 
 struct v7 *v7_create_opt(struct v7_create_opts opts) {
   struct v7 *v7 = NULL;
-  val_t *p;
   char z = 0;
 
 #if defined(HAS_V7_INFINITY) || defined(HAS_V7_NAN)
@@ -9746,12 +9695,6 @@ struct v7 *v7_create_opt(struct v7_create_opts opts) {
      * string as marker.
      */
     mbuf_append(&v7->owned_strings, &z, 1);
-
-    p = v7->predefined_strings;
-    p[PREDEFINED_STR_LENGTH] = v7_create_string(v7, "length", 6, 1);
-    p[PREDEFINED_STR_PROTOTYPE] = v7_create_string(v7, "prototype", 9, 1);
-    p[PREDEFINED_STR_CONSTRUCTOR] = v7_create_string(v7, "constructor", 11, 1);
-    p[PREDEFINED_STR_ARGUMENTS] = v7_create_string(v7, "arguments", 9, 1);
 
 #ifdef V7_FORCE_STRICT_MODE
     v7->strict_mode = 1;
@@ -10592,14 +10535,6 @@ void v7_gc(struct v7 *v7, int full) {
   gc_mark_mbuf(v7, &v7->owned_values);
 
 #ifndef V7_DISABLE_COMPACTING_GC
-#ifndef V7_DISABLE_PREDEFINED_STRINGS
-  {
-    int i;
-    for (i = 0; i < PREDEFINED_STR_MAX; i++) {
-      gc_mark_string(v7, &v7->predefined_strings[i]);
-    }
-  }
-#endif
   gc_compact_strings(v7);
 #endif
 
@@ -12958,11 +12893,7 @@ static val_t i_eval_call(struct v7 *v7, struct ast *a, ast_off_t *pos,
     v7_set(v7, args, "callee", ~0, 0, v1);
 #endif
 
-#ifndef V7_DISABLE_PREDEFINED_STRINGS
-    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS], args);
-#else
     v7_set(v7, frame, "arguments", 9, 0, args);
-#endif
   }
 
   v7->this_object = this_object;
@@ -13521,12 +13452,7 @@ i_apply(struct v7 *v7, val_t f, val_t this_object, val_t args) {
       v7_array_set(v7, arguments, i, res);
     }
 
-#ifndef V7_DISABLE_PREDEFINED_STRINGS
-    v7_set_v(v7, frame, v7->predefined_strings[PREDEFINED_STR_ARGUMENTS],
-             arguments);
-#else
     v7_set(v7, frame, "arguments", 9, 0, arguments);
-#endif
   }
 
   v7->this_object = this_object;
