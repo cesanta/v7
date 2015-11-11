@@ -9997,10 +9997,7 @@ static struct gc_block *gc_new_block(struct gc_arena *a, size_t size) {
 }
 
 V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
-#ifdef V7_DISABLE_GC
-  (void) v7;
-  return calloc(1, a->cell_size);
-#elif V7_MALLOC_GC
+#if V7_MALLOC_GC
   struct gc_cell *r;
   maybe_gc(v7);
   r = (struct gc_cell *) calloc(1, a->cell_size);
@@ -10269,7 +10266,6 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
 }
 #endif
 
-#ifndef V7_DISABLE_GC
 static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   (void) msg;
   (void) a;
@@ -10283,7 +10279,6 @@ static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
 #endif
 #endif
 }
-#endif
 
 V7_PRIVATE uint64_t gc_string_val_to_offset(val_t v) {
   return (((uint64_t)(uintptr_t) v7_to_pointer(v)) & ~V7_TAG_MASK)
@@ -10508,8 +10503,6 @@ void gc_dump_owned_strings(struct v7 *v7) {
 
 #endif
 
-#ifndef V7_DISABLE_GC
-
 /*
  * builting on gcc, tried out by redefining it.
  * Using null pointer as base can trigger undefined behavior, hence
@@ -10550,6 +10543,11 @@ static void gc_mark_mbuf(struct v7 *v7, const struct mbuf *mbuf) {
 
 /* Perform garbage collection */
 void v7_gc(struct v7 *v7, int full) {
+#ifdef V7_DISABLE_GC
+  (void) v7;
+  (int) full;
+  return;
+#else
   int i;
 
 #if defined(V7_GC_VERBOSE)
@@ -10618,6 +10616,7 @@ void v7_gc(struct v7 *v7, int full) {
   if (full) {
     mbuf_trim(&v7->owned_strings);
   }
+#endif /* V7_DISABLE_GC */
 }
 
 V7_PRIVATE int gc_check_val(struct v7 *v7, val_t v) {
@@ -10721,17 +10720,6 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 #endif
 
 #endif /* V7_ENABLE_CHECK_HOOKS */
-
-#else
-V7_PRIVATE void maybe_gc(struct v7 *v7) {
-  (void) v7;
-}
-
-void v7_gc(struct v7 *v7, int full) {
-  (void) v7;
-  (void) full;
-}
-#endif /* V7_DISABLE_GC */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/parser.c"
 /**/
@@ -11755,10 +11743,8 @@ const char *v7_get_parser_error(struct v7 *v7) {
 #undef siglongjmp
 #undef sigsetjmp
 
-#if defined(_WIN32) || defined(ARDUINO) || 1
 #define siglongjmp longjmp
 #define sigsetjmp(buf, mask) setjmp(buf)
-#endif
 
 static const enum ast_tag assign_op_map[] = {
     AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
@@ -13014,12 +13000,10 @@ static val_t i_eval_stmt(struct v7 *v7, struct ast *a, ast_off_t *pos,
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &res);
 
-#ifndef V7_DISABLE_GC
   if (v7->need_gc) {
     maybe_gc(v7);
     v7->need_gc = 0;
   }
-#endif
 
   switch (tag) {
     case AST_SCRIPT:
