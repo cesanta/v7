@@ -2578,6 +2578,7 @@ enum opcode {
   OP_CREATE_ARR, /* creates an empty array */
 
   OP_CALL, /* takes number of args */
+  OP_RET,
 
   OP_MAX,
 };
@@ -13723,6 +13724,7 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
  */
 
 /* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "gc.h" */
 
 #ifdef V7_ENABLE_BCODE
 #define V7_BCODE_DEBUG
@@ -13753,7 +13755,7 @@ static const char *op_names[] = {
     "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR",
     "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET",
     "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ",
-    "CREATE_ARR", "CALL"};
+    "CREATE_ARR", "CALL", "RET"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -13884,22 +13886,69 @@ V7_PRIVATE void dump_bcode(FILE *f, struct bcode *bcode) {
   }
 }
 
-V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
-  uint8_t *ops = (uint8_t *) bcode->ops.buf;
-  uint8_t *end = ops + bcode->ops.len;
-  val_t *lit = (val_t *) bcode->lit.buf;
+struct bcode_registers {
+  struct bcode *bcode;
+  uint8_t *ops;
+  uint8_t *end;
+  val_t *lit;
+};
+
+static void bcode_restore_registers(struct bcode *bcode,
+                                    struct bcode_registers *r) {
+  r->bcode = bcode;
+  r->ops = (uint8_t *) bcode->ops.buf;
+  r->end = r->ops + bcode->ops.len;
+  r->lit = (val_t *) bcode->lit.buf;
+}
+
+/*
+ * Each function frame is linked to the caller frame via ____p hidden property
+ * ___rb points to the caller bcode object while ___ro points to the op address
+ * of the next instruction to be performed after return.
+ *
+ * The caller's bcode object is needed because we have to restore literals
+ * and `end` registers.
+ *
+ * TODO(mkm): put this state on a return stack
+ *
+ * Caller of bcode_perform_call is responsible for owning `frame`
+ */
+static void bcode_perform_call(struct v7 *v7, struct bcode *bcode,
+                               v7_val_t frame, struct v7_function *func,
+                               struct bcode_registers *r) {
+  v7_set(v7, frame, "____p", 5, V7_PROPERTY_HIDDEN, v7->call_stack);
+  v7_set(v7, frame, "___rb", 5, V7_PROPERTY_HIDDEN, v7_create_foreign(bcode));
+  v7_set(v7, frame, "___ro", 5, V7_PROPERTY_HIDDEN,
+         v7_create_foreign(r->ops + 1));
+  v7_to_object(frame)->prototype = func->scope;
+  v7->call_stack = frame;
+  bcode_restore_registers(func->bcode, r);
+}
+
+static void bcode_perform_return(struct v7 *v7, struct bcode_registers *r) {
+  struct bcode *bcode =
+      (struct bcode *) v7_to_foreign(v7_get(v7, v7->call_stack, "___rb", 5));
+  bcode_restore_registers(bcode, r);
+  r->ops = (uint8_t *) v7_to_foreign(v7_get(v7, v7->call_stack, "___ro", 5));
+  v7->call_stack = v7_get(v7, v7->call_stack, "____p", 5);
+}
+
+V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *_bcode) {
+  struct bcode_registers r;
 
   size_t name_len;
   char buf[512];
 
   val_t res, v1, v2, v3;
   (void) res;
+  bcode_restore_registers(_bcode, &r);
 
-  while (ops < end) {
-    enum opcode op = (enum opcode) * ops;
+restart:
+  while (r.ops < r.end) {
+    enum opcode op = (enum opcode) * r.ops;
 #ifdef V7_BCODE_TRACE
     {
-      uint8_t *dops = ops;
+      uint8_t *dops = r.ops;
       fprintf(stderr, "eval ");
       dump_op(stderr, bcode, &dops);
     }
@@ -13944,8 +13993,8 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         PUSH(v7_create_number(1));
         break;
       case OP_PUSH_LIT: {
-        int arg = (int) *(++ops);
-        PUSH(lit[arg]);
+        int arg = (int) *(++r.ops);
+        PUSH(r.lit[arg]);
         break;
       }
       case OP_NEG: {
@@ -14032,16 +14081,16 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
       }
       case OP_GET_VAR: {
         int arg;
-        assert(ops < end - 1);
-        arg = (int) *(++ops);
-        PUSH(v7_get_v(v7, v7->call_stack, lit[arg]));
+        assert(r.ops < r.end - 1);
+        arg = (int) *(++r.ops);
+        PUSH(v7_get_v(v7, v7->call_stack, r.lit[arg]));
         break;
       }
       case OP_SET_VAR: {
         struct v7_property *prop;
-        int arg = (int) *(++ops);
+        int arg = (int) *(++r.ops);
         v3 = POP();
-        v2 = lit[arg];
+        v2 = r.lit[arg];
         v1 = v7->call_stack;
 
         v7_stringify_value(v7, v2, buf, sizeof(buf));
@@ -14055,23 +14104,23 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         break;
       }
       case OP_JMP: {
-        bcode_off_t target = bcode_get_target(&ops);
-        ops = (uint8_t *) bcode->ops.buf + target - 1;
+        bcode_off_t target = bcode_get_target(&r.ops);
+        r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
         break;
       }
       case OP_JMP_FALSE: {
-        bcode_off_t target = bcode_get_target(&ops);
+        bcode_off_t target = bcode_get_target(&r.ops);
         v1 = POP();
         if (!v7_is_true(v7, v1)) {
-          ops = (uint8_t *) bcode->ops.buf + target - 1;
+          r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
         }
         break;
       }
       case OP_JMP_TRUE: {
-        bcode_off_t target = bcode_get_target(&ops);
+        bcode_off_t target = bcode_get_target(&r.ops);
         v1 = POP();
         if (v7_is_true(v7, v1)) {
-          ops = (uint8_t *) bcode->ops.buf + target - 1;
+          r.ops = (uint8_t *) r.bcode->ops.buf + target - 1;
         }
         break;
       }
@@ -14083,7 +14132,9 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
         break;
       case OP_CALL: {
         /* Naive implementation pending stack frame redesign */
-        int args = (int) *(++ops);
+        int args = (int) *(++r.ops);
+        val_t this_obj = v7_get_global(v7); /* TODO(mkm) handle `this` */
+
         if (v7->sp < args) {
           throw_exception(v7, INTERNAL_ERROR, "stack underflow",
                           __func__); /* LCOV_EXCL_LINE */
@@ -14093,16 +14144,54 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *bcode) {
           v7_array_set(v7, v2, --args, POP());
         }
         v1 = POP();
-        /* TODO(mkm) handle `this` */
-        PUSH(i_apply(v7, v1, v7_get_global(v7), v2));
+
+        if (v7_to_function(v1)->ast != NULL) {
+          /*
+           * TODO(mkm): catch AST eval exceptions and rethrow them as bcode
+           * exceptions
+           */
+          PUSH(i_apply(v7, v1, this_obj, v2));
+        } else {
+          int i, names_len;
+          val_t *name;
+          struct v7_function *func = v7_to_function(v1);
+          struct gc_tmp_frame vf = new_tmp_frame(v7);
+
+          val_t frame = v7_create_object(v7);
+          tmp_stack_push(&vf, &frame);
+
+          names_len = func->bcode->names.len / sizeof(val_t);
+          name = (val_t *) func->bcode->names.buf;
+
+          assert(func->bcode->args < names_len);
+          for (i = 1; i < func->bcode->args + 1; i++) {
+            v7_set_v(v7, frame, name[i], v7_array_get(v7, v2, i - 1));
+          }
+          for (; i < names_len; i++, name++) {
+            v7_set_v(v7, frame, name[i], v7_create_undefined());
+          }
+          bcode_perform_call(v7, r.bcode, frame, func, &r);
+          continue; /* don't increment ops */
+        }
         break;
       }
+      case OP_RET:
+        bcode_perform_return(v7, &r);
+        goto restart;
       default:
         throw_exception(v7, INTERNAL_ERROR, "%s",
                         __func__); /* LCOV_EXCL_LINE */
         return;                    /* LCOV_EXCL_LINE */
     }
-    ops++;
+    r.ops++;
+  }
+
+  /* implicit return */
+  if (v7->call_stack != v7->global_object) {
+    bcode_perform_return(v7, &r);
+    POP();
+    PUSH(v7_create_undefined());
+    goto restart;
   }
 }
 
@@ -14576,6 +14665,8 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       uint8_t flit = 0;
       val_t funv = create_function(v7);
       struct v7_function *func = v7_to_function(funv);
+      func->scope =
+          v7_to_object(v7_get_global(v7)); /* TODO(mkm): handle closures */
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode);
       func->bcode->refcnt = 1;
@@ -14825,6 +14916,14 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
       break;
     }
+    case AST_RETURN:
+      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      bcode_op(bcode, OP_RET);
+      break;
+    case AST_VALUE_RETURN:
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_RET);
+      break;
     default:
       (*pos)--;
       return compile_expr(v7, a, pos, bcode);
@@ -14909,7 +15008,11 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
     } while (next != 0);
   }
   *pos = body;
-  return compile_stmts(v7, a, pos, end, bcode);
+  BTRY(compile_stmts(v7, a, pos, end, bcode));
+  if (bcode->ops.buf == NULL) {
+    bcode_op(bcode, OP_PUSH_UNDEFINED);
+  }
+  return V7_OK;
 }
 
 #endif /* V7_ENABLE_BCODE */

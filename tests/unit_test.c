@@ -2411,112 +2411,12 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "Object.keys({a:1,b:2}).length", 2);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "var x=2; 2", 2);
-
-  v7_destroy(v7);
-  return NULL;
-}
-
-static void _eval_bcode_op(struct v7 *v7, uint8_t op) {
-  struct bcode bcode;
-  bcode_init(&bcode);
-  mbuf_append(&bcode.ops, &op, sizeof(op));
-  eval_bcode(v7, &bcode);
-  bcode_free(&bcode);
-}
-
-static const char *test_bcode(void) {
-  struct v7 *v7 = v7_create();
-  uint8_t ops[] = {
-#if 0 /* for clang-format */
-#endif
-    MK_OP_GET_VAR(2),
-    MK_OP_PUSH_LIT(4),
-    MK_OP_PUSH_LIT(0),
-    OP_PUSH_ONE,
-    OP_ADD,
-    MK_OP_PUSH_LIT(0),
-    OP_SUB,
-    MK_OP_GET_VAR(1),
-    OP_ADD,
-    MK_OP_GET_VAR(2),
-    MK_OP_PUSH_LIT(3),
-    OP_GET,
-    OP_MUL,
-    OP_SET,
-    MK_OP_SET_VAR(5), /* assign to non-existing */
-    MK_OP_SET_VAR(5), /* assign to existing */
-    MK_OP_PUSH_LIT(6),
-    OP_EQ
-  };
-  struct bcode bcode;
-  val_t y, y_proto;
-  char buf[512];
-  val_t lit[7];
-
-  v7->call_stack = v7_create_object(v7);
-  v7_to_object(v7->call_stack)->prototype = v7_to_object(v7_get_global(v7));
-
-  v7_set(v7, v7_get_global(v7), "x", 1, 0, v7_create_number(666));
-  y_proto = v7_create_object(v7);
-  y = create_object(v7, y_proto);
-  v7_set(v7, y_proto, "b", 1, 0, v7_create_number(10));
-  v7_set(v7, y, "a", 1, 0, v7_create_number(20));
-  v7_set(v7, v7->call_stack, "y", 1, 0, y);
-#if 0
-  v7_set(v7, v7_get_global(v7), "r", 1, 0, v7_create_undefined());
-#endif
-  v7_set(v7, v7_get_global(v7), "gy", 2, 0, y);
-  v7_set(v7, v7_get_global(v7), "gyp", 3, 0, y_proto);
-  v7_set(v7, v7_get_global(v7), "scope", 5, 0, v7->call_stack);
-
-  bcode_init(&bcode);
-  mbuf_append(&bcode.ops, ops, ARRAY_SIZE(ops));
-  lit[0] = v7_create_number(42);
-  lit[1] = v7_create_string(v7, "x", 1, 1);
-  lit[2] = v7_create_string(v7, "y", 1, 1);
-  lit[3] = v7_create_string(v7, "a", 1, 1);
-  lit[4] = v7_create_string(v7, "b", 1, 1);
-  lit[5] = v7_create_string(v7, "r", 1, 1);
-  lit[6] = v7_create_number((42 + 1 - 42 + 666) * 20);
-  mbuf_append(&bcode.lit, lit, ARRAY_SIZE(ops) * sizeof(val_t));
-
-  ASSERT_EQ(v7->sp, 0);
-  eval_bcode(v7, &bcode);
-
-  v7_stringify_value(v7, v7->stack[v7->sp - 1], buf, sizeof(buf));
-
-  ASSERT_EQ(v7->sp, 1);
-
-#if 0
-  ASSERT(check_num(v7, v7->stack[v7->sp - 1], (42 + 1 - 42 + 666) * 20));
-#else
-  ASSERT(check_bool(v7->stack[v7->sp - 1], 1));
-#endif
-
-  ASSERT_EVAL_EQ(v7, "gy.b", "13340");
-  ASSERT_EVAL_EQ(v7, "gyp.b", "10");
-
-  ASSERT_EVAL_EQ(v7, "scope.r", "13340");
-  ASSERT_EVAL_EQ(v7, "r", "13340");
-
-  bcode_free(&bcode);
-
-  /* test primitive opcodes */
-
-  _eval_bcode_op(v7, OP_PUSH_ZERO);
-  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 0));
-  _eval_bcode_op(v7, OP_DUP);
-  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 0));
-  ASSERT(check_num(v7, v7->stack[v7->sp - 2], 0));
-  _eval_bcode_op(v7, OP_PUSH_ONE);
-  _eval_bcode_op(v7, OP_POP);
-  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 0));
-  _eval_bcode_op(v7, OP_PUSH_ONE);
-  _eval_bcode_op(v7, OP_2DUP);
-  ASSERT(check_num(v7, v7->stack[v7->sp - 1], 1));
-  ASSERT(check_num(v7, v7->stack[v7->sp - 2], 0));
-  ASSERT(check_num(v7, v7->stack[v7->sp - 3], 1));
-  ASSERT(check_num(v7, v7->stack[v7->sp - 4], 0));
+  ASSERT_BCODE_EVAL_EQ(v7, "(function(){})()", "undefined");
+  ASSERT_BCODE_EVAL_EQ(v7, "(function(a){a*2})(21)", "undefined");
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "(function(a){return a*2})(21)", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "b=1;(function(a){var b = 2; return a+b})(39)+b",
+                           42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "(function(){var b = 2; return b})()+40", 42);
 
   v7_destroy(v7);
   return NULL;
@@ -2570,7 +2470,6 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 #ifdef V7_ENABLE_BCODE
   RUN_TEST(test_compiler);
   RUN_TEST(test_exec_bcode);
-  RUN_TEST(test_bcode);
 #endif
   return NULL;
 }
