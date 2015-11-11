@@ -2088,8 +2088,7 @@ struct v7 {
   val_t call_stack;
 
 #ifdef V7_ENABLE_BCODE
-  val_t stack[512]; /* value stack for bcode interpreter */
-  int sp;           /* current stack pointer, stack grow upwards */
+  struct mbuf stack; /* value stack for bcode interpreter */
 #endif
 
   struct mbuf owned_strings;   /* Sequence of (varint len, char data[]) */
@@ -10586,6 +10585,9 @@ void v7_gc(struct v7 *v7, int full) {
     gc_mark(v7, v7->error_objects[i]);
   }
 
+#ifdef V7_ENABLE_BCODE
+  gc_mark_mbuf(v7, &v7->stack);
+#endif
   gc_mark_mbuf(v7, &v7->tmp_stack);
   gc_mark_mbuf(v7, &v7->owned_values);
 
@@ -13711,27 +13713,11 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 /* Amalgamated: #include "gc.h" */
 
 #ifdef V7_ENABLE_BCODE
-#define V7_BCODE_DEBUG
 
-#define PUSH(v) (v7->stack[v7->sp++] = (v))
-
-#ifndef V7_BCODE_DEBUG
-#define POP() (v7->stack[--v7->sp])
-#define TOS() (v7->stack[v7->sp - 1])
-#else
-V7_PRIVATE val_t debug_pop(struct v7 *v7) {
-  assert(v7->sp > 0);
-  return v7->stack[--v7->sp];
-}
-
-V7_PRIVATE val_t debug_tos(struct v7 *v7) {
-  assert(v7->sp >= 0);
-  return v7->stack[v7->sp - 1];
-}
-
-#define POP() debug_pop(v7)
-#define TOS() debug_tos(v7)
-#endif
+#define PUSH(v) stack_push(&v7->stack, v)
+#define POP() stack_pop(&v7->stack)
+#define TOS() stack_tos(&v7->stack)
+#define SP() stack_sp(&v7->stack)
 
 static const char *op_names[] = {
     "POP", "DUP", "2DUP", "PUSH_UNDEFINED", "PUSH_NULL", "PUSH_THIS",
@@ -13742,6 +13728,25 @@ static const char *op_names[] = {
     "CREATE_ARR", "CALL", "RET"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
+
+V7_PRIVATE void stack_push(struct mbuf *s, val_t v) {
+  mbuf_append(s, &v, sizeof(v));
+}
+
+V7_PRIVATE val_t stack_pop(struct mbuf *s) {
+  assert(s->len >= sizeof(val_t));
+  s->len -= sizeof(val_t);
+  return *(val_t *) (s->buf + s->len);
+}
+
+V7_PRIVATE val_t stack_tos(struct mbuf *s) {
+  assert(s->len >= sizeof(val_t));
+  return *(val_t *) (s->buf + s->len - sizeof(val_t));
+}
+
+V7_PRIVATE int stack_sp(struct mbuf *s) {
+  return s->len / sizeof(val_t);
+}
 
 static double b_int_bin_op(struct v7 *v7, enum opcode op, double a, double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
@@ -13934,7 +13939,7 @@ restart:
     {
       uint8_t *dops = r.ops;
       fprintf(stderr, "eval ");
-      dump_op(stderr, bcode, &dops);
+      dump_op(stderr, r.bcode, &dops);
     }
 #endif
 
@@ -14119,7 +14124,7 @@ restart:
         int args = (int) *(++r.ops);
         val_t this_obj = v7_get_global(v7); /* TODO(mkm) handle `this` */
 
-        if (v7->sp < args) {
+        if (SP() < args) {
           throw_exception(v7, INTERNAL_ERROR, "stack underflow",
                           __func__); /* LCOV_EXCL_LINE */
         }
@@ -14241,7 +14246,7 @@ V7_PRIVATE enum v7_err v7_exec_bcode2(struct v7 *v7, const char *src,
 
   v7->call_stack = v7->global_object;
   eval_bcode(v7, bcode);
-  assert(v7->sp >= 1);
+  assert(SP() >= 1);
   *res = POP();
 
   bcode_free(bcode);
