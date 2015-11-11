@@ -14891,6 +14891,29 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, body_label, body_target);
       break;
     }
+    /*
+     * do {
+     *   B...
+     * } while(COND);
+     *
+     * ->
+     *
+     * body:
+     *   <B>
+     *   <COND>
+     *   JMP_TRUE body
+     */
+    case AST_DOWHILE: {
+      end = ast_get_skip(a, *pos, AST_DO_WHILE_COND_SKIP);
+      ast_move_to_children(a, pos);
+      body_target = bcode_pos(bcode);
+      BTRY(compile_stmts(v7, a, pos, end, bcode));
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_JMP_TRUE);
+      body_label = bcode_add_target(bcode);
+      bcode_patch_target(bcode, body_label, body_target);
+      break;
+    }
     case AST_VAR: {
       /*
        * Var decls are hoisted when the function frame is created. Vars
