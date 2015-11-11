@@ -14930,9 +14930,16 @@ void print_str(const char *str);
 
 V7_PRIVATE v7_val_t Std_print(struct v7 *v7) {
   int i, num_args = v7_argc(v7);
-
+  val_t v;
   for (i = 0; i < num_args; i++) {
-    v7_print(v7, v7_arg(v7, i));
+    v = v7_arg(v7, i);
+    if (v7_is_string(v)) {
+      size_t n;
+      const char *s = v7_to_string(v7, &v, &n);
+      printf("%.*s", (int) n, s);
+    } else {
+      v7_print(v7, v);
+    }
     printf(" ");
   }
   printf(ENDL);
