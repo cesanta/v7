@@ -7932,7 +7932,7 @@ struct v7 *v7_head = NULL;
 
 /*
  * Dictionary of read-only strings with length > 5.
- * NOTE(lsm): must be sorted alphabetically, because
+ * NOTE(lsm): must be sorted lexicographically, because
  * v_find_string_in_dictionary performs binary search over this list.
  */
 static const struct v7_vec v_dictionary_strings[] = {
@@ -9836,6 +9836,7 @@ void gc_mark_string(struct v7 *, val_t *);
 
 static struct gc_block *gc_new_block(struct gc_arena *a, size_t size);
 static void gc_free_block(struct gc_block *b);
+static void gc_mark_mbuf(struct v7 *v7, const struct mbuf *mbuf);
 
 V7_PRIVATE struct v7_object *new_object(struct v7 *v7) {
   return (struct v7_object *) gc_alloc_cell(v7, &v7->object_arena);
@@ -10147,6 +10148,14 @@ V7_PRIVATE void gc_mark(struct v7 *v7, val_t v) {
 
   /* function scope pointer is aliased to the object's prototype pointer */
   gc_mark(v7, v7_object_to_value(obj->prototype));
+#ifdef V7_ENABLE_BCODE
+  if (v7_is_function(v)) {
+    struct v7_function *func = v7_to_function(v);
+    if (func->bcode != NULL) {
+      gc_mark_mbuf(v7, &func->bcode->lit);
+    }
+  }
+#endif
 }
 
 #if V7_ENABLE__Memory__stats
@@ -10208,7 +10217,7 @@ int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
 }
 #endif
 
-static void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
+V7_PRIVATE void gc_dump_arena_stats(const char *msg, struct gc_arena *a) {
   (void) msg;
   (void) a;
 #ifndef NO_LIBC
@@ -10487,7 +10496,7 @@ static void gc_mark_mbuf(struct v7 *v7, const struct mbuf *mbuf) {
 void v7_gc(struct v7 *v7, int full) {
 #ifdef V7_DISABLE_GC
   (void) v7;
-  (int) full;
+  (void) full;
   return;
 #else
   int i;
@@ -13854,9 +13863,18 @@ V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *_bcode) {
   size_t name_len;
   char buf[512];
 
-  val_t res, v1, v2, v3;
-  (void) res;
+  val_t res = v7_create_undefined(), v1 = v7_create_undefined(),
+        v2 = v7_create_undefined(), v3 = v7_create_undefined(),
+        frame = v7_create_undefined();
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
   bcode_restore_registers(_bcode, &r);
+
+  tmp_stack_push(&tf, &res);
+  tmp_stack_push(&tf, &v1);
+  tmp_stack_push(&tf, &v2);
+  tmp_stack_push(&tf, &v3);
+  tmp_stack_push(&tf, &frame);
 
 restart:
   while (r.ops < r.end) {
@@ -14070,10 +14088,8 @@ restart:
           int i, names_len;
           val_t *name;
           struct v7_function *func = v7_to_function(v1);
-          struct gc_tmp_frame vf = new_tmp_frame(v7);
 
-          val_t frame = v7_create_object(v7);
-          tmp_stack_push(&vf, &frame);
+          frame = v7_create_object(v7);
 
           names_len = func->bcode->names.len / sizeof(val_t);
           name = (val_t *) func->bcode->names.buf;
@@ -14086,6 +14102,8 @@ restart:
             v7_set_v(v7, frame, name[i], v7_create_undefined());
           }
           bcode_perform_call(v7, r.bcode, frame, func, &r);
+
+          frame = v7_create_undefined();
           continue; /* don't increment ops */
         }
         break;
@@ -14094,6 +14112,7 @@ restart:
         bcode_perform_return(v7, &r);
         goto restart;
       default:
+        tmp_frame_cleanup(&tf);
         throw_exception(v7, INTERNAL_ERROR, "%s",
                         __func__); /* LCOV_EXCL_LINE */
         return;                    /* LCOV_EXCL_LINE */
@@ -14108,6 +14127,7 @@ restart:
     PUSH(v7_create_undefined());
     goto restart;
   }
+  tmp_frame_cleanup(&tf);
 }
 
 V7_PRIVATE void bcode_init(struct bcode *bcode) {
