@@ -2375,6 +2375,21 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a={};a[0]=1;a[0]", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a={};a[0]=1;a['0']", 1);
 
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=0", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a++", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "++a", 2);
+
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a=0", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a++", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x.a", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "++x.a", 2);
+
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']=0", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']++", 0);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "++x['a']", 2);
+
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(true) 1; else 2", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(false) 1; else 2", 2);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(true) 1", 1);

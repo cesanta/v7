@@ -2076,6 +2076,7 @@ struct v7 {
 
 #ifdef V7_ENABLE_BCODE
   struct mbuf stack; /* value stack for bcode interpreter */
+  val_t stash;       /* temporary register for STASH and UNSTASH instructions */
 #endif
 
   struct mbuf owned_strings;   /* Sequence of (varint len, char data[]) */
@@ -2514,9 +2515,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 enum opcode {
-  OP_POP,
-  OP_DUP,
-  OP_2DUP,
+  OP_POP,     /* ( a -- ) */
+  OP_DUP,     /* ( a -- a a ) */
+  OP_2DUP,    /* ( a b -- a b a b ) */
+  OP_STASH,   /* ( a -- a ) saves TOS to stash reg */
+  OP_UNSTASH, /* ( a -- stash ) replaces tos with stash reg */
 
   OP_PUSH_UNDEFINED,
   OP_PUSH_NULL,
@@ -10539,6 +10542,10 @@ void v7_gc(struct v7 *v7, int full) {
 
 #ifdef V7_ENABLE_BCODE
   gc_mark_mbuf(v7, &v7->stack);
+  gc_mark(v7, v7->stash);
+#ifndef V7_DISABLE_COMPACTING_GC
+  gc_mark_string(v7, &v7->stash);
+#endif
 #endif
   gc_mark_mbuf(v7, &v7->tmp_stack);
   gc_mark_mbuf(v7, &v7->owned_values);
@@ -13655,12 +13662,12 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 #define SP() stack_sp(&v7->stack)
 
 static const char *op_names[] = {
-    "POP", "DUP", "2DUP", "PUSH_UNDEFINED", "PUSH_NULL", "PUSH_THIS",
-    "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT", "NEG",
-    "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR",
-    "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "GET",
-    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ",
-    "CREATE_ARR", "CALL", "RET"};
+    "POP", "DUP", "2DUP", "STASH", "UNSTASH", "PUSH_UNDEFINED", "PUSH_NULL",
+    "PUSH_THIS", "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT",
+    "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT",
+    "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE",
+    "GET", "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE",
+    "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -13903,6 +13910,14 @@ restart:
         PUSH(v2);
         PUSH(v1);
         PUSH(v2);
+        break;
+      case OP_STASH:
+        v7->stash = TOS();
+        break;
+      case OP_UNSTASH:
+        POP();
+        PUSH(v7->stash);
+        v7->stash = v7_create_undefined();
         break;
       case OP_PUSH_UNDEFINED:
         PUSH(v7_create_undefined());
@@ -14361,6 +14376,102 @@ static int string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
   return bcode_add_lit(bcode, v7_create_string(v7, name, name_len, 1));
 }
 
+/*
+ * a++ and a-- need to ignore the updated value.
+ *
+ * Call this before updating the lhs.
+ */
+static void fixup_post_op(enum ast_tag tag, struct bcode *bcode) {
+  if (tag == AST_POSTINC || tag == AST_POSTDEC) {
+    bcode_op(bcode, OP_UNSTASH);
+  }
+}
+
+/*
+ * evaluate rhs expression.
+ * ++a and a++ are equivalent to a+=1
+ */
+static enum v7_err eval_assign_rhs(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                   enum ast_tag tag, struct bcode *bcode) {
+  /* a++ and a-- need to preserve initial value. */
+  if (tag == AST_POSTINC || tag == AST_POSTDEC) {
+    bcode_op(bcode, OP_STASH);
+  }
+  if (tag >= AST_PREINC && tag <= AST_POSTDEC) {
+    bcode_op(bcode, OP_PUSH_ONE);
+  } else {
+    BTRY(compile_expr(v7, a, pos, bcode));
+  }
+
+  switch (tag) {
+    case AST_PREINC:
+    case AST_POSTINC:
+      bcode_op(bcode, OP_ADD);
+      break;
+    case AST_PREDEC:
+    case AST_POSTDEC:
+      bcode_op(bcode, OP_SUB);
+      break;
+    case AST_ASSIGN:
+      /* no operation */
+      break;
+    default:
+      binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
+  }
+  return V7_OK;
+}
+
+static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                                  enum ast_tag tag, struct bcode *bcode) {
+  uint8_t lit;
+  enum ast_tag ntag;
+  ntag = ast_fetch_tag(a, pos);
+  switch (ntag) {
+    case AST_IDENT:
+      lit = string_lit(v7, a, pos, bcode);
+      if (tag != AST_ASSIGN) {
+        bcode_op(bcode, OP_GET_VAR);
+        bcode_op(bcode, lit);
+      }
+
+      BTRY(eval_assign_rhs(v7, a, pos, tag, bcode));
+      bcode_op(bcode, OP_SET_VAR);
+      bcode_op(bcode, lit);
+
+      fixup_post_op(tag, bcode);
+      break;
+    case AST_MEMBER:
+    case AST_INDEX:
+      switch (ntag) {
+        case AST_MEMBER:
+          lit = string_lit(v7, a, pos, bcode);
+          BTRY(compile_expr(v7, a, pos, bcode));
+          bcode_push_lit(bcode, lit);
+          break;
+        case AST_INDEX:
+          BTRY(compile_expr(v7, a, pos, bcode));
+          BTRY(compile_expr(v7, a, pos, bcode));
+          break;
+        default:
+          return V7_SYNTAX_ERROR; /* unreachable, compilers are dumb */
+      }
+      if (tag != AST_ASSIGN) {
+        bcode_op(bcode, OP_2DUP);
+        bcode_op(bcode, OP_GET);
+      }
+
+      BTRY(eval_assign_rhs(v7, a, pos, tag, bcode));
+      bcode_op(bcode, OP_SET);
+
+      fixup_post_op(tag, bcode);
+      break;
+    default:
+      strncpy(v7->error_msg, "unexpected ast node", sizeof(v7->error_msg));
+      return V7_SYNTAX_ERROR;
+  }
+  return V7_OK;
+}
+
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
@@ -14411,6 +14522,10 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_GET);
       break;
     case AST_ASSIGN:
+    case AST_PREINC:
+    case AST_PREDEC:
+    case AST_POSTINC:
+    case AST_POSTDEC:
     case AST_REM_ASSIGN:
     case AST_MUL_ASSIGN:
     case AST_DIV_ASSIGN:
@@ -14421,58 +14536,9 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     case AST_AND_ASSIGN:
     case AST_LSHIFT_ASSIGN:
     case AST_RSHIFT_ASSIGN:
-    case AST_URSHIFT_ASSIGN: {
-      uint8_t lit;
-      enum ast_tag ntag;
-      ntag = ast_fetch_tag(a, pos);
-      switch (ntag) {
-        case AST_IDENT:
-          lit = string_lit(v7, a, pos, bcode);
-          if (tag != AST_ASSIGN) {
-            bcode_op(bcode, OP_GET_VAR);
-            bcode_op(bcode, lit);
-          }
-
-          BTRY(compile_expr(v7, a, pos, bcode));
-
-          if (tag != AST_ASSIGN) {
-            binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
-          }
-
-          bcode_op(bcode, OP_SET_VAR);
-          bcode_op(bcode, lit);
-          break;
-        case AST_MEMBER:
-        case AST_INDEX:
-          switch (ntag) {
-            case AST_MEMBER:
-              lit = string_lit(v7, a, pos, bcode);
-              BTRY(compile_expr(v7, a, pos, bcode));
-              bcode_push_lit(bcode, lit);
-              break;
-            case AST_INDEX:
-              BTRY(compile_expr(v7, a, pos, bcode));
-              BTRY(compile_expr(v7, a, pos, bcode));
-              break;
-            default:
-              return V7_SYNTAX_ERROR; /* unreachable, compilers are dumb */
-          }
-          if (tag != AST_ASSIGN) {
-            bcode_op(bcode, OP_2DUP);
-            bcode_op(bcode, OP_GET);
-          }
-          BTRY(compile_expr(v7, a, pos, bcode));
-          if (tag != AST_ASSIGN) {
-            binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
-          }
-          bcode_op(bcode, OP_SET);
-          break;
-        default:
-          strncpy(v7->error_msg, "unexpected ast node", sizeof(v7->error_msg));
-          return V7_SYNTAX_ERROR;
-      }
+    case AST_URSHIFT_ASSIGN:
+      compile_assign(v7, a, pos, tag, bcode);
       break;
-    }
     case AST_LOGICAL_OR:
     case AST_LOGICAL_AND: {
       /*
