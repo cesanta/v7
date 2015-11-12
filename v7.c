@@ -3096,6 +3096,9 @@ enum opcode {
   OP_PUSH_ONE,
   OP_PUSH_LIT, /* 1 byte operand */
 
+  OP_NOT,
+  OP_LOGICAL_NOT,
+
   OP_NEG,
 
   OP_ADD,
@@ -15899,10 +15902,10 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 static const char *op_names[] = {
     "POP", "DUP", "2DUP", "STASH", "UNSTASH", "PUSH_UNDEFINED", "PUSH_NULL",
     "PUSH_THIS", "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT",
-    "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT",
-    "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE",
-    "GET", "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE",
-    "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
+    "NOT", "LOGICAL_NOT", "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT",
+    "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT",
+    "LE", "GT", "GE", "GET", "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE",
+    "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -16178,6 +16181,17 @@ restart:
       case OP_PUSH_LIT: {
         int arg = (int) *(++r.ops);
         PUSH(r.lit[arg]);
+        break;
+      }
+      case OP_LOGICAL_NOT:
+        v1 = POP();
+        PUSH(v7_create_boolean(!v7_is_true(v7, v1)));
+        break;
+      case OP_NOT: {
+        double d1;
+        v1 = POP();
+        d1 = i_as_num(v7, v1);
+        PUSH(v7_create_number(~(int32_t) d1));
         break;
       }
       case OP_NEG: {
@@ -16732,6 +16746,14 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     case AST_GT:
     case AST_GE:
       BTRY(compile_binary(v7, a, pos, tag, bcode));
+      break;
+    case AST_LOGICAL_NOT:
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_LOGICAL_NOT);
+      break;
+    case AST_NOT:
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_NOT);
       break;
     case AST_POSITIVE:
       BTRY(compile_expr(v7, a, pos, bcode));
