@@ -2430,6 +2430,13 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=[41,42];a[1]", 42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=[41,,42];a[2]", 42);
 
+  ASSERT_BCODE_EVAL_EQ(v7, "void (1+2)", "undefined");
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "x=42;this.x", 42);
+
+  ASSERT_BCODE_EVAL_EQ(v7, "x={};'a' in x", "false");
+  ASSERT_BCODE_EVAL_EQ(v7, "x={a:1};'a' in x", "true");
+  ASSERT_BCODE_EVAL_EQ(v7, "x={a:undefined};'a' in x", "true");
+
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "Object.keys({a:1,b:2}).length", 2);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "var x=2; 2", 2);

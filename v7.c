@@ -3122,6 +3122,7 @@ enum opcode {
   OP_GT,
   OP_GE,
 
+  OP_IN,
   OP_GET,
   OP_SET,
   OP_SET_VAR,
@@ -14734,7 +14735,6 @@ static NOINLINE val_t i_eval_expr_uncommon(struct v7 *v7, struct ast *a,
         if (v7_get_property(v7, scope, name, name_len) == NULL) {
           ast_move_to_children(a, &peek);
           *pos = peek;
-          /* TODO(mkm): use interned strings */
           res = v7_create_string(v7, "undefined", 9, 1);
           break;
         }
@@ -15904,8 +15904,8 @@ static const char *op_names[] = {
     "PUSH_THIS", "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT",
     "NOT", "LOGICAL_NOT", "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT",
     "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT",
-    "LE", "GT", "GE", "GET", "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE",
-    "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
+    "LE", "GT", "GE", "IN", "GET", "SET", "SET_VAR", "GET_VAR", "JMP",
+    "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -16258,6 +16258,12 @@ restart:
         PUSH(v7_create_boolean(b_bool_bin_op(v7, op, d1, d2)));
         break;
       }
+      case OP_IN:
+        v2 = POP();
+        v1 = POP();
+        v7_stringify_value(v7, v1, buf, sizeof(buf));
+        PUSH(v7_create_boolean(v7_get_property(v7, v2, buf, -1) != NULL));
+        break;
       case OP_GET:
         v2 = POP();
         v1 = POP();
@@ -16778,6 +16784,11 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_GET);
       break;
+    case AST_IN:
+      BTRY(compile_expr(v7, a, pos, bcode));
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_IN);
+      break;
     case AST_ASSIGN:
     case AST_PREINC:
     case AST_PREDEC:
@@ -16935,6 +16946,14 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_push_lit(bcode, flit);
       break;
     }
+    case AST_THIS:
+      bcode_op(bcode, OP_PUSH_THIS);
+      break;
+    case AST_VOID:
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_POP);
+      bcode_op(bcode, OP_PUSH_UNDEFINED);
+      break;
     case AST_NULL:
       bcode_op(bcode, OP_PUSH_NULL);
       break;
