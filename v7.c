@@ -17488,6 +17488,9 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
  * All rights reserved
  */
 
+/* clang-format off */
+/* because clang-format would break JS code, e.g. === converted to == = ... */
+
 /* Amalgamated: #include "internal.h" */
 
 #define STRINGIFY(x) #x
