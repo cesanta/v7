@@ -1397,6 +1397,565 @@ char *cs_read_file(const char *path, size_t *size);
 char *cs_mmap_file(const char *path, size_t *size);
 #endif
 #ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/coroutine.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * Module that provides generic macros and functions to implement "coroutines",
+ * i.e. C code that uses `mbuf` as a stack for function calls.
+ *
+ * More info: see the design doc: https://goo.gl/kfcG61
+ */
+
+#ifndef _COROUTINE_H
+#define _COROUTINE_H
+
+/* Amalgamated: #include "osdep.h" */
+
+/* Amalgamated: #include "../common/mbuf.h" */
+
+/* user-defined union, this module only operates on the pointer */
+union user_arg_ret;
+
+/*
+ * Descriptor of a single function; const array of such descriptors should
+ * be given to `cr_context_init()`
+ */
+struct cr_func_desc {
+  /*
+   * Size of the function's data that should be stored on stack.
+   *
+   * NOTE: you should use `CR_LOCALS_SIZEOF(your_type)` instead of `sizeof()`,
+   * since this value should be aligned by the word boundary, and
+   * `CR_LOCALS_SIZEOF()` takes care of this.
+   */
+  uint8_t locals_size;
+};
+
+enum cr_status {
+  CR_RES__OK,
+  CR_RES__OK_YIELDED,
+
+  CR_RES__ERR_STACK_OVERFLOW,
+
+  /* Underflow can only be caused by memory corruption or bug in CR */
+  CR_RES__ERR_STACK_DATA_UNDERFLOW,
+  /* Underflow can only be caused by memory corruption or bug in CR */
+  CR_RES__ERR_STACK_CALL_UNDERFLOW,
+
+  CR_RES__ERR_UNCAUGHT_EXCEPTION,
+};
+
+/* Context of the coroutine engine */
+struct cr_ctx {
+  /*
+   * id of the next "function" to call. If no function is going to be called,
+   * it's CR_FID__NONE.
+   */
+  uint8_t called_fid;
+
+  /*
+   * when `called_fid` is not `CR_FID__NONE`, this field holds called
+   * function's stack frame size
+   */
+  size_t call_locals_size;
+
+  /*
+   * when `called_fid` is not `CR_FID__NONE`, this field holds called
+   * function's arguments size
+   */
+  size_t call_arg_size;
+
+  /*
+   * pointer to the current function's locals.
+   * Needed to make `CR_CUR_LOCALS_PT()` fast.
+   */
+  uint8_t *p_cur_func_locals;
+
+  /* data stack */
+  struct mbuf stack_data;
+
+  /* return stack */
+  struct mbuf stack_ret;
+
+  /* index of the current fid + 1 in return stack */
+  size_t cur_fid_idx;
+
+  /* pointer to the array of function descriptors */
+  const struct cr_func_desc *p_func_descrs;
+
+  /* thrown exception. If nothing is currently thrown, it's `CR_EXC_ID__NONE` */
+  uint8_t thrown_exc;
+
+  /* status: normally, it's `CR_RES__OK` */
+  enum cr_status status;
+
+  /*
+   * pointer to user-dependent union of arguments for all functions, as well as
+   * return values, yielded and resumed values.
+   */
+  union user_arg_ret *p_arg_retval;
+
+  /* true if currently running function returns */
+  unsigned need_return : 1;
+
+  /* true if currently running function yields */
+  unsigned need_yield : 1;
+
+#if defined(CR_TRACK_MAX_STACK_LEN)
+  size_t stack_data_max_len;
+  size_t stack_ret_max_len;
+#endif
+};
+
+/*
+ * User's enum with function ids should use items of this one like this:
+ *
+ *   enum my_func_id {
+ *     my_func_none = CR_FID__NONE,
+ *
+ *     my_foo = CR_FID__USER,
+ *     my_foo1,
+ *     my_foo2,
+ *
+ *     my_bar,
+ *     my_bar1,
+ *   };
+ *
+ */
+enum cr_fid {
+  CR_FID__NONE,
+  CR_FID__USER,
+
+  /* for internal usage only */
+  CR_FID__TRY_MARKER = 0xff,
+};
+
+/*
+ * User's enum with exception ids should use items of this one like this:
+ *
+ *   enum my_exc_id {
+ *     MY_EXC_ID__FIRST = CR_EXC_ID__USER,
+ *     MY_EXC_ID__SECOND,
+ *     MY_EXC_ID__THIRD,
+ *   };
+ */
+enum cr_exc_id {
+  CR_EXC_ID__NONE,
+  CR_EXC_ID__USER,
+};
+
+/*
+ * To be used in dispatcher switch: depending on the "fid" (function id), we
+ * jump to the appropriate label.
+ */
+#define CR_DEFINE_ENTRY_POINT(fid) \
+  case fid:                        \
+    goto fid
+
+/*
+ * Returns lvalue: id of the currently active "function". It just takes the id
+ * from the appropriate position of the "stack".
+ *
+ * Client code only needs it in dispatcher switch.
+ */
+#define CR_CURR_FUNC_C(p_ctx) \
+  *(((uint8_t *) (p_ctx)->stack_ret.buf) + (p_ctx)->cur_fid_idx - 1)
+
+/*
+ * Prepare context for calling first function.
+ *
+ * Should be used outside of the exec loop, right after initializing
+ * context with `cr_context_init()`
+ *
+ * `call_fid`: id of the function to be called
+ */
+#define CR_FIRST_CALL_PREPARE_C(p_ctx, call_fid)                           \
+  _CR_CALL_PREPARE(p_ctx, call_fid, CR_LOCALS_SIZEOF(call_fid##_locals_t), \
+                   sizeof(call_fid##_arg_t), CR_FID__NONE)
+
+/*
+ * Call "function" with id `call_fid`: uses `_CR_CALL_PREPARE()` to prepare
+ * stuff, and then jumps to the `_cr_iter_begin`, which will perform all
+ * necessary bookkeeping.
+ *
+ * Should be used from eval loop only.
+ *
+ * `local_ret_fid`: id of the label right after the function call (where
+ * currently running function will be resumed later)
+ */
+#define CR_CALL_C(p_ctx, call_fid, local_ret_fid)                            \
+  do {                                                                       \
+    _CR_CALL_PREPARE(p_ctx, call_fid, CR_LOCALS_SIZEOF(call_fid##_locals_t), \
+                     sizeof(call_fid##_arg_t), local_ret_fid);               \
+    goto _cr_iter_begin;                                                     \
+  local_ret_fid:                                                             \
+    /* we'll get here when called function returns */                        \
+    ;                                                                        \
+  } while (0)
+
+/*
+ * "Return" the value `retval` from the current "function" with id `cur_fid`.
+ * You have to specify `cur_fid` since different functions may have different
+ * return types.
+ *
+ * Should be used from eval loop only.
+ */
+#define CR_RETURN_C(p_ctx, cur_fid, retval)         \
+  do {                                              \
+    /* copy ret to arg_retval */                    \
+    CR_ARG_RET_PT_C(p_ctx)->ret.cur_fid = (retval); \
+    /* set need_return flag */                      \
+    (p_ctx)->need_return = 1;                       \
+    goto _cr_iter_begin;                            \
+  } while (0)
+
+/*
+ * Same as `CR_RETURN_C`, but without any return value
+ */
+#define CR_RETURN_VOID_C(p_ctx) \
+  do {                          \
+    /* set need_return flag */  \
+    (p_ctx)->need_return = 1;   \
+    goto _cr_iter_begin;        \
+  } while (0)
+
+/*
+ * Yield with the value `value`. It will be set just by the assigment operator
+ * in the `yielded` field of the `union user_arg_ret`.
+ *
+ * `local_ret_fid`: id of the label right after the yielding (where currently
+ * running function will be resumed later)
+ *
+ */
+#define CR_YIELD_C(p_ctx, value, local_ret_fid)           \
+  do {                                                    \
+    /* copy ret to arg_retval */                          \
+    CR_ARG_RET_PT_C(p_ctx)->yielded = (value);            \
+    /* set need_yield flag */                             \
+    (p_ctx)->need_yield = 1;                              \
+                                                          \
+    /* adjust return func id */                           \
+    CR_CURR_FUNC_C(p_ctx) = (local_ret_fid);              \
+                                                          \
+    goto _cr_iter_begin;                                  \
+  local_ret_fid:                                          \
+    /* we'll get here when the machine will be resumed */ \
+    ;                                                     \
+  } while (0)
+
+/*
+ * Prepare context for resuming with the given value. After using this
+ * macro, you need to call your user-dependent exec function.
+ */
+#define CR_RESUME_C(p_ctx, value)                \
+  do {                                           \
+    if ((p_ctx)->status == CR_RES__OK_YIELDED) { \
+      CR_ARG_RET_PT_C(p_ctx)->resumed = (value); \
+      (p_ctx)->status = CR_RES__OK;              \
+    }                                            \
+  } while (0)
+
+/*
+ * Evaluates to the yielded value (value given to `CR_YIELD_C()`)
+ */
+#define CR_YIELDED_C(p_ctx) (CR_ARG_RET_PT_C(p_ctx)->yielded)
+
+/*
+ * Evaluates to the value given to `CR_RESUME_C()`
+ */
+#define CR_RESUMED_C(p_ctx) (CR_ARG_RET_PT_C(p_ctx)->resumed)
+
+/*
+ * Beginning of the try-catch block.
+ *
+ * Should be used in eval loop only.
+ *
+ * `first_catch_fid`: function id of the first catch block.
+ */
+#define CR_TRY_C(p_ctx, first_catch_fid)                                   \
+  do {                                                                     \
+    _CR_STACK_RET_ALLOC((p_ctx), _CR_TRY_SIZE);                            \
+    /* update pointer to current function's locals (may be invalidated) */ \
+    _CR_CUR_FUNC_LOCALS_UPD(p_ctx);                                        \
+    /*  */                                                                 \
+    _CR_TRY_MARKER(p_ctx) = CR_FID__TRY_MARKER;                            \
+    _CR_TRY_CATCH_FID(p_ctx) = (first_catch_fid);                          \
+  } while (0)
+
+/*
+ * Beginning of the individual catch block (and the end of the previous one, if
+ * any)
+ *
+ * Should be used in eval loop only.
+ *
+ * `exc_id`: exception id to catch
+ *
+ * `catch_fid`: function id of this catch block.
+ *
+ * `next_catch_fid`: function id of the next catch block (or of the
+ * `CR_ENDCATCH()`)
+ */
+#define CR_CATCH_C(p_ctx, exc_id, catch_fid, next_catch_fid) \
+  catch_fid:                                                 \
+  do {                                                       \
+    if ((p_ctx)->thrown_exc != (exc_id)) {                   \
+      goto next_catch_fid;                                   \
+    }                                                        \
+    (p_ctx)->thrown_exc = CR_EXC_ID__NONE;                   \
+  } while (0)
+
+/*
+ * End of all catch blocks.
+ *
+ * Should be used in eval loop only.
+ *
+ * `endcatch_fid`: function id of this endcatch.
+ */
+#define CR_ENDCATCH_C(p_ctx, endcatch_fid)                                   \
+  endcatch_fid:                                                              \
+  do {                                                                       \
+    (p_ctx)->stack_ret.len -= _CR_TRY_SIZE;                                  \
+    /* if we still have non-handled exception, continue unwinding "stack" */ \
+    if ((p_ctx)->thrown_exc != CR_EXC_ID__NONE) {                            \
+      goto _cr_iter_begin;                                                   \
+    }                                                                        \
+  } while (0)
+
+/*
+ * Throw exception.
+ *
+ * Should be used from eval loop only.
+ *
+ * `exc_id`: exception id to throw
+ */
+#define CR_THROW_C(p_ctx, exc_id)                        \
+  do {                                                   \
+    assert((enum cr_exc_id)(exc_id) != CR_EXC_ID__NONE); \
+    /* clear need_return flag */                         \
+    (p_ctx)->thrown_exc = (exc_id);                      \
+    goto _cr_iter_begin;                                 \
+  } while (0)
+
+/*
+ * Get latest returned value from the given "function".
+ *
+ * `fid`: id of the function which returned value. Needed to ret value value
+ * from the right field in the `(p_ctx)->arg_retval.ret` (different functions
+ * may have different return types)
+ */
+#define CR_RETURNED_C(p_ctx, fid) (CR_ARG_RET_PT_C(p_ctx)->ret.fid)
+
+/*
+ * Get currently thrown exception id. If nothing is being thrown at the moment,
+ * `CR_EXC_ID__NONE` is returned
+ */
+#define CR_THROWN_C(p_ctx) ((p_ctx)->thrown_exc)
+
+/*
+ * Like `sizeof()`, but it always evaluates to the multiple of `sizeof(void *)`
+ *
+ * It should be used for (struct cr_func_desc)::locals_size
+ */
+#define CR_LOCALS_SIZEOF(type) \
+  (((sizeof(type)) + (sizeof(void *) - 1)) & (~(sizeof(void *) - 1)))
+
+/*
+ * Returns pointer to the current function's stack locals, and casts to given
+ * type.
+ *
+ * Typical usage might look as follows:
+ *
+ *    #undef L
+ *    #define L CR_CUR_LOCALS_PT(p_ctx, struct my_foo_locals)
+ *
+ * Then, assuming `struct my_foo_locals` has the field `bar`, we can access it
+ * like this:
+ *
+ *    L->bar
+ */
+#define CR_CUR_LOCALS_PT_C(p_ctx, type) ((type *) ((p_ctx)->p_cur_func_locals))
+
+/*
+ * Returns pointer to the user-defined union of arguments and return values:
+ * `union user_arg_ret`
+ */
+#define CR_ARG_RET_PT_C(p_ctx) ((p_ctx)->p_arg_retval)
+
+#define CR_ARG_RET_PT() CR_ARG_RET_PT_C(p_ctx)
+
+#define CR_CUR_LOCALS_PT(type) CR_CUR_LOCALS_PT_C(p_ctx, type)
+
+#define CR_CURR_FUNC() CR_CURR_FUNC_C(p_ctx)
+
+#define CR_CALL(call_fid, local_ret_fid) \
+  CR_CALL_C(p_ctx, call_fid, local_ret_fid)
+
+#define CR_RETURN(cur_fid, retval) CR_RETURN_C(p_ctx, cur_fid, retval)
+
+#define CR_RETURN_VOID() CR_RETURN_VOID_C(p_ctx)
+
+#define CR_RETURNED(fid) CR_RETURNED_C(p_ctx, fid)
+
+#define CR_YIELD(value, local_ret_fid) CR_YIELD_C(p_ctx, value, local_ret_fid)
+
+#define CR_YIELDED() CR_YIELDED_C(p_ctx)
+
+#define CR_RESUME(value) CR_RESUME_C(p_ctx, value)
+
+#define CR_RESUMED() CR_RESUMED_C(p_ctx)
+
+#define CR_TRY(catch_name) CR_TRY_C(p_ctx, catch_name)
+
+#define CR_CATCH(exc_id, catch_name, next_catch_name) \
+  CR_CATCH_C(p_ctx, exc_id, catch_name, next_catch_name)
+
+#define CR_ENDCATCH(endcatch_name) CR_ENDCATCH_C(p_ctx, endcatch_name)
+
+#define CR_THROW(exc_id) CR_THROW_C(p_ctx, exc_id)
+
+/* Private macros {{{ */
+
+#define _CR_CUR_FUNC_LOCALS_UPD(p_ctx)                                 \
+  do {                                                                 \
+    (p_ctx)->p_cur_func_locals = (uint8_t *) (p_ctx)->stack_data.buf + \
+                                 (p_ctx)->stack_data.len -             \
+                                 _CR_CURR_FUNC_LOCALS_SIZE(p_ctx);     \
+  } while (0)
+
+/*
+ * Size of the stack needed for each try-catch block.
+ * Use `_CR_TRY_MARKER()` and `_CR_TRY_CATCH_FID()` to get/set parts.
+ */
+#define _CR_TRY_SIZE 2 /*CR_FID__TRY_MARKER, catch_fid*/
+
+/*
+ * Evaluates to lvalue where `CR_FID__TRY_MARKER` should be stored
+ */
+#define _CR_TRY_MARKER(p_ctx) \
+  *(((uint8_t *) (p_ctx)->stack_ret.buf) + (p_ctx)->stack_ret.len - 1)
+
+/*
+ * Evaluates to lvalue where `catch_fid` should be stored
+ */
+#define _CR_TRY_CATCH_FID(p_ctx) \
+  *(((uint8_t *) (p_ctx)->stack_ret.buf) + (p_ctx)->stack_ret.len - 2)
+
+#define _CR_CURR_FUNC_LOCALS_SIZE(p_ctx) \
+  ((p_ctx)->p_func_descrs[CR_CURR_FUNC_C(p_ctx)].locals_size)
+
+/*
+ * Prepare context for calling next function.
+ *
+ * See comments for `CR_CALL()` macro.
+ */
+#define _CR_CALL_PREPARE(p_ctx, _call_fid, _locals_size, _arg_size, \
+                         local_ret_fid)                             \
+  do {                                                              \
+    /* adjust return func id */                                     \
+    CR_CURR_FUNC_C(p_ctx) = (local_ret_fid);                        \
+                                                                    \
+    /* set called_fid */                                            \
+    (p_ctx)->called_fid = (_call_fid);                              \
+                                                                    \
+    /* set sizes: locals and arg */                                 \
+    (p_ctx)->call_locals_size = (_locals_size);                     \
+    (p_ctx)->call_arg_size = (_arg_size);                           \
+  } while (0)
+
+#define _CR_STACK_DATA_OVF_CHECK(p_ctx, inc) (0)
+
+#define _CR_STACK_DATA_UND_CHECK(p_ctx, dec) ((p_ctx)->stack_data.len < (dec))
+
+#define _CR_STACK_RET_OVF_CHECK(p_ctx, inc) (0)
+
+#define _CR_STACK_RET_UND_CHECK(p_ctx, dec) ((p_ctx)->stack_ret.len < (dec))
+
+#define _CR_STACK_FID_OVF_CHECK(p_ctx, inc) (0)
+
+#define _CR_STACK_FID_UND_CHECK(p_ctx, dec) ((p_ctx)->cur_fid_idx < (dec))
+
+#if defined(CR_TRACK_MAX_STACK_LEN)
+
+#define _CR_STACK_DATA_ALLOC(p_ctx, inc)                         \
+  do {                                                           \
+    mbuf_append(&((p_ctx)->stack_data), NULL, (inc));            \
+    if ((p_ctx)->stack_data_max_len < (p_ctx)->stack_data.len) { \
+      (p_ctx)->stack_data_max_len = (p_ctx)->stack_data.len;     \
+    }                                                            \
+  } while (0)
+
+#define _CR_STACK_RET_ALLOC(p_ctx, inc)                        \
+  do {                                                         \
+    mbuf_append(&((p_ctx)->stack_ret), NULL, (inc));           \
+    if ((p_ctx)->stack_ret_max_len < (p_ctx)->stack_ret.len) { \
+      (p_ctx)->stack_ret_max_len = (p_ctx)->stack_ret.len;     \
+    }                                                          \
+  } while (0)
+
+#else
+
+#define _CR_STACK_DATA_ALLOC(p_ctx, inc)              \
+  do {                                                \
+    mbuf_append(&((p_ctx)->stack_data), NULL, (inc)); \
+  } while (0)
+
+#define _CR_STACK_RET_ALLOC(p_ctx, inc)              \
+  do {                                               \
+    mbuf_append(&((p_ctx)->stack_ret), NULL, (inc)); \
+  } while (0)
+
+#endif
+
+#define _CR_STACK_DATA_FREE(p_ctx, dec) \
+  do {                                  \
+    (p_ctx)->stack_data.len -= (dec);   \
+  } while (0)
+
+#define _CR_STACK_RET_FREE(p_ctx, dec) \
+  do {                                 \
+    (p_ctx)->stack_ret.len -= (dec);   \
+  } while (0)
+
+#define _CR_STACK_FID_ALLOC(p_ctx, inc) \
+  do {                                  \
+    (p_ctx)->cur_fid_idx += (inc);      \
+  } while (0)
+
+#define _CR_STACK_FID_FREE(p_ctx, dec) \
+  do {                                 \
+    (p_ctx)->cur_fid_idx -= (dec);     \
+  } while (0)
+
+/* }}} */
+
+/*
+ * Should be used in eval loop right after `_cr_iter_begin:` label
+ */
+enum cr_status cr_on_iter_begin(struct cr_ctx *p_ctx);
+
+/*
+ * Initialize context `p_ctx`.
+ *
+ * `p_arg_retval`: pointer to the user-defined `union user_arg_ret`
+ *
+ * `p_func_descrs`: array of all user function descriptors
+ */
+void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
+                     const struct cr_func_desc *p_func_descrs);
+
+/*
+ * free resources occupied by context (at least, "stack" arrays)
+ */
+void cr_context_free(struct cr_ctx *p_ctx);
+
+#endif /* _COROUTINE_H */
+#ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/builtin.h"
 /**/
 #endif
@@ -2149,6 +2708,13 @@ struct v7 {
 #ifndef V7_DISABLE_STR_ALLOC_SEQ
   uint16_t gc_next_asn; /* Next sequence number to use. */
   uint16_t gc_min_asn;  /* Minimal sequence number currently in use. */
+#endif
+
+#if defined(V7_TRACK_MAX_PARSER_STACK_SIZE)
+  size_t parser_stack_data_max_size;
+  size_t parser_stack_ret_max_size;
+  size_t parser_stack_data_max_len;
+  size_t parser_stack_ret_max_len;
 #endif
 };
 
@@ -5565,6 +6131,156 @@ char *cs_mmap_file(const char *path, size_t *size) {
   return r;
 }
 #endif
+#ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/coroutine.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * Module that provides generic macros and functions to implement "coroutines",
+ * i.e. C code that uses `mbuf` as a stack for function calls.
+ *
+ * More info: see the design doc: https://goo.gl/kfcG61
+ */
+
+#include <string.h>
+#include <stdlib.h>
+
+/* Amalgamated: #include "coroutine.h" */
+
+/*
+ * Unwinds stack by 1 function. Used when we're returning from function and
+ * when an exception is thrown.
+ */
+static void _level_up(struct cr_ctx *p_ctx) {
+  /* get size of current function's stack data */
+  size_t locals_size = _CR_CURR_FUNC_LOCALS_SIZE(p_ctx);
+
+  /* check stacks underflow */
+  if (_CR_STACK_FID_UND_CHECK(p_ctx, 1 /*fid*/)) {
+    p_ctx->status = CR_RES__ERR_STACK_CALL_UNDERFLOW;
+    return;
+  } else if (_CR_STACK_DATA_UND_CHECK(p_ctx, locals_size)) {
+    p_ctx->status = CR_RES__ERR_STACK_DATA_UNDERFLOW;
+    return;
+  }
+
+  /* decrement stacks */
+  _CR_STACK_DATA_FREE(p_ctx, locals_size);
+  _CR_STACK_FID_FREE(p_ctx, 1 /*fid*/);
+  p_ctx->stack_ret.len = p_ctx->cur_fid_idx;
+
+  /* if we have exception marker here, adjust cur_fid_idx */
+  while (CR_CURR_FUNC_C(p_ctx) == CR_FID__TRY_MARKER) {
+    /* check for stack underflow */
+    if (_CR_STACK_FID_UND_CHECK(p_ctx, _CR_TRY_SIZE)) {
+      p_ctx->status = CR_RES__ERR_STACK_CALL_UNDERFLOW;
+      return;
+    }
+    _CR_STACK_FID_FREE(p_ctx, _CR_TRY_SIZE);
+  }
+}
+
+enum cr_status cr_on_iter_begin(struct cr_ctx *p_ctx) {
+  if (p_ctx->status != CR_RES__OK) {
+    goto out;
+  } else if (p_ctx->called_fid != CR_FID__NONE) {
+    /* need to call new function */
+
+    size_t locals_size = p_ctx->p_func_descrs[p_ctx->called_fid].locals_size;
+    /*
+     * increment stack pointers
+     */
+    /* make sure this function has correct `struct cr_func_desc` */
+    assert(locals_size == p_ctx->call_locals_size);
+
+    _CR_STACK_DATA_ALLOC(p_ctx, locals_size);
+    _CR_STACK_RET_ALLOC(p_ctx, 1 /*fid*/);
+    p_ctx->cur_fid_idx = p_ctx->stack_ret.len;
+
+    /* copy arguments to our "stack" (and advance locals stack pointer) */
+    {
+      memcpy(p_ctx->stack_data.buf + p_ctx->stack_data.len - locals_size,
+             p_ctx->p_arg_retval, p_ctx->call_arg_size);
+    }
+
+    /* set function id */
+    CR_CURR_FUNC_C(p_ctx) = p_ctx->called_fid;
+
+    /* clear called_fid */
+    p_ctx->called_fid = CR_FID__NONE;
+
+  } else if (p_ctx->need_return) {
+    /* need to return from the currently running function */
+
+    _level_up(p_ctx);
+    if (p_ctx->status != CR_RES__OK) {
+      goto out;
+    }
+
+    p_ctx->need_return = 0;
+
+  } else if (p_ctx->need_yield) {
+    /* need to yield */
+
+    p_ctx->need_yield = 0;
+    p_ctx->status = CR_RES__OK_YIELDED;
+    goto out;
+
+  } else if (p_ctx->thrown_exc != CR_EXC_ID__NONE) {
+    /* exception was thrown */
+
+    /* unwind stack until we reach the bottom, or find some try-catch blocks */
+    do {
+      _level_up(p_ctx);
+      if (p_ctx->status != CR_RES__OK) {
+        goto out;
+      }
+
+      if (_CR_TRY_MARKER(p_ctx) == CR_FID__TRY_MARKER) {
+        /* we have some try-catch here, go to the first catch */
+        CR_CURR_FUNC_C(p_ctx) = _CR_TRY_CATCH_FID(p_ctx);
+        break;
+      } else if (CR_CURR_FUNC_C(p_ctx) == CR_FID__NONE) {
+        /* we've reached the bottom of the stack */
+        p_ctx->status = CR_RES__ERR_UNCAUGHT_EXCEPTION;
+        break;
+      }
+
+    } while (1);
+  }
+
+  /* remember pointer to current function's locals */
+  _CR_CUR_FUNC_LOCALS_UPD(p_ctx);
+
+out:
+  return p_ctx->status;
+}
+
+void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
+                     const struct cr_func_desc *p_func_descrs) {
+  memset(p_ctx, 0x00, sizeof(*p_ctx));
+
+  p_ctx->p_func_descrs = p_func_descrs;
+  p_ctx->p_arg_retval = p_arg_retval;
+
+  mbuf_init(&p_ctx->stack_data, 0);
+  mbuf_init(&p_ctx->stack_ret, 0);
+
+  mbuf_append(&p_ctx->stack_ret, NULL, 1 /*starting byte for CR_FID__NONE*/);
+  p_ctx->cur_fid_idx = p_ctx->stack_ret.len;
+
+  _CR_CALL_PREPARE(p_ctx, CR_FID__NONE, 0, 0, CR_FID__NONE);
+}
+
+void cr_context_free(struct cr_ctx *p_ctx) {
+  mbuf_free(&p_ctx->stack_data);
+  mbuf_free(&p_ctx->stack_ret);
+}
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../builtin/file.c"
 /**/
@@ -10683,79 +11399,1187 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
  */
 
 /* Amalgamated: #include "internal.h" */
+/* Amalgamated: #include "coroutine.h" */
 
-#define ACCEPT(t) (((v7)->cur_tok == (t)) ? next_tok((v7)), 1 : 0)
+#define ACCEPT(t) (((L->arg.v7)->cur_tok == (t)) ? next_tok((L->arg.v7)), 1 : 0)
 
-#define PARSE(p) TRY(parse_##p(v7, a))
-#define PARSE_ARG(p, arg) TRY(parse_##p(v7, a, arg))
-#define PARSE_ARG_2(p, a1, a2) TRY(parse_##p(v7, a, a1, a2))
-
-#define TRY(call)           \
-  do {                      \
-    enum v7_err _e = call;  \
-    CHECK(_e == V7_OK, _e); \
+#define EXPECT(t)                            \
+  do {                                       \
+    if ((L->arg.v7)->cur_tok != (t)) {       \
+      CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR); \
+    }                                        \
+    next_tok(L->arg.v7);                     \
   } while (0)
 
-#define THROW(err_code)                \
-  do {                                 \
-    return parser_throw(v7, err_code); \
+#define PARSE_WITH_OPT_ARG(tag, arg_tag, arg_parser, label) \
+  do {                                                      \
+    if (end_of_statement(L->arg.v7) == V7_OK) {             \
+      ast_add_node(L->arg.a, (tag));                        \
+    } else {                                                \
+      ast_add_node(L->arg.a, (arg_tag));                    \
+      arg_parser(label);                                    \
+    }                                                       \
   } while (0)
 
-#define CHECK(cond, code)     \
-  do {                        \
-    if (!(cond)) THROW(code); \
-  } while (0)
+#define N (CR_ARG_RET_PT()->arg)
 
-#define EXPECT(t)                                     \
-  do {                                                \
-    if ((v7)->cur_tok != (t)) return V7_SYNTAX_ERROR; \
-    next_tok(v7);                                     \
-  } while (0)
+/*
+ * User functions
+ * (as well as other in-function entry points)
+ */
+enum my_fid {
+  fid_none = CR_FID__NONE,
 
-/* check for stack overflow on embedded devices */
-#ifdef V7_STACK_SIZE
-static enum v7_err parser_throw(struct v7 *v7, enum v7_err err);
+  /* parse_script function */
+  fid_parse_script = CR_FID__USER,
+  fid_p_script_1,
+  fid_p_script_2,
+  fid_p_script_3,
+  fid_p_script_4,
 
-NOINLINE static int check_stack(struct v7 *v7) {
-  if ((void *) &v7 <= v7->sp_limit) {
-    parser_throw(v7, V7_SYNTAX_ERROR);
-    return 1;
-  }
-  return 0;
-}
+  /* parse_use_strict function */
+  fid_parse_use_strict,
 
-#define CHECK_STACK() \
-  if (check_stack(v7)) return V7_STACK_OVERFLOW;
+  /* parse_body function */
+  fid_parse_body,
+  fid_p_body_1,
+  fid_p_body_2,
 
-#else
-#define CHECK_STACK() (void) 0
+  /* parse_statement function */
+  fid_parse_statement,
+  fid_p_stat_1,
+  fid_p_stat_2,
+  fid_p_stat_3,
+  fid_p_stat_4,
+  fid_p_stat_5,
+  fid_p_stat_6,
+  fid_p_stat_7,
+  fid_p_stat_8,
+  fid_p_stat_9,
+  fid_p_stat_10,
+  fid_p_stat_11,
+  fid_p_stat_12,
+  fid_p_stat_13,
+  fid_p_stat_14,
+
+  /* parse_expression function */
+  fid_parse_expression,
+  fid_p_expr_1,
+
+  /* parse_assign function */
+  fid_parse_assign,
+  fid_p_assign_1,
+
+  /* parse_binary function */
+  fid_parse_binary,
+  fid_p_binary_1,
+  fid_p_binary_2,
+  fid_p_binary_3,
+  fid_p_binary_4,
+  fid_p_binary_5,
+  fid_p_binary_6,
+
+  /* parse_prefix function */
+  fid_parse_prefix,
+  fid_p_prefix_1,
+
+  /* parse_postfix function */
+  fid_parse_postfix,
+  fid_p_postfix_1,
+
+  /* parse_callexpr function */
+  fid_parse_callexpr,
+  fid_p_callexpr_1,
+  fid_p_callexpr_2,
+  fid_p_callexpr_3,
+
+  /* parse_newexpr function */
+  fid_parse_newexpr,
+  fid_p_newexpr_1,
+  fid_p_newexpr_2,
+  fid_p_newexpr_3,
+  fid_p_newexpr_4,
+
+  /* parse_terminal function */
+  fid_parse_terminal,
+  fid_p_terminal_1,
+  fid_p_terminal_2,
+  fid_p_terminal_3,
+  fid_p_terminal_4,
+
+  /* parse_block function */
+  fid_parse_block,
+  fid_p_block_1,
+
+  /* parse_if function */
+  fid_parse_if,
+  fid_p_if_1,
+  fid_p_if_2,
+  fid_p_if_3,
+
+  /* parse_while function */
+  fid_parse_while,
+  fid_p_while_1,
+  fid_p_while_2,
+
+  /* parse_ident function */
+  fid_parse_ident,
+
+  /* parse_ident_allow_reserved_words function */
+  fid_parse_ident_allow_reserved_words,
+  fid_p_ident_arw_1,
+
+  /* parse_funcdecl function */
+  fid_parse_funcdecl,
+  fid_p_funcdecl_1,
+  fid_p_funcdecl_2,
+  fid_p_funcdecl_3,
+  fid_p_funcdecl_4,
+  fid_p_funcdecl_5,
+  fid_p_funcdecl_6,
+  fid_p_funcdecl_7,
+  fid_p_funcdecl_8,
+  fid_p_funcdecl_9,
+
+  /* parse_arglist function */
+  fid_parse_arglist,
+  fid_p_arglist_1,
+
+  /* parse_member function */
+  fid_parse_member,
+  fid_p_member_1,
+
+  /* parse_memberexpr function */
+  fid_parse_memberexpr,
+  fid_p_memberexpr_1,
+  fid_p_memberexpr_2,
+
+  /* parse_var function */
+  fid_parse_var,
+  fid_p_var_1,
+
+  /* parse_prop function */
+  fid_parse_prop,
+#ifdef V7_ENABLE_JS_GETTERS
+  fid_p_prop_1_getter,
 #endif
+  fid_p_prop_2,
+#ifdef V7_ENABLE_JS_SETTERS
+  fid_p_prop_3_setter,
+#endif
+  fid_p_prop_4,
 
-static enum v7_err parse_expression(struct v7 *, struct ast *);
-static enum v7_err parse_statement(struct v7 *, struct ast *);
-static enum v7_err parse_terminal(struct v7 *, struct ast *);
-static enum v7_err parse_assign(struct v7 *, struct ast *);
-static enum v7_err parse_memberexpr(struct v7 *, struct ast *);
-static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int, int);
-static enum v7_err parse_block(struct v7 *, struct ast *);
-static enum v7_err parse_body(struct v7 *, struct ast *, enum v7_tok);
-static enum v7_err parse_use_strict(struct v7 *, struct ast *);
+  /* parse_dowhile function */
+  fid_parse_dowhile,
+  fid_p_dowhile_1,
+  fid_p_dowhile_2,
 
-static enum v7_err parser_throw(struct v7 *v7, enum v7_err err) {
-  c_snprintf(v7->error_msg, sizeof(v7->error_msg), "Parse error: %s line %d",
-             v7->pstate.file_name, v7->pstate.line_no);
-  return err;
-}
+  /* parse_for function */
+  fid_parse_for,
+  fid_p_for_1,
+  fid_p_for_2,
+  fid_p_for_3,
+  fid_p_for_4,
+  fid_p_for_5,
+  fid_p_for_6,
 
-static enum v7_tok lookahead(const struct v7 *v7) {
-  const char *s = v7->pstate.pc;
-  double d;
-  return get_tok(&s, &d, v7->cur_tok);
-}
+  /* parse_try function */
+  fid_parse_try,
+  fid_p_try_1,
+  fid_p_try_2,
+  fid_p_try_3,
+  fid_p_try_4,
+
+  /* parse_switch function */
+  fid_parse_switch,
+  fid_p_switch_1,
+  fid_p_switch_2,
+  fid_p_switch_3,
+  fid_p_switch_4,
+
+  /* parse_with function */
+  fid_parse_with,
+  fid_p_with_1,
+  fid_p_with_2,
+
+  MY_FID_CNT
+};
+
+/*
+ * User exception IDs. The first one should have value `CR_EXC_ID__USER`
+ */
+enum parser_exc_id {
+  PARSER_EXC_ID__NONE = CR_EXC_ID__NONE,
+  PARSER_EXC_ID__SYNTAX_ERROR = CR_EXC_ID__USER,
+  PARSER_EXC_ID__EXEC_EXCEPTION,
+  PARSER_EXC_ID__STACK_OVERFLOW,
+  PARSER_EXC_ID__AST_TOO_LARGE,
+  PARSER_EXC_ID__INVALID_ARG,
+};
+
+/* structures with locals and args {{{ */
+
+/* parse_script {{{ */
+
+/* parse_script's arguments */
+typedef struct fid_parse_script_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_script_arg_t;
+
+/* parse_script's data on stack */
+typedef struct fid_parse_script_locals {
+  struct fid_parse_script_arg arg;
+
+  ast_off_t start;
+  ast_off_t outer_last_var_node;
+  int saved_in_strict;
+} fid_parse_script_locals_t;
+/* }}} */
+
+/* parse_use_strict {{{ */
+/* parse_use_strict's arguments */
+typedef struct fid_parse_use_strict_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_use_strict_arg_t;
+
+/* parse_use_strict's data on stack */
+typedef struct fid_parse_use_strict_locals {
+  struct fid_parse_use_strict_arg arg;
+} fid_parse_use_strict_locals_t;
+
+#define CALL_PARSE_USE_STRICT(_label)      \
+  do {                                     \
+    N.fid_parse_use_strict.v7 = L->arg.v7; \
+    N.fid_parse_use_strict.a = L->arg.a;   \
+    CR_CALL(fid_parse_use_strict, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_body {{{ */
+/* parse_body's arguments */
+typedef struct fid_parse_body_arg {
+  struct v7 *v7;
+  struct ast *a;
+  enum v7_tok end;
+} fid_parse_body_arg_t;
+
+/* parse_body's data on stack */
+typedef struct fid_parse_body_locals {
+  struct fid_parse_body_arg arg;
+
+  ast_off_t start;
+} fid_parse_body_locals_t;
+
+#define CALL_PARSE_BODY(_end, _label) \
+  do {                                \
+    N.fid_parse_body.v7 = L->arg.v7;  \
+    N.fid_parse_body.a = L->arg.a;    \
+    N.fid_parse_body.end = (_end);    \
+    CR_CALL(fid_parse_body, _label);  \
+  } while (0)
+/* }}} */
+
+/* parse_statement {{{ */
+/* parse_statement's arguments */
+typedef struct fid_parse_statement_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_statement_arg_t;
+
+/* parse_statement's data on stack */
+typedef struct fid_parse_statement_locals {
+  struct fid_parse_statement_arg arg;
+} fid_parse_statement_locals_t;
+
+#define CALL_PARSE_STATEMENT(_label)      \
+  do {                                    \
+    N.fid_parse_statement.v7 = L->arg.v7; \
+    N.fid_parse_statement.a = L->arg.a;   \
+    CR_CALL(fid_parse_statement, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_expression {{{ */
+/* parse_expression's arguments */
+typedef struct fid_parse_expression_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_expression_arg_t;
+
+/* parse_expression's data on stack */
+typedef struct fid_parse_expression_locals {
+  struct fid_parse_expression_arg arg;
+
+  ast_off_t pos;
+  int group;
+} fid_parse_expression_locals_t;
+
+#define CALL_PARSE_EXPRESSION(_label)      \
+  do {                                     \
+    N.fid_parse_expression.v7 = L->arg.v7; \
+    N.fid_parse_expression.a = L->arg.a;   \
+    CR_CALL(fid_parse_expression, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_assign {{{ */
+/* parse_assign's arguments */
+typedef struct fid_parse_assign_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_assign_arg_t;
+
+/* parse_assign's data on stack */
+typedef struct fid_parse_assign_locals {
+  struct fid_parse_assign_arg arg;
+} fid_parse_assign_locals_t;
+
+#define CALL_PARSE_ASSIGN(_label)      \
+  do {                                 \
+    N.fid_parse_assign.v7 = L->arg.v7; \
+    N.fid_parse_assign.a = L->arg.a;   \
+    CR_CALL(fid_parse_assign, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_binary {{{ */
+/* parse_binary's arguments */
+typedef struct fid_parse_binary_arg {
+  struct v7 *v7;
+  struct ast *a;
+  int level;
+  ast_off_t pos;
+} fid_parse_binary_arg_t;
+
+/* parse_binary's data on stack */
+typedef struct fid_parse_binary_locals {
+  struct fid_parse_binary_arg arg;
+
+  int i;
+  enum v7_tok tok;
+  enum ast_tag ast;
+} fid_parse_binary_locals_t;
+
+#define CALL_PARSE_BINARY(_level, _pos, _label) \
+  do {                                          \
+    N.fid_parse_binary.v7 = L->arg.v7;          \
+    N.fid_parse_binary.a = L->arg.a;            \
+    N.fid_parse_binary.level = (_level);        \
+    N.fid_parse_binary.pos = (_pos);            \
+    CR_CALL(fid_parse_binary, _label);          \
+  } while (0)
+/* }}} */
+
+/* parse_prefix {{{ */
+/* parse_prefix's arguments */
+typedef struct fid_parse_prefix_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_prefix_arg_t;
+
+/* parse_prefix's data on stack */
+typedef struct fid_parse_prefix_locals {
+  struct fid_parse_prefix_arg arg;
+} fid_parse_prefix_locals_t;
+
+#define CALL_PARSE_PREFIX(_label)      \
+  do {                                 \
+    N.fid_parse_prefix.v7 = L->arg.v7; \
+    N.fid_parse_prefix.a = L->arg.a;   \
+    CR_CALL(fid_parse_prefix, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_postfix {{{ */
+/* parse_postfix's arguments */
+typedef struct fid_parse_postfix_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_postfix_arg_t;
+
+/* parse_postfix's data on stack */
+typedef struct fid_parse_postfix_locals {
+  struct fid_parse_postfix_arg arg;
+
+  ast_off_t pos;
+} fid_parse_postfix_locals_t;
+
+#define CALL_PARSE_POSTFIX(_label)      \
+  do {                                  \
+    N.fid_parse_postfix.v7 = L->arg.v7; \
+    N.fid_parse_postfix.a = L->arg.a;   \
+    CR_CALL(fid_parse_postfix, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_callexpr {{{ */
+/* parse_callexpr's arguments */
+typedef struct fid_parse_callexpr_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_callexpr_arg_t;
+
+/* parse_callexpr's data on stack */
+typedef struct fid_parse_callexpr_locals {
+  struct fid_parse_callexpr_arg arg;
+
+  ast_off_t pos;
+} fid_parse_callexpr_locals_t;
+
+#define CALL_PARSE_CALLEXPR(_label)      \
+  do {                                   \
+    N.fid_parse_callexpr.v7 = L->arg.v7; \
+    N.fid_parse_callexpr.a = L->arg.a;   \
+    CR_CALL(fid_parse_callexpr, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_newexpr {{{ */
+/* parse_newexpr's arguments */
+typedef struct fid_parse_newexpr_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_newexpr_arg_t;
+
+/* parse_newexpr's data on stack */
+typedef struct fid_parse_newexpr_locals {
+  struct fid_parse_newexpr_arg arg;
+
+  ast_off_t start;
+} fid_parse_newexpr_locals_t;
+
+#define CALL_PARSE_NEWEXPR(_label)      \
+  do {                                  \
+    N.fid_parse_newexpr.v7 = L->arg.v7; \
+    N.fid_parse_newexpr.a = L->arg.a;   \
+    CR_CALL(fid_parse_newexpr, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_terminal {{{ */
+/* parse_terminal's arguments */
+typedef struct fid_parse_terminal_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_terminal_arg_t;
+
+/* parse_terminal's data on stack */
+typedef struct fid_parse_terminal_locals {
+  struct fid_parse_terminal_arg arg;
+
+  ast_off_t start;
+} fid_parse_terminal_locals_t;
+
+#define CALL_PARSE_TERMINAL(_label)      \
+  do {                                   \
+    N.fid_parse_terminal.v7 = L->arg.v7; \
+    N.fid_parse_terminal.a = L->arg.a;   \
+    CR_CALL(fid_parse_terminal, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_block {{{ */
+/* parse_block's arguments */
+typedef struct fid_parse_block_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_block_arg_t;
+
+/* parse_block's data on stack */
+typedef struct fid_parse_block_locals {
+  struct fid_parse_block_arg arg;
+} fid_parse_block_locals_t;
+
+#define CALL_PARSE_BLOCK(_label)      \
+  do {                                \
+    N.fid_parse_block.v7 = L->arg.v7; \
+    N.fid_parse_block.a = L->arg.a;   \
+    CR_CALL(fid_parse_block, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_if {{{ */
+/* parse_if's arguments */
+typedef struct fid_parse_if_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_if_arg_t;
+
+/* parse_if's data on stack */
+typedef struct fid_parse_if_locals {
+  struct fid_parse_if_arg arg;
+
+  ast_off_t start;
+} fid_parse_if_locals_t;
+
+#define CALL_PARSE_IF(_label)      \
+  do {                             \
+    N.fid_parse_if.v7 = L->arg.v7; \
+    N.fid_parse_if.a = L->arg.a;   \
+    CR_CALL(fid_parse_if, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_while {{{ */
+/* parse_while's arguments */
+typedef struct fid_parse_while_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_while_arg_t;
+
+/* parse_while's data on stack */
+typedef struct fid_parse_while_locals {
+  struct fid_parse_while_arg arg;
+
+  ast_off_t start;
+  int saved_in_loop;
+} fid_parse_while_locals_t;
+
+#define CALL_PARSE_WHILE(_label)      \
+  do {                                \
+    N.fid_parse_while.v7 = L->arg.v7; \
+    N.fid_parse_while.a = L->arg.a;   \
+    CR_CALL(fid_parse_while, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_ident {{{ */
+/* parse_ident's arguments */
+typedef struct fid_parse_ident_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_ident_arg_t;
+
+/* parse_ident's data on stack */
+typedef struct fid_parse_ident_locals {
+  struct fid_parse_ident_arg arg;
+} fid_parse_ident_locals_t;
+
+#define CALL_PARSE_IDENT(_label)      \
+  do {                                \
+    N.fid_parse_ident.v7 = L->arg.v7; \
+    N.fid_parse_ident.a = L->arg.a;   \
+    CR_CALL(fid_parse_ident, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_ident_allow_reserved_words {{{ */
+/* parse_ident_allow_reserved_words's arguments */
+typedef struct fid_parse_ident_allow_reserved_words_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_ident_allow_reserved_words_arg_t;
+
+/* parse_ident_allow_reserved_words's data on stack */
+typedef struct fid_parse_ident_allow_reserved_words_locals {
+  struct fid_parse_ident_allow_reserved_words_arg arg;
+} fid_parse_ident_allow_reserved_words_locals_t;
+
+#define CALL_PARSE_IDENT_ALLOW_RESERVED_WORDS(_label)      \
+  do {                                                     \
+    N.fid_parse_ident_allow_reserved_words.v7 = L->arg.v7; \
+    N.fid_parse_ident_allow_reserved_words.a = L->arg.a;   \
+    CR_CALL(fid_parse_ident_allow_reserved_words, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_funcdecl {{{ */
+/* parse_funcdecl's arguments */
+typedef struct fid_parse_funcdecl_arg {
+  struct v7 *v7;
+  struct ast *a;
+  int require_named;
+  int reserved_name;
+} fid_parse_funcdecl_arg_t;
+
+/* parse_funcdecl's data on stack */
+typedef struct fid_parse_funcdecl_locals {
+  struct fid_parse_funcdecl_arg arg;
+
+  ast_off_t start;
+  ast_off_t outer_last_var_node;
+  int saved_in_function;
+  int saved_in_strict;
+} fid_parse_funcdecl_locals_t;
+
+#define CALL_PARSE_FUNCDECL(_require_named, _reserved_name, _label) \
+  do {                                                              \
+    N.fid_parse_funcdecl.v7 = L->arg.v7;                            \
+    N.fid_parse_funcdecl.a = L->arg.a;                              \
+    N.fid_parse_funcdecl.require_named = (_require_named);          \
+    N.fid_parse_funcdecl.reserved_name = (_reserved_name);          \
+    CR_CALL(fid_parse_funcdecl, _label);                            \
+  } while (0)
+/* }}} */
+
+/* parse_arglist {{{ */
+/* parse_arglist's arguments */
+typedef struct fid_parse_arglist_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_arglist_arg_t;
+
+/* parse_arglist's data on stack */
+typedef struct fid_parse_arglist_locals {
+  struct fid_parse_arglist_arg arg;
+} fid_parse_arglist_locals_t;
+
+#define CALL_PARSE_ARGLIST(_label)      \
+  do {                                  \
+    N.fid_parse_arglist.v7 = L->arg.v7; \
+    N.fid_parse_arglist.a = L->arg.a;   \
+    CR_CALL(fid_parse_arglist, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_member {{{ */
+/* parse_member's arguments */
+typedef struct fid_parse_member_arg {
+  struct v7 *v7;
+  struct ast *a;
+  ast_off_t pos;
+} fid_parse_member_arg_t;
+
+/* parse_member's data on stack */
+typedef struct fid_parse_member_locals {
+  struct fid_parse_member_arg arg;
+} fid_parse_member_locals_t;
+
+#define CALL_PARSE_MEMBER(_pos, _label) \
+  do {                                  \
+    N.fid_parse_member.v7 = L->arg.v7;  \
+    N.fid_parse_member.a = L->arg.a;    \
+    N.fid_parse_member.pos = (_pos);    \
+    CR_CALL(fid_parse_member, _label);  \
+  } while (0)
+/* }}} */
+
+/* parse_memberexpr {{{ */
+/* parse_memberexpr's arguments */
+typedef struct fid_parse_memberexpr_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_memberexpr_arg_t;
+
+/* parse_memberexpr's data on stack */
+typedef struct fid_parse_memberexpr_locals {
+  struct fid_parse_memberexpr_arg arg;
+
+  ast_off_t pos;
+} fid_parse_memberexpr_locals_t;
+
+#define CALL_PARSE_MEMBEREXPR(_label)      \
+  do {                                     \
+    N.fid_parse_memberexpr.v7 = L->arg.v7; \
+    N.fid_parse_memberexpr.a = L->arg.a;   \
+    CR_CALL(fid_parse_memberexpr, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_var {{{ */
+/* parse_var's arguments */
+typedef struct fid_parse_var_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_var_arg_t;
+
+/* parse_var's data on stack */
+typedef struct fid_parse_var_locals {
+  struct fid_parse_var_arg arg;
+
+  ast_off_t start;
+} fid_parse_var_locals_t;
+
+#define CALL_PARSE_VAR(_label)      \
+  do {                              \
+    N.fid_parse_var.v7 = L->arg.v7; \
+    N.fid_parse_var.a = L->arg.a;   \
+    CR_CALL(fid_parse_var, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_prop {{{ */
+/* parse_prop's arguments */
+typedef struct fid_parse_prop_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_prop_arg_t;
+
+/* parse_prop's data on stack */
+typedef struct fid_parse_prop_locals {
+  struct fid_parse_prop_arg arg;
+} fid_parse_prop_locals_t;
+
+#define CALL_PARSE_PROP(_label)      \
+  do {                               \
+    N.fid_parse_prop.v7 = L->arg.v7; \
+    N.fid_parse_prop.a = L->arg.a;   \
+    CR_CALL(fid_parse_prop, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_dowhile {{{ */
+/* parse_dowhile's arguments */
+typedef struct fid_parse_dowhile_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_dowhile_arg_t;
+
+/* parse_dowhile's data on stack */
+typedef struct fid_parse_dowhile_locals {
+  struct fid_parse_dowhile_arg arg;
+
+  ast_off_t start;
+  int saved_in_loop;
+} fid_parse_dowhile_locals_t;
+
+#define CALL_PARSE_DOWHILE(_label)      \
+  do {                                  \
+    N.fid_parse_dowhile.v7 = L->arg.v7; \
+    N.fid_parse_dowhile.a = L->arg.a;   \
+    CR_CALL(fid_parse_dowhile, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_for {{{ */
+/* parse_for's arguments */
+typedef struct fid_parse_for_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_for_arg_t;
+
+/* parse_for's data on stack */
+typedef struct fid_parse_for_locals {
+  struct fid_parse_for_arg arg;
+
+  ast_off_t start;
+  int saved_in_loop;
+} fid_parse_for_locals_t;
+
+#define CALL_PARSE_FOR(_label)      \
+  do {                              \
+    N.fid_parse_for.v7 = L->arg.v7; \
+    N.fid_parse_for.a = L->arg.a;   \
+    CR_CALL(fid_parse_for, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_try {{{ */
+/* parse_try's arguments */
+typedef struct fid_parse_try_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_try_arg_t;
+
+/* parse_try's data on stack */
+typedef struct fid_parse_try_locals {
+  struct fid_parse_try_arg arg;
+
+  ast_off_t start;
+} fid_parse_try_locals_t;
+
+#define CALL_PARSE_TRY(_label)      \
+  do {                              \
+    N.fid_parse_try.v7 = L->arg.v7; \
+    N.fid_parse_try.a = L->arg.a;   \
+    CR_CALL(fid_parse_try, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_switch {{{ */
+/* parse_switch's arguments */
+typedef struct fid_parse_switch_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_switch_arg_t;
+
+/* parse_switch's data on stack */
+typedef struct fid_parse_switch_locals {
+  struct fid_parse_switch_arg arg;
+
+  ast_off_t start;
+  int saved_in_switch;
+  ast_off_t case_start;
+} fid_parse_switch_locals_t;
+
+#define CALL_PARSE_SWITCH(_label)      \
+  do {                                 \
+    N.fid_parse_switch.v7 = L->arg.v7; \
+    N.fid_parse_switch.a = L->arg.a;   \
+    CR_CALL(fid_parse_switch, _label); \
+  } while (0)
+/* }}} */
+
+/* parse_with {{{ */
+/* parse_with's arguments */
+typedef struct fid_parse_with_arg {
+  struct v7 *v7;
+  struct ast *a;
+} fid_parse_with_arg_t;
+
+/* parse_with's data on stack */
+typedef struct fid_parse_with_locals {
+  struct fid_parse_with_arg arg;
+
+  ast_off_t start;
+} fid_parse_with_locals_t;
+
+#define CALL_PARSE_WITH(_label)      \
+  do {                               \
+    N.fid_parse_with.v7 = L->arg.v7; \
+    N.fid_parse_with.a = L->arg.a;   \
+    CR_CALL(fid_parse_with, _label); \
+  } while (0)
+/* }}} */
+
+/* }}} */
+
+/*
+ * Array of "function" descriptors. Each descriptor contains just a size
+ * of "function"'s locals.
+ */
+static const struct cr_func_desc _fid_descrs[MY_FID_CNT] = {
+
+    /* fid_none */
+    {0},
+
+    /* fid_parse_script ----------------------------------------- */
+    /* fid_parse_script */
+    {CR_LOCALS_SIZEOF(fid_parse_script_locals_t)},
+    /* fid_p_script_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_script_locals_t)},
+    /* fid_p_script_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_script_locals_t)},
+    /* fid_p_script_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_script_locals_t)},
+    /* fid_p_script_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_script_locals_t)},
+
+    /* fid_parse_use_strict ----------------------------------------- */
+    /* fid_parse_use_strict */
+    {CR_LOCALS_SIZEOF(fid_parse_use_strict_locals_t)},
+
+    /* fid_parse_body ----------------------------------------- */
+    /* fid_parse_body */
+    {CR_LOCALS_SIZEOF(fid_parse_body_locals_t)},
+    /* fid_p_body_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_body_locals_t)},
+    /* fid_p_body_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_body_locals_t)},
+
+    /* fid_parse_statement ----------------------------------------- */
+    /* fid_parse_statement */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_5 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_6 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_7 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_8 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_9 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_10 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_11 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_12 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_13 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+    /* fid_p_stat_14 */
+    {CR_LOCALS_SIZEOF(fid_parse_statement_locals_t)},
+
+    /* fid_parse_expression ----------------------------------------- */
+    /* fid_parse_expression */
+    {CR_LOCALS_SIZEOF(fid_parse_expression_locals_t)},
+    /* fid_p_expr_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_expression_locals_t)},
+
+    /* fid_parse_assign ----------------------------------------- */
+    /* fid_parse_assign */
+    {CR_LOCALS_SIZEOF(fid_parse_assign_locals_t)},
+    /* fid_p_assign_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_assign_locals_t)},
+
+    /* fid_parse_binary ----------------------------------------- */
+    /* fid_parse_binary */
+    {CR_LOCALS_SIZEOF(fid_parse_binary_locals_t)},
+    /* fid_p_binary_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_binary_locals_t)},
+    /* fid_p_binary_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_binary_locals_t)},
+    /* fid_p_binary_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_binary_locals_t)},
+    /* fid_p_binary_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_binary_locals_t)},
+    /* fid_p_binary_5 */
+    {CR_LOCALS_SIZEOF(fid_parse_binary_locals_t)},
+    /* fid_p_binary_6 */
+    {CR_LOCALS_SIZEOF(fid_parse_binary_locals_t)},
+
+    /* fid_parse_prefix ----------------------------------------- */
+    /* fid_parse_prefix */
+    {CR_LOCALS_SIZEOF(fid_parse_prefix_locals_t)},
+    /* fid_p_prefix_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_prefix_locals_t)},
+
+    /* fid_parse_postfix ----------------------------------------- */
+    /* fid_parse_postfix */
+    {CR_LOCALS_SIZEOF(fid_parse_postfix_locals_t)},
+    /* fid_p_postfix_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_postfix_locals_t)},
+
+    /* fid_parse_callexpr ----------------------------------------- */
+    /* fid_parse_callexpr */
+    {CR_LOCALS_SIZEOF(fid_parse_callexpr_locals_t)},
+    /* fid_p_callexpr_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_callexpr_locals_t)},
+    /* fid_p_callexpr_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_callexpr_locals_t)},
+    /* fid_p_callexpr_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_callexpr_locals_t)},
+
+    /* fid_parse_newexpr ----------------------------------------- */
+    /* fid_parse_newexpr */
+    {CR_LOCALS_SIZEOF(fid_parse_newexpr_locals_t)},
+    /* fid_p_newexpr_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_newexpr_locals_t)},
+    /* fid_p_newexpr_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_newexpr_locals_t)},
+    /* fid_p_newexpr_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_newexpr_locals_t)},
+    /* fid_p_newexpr_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_newexpr_locals_t)},
+
+    /* fid_parse_terminal ----------------------------------------- */
+    /* fid_parse_terminal */
+    {CR_LOCALS_SIZEOF(fid_parse_terminal_locals_t)},
+    /* fid_p_terminal_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_terminal_locals_t)},
+    /* fid_p_terminal_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_terminal_locals_t)},
+    /* fid_p_terminal_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_terminal_locals_t)},
+    /* fid_p_terminal_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_terminal_locals_t)},
+
+    /* fid_parse_block ----------------------------------------- */
+    /* fid_parse_block */
+    {CR_LOCALS_SIZEOF(fid_parse_block_locals_t)},
+    /* fid_p_block_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_block_locals_t)},
+
+    /* fid_parse_if ----------------------------------------- */
+    /* fid_parse_if */
+    {CR_LOCALS_SIZEOF(fid_parse_if_locals_t)},
+    /* fid_p_if_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_if_locals_t)},
+    /* fid_p_if_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_if_locals_t)},
+    /* fid_p_if_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_if_locals_t)},
+
+    /* fid_parse_while ----------------------------------------- */
+    /* fid_parse_while */
+    {CR_LOCALS_SIZEOF(fid_parse_while_locals_t)},
+    /* fid_p_while_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_while_locals_t)},
+    /* fid_p_while_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_while_locals_t)},
+
+    /* fid_parse_ident ----------------------------------------- */
+    /* fid_parse_ident */
+    {CR_LOCALS_SIZEOF(fid_parse_ident_locals_t)},
+
+    /* fid_parse_ident_allow_reserved_words -------------------- */
+    /* fid_parse_ident_allow_reserved_words */
+    {CR_LOCALS_SIZEOF(fid_parse_ident_allow_reserved_words_locals_t)},
+    /* fid_p_ident_allow_reserved_words_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_ident_allow_reserved_words_locals_t)},
+
+    /* fid_parse_funcdecl ----------------------------------------- */
+    /* fid_parse_funcdecl */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_5 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_6 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_7 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_8 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+    /* fid_p_funcdecl_9 */
+    {CR_LOCALS_SIZEOF(fid_parse_funcdecl_locals_t)},
+
+    /* fid_parse_arglist ----------------------------------------- */
+    /* fid_parse_arglist */
+    {CR_LOCALS_SIZEOF(fid_parse_arglist_locals_t)},
+    /* fid_p_arglist_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_arglist_locals_t)},
+
+    /* fid_parse_member ----------------------------------------- */
+    /* fid_parse_member */
+    {CR_LOCALS_SIZEOF(fid_parse_member_locals_t)},
+    /* fid_p_member_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_member_locals_t)},
+
+    /* fid_parse_memberexpr ----------------------------------------- */
+    /* fid_parse_memberexpr */
+    {CR_LOCALS_SIZEOF(fid_parse_memberexpr_locals_t)},
+    /* fid_p_memberexpr_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_memberexpr_locals_t)},
+    /* fid_p_memberexpr_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_memberexpr_locals_t)},
+
+    /* fid_parse_var ----------------------------------------- */
+    /* fid_parse_var */
+    {CR_LOCALS_SIZEOF(fid_parse_var_locals_t)},
+    /* fid_p_var_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_var_locals_t)},
+
+    /* fid_parse_prop ----------------------------------------- */
+    /* fid_parse_prop */
+    {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
+#ifdef V7_ENABLE_JS_GETTERS
+    /* fid_p_prop_1_getter */
+    {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
+#endif
+    /* fid_p_prop_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
+#ifdef V7_ENABLE_JS_SETTERS
+    /* fid_p_prop_3_setter */
+    {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
+#endif
+    /* fid_p_prop_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_prop_locals_t)},
+
+    /* fid_parse_dowhile ----------------------------------------- */
+    /* fid_parse_dowhile */
+    {CR_LOCALS_SIZEOF(fid_parse_dowhile_locals_t)},
+    /* fid_p_dowhile_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_dowhile_locals_t)},
+    /* fid_p_dowhile_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_dowhile_locals_t)},
+
+    /* fid_parse_for ----------------------------------------- */
+    /* fid_parse_for */
+    {CR_LOCALS_SIZEOF(fid_parse_for_locals_t)},
+    /* fid_p_for_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_for_locals_t)},
+    /* fid_p_for_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_for_locals_t)},
+    /* fid_p_for_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_for_locals_t)},
+    /* fid_p_for_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_for_locals_t)},
+    /* fid_p_for_5 */
+    {CR_LOCALS_SIZEOF(fid_parse_for_locals_t)},
+    /* fid_p_for_6 */
+    {CR_LOCALS_SIZEOF(fid_parse_for_locals_t)},
+
+    /* fid_parse_try ----------------------------------------- */
+    /* fid_parse_try */
+    {CR_LOCALS_SIZEOF(fid_parse_try_locals_t)},
+    /* fid_p_try_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_try_locals_t)},
+    /* fid_p_try_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_try_locals_t)},
+    /* fid_p_try_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_try_locals_t)},
+    /* fid_p_try_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_try_locals_t)},
+
+    /* fid_parse_switch ----------------------------------------- */
+    /* fid_parse_switch */
+    {CR_LOCALS_SIZEOF(fid_parse_switch_locals_t)},
+    /* fid_p_switch_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_switch_locals_t)},
+    /* fid_p_switch_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_switch_locals_t)},
+    /* fid_p_switch_3 */
+    {CR_LOCALS_SIZEOF(fid_parse_switch_locals_t)},
+    /* fid_p_switch_4 */
+    {CR_LOCALS_SIZEOF(fid_parse_switch_locals_t)},
+
+    /* fid_parse_with ----------------------------------------- */
+    /* fid_parse_with */
+    {CR_LOCALS_SIZEOF(fid_parse_with_locals_t)},
+    /* fid_p_with_1 */
+    {CR_LOCALS_SIZEOF(fid_parse_with_locals_t)},
+    /* fid_p_with_2 */
+    {CR_LOCALS_SIZEOF(fid_parse_with_locals_t)},
+
+};
+
+/*
+ * Union of arguments and return values for all existing "functions".
+ *
+ * Used as an accumulator when we call function, return from function,
+ * yield, or resume.
+ */
+union user_arg_ret {
+  /* arguments to the next function */
+  union {
+    fid_parse_script_arg_t fid_parse_script;
+    fid_parse_use_strict_arg_t fid_parse_use_strict;
+    fid_parse_body_arg_t fid_parse_body;
+    fid_parse_statement_arg_t fid_parse_statement;
+    fid_parse_expression_arg_t fid_parse_expression;
+    fid_parse_assign_arg_t fid_parse_assign;
+    fid_parse_binary_arg_t fid_parse_binary;
+    fid_parse_prefix_arg_t fid_parse_prefix;
+    fid_parse_postfix_arg_t fid_parse_postfix;
+    fid_parse_callexpr_arg_t fid_parse_callexpr;
+    fid_parse_newexpr_arg_t fid_parse_newexpr;
+    fid_parse_terminal_arg_t fid_parse_terminal;
+    fid_parse_block_arg_t fid_parse_block;
+    fid_parse_if_arg_t fid_parse_if;
+    fid_parse_while_arg_t fid_parse_while;
+    fid_parse_ident_arg_t fid_parse_ident;
+    fid_parse_ident_allow_reserved_words_arg_t
+        fid_parse_ident_allow_reserved_words;
+    fid_parse_funcdecl_arg_t fid_parse_funcdecl;
+    fid_parse_arglist_arg_t fid_parse_arglist;
+    fid_parse_member_arg_t fid_parse_member;
+    fid_parse_memberexpr_arg_t fid_parse_memberexpr;
+    fid_parse_var_arg_t fid_parse_var;
+    fid_parse_prop_arg_t fid_parse_prop;
+    fid_parse_dowhile_arg_t fid_parse_dowhile;
+    fid_parse_for_arg_t fid_parse_for;
+    fid_parse_try_arg_t fid_parse_try;
+    fid_parse_switch_arg_t fid_parse_switch;
+    fid_parse_with_arg_t fid_parse_with;
+  } arg;
+
+  /* value returned from function */
+  /*
+     union {
+     } ret;
+     */
+};
 
 static enum v7_tok next_tok(struct v7 *v7) {
   int prev_line_no = v7->pstate.prev_line_no;
-  CHECK_STACK();
   v7->pstate.prev_line_no = v7->pstate.line_no;
   v7->pstate.line_no += skip_to_next_tok(&v7->pstate.pc);
   v7->after_newline = prev_line_no != v7->pstate.line_no;
@@ -10766,314 +12590,42 @@ static enum v7_tok next_tok(struct v7 *v7) {
   return v7->cur_tok;
 }
 
-static enum v7_err parse_ident(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-  if (v7->cur_tok == TOK_IDENTIFIER) {
-    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
-    next_tok(v7);
+static unsigned long get_column(const char *code, const char *pos) {
+  const char *p = pos;
+  while (p > code && *p != '\n') {
+    p--;
+  }
+  return p == code ? pos - p : pos - (p + 1);
+}
+
+static const char *get_err_name(enum v7_err err) {
+  static const char *err_names[] = {"", "syntax error", "exception",
+                                    "stack overflow", "script too large"};
+  return (err < sizeof(err_names) / sizeof(err_names[0])) ? err_names[err]
+                                                          : "internal error";
+}
+
+static enum v7_err end_of_statement(struct v7 *v7) {
+  if (v7->cur_tok == TOK_SEMICOLON || v7->cur_tok == TOK_END_OF_INPUT ||
+      v7->cur_tok == TOK_CLOSE_CURLY || v7->after_newline) {
     return V7_OK;
   }
   return V7_SYNTAX_ERROR;
 }
 
-static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
-                                                    struct ast *a) {
-  CHECK_STACK();
-  /* Allow reserved words as property names. */
-  if (is_reserved_word_token(v7->cur_tok)) {
-    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
-    next_tok(v7);
-  } else {
-    PARSE(ident);
-  }
-  return V7_OK;
+static enum v7_tok lookahead(const struct v7 *v7) {
+  const char *s = v7->pstate.pc;
+  double d;
+  return get_tok(&s, &d, v7->cur_tok);
 }
 
-static enum v7_err parse_prop(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-#ifdef V7_ENABLE_JS_GETTERS
-  if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
-      strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
-    next_tok(v7);
-    ast_add_node(a, AST_GETTER);
-    parse_funcdecl(v7, a, 1, 1);
-  } else
-#endif
-      if (v7->cur_tok == TOK_IDENTIFIER && lookahead(v7) == TOK_OPEN_PAREN) {
-    /* ecmascript 6 feature */
-    parse_funcdecl(v7, a, 1, 1);
-#ifdef V7_ENABLE_JS_SETTERS
-  } else if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
-             strncmp(v7->tok, "set", v7->tok_len) == 0 &&
-             lookahead(v7) != TOK_COLON) {
-    next_tok(v7);
-    ast_add_node(a, AST_SETTER);
-    parse_funcdecl(v7, a, 1, 1);
-#endif
-  } else {
-    /* Allow reserved words as property names. */
-    if (is_reserved_word_token(v7->cur_tok) || v7->cur_tok == TOK_IDENTIFIER ||
-        v7->cur_tok == TOK_NUMBER) {
-      ast_add_inlined_node(a, AST_PROP, v7->tok, v7->tok_len);
-    } else if (v7->cur_tok == TOK_STRING_LITERAL) {
-      ast_add_inlined_node(a, AST_PROP, v7->tok + 1, v7->tok_len - 2);
-    } else {
-      return V7_SYNTAX_ERROR;
-    }
-    next_tok(v7);
-    EXPECT(TOK_COLON);
-    PARSE(assign);
+static int parse_optional(struct v7 *v7, struct ast *a,
+                          enum v7_tok terminator) {
+  if (v7->cur_tok != terminator) {
+    return 1;
   }
-  return V7_OK;
-}
-
-static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  CHECK_STACK();
-  switch (v7->cur_tok) {
-    case TOK_OPEN_PAREN:
-      next_tok(v7);
-      PARSE(expression);
-      EXPECT(TOK_CLOSE_PAREN);
-      break;
-    case TOK_OPEN_BRACKET:
-      next_tok(v7);
-      start = ast_add_node(a, AST_ARRAY);
-      while (v7->cur_tok != TOK_CLOSE_BRACKET) {
-        if (v7->cur_tok == TOK_COMMA) {
-          /* Array literals allow missing elements, e.g. [,,1,] */
-          ast_add_node(a, AST_NOP);
-        } else {
-          PARSE(assign);
-        }
-        ACCEPT(TOK_COMMA);
-      }
-      EXPECT(TOK_CLOSE_BRACKET);
-      ast_set_skip(a, start, AST_END_SKIP);
-      break;
-    case TOK_OPEN_CURLY:
-      next_tok(v7);
-      start = ast_add_node(a, AST_OBJECT);
-      if (v7->cur_tok != TOK_CLOSE_CURLY) {
-        do {
-          if (v7->cur_tok == TOK_CLOSE_CURLY) {
-            break;
-          }
-          PARSE(prop);
-        } while (ACCEPT(TOK_COMMA));
-      }
-      EXPECT(TOK_CLOSE_CURLY);
-      ast_set_skip(a, start, AST_END_SKIP);
-      break;
-    case TOK_THIS:
-      next_tok(v7);
-      ast_add_node(a, AST_THIS);
-      break;
-    case TOK_TRUE:
-      next_tok(v7);
-      ast_add_node(a, AST_TRUE);
-      break;
-    case TOK_FALSE:
-      next_tok(v7);
-      ast_add_node(a, AST_FALSE);
-      break;
-    case TOK_NULL:
-      next_tok(v7);
-      ast_add_node(a, AST_NULL);
-      break;
-    case TOK_STRING_LITERAL:
-      ast_add_inlined_node(a, AST_STRING, v7->tok + 1, v7->tok_len - 2);
-      next_tok(v7);
-      break;
-    case TOK_NUMBER:
-      ast_add_inlined_node(a, AST_NUM, v7->tok, v7->tok_len);
-      next_tok(v7);
-      break;
-    case TOK_REGEX_LITERAL:
-      ast_add_inlined_node(a, AST_REGEX, v7->tok, v7->tok_len);
-      next_tok(v7);
-      break;
-    case TOK_IDENTIFIER:
-      if (v7->tok_len == 9 && strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
-        ast_add_node(a, AST_UNDEFINED);
-        next_tok(v7);
-        break;
-      }
-    /* fall through */
-    default:
-      PARSE(ident);
-  }
-  return V7_OK;
-}
-
-static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-  if (v7->cur_tok != TOK_CLOSE_PAREN) {
-    do {
-      PARSE(assign);
-    } while (ACCEPT(TOK_COMMA));
-  }
-  return V7_OK;
-}
-
-static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  CHECK_STACK();
-  switch (v7->cur_tok) {
-    case TOK_NEW:
-      next_tok(v7);
-      start = ast_add_node(a, AST_NEW);
-      PARSE(memberexpr);
-      if (ACCEPT(TOK_OPEN_PAREN)) {
-        PARSE(arglist);
-        EXPECT(TOK_CLOSE_PAREN);
-      }
-      ast_set_skip(a, start, AST_END_SKIP);
-      break;
-    case TOK_FUNCTION:
-      next_tok(v7);
-      PARSE_ARG_2(funcdecl, 0, 0);
-      break;
-    default:
-      PARSE(terminal);
-      break;
-  }
-  return V7_OK;
-}
-
-static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos) {
-  CHECK_STACK();
-  switch (v7->cur_tok) {
-    case TOK_DOT:
-      next_tok(v7);
-      /* Allow reserved words as member identifiers */
-      if (is_reserved_word_token(v7->cur_tok) ||
-          v7->cur_tok == TOK_IDENTIFIER) {
-        ast_insert_inlined_node(a, pos, AST_MEMBER, v7->tok, v7->tok_len);
-        next_tok(v7);
-      } else {
-        return V7_SYNTAX_ERROR;
-      }
-      break;
-    case TOK_OPEN_BRACKET:
-      next_tok(v7);
-      PARSE(expression);
-      EXPECT(TOK_CLOSE_BRACKET);
-      ast_insert_node(a, pos, AST_INDEX);
-      break;
-    default:
-      return V7_OK;
-  }
-  return V7_OK;
-}
-
-static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->mbuf.len;
-  CHECK_STACK();
-  PARSE(newexpr);
-
-  for (;;) {
-    switch (v7->cur_tok) {
-      case TOK_DOT:
-      case TOK_OPEN_BRACKET:
-        PARSE_ARG(member, pos);
-        break;
-      default:
-        return V7_OK;
-    }
-  }
-}
-
-static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->mbuf.len;
-  CHECK_STACK();
-  PARSE(newexpr);
-
-  for (;;) {
-    switch (v7->cur_tok) {
-      case TOK_DOT:
-      case TOK_OPEN_BRACKET:
-        PARSE_ARG(member, pos);
-        break;
-      case TOK_OPEN_PAREN:
-        next_tok(v7);
-        PARSE(arglist);
-        EXPECT(TOK_CLOSE_PAREN);
-        ast_insert_node(a, pos, AST_CALL);
-        break;
-      default:
-        return V7_OK;
-    }
-  }
-}
-
-static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->mbuf.len;
-  CHECK_STACK();
-  PARSE(callexpr);
-
-  if (v7->after_newline) {
-    return V7_OK;
-  }
-  switch (v7->cur_tok) {
-    case TOK_PLUS_PLUS:
-      next_tok(v7);
-      ast_insert_node(a, pos, AST_POSTINC);
-      break;
-    case TOK_MINUS_MINUS:
-      next_tok(v7);
-      ast_insert_node(a, pos, AST_POSTDEC);
-      break;
-    default:
-      break; /* nothing */
-  }
-  return V7_OK;
-}
-
-enum v7_err parse_prefix(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-  for (;;) {
-    switch (v7->cur_tok) {
-      case TOK_PLUS:
-        next_tok(v7);
-        ast_add_node(a, AST_POSITIVE);
-        break;
-      case TOK_MINUS:
-        next_tok(v7);
-        ast_add_node(a, AST_NEGATIVE);
-        break;
-      case TOK_PLUS_PLUS:
-        next_tok(v7);
-        ast_add_node(a, AST_PREINC);
-        break;
-      case TOK_MINUS_MINUS:
-        next_tok(v7);
-        ast_add_node(a, AST_PREDEC);
-        break;
-      case TOK_TILDA:
-        next_tok(v7);
-        ast_add_node(a, AST_NOT);
-        break;
-      case TOK_NOT:
-        next_tok(v7);
-        ast_add_node(a, AST_LOGICAL_NOT);
-        break;
-      case TOK_VOID:
-        next_tok(v7);
-        ast_add_node(a, AST_VOID);
-        break;
-      case TOK_DELETE:
-        next_tok(v7);
-        ast_add_node(a, AST_DELETE);
-        break;
-      case TOK_TYPEOF:
-        next_tok(v7);
-        ast_add_node(a, AST_TYPEOF);
-        break;
-      default:
-        return parse_postfix(v7, a);
-    }
-  }
+  ast_add_node(a, AST_NOP);
+  return 0;
 }
 
 /*
@@ -11104,24 +12656,391 @@ static const struct {
     {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, NONE}},
     {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, NONE}}};
 
-static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
-                                ast_off_t pos) {
-  int i;
-  enum v7_tok tok;
-  enum ast_tag ast;
-  CHECK_STACK();
+enum cr_status parser_cr_exec(struct cr_ctx *p_ctx) {
+  enum cr_status rc = CR_RES__OK;
 
-  if (level == (int) ARRAY_SIZE(levels) - 1) {
-    PARSE(prefix);
-  } else {
-    TRY(parse_binary(v7, a, level + 1, a->mbuf.len));
+_cr_iter_begin:
+
+  rc = cr_on_iter_begin(p_ctx);
+  if (rc != CR_RES__OK) {
+    return rc;
   }
 
-  for (i = 0; i < levels[level].len; i++) {
-    tok = levels[level].parts[i].start_tok;
-    ast = levels[level].parts[i].start_ast;
+  /*
+   * dispatcher switch: depending on the fid, jump to the corresponding label
+   */
+  switch ((enum my_fid) CR_CURR_FUNC()) {
+    CR_DEFINE_ENTRY_POINT(fid_none);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_script);
+    CR_DEFINE_ENTRY_POINT(fid_p_script_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_script_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_script_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_script_4);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_use_strict);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_body);
+    CR_DEFINE_ENTRY_POINT(fid_p_body_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_body_2);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_statement);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_4);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_5);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_6);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_7);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_8);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_9);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_10);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_11);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_12);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_13);
+    CR_DEFINE_ENTRY_POINT(fid_p_stat_14);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_expression);
+    CR_DEFINE_ENTRY_POINT(fid_p_expr_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_assign);
+    CR_DEFINE_ENTRY_POINT(fid_p_assign_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_binary);
+    CR_DEFINE_ENTRY_POINT(fid_p_binary_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_binary_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_binary_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_binary_4);
+    CR_DEFINE_ENTRY_POINT(fid_p_binary_5);
+    CR_DEFINE_ENTRY_POINT(fid_p_binary_6);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_prefix);
+    CR_DEFINE_ENTRY_POINT(fid_p_prefix_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_postfix);
+    CR_DEFINE_ENTRY_POINT(fid_p_postfix_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_callexpr);
+    CR_DEFINE_ENTRY_POINT(fid_p_callexpr_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_callexpr_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_callexpr_3);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_newexpr);
+    CR_DEFINE_ENTRY_POINT(fid_p_newexpr_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_newexpr_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_newexpr_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_newexpr_4);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_terminal);
+    CR_DEFINE_ENTRY_POINT(fid_p_terminal_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_terminal_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_terminal_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_terminal_4);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_block);
+    CR_DEFINE_ENTRY_POINT(fid_p_block_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_if);
+    CR_DEFINE_ENTRY_POINT(fid_p_if_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_if_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_if_3);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_while);
+    CR_DEFINE_ENTRY_POINT(fid_p_while_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_while_2);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_ident);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_ident_allow_reserved_words);
+    CR_DEFINE_ENTRY_POINT(fid_p_ident_arw_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_funcdecl);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_4);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_5);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_6);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_7);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_8);
+    CR_DEFINE_ENTRY_POINT(fid_p_funcdecl_9);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_arglist);
+    CR_DEFINE_ENTRY_POINT(fid_p_arglist_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_member);
+    CR_DEFINE_ENTRY_POINT(fid_p_member_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_memberexpr);
+    CR_DEFINE_ENTRY_POINT(fid_p_memberexpr_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_memberexpr_2);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_var);
+    CR_DEFINE_ENTRY_POINT(fid_p_var_1);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_prop);
+#ifdef V7_ENABLE_JS_GETTERS
+    CR_DEFINE_ENTRY_POINT(fid_p_prop_1_getter);
+#endif
+    CR_DEFINE_ENTRY_POINT(fid_p_prop_2);
+#ifdef V7_ENABLE_JS_SETTERS
+    CR_DEFINE_ENTRY_POINT(fid_p_prop_3_setter);
+#endif
+    CR_DEFINE_ENTRY_POINT(fid_p_prop_4);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_dowhile);
+    CR_DEFINE_ENTRY_POINT(fid_p_dowhile_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_dowhile_2);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_for);
+    CR_DEFINE_ENTRY_POINT(fid_p_for_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_for_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_for_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_for_4);
+    CR_DEFINE_ENTRY_POINT(fid_p_for_5);
+    CR_DEFINE_ENTRY_POINT(fid_p_for_6);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_try);
+    CR_DEFINE_ENTRY_POINT(fid_p_try_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_try_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_try_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_try_4);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_switch);
+    CR_DEFINE_ENTRY_POINT(fid_p_switch_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_switch_2);
+    CR_DEFINE_ENTRY_POINT(fid_p_switch_3);
+    CR_DEFINE_ENTRY_POINT(fid_p_switch_4);
+
+    CR_DEFINE_ENTRY_POINT(fid_parse_with);
+    CR_DEFINE_ENTRY_POINT(fid_p_with_1);
+    CR_DEFINE_ENTRY_POINT(fid_p_with_2);
+
+    default:
+      /* should never be here */
+      printf("fatal: wrong func id: %d", CR_CURR_FUNC());
+      break;
+  };
+
+/* static enum v7_err parse_script(struct v7 *v7, struct ast *a) */
+fid_parse_script :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_script_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_SCRIPT);
+  L->outer_last_var_node = L->arg.v7->last_var_node;
+  L->saved_in_strict = L->arg.v7->pstate.in_strict;
+
+  L->arg.v7->last_var_node = L->start;
+  ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+
+  CR_TRY(fid_p_script_1);
+  {
+    CALL_PARSE_USE_STRICT(fid_p_script_3);
+    L->arg.v7->pstate.in_strict = 1;
+  }
+  CR_CATCH(PARSER_EXC_ID__SYNTAX_ERROR, fid_p_script_1, fid_p_script_2);
+  CR_ENDCATCH(fid_p_script_2);
+
+  CALL_PARSE_BODY(TOK_END_OF_INPUT, fid_p_script_4);
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  L->arg.v7->pstate.in_strict = L->saved_in_strict;
+  L->arg.v7->last_var_node = L->outer_last_var_node;
+
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) */
+fid_parse_use_strict :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_use_strict_locals_t)
+{
+  if (L->arg.v7->cur_tok == TOK_STRING_LITERAL &&
+      (strncmp(L->arg.v7->tok, "\"use strict\"", L->arg.v7->tok_len) == 0 ||
+       strncmp(L->arg.v7->tok, "'use strict'", L->arg.v7->tok_len) == 0)) {
+    next_tok(L->arg.v7);
+    ast_add_node(L->arg.a, AST_USE_STRICT);
+    CR_RETURN_VOID();
+  } else {
+    CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+  }
+}
+
+/*
+ * static enum v7_err parse_body(struct v7 *v7, struct ast *a,
+ *                               enum v7_tok end)
+ */
+fid_parse_body :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_body_locals_t)
+{
+  while (L->arg.v7->cur_tok != L->arg.end) {
+    if (ACCEPT(TOK_FUNCTION)) {
+      if (L->arg.v7->cur_tok != TOK_IDENTIFIER) {
+        CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+      }
+      L->start = ast_add_node(L->arg.a, AST_VAR);
+      ast_modify_skip(L->arg.a, L->arg.v7->last_var_node, L->start,
+                      AST_FUNC_FIRST_VAR_SKIP);
+      /* zero out var node pointer */
+      ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+      L->arg.v7->last_var_node = L->start;
+      ast_add_inlined_node(L->arg.a, AST_FUNC_DECL, L->arg.v7->tok,
+                           L->arg.v7->tok_len);
+
+      CALL_PARSE_FUNCDECL(1, 0, fid_p_body_1);
+      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+    } else {
+      CALL_PARSE_STATEMENT(fid_p_body_2);
+    }
+  }
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_statement(struct v7 *v7, struct ast *a) */
+fid_parse_statement :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_statement_locals_t)
+{
+  switch (L->arg.v7->cur_tok) {
+    case TOK_SEMICOLON:
+      next_tok(L->arg.v7);
+      /* empty statement */
+      CR_RETURN_VOID();
+    case TOK_OPEN_CURLY: /* block */
+      CALL_PARSE_BLOCK(fid_p_stat_3);
+      /* returning because no semicolon required */
+      CR_RETURN_VOID();
+    case TOK_IF:
+      next_tok(L->arg.v7);
+      CALL_PARSE_IF(fid_p_stat_4);
+      CR_RETURN_VOID();
+    case TOK_WHILE:
+      next_tok(L->arg.v7);
+      CALL_PARSE_WHILE(fid_p_stat_5);
+      CR_RETURN_VOID();
+    case TOK_DO:
+      next_tok(L->arg.v7);
+      CALL_PARSE_DOWHILE(fid_p_stat_10);
+      CR_RETURN_VOID();
+    case TOK_FOR:
+      next_tok(L->arg.v7);
+      CALL_PARSE_FOR(fid_p_stat_11);
+      CR_RETURN_VOID();
+    case TOK_TRY:
+      next_tok(L->arg.v7);
+      CALL_PARSE_TRY(fid_p_stat_12);
+      CR_RETURN_VOID();
+    case TOK_SWITCH:
+      next_tok(L->arg.v7);
+      CALL_PARSE_SWITCH(fid_p_stat_13);
+      CR_RETURN_VOID();
+    case TOK_WITH:
+      next_tok(L->arg.v7);
+      CALL_PARSE_WITH(fid_p_stat_14);
+      CR_RETURN_VOID();
+    case TOK_BREAK:
+      if (!(L->arg.v7->pstate.in_loop || L->arg.v7->pstate.in_switch)) {
+        CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+      }
+      next_tok(L->arg.v7);
+      PARSE_WITH_OPT_ARG(AST_BREAK, AST_LABELED_BREAK, CALL_PARSE_IDENT,
+                         fid_p_stat_7);
+      break;
+    case TOK_CONTINUE:
+      if (!L->arg.v7->pstate.in_loop) {
+        CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+      }
+      next_tok(L->arg.v7);
+      PARSE_WITH_OPT_ARG(AST_CONTINUE, AST_LABELED_CONTINUE, CALL_PARSE_IDENT,
+                         fid_p_stat_8);
+      break;
+    case TOK_RETURN:
+      if (!L->arg.v7->pstate.in_function) {
+        CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+      }
+      next_tok(L->arg.v7);
+      PARSE_WITH_OPT_ARG(AST_RETURN, AST_VALUE_RETURN, CALL_PARSE_EXPRESSION,
+                         fid_p_stat_6);
+      break;
+    case TOK_THROW:
+      next_tok(L->arg.v7);
+      ast_add_node(L->arg.a, AST_THROW);
+      CALL_PARSE_EXPRESSION(fid_p_stat_2);
+      break;
+    case TOK_DEBUGGER:
+      next_tok(L->arg.v7);
+      ast_add_node(L->arg.a, AST_DEBUGGER);
+      break;
+    case TOK_VAR:
+      next_tok(L->arg.v7);
+      CALL_PARSE_VAR(fid_p_stat_9);
+      break;
+    case TOK_IDENTIFIER:
+      if (lookahead(L->arg.v7) == TOK_COLON) {
+        ast_add_inlined_node(L->arg.a, AST_LABEL, L->arg.v7->tok,
+                             L->arg.v7->tok_len);
+        next_tok(L->arg.v7);
+        EXPECT(TOK_COLON);
+        CR_RETURN_VOID();
+      }
+    /* fall through */
+    default:
+      CALL_PARSE_EXPRESSION(fid_p_stat_1);
+      break;
+  }
+
+  if (end_of_statement(L->arg.v7) != V7_OK) {
+    CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+  }
+  ACCEPT(TOK_SEMICOLON); /* swallow optional semicolon */
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_expression(struct v7 *v7, struct ast *a) */
+fid_parse_expression :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_expression_locals_t)
+{
+  L->pos = L->arg.a->mbuf.len;
+  L->group = 0;
+  do {
+    CALL_PARSE_ASSIGN(fid_p_expr_1);
+  } while (ACCEPT(TOK_COMMA) && (L->group = 1));
+  if (L->group) {
+    ast_insert_node(L->arg.a, L->pos, AST_SEQ);
+  }
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_assign(struct v7 *v7, struct ast *a) */
+fid_parse_assign :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_assign_locals_t)
+{
+  CALL_PARSE_BINARY(0, L->arg.a->mbuf.len, fid_p_assign_1);
+  CR_RETURN_VOID();
+}
+
+/*
+ * static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
+ *                                 ast_off_t pos)
+ */
+fid_parse_binary :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_binary_locals_t)
+{
+  if (L->arg.level == (int) ARRAY_SIZE(levels) - 1) {
+    CALL_PARSE_PREFIX(fid_p_binary_6);
+  } else {
+    CALL_PARSE_BINARY(L->arg.level + 1, L->arg.a->mbuf.len, fid_p_binary_1);
+  }
+
+  for (L->i = 0; L->i < levels[L->arg.level].len; L->i++) {
+    L->tok = levels[L->arg.level].parts[L->i].start_tok;
+    L->ast = levels[L->arg.level].parts[L->i].start_ast;
     do {
-      if (v7->pstate.inhibit_in && tok == TOK_IN) {
+      if (L->arg.v7->pstate.inhibit_in && L->tok == TOK_IN) {
         continue;
       }
 
@@ -11130,491 +13049,704 @@ static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
        * precedence chain. Deal with it as an exception and don't break
        * the chain.
        */
-      if (tok == TOK_QUESTION && v7->cur_tok == TOK_QUESTION) {
-        next_tok(v7);
-        PARSE(assign);
+      if (L->tok == TOK_QUESTION && L->arg.v7->cur_tok == TOK_QUESTION) {
+        next_tok(L->arg.v7);
+        CALL_PARSE_ASSIGN(fid_p_binary_2);
         EXPECT(TOK_COLON);
-        PARSE(assign);
-        ast_insert_node(a, pos, AST_COND);
-        return V7_OK;
-      } else if (ACCEPT(tok)) {
-        if (levels[level].left_to_right) {
-          ast_insert_node(a, pos, ast);
-          TRY(parse_binary(v7, a, level, pos));
+        CALL_PARSE_ASSIGN(fid_p_binary_3);
+        ast_insert_node(L->arg.a, L->arg.pos, AST_COND);
+        CR_RETURN_VOID();
+      } else if (ACCEPT(L->tok)) {
+        if (levels[L->arg.level].left_to_right) {
+          ast_insert_node(L->arg.a, L->arg.pos, L->ast);
+          CALL_PARSE_BINARY(L->arg.level, L->arg.pos, fid_p_binary_4);
         } else {
-          TRY(parse_binary(v7, a, level, a->mbuf.len));
-          ast_insert_node(a, pos, ast);
+          CALL_PARSE_BINARY(L->arg.level, L->arg.a->mbuf.len, fid_p_binary_5);
+          ast_insert_node(L->arg.a, L->arg.pos, L->ast);
         }
       }
-    } while (
-        ast = (enum ast_tag)(ast + 1),
-        tok < levels[level].parts[i].end_tok && (tok = (enum v7_tok)(tok + 1)));
+    } while (L->ast = (enum ast_tag)(L->ast + 1),
+             L->tok < levels[L->arg.level].parts[L->i].end_tok &&
+                 (L->tok = (enum v7_tok)(L->tok + 1)));
   }
 
-  return V7_OK;
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_assign(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-  return parse_binary(v7, a, 0, a->mbuf.len);
-}
-
-static enum v7_err parse_expression(struct v7 *v7, struct ast *a) {
-  ast_off_t pos = a->mbuf.len;
-  int group = 0;
-  CHECK_STACK();
-  do {
-    PARSE(assign);
-  } while (ACCEPT(TOK_COMMA) && (group = 1));
-  if (group) {
-    ast_insert_node(a, pos, AST_SEQ);
+/* enum v7_err parse_prefix(struct v7 *v7, struct ast *a) */
+fid_parse_prefix :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_prefix_locals_t)
+{
+  for (;;) {
+    switch (L->arg.v7->cur_tok) {
+      case TOK_PLUS:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_POSITIVE);
+        break;
+      case TOK_MINUS:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_NEGATIVE);
+        break;
+      case TOK_PLUS_PLUS:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_PREINC);
+        break;
+      case TOK_MINUS_MINUS:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_PREDEC);
+        break;
+      case TOK_TILDA:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_NOT);
+        break;
+      case TOK_NOT:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_LOGICAL_NOT);
+        break;
+      case TOK_VOID:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_VOID);
+        break;
+      case TOK_DELETE:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_DELETE);
+        break;
+      case TOK_TYPEOF:
+        next_tok(L->arg.v7);
+        ast_add_node(L->arg.a, AST_TYPEOF);
+        break;
+      default:
+        CALL_PARSE_POSTFIX(fid_p_prefix_1);
+        CR_RETURN_VOID();
+    }
   }
-  return V7_OK;
 }
 
-static enum v7_err end_of_statement(struct v7 *v7) {
-  CHECK_STACK();
-  if (v7->cur_tok == TOK_SEMICOLON || v7->cur_tok == TOK_END_OF_INPUT ||
-      v7->cur_tok == TOK_CLOSE_CURLY || v7->after_newline) {
-    return V7_OK;
+/* static enum v7_err parse_postfix(struct v7 *v7, struct ast *a) */
+fid_parse_postfix :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_postfix_locals_t)
+{
+  L->pos = L->arg.a->mbuf.len;
+  CALL_PARSE_CALLEXPR(fid_p_postfix_1);
+
+  if (L->arg.v7->after_newline) {
+    CR_RETURN_VOID();
   }
-  return V7_SYNTAX_ERROR;
+  switch (L->arg.v7->cur_tok) {
+    case TOK_PLUS_PLUS:
+      next_tok(L->arg.v7);
+      ast_insert_node(L->arg.a, L->pos, AST_POSTINC);
+      break;
+    case TOK_MINUS_MINUS:
+      next_tok(L->arg.v7);
+      ast_insert_node(L->arg.a, L->pos, AST_POSTDEC);
+      break;
+    default:
+      break; /* nothing */
+  }
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_var(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  CHECK_STACK();
-  start = ast_add_node(a, AST_VAR);
-  ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
+/* static enum v7_err parse_callexpr(struct v7 *v7, struct ast *a) */
+fid_parse_callexpr :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_callexpr_locals_t)
+{
+  L->pos = L->arg.a->mbuf.len;
+  CALL_PARSE_NEWEXPR(fid_p_callexpr_1);
+
+  for (;;) {
+    switch (L->arg.v7->cur_tok) {
+      case TOK_DOT:
+      case TOK_OPEN_BRACKET:
+        CALL_PARSE_MEMBER(L->pos, fid_p_callexpr_3);
+        break;
+      case TOK_OPEN_PAREN:
+        next_tok(L->arg.v7);
+        CALL_PARSE_ARGLIST(fid_p_callexpr_2);
+        EXPECT(TOK_CLOSE_PAREN);
+        ast_insert_node(L->arg.a, L->pos, AST_CALL);
+        break;
+      default:
+        CR_RETURN_VOID();
+    }
+  }
+}
+
+/* static enum v7_err parse_newexpr(struct v7 *v7, struct ast *a) */
+fid_parse_newexpr :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_newexpr_locals_t)
+{
+  switch (L->arg.v7->cur_tok) {
+    case TOK_NEW:
+      next_tok(L->arg.v7);
+      L->start = ast_add_node(L->arg.a, AST_NEW);
+      CALL_PARSE_MEMBEREXPR(fid_p_newexpr_3);
+      if (ACCEPT(TOK_OPEN_PAREN)) {
+        CALL_PARSE_ARGLIST(fid_p_newexpr_4);
+        EXPECT(TOK_CLOSE_PAREN);
+      }
+      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+      break;
+    case TOK_FUNCTION:
+      next_tok(L->arg.v7);
+      CALL_PARSE_FUNCDECL(0, 0, fid_p_newexpr_2);
+      break;
+    default:
+      CALL_PARSE_TERMINAL(fid_p_newexpr_1);
+      break;
+  }
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_terminal(struct v7 *v7, struct ast *a) */
+fid_parse_terminal :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_terminal_locals_t)
+{
+  switch (L->arg.v7->cur_tok) {
+    case TOK_OPEN_PAREN:
+      next_tok(L->arg.v7);
+      CALL_PARSE_EXPRESSION(fid_p_terminal_1);
+      EXPECT(TOK_CLOSE_PAREN);
+      break;
+    case TOK_OPEN_BRACKET:
+      next_tok(L->arg.v7);
+      L->start = ast_add_node(L->arg.a, AST_ARRAY);
+      while (L->arg.v7->cur_tok != TOK_CLOSE_BRACKET) {
+        if (L->arg.v7->cur_tok == TOK_COMMA) {
+          /* Array literals allow missing elements, e.g. [,,1,] */
+          ast_add_node(L->arg.a, AST_NOP);
+        } else {
+          CALL_PARSE_ASSIGN(fid_p_terminal_2);
+        }
+        ACCEPT(TOK_COMMA);
+      }
+      EXPECT(TOK_CLOSE_BRACKET);
+      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+      break;
+    case TOK_OPEN_CURLY:
+      next_tok(L->arg.v7);
+      L->start = ast_add_node(L->arg.a, AST_OBJECT);
+      if (L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
+        do {
+          if (L->arg.v7->cur_tok == TOK_CLOSE_CURLY) {
+            break;
+          }
+          CALL_PARSE_PROP(fid_p_terminal_3);
+        } while (ACCEPT(TOK_COMMA));
+      }
+      EXPECT(TOK_CLOSE_CURLY);
+      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+      break;
+    case TOK_THIS:
+      next_tok(L->arg.v7);
+      ast_add_node(L->arg.a, AST_THIS);
+      break;
+    case TOK_TRUE:
+      next_tok(L->arg.v7);
+      ast_add_node(L->arg.a, AST_TRUE);
+      break;
+    case TOK_FALSE:
+      next_tok(L->arg.v7);
+      ast_add_node(L->arg.a, AST_FALSE);
+      break;
+    case TOK_NULL:
+      next_tok(L->arg.v7);
+      ast_add_node(L->arg.a, AST_NULL);
+      break;
+    case TOK_STRING_LITERAL:
+      ast_add_inlined_node(L->arg.a, AST_STRING, L->arg.v7->tok + 1,
+                           L->arg.v7->tok_len - 2);
+      next_tok(L->arg.v7);
+      break;
+    case TOK_NUMBER:
+      ast_add_inlined_node(L->arg.a, AST_NUM, L->arg.v7->tok,
+                           L->arg.v7->tok_len);
+      next_tok(L->arg.v7);
+      break;
+    case TOK_REGEX_LITERAL:
+      ast_add_inlined_node(L->arg.a, AST_REGEX, L->arg.v7->tok,
+                           L->arg.v7->tok_len);
+      next_tok(L->arg.v7);
+      break;
+    case TOK_IDENTIFIER:
+      if (L->arg.v7->tok_len == 9 &&
+          strncmp(L->arg.v7->tok, "undefined", L->arg.v7->tok_len) == 0) {
+        ast_add_node(L->arg.a, AST_UNDEFINED);
+        next_tok(L->arg.v7);
+        break;
+      }
+    /* fall through */
+    default:
+      CALL_PARSE_IDENT(fid_p_terminal_4);
+  }
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_block(struct v7 *v7, struct ast *a) */
+fid_parse_block :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_block_locals_t)
+{
+  EXPECT(TOK_OPEN_CURLY);
+  CALL_PARSE_BODY(TOK_CLOSE_CURLY, fid_p_block_1);
+  EXPECT(TOK_CLOSE_CURLY);
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_if(struct v7 *v7, struct ast *a) */
+fid_parse_if :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_if_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_IF);
+  EXPECT(TOK_OPEN_PAREN);
+  CALL_PARSE_EXPRESSION(fid_p_if_1);
+  EXPECT(TOK_CLOSE_PAREN);
+  CALL_PARSE_STATEMENT(fid_p_if_2);
+  ast_set_skip(L->arg.a, L->start, AST_END_IF_TRUE_SKIP);
+  if (ACCEPT(TOK_ELSE)) {
+    CALL_PARSE_STATEMENT(fid_p_if_3);
+  }
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_while(struct v7 *v7, struct ast *a) */
+fid_parse_while :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_while_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_WHILE);
+  L->saved_in_loop = L->arg.v7->pstate.in_loop;
+  EXPECT(TOK_OPEN_PAREN);
+  CALL_PARSE_EXPRESSION(fid_p_while_1);
+  EXPECT(TOK_CLOSE_PAREN);
+  L->arg.v7->pstate.in_loop = 1;
+  CALL_PARSE_STATEMENT(fid_p_while_2);
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  L->arg.v7->pstate.in_loop = L->saved_in_loop;
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_ident(struct v7 *v7, struct ast *a) */
+fid_parse_ident :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_ident_locals_t)
+{
+  if (L->arg.v7->cur_tok == TOK_IDENTIFIER) {
+    ast_add_inlined_node(L->arg.a, AST_IDENT, L->arg.v7->tok,
+                         L->arg.v7->tok_len);
+    next_tok(L->arg.v7);
+    CR_RETURN_VOID();
+  }
+  CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+}
+
+/*
+ * static enum v7_err parse_ident_allow_reserved_words(struct v7 *v7,
+ *                                                     struct ast *a)
+ *
+ */
+fid_parse_ident_allow_reserved_words :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_ident_allow_reserved_words_locals_t)
+{
+  /* Allow reserved words as property names. */
+  if (is_reserved_word_token(L->arg.v7->cur_tok)) {
+    ast_add_inlined_node(L->arg.a, AST_IDENT, L->arg.v7->tok,
+                         L->arg.v7->tok_len);
+    next_tok(L->arg.v7);
+  } else {
+    CALL_PARSE_IDENT(fid_p_ident_arw_1);
+  }
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_funcdecl(struct v7 *, struct ast *, int, int) */
+fid_parse_funcdecl :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_funcdecl_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_FUNC);
+  L->outer_last_var_node = L->arg.v7->last_var_node;
+  L->saved_in_function = L->arg.v7->pstate.in_function;
+  L->saved_in_strict = L->arg.v7->pstate.in_strict;
+
+  L->arg.v7->last_var_node = L->start;
+  ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+
+  CR_TRY(fid_p_funcdecl_2);
+  {
+    if (L->arg.reserved_name) {
+      CALL_PARSE_IDENT_ALLOW_RESERVED_WORDS(fid_p_funcdecl_1);
+    } else {
+      CALL_PARSE_IDENT(fid_p_funcdecl_9);
+    }
+  }
+  CR_CATCH(PARSER_EXC_ID__SYNTAX_ERROR, fid_p_funcdecl_2, fid_p_funcdecl_3);
+  {
+    if (L->arg.require_named) {
+      /* function name is required, so, rethrow SYNTAX ERROR */
+      CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+    } else {
+      /* it's ok not to have a function name, just insert NOP */
+      ast_add_node(L->arg.a, AST_NOP);
+    }
+  }
+  CR_ENDCATCH(fid_p_funcdecl_3);
+
+  EXPECT(TOK_OPEN_PAREN);
+  CALL_PARSE_ARGLIST(fid_p_funcdecl_4);
+  EXPECT(TOK_CLOSE_PAREN);
+  ast_set_skip(L->arg.a, L->start, AST_FUNC_BODY_SKIP);
+  L->arg.v7->pstate.in_function = 1;
+  EXPECT(TOK_OPEN_CURLY);
+
+  CR_TRY(fid_p_funcdecl_5);
+  {
+    CALL_PARSE_USE_STRICT(fid_p_funcdecl_7);
+    L->arg.v7->pstate.in_strict = 1;
+  }
+  CR_CATCH(PARSER_EXC_ID__SYNTAX_ERROR, fid_p_funcdecl_5, fid_p_funcdecl_6);
+  CR_ENDCATCH(fid_p_funcdecl_6);
+
+  CALL_PARSE_BODY(TOK_CLOSE_CURLY, fid_p_funcdecl_8);
+  EXPECT(TOK_CLOSE_CURLY);
+  L->arg.v7->pstate.in_strict = L->saved_in_strict;
+  L->arg.v7->pstate.in_function = L->saved_in_function;
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  L->arg.v7->last_var_node = L->outer_last_var_node;
+
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_arglist(struct v7 *v7, struct ast *a) */
+fid_parse_arglist :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_arglist_locals_t)
+{
+  if (L->arg.v7->cur_tok != TOK_CLOSE_PAREN) {
+    do {
+      CALL_PARSE_ASSIGN(fid_p_arglist_1);
+    } while (ACCEPT(TOK_COMMA));
+  }
+  CR_RETURN_VOID();
+}
+
+/*
+ * static enum v7_err parse_member(struct v7 *v7, struct ast *a, ast_off_t pos)
+ */
+fid_parse_member :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_member_locals_t)
+{
+  switch (L->arg.v7->cur_tok) {
+    case TOK_DOT:
+      next_tok(L->arg.v7);
+      /* Allow reserved words as member identifiers */
+      if (is_reserved_word_token(L->arg.v7->cur_tok) ||
+          L->arg.v7->cur_tok == TOK_IDENTIFIER) {
+        ast_insert_inlined_node(L->arg.a, L->arg.pos, AST_MEMBER,
+                                L->arg.v7->tok, L->arg.v7->tok_len);
+        next_tok(L->arg.v7);
+      } else {
+        CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+      }
+      break;
+    case TOK_OPEN_BRACKET:
+      next_tok(L->arg.v7);
+      CALL_PARSE_EXPRESSION(fid_p_member_1);
+      EXPECT(TOK_CLOSE_BRACKET);
+      ast_insert_node(L->arg.a, L->arg.pos, AST_INDEX);
+      break;
+    default:
+      CR_RETURN_VOID();
+  }
+  /* not necessary, but let it be anyway */
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_memberexpr(struct v7 *v7, struct ast *a) */
+fid_parse_memberexpr :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_memberexpr_locals_t)
+{
+  L->pos = L->arg.a->mbuf.len;
+  CALL_PARSE_NEWEXPR(fid_p_memberexpr_1);
+
+  for (;;) {
+    switch (L->arg.v7->cur_tok) {
+      case TOK_DOT:
+      case TOK_OPEN_BRACKET:
+        CALL_PARSE_MEMBER(L->pos, fid_p_memberexpr_2);
+        break;
+      default:
+        CR_RETURN_VOID();
+    }
+  }
+  /* not necessary, but let it be anyway */
+  CR_RETURN_VOID();
+}
+
+/* static enum v7_err parse_var(struct v7 *v7, struct ast *a) */
+fid_parse_var :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_var_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_VAR);
+  ast_modify_skip(L->arg.a, L->arg.v7->last_var_node, L->start,
+                  AST_FUNC_FIRST_VAR_SKIP);
   /* zero out var node pointer */
-  ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-  v7->last_var_node = start;
+  ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+  L->arg.v7->last_var_node = L->start;
   do {
-    ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
+    ast_add_inlined_node(L->arg.a, AST_VAR_DECL, L->arg.v7->tok,
+                         L->arg.v7->tok_len);
     EXPECT(TOK_IDENTIFIER);
     if (ACCEPT(TOK_ASSIGN)) {
-      PARSE(assign);
+      CALL_PARSE_ASSIGN(fid_p_var_1);
     } else {
-      ast_add_node(a, AST_NOP);
+      ast_add_node(L->arg.a, AST_NOP);
     }
   } while (ACCEPT(TOK_COMMA));
-  ast_set_skip(a, start, AST_END_SKIP);
-  return V7_OK;
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  CR_RETURN_VOID();
 }
 
-static int parse_optional(struct v7 *v7, struct ast *a,
-                          enum v7_tok terminator) {
-  CHECK_STACK();
-  if (v7->cur_tok != terminator) {
-    return 1;
+/* static enum v7_err parse_prop(struct v7 *v7, struct ast *a) */
+fid_parse_prop :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_prop_locals_t)
+{
+#ifdef V7_ENABLE_JS_GETTERS
+  if (L->arg.v7->cur_tok == TOK_IDENTIFIER && L->arg.v7->tok_len == 3 &&
+      strncmp(L->arg.v7->tok, "get", L->arg.v7->tok_len) == 0 &&
+      lookahead(L->arg.v7) != TOK_COLON) {
+    next_tok(L->arg.v7);
+    ast_add_node(L->arg.a, AST_GETTER);
+    CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_1_getter);
+  } else
+#endif
+      if (L->arg.v7->cur_tok == TOK_IDENTIFIER &&
+          lookahead(L->arg.v7) == TOK_OPEN_PAREN) {
+    /* ecmascript 6 feature */
+    CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_2);
+#ifdef V7_ENABLE_JS_SETTERS
+  } else if (L->arg.v7->cur_tok == TOK_IDENTIFIER && L->arg.v7->tok_len == 3 &&
+             strncmp(L->arg.v7->tok, "set", L->arg.v7->tok_len) == 0 &&
+             lookahead(L->arg.v7) != TOK_COLON) {
+    next_tok(L->arg.v7);
+    ast_add_node(L->arg.a, AST_SETTER);
+    CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_3_setter);
+#endif
+  } else {
+    /* Allow reserved words as property names. */
+    if (is_reserved_word_token(L->arg.v7->cur_tok) ||
+        L->arg.v7->cur_tok == TOK_IDENTIFIER ||
+        L->arg.v7->cur_tok == TOK_NUMBER) {
+      ast_add_inlined_node(L->arg.a, AST_PROP, L->arg.v7->tok,
+                           L->arg.v7->tok_len);
+    } else if (L->arg.v7->cur_tok == TOK_STRING_LITERAL) {
+      ast_add_inlined_node(L->arg.a, AST_PROP, L->arg.v7->tok + 1,
+                           L->arg.v7->tok_len - 2);
+    } else {
+      CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+    }
+    next_tok(L->arg.v7);
+    EXPECT(TOK_COLON);
+    CALL_PARSE_ASSIGN(fid_p_prop_4);
   }
-  ast_add_node(a, AST_NOP);
-  return 0;
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_if(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  CHECK_STACK();
-  start = ast_add_node(a, AST_IF);
-  EXPECT(TOK_OPEN_PAREN);
-  PARSE(expression);
-  EXPECT(TOK_CLOSE_PAREN);
-  PARSE(statement);
-  ast_set_skip(a, start, AST_END_IF_TRUE_SKIP);
-  if (ACCEPT(TOK_ELSE)) {
-    PARSE(statement);
-  }
-  ast_set_skip(a, start, AST_END_SKIP);
-  return V7_OK;
-}
+/* static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) */
+fid_parse_dowhile :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_dowhile_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_DOWHILE);
+  L->saved_in_loop = L->arg.v7->pstate.in_loop;
 
-static enum v7_err parse_while(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  int saved_in_loop;
-  CHECK_STACK();
-  start = ast_add_node(a, AST_WHILE);
-  saved_in_loop = v7->pstate.in_loop;
-  EXPECT(TOK_OPEN_PAREN);
-  PARSE(expression);
-  EXPECT(TOK_CLOSE_PAREN);
-  v7->pstate.in_loop = 1;
-  PARSE(statement);
-  ast_set_skip(a, start, AST_END_SKIP);
-  v7->pstate.in_loop = saved_in_loop;
-  return V7_OK;
-}
-
-static enum v7_err parse_dowhile(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  int saved_in_loop;
-  CHECK_STACK();
-
-  start = ast_add_node(a, AST_DOWHILE);
-  saved_in_loop = v7->pstate.in_loop;
-
-  v7->pstate.in_loop = 1;
-  PARSE(statement);
-  v7->pstate.in_loop = saved_in_loop;
-  ast_set_skip(a, start, AST_DO_WHILE_COND_SKIP);
+  L->arg.v7->pstate.in_loop = 1;
+  CALL_PARSE_STATEMENT(fid_p_dowhile_1);
+  L->arg.v7->pstate.in_loop = L->saved_in_loop;
+  ast_set_skip(L->arg.a, L->start, AST_DO_WHILE_COND_SKIP);
   EXPECT(TOK_WHILE);
   EXPECT(TOK_OPEN_PAREN);
-  PARSE(expression);
+  CALL_PARSE_EXPRESSION(fid_p_dowhile_2);
   EXPECT(TOK_CLOSE_PAREN);
-  ast_set_skip(a, start, AST_END_SKIP);
-  return V7_OK;
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_for(struct v7 *v7, struct ast *a) {
+/* static enum v7_err parse_for(struct v7 *v7, struct ast *a) */
+fid_parse_for :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_for_locals_t)
+{
   /* TODO(mkm): for of, for each in */
+  /*
   ast_off_t start;
   int saved_in_loop;
+  */
 
-  CHECK_STACK();
-  start = ast_add_node(a, AST_FOR);
-  saved_in_loop = v7->pstate.in_loop;
+  L->start = ast_add_node(L->arg.a, AST_FOR);
+  L->saved_in_loop = L->arg.v7->pstate.in_loop;
 
   EXPECT(TOK_OPEN_PAREN);
 
-  if (parse_optional(v7, a, TOK_SEMICOLON)) {
+  if (parse_optional(L->arg.v7, L->arg.a, TOK_SEMICOLON)) {
     /*
      * TODO(mkm): make this reentrant otherwise this pearl won't parse:
      * for((function(){return 1 in o.a ? o : x})().a in [1,2,3])
      */
-    v7->pstate.inhibit_in = 1;
+    L->arg.v7->pstate.inhibit_in = 1;
     if (ACCEPT(TOK_VAR)) {
-      PARSE(var);
+      CALL_PARSE_VAR(fid_p_for_1);
     } else {
-      PARSE(expression);
+      CALL_PARSE_EXPRESSION(fid_p_for_2);
     }
-    v7->pstate.inhibit_in = 0;
+    L->arg.v7->pstate.inhibit_in = 0;
 
     if (ACCEPT(TOK_IN)) {
-      PARSE(expression);
-      ast_add_node(a, AST_NOP);
+      CALL_PARSE_EXPRESSION(fid_p_for_3);
+      ast_add_node(L->arg.a, AST_NOP);
       /*
        * Assumes that for and for in have the same AST format which is
        * suboptimal but avoids the need of fixing up the var offset chain.
        * TODO(mkm) improve this
        */
-      a->mbuf.buf[start - 1] = AST_FOR_IN;
-      goto body;
+      L->arg.a->mbuf.buf[L->start - 1] = AST_FOR_IN;
+      goto for_loop_body;
     }
   }
 
   EXPECT(TOK_SEMICOLON);
-  if (parse_optional(v7, a, TOK_SEMICOLON)) {
-    PARSE(expression);
+  if (parse_optional(L->arg.v7, L->arg.a, TOK_SEMICOLON)) {
+    CALL_PARSE_EXPRESSION(fid_p_for_4);
   }
   EXPECT(TOK_SEMICOLON);
-  if (parse_optional(v7, a, TOK_CLOSE_PAREN)) {
-    PARSE(expression);
+  if (parse_optional(L->arg.v7, L->arg.a, TOK_CLOSE_PAREN)) {
+    CALL_PARSE_EXPRESSION(fid_p_for_5);
   }
 
-body:
+for_loop_body:
   EXPECT(TOK_CLOSE_PAREN);
-  ast_set_skip(a, start, AST_FOR_BODY_SKIP);
-  v7->pstate.in_loop = 1;
-  PARSE(statement);
-  v7->pstate.in_loop = saved_in_loop;
-  ast_set_skip(a, start, AST_END_SKIP);
-  return V7_OK;
+  ast_set_skip(L->arg.a, L->start, AST_FOR_BODY_SKIP);
+  L->arg.v7->pstate.in_loop = 1;
+  CALL_PARSE_STATEMENT(fid_p_for_6);
+  L->arg.v7->pstate.in_loop = L->saved_in_loop;
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_switch(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  int saved_in_switch;
-
-  CHECK_STACK();
-  start = ast_add_node(a, AST_SWITCH);
-  saved_in_switch = v7->pstate.in_switch;
-
-  ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
-  EXPECT(TOK_OPEN_PAREN);
-  PARSE(expression);
-  EXPECT(TOK_CLOSE_PAREN);
-  EXPECT(TOK_OPEN_CURLY);
-  v7->pstate.in_switch = 1;
-  while (v7->cur_tok != TOK_CLOSE_CURLY) {
-    ast_off_t case_start;
-    switch (v7->cur_tok) {
-      case TOK_CASE:
-        next_tok(v7);
-        case_start = ast_add_node(a, AST_CASE);
-        PARSE(expression);
-        EXPECT(TOK_COLON);
-        while (v7->cur_tok != TOK_CASE && v7->cur_tok != TOK_DEFAULT &&
-               v7->cur_tok != TOK_CLOSE_CURLY) {
-          PARSE(statement);
-        }
-        ast_set_skip(a, case_start, AST_END_SKIP);
-        break;
-      case TOK_DEFAULT:
-        next_tok(v7);
-        EXPECT(TOK_COLON);
-        ast_set_skip(a, start, AST_SWITCH_DEFAULT_SKIP);
-        case_start = ast_add_node(a, AST_DEFAULT);
-        while (v7->cur_tok != TOK_CASE && v7->cur_tok != TOK_DEFAULT &&
-               v7->cur_tok != TOK_CLOSE_CURLY) {
-          PARSE(statement);
-        }
-        ast_set_skip(a, case_start, AST_END_SKIP);
-        break;
-      default:
-        return V7_SYNTAX_ERROR;
-    }
-  }
-  EXPECT(TOK_CLOSE_CURLY);
-  ast_set_skip(a, start, AST_END_SKIP);
-  v7->pstate.in_switch = saved_in_switch;
-  return V7_OK;
-}
-
-static enum v7_err parse_try(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  CHECK_STACK();
-  start = ast_add_node(a, AST_TRY);
-  PARSE(block);
-  ast_set_skip(a, start, AST_TRY_CATCH_SKIP);
+/* static enum v7_err parse_try(struct v7 *v7, struct ast *a) */
+fid_parse_try :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_try_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_TRY);
+  CALL_PARSE_BLOCK(fid_p_try_1);
+  ast_set_skip(L->arg.a, L->start, AST_TRY_CATCH_SKIP);
   if (ACCEPT(TOK_CATCH)) {
     EXPECT(TOK_OPEN_PAREN);
-    PARSE(ident);
+    CALL_PARSE_IDENT(fid_p_try_2);
     EXPECT(TOK_CLOSE_PAREN);
-    PARSE(block);
+    CALL_PARSE_BLOCK(fid_p_try_3);
   }
-  ast_set_skip(a, start, AST_TRY_FINALLY_SKIP);
+  ast_set_skip(L->arg.a, L->start, AST_TRY_FINALLY_SKIP);
   if (ACCEPT(TOK_FINALLY)) {
-    PARSE(block);
+    CALL_PARSE_BLOCK(fid_p_try_4);
   }
-  ast_set_skip(a, start, AST_END_SKIP);
-  return V7_OK;
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_with(struct v7 *v7, struct ast *a) {
-  ast_off_t start;
-  CHECK_STACK();
-  start = ast_add_node(a, AST_WITH);
-  if (v7->pstate.in_strict) {
-    return V7_SYNTAX_ERROR;
-  }
+/* static enum v7_err parse_switch(struct v7 *v7, struct ast *a) */
+fid_parse_switch :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_switch_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_SWITCH);
+  L->saved_in_switch = L->arg.v7->pstate.in_switch;
+
+  ast_set_skip(L->arg.a, L->start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
-  PARSE(expression);
+  CALL_PARSE_EXPRESSION(fid_p_switch_1);
   EXPECT(TOK_CLOSE_PAREN);
-  PARSE(statement);
-  ast_set_skip(a, start, AST_END_SKIP);
-  return V7_OK;
-}
-
-#define PARSE_WITH_OPT_ARG(tag, arg_tag, arg_parser) \
-  do {                                               \
-    if (end_of_statement(v7) == V7_OK) {             \
-      ast_add_node(a, tag);                          \
-    } else {                                         \
-      ast_add_node(a, arg_tag);                      \
-      PARSE(arg_parser);                             \
-    }                                                \
-  } while (0)
-
-static enum v7_err parse_statement(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-  switch (v7->cur_tok) {
-    case TOK_SEMICOLON:
-      next_tok(v7);
-      return V7_OK;      /* empty statement */
-    case TOK_OPEN_CURLY: /* block */
-      PARSE(block);
-      return V7_OK; /* returning because no semicolon required */
-    case TOK_IF:
-      next_tok(v7);
-      return parse_if(v7, a);
-    case TOK_WHILE:
-      next_tok(v7);
-      return parse_while(v7, a);
-    case TOK_DO:
-      next_tok(v7);
-      return parse_dowhile(v7, a);
-    case TOK_FOR:
-      next_tok(v7);
-      return parse_for(v7, a);
-    case TOK_TRY:
-      next_tok(v7);
-      return parse_try(v7, a);
-    case TOK_SWITCH:
-      next_tok(v7);
-      return parse_switch(v7, a);
-    case TOK_WITH:
-      next_tok(v7);
-      return parse_with(v7, a);
-    case TOK_BREAK:
-      if (!(v7->pstate.in_loop || v7->pstate.in_switch)) {
-        return V7_SYNTAX_ERROR;
-      }
-      next_tok(v7);
-      PARSE_WITH_OPT_ARG(AST_BREAK, AST_LABELED_BREAK, ident);
-      break;
-    case TOK_CONTINUE:
-      if (!v7->pstate.in_loop) {
-        return V7_SYNTAX_ERROR;
-      }
-      next_tok(v7);
-      PARSE_WITH_OPT_ARG(AST_CONTINUE, AST_LABELED_CONTINUE, ident);
-      break;
-    case TOK_RETURN:
-      if (!v7->pstate.in_function) {
-        return V7_SYNTAX_ERROR;
-      }
-      next_tok(v7);
-      PARSE_WITH_OPT_ARG(AST_RETURN, AST_VALUE_RETURN, expression);
-      break;
-    case TOK_THROW:
-      next_tok(v7);
-      ast_add_node(a, AST_THROW);
-      PARSE(expression);
-      break;
-    case TOK_DEBUGGER:
-      next_tok(v7);
-      ast_add_node(a, AST_DEBUGGER);
-      break;
-    case TOK_VAR:
-      next_tok(v7);
-      PARSE(var);
-      break;
-    case TOK_IDENTIFIER:
-      if (lookahead(v7) == TOK_COLON) {
-        ast_add_inlined_node(a, AST_LABEL, v7->tok, v7->tok_len);
-        next_tok(v7);
+  EXPECT(TOK_OPEN_CURLY);
+  L->arg.v7->pstate.in_switch = 1;
+  while (L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
+    switch (L->arg.v7->cur_tok) {
+      case TOK_CASE:
+        next_tok(L->arg.v7);
+        L->case_start = ast_add_node(L->arg.a, AST_CASE);
+        CALL_PARSE_EXPRESSION(fid_p_switch_2);
         EXPECT(TOK_COLON);
-        return V7_OK;
-      }
-    /* fall through */
-    default:
-      PARSE(expression);
-      break;
+        while (L->arg.v7->cur_tok != TOK_CASE &&
+               L->arg.v7->cur_tok != TOK_DEFAULT &&
+               L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
+          CALL_PARSE_STATEMENT(fid_p_switch_3);
+        }
+        ast_set_skip(L->arg.a, L->case_start, AST_END_SKIP);
+        break;
+      case TOK_DEFAULT:
+        next_tok(L->arg.v7);
+        EXPECT(TOK_COLON);
+        ast_set_skip(L->arg.a, L->start, AST_SWITCH_DEFAULT_SKIP);
+        L->case_start = ast_add_node(L->arg.a, AST_DEFAULT);
+        while (L->arg.v7->cur_tok != TOK_CASE &&
+               L->arg.v7->cur_tok != TOK_DEFAULT &&
+               L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
+          CALL_PARSE_STATEMENT(fid_p_switch_4);
+        }
+        ast_set_skip(L->arg.a, L->case_start, AST_END_SKIP);
+        break;
+      default:
+        CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+    }
   }
-
-  TRY(end_of_statement(v7));
-  ACCEPT(TOK_SEMICOLON); /* swallow optional semicolon */
-  return V7_OK;
+  EXPECT(TOK_CLOSE_CURLY);
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  L->arg.v7->pstate.in_switch = L->saved_in_switch;
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_funcdecl(struct v7 *v7, struct ast *a,
-                                  int require_named, int reserved_name) {
-  ast_off_t start;
-  ast_off_t outer_last_var_node;
-  int saved_in_function;
-  int saved_in_strict;
-
-  CHECK_STACK();
-  start = ast_add_node(a, AST_FUNC);
-  outer_last_var_node = v7->last_var_node;
-  saved_in_function = v7->pstate.in_function;
-  saved_in_strict = v7->pstate.in_strict;
-
-  v7->last_var_node = start;
-  ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-  if ((reserved_name ? parse_ident_allow_reserved_words : parse_ident)(v7, a) ==
-      V7_SYNTAX_ERROR) {
-    if (require_named) {
-      return V7_SYNTAX_ERROR;
-    }
-    ast_add_node(a, AST_NOP);
+/* static enum v7_err parse_with(struct v7 *v7, struct ast *a) */
+fid_parse_with :
+#undef L
+#define L CR_CUR_LOCALS_PT(fid_parse_with_locals_t)
+{
+  L->start = ast_add_node(L->arg.a, AST_WITH);
+  if (L->arg.v7->pstate.in_strict) {
+    CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
   }
   EXPECT(TOK_OPEN_PAREN);
-  PARSE(arglist);
+  CALL_PARSE_EXPRESSION(fid_p_with_1);
   EXPECT(TOK_CLOSE_PAREN);
-  ast_set_skip(a, start, AST_FUNC_BODY_SKIP);
-  v7->pstate.in_function = 1;
-  EXPECT(TOK_OPEN_CURLY);
-  if (parse_use_strict(v7, a) == V7_OK) {
-    v7->pstate.in_strict = 1;
-  }
-  PARSE_ARG(body, TOK_CLOSE_CURLY);
-  EXPECT(TOK_CLOSE_CURLY);
-  v7->pstate.in_strict = saved_in_strict;
-  v7->pstate.in_function = saved_in_function;
-  ast_set_skip(a, start, AST_END_SKIP);
-  v7->last_var_node = outer_last_var_node;
-  return V7_OK;
+  CALL_PARSE_STATEMENT(fid_p_with_2);
+  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  CR_RETURN_VOID();
 }
 
-static enum v7_err parse_block(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-  EXPECT(TOK_OPEN_CURLY);
-  PARSE_ARG(body, TOK_CLOSE_CURLY);
-  EXPECT(TOK_CLOSE_CURLY);
-  return V7_OK;
-}
-
-static enum v7_err parse_body(struct v7 *v7, struct ast *a, enum v7_tok end) {
-  ast_off_t start;
-  CHECK_STACK();
-  while (v7->cur_tok != end) {
-    if (ACCEPT(TOK_FUNCTION)) {
-      if (v7->cur_tok != TOK_IDENTIFIER) {
-        return V7_SYNTAX_ERROR;
-      }
-      start = ast_add_node(a, AST_VAR);
-      ast_modify_skip(a, v7->last_var_node, start, AST_FUNC_FIRST_VAR_SKIP);
-      /* zero out var node pointer */
-      ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-      v7->last_var_node = start;
-      ast_add_inlined_node(a, AST_FUNC_DECL, v7->tok, v7->tok_len);
-
-      PARSE_ARG_2(funcdecl, 1, 0);
-      ast_set_skip(a, start, AST_END_SKIP);
-    } else {
-      PARSE(statement);
-    }
-  }
-  return V7_OK;
-}
-
-static enum v7_err parse_use_strict(struct v7 *v7, struct ast *a) {
-  CHECK_STACK();
-  if (v7->cur_tok == TOK_STRING_LITERAL &&
-      (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
-       strncmp(v7->tok, "'use strict'", v7->tok_len) == 0)) {
-    next_tok(v7);
-    ast_add_node(a, AST_USE_STRICT);
-    return V7_OK;
-  }
-  return V7_SYNTAX_ERROR;
-}
-
-static enum v7_err parse_script(struct v7 *v7, struct ast *a) {
-  ast_off_t start = ast_add_node(a, AST_SCRIPT);
-  ast_off_t outer_last_var_node = v7->last_var_node;
-  int saved_in_strict = v7->pstate.in_strict;
-  v7->last_var_node = start;
-  ast_modify_skip(a, start, start, AST_FUNC_FIRST_VAR_SKIP);
-  if (parse_use_strict(v7, a) == V7_OK) {
-    v7->pstate.in_strict = 1;
-  }
-  PARSE_ARG(body, TOK_END_OF_INPUT);
-  ast_set_skip(a, start, AST_END_SKIP);
-  v7->pstate.in_strict = saved_in_strict;
-  v7->last_var_node = outer_last_var_node;
-  return V7_OK;
-}
-
-static unsigned long get_column(const char *code, const char *pos) {
-  const char *p = pos;
-  while (p > code && *p != '\n') {
-    p--;
-  }
-  return p == code ? pos - p : pos - (p + 1);
-}
-
-static const char *get_err_name(enum v7_err err) {
-  static const char *err_names[] = {"", "syntax error", "exception",
-                                    "stack overflow", "script too large"};
-  return (err < sizeof(err_names) / sizeof(err_names[0])) ? err_names[err]
-                                                          : "internal error";
+fid_none:
+  /* stack is empty, so we're done; return */
+  return rc;
 }
 
 V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
                              int verbose, int is_json) {
   enum v7_err err;
   const char *p;
+  struct cr_ctx cr_ctx;
+  union user_arg_ret arg_retval;
+  enum cr_status rc;
+
   v7->pstate.source_code = v7->pstate.pc = src;
   v7->pstate.file_name = "<stdin>";
   v7->pstate.line_no = 1;
@@ -11638,11 +13770,113 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
     }
   }
 
+  /* init cr context */
+  cr_context_init(&cr_ctx, &arg_retval, _fid_descrs);
+
+  /* prepare first function call: fid_mul_sum */
   if (is_json) {
-    err = parse_terminal(v7, a);
+    arg_retval.arg.fid_parse_terminal.v7 = v7;
+    arg_retval.arg.fid_parse_terminal.a = a;
+    CR_FIRST_CALL_PREPARE_C(&cr_ctx, fid_parse_terminal);
   } else {
-    err = parse_script(v7, a);
+    arg_retval.arg.fid_parse_script.v7 = v7;
+    arg_retval.arg.fid_parse_script.a = a;
+    CR_FIRST_CALL_PREPARE_C(&cr_ctx, fid_parse_script);
   }
+
+  /* proceed to coroutine execution */
+  rc = parser_cr_exec(&cr_ctx);
+
+  /* set `err` depending on coroutine state */
+  switch (rc) {
+    case CR_RES__OK:
+      err = V7_OK;
+      break;
+    case CR_RES__ERR_UNCAUGHT_EXCEPTION:
+      switch ((enum parser_exc_id) CR_THROWN_C(&cr_ctx)) {
+        case PARSER_EXC_ID__SYNTAX_ERROR:
+          err = V7_SYNTAX_ERROR;
+          break;
+        case PARSER_EXC_ID__EXEC_EXCEPTION:
+          err = V7_EXEC_EXCEPTION;
+          break;
+        case PARSER_EXC_ID__STACK_OVERFLOW:
+          err = V7_STACK_OVERFLOW;
+          break;
+        case PARSER_EXC_ID__AST_TOO_LARGE:
+          err = V7_AST_TOO_LARGE;
+          break;
+        case PARSER_EXC_ID__INVALID_ARG:
+          err = V7_INVALID_ARG;
+          break;
+
+        default:
+          /*
+           * TODO(dfrank): why don't we have `V7_INTERNAL_ERROR`? Maybe let's
+           * add it?  For now, using `V7_SYNTAX_ERROR`
+           */
+          err = V7_SYNTAX_ERROR;
+#ifndef NO_LIBC
+          fprintf(stderr, "internal error: no exception id set\n");
+#endif
+          break;
+      }
+      break;
+    default:
+      /*
+       * TODO(dfrank): why don't we have `V7_INTERNAL_ERROR`? Maybe let's add
+       * it?  For now, using `V7_SYNTAX_ERROR`
+       */
+      err = V7_SYNTAX_ERROR;
+#ifndef NO_LIBC
+      fprintf(stderr, "internal error: parser coroutine return code: %d\n",
+              (int) rc);
+#endif
+      break;
+  }
+
+#if defined(V7_TRACK_MAX_PARSER_STACK_SIZE)
+  /* remember how much stack space was consumed */
+
+  if (v7->parser_stack_data_max_size < cr_ctx.stack_data.size) {
+    v7->parser_stack_data_max_size = cr_ctx.stack_data.size;
+#ifndef NO_LIBC
+    printf("parser_stack_data_max_size=%u\n",
+           (unsigned int) v7->parser_stack_data_max_size);
+#endif
+  }
+
+  if (v7->parser_stack_ret_max_size < cr_ctx.stack_ret.size) {
+    v7->parser_stack_ret_max_size = cr_ctx.stack_ret.size;
+#ifndef NO_LIBC
+    printf("parser_stack_ret_max_size=%u\n",
+           (unsigned int) v7->parser_stack_ret_max_size);
+#endif
+  }
+
+#if defined(CR_TRACK_MAX_STACK_LEN)
+  if (v7->parser_stack_data_max_len < cr_ctx.stack_data_max_len) {
+    v7->parser_stack_data_max_len = cr_ctx.stack_data_max_len;
+#ifndef NO_LIBC
+    printf("parser_stack_data_max_len=%u\n",
+           (unsigned int) v7->parser_stack_data_max_len);
+#endif
+  }
+
+  if (v7->parser_stack_ret_max_len < cr_ctx.stack_ret_max_len) {
+    v7->parser_stack_ret_max_len = cr_ctx.stack_ret_max_len;
+#ifndef NO_LIBC
+    printf("parser_stack_ret_max_len=%u\n",
+           (unsigned int) v7->parser_stack_ret_max_len);
+#endif
+  }
+#endif
+
+#endif
+
+  /* free resources occupied by context (at least, "stack" arrays) */
+  cr_context_free(&cr_ctx);
+
   if (a->has_overflow) {
     c_snprintf(v7->error_msg, sizeof(v7->error_msg),
                "script too large (try V7_LARGE_AST build option)");
