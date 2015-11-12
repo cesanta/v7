@@ -1049,7 +1049,7 @@ char *utfutf(char *s1, char *s2);
 #define __func__ __FILE__ ":" STR(__LINE__)
 #endif
 #define snprintf _snprintf
-#define fileno  _fileno
+#define fileno _fileno
 #define vsnprintf _vsnprintf
 #define sleep(x) Sleep((x) *1000)
 #define to64(x) _atoi64(x)
@@ -5298,7 +5298,7 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
-#endif  /* CS_ENABLE_NATIVE_MD5 */
+#endif /* CS_ENABLE_NATIVE_MD5 */
 
 /*
  * Stringify binary data. Output buffer size must be 2 * size_of_input + 1
@@ -5512,7 +5512,8 @@ void cs_sha1_init(cs_sha1_ctx *context) {
   context->count[0] = context->count[1] = 0;
 }
 
-void cs_sha1_update(cs_sha1_ctx *context, const unsigned char *data, uint32_t len) {
+void cs_sha1_update(cs_sha1_ctx *context, const unsigned char *data,
+                    uint32_t len) {
   uint32_t i, j;
 
   j = context->count[0];
