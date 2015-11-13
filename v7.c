@@ -1423,6 +1423,12 @@ char *cs_mmap_file(const char *path, size_t *size);
 union user_arg_ret;
 
 /*
+ * Type that represents size of local function variables. We assume we'll never
+ * need more than 255 bytes of stack frame.
+ */
+typedef uint8_t cr_locals_size_t;
+
+/*
  * Descriptor of a single function; const array of such descriptors should
  * be given to `cr_context_init()`
  */
@@ -1434,7 +1440,7 @@ struct cr_func_desc {
    * since this value should be aligned by the word boundary, and
    * `CR_LOCALS_SIZEOF()` takes care of this.
    */
-  uint8_t locals_size;
+  cr_locals_size_t locals_size;
 };
 
 enum cr_status {
@@ -1551,6 +1557,15 @@ enum cr_exc_id {
 };
 
 /*
+ * A type whose size is a special case for macros `CR_LOCALS_SIZEOF()` and
+ * `CR_ARG_SIZEOF()` : it is assumed as zero size.
+ *
+ * This hackery is needed because empty structs (that would yield sizeof 0) are
+ * illegal in plain C.
+ */
+typedef struct { uint8_t _dummy[((cr_locals_size_t) -1)]; } cr_zero_size_type_t;
+
+/*
  * To be used in dispatcher switch: depending on the "fid" (function id), we
  * jump to the appropriate label.
  */
@@ -1565,7 +1580,7 @@ enum cr_exc_id {
  * Client code only needs it in dispatcher switch.
  */
 #define CR_CURR_FUNC_C(p_ctx) \
-  *(((uint8_t *) (p_ctx)->stack_ret.buf) + (p_ctx)->cur_fid_idx - 1)
+  *(((cr_locals_size_t *) (p_ctx)->stack_ret.buf) + (p_ctx)->cur_fid_idx - 1)
 
 /*
  * Prepare context for calling first function.
@@ -1577,7 +1592,7 @@ enum cr_exc_id {
  */
 #define CR_FIRST_CALL_PREPARE_C(p_ctx, call_fid)                           \
   _CR_CALL_PREPARE(p_ctx, call_fid, CR_LOCALS_SIZEOF(call_fid##_locals_t), \
-                   sizeof(call_fid##_arg_t), CR_FID__NONE)
+                   CR_ARG_SIZEOF(call_fid##_arg_t), CR_FID__NONE)
 
 /*
  * Call "function" with id `call_fid`: uses `_CR_CALL_PREPARE()` to prepare
@@ -1592,7 +1607,7 @@ enum cr_exc_id {
 #define CR_CALL_C(p_ctx, call_fid, local_ret_fid)                            \
   do {                                                                       \
     _CR_CALL_PREPARE(p_ctx, call_fid, CR_LOCALS_SIZEOF(call_fid##_locals_t), \
-                     sizeof(call_fid##_arg_t), local_ret_fid);               \
+                     CR_ARG_SIZEOF(call_fid##_arg_t), local_ret_fid);        \
     goto _cr_iter_begin;                                                     \
   local_ret_fid:                                                             \
     /* we'll get here when called function returns */                        \
@@ -1761,9 +1776,23 @@ enum cr_exc_id {
  * Like `sizeof()`, but it always evaluates to the multiple of `sizeof(void *)`
  *
  * It should be used for (struct cr_func_desc)::locals_size
+ *
+ * NOTE: instead of checking `sizeof(type) <= ((cr_locals_size_t) -1)`, I'd
+ * better put the calculated value as it is, and if it overflows, then compiler
+ * will generate warning, and this would help us to reveal our mistake. But
+ * unfortunately, clang *always* generates this warning (even if the whole
+ * expression yields 0), so we have to apply a bit more of dirty hacks here.
  */
-#define CR_LOCALS_SIZEOF(type) \
-  (((sizeof(type)) + (sizeof(void *) - 1)) & (~(sizeof(void *) - 1)))
+#define CR_LOCALS_SIZEOF(type)                                                \
+  ((sizeof(type) == sizeof(cr_zero_size_type_t))                              \
+       ? 0                                                                    \
+       : (sizeof(type) <= ((cr_locals_size_t) -1)                             \
+              ? ((cr_locals_size_t)(((sizeof(type)) + (sizeof(void *) - 1)) & \
+                                    (~(sizeof(void *) - 1))))                 \
+              : ((cr_locals_size_t) -1)))
+
+#define CR_ARG_SIZEOF(type) \
+  ((sizeof(type) == sizeof(cr_zero_size_type_t)) ? 0 : sizeof(type))
 
 /*
  * Returns pointer to the current function's stack locals, and casts to given
@@ -1947,6 +1976,7 @@ enum cr_status cr_on_iter_begin(struct cr_ctx *p_ctx);
  * `p_func_descrs`: array of all user function descriptors
  */
 void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
+                     size_t arg_retval_size,
                      const struct cr_func_desc *p_func_descrs);
 
 /*
@@ -6200,18 +6230,23 @@ enum cr_status cr_on_iter_begin(struct cr_ctx *p_ctx) {
     /*
      * increment stack pointers
      */
-    /* make sure this function has correct `struct cr_func_desc` */
+    /* make sure this function has correct `struct cr_func_desc` entry */
     assert(locals_size == p_ctx->call_locals_size);
+    /*
+     * make sure we haven't mistakenly included "zero-sized" `.._arg_t`
+     * structure in `.._locals_t` struct
+     *
+     * By "zero-sized" I mean `cr_zero_size_type_t`.
+     */
+    assert(locals_size < sizeof(cr_zero_size_type_t));
 
     _CR_STACK_DATA_ALLOC(p_ctx, locals_size);
     _CR_STACK_RET_ALLOC(p_ctx, 1 /*fid*/);
     p_ctx->cur_fid_idx = p_ctx->stack_ret.len;
 
     /* copy arguments to our "stack" (and advance locals stack pointer) */
-    {
-      memcpy(p_ctx->stack_data.buf + p_ctx->stack_data.len - locals_size,
-             p_ctx->p_arg_retval, p_ctx->call_arg_size);
-    }
+    memcpy(p_ctx->stack_data.buf + p_ctx->stack_data.len - locals_size,
+           p_ctx->p_arg_retval, p_ctx->call_arg_size);
 
     /* set function id */
     CR_CURR_FUNC_C(p_ctx) = p_ctx->called_fid;
@@ -6267,7 +6302,16 @@ out:
 }
 
 void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
+                     size_t arg_retval_size,
                      const struct cr_func_desc *p_func_descrs) {
+  /*
+   * make sure we haven't mistakenly included "zero-sized" `.._arg_t`
+   * structure in `union user_arg_ret`.
+   *
+   * By "zero-sized" I mean `cr_zero_size_type_t`.
+   */
+  assert(arg_retval_size < sizeof(cr_zero_size_type_t));
+
   memset(p_ctx, 0x00, sizeof(*p_ctx));
 
   p_ctx->p_func_descrs = p_func_descrs;
@@ -11406,22 +11450,22 @@ void __cyg_profile_func_exit(void *this_fn, void *call_site) {
 /* Amalgamated: #include "internal.h" */
 /* Amalgamated: #include "coroutine.h" */
 
-#define ACCEPT(t) (((L->arg.v7)->cur_tok == (t)) ? next_tok((L->arg.v7)), 1 : 0)
+#define ACCEPT(t) (((v7)->cur_tok == (t)) ? next_tok((v7)), 1 : 0)
 
 #define EXPECT(t)                            \
   do {                                       \
-    if ((L->arg.v7)->cur_tok != (t)) {       \
+    if ((v7)->cur_tok != (t)) {              \
       CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR); \
     }                                        \
-    next_tok(L->arg.v7);                     \
+    next_tok(v7);                            \
   } while (0)
 
 #define PARSE_WITH_OPT_ARG(tag, arg_tag, arg_parser, label) \
   do {                                                      \
-    if (end_of_statement(L->arg.v7) == V7_OK) {             \
-      ast_add_node(L->arg.a, (tag));                        \
+    if (end_of_statement(v7) == V7_OK) {                    \
+      ast_add_node(a, (tag));                               \
     } else {                                                \
-      ast_add_node(L->arg.a, (arg_tag));                    \
+      ast_add_node(a, (arg_tag));                           \
       arg_parser(label);                                    \
     }                                                       \
   } while (0)
@@ -11627,48 +11671,54 @@ enum parser_exc_id {
 /* parse_script {{{ */
 
 /* parse_script's arguments */
+#if 0
 typedef struct fid_parse_script_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_script_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_script_arg_t;
+#endif
 
 /* parse_script's data on stack */
 typedef struct fid_parse_script_locals {
+#if 0
   struct fid_parse_script_arg arg;
+#endif
 
   ast_off_t start;
   ast_off_t outer_last_var_node;
   int saved_in_strict;
 } fid_parse_script_locals_t;
+
 /* }}} */
 
 /* parse_use_strict {{{ */
 /* parse_use_strict's arguments */
+#if 0
 typedef struct fid_parse_use_strict_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_use_strict_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_use_strict_arg_t;
+#endif
 
 /* parse_use_strict's data on stack */
+#if 0
 typedef struct fid_parse_use_strict_locals {
   struct fid_parse_use_strict_arg arg;
 } fid_parse_use_strict_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_use_strict_locals_t;
+#endif
 
 #define CALL_PARSE_USE_STRICT(_label)      \
   do {                                     \
-    N.fid_parse_use_strict.v7 = L->arg.v7; \
-    N.fid_parse_use_strict.a = L->arg.a;   \
     CR_CALL(fid_parse_use_strict, _label); \
   } while (0)
+
 /* }}} */
 
 /* parse_body {{{ */
 /* parse_body's arguments */
-typedef struct fid_parse_body_arg {
-  struct v7 *v7;
-  struct ast *a;
-  enum v7_tok end;
-} fid_parse_body_arg_t;
+typedef struct fid_parse_body_arg { enum v7_tok end; } fid_parse_body_arg_t;
 
 /* parse_body's data on stack */
 typedef struct fid_parse_body_locals {
@@ -11679,8 +11729,6 @@ typedef struct fid_parse_body_locals {
 
 #define CALL_PARSE_BODY(_end, _label) \
   do {                                \
-    N.fid_parse_body.v7 = L->arg.v7;  \
-    N.fid_parse_body.a = L->arg.a;    \
     N.fid_parse_body.end = (_end);    \
     CR_CALL(fid_parse_body, _label);  \
   } while (0)
@@ -11688,34 +11736,42 @@ typedef struct fid_parse_body_locals {
 
 /* parse_statement {{{ */
 /* parse_statement's arguments */
+#if 0
 typedef struct fid_parse_statement_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_statement_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_statement_arg_t;
+#endif
 
 /* parse_statement's data on stack */
+#if 0
 typedef struct fid_parse_statement_locals {
   struct fid_parse_statement_arg arg;
 } fid_parse_statement_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_statement_locals_t;
+#endif
 
 #define CALL_PARSE_STATEMENT(_label)      \
   do {                                    \
-    N.fid_parse_statement.v7 = L->arg.v7; \
-    N.fid_parse_statement.a = L->arg.a;   \
     CR_CALL(fid_parse_statement, _label); \
   } while (0)
 /* }}} */
 
 /* parse_expression {{{ */
 /* parse_expression's arguments */
+#if 0
 typedef struct fid_parse_expression_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_expression_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_expression_arg_t;
+#endif
 
 /* parse_expression's data on stack */
 typedef struct fid_parse_expression_locals {
+#if 0
   struct fid_parse_expression_arg arg;
+#endif
 
   ast_off_t pos;
   int group;
@@ -11723,28 +11779,30 @@ typedef struct fid_parse_expression_locals {
 
 #define CALL_PARSE_EXPRESSION(_label)      \
   do {                                     \
-    N.fid_parse_expression.v7 = L->arg.v7; \
-    N.fid_parse_expression.a = L->arg.a;   \
     CR_CALL(fid_parse_expression, _label); \
   } while (0)
 /* }}} */
 
 /* parse_assign {{{ */
 /* parse_assign's arguments */
+#if 0
 typedef struct fid_parse_assign_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_assign_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_assign_arg_t;
+#endif
 
 /* parse_assign's data on stack */
+#if 0
 typedef struct fid_parse_assign_locals {
   struct fid_parse_assign_arg arg;
 } fid_parse_assign_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_assign_locals_t;
+#endif
 
 #define CALL_PARSE_ASSIGN(_label)      \
   do {                                 \
-    N.fid_parse_assign.v7 = L->arg.v7; \
-    N.fid_parse_assign.a = L->arg.a;   \
     CR_CALL(fid_parse_assign, _label); \
   } while (0)
 /* }}} */
@@ -11752,26 +11810,25 @@ typedef struct fid_parse_assign_locals {
 /* parse_binary {{{ */
 /* parse_binary's arguments */
 typedef struct fid_parse_binary_arg {
-  struct v7 *v7;
-  struct ast *a;
-  int level;
   ast_off_t pos;
+  uint8_t min_level;
 } fid_parse_binary_arg_t;
 
 /* parse_binary's data on stack */
 typedef struct fid_parse_binary_locals {
   struct fid_parse_binary_arg arg;
 
-  int i;
-  enum v7_tok tok;
-  enum ast_tag ast;
+  uint8_t i;
+  /* during iteration, it becomes negative, so should be signed */
+  int8_t level;
+  uint8_t /*enum v7_tok*/ tok;
+  uint8_t /*enum ast_tag*/ ast;
+  ast_off_t saved_mbuf_len;
 } fid_parse_binary_locals_t;
 
 #define CALL_PARSE_BINARY(_level, _pos, _label) \
   do {                                          \
-    N.fid_parse_binary.v7 = L->arg.v7;          \
-    N.fid_parse_binary.a = L->arg.a;            \
-    N.fid_parse_binary.level = (_level);        \
+    N.fid_parse_binary.min_level = (_level);    \
     N.fid_parse_binary.pos = (_pos);            \
     CR_CALL(fid_parse_binary, _label);          \
   } while (0)
@@ -11779,213 +11836,241 @@ typedef struct fid_parse_binary_locals {
 
 /* parse_prefix {{{ */
 /* parse_prefix's arguments */
+#if 0
 typedef struct fid_parse_prefix_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_prefix_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_prefix_arg_t;
+#endif
 
 /* parse_prefix's data on stack */
+#if 0
 typedef struct fid_parse_prefix_locals {
   struct fid_parse_prefix_arg arg;
 } fid_parse_prefix_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_prefix_locals_t;
+#endif
 
 #define CALL_PARSE_PREFIX(_label)      \
   do {                                 \
-    N.fid_parse_prefix.v7 = L->arg.v7; \
-    N.fid_parse_prefix.a = L->arg.a;   \
     CR_CALL(fid_parse_prefix, _label); \
   } while (0)
 /* }}} */
 
 /* parse_postfix {{{ */
 /* parse_postfix's arguments */
+#if 0
 typedef struct fid_parse_postfix_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_postfix_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_postfix_arg_t;
+#endif
 
 /* parse_postfix's data on stack */
 typedef struct fid_parse_postfix_locals {
+#if 0
   struct fid_parse_postfix_arg arg;
+#endif
 
   ast_off_t pos;
 } fid_parse_postfix_locals_t;
 
 #define CALL_PARSE_POSTFIX(_label)      \
   do {                                  \
-    N.fid_parse_postfix.v7 = L->arg.v7; \
-    N.fid_parse_postfix.a = L->arg.a;   \
     CR_CALL(fid_parse_postfix, _label); \
   } while (0)
 /* }}} */
 
 /* parse_callexpr {{{ */
 /* parse_callexpr's arguments */
+#if 0
 typedef struct fid_parse_callexpr_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_callexpr_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_callexpr_arg_t;
+#endif
 
 /* parse_callexpr's data on stack */
 typedef struct fid_parse_callexpr_locals {
+#if 0
   struct fid_parse_callexpr_arg arg;
+#endif
 
   ast_off_t pos;
 } fid_parse_callexpr_locals_t;
 
 #define CALL_PARSE_CALLEXPR(_label)      \
   do {                                   \
-    N.fid_parse_callexpr.v7 = L->arg.v7; \
-    N.fid_parse_callexpr.a = L->arg.a;   \
     CR_CALL(fid_parse_callexpr, _label); \
   } while (0)
 /* }}} */
 
 /* parse_newexpr {{{ */
 /* parse_newexpr's arguments */
+#if 0
 typedef struct fid_parse_newexpr_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_newexpr_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_newexpr_arg_t;
+#endif
 
 /* parse_newexpr's data on stack */
 typedef struct fid_parse_newexpr_locals {
+#if 0
   struct fid_parse_newexpr_arg arg;
+#endif
 
   ast_off_t start;
 } fid_parse_newexpr_locals_t;
 
 #define CALL_PARSE_NEWEXPR(_label)      \
   do {                                  \
-    N.fid_parse_newexpr.v7 = L->arg.v7; \
-    N.fid_parse_newexpr.a = L->arg.a;   \
     CR_CALL(fid_parse_newexpr, _label); \
   } while (0)
 /* }}} */
 
 /* parse_terminal {{{ */
 /* parse_terminal's arguments */
+#if 0
 typedef struct fid_parse_terminal_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_terminal_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_terminal_arg_t;
+#endif
 
 /* parse_terminal's data on stack */
 typedef struct fid_parse_terminal_locals {
+#if 0
   struct fid_parse_terminal_arg arg;
+#endif
 
   ast_off_t start;
 } fid_parse_terminal_locals_t;
 
 #define CALL_PARSE_TERMINAL(_label)      \
   do {                                   \
-    N.fid_parse_terminal.v7 = L->arg.v7; \
-    N.fid_parse_terminal.a = L->arg.a;   \
     CR_CALL(fid_parse_terminal, _label); \
   } while (0)
 /* }}} */
 
 /* parse_block {{{ */
 /* parse_block's arguments */
+#if 0
 typedef struct fid_parse_block_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_block_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_block_arg_t;
+#endif
 
 /* parse_block's data on stack */
+#if 0
 typedef struct fid_parse_block_locals {
   struct fid_parse_block_arg arg;
 } fid_parse_block_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_block_locals_t;
+#endif
 
 #define CALL_PARSE_BLOCK(_label)      \
   do {                                \
-    N.fid_parse_block.v7 = L->arg.v7; \
-    N.fid_parse_block.a = L->arg.a;   \
     CR_CALL(fid_parse_block, _label); \
   } while (0)
 /* }}} */
 
 /* parse_if {{{ */
 /* parse_if's arguments */
+#if 0
 typedef struct fid_parse_if_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_if_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_if_arg_t;
+#endif
 
 /* parse_if's data on stack */
 typedef struct fid_parse_if_locals {
+#if 0
   struct fid_parse_if_arg arg;
+#endif
 
   ast_off_t start;
 } fid_parse_if_locals_t;
 
 #define CALL_PARSE_IF(_label)      \
   do {                             \
-    N.fid_parse_if.v7 = L->arg.v7; \
-    N.fid_parse_if.a = L->arg.a;   \
     CR_CALL(fid_parse_if, _label); \
   } while (0)
 /* }}} */
 
 /* parse_while {{{ */
 /* parse_while's arguments */
+#if 0
 typedef struct fid_parse_while_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_while_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_while_arg_t;
+#endif
 
 /* parse_while's data on stack */
 typedef struct fid_parse_while_locals {
+#if 0
   struct fid_parse_while_arg arg;
+#endif
 
   ast_off_t start;
-  int saved_in_loop;
+  uint8_t saved_in_loop;
 } fid_parse_while_locals_t;
 
 #define CALL_PARSE_WHILE(_label)      \
   do {                                \
-    N.fid_parse_while.v7 = L->arg.v7; \
-    N.fid_parse_while.a = L->arg.a;   \
     CR_CALL(fid_parse_while, _label); \
   } while (0)
 /* }}} */
 
 /* parse_ident {{{ */
 /* parse_ident's arguments */
+#if 0
 typedef struct fid_parse_ident_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_ident_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_ident_arg_t;
+#endif
 
 /* parse_ident's data on stack */
+#if 0
 typedef struct fid_parse_ident_locals {
   struct fid_parse_ident_arg arg;
 } fid_parse_ident_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_ident_locals_t;
+#endif
 
 #define CALL_PARSE_IDENT(_label)      \
   do {                                \
-    N.fid_parse_ident.v7 = L->arg.v7; \
-    N.fid_parse_ident.a = L->arg.a;   \
     CR_CALL(fid_parse_ident, _label); \
   } while (0)
 /* }}} */
 
 /* parse_ident_allow_reserved_words {{{ */
 /* parse_ident_allow_reserved_words's arguments */
+#if 0
 typedef struct fid_parse_ident_allow_reserved_words_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_ident_allow_reserved_words_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_ident_allow_reserved_words_arg_t;
+#endif
 
 /* parse_ident_allow_reserved_words's data on stack */
+#if 0
 typedef struct fid_parse_ident_allow_reserved_words_locals {
   struct fid_parse_ident_allow_reserved_words_arg arg;
 } fid_parse_ident_allow_reserved_words_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_ident_allow_reserved_words_locals_t;
+#endif
 
 #define CALL_PARSE_IDENT_ALLOW_RESERVED_WORDS(_label)      \
   do {                                                     \
-    N.fid_parse_ident_allow_reserved_words.v7 = L->arg.v7; \
-    N.fid_parse_ident_allow_reserved_words.a = L->arg.a;   \
     CR_CALL(fid_parse_ident_allow_reserved_words, _label); \
   } while (0)
 /* }}} */
@@ -11993,10 +12078,8 @@ typedef struct fid_parse_ident_allow_reserved_words_locals {
 /* parse_funcdecl {{{ */
 /* parse_funcdecl's arguments */
 typedef struct fid_parse_funcdecl_arg {
-  struct v7 *v7;
-  struct ast *a;
-  int require_named;
-  int reserved_name;
+  uint8_t require_named;
+  uint8_t reserved_name;
 } fid_parse_funcdecl_arg_t;
 
 /* parse_funcdecl's data on stack */
@@ -12005,14 +12088,12 @@ typedef struct fid_parse_funcdecl_locals {
 
   ast_off_t start;
   ast_off_t outer_last_var_node;
-  int saved_in_function;
-  int saved_in_strict;
+  uint8_t saved_in_function;
+  uint8_t saved_in_strict;
 } fid_parse_funcdecl_locals_t;
 
 #define CALL_PARSE_FUNCDECL(_require_named, _reserved_name, _label) \
   do {                                                              \
-    N.fid_parse_funcdecl.v7 = L->arg.v7;                            \
-    N.fid_parse_funcdecl.a = L->arg.a;                              \
     N.fid_parse_funcdecl.require_named = (_require_named);          \
     N.fid_parse_funcdecl.reserved_name = (_reserved_name);          \
     CR_CALL(fid_parse_funcdecl, _label);                            \
@@ -12021,31 +12102,31 @@ typedef struct fid_parse_funcdecl_locals {
 
 /* parse_arglist {{{ */
 /* parse_arglist's arguments */
+#if 0
 typedef struct fid_parse_arglist_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_arglist_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_arglist_arg_t;
+#endif
 
 /* parse_arglist's data on stack */
+#if 0
 typedef struct fid_parse_arglist_locals {
   struct fid_parse_arglist_arg arg;
 } fid_parse_arglist_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_arglist_locals_t;
+#endif
 
 #define CALL_PARSE_ARGLIST(_label)      \
   do {                                  \
-    N.fid_parse_arglist.v7 = L->arg.v7; \
-    N.fid_parse_arglist.a = L->arg.a;   \
     CR_CALL(fid_parse_arglist, _label); \
   } while (0)
 /* }}} */
 
 /* parse_member {{{ */
 /* parse_member's arguments */
-typedef struct fid_parse_member_arg {
-  struct v7 *v7;
-  struct ast *a;
-  ast_off_t pos;
-} fid_parse_member_arg_t;
+typedef struct fid_parse_member_arg { ast_off_t pos; } fid_parse_member_arg_t;
 
 /* parse_member's data on stack */
 typedef struct fid_parse_member_locals {
@@ -12054,8 +12135,6 @@ typedef struct fid_parse_member_locals {
 
 #define CALL_PARSE_MEMBER(_pos, _label) \
   do {                                  \
-    N.fid_parse_member.v7 = L->arg.v7;  \
-    N.fid_parse_member.a = L->arg.a;    \
     N.fid_parse_member.pos = (_pos);    \
     CR_CALL(fid_parse_member, _label);  \
   } while (0)
@@ -12063,146 +12142,164 @@ typedef struct fid_parse_member_locals {
 
 /* parse_memberexpr {{{ */
 /* parse_memberexpr's arguments */
+#if 0
 typedef struct fid_parse_memberexpr_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_memberexpr_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_memberexpr_arg_t;
+#endif
 
 /* parse_memberexpr's data on stack */
 typedef struct fid_parse_memberexpr_locals {
+#if 0
   struct fid_parse_memberexpr_arg arg;
+#endif
 
   ast_off_t pos;
 } fid_parse_memberexpr_locals_t;
 
 #define CALL_PARSE_MEMBEREXPR(_label)      \
   do {                                     \
-    N.fid_parse_memberexpr.v7 = L->arg.v7; \
-    N.fid_parse_memberexpr.a = L->arg.a;   \
     CR_CALL(fid_parse_memberexpr, _label); \
   } while (0)
 /* }}} */
 
 /* parse_var {{{ */
 /* parse_var's arguments */
+#if 0
 typedef struct fid_parse_var_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_var_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_var_arg_t;
+#endif
 
 /* parse_var's data on stack */
 typedef struct fid_parse_var_locals {
+#if 0
   struct fid_parse_var_arg arg;
+#endif
 
   ast_off_t start;
 } fid_parse_var_locals_t;
 
 #define CALL_PARSE_VAR(_label)      \
   do {                              \
-    N.fid_parse_var.v7 = L->arg.v7; \
-    N.fid_parse_var.a = L->arg.a;   \
     CR_CALL(fid_parse_var, _label); \
   } while (0)
 /* }}} */
 
 /* parse_prop {{{ */
 /* parse_prop's arguments */
+#if 0
 typedef struct fid_parse_prop_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_prop_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_prop_arg_t;
+#endif
 
 /* parse_prop's data on stack */
+#if 0
 typedef struct fid_parse_prop_locals {
   struct fid_parse_prop_arg arg;
 } fid_parse_prop_locals_t;
+#else
+typedef cr_zero_size_type_t fid_parse_prop_locals_t;
+#endif
 
 #define CALL_PARSE_PROP(_label)      \
   do {                               \
-    N.fid_parse_prop.v7 = L->arg.v7; \
-    N.fid_parse_prop.a = L->arg.a;   \
     CR_CALL(fid_parse_prop, _label); \
   } while (0)
 /* }}} */
 
 /* parse_dowhile {{{ */
 /* parse_dowhile's arguments */
+#if 0
 typedef struct fid_parse_dowhile_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_dowhile_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_dowhile_arg_t;
+#endif
 
 /* parse_dowhile's data on stack */
 typedef struct fid_parse_dowhile_locals {
+#if 0
   struct fid_parse_dowhile_arg arg;
+#endif
 
   ast_off_t start;
-  int saved_in_loop;
+  uint8_t saved_in_loop;
 } fid_parse_dowhile_locals_t;
 
 #define CALL_PARSE_DOWHILE(_label)      \
   do {                                  \
-    N.fid_parse_dowhile.v7 = L->arg.v7; \
-    N.fid_parse_dowhile.a = L->arg.a;   \
     CR_CALL(fid_parse_dowhile, _label); \
   } while (0)
 /* }}} */
 
 /* parse_for {{{ */
 /* parse_for's arguments */
+#if 0
 typedef struct fid_parse_for_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_for_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_for_arg_t;
+#endif
 
 /* parse_for's data on stack */
 typedef struct fid_parse_for_locals {
+#if 0
   struct fid_parse_for_arg arg;
+#endif
 
   ast_off_t start;
-  int saved_in_loop;
+  uint8_t saved_in_loop;
 } fid_parse_for_locals_t;
 
 #define CALL_PARSE_FOR(_label)      \
   do {                              \
-    N.fid_parse_for.v7 = L->arg.v7; \
-    N.fid_parse_for.a = L->arg.a;   \
     CR_CALL(fid_parse_for, _label); \
   } while (0)
 /* }}} */
 
 /* parse_try {{{ */
 /* parse_try's arguments */
+#if 0
 typedef struct fid_parse_try_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_try_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_try_arg_t;
+#endif
 
 /* parse_try's data on stack */
 typedef struct fid_parse_try_locals {
+#if 0
   struct fid_parse_try_arg arg;
+#endif
 
   ast_off_t start;
 } fid_parse_try_locals_t;
 
 #define CALL_PARSE_TRY(_label)      \
   do {                              \
-    N.fid_parse_try.v7 = L->arg.v7; \
-    N.fid_parse_try.a = L->arg.a;   \
     CR_CALL(fid_parse_try, _label); \
   } while (0)
 /* }}} */
 
 /* parse_switch {{{ */
 /* parse_switch's arguments */
+#if 0
 typedef struct fid_parse_switch_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_switch_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_switch_arg_t;
+#endif
 
 /* parse_switch's data on stack */
 typedef struct fid_parse_switch_locals {
+#if 0
   struct fid_parse_switch_arg arg;
+#endif
 
   ast_off_t start;
   int saved_in_switch;
@@ -12211,30 +12308,30 @@ typedef struct fid_parse_switch_locals {
 
 #define CALL_PARSE_SWITCH(_label)      \
   do {                                 \
-    N.fid_parse_switch.v7 = L->arg.v7; \
-    N.fid_parse_switch.a = L->arg.a;   \
     CR_CALL(fid_parse_switch, _label); \
   } while (0)
 /* }}} */
 
 /* parse_with {{{ */
 /* parse_with's arguments */
+#if 0
 typedef struct fid_parse_with_arg {
-  struct v7 *v7;
-  struct ast *a;
 } fid_parse_with_arg_t;
+#else
+typedef cr_zero_size_type_t fid_parse_with_arg_t;
+#endif
 
 /* parse_with's data on stack */
 typedef struct fid_parse_with_locals {
+#if 0
   struct fid_parse_with_arg arg;
+#endif
 
   ast_off_t start;
 } fid_parse_with_locals_t;
 
 #define CALL_PARSE_WITH(_label)      \
   do {                               \
-    N.fid_parse_with.v7 = L->arg.v7; \
-    N.fid_parse_with.a = L->arg.a;   \
     CR_CALL(fid_parse_with, _label); \
   } while (0)
 /* }}} */
@@ -12545,13 +12642,12 @@ static const struct cr_func_desc _fid_descrs[MY_FID_CNT] = {
 union user_arg_ret {
   /* arguments to the next function */
   union {
+#if 0
     fid_parse_script_arg_t fid_parse_script;
     fid_parse_use_strict_arg_t fid_parse_use_strict;
-    fid_parse_body_arg_t fid_parse_body;
     fid_parse_statement_arg_t fid_parse_statement;
     fid_parse_expression_arg_t fid_parse_expression;
     fid_parse_assign_arg_t fid_parse_assign;
-    fid_parse_binary_arg_t fid_parse_binary;
     fid_parse_prefix_arg_t fid_parse_prefix;
     fid_parse_postfix_arg_t fid_parse_postfix;
     fid_parse_callexpr_arg_t fid_parse_callexpr;
@@ -12562,10 +12658,8 @@ union user_arg_ret {
     fid_parse_while_arg_t fid_parse_while;
     fid_parse_ident_arg_t fid_parse_ident;
     fid_parse_ident_allow_reserved_words_arg_t
-        fid_parse_ident_allow_reserved_words;
-    fid_parse_funcdecl_arg_t fid_parse_funcdecl;
+      fid_parse_ident_allow_reserved_words;
     fid_parse_arglist_arg_t fid_parse_arglist;
-    fid_parse_member_arg_t fid_parse_member;
     fid_parse_memberexpr_arg_t fid_parse_memberexpr;
     fid_parse_var_arg_t fid_parse_var;
     fid_parse_prop_arg_t fid_parse_prop;
@@ -12574,6 +12668,11 @@ union user_arg_ret {
     fid_parse_try_arg_t fid_parse_try;
     fid_parse_switch_arg_t fid_parse_switch;
     fid_parse_with_arg_t fid_parse_with;
+#endif
+    fid_parse_body_arg_t fid_parse_body;
+    fid_parse_binary_arg_t fid_parse_binary;
+    fid_parse_funcdecl_arg_t fid_parse_funcdecl;
+    fid_parse_member_arg_t fid_parse_member;
   } arg;
 
   /* value returned from function */
@@ -12661,7 +12760,8 @@ static const struct {
     {1, 1, {{TOK_PLUS, TOK_MINUS, AST_ADD}, NONE}},
     {1, 1, {{TOK_REM, TOK_DIV, AST_REM}, NONE}}};
 
-enum cr_status parser_cr_exec(struct cr_ctx *p_ctx) {
+enum cr_status parser_cr_exec(struct cr_ctx *p_ctx, struct v7 *v7,
+                              struct ast *a) {
   enum cr_status rc = CR_RES__OK;
 
 _cr_iter_begin:
@@ -12712,7 +12812,6 @@ _cr_iter_begin:
     CR_DEFINE_ENTRY_POINT(fid_p_assign_1);
 
     CR_DEFINE_ENTRY_POINT(fid_parse_binary);
-    CR_DEFINE_ENTRY_POINT(fid_p_binary_1);
     CR_DEFINE_ENTRY_POINT(fid_p_binary_2);
     CR_DEFINE_ENTRY_POINT(fid_p_binary_3);
     CR_DEFINE_ENTRY_POINT(fid_p_binary_4);
@@ -12832,25 +12931,25 @@ fid_parse_script :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_script_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_SCRIPT);
-  L->outer_last_var_node = L->arg.v7->last_var_node;
-  L->saved_in_strict = L->arg.v7->pstate.in_strict;
+  L->start = ast_add_node(a, AST_SCRIPT);
+  L->outer_last_var_node = v7->last_var_node;
+  L->saved_in_strict = v7->pstate.in_strict;
 
-  L->arg.v7->last_var_node = L->start;
-  ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+  v7->last_var_node = L->start;
+  ast_modify_skip(a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
 
   CR_TRY(fid_p_script_1);
   {
     CALL_PARSE_USE_STRICT(fid_p_script_3);
-    L->arg.v7->pstate.in_strict = 1;
+    v7->pstate.in_strict = 1;
   }
   CR_CATCH(PARSER_EXC_ID__SYNTAX_ERROR, fid_p_script_1, fid_p_script_2);
   CR_ENDCATCH(fid_p_script_2);
 
   CALL_PARSE_BODY(TOK_END_OF_INPUT, fid_p_script_4);
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
-  L->arg.v7->pstate.in_strict = L->saved_in_strict;
-  L->arg.v7->last_var_node = L->outer_last_var_node;
+  ast_set_skip(a, L->start, AST_END_SKIP);
+  v7->pstate.in_strict = L->saved_in_strict;
+  v7->last_var_node = L->outer_last_var_node;
 
   CR_RETURN_VOID();
 }
@@ -12860,11 +12959,11 @@ fid_parse_use_strict :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_use_strict_locals_t)
 {
-  if (L->arg.v7->cur_tok == TOK_STRING_LITERAL &&
-      (strncmp(L->arg.v7->tok, "\"use strict\"", L->arg.v7->tok_len) == 0 ||
-       strncmp(L->arg.v7->tok, "'use strict'", L->arg.v7->tok_len) == 0)) {
-    next_tok(L->arg.v7);
-    ast_add_node(L->arg.a, AST_USE_STRICT);
+  if (v7->cur_tok == TOK_STRING_LITERAL &&
+      (strncmp(v7->tok, "\"use strict\"", v7->tok_len) == 0 ||
+       strncmp(v7->tok, "'use strict'", v7->tok_len) == 0)) {
+    next_tok(v7);
+    ast_add_node(a, AST_USE_STRICT);
     CR_RETURN_VOID();
   } else {
     CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
@@ -12879,22 +12978,20 @@ fid_parse_body :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_body_locals_t)
 {
-  while (L->arg.v7->cur_tok != L->arg.end) {
+  while (v7->cur_tok != L->arg.end) {
     if (ACCEPT(TOK_FUNCTION)) {
-      if (L->arg.v7->cur_tok != TOK_IDENTIFIER) {
+      if (v7->cur_tok != TOK_IDENTIFIER) {
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
       }
-      L->start = ast_add_node(L->arg.a, AST_VAR);
-      ast_modify_skip(L->arg.a, L->arg.v7->last_var_node, L->start,
-                      AST_FUNC_FIRST_VAR_SKIP);
+      L->start = ast_add_node(a, AST_VAR);
+      ast_modify_skip(a, v7->last_var_node, L->start, AST_FUNC_FIRST_VAR_SKIP);
       /* zero out var node pointer */
-      ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
-      L->arg.v7->last_var_node = L->start;
-      ast_add_inlined_node(L->arg.a, AST_FUNC_DECL, L->arg.v7->tok,
-                           L->arg.v7->tok_len);
+      ast_modify_skip(a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+      v7->last_var_node = L->start;
+      ast_add_inlined_node(a, AST_FUNC_DECL, v7->tok, v7->tok_len);
 
       CALL_PARSE_FUNCDECL(1, 0, fid_p_body_1);
-      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+      ast_set_skip(a, L->start, AST_END_SKIP);
     } else {
       CALL_PARSE_STATEMENT(fid_p_body_2);
     }
@@ -12907,9 +13004,9 @@ fid_parse_statement :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_statement_locals_t)
 {
-  switch (L->arg.v7->cur_tok) {
+  switch (v7->cur_tok) {
     case TOK_SEMICOLON:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       /* empty statement */
       CR_RETURN_VOID();
     case TOK_OPEN_CURLY: /* block */
@@ -12917,75 +13014,74 @@ fid_parse_statement :
       /* returning because no semicolon required */
       CR_RETURN_VOID();
     case TOK_IF:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_IF(fid_p_stat_4);
       CR_RETURN_VOID();
     case TOK_WHILE:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_WHILE(fid_p_stat_5);
       CR_RETURN_VOID();
     case TOK_DO:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_DOWHILE(fid_p_stat_10);
       CR_RETURN_VOID();
     case TOK_FOR:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_FOR(fid_p_stat_11);
       CR_RETURN_VOID();
     case TOK_TRY:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_TRY(fid_p_stat_12);
       CR_RETURN_VOID();
     case TOK_SWITCH:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_SWITCH(fid_p_stat_13);
       CR_RETURN_VOID();
     case TOK_WITH:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_WITH(fid_p_stat_14);
       CR_RETURN_VOID();
     case TOK_BREAK:
-      if (!(L->arg.v7->pstate.in_loop || L->arg.v7->pstate.in_switch)) {
+      if (!(v7->pstate.in_loop || v7->pstate.in_switch)) {
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
       }
-      next_tok(L->arg.v7);
+      next_tok(v7);
       PARSE_WITH_OPT_ARG(AST_BREAK, AST_LABELED_BREAK, CALL_PARSE_IDENT,
                          fid_p_stat_7);
       break;
     case TOK_CONTINUE:
-      if (!L->arg.v7->pstate.in_loop) {
+      if (!v7->pstate.in_loop) {
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
       }
-      next_tok(L->arg.v7);
+      next_tok(v7);
       PARSE_WITH_OPT_ARG(AST_CONTINUE, AST_LABELED_CONTINUE, CALL_PARSE_IDENT,
                          fid_p_stat_8);
       break;
     case TOK_RETURN:
-      if (!L->arg.v7->pstate.in_function) {
+      if (!v7->pstate.in_function) {
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
       }
-      next_tok(L->arg.v7);
+      next_tok(v7);
       PARSE_WITH_OPT_ARG(AST_RETURN, AST_VALUE_RETURN, CALL_PARSE_EXPRESSION,
                          fid_p_stat_6);
       break;
     case TOK_THROW:
-      next_tok(L->arg.v7);
-      ast_add_node(L->arg.a, AST_THROW);
+      next_tok(v7);
+      ast_add_node(a, AST_THROW);
       CALL_PARSE_EXPRESSION(fid_p_stat_2);
       break;
     case TOK_DEBUGGER:
-      next_tok(L->arg.v7);
-      ast_add_node(L->arg.a, AST_DEBUGGER);
+      next_tok(v7);
+      ast_add_node(a, AST_DEBUGGER);
       break;
     case TOK_VAR:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_VAR(fid_p_stat_9);
       break;
     case TOK_IDENTIFIER:
-      if (lookahead(L->arg.v7) == TOK_COLON) {
-        ast_add_inlined_node(L->arg.a, AST_LABEL, L->arg.v7->tok,
-                             L->arg.v7->tok_len);
-        next_tok(L->arg.v7);
+      if (lookahead(v7) == TOK_COLON) {
+        ast_add_inlined_node(a, AST_LABEL, v7->tok, v7->tok_len);
+        next_tok(v7);
         EXPECT(TOK_COLON);
         CR_RETURN_VOID();
       }
@@ -12995,7 +13091,7 @@ fid_parse_statement :
       break;
   }
 
-  if (end_of_statement(L->arg.v7) != V7_OK) {
+  if (end_of_statement(v7) != V7_OK) {
     CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
   }
   ACCEPT(TOK_SEMICOLON); /* swallow optional semicolon */
@@ -13007,13 +13103,13 @@ fid_parse_expression :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_expression_locals_t)
 {
-  L->pos = L->arg.a->mbuf.len;
+  L->pos = a->mbuf.len;
   L->group = 0;
   do {
     CALL_PARSE_ASSIGN(fid_p_expr_1);
   } while (ACCEPT(TOK_COMMA) && (L->group = 1));
   if (L->group) {
-    ast_insert_node(L->arg.a, L->pos, AST_SEQ);
+    ast_insert_node(a, L->pos, AST_SEQ);
   }
   CR_RETURN_VOID();
 }
@@ -13023,7 +13119,7 @@ fid_parse_assign :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_assign_locals_t)
 {
-  CALL_PARSE_BINARY(0, L->arg.a->mbuf.len, fid_p_assign_1);
+  CALL_PARSE_BINARY(0, a->mbuf.len, fid_p_assign_1);
   CR_RETURN_VOID();
 }
 
@@ -13031,52 +13127,63 @@ fid_parse_assign :
  * static enum v7_err parse_binary(struct v7 *v7, struct ast *a, int level,
  *                                 ast_off_t pos)
  */
+#if 1
 fid_parse_binary :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_binary_locals_t)
 {
-  if (L->arg.level == (int) ARRAY_SIZE(levels) - 1) {
-    CALL_PARSE_PREFIX(fid_p_binary_6);
-  } else {
-    CALL_PARSE_BINARY(L->arg.level + 1, L->arg.a->mbuf.len, fid_p_binary_1);
-  }
+/*
+ * Note: we use macro CUR_POS instead of a local variable, since this
+ * function is called really a lot, so, each byte on stack frame counts.
+ *
+ * It will work a bit slower of course, but slowness is not a problem
+ */
+#define CUR_POS ((L->level > L->arg.min_level) ? L->saved_mbuf_len : L->arg.pos)
+  L->saved_mbuf_len = a->mbuf.len;
 
-  for (L->i = 0; L->i < levels[L->arg.level].len; L->i++) {
-    L->tok = levels[L->arg.level].parts[L->i].start_tok;
-    L->ast = levels[L->arg.level].parts[L->i].start_ast;
-    do {
-      if (L->arg.v7->pstate.inhibit_in && L->tok == TOK_IN) {
-        continue;
-      }
+  CALL_PARSE_PREFIX(fid_p_binary_6);
 
-      /*
-       * Ternary operator sits in the middle of the binary operator
-       * precedence chain. Deal with it as an exception and don't break
-       * the chain.
-       */
-      if (L->tok == TOK_QUESTION && L->arg.v7->cur_tok == TOK_QUESTION) {
-        next_tok(L->arg.v7);
-        CALL_PARSE_ASSIGN(fid_p_binary_2);
-        EXPECT(TOK_COLON);
-        CALL_PARSE_ASSIGN(fid_p_binary_3);
-        ast_insert_node(L->arg.a, L->arg.pos, AST_COND);
-        CR_RETURN_VOID();
-      } else if (ACCEPT(L->tok)) {
-        if (levels[L->arg.level].left_to_right) {
-          ast_insert_node(L->arg.a, L->arg.pos, L->ast);
-          CALL_PARSE_BINARY(L->arg.level, L->arg.pos, fid_p_binary_4);
-        } else {
-          CALL_PARSE_BINARY(L->arg.level, L->arg.a->mbuf.len, fid_p_binary_5);
-          ast_insert_node(L->arg.a, L->arg.pos, L->ast);
+  for (L->level = (int) ARRAY_SIZE(levels) - 1; L->level >= L->arg.min_level;
+       L->level--) {
+    for (L->i = 0; L->i < levels[L->level].len; L->i++) {
+      L->tok = levels[L->level].parts[L->i].start_tok;
+      L->ast = levels[L->level].parts[L->i].start_ast;
+      do {
+        if (v7->pstate.inhibit_in && L->tok == TOK_IN) {
+          continue;
         }
-      }
-    } while (L->ast = (enum ast_tag)(L->ast + 1),
-             L->tok < levels[L->arg.level].parts[L->i].end_tok &&
-                 (L->tok = (enum v7_tok)(L->tok + 1)));
+
+        /*
+         * Ternary operator sits in the middle of the binary operator
+         * precedence chain. Deal with it as an exception and don't break
+         * the chain.
+         */
+        if (L->tok == TOK_QUESTION && v7->cur_tok == TOK_QUESTION) {
+          next_tok(v7);
+          CALL_PARSE_ASSIGN(fid_p_binary_2);
+          EXPECT(TOK_COLON);
+          CALL_PARSE_ASSIGN(fid_p_binary_3);
+          ast_insert_node(a, CUR_POS, AST_COND);
+          CR_RETURN_VOID();
+        } else if (ACCEPT(L->tok)) {
+          if (levels[L->level].left_to_right) {
+            ast_insert_node(a, CUR_POS, (enum ast_tag) L->ast);
+            CALL_PARSE_BINARY(L->level, CUR_POS, fid_p_binary_4);
+          } else {
+            CALL_PARSE_BINARY(L->level, a->mbuf.len, fid_p_binary_5);
+            ast_insert_node(a, CUR_POS, (enum ast_tag) L->ast);
+          }
+        }
+      } while (L->ast = (enum ast_tag)(L->ast + 1),
+               L->tok < levels[L->level].parts[L->i].end_tok &&
+                   (L->tok = (enum v7_tok)(L->tok + 1)));
+    }
   }
 
   CR_RETURN_VOID();
+#undef CUR_POS
 }
+#endif
 
 /* enum v7_err parse_prefix(struct v7 *v7, struct ast *a) */
 fid_parse_prefix :
@@ -13084,42 +13191,42 @@ fid_parse_prefix :
 #define L CR_CUR_LOCALS_PT(fid_parse_prefix_locals_t)
 {
   for (;;) {
-    switch (L->arg.v7->cur_tok) {
+    switch (v7->cur_tok) {
       case TOK_PLUS:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_POSITIVE);
+        next_tok(v7);
+        ast_add_node(a, AST_POSITIVE);
         break;
       case TOK_MINUS:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_NEGATIVE);
+        next_tok(v7);
+        ast_add_node(a, AST_NEGATIVE);
         break;
       case TOK_PLUS_PLUS:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_PREINC);
+        next_tok(v7);
+        ast_add_node(a, AST_PREINC);
         break;
       case TOK_MINUS_MINUS:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_PREDEC);
+        next_tok(v7);
+        ast_add_node(a, AST_PREDEC);
         break;
       case TOK_TILDA:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_NOT);
+        next_tok(v7);
+        ast_add_node(a, AST_NOT);
         break;
       case TOK_NOT:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_LOGICAL_NOT);
+        next_tok(v7);
+        ast_add_node(a, AST_LOGICAL_NOT);
         break;
       case TOK_VOID:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_VOID);
+        next_tok(v7);
+        ast_add_node(a, AST_VOID);
         break;
       case TOK_DELETE:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_DELETE);
+        next_tok(v7);
+        ast_add_node(a, AST_DELETE);
         break;
       case TOK_TYPEOF:
-        next_tok(L->arg.v7);
-        ast_add_node(L->arg.a, AST_TYPEOF);
+        next_tok(v7);
+        ast_add_node(a, AST_TYPEOF);
         break;
       default:
         CALL_PARSE_POSTFIX(fid_p_prefix_1);
@@ -13133,20 +13240,20 @@ fid_parse_postfix :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_postfix_locals_t)
 {
-  L->pos = L->arg.a->mbuf.len;
+  L->pos = a->mbuf.len;
   CALL_PARSE_CALLEXPR(fid_p_postfix_1);
 
-  if (L->arg.v7->after_newline) {
+  if (v7->after_newline) {
     CR_RETURN_VOID();
   }
-  switch (L->arg.v7->cur_tok) {
+  switch (v7->cur_tok) {
     case TOK_PLUS_PLUS:
-      next_tok(L->arg.v7);
-      ast_insert_node(L->arg.a, L->pos, AST_POSTINC);
+      next_tok(v7);
+      ast_insert_node(a, L->pos, AST_POSTINC);
       break;
     case TOK_MINUS_MINUS:
-      next_tok(L->arg.v7);
-      ast_insert_node(L->arg.a, L->pos, AST_POSTDEC);
+      next_tok(v7);
+      ast_insert_node(a, L->pos, AST_POSTDEC);
       break;
     default:
       break; /* nothing */
@@ -13159,20 +13266,20 @@ fid_parse_callexpr :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_callexpr_locals_t)
 {
-  L->pos = L->arg.a->mbuf.len;
+  L->pos = a->mbuf.len;
   CALL_PARSE_NEWEXPR(fid_p_callexpr_1);
 
   for (;;) {
-    switch (L->arg.v7->cur_tok) {
+    switch (v7->cur_tok) {
       case TOK_DOT:
       case TOK_OPEN_BRACKET:
         CALL_PARSE_MEMBER(L->pos, fid_p_callexpr_3);
         break;
       case TOK_OPEN_PAREN:
-        next_tok(L->arg.v7);
+        next_tok(v7);
         CALL_PARSE_ARGLIST(fid_p_callexpr_2);
         EXPECT(TOK_CLOSE_PAREN);
-        ast_insert_node(L->arg.a, L->pos, AST_CALL);
+        ast_insert_node(a, L->pos, AST_CALL);
         break;
       default:
         CR_RETURN_VOID();
@@ -13185,19 +13292,19 @@ fid_parse_newexpr :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_newexpr_locals_t)
 {
-  switch (L->arg.v7->cur_tok) {
+  switch (v7->cur_tok) {
     case TOK_NEW:
-      next_tok(L->arg.v7);
-      L->start = ast_add_node(L->arg.a, AST_NEW);
+      next_tok(v7);
+      L->start = ast_add_node(a, AST_NEW);
       CALL_PARSE_MEMBEREXPR(fid_p_newexpr_3);
       if (ACCEPT(TOK_OPEN_PAREN)) {
         CALL_PARSE_ARGLIST(fid_p_newexpr_4);
         EXPECT(TOK_CLOSE_PAREN);
       }
-      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+      ast_set_skip(a, L->start, AST_END_SKIP);
       break;
     case TOK_FUNCTION:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_FUNCDECL(0, 0, fid_p_newexpr_2);
       break;
     default:
@@ -13212,77 +13319,73 @@ fid_parse_terminal :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_terminal_locals_t)
 {
-  switch (L->arg.v7->cur_tok) {
+  switch (v7->cur_tok) {
     case TOK_OPEN_PAREN:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_EXPRESSION(fid_p_terminal_1);
       EXPECT(TOK_CLOSE_PAREN);
       break;
     case TOK_OPEN_BRACKET:
-      next_tok(L->arg.v7);
-      L->start = ast_add_node(L->arg.a, AST_ARRAY);
-      while (L->arg.v7->cur_tok != TOK_CLOSE_BRACKET) {
-        if (L->arg.v7->cur_tok == TOK_COMMA) {
+      next_tok(v7);
+      L->start = ast_add_node(a, AST_ARRAY);
+      while (v7->cur_tok != TOK_CLOSE_BRACKET) {
+        if (v7->cur_tok == TOK_COMMA) {
           /* Array literals allow missing elements, e.g. [,,1,] */
-          ast_add_node(L->arg.a, AST_NOP);
+          ast_add_node(a, AST_NOP);
         } else {
           CALL_PARSE_ASSIGN(fid_p_terminal_2);
         }
         ACCEPT(TOK_COMMA);
       }
       EXPECT(TOK_CLOSE_BRACKET);
-      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+      ast_set_skip(a, L->start, AST_END_SKIP);
       break;
     case TOK_OPEN_CURLY:
-      next_tok(L->arg.v7);
-      L->start = ast_add_node(L->arg.a, AST_OBJECT);
-      if (L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
+      next_tok(v7);
+      L->start = ast_add_node(a, AST_OBJECT);
+      if (v7->cur_tok != TOK_CLOSE_CURLY) {
         do {
-          if (L->arg.v7->cur_tok == TOK_CLOSE_CURLY) {
+          if (v7->cur_tok == TOK_CLOSE_CURLY) {
             break;
           }
           CALL_PARSE_PROP(fid_p_terminal_3);
         } while (ACCEPT(TOK_COMMA));
       }
       EXPECT(TOK_CLOSE_CURLY);
-      ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+      ast_set_skip(a, L->start, AST_END_SKIP);
       break;
     case TOK_THIS:
-      next_tok(L->arg.v7);
-      ast_add_node(L->arg.a, AST_THIS);
+      next_tok(v7);
+      ast_add_node(a, AST_THIS);
       break;
     case TOK_TRUE:
-      next_tok(L->arg.v7);
-      ast_add_node(L->arg.a, AST_TRUE);
+      next_tok(v7);
+      ast_add_node(a, AST_TRUE);
       break;
     case TOK_FALSE:
-      next_tok(L->arg.v7);
-      ast_add_node(L->arg.a, AST_FALSE);
+      next_tok(v7);
+      ast_add_node(a, AST_FALSE);
       break;
     case TOK_NULL:
-      next_tok(L->arg.v7);
-      ast_add_node(L->arg.a, AST_NULL);
+      next_tok(v7);
+      ast_add_node(a, AST_NULL);
       break;
     case TOK_STRING_LITERAL:
-      ast_add_inlined_node(L->arg.a, AST_STRING, L->arg.v7->tok + 1,
-                           L->arg.v7->tok_len - 2);
-      next_tok(L->arg.v7);
+      ast_add_inlined_node(a, AST_STRING, v7->tok + 1, v7->tok_len - 2);
+      next_tok(v7);
       break;
     case TOK_NUMBER:
-      ast_add_inlined_node(L->arg.a, AST_NUM, L->arg.v7->tok,
-                           L->arg.v7->tok_len);
-      next_tok(L->arg.v7);
+      ast_add_inlined_node(a, AST_NUM, v7->tok, v7->tok_len);
+      next_tok(v7);
       break;
     case TOK_REGEX_LITERAL:
-      ast_add_inlined_node(L->arg.a, AST_REGEX, L->arg.v7->tok,
-                           L->arg.v7->tok_len);
-      next_tok(L->arg.v7);
+      ast_add_inlined_node(a, AST_REGEX, v7->tok, v7->tok_len);
+      next_tok(v7);
       break;
     case TOK_IDENTIFIER:
-      if (L->arg.v7->tok_len == 9 &&
-          strncmp(L->arg.v7->tok, "undefined", L->arg.v7->tok_len) == 0) {
-        ast_add_node(L->arg.a, AST_UNDEFINED);
-        next_tok(L->arg.v7);
+      if (v7->tok_len == 9 && strncmp(v7->tok, "undefined", v7->tok_len) == 0) {
+        ast_add_node(a, AST_UNDEFINED);
+        next_tok(v7);
         break;
       }
     /* fall through */
@@ -13308,16 +13411,16 @@ fid_parse_if :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_if_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_IF);
+  L->start = ast_add_node(a, AST_IF);
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_EXPRESSION(fid_p_if_1);
   EXPECT(TOK_CLOSE_PAREN);
   CALL_PARSE_STATEMENT(fid_p_if_2);
-  ast_set_skip(L->arg.a, L->start, AST_END_IF_TRUE_SKIP);
+  ast_set_skip(a, L->start, AST_END_IF_TRUE_SKIP);
   if (ACCEPT(TOK_ELSE)) {
     CALL_PARSE_STATEMENT(fid_p_if_3);
   }
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  ast_set_skip(a, L->start, AST_END_SKIP);
   CR_RETURN_VOID();
 }
 
@@ -13326,15 +13429,15 @@ fid_parse_while :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_while_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_WHILE);
-  L->saved_in_loop = L->arg.v7->pstate.in_loop;
+  L->start = ast_add_node(a, AST_WHILE);
+  L->saved_in_loop = v7->pstate.in_loop;
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_EXPRESSION(fid_p_while_1);
   EXPECT(TOK_CLOSE_PAREN);
-  L->arg.v7->pstate.in_loop = 1;
+  v7->pstate.in_loop = 1;
   CALL_PARSE_STATEMENT(fid_p_while_2);
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
-  L->arg.v7->pstate.in_loop = L->saved_in_loop;
+  ast_set_skip(a, L->start, AST_END_SKIP);
+  v7->pstate.in_loop = L->saved_in_loop;
   CR_RETURN_VOID();
 }
 
@@ -13343,10 +13446,9 @@ fid_parse_ident :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_ident_locals_t)
 {
-  if (L->arg.v7->cur_tok == TOK_IDENTIFIER) {
-    ast_add_inlined_node(L->arg.a, AST_IDENT, L->arg.v7->tok,
-                         L->arg.v7->tok_len);
-    next_tok(L->arg.v7);
+  if (v7->cur_tok == TOK_IDENTIFIER) {
+    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
+    next_tok(v7);
     CR_RETURN_VOID();
   }
   CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
@@ -13362,10 +13464,9 @@ fid_parse_ident_allow_reserved_words :
 #define L CR_CUR_LOCALS_PT(fid_parse_ident_allow_reserved_words_locals_t)
 {
   /* Allow reserved words as property names. */
-  if (is_reserved_word_token(L->arg.v7->cur_tok)) {
-    ast_add_inlined_node(L->arg.a, AST_IDENT, L->arg.v7->tok,
-                         L->arg.v7->tok_len);
-    next_tok(L->arg.v7);
+  if (is_reserved_word_token(v7->cur_tok)) {
+    ast_add_inlined_node(a, AST_IDENT, v7->tok, v7->tok_len);
+    next_tok(v7);
   } else {
     CALL_PARSE_IDENT(fid_p_ident_arw_1);
   }
@@ -13377,13 +13478,13 @@ fid_parse_funcdecl :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_funcdecl_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_FUNC);
-  L->outer_last_var_node = L->arg.v7->last_var_node;
-  L->saved_in_function = L->arg.v7->pstate.in_function;
-  L->saved_in_strict = L->arg.v7->pstate.in_strict;
+  L->start = ast_add_node(a, AST_FUNC);
+  L->outer_last_var_node = v7->last_var_node;
+  L->saved_in_function = v7->pstate.in_function;
+  L->saved_in_strict = v7->pstate.in_strict;
 
-  L->arg.v7->last_var_node = L->start;
-  ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+  v7->last_var_node = L->start;
+  ast_modify_skip(a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
 
   CR_TRY(fid_p_funcdecl_2);
   {
@@ -13400,7 +13501,7 @@ fid_parse_funcdecl :
       CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
     } else {
       /* it's ok not to have a function name, just insert NOP */
-      ast_add_node(L->arg.a, AST_NOP);
+      ast_add_node(a, AST_NOP);
     }
   }
   CR_ENDCATCH(fid_p_funcdecl_3);
@@ -13408,24 +13509,24 @@ fid_parse_funcdecl :
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_ARGLIST(fid_p_funcdecl_4);
   EXPECT(TOK_CLOSE_PAREN);
-  ast_set_skip(L->arg.a, L->start, AST_FUNC_BODY_SKIP);
-  L->arg.v7->pstate.in_function = 1;
+  ast_set_skip(a, L->start, AST_FUNC_BODY_SKIP);
+  v7->pstate.in_function = 1;
   EXPECT(TOK_OPEN_CURLY);
 
   CR_TRY(fid_p_funcdecl_5);
   {
     CALL_PARSE_USE_STRICT(fid_p_funcdecl_7);
-    L->arg.v7->pstate.in_strict = 1;
+    v7->pstate.in_strict = 1;
   }
   CR_CATCH(PARSER_EXC_ID__SYNTAX_ERROR, fid_p_funcdecl_5, fid_p_funcdecl_6);
   CR_ENDCATCH(fid_p_funcdecl_6);
 
   CALL_PARSE_BODY(TOK_CLOSE_CURLY, fid_p_funcdecl_8);
   EXPECT(TOK_CLOSE_CURLY);
-  L->arg.v7->pstate.in_strict = L->saved_in_strict;
-  L->arg.v7->pstate.in_function = L->saved_in_function;
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
-  L->arg.v7->last_var_node = L->outer_last_var_node;
+  v7->pstate.in_strict = L->saved_in_strict;
+  v7->pstate.in_function = L->saved_in_function;
+  ast_set_skip(a, L->start, AST_END_SKIP);
+  v7->last_var_node = L->outer_last_var_node;
 
   CR_RETURN_VOID();
 }
@@ -13435,7 +13536,7 @@ fid_parse_arglist :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_arglist_locals_t)
 {
-  if (L->arg.v7->cur_tok != TOK_CLOSE_PAREN) {
+  if (v7->cur_tok != TOK_CLOSE_PAREN) {
     do {
       CALL_PARSE_ASSIGN(fid_p_arglist_1);
     } while (ACCEPT(TOK_COMMA));
@@ -13450,24 +13551,24 @@ fid_parse_member :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_member_locals_t)
 {
-  switch (L->arg.v7->cur_tok) {
+  switch (v7->cur_tok) {
     case TOK_DOT:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       /* Allow reserved words as member identifiers */
-      if (is_reserved_word_token(L->arg.v7->cur_tok) ||
-          L->arg.v7->cur_tok == TOK_IDENTIFIER) {
-        ast_insert_inlined_node(L->arg.a, L->arg.pos, AST_MEMBER,
-                                L->arg.v7->tok, L->arg.v7->tok_len);
-        next_tok(L->arg.v7);
+      if (is_reserved_word_token(v7->cur_tok) ||
+          v7->cur_tok == TOK_IDENTIFIER) {
+        ast_insert_inlined_node(a, L->arg.pos, AST_MEMBER, v7->tok,
+                                v7->tok_len);
+        next_tok(v7);
       } else {
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
       }
       break;
     case TOK_OPEN_BRACKET:
-      next_tok(L->arg.v7);
+      next_tok(v7);
       CALL_PARSE_EXPRESSION(fid_p_member_1);
       EXPECT(TOK_CLOSE_BRACKET);
-      ast_insert_node(L->arg.a, L->arg.pos, AST_INDEX);
+      ast_insert_node(a, L->arg.pos, AST_INDEX);
       break;
     default:
       CR_RETURN_VOID();
@@ -13481,11 +13582,11 @@ fid_parse_memberexpr :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_memberexpr_locals_t)
 {
-  L->pos = L->arg.a->mbuf.len;
+  L->pos = a->mbuf.len;
   CALL_PARSE_NEWEXPR(fid_p_memberexpr_1);
 
   for (;;) {
-    switch (L->arg.v7->cur_tok) {
+    switch (v7->cur_tok) {
       case TOK_DOT:
       case TOK_OPEN_BRACKET:
         CALL_PARSE_MEMBER(L->pos, fid_p_memberexpr_2);
@@ -13503,23 +13604,21 @@ fid_parse_var :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_var_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_VAR);
-  ast_modify_skip(L->arg.a, L->arg.v7->last_var_node, L->start,
-                  AST_FUNC_FIRST_VAR_SKIP);
+  L->start = ast_add_node(a, AST_VAR);
+  ast_modify_skip(a, v7->last_var_node, L->start, AST_FUNC_FIRST_VAR_SKIP);
   /* zero out var node pointer */
-  ast_modify_skip(L->arg.a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
-  L->arg.v7->last_var_node = L->start;
+  ast_modify_skip(a, L->start, L->start, AST_FUNC_FIRST_VAR_SKIP);
+  v7->last_var_node = L->start;
   do {
-    ast_add_inlined_node(L->arg.a, AST_VAR_DECL, L->arg.v7->tok,
-                         L->arg.v7->tok_len);
+    ast_add_inlined_node(a, AST_VAR_DECL, v7->tok, v7->tok_len);
     EXPECT(TOK_IDENTIFIER);
     if (ACCEPT(TOK_ASSIGN)) {
       CALL_PARSE_ASSIGN(fid_p_var_1);
     } else {
-      ast_add_node(L->arg.a, AST_NOP);
+      ast_add_node(a, AST_NOP);
     }
   } while (ACCEPT(TOK_COMMA));
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  ast_set_skip(a, L->start, AST_END_SKIP);
   CR_RETURN_VOID();
 }
 
@@ -13529,40 +13628,35 @@ fid_parse_prop :
 #define L CR_CUR_LOCALS_PT(fid_parse_prop_locals_t)
 {
 #ifdef V7_ENABLE_JS_GETTERS
-  if (L->arg.v7->cur_tok == TOK_IDENTIFIER && L->arg.v7->tok_len == 3 &&
-      strncmp(L->arg.v7->tok, "get", L->arg.v7->tok_len) == 0 &&
-      lookahead(L->arg.v7) != TOK_COLON) {
-    next_tok(L->arg.v7);
-    ast_add_node(L->arg.a, AST_GETTER);
+  if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
+      strncmp(v7->tok, "get", v7->tok_len) == 0 && lookahead(v7) != TOK_COLON) {
+    next_tok(v7);
+    ast_add_node(a, AST_GETTER);
     CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_1_getter);
   } else
 #endif
-      if (L->arg.v7->cur_tok == TOK_IDENTIFIER &&
-          lookahead(L->arg.v7) == TOK_OPEN_PAREN) {
+      if (v7->cur_tok == TOK_IDENTIFIER && lookahead(v7) == TOK_OPEN_PAREN) {
     /* ecmascript 6 feature */
     CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_2);
 #ifdef V7_ENABLE_JS_SETTERS
-  } else if (L->arg.v7->cur_tok == TOK_IDENTIFIER && L->arg.v7->tok_len == 3 &&
-             strncmp(L->arg.v7->tok, "set", L->arg.v7->tok_len) == 0 &&
-             lookahead(L->arg.v7) != TOK_COLON) {
-    next_tok(L->arg.v7);
-    ast_add_node(L->arg.a, AST_SETTER);
+  } else if (v7->cur_tok == TOK_IDENTIFIER && v7->tok_len == 3 &&
+             strncmp(v7->tok, "set", v7->tok_len) == 0 &&
+             lookahead(v7) != TOK_COLON) {
+    next_tok(v7);
+    ast_add_node(a, AST_SETTER);
     CALL_PARSE_FUNCDECL(1, 1, fid_p_prop_3_setter);
 #endif
   } else {
     /* Allow reserved words as property names. */
-    if (is_reserved_word_token(L->arg.v7->cur_tok) ||
-        L->arg.v7->cur_tok == TOK_IDENTIFIER ||
-        L->arg.v7->cur_tok == TOK_NUMBER) {
-      ast_add_inlined_node(L->arg.a, AST_PROP, L->arg.v7->tok,
-                           L->arg.v7->tok_len);
-    } else if (L->arg.v7->cur_tok == TOK_STRING_LITERAL) {
-      ast_add_inlined_node(L->arg.a, AST_PROP, L->arg.v7->tok + 1,
-                           L->arg.v7->tok_len - 2);
+    if (is_reserved_word_token(v7->cur_tok) || v7->cur_tok == TOK_IDENTIFIER ||
+        v7->cur_tok == TOK_NUMBER) {
+      ast_add_inlined_node(a, AST_PROP, v7->tok, v7->tok_len);
+    } else if (v7->cur_tok == TOK_STRING_LITERAL) {
+      ast_add_inlined_node(a, AST_PROP, v7->tok + 1, v7->tok_len - 2);
     } else {
       CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
     }
-    next_tok(L->arg.v7);
+    next_tok(v7);
     EXPECT(TOK_COLON);
     CALL_PARSE_ASSIGN(fid_p_prop_4);
   }
@@ -13574,18 +13668,18 @@ fid_parse_dowhile :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_dowhile_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_DOWHILE);
-  L->saved_in_loop = L->arg.v7->pstate.in_loop;
+  L->start = ast_add_node(a, AST_DOWHILE);
+  L->saved_in_loop = v7->pstate.in_loop;
 
-  L->arg.v7->pstate.in_loop = 1;
+  v7->pstate.in_loop = 1;
   CALL_PARSE_STATEMENT(fid_p_dowhile_1);
-  L->arg.v7->pstate.in_loop = L->saved_in_loop;
-  ast_set_skip(L->arg.a, L->start, AST_DO_WHILE_COND_SKIP);
+  v7->pstate.in_loop = L->saved_in_loop;
+  ast_set_skip(a, L->start, AST_DO_WHILE_COND_SKIP);
   EXPECT(TOK_WHILE);
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_EXPRESSION(fid_p_dowhile_2);
   EXPECT(TOK_CLOSE_PAREN);
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  ast_set_skip(a, L->start, AST_END_SKIP);
   CR_RETURN_VOID();
 }
 
@@ -13600,53 +13694,53 @@ fid_parse_for :
   int saved_in_loop;
   */
 
-  L->start = ast_add_node(L->arg.a, AST_FOR);
-  L->saved_in_loop = L->arg.v7->pstate.in_loop;
+  L->start = ast_add_node(a, AST_FOR);
+  L->saved_in_loop = v7->pstate.in_loop;
 
   EXPECT(TOK_OPEN_PAREN);
 
-  if (parse_optional(L->arg.v7, L->arg.a, TOK_SEMICOLON)) {
+  if (parse_optional(v7, a, TOK_SEMICOLON)) {
     /*
      * TODO(mkm): make this reentrant otherwise this pearl won't parse:
      * for((function(){return 1 in o.a ? o : x})().a in [1,2,3])
      */
-    L->arg.v7->pstate.inhibit_in = 1;
+    v7->pstate.inhibit_in = 1;
     if (ACCEPT(TOK_VAR)) {
       CALL_PARSE_VAR(fid_p_for_1);
     } else {
       CALL_PARSE_EXPRESSION(fid_p_for_2);
     }
-    L->arg.v7->pstate.inhibit_in = 0;
+    v7->pstate.inhibit_in = 0;
 
     if (ACCEPT(TOK_IN)) {
       CALL_PARSE_EXPRESSION(fid_p_for_3);
-      ast_add_node(L->arg.a, AST_NOP);
+      ast_add_node(a, AST_NOP);
       /*
        * Assumes that for and for in have the same AST format which is
        * suboptimal but avoids the need of fixing up the var offset chain.
        * TODO(mkm) improve this
        */
-      L->arg.a->mbuf.buf[L->start - 1] = AST_FOR_IN;
+      a->mbuf.buf[L->start - 1] = AST_FOR_IN;
       goto for_loop_body;
     }
   }
 
   EXPECT(TOK_SEMICOLON);
-  if (parse_optional(L->arg.v7, L->arg.a, TOK_SEMICOLON)) {
+  if (parse_optional(v7, a, TOK_SEMICOLON)) {
     CALL_PARSE_EXPRESSION(fid_p_for_4);
   }
   EXPECT(TOK_SEMICOLON);
-  if (parse_optional(L->arg.v7, L->arg.a, TOK_CLOSE_PAREN)) {
+  if (parse_optional(v7, a, TOK_CLOSE_PAREN)) {
     CALL_PARSE_EXPRESSION(fid_p_for_5);
   }
 
 for_loop_body:
   EXPECT(TOK_CLOSE_PAREN);
-  ast_set_skip(L->arg.a, L->start, AST_FOR_BODY_SKIP);
-  L->arg.v7->pstate.in_loop = 1;
+  ast_set_skip(a, L->start, AST_FOR_BODY_SKIP);
+  v7->pstate.in_loop = 1;
   CALL_PARSE_STATEMENT(fid_p_for_6);
-  L->arg.v7->pstate.in_loop = L->saved_in_loop;
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  v7->pstate.in_loop = L->saved_in_loop;
+  ast_set_skip(a, L->start, AST_END_SKIP);
   CR_RETURN_VOID();
 }
 
@@ -13655,20 +13749,20 @@ fid_parse_try :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_try_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_TRY);
+  L->start = ast_add_node(a, AST_TRY);
   CALL_PARSE_BLOCK(fid_p_try_1);
-  ast_set_skip(L->arg.a, L->start, AST_TRY_CATCH_SKIP);
+  ast_set_skip(a, L->start, AST_TRY_CATCH_SKIP);
   if (ACCEPT(TOK_CATCH)) {
     EXPECT(TOK_OPEN_PAREN);
     CALL_PARSE_IDENT(fid_p_try_2);
     EXPECT(TOK_CLOSE_PAREN);
     CALL_PARSE_BLOCK(fid_p_try_3);
   }
-  ast_set_skip(L->arg.a, L->start, AST_TRY_FINALLY_SKIP);
+  ast_set_skip(a, L->start, AST_TRY_FINALLY_SKIP);
   if (ACCEPT(TOK_FINALLY)) {
     CALL_PARSE_BLOCK(fid_p_try_4);
   }
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  ast_set_skip(a, L->start, AST_END_SKIP);
   CR_RETURN_VOID();
 }
 
@@ -13677,48 +13771,46 @@ fid_parse_switch :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_switch_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_SWITCH);
-  L->saved_in_switch = L->arg.v7->pstate.in_switch;
+  L->start = ast_add_node(a, AST_SWITCH);
+  L->saved_in_switch = v7->pstate.in_switch;
 
-  ast_set_skip(L->arg.a, L->start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
+  ast_set_skip(a, L->start, AST_SWITCH_DEFAULT_SKIP); /* clear out */
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_EXPRESSION(fid_p_switch_1);
   EXPECT(TOK_CLOSE_PAREN);
   EXPECT(TOK_OPEN_CURLY);
-  L->arg.v7->pstate.in_switch = 1;
-  while (L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
-    switch (L->arg.v7->cur_tok) {
+  v7->pstate.in_switch = 1;
+  while (v7->cur_tok != TOK_CLOSE_CURLY) {
+    switch (v7->cur_tok) {
       case TOK_CASE:
-        next_tok(L->arg.v7);
-        L->case_start = ast_add_node(L->arg.a, AST_CASE);
+        next_tok(v7);
+        L->case_start = ast_add_node(a, AST_CASE);
         CALL_PARSE_EXPRESSION(fid_p_switch_2);
         EXPECT(TOK_COLON);
-        while (L->arg.v7->cur_tok != TOK_CASE &&
-               L->arg.v7->cur_tok != TOK_DEFAULT &&
-               L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
+        while (v7->cur_tok != TOK_CASE && v7->cur_tok != TOK_DEFAULT &&
+               v7->cur_tok != TOK_CLOSE_CURLY) {
           CALL_PARSE_STATEMENT(fid_p_switch_3);
         }
-        ast_set_skip(L->arg.a, L->case_start, AST_END_SKIP);
+        ast_set_skip(a, L->case_start, AST_END_SKIP);
         break;
       case TOK_DEFAULT:
-        next_tok(L->arg.v7);
+        next_tok(v7);
         EXPECT(TOK_COLON);
-        ast_set_skip(L->arg.a, L->start, AST_SWITCH_DEFAULT_SKIP);
-        L->case_start = ast_add_node(L->arg.a, AST_DEFAULT);
-        while (L->arg.v7->cur_tok != TOK_CASE &&
-               L->arg.v7->cur_tok != TOK_DEFAULT &&
-               L->arg.v7->cur_tok != TOK_CLOSE_CURLY) {
+        ast_set_skip(a, L->start, AST_SWITCH_DEFAULT_SKIP);
+        L->case_start = ast_add_node(a, AST_DEFAULT);
+        while (v7->cur_tok != TOK_CASE && v7->cur_tok != TOK_DEFAULT &&
+               v7->cur_tok != TOK_CLOSE_CURLY) {
           CALL_PARSE_STATEMENT(fid_p_switch_4);
         }
-        ast_set_skip(L->arg.a, L->case_start, AST_END_SKIP);
+        ast_set_skip(a, L->case_start, AST_END_SKIP);
         break;
       default:
         CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
     }
   }
   EXPECT(TOK_CLOSE_CURLY);
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
-  L->arg.v7->pstate.in_switch = L->saved_in_switch;
+  ast_set_skip(a, L->start, AST_END_SKIP);
+  v7->pstate.in_switch = L->saved_in_switch;
   CR_RETURN_VOID();
 }
 
@@ -13727,15 +13819,15 @@ fid_parse_with :
 #undef L
 #define L CR_CUR_LOCALS_PT(fid_parse_with_locals_t)
 {
-  L->start = ast_add_node(L->arg.a, AST_WITH);
-  if (L->arg.v7->pstate.in_strict) {
+  L->start = ast_add_node(a, AST_WITH);
+  if (v7->pstate.in_strict) {
     CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
   }
   EXPECT(TOK_OPEN_PAREN);
   CALL_PARSE_EXPRESSION(fid_p_with_1);
   EXPECT(TOK_CLOSE_PAREN);
   CALL_PARSE_STATEMENT(fid_p_with_2);
-  ast_set_skip(L->arg.a, L->start, AST_END_SKIP);
+  ast_set_skip(a, L->start, AST_END_SKIP);
   CR_RETURN_VOID();
 }
 
@@ -13776,21 +13868,17 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
   }
 
   /* init cr context */
-  cr_context_init(&cr_ctx, &arg_retval, _fid_descrs);
+  cr_context_init(&cr_ctx, &arg_retval, sizeof(arg_retval), _fid_descrs);
 
   /* prepare first function call: fid_mul_sum */
   if (is_json) {
-    arg_retval.arg.fid_parse_terminal.v7 = v7;
-    arg_retval.arg.fid_parse_terminal.a = a;
     CR_FIRST_CALL_PREPARE_C(&cr_ctx, fid_parse_terminal);
   } else {
-    arg_retval.arg.fid_parse_script.v7 = v7;
-    arg_retval.arg.fid_parse_script.a = a;
     CR_FIRST_CALL_PREPARE_C(&cr_ctx, fid_parse_script);
   }
 
   /* proceed to coroutine execution */
-  rc = parser_cr_exec(&cr_ctx);
+  rc = parser_cr_exec(&cr_ctx, v7, a);
 
   /* set `err` depending on coroutine state */
   switch (rc) {
