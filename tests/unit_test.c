@@ -2437,6 +2437,10 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_EQ(v7, "x={a:1};'a' in x", "true");
   ASSERT_BCODE_EVAL_EQ(v7, "x={a:undefined};'a' in x", "true");
 
+  ASSERT_BCODE_EVAL_EQ(v7, "Number instanceof Object", "true");
+  ASSERT_BCODE_EVAL_EQ(v7, "Number instanceof Function", "true");
+  ASSERT_BCODE_EVAL_EQ(v7, "Object instanceof Number", "false");
+
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "Object.keys({a:1,b:2}).length", 2);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "var x=2; 2", 2);
@@ -2495,11 +2499,11 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 #endif
   RUN_TEST(test_gc_own);
 #endif
-  RUN_TEST(test_ecmac);
 #ifdef V7_ENABLE_BCODE
   RUN_TEST(test_compiler);
   RUN_TEST(test_exec_bcode);
 #endif
+  RUN_TEST(test_ecmac);
   return NULL;
 }
 

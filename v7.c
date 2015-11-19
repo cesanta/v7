@@ -1082,6 +1082,7 @@ char *utfutf(char *s1, char *s2);
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -3234,6 +3235,7 @@ enum opcode {
   OP_LE,
   OP_GT,
   OP_GE,
+  OP_INSTANCEOF,
 
   OP_IN,
   OP_GET,
@@ -16031,8 +16033,8 @@ static const char *op_names[] = {
     "PUSH_THIS", "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT",
     "NOT", "LOGICAL_NOT", "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT",
     "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT",
-    "LE", "GT", "GE", "IN", "GET", "SET", "SET_VAR", "GET_VAR", "JMP",
-    "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
+    "LE", "GT", "GE", "INSTANCEOF", "IN", "GET", "SET", "SET_VAR", "GET_VAR",
+    "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -16385,6 +16387,17 @@ restart:
         PUSH(v7_create_boolean(b_bool_bin_op(v7, op, d1, d2)));
         break;
       }
+      case OP_INSTANCEOF: {
+        v2 = POP();
+        v1 = POP();
+        if (!v7_is_function(v2) && !v7_is_cfunction(i_value_of(v7, v2))) {
+          throw_exception(v7, TYPE_ERROR,
+                          "Expecting a function in instanceof check");
+        }
+        PUSH(v7_create_boolean(
+            is_prototype_of(v7, v1, v7_get(v7, v2, "prototype", 9))));
+        break;
+      }
       case OP_IN:
         v2 = POP();
         v1 = POP();
@@ -16733,6 +16746,9 @@ V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
     case AST_GE:
       op = OP_GE;
       break;
+    case AST_INSTANCEOF:
+      op = OP_INSTANCEOF;
+      break;
     default:
       strncpy(v7->error_msg, "unknown binary ast node", sizeof(v7->error_msg));
       return V7_SYNTAX_ERROR;
@@ -16878,6 +16894,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     case AST_LE:
     case AST_GT:
     case AST_GE:
+    case AST_INSTANCEOF:
       BTRY(compile_binary(v7, a, pos, tag, bcode));
       break;
     case AST_LOGICAL_NOT:
