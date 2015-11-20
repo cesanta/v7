@@ -3090,7 +3090,8 @@ V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
 #define GET_VAL_NAN_PAYLOAD(v) ((char *) &(v))
 
 V7_PRIVATE val_t create_object(struct v7 *, val_t);
-V7_PRIVATE v7_val_t create_function(struct v7 *v7);
+V7_PRIVATE val_t create_function2(struct v7 *, struct v7_object *, val_t);
+V7_PRIVATE val_t create_function(struct v7 *);
 V7_PRIVATE v7_val_t v7_create_dense_array(struct v7 *v7);
 V7_PRIVATE int v7_stringify_value(struct v7 *, val_t, char *, size_t);
 V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
@@ -3250,6 +3251,13 @@ enum opcode {
   OP_CREATE_OBJ, /* creates an empty object */
   OP_CREATE_ARR, /* creates an empty array */
 
+  /*
+   * Copies the function object at TOS and assigns current scope
+   * in func->scope.
+   *
+   * ( a -- a )
+   */
+  OP_FUNC_LIT,
   OP_CALL, /* takes number of args */
   OP_RET,
 
@@ -9153,9 +9161,10 @@ v7_val_t v7_create_foreign(void *p) {
   return v7_pointer_to_value(p) | V7_TAG_FOREIGN;
 }
 
-v7_val_t create_function(struct v7 *v7) {
+V7_PRIVATE
+val_t create_function2(struct v7 *v7, struct v7_object *scope, val_t proto) {
   struct v7_function *f = new_function(v7);
-  val_t proto = v7_create_undefined(), fval = v7_function_to_value(f);
+  val_t fval = v7_function_to_value(f);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   if (f == NULL) {
     fval = v7_create_null();
@@ -9165,10 +9174,9 @@ v7_val_t create_function(struct v7 *v7) {
   tmp_stack_push(&tf, &fval);
 
   f->properties = NULL;
-  f->scope = NULL;
+  f->scope = scope;
   f->attributes = 0;
   /* TODO(mkm): lazily create these properties on first access */
-  proto = v7_create_object(v7);
   v7_set_property(v7, proto, "constructor", 11, V7_PROPERTY_DONT_ENUM, fval);
   v7_set_property(v7, fval, "prototype", 9,
                   V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE, proto);
@@ -9176,6 +9184,10 @@ v7_val_t create_function(struct v7 *v7) {
 cleanup:
   tmp_frame_cleanup(&tf);
   return fval;
+}
+
+val_t create_function(struct v7 *v7) {
+  return create_function2(v7, NULL, v7_create_object(v7));
 }
 
 /* like c_snprintf but returns `size` if write is truncated */
@@ -16034,7 +16046,8 @@ static const char *op_names[] = {
     "NOT", "LOGICAL_NOT", "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT",
     "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT",
     "LE", "GT", "GE", "INSTANCEOF", "IN", "GET", "SET", "SET_VAR", "GET_VAR",
-    "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "CALL", "RET"};
+    "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "FUNC_LIT",
+    "CALL", "RET"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -16229,6 +16242,24 @@ static void bcode_perform_return(struct v7 *v7, struct bcode_registers *r) {
   bcode_restore_registers(bcode, r);
   r->ops = (uint8_t *) v7_to_foreign(v7_get(v7, v7->call_stack, "___ro", 5));
   v7->call_stack = v7_get(v7, v7->call_stack, "____p", 5);
+}
+
+/*
+ * Copy a function literal prototype and binds it to the current scope.
+ *
+ * Assumes `func` is owned by the caller.
+ */
+static val_t bcode_instantiate_function(struct v7 *v7, val_t func) {
+  val_t res;
+  struct v7_function *f, *rf;
+  assert(v7_is_function(func));
+  f = v7_to_function(func);
+  res = create_function2(v7, v7_to_object(v7->call_stack),
+                         v7_get(v7, func, "prototype", 9));
+  rf = v7_to_function(res);
+  rf->bcode = f->bcode;
+  rf->bcode->refcnt++;
+  return res;
 }
 
 V7_PRIVATE void eval_bcode(struct v7 *v7, struct bcode *_bcode) {
@@ -16473,6 +16504,12 @@ restart:
       case OP_CREATE_ARR:
         PUSH(v7_create_array(v7));
         break;
+      case OP_FUNC_LIT: {
+        v1 = POP();
+        v2 = bcode_instantiate_function(v7, v1);
+        PUSH(v2);
+        break;
+      }
       case OP_CALL: {
         /* Naive implementation pending stack frame redesign */
         int args = (int) *(++r.ops);
@@ -17078,8 +17115,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       uint8_t flit = 0;
       val_t funv = create_function(v7);
       struct v7_function *func = v7_to_function(funv);
-      func->scope =
-          v7_to_object(v7_get_global(v7)); /* TODO(mkm): handle closures */
+      func->scope = NULL;
       func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
       bcode_init(func->bcode);
       func->bcode->refcnt = 1;
@@ -17088,6 +17124,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       (*pos)--;
       BTRY(compile_function(v7, a, pos, func->bcode));
       bcode_push_lit(bcode, flit);
+      bcode_op(bcode, OP_FUNC_LIT);
       break;
     }
     case AST_THIS:

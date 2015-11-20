@@ -2451,6 +2451,9 @@ static const char *test_exec_bcode(void) {
                            42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "(function(){var b = 2; return b})()+40", 42);
 
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "a=1; (function(a) {return function(){return a}})(42)()", 42);
+
   v7_destroy(v7);
   return NULL;
 }
