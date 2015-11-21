@@ -61,6 +61,8 @@ extern long timezone;
 #define isnan(x) _isnan(x)
 #endif
 
+#define STRINGIFY(x) #x
+
 static enum v7_err eval(struct v7 *v7, v7_val_t *result, const char *code) {
   return v7_exec(v7, code, result);
 }
@@ -2453,6 +2455,317 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_NUM_EQ(
       v7, "a=1; (function(a) {return function(){return a}})(42)()", 42);
+
+  /* clang-format off */
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          var a;
+          try       { a = 10; }
+          catch (e) { a = 15; }
+          finally   { a = 20; }
+          a
+        ), 20
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a;
+        try       { a = "a-"; throw "test"; }
+        catch (e) { a = a + "b-"; }
+        finally   { a = a + "c-"; }
+        a
+        ), "a-b-c-"
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a;
+        try       { a = "a-"; throw "test"; }
+        catch (e) { a = a + e; }
+        a
+        ), "a-test"
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var f1 = function(){
+          var a = "1-";
+          try {
+            try { a += "2-" }
+            catch (e) { a += e + "-3-"; }
+            finally { a += "4-"; }
+          }
+          catch (e) { a += e + "-5-"; }
+          finally { a += "6-"; }
+
+          return a;
+        };
+        f1();
+        ), "1-2-4-6-"
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var f1 = function(acc, val){
+          if (val == 0) {
+            throw acc;
+          }
+          f1(acc + ".", val - 1);
+        };
+
+        var a;
+        try {
+          f1("", 10);
+        } catch (e) {
+          a = e;
+        }
+        ), ".........."
+      );
+
+  /*
+   * should take first return from `try`, and ignore last return outside of
+   * `try`
+   */
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a = "1-";
+
+        var f1 = function(){
+          var b = "1-";
+          try {
+            try { a += "2-";
+                  b += "2-";
+                  return b + "_1"; }
+            catch (e) { a += e + "-3-";
+                        b += e + "-3-"; }
+            finally { a += "4-";
+                      b += "4-"; }
+          }
+          catch (e) { a += e + "-5-";
+                      b += e + "-5-"; }
+          finally { a += "6-";
+                    b += "6-"; }
+
+          return b + "_2";
+        };
+
+        var c = f1() + "|" + a;
+        c;
+        ), "1-2-_1|1-2-4-6-"
+      );
+
+  /*
+   * should take second return from `finally`, and ignore last return outside of
+   * `try`
+   */
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a = "1-";
+
+        var f1 = function(){
+          var b = "1-";
+          try {
+            try { a += "2-";
+                  b += "2-";
+                  return b + "_1"; }
+            catch (e) { a += e + "-3-";
+                        b += e + "-3-"; }
+            finally { a += "4-";
+                      b += "4-";
+                      return b + "_2"; }
+          }
+          catch (e) { a += e + "-5-";
+                      b += e + "-5-"; }
+          finally { a += "6-";
+                    b += "6-"; }
+
+          return b + "_3";
+        };
+
+        var c = f1() + "|" + a;
+        c;
+        ), "1-2-4-_2|1-2-4-6-"
+      );
+
+  /*
+   * should take third return from `finally`, and ignore last return outside of
+   * `try`
+   */
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a = "1-";
+
+        var f1 = function(){
+          var b = "1-";
+          try {
+            try { a += "2-";
+                  b += "2-";
+                  return b + "_1"; }
+            catch (e) { a += e + "-3-";
+                        b += e + "-3-"; }
+            finally { a += "4-";
+                      b += "4-";
+                      return b + "_2"; }
+          }
+          catch (e) { a += e + "-5-";
+                      b += e + "-5-"; }
+          finally { a += "6-";
+                    b += "6-";
+                    return b + "_3"; }
+
+          return b + "_4";
+        };
+
+        var c = f1() + "|" + a;
+        c;
+        ), "1-2-4-6-_3|1-2-4-6-"
+      );
+
+  /*
+   * should take third return from `finally`, and ignore last return outside of
+   * `try`
+   */
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a = "1-";
+
+        var f1 = function(){
+          var b = "1-";
+          try {
+            try { a += "2-";
+                  b += "2-";
+                  return b + "_1"; }
+            catch (e) { a += e + "-3-";
+                        b += e + "-3-"; }
+            finally { a += "4-";
+                      b += "4-";
+                      return b + f2() + "_2"; }
+          }
+          catch (e) { a += e + "-5-";
+                      b += e + "-5-"; }
+          finally { a += "6-";
+                    b += "6-"; }
+
+          return b + "_4";
+        };
+
+        var f2 = function(){
+          var b = "a-";
+          try {
+            try { a += "b-";
+                  b += "b-";
+                  return b + "_1"; }
+            catch (e) { a += e + "-c-";
+                        b += e + "-c-"; }
+            finally { a += "d-";
+                      b += "d-";
+                      return b + "_2"; }
+          }
+          catch (e) { a += e + "-e-";
+                      b += e + "-e-"; }
+          finally { a += "f-";
+                    b += "f-";
+                    return b + "_3"; }
+        };
+
+        var c = f1() + "|" + a;
+        c;
+        ), "1-2-4-a-b-d-f-_3_2|1-2-4-b-d-f-6-"
+      );
+
+
+  /*
+   * Throw should dismiss any pending returns
+   */
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var f1 = function(){
+          var b = "1-";
+          try {
+            b += "2-";
+            try       { b += "3-"; return b + "-ret1"; }
+            catch (e) { b += "4-"; }
+            finally   { b += "5-"; throw "test"; }
+          }
+          catch (e) { b += e + "-"; }
+          finally { b += "6-"; }
+          return b + "-ret2";
+        };
+
+        var c = f1();
+        ), "1-2-3-5-test-6--ret2"
+      );
+
+  /*
+   * Return should dismiss any pending thrown values
+   */
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var f1 = function(){
+          var b = "1-";
+          try {
+            b += "2-";
+            try       { b += "3-"; throw "test"; }
+            finally   { b += "5-"; return b + "-ret1"; }
+          }
+          catch (e) { b += e + "-"; }
+          finally { b += "6-"; }
+          return b + "-ret2";
+        };
+
+        var c = f1();
+        ), "1-2-3-5--ret1"
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a = "1-";
+
+        var f1 = function(){
+          var b = "1-";
+          try {
+            try { a += "2-";
+                  b += "2-";
+                  return b + "_1"; }
+            catch (e) { a += e + "-3-";
+                        b += e + "-3-"; }
+            finally { a += "4-";
+                      b += "4-";
+                      return b + f2() + "_2"; }
+          }
+          catch (e) { a += e + "-5-";
+                      b += e + "-5-"; }
+          finally { a += "6-";
+                    b += "6-"; }
+
+          return b + "_4";
+        };
+
+        var f2 = function(){
+          var b = "a-";
+          try {
+            try { a += "b-";
+                  b += "b-";
+                  return b + "_1"; }
+            catch (e) { a += e + "-c-";
+                        b += e + "-c-"; }
+            finally { a += "d-";
+                      b += "d-";
+                      throw "-test-"; }
+          }
+          catch (e) { a += e + "-e-";
+                      b += e + "-e-"; }
+          finally { a += "f-";
+                    b += "f-";
+                    return b + "_3"; }
+        };
+
+        var c = f1() + "|" + a;
+        c;
+        ), "1-2-4-a-b-d--test--e-f-_3_2|1-2-4-b-d--test--e-f-6-"
+      );
+  /* clang-format on */
 
   v7_destroy(v7);
   return NULL;
