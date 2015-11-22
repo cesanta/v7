@@ -2505,6 +2505,24 @@ static const char *test_exec_bcode(void) {
         ), "1-2-4-6-"
       );
 
+  /* TODO(dfrank): avoid depending on exact error message */
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a = "";
+
+        var b = (function() {
+          try {foo}
+          catch(e) { a += "GOT:" + e + ";"; }
+          finally { a += "FINALLY;"; return 42 };
+          return 10;
+        }
+        )();
+
+        var c = a + "|" + b;
+        c;
+        ), "GOT:Error: [foo] is not defined;FINALLY;|42"
+      );
+
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
         var f1 = function(acc, val){
