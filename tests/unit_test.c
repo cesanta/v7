@@ -197,6 +197,23 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
     }                                                                   \
   } while (0)
 
+#define _ASSERT_XXX_EVAL_ERR(v7, js_expr, expected_err, eval_fun)        \
+  do {                                                                   \
+    v7_val_t v;                                                          \
+    enum v7_err e;                                                       \
+    int r = 1;                                                           \
+    num_tests++;                                                         \
+    e = eval_fun(v7, js_expr, &v);                                       \
+    if (e != (expected_err)) {                                           \
+      printf("Exec '%s' returned err=%d, expected err=%d\n", js_expr, e, \
+             expected_err);                                              \
+      r = 0;                                                             \
+    }                                                                    \
+    if (r == 0) {                                                        \
+      FAIL("wrong eval err", __LINE__);                                  \
+    }                                                                    \
+  } while (0)
+
 #define _ASSERT_EVAL_EQ(v7, js_expr, expected, check_fun) \
   _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, v7_exec)
 
@@ -2349,6 +2366,9 @@ static const char *test_compiler(void) {
 #define ASSERT_BCODE_EVAL_STR_EQ(v7, js_expr, expected) \
   _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_str)
 
+#define ASSERT_BCODE_EVAL_ERR(v7, js_expr, expected_err) \
+  _ASSERT_XXX_EVAL_ERR(v7, js_expr, expected_err, v7_exec_bcode)
+
 static const char *test_exec_bcode(void) {
   struct v7 *v7 = v7_create();
 
@@ -2457,6 +2477,8 @@ static const char *test_exec_bcode(void) {
       v7, "a=1; (function(a) {return function(){return a}})(42)()", 42);
 
   /* clang-format off */
+
+  /* exceptions {{{ */
 
   ASSERT_BCODE_EVAL_NUM_EQ(
       v7, STRINGIFY(
@@ -2783,6 +2805,81 @@ static const char *test_exec_bcode(void) {
         c;
         ), "1-2-4-a-b-d--test--e-f-_3_2|1-2-4-b-d--test--e-f-6-"
       );
+
+  /* }}} */
+
+  /* use strict {{{ */
+
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "'use strict'; var a = {b:1, c:2, b:3}; a.b", V7_SYNTAX_ERROR
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "var a = {b:1, c:2, b:3}; a.b", 3
+      );
+
+  ASSERT_BCODE_EVAL_ERR(
+      v7, STRINGIFY(
+        var a = (function(){
+          'use strict';
+          return {b:1, c:2, b:3};
+        });
+        a
+        ), V7_SYNTAX_ERROR
+      );
+
+  ASSERT_BCODE_EVAL_ERR(
+      v7, STRINGIFY(
+        'use strict';
+        var a = (function(){
+          return {b:1, c:2, b:3};
+        });
+        a
+        ), V7_SYNTAX_ERROR
+      );
+
+  ASSERT_BCODE_EVAL_ERR(
+      v7, STRINGIFY(
+        'use strict';
+        var a = (function(){
+          return {b:1, c:2};
+        });
+        var b = (function(){
+          return {b:1, c:2, b:3};
+        });
+        a
+        ), V7_SYNTAX_ERROR
+      );
+
+  ASSERT_BCODE_EVAL_ERR(
+      v7, STRINGIFY(
+        var a = (function(){
+          'use strict';
+          return {b:1, c:2};
+        });
+        var b = (function(){
+          'use strict';
+          return {b:1, c:2, b:3};
+        });
+        b();
+        ), V7_SYNTAX_ERROR
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+        var a = (function(){
+          'use strict';
+          return {b:1, c:2};
+          });
+        var b = (function(){
+          return {b:1, c:2, b:3};
+          });
+        b().b;
+        ), 3
+      );
+
+  /* }}} */
+
   /* clang-format on */
 
   v7_destroy(v7);

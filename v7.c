@@ -94,7 +94,8 @@ enum v7_err {
   V7_EXEC_EXCEPTION,
   V7_STACK_OVERFLOW,
   V7_AST_TOO_LARGE,
-  V7_INVALID_ARG
+  V7_INVALID_ARG,
+  V7_INTERNAL_ERROR,
 };
 
 /*
@@ -3207,20 +3208,72 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
 /* Amalgamated: #include "internal.h" */
 
+/*
+ * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
+ * "throws" an error with `BTHROW()`
+ */
 #define BTRY(call)           \
   do {                       \
     enum v7_err _e = call;   \
     BCHECK(_e == V7_OK, _e); \
   } while (0)
 
+/*
+ * Sets return value to the provided one, and `goto`s `clean`.
+ *
+ * For this to work, you should have local `enum v7_err ret` variable,
+ * and a `clean` label.
+ */
 #define BTHROW(err_code) \
   do {                   \
-    return err_code;     \
+    ret = (err_code);    \
+    goto clean;          \
   } while (0)
 
-#define BCHECK(cond, code)     \
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * provided `err_code` (see `BTHROW()`)
+ */
+#define BCHECK(cond, err_code) \
   do {                         \
-    if (!(cond)) BTHROW(code); \
+    if (!(cond)) {             \
+      BTHROW(err_code);        \
+    }                          \
+  } while (0)
+
+/*
+ * The same as `BTHROW`, but additionally takes an error message
+ */
+#define BTHROW_MSG(err_code, err_msg)                         \
+  do {                                                        \
+    strncpy(v7->error_msg, (err_msg), sizeof(v7->error_msg)); \
+    ret = (err_code);                                         \
+    goto clean;                                               \
+  } while (0)
+
+/*
+ * The same as `BCHECK`, but additionally takes an error message that is used
+ * in case of error
+ */
+#define BCHECK_MSG(cond, err_code, err_msg) \
+  do {                                      \
+    if (!(cond)) {                          \
+      BTHROW_MSG(err_code, err_msg);        \
+    }                                       \
+  } while (0)
+
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * internal error
+ *
+ * TODO(dfrank): it would be good to have formatted string: then, we can
+ * specify file and line.
+ */
+#define BCHECK_INTERNAL(cond)                          \
+  do {                                                 \
+    if (!(cond)) {                                     \
+      BTHROW_MSG(V7_INTERNAL_ERROR, "internal error"); \
+    }                                                  \
   } while (0)
 
 #if defined(__cplusplus)
@@ -3398,6 +3451,7 @@ V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
 
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
 V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
+V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, uint8_t idx);
 V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx);
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, v7_val_t v);
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
@@ -16423,6 +16477,9 @@ static void bcode_perform_call(struct v7 *v7, struct bcode *bcode,
   v7_to_object(frame)->prototype = func->scope;
   v7->call_stack = frame;
   bcode_restore_registers(func->bcode, r);
+
+  /* `ops` already points to the needed instruction, no need to increment it */
+  r->need_inc_ops = 0;
 }
 
 static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
@@ -17018,7 +17075,6 @@ restart:
             bcode_perform_call(v7, r.bcode, frame, func, &r);
 
             frame = v7_create_undefined();
-            continue; /* don't increment ops */
           }
         }
         break;
@@ -17160,6 +17216,12 @@ V7_PRIVATE uint8_t bcode_add_lit(struct bcode *bcode, val_t val) {
   return idx;
 }
 
+V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, uint8_t idx) {
+  val_t ret;
+  memcpy(&ret, bcode->lit.buf + (size_t) idx * sizeof(ret), sizeof(ret));
+  return ret;
+}
+
 V7_PRIVATE void bcode_push_lit(struct bcode *bcode, uint8_t idx) {
   bcode_op(bcode, OP_PUSH_LIT);
   bcode_op(bcode, idx);
@@ -17214,6 +17276,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
                                  struct bcode *bcode) {
   uint8_t op;
+  enum v7_err ret = V7_OK;
 
   switch (tag) {
     case AST_ADD:
@@ -17277,20 +17340,23 @@ V7_PRIVATE enum v7_err binary_op(struct v7 *v7, enum ast_tag tag,
       op = OP_INSTANCEOF;
       break;
     default:
-      strncpy(v7->error_msg, "unknown binary ast node", sizeof(v7->error_msg));
-      return V7_SYNTAX_ERROR;
+      BTHROW_MSG(V7_SYNTAX_ERROR, "unknown binary ast node");
   }
   bcode_op(bcode, op);
-  return V7_OK;
+clean:
+  return ret;
 }
 
 V7_PRIVATE enum v7_err compile_binary(struct v7 *v7, struct ast *a,
                                       ast_off_t *pos, enum ast_tag tag,
                                       struct bcode *bcode) {
+  enum v7_err ret = V7_OK;
   BTRY(compile_expr(v7, a, pos, bcode));
   BTRY(compile_expr(v7, a, pos, bcode));
 
-  return binary_op(v7, tag, bcode);
+  BTRY(binary_op(v7, tag, bcode));
+clean:
+  return ret;
 }
 
 static int string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
@@ -17318,6 +17384,8 @@ static void fixup_post_op(enum ast_tag tag, struct bcode *bcode) {
  */
 static enum v7_err eval_assign_rhs(struct v7 *v7, struct ast *a, ast_off_t *pos,
                                    enum ast_tag tag, struct bcode *bcode) {
+  enum v7_err ret = V7_OK;
+
   /* a++ and a-- need to preserve initial value. */
   if (tag == AST_POSTINC || tag == AST_POSTDEC) {
     bcode_op(bcode, OP_STASH);
@@ -17343,7 +17411,9 @@ static enum v7_err eval_assign_rhs(struct v7 *v7, struct ast *a, ast_off_t *pos,
     default:
       binary_op(v7, assign_ast_map[tag - AST_ASSIGN - 1], bcode);
   }
-  return V7_OK;
+
+clean:
+  return ret;
 }
 
 static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
@@ -17351,6 +17421,8 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
   uint8_t lit;
   enum ast_tag ntag;
   ntag = ast_fetch_tag(a, pos);
+  enum v7_err ret = V7_OK;
+
   switch (ntag) {
     case AST_IDENT:
       lit = string_lit(v7, a, pos, bcode);
@@ -17378,7 +17450,8 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
           BTRY(compile_expr(v7, a, pos, bcode));
           break;
         default:
-          return V7_SYNTAX_ERROR; /* unreachable, compilers are dumb */
+          /* unreachable, compilers are dumb */
+          BTHROW(V7_SYNTAX_ERROR);
       }
       if (tag != AST_ASSIGN) {
         bcode_op(bcode, OP_2DUP);
@@ -17391,15 +17464,16 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
       fixup_post_op(tag, bcode);
       break;
     default:
-      strncpy(v7->error_msg, "unexpected ast node", sizeof(v7->error_msg));
-      return V7_SYNTAX_ERROR;
+      BTHROW_MSG(V7_SYNTAX_ERROR, "unexpected ast node");
   }
-  return V7_OK;
+clean:
+  return ret;
 }
 
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode) {
   enum ast_tag tag = ast_fetch_tag(a, pos);
+  enum v7_err ret = V7_OK;
 
   switch (tag) {
     case AST_ADD:
@@ -17511,10 +17585,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
         BTRY(compile_expr(v7, a, pos, bcode));
       }
       bcode_op(bcode, OP_CALL);
-      if (args > 0x7f) {
-        strncpy(v7->error_msg, "too many arguments", sizeof(v7->error_msg));
-        return V7_SYNTAX_ERROR;
-      }
+      BCHECK_MSG(args <= 0x7f, V7_SYNTAX_ERROR, "too many arguments");
       bcode_op(bcode, (uint8_t) args);
       break;
     }
@@ -17532,7 +17603,17 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
        *   POP
        *   ...
        */
+
+      /*
+       * Literal indices of property names of current object literal.
+       * Needed for strict mode: we need to keep track of the added
+       * properties, since duplicates are not allowed
+       */
+      struct mbuf cur_literals;
+      uint8_t lit;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+      mbuf_init(&cur_literals, 0);
+
       ast_move_to_children(a, pos);
       bcode_op(bcode, OP_CREATE_OBJ);
       while (*pos < end) {
@@ -17540,16 +17621,52 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
         switch (tag) {
           case AST_PROP:
             bcode_op(bcode, OP_DUP);
-            bcode_push_lit(bcode, string_lit(v7, a, pos, bcode));
+            lit = string_lit(v7, a, pos, bcode);
+            if (v7->strict_mode) {
+              /*
+               * In strict mode, check for duplicate property names in
+               * object literals
+               */
+              uint8_t *plit;
+              for (plit = (uint8_t *) cur_literals.buf;
+                   (char *) plit < cur_literals.buf + cur_literals.len;
+                   plit++) {
+                const char *str1, *str2;
+                size_t size1, size2;
+                v7_val_t val1, val2;
+
+                val1 = bcode_get_lit(bcode, lit);
+                str1 = v7_to_string(v7, &val1, &size1);
+
+                val2 = bcode_get_lit(bcode, *plit);
+                str2 = v7_to_string(v7, &val2, &size2);
+
+                if (size1 == size2 && memcmp(str1, str2, size1) == 0) {
+                  /* found already existing property of the same name */
+                  strncpy(v7->error_msg,
+                          "duplicate data property in object literal "
+                          "is not allowed in strict mode",
+                          sizeof(v7->error_msg));
+                  ret = V7_SYNTAX_ERROR;
+                  goto ast_object_clean;
+                }
+              }
+              mbuf_append(&cur_literals, &lit, sizeof(lit));
+            }
+            bcode_push_lit(bcode, lit);
             BTRY(compile_expr(v7, a, pos, bcode));
             bcode_op(bcode, OP_SET);
             bcode_op(bcode, OP_POP);
             break;
           default:
             strncpy(v7->error_msg, "not implemented", sizeof(v7->error_msg));
-            return V7_SYNTAX_ERROR;
+            ret = V7_SYNTAX_ERROR;
+            goto ast_object_clean;
         }
       }
+
+    ast_object_clean:
+      mbuf_free(&cur_literals);
       break;
     }
     case AST_ARRAY: {
@@ -17657,9 +17774,10 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     default:
       sprintf(v7->error_msg, "unknown ast node %d", (int) tag);
       abort();
-      return V7_SYNTAX_ERROR;
+      ret = V7_SYNTAX_ERROR;
   }
-  return V7_OK;
+clean:
+  return ret;
 }
 
 V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
@@ -17668,11 +17786,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 V7_PRIVATE enum v7_err compile_stmts(struct v7 *v7, struct ast *a,
                                      ast_off_t *pos, ast_off_t end,
                                      struct bcode *bcode) {
+  enum v7_err ret = V7_OK;
   while (*pos < end) {
     BTRY(compile_stmt(v7, a, pos, bcode));
     if (*pos < end) bcode_op(bcode, OP_POP);
   }
-  return V7_OK;
+clean:
+  return ret;
 }
 
 V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
@@ -17681,6 +17801,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
   enum ast_tag tag = ast_fetch_tag(a, pos);
   ast_off_t cond;
   bcode_off_t body_target, body_label, cond_label;
+  enum v7_err ret = V7_OK;
 
   switch (tag) {
     /*
@@ -17858,11 +17979,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       ast_move_to_children(a, pos);
 
       /* make sure at least `catch` or `finally` is present */
-      if (acatch == end) {
-        strncpy(v7->error_msg, "Missing catch or finally after try",
-                sizeof(v7->error_msg));
-        return V7_SYNTAX_ERROR;
-      }
+      BCHECK_MSG(acatch != end, V7_SYNTAX_ERROR,
+                 "Missing catch or finally after try");
 
       if (afinally != end) {
         /* `finally` clause is present: push its offset */
@@ -18043,12 +18161,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       ast_move_to_children(a, pos);
       while (*pos < end) {
         tag = ast_fetch_tag(a, pos);
-        if (tag == AST_FUNC_DECL) {
-          strncpy(v7->error_msg, "not implemented yet", sizeof(v7->error_msg));
-          printf("SYNTAX ERROR: %s\n", v7->error_msg);
-          return V7_SYNTAX_ERROR;
-        }
-        V7_CHECK(v7, tag == AST_VAR_DECL);
+        BCHECK_MSG(tag != AST_FUNC_DECL, V7_SYNTAX_ERROR,
+                   "not implemented yet");
+        BCHECK_INTERNAL(tag == AST_VAR_DECL);
         lit = string_lit(v7, a, pos, bcode);
         BTRY(compile_expr(v7, a, pos, bcode));
         bcode_op(bcode, OP_SET_VAR);
@@ -18066,9 +18181,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       break;
     default:
       (*pos)--;
-      return compile_expr(v7, a, pos, bcode);
+      BTRY(compile_expr(v7, a, pos, bcode));
   }
-  return V7_OK;
+clean:
+  return ret;
 }
 
 /*
@@ -18079,11 +18195,29 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
                                       struct bcode *bcode) {
   ast_off_t end, pos = 0;
   enum ast_tag tag = ast_fetch_tag(a, &pos);
-  enum v7_err ret;
+  enum v7_err ret = V7_OK;
   (void) tag;
+#ifndef V7_FORCE_STRICT_MODE
+  int saved_strict_mode = v7->strict_mode;
+#endif
   assert(tag == AST_SCRIPT);
   end = ast_get_skip(a, pos, AST_END_SKIP);
   ast_move_to_children(a, &pos);
+
+#ifndef V7_FORCE_STRICT_MODE
+  /* check 'use strict' */
+  if (pos < end) {
+    ast_off_t tmp_pos = pos;
+    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
+      v7->strict_mode = 1;
+      /*
+       * move `pos` offset, effectively removing `AST_USE_STRICT` from the
+       * script
+       */
+      pos = tmp_pos;
+    }
+  }
+#endif
 
   ret = compile_stmts(v7, a, &pos, end, bcode);
 
@@ -18092,6 +18226,9 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
   dump_bcode(stderr, bcode);
 #endif
 
+#ifndef V7_FORCE_STRICT_MODE
+  v7->strict_mode = saved_strict_mode;
+#endif
   return ret;
 }
 
@@ -18106,6 +18243,10 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   enum ast_tag tag = ast_fetch_tag(a, pos);
   const char *name;
   size_t name_len;
+  enum v7_err ret = V7_OK;
+#ifndef V7_FORCE_STRICT_MODE
+  int saved_strict_mode = v7->strict_mode;
+#endif
 
   (void) tag;
   assert(tag == AST_FUNC);
@@ -18115,27 +18256,43 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   var = ast_get_skip(a, *pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
   ast_move_to_children(a, pos);
 
+  /* retrieve function name */
   tag = ast_fetch_tag(a, pos);
   if (tag == AST_IDENT) {
+    /* function name is provided */
     name = ast_get_inlined_data(a, *pos, &name_len);
     ast_move_to_children(a, pos);
     bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
   } else {
-    /* anonymous */
+    /* no name: anonymous function */
     bcode_add_name(bcode, v7_create_string(v7, "", 0, 1));
   }
 
+  /* retrieve function's argument names */
   for (bcode->args = 0; *pos < body; bcode->args++) {
     tag = ast_fetch_tag(a, pos);
-    V7_CHECK(v7, tag == AST_IDENT);
+    BCHECK_INTERNAL(tag == AST_IDENT);
     name = ast_get_inlined_data(a, *pos, &name_len);
     ast_move_to_children(a, pos);
     bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
   }
 
+#ifndef V7_FORCE_STRICT_MODE
+  /* check 'use strict' */
+  if (*pos < end) {
+    ast_off_t tmp_pos = body;
+    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
+      v7->strict_mode = 1;
+      /* move `body` offset, effectively removing `AST_USE_STRICT` from it */
+      body = tmp_pos;
+    }
+  }
+#endif
+
   if (var != start) {
+    /* there are some `var`s in function, let's compile them all */
     do {
-      V7_CHECK(v7, ast_fetch_tag(a, &var) == AST_VAR);
+      BCHECK_INTERNAL(ast_fetch_tag(a, &var) == AST_VAR);
       next = ast_get_skip(a, var, AST_VAR_NEXT_SKIP);
       if (next == var) {
         next = 0;
@@ -18145,7 +18302,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
       ast_move_to_children(a, &var);
       while (var < var_end) {
         enum ast_tag tag = ast_fetch_tag(a, &var);
-        V7_CHECK(v7, tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
+        BCHECK_INTERNAL(tag == AST_VAR_DECL || tag == AST_FUNC_DECL);
         name = ast_get_inlined_data(a, var, &name_len);
         ast_move_to_children(a, &var);
         ast_skip_tree(a, &var);
@@ -18156,6 +18313,8 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
       }
     } while (next != 0);
   }
+
+  /* compile function body */
   *pos = body;
   BTRY(compile_stmts(v7, a, pos, end, bcode));
   if (bcode->ops.buf == NULL) {
@@ -18166,7 +18325,12 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
   fprintf(stderr, "--- function ---\n");
   dump_bcode(stderr, bcode);
 #endif
-  return V7_OK;
+
+#ifndef V7_FORCE_STRICT_MODE
+  v7->strict_mode = saved_strict_mode;
+#endif
+clean:
+  return ret;
 }
 
 #endif /* V7_ENABLE_BCODE */
