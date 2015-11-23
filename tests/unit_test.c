@@ -2287,75 +2287,6 @@ static int check_ops(struct bcode *bcode, uint8_t *ops, size_t len) {
   }                                            \
   while (0)
 
-static const char *test_compiler(void) {
-  struct v7 *v7 = v7_create();
-  struct bcode bcode;
-  struct ast a;
-
-  bcode_init(&bcode);
-  ast_init(&a, 0);
-
-  BEGIN_CHECK_OPS("0+1"){OP_PUSH_ZERO, OP_PUSH_ONE, OP_ADD};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("-(1)"){OP_PUSH_ONE, OP_NEG};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("1+2*3"){OP_PUSH_ONE, OP_PUSH_LIT, 0,     OP_PUSH_LIT,
-                           1,           OP_MUL,      OP_ADD};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("x"){OP_GET_VAR, 0};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("x=1"){OP_PUSH_ONE, OP_SET_VAR, 0};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("a.b"){OP_GET_VAR, 1, OP_PUSH_LIT, 0, OP_GET};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("(0+1)[1-0]"){OP_PUSH_ZERO, OP_PUSH_ONE, OP_ADD, OP_PUSH_ONE,
-                                OP_PUSH_ZERO, OP_SUB,      OP_GET};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("a['b']"){OP_GET_VAR, 0, OP_PUSH_LIT, 1, OP_GET};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("a.b=0"){OP_GET_VAR, 1, OP_PUSH_LIT, 0, OP_PUSH_ZERO, OP_SET};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("a.b+=1"){OP_GET_VAR,  1,       OP_PUSH_LIT,
-                            0,           OP_2DUP, OP_GET,
-                            OP_PUSH_ONE, OP_ADD,  OP_SET};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("a['b']=0"){OP_GET_VAR, 0, OP_PUSH_LIT, 1, OP_PUSH_ZERO,
-                              OP_SET};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("a['b']+=1"){OP_GET_VAR,  0,       OP_PUSH_LIT,
-                               1,           OP_2DUP, OP_GET,
-                               OP_PUSH_ONE, OP_ADD,  OP_SET};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("1&&0"){OP_PUSH_ONE, OP_DUP, OP_JMP_FALSE, 9, 0, 0, 0, OP_POP,
-                          OP_PUSH_ZERO};
-  END_CHECK_OPS();
-
-  BEGIN_CHECK_OPS("1||0"){OP_PUSH_ONE, OP_DUP, OP_JMP_TRUE, 9,           0,
-                          0,           0,      OP_POP,      OP_PUSH_ZERO};
-  END_CHECK_OPS();
-
-  ASSERT_EQ(parse_js(v7, "(function foo(a,b){var c,d})", &a), V7_OK);
-  {
-    ast_off_t pos = 5;
-    assert(compile_function(v7, &a, &pos, &bcode) == V7_OK);
-  }
-
-  v7_destroy(v7);
-  return NULL;
-}
-
 #define _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_fun) \
   _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, v7_exec_bcode)
 
@@ -2365,6 +2296,8 @@ static const char *test_compiler(void) {
   _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_num)
 #define ASSERT_BCODE_EVAL_STR_EQ(v7, js_expr, expected) \
   _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_str)
+#define ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, js_expr, expected) \
+  _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_js_expr)
 
 #define ASSERT_BCODE_EVAL_ERR(v7, js_expr, expected_err) \
   _ASSERT_XXX_EVAL_ERR(v7, js_expr, expected_err, v7_exec_bcode)
@@ -2507,6 +2440,14 @@ static const char *test_exec_bcode(void) {
         catch (e) { a = a + e; }
         a
         ), "a-test"
+      );
+
+  /* try-catch with empty `catch` body should evaluate to `undefined` */
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+        try       { foo }
+        catch (e) { }
+        ), "undefined"
       );
 
   ASSERT_BCODE_EVAL_STR_EQ(
@@ -2931,7 +2872,6 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_gc_own);
 #endif
 #ifdef V7_ENABLE_BCODE
-  RUN_TEST(test_compiler);
   RUN_TEST(test_exec_bcode);
 #endif
   RUN_TEST(test_ecmac);
