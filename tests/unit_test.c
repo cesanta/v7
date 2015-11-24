@@ -167,6 +167,32 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   return result == (v7_is_true(v7, v) ? 1 : 0);
 }
 
+#if defined(V7_ENABLE_BCODE)
+/*
+ * check that bcode stack is zero (should be zero after each call to
+ * `v7_exec_bcode()`)
+ */
+#define CHECK_BCODE_STACK_ZERO(v7) (v7->stack.len == 0)
+/*
+ * Print stack error
+ */
+#define PRINT_BCODE_STACK_ERROR(v7, js_expr)                \
+  do {                                                      \
+    printf("Exec '%s': non-zero stack size: %u\n", js_expr, \
+           (unsigned int)(v7->stack.len / sizeof(val_t)));  \
+  } while (0)
+
+#else
+#define CHECK_BCODE_STACK_ZERO(v7) 1
+#define PRINT_BCODE_STACK_ERROR(v7, js_expr) /* nothing*/
+#endif
+
+#if defined(UNIT_TEST_TRACE)
+#define TRACE_EXPR(js_expr) printf("Executing: '%s' ...\n", js_expr)
+#else
+#define TRACE_EXPR(js_expr) /* nothing */
+#endif
+
 #define ASSERT_EVAL_OK(v7, js_expr)                     \
   do {                                                  \
     v7_val_t v;                                         \
@@ -185,9 +211,13 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
     enum v7_err e;                                                      \
     int r = 1;                                                          \
     num_tests++;                                                        \
+    TRACE_EXPR(js_expr);                                                \
     e = eval_fun(v7, js_expr, &v);                                      \
     if (e != V7_OK) {                                                   \
       printf("Exec '%s' failed, err=%d\n", js_expr, e);                 \
+      r = 0;                                                            \
+    } else if (!(CHECK_BCODE_STACK_ZERO(v7))) {                         \
+      PRINT_BCODE_STACK_ERROR(v7, js_expr);                             \
       r = 0;                                                            \
     } else {                                                            \
       r = check_fun(v7, v, expected);                                   \
