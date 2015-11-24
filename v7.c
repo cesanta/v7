@@ -2856,6 +2856,8 @@ struct v7 {
   unsigned int is_thrown : 1;
   /* true if `returned_value` is valid (used in bcode) */
   unsigned int is_returned : 1;
+  /* true if last emitted statement is a compound statement */
+  unsigned int is_compound : 1;
 };
 
 enum jmp_type { NO_JMP, THROW_JMP, BREAK_JMP, CONTINUE_JMP };
@@ -17293,6 +17295,68 @@ V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
 
 #ifdef V7_ENABLE_BCODE
 
+/*
+ * The bytecode compiler takes an AST as input and produces one or more
+ * bcode structure as output.
+ *
+ * Each script or function body is compiled into it's own bcode structure.
+ *
+ * Each bcode stream produces a new value on the stack, i.e. its overall
+ * stack diagram is: `( -- a)`
+ *
+ * This value will be then popped by the function caller or by v7_exec in case
+ * of scripts.
+ *
+ * In JS, the value of a script is the value of the last statement.
+ * A script with no statement has an `undefined` value.
+ * Functions instead require an explicit return value, so this matters only
+ * for `v7_exec` and JS `eval`.
+ *
+ * Since an empty script has an undefined value, and each script has to
+ * yield a value, the script/function prologue consists of a PUSH_UNDEFINED.
+ *
+ * Each statement will be compiled to push a value on the stack.
+ * When a statement begins evaluating, the current TOS is thus either
+ * the value of the previous statement or `undefined` in case of the first
+ * statement.
+ *
+ * Every statement of a given script/function body always evaluates at the same
+ * stack depth.
+ *
+ * In order to achieve that, after a statement is compiled out, a SWAP_DROP
+ * opcode is emitted, that drops the value of the previous statement (or the
+ * initial `undefined`). Dropping the value after the next statement is
+ * evaluated and not before has allows us to correctly implement exception
+ * behaviour and the break statement.
+ *
+ * Compound statements are constructs such as `if`/`while`/`for`/`try`. These
+ * constructs contain a body consisting of a possibly empty statement list.
+ *
+ * Unlike normal statements, compound statements don't produce a value
+ * themselves. Their value is either the value of their last executed statement
+ * in their body, or the previous statement in case their body is empty or not
+ * evaluated at all.
+ *
+ * An example is:
+ *
+ * [source,js]
+ * ----
+ * try {
+ *   42;
+ *   someUnexistingVariable;
+ * } catch(e) {
+ *   while(true) {}
+ *     if(true) {
+ *     }
+ *     if(false) {
+ *       2;
+ *     }
+ *     break;
+ *   }
+ * }
+ * ----
+ */
+
 static const enum ast_tag assign_ast_map[] = {
     AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
     AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
@@ -17816,7 +17880,11 @@ V7_PRIVATE enum v7_err compile_stmts(struct v7 *v7, struct ast *a,
   enum v7_err ret = V7_OK;
   while (*pos < end) {
     BTRY(compile_stmt(v7, a, pos, bcode));
-    bcode_op(bcode, OP_SWAP_DROP);
+    if (!v7->is_compound) {
+      bcode_op(bcode, OP_SWAP_DROP);
+    } else {
+      v7->is_compound = 0;
+    }
   }
 clean:
   return ret;
@@ -17840,7 +17908,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
-     *   DUP
      *   <E>
      *   JMP_FALSE body
      *   <BT>
@@ -17859,13 +17926,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       if_false = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
       ast_move_to_children(a, pos);
-
-      /*
-       * put initial value for the branch that will be executed,
-       * be it true or false branch. It's not `undefined`, because
-       * `1; if(false) {}` should yield `1`, not `undefined`.
-       */
-      bcode_op(bcode, OP_DUP);
 
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_JMP_FALSE);
@@ -17894,6 +17954,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_patch_target(bcode, if_false_label, bcode_pos(bcode));
       }
 
+      v7->is_compound = 1;
       break;
     }
     /*
@@ -17903,7 +17964,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
-     *   DUP
      *   JMP cond
      * body:
      *   <B>
@@ -17916,12 +17976,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       ast_move_to_children(a, pos);
       cond = *pos;
       ast_skip_tree(a, pos);
-
-      /*
-       * As all compound statements, it's value is the previous statement's
-       * value if no body statement is executed.
-       */
-      bcode_op(bcode, OP_DUP);
 
       /*
        * Condition check is at the end of the loop, this layout
@@ -17939,6 +17993,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_JMP_TRUE);
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
+
+      v7->is_compound = 1;
       break;
 
     /*
@@ -17961,7 +18017,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * ->
      *    OP_TRY_PUSH_FINALLY finally
      *    OP_TRY_PUSH_CATCH catch
-     *    OP_PUSH_UNDEFINED
      *    <TRY_B>
      *    OP_TRY_POP
      *    JMP finally
@@ -17985,7 +18040,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *    OP_TRY_PUSH_CATCH catch
-     *    OP_PUSH_UNDEFINED
      *    <TRY_B>
      *    OP_TRY_POP
      *    JMP end
@@ -18006,7 +18060,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *    OP_TRY_PUSH_FINALLY finally
-     *    OP_PUSH_UNDEFINED
      *    <TRY_B>
      *  finally:
      *    OP_TRY_POP
@@ -18037,9 +18090,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_op(bcode, OP_TRY_PUSH_CATCH);
         catch_label = bcode_add_target(bcode);
       }
-
-      /* put initial value for the `try` block execution */
-      bcode_op(bcode, OP_PUSH_UNDEFINED);
 
       /* compile statements of `try` block */
       BTRY(compile_stmts(v7, a, pos, acatch, bcode));
@@ -18112,6 +18162,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
         bcode_op(bcode, OP_AFTER_FINALLY);
       }
+
+      v7->is_compound = 1;
     } break;
 
     case AST_THROW: {
@@ -18127,7 +18179,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * ->
      *   <INIT>
      *   POP
-     *   DUP
      *   JMP cond
      * body:
      *   <B>
@@ -18150,7 +18201,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       *pos = body;
 
       bcode_op(bcode, OP_POP);
-      bcode_op(bcode, OP_DUP);
       bcode_op(bcode, OP_JMP);
       cond_label = bcode_add_target(bcode);
       body_target = bcode_pos(bcode);
@@ -18173,6 +18223,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
+
+      v7->is_compound = 1;
       break;
     }
     /*
@@ -18196,6 +18248,8 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_JMP_TRUE);
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
+
+      v7->is_compound = 1;
       break;
     }
     case AST_VAR: {
