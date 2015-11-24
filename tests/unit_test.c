@@ -914,7 +914,6 @@ static const char *test_parser(void) {
     "function f() {if (1) {return;}}",
     "function f() {if (1) {return 2}}",
     "throw 1+2",
-    "try { 1 }",
     "try { 1 } catch (e) { 2 }",
     "try {1} finally {3}",
     "try {1} catch (e) {2} finally {3}",
@@ -1437,7 +1436,7 @@ static const char *test_interpreter(void) {
                  "[[function a()],1]");
   ASSERT_EVAL_EQ(v7, "(function(){f=42;function f(){};return f})()", "42");
 
-  ASSERT_EVAL_EQ(v7, "x=0;try{x=1};x", "1");
+  ASSERT_EVAL_EQ(v7, "x=0;try{x=1}finally{};x", "1");
   ASSERT_EVAL_EQ(v7, "x=0;try{x=1}finally{x=x+1};x", "2");
   ASSERT_EVAL_EQ(v7, "x=0;try{x=1}catch(e){x=100}finally{x=x+1};x", "2");
 
@@ -2399,6 +2398,31 @@ static const char *test_exec_bcode(void) {
   /* clang-format off */
 
   /* exceptions {{{ */
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "try{} finally{}", "undefined");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{} finally{}", "1");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{2} finally{}", "2");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{2} finally{3}", "3");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "try{foo} catch(e){}", "undefined");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{foo} catch(e){}", "1");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{2;foo} catch(e){}", "2");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var f=(function(){foo});"
+      "2;try{f();} catch(e){}",
+      "2");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var f=(function(){foo});"
+      "2;try{3;f();} catch(e){}",
+      "3");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var f=(function(){foo});"
+      "2;try{3;f();} catch(e){} finally{}",
+      "3");
+
+  /* plain try{} is a syntax error */
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "try{}", V7_SYNTAX_ERROR
+      );
 
   ASSERT_BCODE_EVAL_NUM_EQ(
       v7, STRINGIFY(

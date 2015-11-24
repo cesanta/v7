@@ -12522,6 +12522,7 @@ typedef struct fid_parse_try_locals {
 #endif
 
   ast_off_t start;
+  uint8_t catch_or_finally;
 } fid_parse_try_locals_t;
 
 #define CALL_PARSE_TRY(_label)      \
@@ -13994,9 +13995,11 @@ fid_parse_try :
 #define L CR_CUR_LOCALS_PT(fid_parse_try_locals_t)
 {
   L->start = ast_add_node(a, AST_TRY);
+  L->catch_or_finally = 0;
   CALL_PARSE_BLOCK(fid_p_try_1);
   ast_set_skip(a, L->start, AST_TRY_CATCH_SKIP);
   if (ACCEPT(TOK_CATCH)) {
+    L->catch_or_finally = 1;
     EXPECT(TOK_OPEN_PAREN);
     CALL_PARSE_IDENT(fid_p_try_2);
     EXPECT(TOK_CLOSE_PAREN);
@@ -14004,9 +14007,16 @@ fid_parse_try :
   }
   ast_set_skip(a, L->start, AST_TRY_FINALLY_SKIP);
   if (ACCEPT(TOK_FINALLY)) {
+    L->catch_or_finally = 1;
     CALL_PARSE_BLOCK(fid_p_try_4);
   }
   ast_set_skip(a, L->start, AST_END_SKIP);
+
+  /* make sure `catch` and `finally` aren't both missing */
+  if (!L->catch_or_finally) {
+    CR_THROW(PARSER_EXC_ID__SYNTAX_ERROR);
+  }
+
   CR_RETURN_VOID();
 }
 
@@ -18074,10 +18084,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       acatch = ast_get_skip(a, *pos, AST_TRY_CATCH_SKIP);
       afinally = ast_get_skip(a, *pos, AST_TRY_FINALLY_SKIP);
       ast_move_to_children(a, pos);
-
-      /* make sure at least `catch` or `finally` is present */
-      BCHECK_MSG(acatch != end, V7_SYNTAX_ERROR,
-                 "Missing catch or finally after try");
 
       if (afinally != end) {
         /* `finally` clause is present: push its offset */
