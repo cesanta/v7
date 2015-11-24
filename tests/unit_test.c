@@ -2361,10 +2361,12 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=1;while(a) a-=1", 0);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=3;b=0;while(a) {a-=1;b+=1}", 3);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=3;b=0;while(a) {a-=1;b+=1};b", 3);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; while(false) {}", 1);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=0;b=0;for(i=0;i<10;i+=1) b+=1", 10);
   ASSERT_BCODE_EVAL_EQ(v7, "for(1;false;1) 1", "undefined");
   ASSERT_BCODE_EVAL_EQ(v7, "for(1;false;) 1", "undefined");
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; for(;false;) {}", 1);
 
   ASSERT_BCODE_EVAL_EQ(v7, "!0", "true");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "~0", -1);
