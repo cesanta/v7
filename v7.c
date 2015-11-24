@@ -1085,7 +1085,6 @@ char *utfutf(char *s1, char *s2);
 
 #include <assert.h>
 #include <ctype.h>
-#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -1214,8 +1213,11 @@ struct dirent *readdir(DIR *dir);
 #include <sys/select.h>
 #endif
 
-#ifndef _WIN32
+#ifndef LWIP_PROVIDE_ERRNO
 #include <errno.h>
+#endif
+
+#ifndef _WIN32
 #include <inttypes.h>
 #include <stdarg.h>
 
@@ -1396,9 +1398,12 @@ extern "C" {
 int c_snprintf(char *buf, size_t buf_size, const char *format, ...);
 int c_vsnprintf(char *buf, size_t buf_size, const char *format, va_list ap);
 
-#if !(_XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L) &&    \
-        !(__DARWIN_C_LEVEL >= 200809L) && !defined(RTOS_SDK) || \
+#if (!(defined(_XOPEN_SOURCE) && _XOPEN_SOURCE >= 700) &&           \
+     !(defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L) &&   \
+     !(defined(__DARWIN_C_LEVEL) && __DARWIN_C_LEVEL >= 200809L) && \
+     !defined(RTOS_SDK)) ||                                         \
     defined(_WIN32)
+#define _MG_PROVIDE_STRNLEN
 size_t strnlen(const char *s, size_t maxlen);
 #endif
 
@@ -3286,6 +3291,13 @@ enum opcode {
   OP_2DUP,    /* ( a b -- a b a b ) */
   OP_STASH,   /* ( a -- a ) saves TOS to stash reg */
   OP_UNSTASH, /* ( a -- stash ) replaces tos with stash reg */
+
+  /*
+   * Effectively drops the last-but-one element from stack
+   *
+   * `( a b -- b )`
+   */
+  OP_SWAP_DROP,
 
   OP_PUSH_UNDEFINED,
   OP_PUSH_NULL,
@@ -5882,9 +5894,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t keylen,
 /* Amalgamated: #include "osdep.h" */
 /* Amalgamated: #include "str_util.h" */
 
-#if !(_XOPEN_SOURCE >= 700 || _POSIX_C_SOURCE >= 200809L) &&    \
-        !(__DARWIN_C_LEVEL >= 200809L) && !defined(RTOS_SDK) || \
-    defined(_WIN32)
+#ifdef _MG_PROVIDE_STRNLEN
 size_t strnlen(const char *s, size_t maxlen) {
   size_t l = 0;
   for (; l < maxlen && s[l] != '\0'; l++) {
@@ -16275,14 +16285,14 @@ enum found_try_block {
 };
 
 static const char *op_names[] = {
-    "POP", "DUP", "2DUP", "STASH", "UNSTASH", "PUSH_UNDEFINED", "PUSH_NULL",
-    "PUSH_THIS", "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO", "PUSH_ONE", "PUSH_LIT",
-    "NOT", "LOGICAL_NOT", "NEG", "ADD", "SUB", "REM", "MUL", "DIV", "LSHIFT",
-    "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ", "EQ", "NE", "NE_NE", "LT",
-    "LE", "GT", "GE", "INSTANCEOF", "IN", "GET", "SET", "SET_VAR", "GET_VAR",
-    "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ", "CREATE_ARR", "FUNC_LIT",
-    "CALL", "RET", "TRY_PUSH_CATCH", "TRY_PUSH_FINALLY", "TRY_POP",
-    "AFTER_FINALLY", "THROW"};
+    "POP", "DUP", "2DUP", "STASH", "UNSTASH", "SWAP_DROP", "PUSH_UNDEFINED",
+    "PUSH_NULL", "PUSH_THIS", "PUSH_TRUE", "PUSH_FALSE", "PUSH_ZERO",
+    "PUSH_ONE", "PUSH_LIT", "NOT", "LOGICAL_NOT", "NEG", "ADD", "SUB", "REM",
+    "MUL", "DIV", "LSHIFT", "RSHIFT", "URSHIFT", "OR", "XOR", "AND", "EQ_EQ",
+    "EQ", "NE", "NE_NE", "LT", "LE", "GT", "GE", "INSTANCEOF", "IN", "GET",
+    "SET", "SET_VAR", "GET_VAR", "JMP", "JMP_TRUE", "JMP_FALSE", "CREATE_OBJ",
+    "CREATE_ARR", "FUNC_LIT", "CALL", "RET", "TRY_PUSH_CATCH",
+    "TRY_PUSH_FINALLY", "TRY_POP", "AFTER_FINALLY", "THROW"};
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
 
@@ -16824,6 +16834,13 @@ restart:
         PUSH(v7->stash);
         v7->stash = v7_create_undefined();
         break;
+
+      case OP_SWAP_DROP:
+        v1 = POP();
+        POP();
+        PUSH(v1);
+        break;
+
       case OP_PUSH_UNDEFINED:
         PUSH(v7_create_undefined());
         break;
@@ -17113,6 +17130,16 @@ restart:
                                     "Unknown opcode: %d", (int) op);
         break;
     }
+
+#ifdef V7_BCODE_TRACE
+    /* print current stack state */
+    {
+      char *str = v7_stringify(v7, TOS(), NULL, 0, V7_STRINGIFY_DEFAULT);
+      fprintf(stderr, "        stack size: %u, TOS: '%s'\n",
+              (unsigned int) (v7->stack.len / sizeof(val_t)), str);
+      free(str);
+    }
+#endif
     if (r.need_inc_ops) {
       r.ops++;
     }
@@ -17789,7 +17816,7 @@ V7_PRIVATE enum v7_err compile_stmts(struct v7 *v7, struct ast *a,
   enum v7_err ret = V7_OK;
   while (*pos < end) {
     BTRY(compile_stmt(v7, a, pos, bcode));
-    if (*pos < end) bcode_op(bcode, OP_POP);
+    bcode_op(bcode, OP_SWAP_DROP);
   }
 clean:
   return ret;
@@ -17813,12 +17840,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *
+     *   DUP
      *   <E>
-     *   JMP_TRUE body
-     *   <BF>
+     *   JMP_FALSE body
+     *   <BT>
      *   JMP end
      * body:
-     *   <BT>
+     *   <BF>
      * end:
      *
      * If else clause is omitted, it will emit output equivalent to:
@@ -17826,28 +17854,46 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * if(E) {BT} else undefined;
      */
     case AST_IF: {
-      ast_off_t end_true, iffalse;
-      bcode_off_t end_label;
+      ast_off_t if_false;
+      bcode_off_t end_label, if_false_label;
       end = ast_get_skip(a, *pos, AST_END_SKIP);
-      iffalse = end_true = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
+      if_false = ast_get_skip(a, *pos, AST_END_IF_TRUE_SKIP);
       ast_move_to_children(a, pos);
 
+      /*
+       * put initial value for the branch that will be executed,
+       * be it true or false branch. It's not `undefined`, because
+       * `1; if(false) {}` should yield `1`, not `undefined`.
+       */
+      bcode_op(bcode, OP_DUP);
+
       BTRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_JMP_TRUE);
-      body_label = bcode_add_target(bcode);
+      bcode_op(bcode, OP_JMP_FALSE);
+      if_false_label = bcode_add_target(bcode);
 
-      if (iffalse != end) {
-        BTRY(compile_stmts(v7, a, &iffalse, end, bcode));
+      /* body if true */
+      BTRY(compile_stmts(v7, a, pos, if_false, bcode));
+
+      if (if_false != end) {
+        /* `else` branch is present */
+        bcode_op(bcode, OP_JMP);
+        end_label = bcode_add_target(bcode);
+
+        /* will jump here if `false` */
+        bcode_patch_target(bcode, if_false_label, bcode_pos(bcode));
+
+        /* body if false */
+        BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+        bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       } else {
-        bcode_op(bcode, OP_PUSH_UNDEFINED);
+        /*
+         * `else` branch is not present: just remember where we should
+         * jump in case of `false`
+         */
+        bcode_patch_target(bcode, if_false_label, bcode_pos(bcode));
       }
-      bcode_op(bcode, OP_JMP);
-      end_label = bcode_add_target(bcode);
 
-      bcode_patch_target(bcode, body_label, bcode_pos(bcode));
-      BTRY(compile_stmts(v7, a, pos, end_true, bcode));
-      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
-      *pos = end;
       break;
     }
     /*
@@ -17860,7 +17906,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   PUSH_UNDEFINED
      *   JMP cond
      * body:
-     *   POP
      *   <B>
      * cond:
      *   <C>
@@ -17886,12 +17931,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       cond_label = bcode_add_target(bcode);
       body_target = bcode_pos(bcode);
 
-      /*
-       * Before executing the loop body we pop any value that was
-       * left of the stack by the previously executed iteration or
-       * the fallback `undefined` value pushed before the first iteration.
-       */
-      bcode_op(bcode, OP_POP);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
 
       bcode_patch_target(bcode, cond_label, bcode_pos(bcode));
@@ -17922,12 +17961,14 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      * ->
      *    OP_TRY_PUSH_FINALLY finally
      *    OP_TRY_PUSH_CATCH catch
+     *    OP_PUSH_UNDEFINED
      *    <TRY_B>
      *    OP_TRY_POP
      *    JMP finally
      *  catch:
      *    OP_TRY_POP
-     *    OP_SET_VAR (bind exception to the catch variable)
+     *    OP_SET_VAR        (bind exception to the catch variable)
+     *    OP_POP            (remove exception from stack)
      *    <CATCH_B>
      *  finally:
      *    OP_TRY_POP
@@ -17944,12 +17985,14 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *    OP_TRY_PUSH_CATCH catch
+     *    OP_PUSH_UNDEFINED
      *    <TRY_B>
      *    OP_TRY_POP
      *    JMP end
      *  catch:
      *    OP_TRY_POP
-     *    OP_SET_VAR (bind exception to the catch variable)
+     *    OP_SET_VAR        (bind exception to the catch variable)
+     *    OP_POP            (remove exception from stack)
      *    <CATCH_B>
      *  end:
      *
@@ -17963,6 +18006,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      * ->
      *    OP_TRY_PUSH_FINALLY finally
+     *    OP_PUSH_UNDEFINED
      *    <TRY_B>
      *  finally:
      *    OP_TRY_POP
@@ -17993,6 +18037,9 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         bcode_op(bcode, OP_TRY_PUSH_CATCH);
         catch_label = bcode_add_target(bcode);
       }
+
+      /* put initial value for the `try` block execution */
+      bcode_op(bcode, OP_PUSH_UNDEFINED);
 
       /* compile statements of `try` block */
       BTRY(compile_stmts(v7, a, pos, acatch, bcode));
@@ -18032,6 +18079,11 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
           uint8_t lit = string_lit(v7, a, pos, bcode);
           bcode_op(bcode, OP_SET_VAR);
           bcode_op(bcode, lit);
+          /*
+           * Exception value should not stay on stack; we have on stack the
+           * latest element from `try` block. So, just drop exception value.
+           */
+          bcode_op(bcode, OP_POP);
         }
 
         /*
@@ -18078,7 +18130,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   PUSH_UNDEFINED
      *   JMP cond
      * body:
-     *   POP
      *   <B>
      *   <IT>
      *   POP
@@ -18103,7 +18154,6 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_JMP);
       cond_label = bcode_add_target(bcode);
       body_target = bcode_pos(bcode);
-      bcode_op(bcode, OP_POP);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
       BTRY(compile_expr(v7, a, &iter, bcode));
       bcode_op(bcode, OP_POP);
@@ -18219,6 +18269,8 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
   }
 #endif
 
+  bcode_op(bcode, OP_PUSH_UNDEFINED);
+
   ret = compile_stmts(v7, a, &pos, end, bcode);
 
 #ifdef V7_BCODE_DUMP
@@ -18314,12 +18366,12 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
     } while (next != 0);
   }
 
+  /* put initial value for the function body execution */
+  bcode_op(bcode, OP_PUSH_UNDEFINED);
+
   /* compile function body */
   *pos = body;
   BTRY(compile_stmts(v7, a, pos, end, bcode));
-  if (bcode->ops.buf == NULL) {
-    bcode_op(bcode, OP_PUSH_UNDEFINED);
-  }
 
 #ifdef V7_BCODE_DUMP
   fprintf(stderr, "--- function ---\n");

@@ -2349,6 +2349,13 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(false) 1; else 2", 2);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(true) 1", 1);
   ASSERT_BCODE_EVAL_EQ(v7, "if(false) 1", "undefined");
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(false) {}", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(true) {}", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(true) {2}", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(false) {2}", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(false) {2} else {}", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(false) {2} else {3}", 3);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(true) {} else {3}", 1);
 
   ASSERT_BCODE_EVAL_EQ(v7, "while(0) 1", "undefined");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=1;while(a) a-=1", 0);
