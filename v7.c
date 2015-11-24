@@ -3288,11 +3288,11 @@ extern "C" {
 #endif /* __cplusplus */
 
 enum opcode {
-  OP_POP,     /* ( a -- ) */
-  OP_DUP,     /* ( a -- a a ) */
-  OP_2DUP,    /* ( a b -- a b a b ) */
-  OP_STASH,   /* ( a -- a ) saves TOS to stash reg */
-  OP_UNSTASH, /* ( a -- stash ) replaces tos with stash reg */
+  OP_DROP,    /* `( a -- )` */
+  OP_DUP,     /* `( a -- a a )` */
+  OP_2DUP,    /* `( a b -- a b a b )` */
+  OP_STASH,   /* `( a S: b -- a S: a)` saves TOS to stash reg */
+  OP_UNSTASH, /* `( a S: b -- b S: nil )` replaces tos with stash reg */
 
   /*
    * Effectively drops the last-but-one element from stack
@@ -16298,7 +16298,7 @@ enum found_try_block {
 
 /* clang-format off */
 static const char *op_names[] = {
-  "POP",
+  "DROP",
   "DUP",
   "2DUP",
   "STASH",
@@ -16871,7 +16871,7 @@ restart:
 #endif
 
     switch (op) {
-      case OP_POP:
+      case OP_DROP:
         POP();
         break;
       case OP_DUP:
@@ -17721,7 +17721,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_DUP);
       bcode_op(bcode, tag == AST_LOGICAL_AND ? OP_JMP_FALSE : OP_JMP_TRUE);
       end_label = bcode_add_target(bcode);
-      bcode_op(bcode, OP_POP);
+      bcode_op(bcode, OP_DROP);
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       break;
@@ -17806,7 +17806,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
             bcode_push_lit(bcode, lit);
             BTRY(compile_expr(v7, a, pos, bcode));
             bcode_op(bcode, OP_SET);
-            bcode_op(bcode, OP_POP);
+            bcode_op(bcode, OP_DROP);
             break;
           default:
             strncpy(v7->error_msg, "not implemented", sizeof(v7->error_msg));
@@ -17858,14 +17858,14 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
           bcode_op(bcode, OP_2DUP);
           BTRY(compile_expr(v7, a, pos, bcode));
           bcode_op(bcode, OP_SET);
-          bcode_op(bcode, OP_POP);
+          bcode_op(bcode, OP_DROP);
         } else {
           *pos = lookahead; /* skip nop */
         }
         bcode_op(bcode, OP_PUSH_ONE);
         bcode_op(bcode, OP_ADD);
       }
-      bcode_op(bcode, OP_POP);
+      bcode_op(bcode, OP_DROP);
       break;
     }
     case AST_FUNC: {
@@ -17889,7 +17889,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       break;
     case AST_VOID:
       BTRY(compile_expr(v7, a, pos, bcode));
-      bcode_op(bcode, OP_POP);
+      bcode_op(bcode, OP_DROP);
       bcode_op(bcode, OP_PUSH_UNDEFINED);
       break;
     case AST_NULL:
@@ -18082,7 +18082,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *  catch:
      *    OP_TRY_POP
      *    OP_SET_VAR        (bind exception to the catch variable)
-     *    OP_POP            (remove exception from stack)
+     *    OP_DROP           (remove exception from stack)
      *    <CATCH_B>
      *  finally:
      *    OP_TRY_POP
@@ -18105,7 +18105,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *  catch:
      *    OP_TRY_POP
      *    OP_SET_VAR        (bind exception to the catch variable)
-     *    OP_POP            (remove exception from stack)
+     *    OP_DROP           (remove exception from stack)
      *    <CATCH_B>
      *  end:
      *
@@ -18188,7 +18188,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
            * Exception value should not stay on stack; we have on stack the
            * latest element from `try` block. So, just drop exception value.
            */
-          bcode_op(bcode, OP_POP);
+          bcode_op(bcode, OP_DROP);
         }
 
         /*
@@ -18255,13 +18255,13 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       iter = *pos;
       *pos = body;
 
-      bcode_op(bcode, OP_POP);
+      bcode_op(bcode, OP_DROP);
       bcode_op(bcode, OP_JMP);
       cond_label = bcode_add_target(bcode);
       body_target = bcode_pos(bcode);
       BTRY(compile_stmts(v7, a, pos, end, bcode));
       BTRY(compile_expr(v7, a, &iter, bcode));
-      bcode_op(bcode, OP_POP);
+      bcode_op(bcode, OP_DROP);
 
       bcode_patch_target(bcode, cond_label, bcode_pos(bcode));
 
