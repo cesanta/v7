@@ -2263,30 +2263,6 @@ static const char *test_ubjson(void) {
 
 #ifdef V7_ENABLE_BCODE
 
-static int check_ops(struct bcode *bcode, uint8_t *ops, size_t len) {
-  size_t i;
-  if (bcode->ops.len != len) return 0;
-  for (i = 0; i < len; i++) {
-    if (bcode->ops.buf[i] != ops[i]) return 0;
-  }
-  return 1;
-}
-
-#define BEGIN_CHECK_OPS(expr)                         \
-  do {                                                \
-    ASSERT_EQ(parse_js(v7, expr, &a), V7_OK);         \
-    ASSERT_EQ(compile_script(v7, &a, &bcode), V7_OK); \
-    {                                                 \
-    uint8_t o[] =
-
-#define END_CHECK_OPS()                        \
-  ASSERT(check_ops(&bcode, o, ARRAY_SIZE(o))); \
-  }                                            \
-  bcode_free(&bcode);                          \
-  ast_free(&a);                                \
-  }                                            \
-  while (0)
-
 #define _ASSERT_BCODE_EVAL_EQ(v7, js_expr, expected, check_fun) \
   _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, v7_exec_bcode)
 
