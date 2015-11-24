@@ -9324,15 +9324,20 @@ v7_val_t v7_create_foreign(void *p) {
 
 V7_PRIVATE
 val_t create_function2(struct v7 *v7, struct v7_object *scope, val_t proto) {
-  struct v7_function *f = new_function(v7);
-  val_t fval = v7_function_to_value(f);
+  struct v7_function *f;
+  val_t fval = v7_create_null();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
-  if (f == NULL) {
-    fval = v7_create_null();
-    goto cleanup;
-  }
   tmp_stack_push(&tf, &proto);
   tmp_stack_push(&tf, &fval);
+
+  f = new_function(v7);
+
+  if (f == NULL) {
+    /* fval is left `null` */
+    goto cleanup;
+  }
+
+  fval = v7_function_to_value(f);
 
   f->properties = NULL;
   f->scope = scope;
@@ -11323,7 +11328,7 @@ uint16_t gc_next_allocation_seqn(struct v7 *v7, const char *str, size_t len) {
    * as created by s_concat.
    */
   if (str == NULL) {
-    fprintf(stderr, "GC ASN %d: <nil>\n", asn, (int) len);
+    fprintf(stderr, "GC ASN %d: <nil>\n", asn);
   } else {
     fprintf(stderr, "GC ASN %d: \"%.*s\"\n", asn, (int) len, str);
   }
