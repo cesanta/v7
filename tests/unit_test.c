@@ -2862,6 +2862,89 @@ static const char *test_exec_bcode(void) {
 
   /* }}} */
 
+  /* switch {{{ */
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          switch(0) {
+            case 1:
+              1;
+            default:
+              2;
+          }
+        ), 2
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          x = 0;
+          switch(0) {
+            default:
+              x = 2;
+            case 1:
+              x;
+          }
+        ), 2
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          x=0;
+          switch(1) {
+            default:
+              x=2;
+            case 1:
+              x;
+          }
+        ), 0
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          42;
+          switch(0) {
+            default:
+            case 2:
+          }
+        ), 42
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          42;
+          switch(0) {
+            case 1:
+              1;
+            case 2:
+              2;
+          }
+        ), 42
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          switch(2) {
+            case 1:
+              1;
+            case 2:
+              2;
+          }
+        ), 2
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          switch(1) {
+            case 1:
+              1;
+            case 2:
+              2;
+          }
+        ), 2
+      );
+
+  /* }}} */
+
   /* clang-format on */
 
   v7_destroy(v7);
