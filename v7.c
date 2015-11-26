@@ -17201,6 +17201,15 @@ restart:
           v1 = POP();
 
           if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
+            /* extract the hidden property from a cfunction_object */
+            struct v7_property *p;
+            p = v7_get_own_property2(v7, v1, "", 0, V7_PROPERTY_HIDDEN);
+            if (p != NULL) {
+              v1 = p->value;
+            }
+          }
+
+          if (!v7_is_function(v1) && !v7_is_cfunction(v1)) {
             /* tried to call non-function object: throw a TypeError */
 
             /*

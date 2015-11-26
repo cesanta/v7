@@ -3123,6 +3123,11 @@ static const char *test_exec_bcode(void) {
         ), "6"
       );
 
+  /* should be able to call cfunction `print` */
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "print('foo');", V7_OK
+      );
+
   /* clang-format on */
 
   v7_destroy(v7);
