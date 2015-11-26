@@ -233,10 +233,14 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
     enum v7_err e;                                                       \
     int r = 1;                                                           \
     num_tests++;                                                         \
+    TRACE_EXPR(js_expr);                                                 \
     e = eval_fun(v7, js_expr, &v);                                       \
     if (e != (expected_err)) {                                           \
       printf("Exec '%s' returned err=%d, expected err=%d\n", js_expr, e, \
              expected_err);                                              \
+      r = 0;                                                             \
+    } else if (!(CHECK_BCODE_STACK_ZERO(v7))) {                          \
+      PRINT_BCODE_STACK_ERROR(v7, js_expr);                              \
       r = 0;                                                             \
     }                                                                    \
     if (r == 0) {                                                        \
@@ -2792,6 +2796,8 @@ static const char *test_exec_bcode(void) {
 
   /* use strict {{{ */
 
+  /* duplicate properties in object literal {{{ */
+
   ASSERT_BCODE_EVAL_ERR(
       v7, "'use strict'; var a = {b:1, c:2, b:3}; a.b", V7_SYNTAX_ERROR
       );
@@ -2943,7 +2949,179 @@ static const char *test_exec_bcode(void) {
         ), 2
       );
 
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var s1 = "";
+        var s2 = "";
+
+        var f=function(v){
+          s1 += v;
+          return v;
+        };
+
+        switch (f("2")){
+          case f("0"):
+            s2 += "0";
+          case f("1"):
+            s2 += "1";
+          case f("2"):
+            s2 += "2";
+          case f("3"):
+            s2 += "3";
+          case f("4"):
+            s2 += "4";
+        }
+
+        var res = s1 + ":" + s2;
+        ), "2012:234"
+      );
+
   /* }}} */
+
+  /* undefined variables {{{ */
+
+  /*
+   * TODO(dfrank): invent some more centralized way of cleaning up the
+   * Global Object than invoking `v7_del_property()` all the time
+   */
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "a = 1;", 1
+      );
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "'use strict'; a = 1;", V7_EXEC_EXCEPTION
+      );
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "b=1;(function(a){'use strict'; var b = 2; return a+b})(39)+b",
+      42);
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "b=1;(function(a){'use strict'; b = 2; return a+b})(39)+b",
+      43);
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "b=1;(function(a){var b = 2; return a+b})(39)+b",
+      42);
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "b=1;(function(a){b = 2; return a+b})(39)+b",
+      43);
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "'use strict'; b=1;(function(a){b = 2; return a+b})(39)+b",
+      V7_EXEC_EXCEPTION);
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  v7_del_property(v7, v7->global_object, "c", 1);
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "'use strict'; var b=1;(function(a){c = 2; return a+b})(39)+b",
+      V7_EXEC_EXCEPTION);
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  v7_del_property(v7, v7->global_object, "c", 1);
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, "b='1-';(function(a){c = '2-'; return a+b+c})('39-')+b",
+      "39-1-2-1-");
+
+  v7_del_property(v7, v7->global_object, "b", 1);
+  v7_del_property(v7, v7->global_object, "c", 1);
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "b='1-';(function(a){'use strict'; c = '2-'; return a+b+c})('39-')+b",
+      V7_EXEC_EXCEPTION);
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        a = '1-';
+
+        f1 = (function(){
+          'use strict';
+          var b = '2-';
+          a += b;
+          });
+
+        var f2 = (function(){
+          c = '3-';
+          a += c;
+          });
+
+        f1();
+        f2();
+        a;
+        ), "1-2-3-"
+      );
+
+
+  /* }}} */
+
+  /* }}} */
+
+  /* function should be able to return itself */
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "(function foo() {return foo})()", "(function foo() {return foo})"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "function foo() {return foo}; foo();", "(function foo() {return foo})"
+      );
+
+  /* function are hoisted */
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+        var a = 1 + foo();
+        function foo(){ return bar() * 2 };
+        function bar(){ return 5; };
+        a;
+        ), "11"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+        var a = 1 + foo();
+        function foo(){
+          return bar() * 2;
+          function bar(){ return 5; };
+        };
+        a;
+        ), "11"
+      );
+
+  ASSERT_BCODE_EVAL_ERR(
+      v7, STRINGIFY(
+        var a = 1 + foo();
+        var foo = function foo(){
+          return 2;
+        };
+        ), V7_EXEC_EXCEPTION
+      );
+
+  /* check several `var`s */
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+        var a;
+        (function(){
+          a = foo();
+          function foo(){
+            var a = 1, b;
+
+            var c = 3;
+            b = 2;
+
+            return a + c + b;
+          };
+        })();
+        a;
+        ), "6"
+      );
 
   /* clang-format on */
 
