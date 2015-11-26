@@ -17558,6 +17558,8 @@ static const enum ast_tag assign_ast_map[] = {
     AST_REM, AST_MUL, AST_DIV,    AST_XOR,    AST_ADD,    AST_SUB,
     AST_OR,  AST_AND, AST_LSHIFT, AST_RSHIFT, AST_URSHIFT};
 
+extern void dump_bcode(FILE *f, struct bcode *bcode);
+
 V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
                                     ast_off_t *pos, struct bcode *bcode);
 
@@ -18697,6 +18699,41 @@ clean:
   return ret;
 }
 
+static enum v7_err compile_body(struct v7 *v7, struct ast *a,
+                                struct bcode *bcode, ast_off_t start,
+                                ast_off_t end, ast_off_t body, ast_off_t fvar,
+                                ast_off_t *pos) {
+  enum v7_err ret = V7_OK;
+
+#ifndef V7_FORCE_STRICT_MODE
+  /* check 'use strict' */
+  if (*pos < end) {
+    ast_off_t tmp_pos = body;
+    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
+      v7->strict_mode = 1;
+    }
+  }
+#endif
+
+  /* put initial value for the function body execution */
+  bcode_op(bcode, OP_PUSH_UNDEFINED);
+
+  /*
+   * fill `bcode->names` with function's local vars. Note that we should do
+   * this *after* `OP_PUSH_UNDEFINED`, since `compile_local_vars` emits
+   * code that assign the hoisted functions to local variables, and those
+   * statements assume that the stack contains `undefined`.
+   */
+  BTRY(compile_local_vars(v7, a, start, fvar, bcode));
+
+  /* compile body */
+  *pos = body;
+  BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+clean:
+  return ret;
+}
+
 /*
  * Compiles a given script and populates a bcode structure.
  * The AST must start with an AST_SCRIPT node.
@@ -18721,28 +18758,7 @@ V7_PRIVATE enum v7_err compile_script(struct v7 *v7, struct ast *a,
   fvar = ast_get_skip(a, pos, AST_FUNC_FIRST_VAR_SKIP) - 1;
   ast_move_to_children(a, &pos);
 
-#ifndef V7_FORCE_STRICT_MODE
-  /* check 'use strict' */
-  if (pos < end) {
-    ast_off_t tmp_pos = pos;
-    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
-      v7->strict_mode = 1;
-    }
-  }
-#endif
-
-  /* put initial value for the script execution */
-  bcode_op(bcode, OP_PUSH_UNDEFINED);
-
-  /*
-   * fill `bcode->names` with script vars. Note that we should do this *after*
-   * `OP_PUSH_UNDEFINED`, since `compile_local_vars` adds all hoisted
-   * functions at the current position of `bcode`.
-   */
-  BTRY(compile_local_vars(v7, a, start, fvar, bcode));
-
-  /* compile all the AST into bcode */
-  BTRY(compile_stmts(v7, a, &pos, end, bcode));
+  BTRY(compile_body(v7, a, bcode, start, end, pos /* body */, fvar, &pos));
 
 #ifdef V7_BCODE_DUMP
   fprintf(stderr, "--- script ---\n");
@@ -18756,7 +18772,6 @@ clean:
   return ret;
 }
 
-extern void dump_bcode(FILE *f, struct bcode *bcode);
 /*
  * Compiles a given function and populates a bcode structure.
  * The AST must contain an AST_FUNC node at offset ast_off.
@@ -18801,29 +18816,7 @@ V7_PRIVATE enum v7_err compile_function(struct v7 *v7, struct ast *a,
     bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
   }
 
-#ifndef V7_FORCE_STRICT_MODE
-  /* check 'use strict' */
-  if (*pos < end) {
-    ast_off_t tmp_pos = body;
-    if (ast_fetch_tag(a, &tmp_pos) == AST_USE_STRICT) {
-      v7->strict_mode = 1;
-    }
-  }
-#endif
-
-  /* put initial value for the function body execution */
-  bcode_op(bcode, OP_PUSH_UNDEFINED);
-
-  /*
-   * fill `bcode->names` with function's local vars. Note that we should do
-   * this *after* `OP_PUSH_UNDEFINED`, since `compile_local_vars` adds all
-   * hoisted functions at the current position of `bcode`.
-   */
-  BTRY(compile_local_vars(v7, a, start, fvar, bcode));
-
-  /* compile function body */
-  *pos = body;
-  BTRY(compile_stmts(v7, a, pos, end, bcode));
+  BTRY(compile_body(v7, a, bcode, start, end, body, fvar, pos));
 
 #ifdef V7_BCODE_DUMP
   fprintf(stderr, "--- function ---\n");
