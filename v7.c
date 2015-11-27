@@ -16378,11 +16378,15 @@ V7_STATIC_ASSERT(sizeof(bcode_off_t) <= sizeof(uint32_t),
 #define TOS() stack_tos(&v7->stack)
 #define SP() stack_sp(&v7->stack)
 
-enum found_try_block {
-  FOUND_TRY_BLOCK_NONE,
-  FOUND_TRY_BLOCK_CATCH,
-  FOUND_TRY_BLOCK_FINALLY,
-  FOUND_BREAK,
+/*
+ * Local-to-function block types that we might want to consider when unwinding
+ * stack for whatever reason. see `unwind_local_blocks_stack()`.
+ */
+enum local_block {
+  LOCAL_BLOCK_NONE = (0),
+  LOCAL_BLOCK_CATCH = (1 << 0),
+  LOCAL_BLOCK_FINALLY = (1 << 1),
+  LOCAL_BLOCK_BREAK = (1 << 2),
 };
 
 /* clang-format off */
@@ -16694,23 +16698,22 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
 
 /*
  * Unwinds local "try stack" (i.e. local-to-current-function stack of nested
- * `try` blocks)
+ * `try` blocks), looking for local-to-function blocks.
  *
- * If `ignore_catch` is non-zero, `catch` blocks are ignored (only `finally`
- * considered)
+ * Block types of interest are specified with `wanted_blocks_mask`: it's a
+ * bitmask of `enum local_block` values.
  *
- * If `ignore_break` is non-zero, `break` exit points are ignored.
+ * Only blocks of specified types will be considered, others will be dropped.
  *
- * Returns 1 when control was transferred to some `catch` or
- * `finally` block, 0 otherwise.
+ * Returns id of the block type that control was transferred into, or
+ * `LOCAL_BLOCK_NONE` if no appropriate block was found. Note: returned value
+ * contains at most 1 block bit; it can't contain multiple bits.
  */
-static enum found_try_block unwind_local_try_stack(struct v7 *v7,
-                                                   struct bcode_registers *r,
-                                                   int ignore_catch,
-                                                   int ignore_break) {
+static enum local_block unwind_local_blocks_stack(
+    struct v7 *v7, struct bcode_registers *r, unsigned int wanted_blocks_mask) {
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
-  enum found_try_block ret = FOUND_TRY_BLOCK_NONE;
+  enum local_block found_block = LOCAL_BLOCK_NONE;
   unsigned long length;
 
   tmp_stack_push(&tf, &arr);
@@ -16724,31 +16727,37 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
     while ((length = v7_array_length(v7, arr)) > 0) {
       /* get latest offset from the "try stack" */
       uint64_t offset = v7_to_number(v7_array_get(v7, arr, length - 1));
-      if ((!ignore_catch || OFFSET_TAG(offset) != OFFSET_TAG_CATCH) &&
-          (!ignore_break || OFFSET_TAG(offset) != OFFSET_TAG_BREAK)) {
+      enum local_block cur_block;
+
+      /* get id of the current block type */
+      switch (OFFSET_TAG(offset)) {
+        case OFFSET_TAG_CATCH:
+          cur_block = LOCAL_BLOCK_CATCH;
+          break;
+        case OFFSET_TAG_FINALLY:
+          cur_block = LOCAL_BLOCK_FINALLY;
+          break;
+        case OFFSET_TAG_BREAK:
+          cur_block = LOCAL_BLOCK_BREAK;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+
+      if (cur_block & wanted_blocks_mask) {
         /* need to transfer control to this offset */
         r->ops = (uint8_t *) r->bcode->ops.buf + OFFSET_VALUE(offset);
 #ifdef V7_BCODE_TRACE
-        printf("transferring to %u\n", (unsigned int) OFFSET_VALUE(offset));
+        printf("transferring to block #%d: %u\n", (int) cur_block,
+               (unsigned int) OFFSET_VALUE(offset));
 #endif
-        switch (OFFSET_TAG(offset)) {
-          case OFFSET_TAG_CATCH:
-            ret = FOUND_TRY_BLOCK_CATCH;
-            break;
-          case OFFSET_TAG_FINALLY:
-            ret = FOUND_TRY_BLOCK_FINALLY;
-            break;
-          case OFFSET_TAG_BREAK:
-            ret = FOUND_BREAK;
-            break;
-          default:
-            assert(0);
-            break;
-        }
+        found_block = cur_block;
         break;
       } else {
 #ifdef V7_BCODE_TRACE
-        printf("skipped catch %u\n", (unsigned int) OFFSET_VALUE(offset));
+        printf("skipped block #%d: %u\n", (int) cur_block,
+               (unsigned int) OFFSET_VALUE(offset));
 #endif
         /*
          * since we don't need to control transfer there, just pop
@@ -16760,7 +16769,7 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
   }
 
   tmp_frame_cleanup(&tf);
-  return ret;
+  return found_block;
 }
 
 /*
@@ -16768,20 +16777,20 @@ static enum found_try_block unwind_local_try_stack(struct v7 *v7,
  * control there.
  */
 static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
-  enum found_try_block found;
+  enum local_block found;
   v7->is_breaking = 0;
   /*
-   * Try to unwind local "try stack", ignoring `catch` blocks. If there are no
-   * `finally` blocks in effect, actually transfer control to break target.
+   * Try to unwind local "try stack", considering only `finally` and `break`.
    */
-  found = unwind_local_try_stack(v7, r, 1 /*ignore_catch*/, 0 /*ignore_break*/);
-  assert(found != FOUND_TRY_BLOCK_NONE);
+  found = unwind_local_blocks_stack(v7, r,
+                                    (LOCAL_BLOCK_BREAK | LOCAL_BLOCK_FINALLY));
+  assert(found != LOCAL_BLOCK_NONE);
 
   /*
    * upon exit of a finally block we'll reenter here if is_breaking is true.
    * See OP_AFTER_FINALLY.
    */
-  if (found == FOUND_TRY_BLOCK_FINALLY) {
+  if (found == LOCAL_BLOCK_FINALLY) {
     v7->is_breaking = 1;
   }
 
@@ -16814,11 +16823,11 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
   }
 
   /*
-   * Try to unwind local "try stack", ignoring `catch` blocks. If there are no
-   * `finally` blocks in effect, actually perform return.
+   * Try to unwind local "try stack", considering only `finally` blocks. If
+   * there are no `finally` blocks in effect, actually perform return.
    */
-  if (unwind_local_try_stack(v7, r, 1 /*ignore_catch*/, 1 /*ignore_break*/) ==
-      FOUND_TRY_BLOCK_NONE) {
+  if (unwind_local_blocks_stack(v7, r, (LOCAL_BLOCK_FINALLY)) ==
+      LOCAL_BLOCK_NONE) {
     /*
      * no `finally` blocks were found, so, perform return: unwind stack by 1
      * level, and populate TOS with the return value
@@ -16848,7 +16857,7 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
 static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
                                        int take_thrown_value) {
   enum v7_err err = V7_OK;
-  enum found_try_block found;
+  enum local_block found;
 
   assert(take_thrown_value || v7->is_thrown);
 
@@ -16861,9 +16870,9 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
     v7->returned_value = v7_create_undefined();
   }
 
-  while ((found = unwind_local_try_stack(v7, r, 0 /*don't ignore catch*/,
-                                         1 /*ignore break*/)) ==
-         FOUND_TRY_BLOCK_NONE) {
+  while ((found = unwind_local_blocks_stack(
+              v7, r, (LOCAL_BLOCK_CATCH | LOCAL_BLOCK_FINALLY))) ==
+         LOCAL_BLOCK_NONE) {
     if (v7->call_stack != v7->global_object) {
       /* not reached bottom of the stack yet, keep unwinding */
       unwind_stack_1level(v7, r);
@@ -16874,7 +16883,7 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
     }
   }
 
-  if (found == FOUND_TRY_BLOCK_CATCH) {
+  if (found == LOCAL_BLOCK_CATCH) {
     /*
      * we're going to enter `catch` block, so, populate TOS with the thrown
      * value, and clear it in v7 context.
