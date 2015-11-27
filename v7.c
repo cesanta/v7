@@ -3306,6 +3306,7 @@ enum opcode {
   OP_DROP,    /* `( a -- )` */
   OP_DUP,     /* `( a -- a a )` */
   OP_2DUP,    /* `( a b -- a b a b )` */
+  OP_SWAP,    /* `( a b -- b a )` */
   OP_STASH,   /* `( a S: b -- a S: a)` saves TOS to stash reg */
   OP_UNSTASH, /* `( a S: b -- b S: nil )` replaces tos with stash reg */
 
@@ -3380,6 +3381,23 @@ enum opcode {
 
   OP_CREATE_OBJ, /* creates an empty object */
   OP_CREATE_ARR, /* creates an empty array */
+
+  /*
+   * Yields the next property name.
+   * Used in the for..in construct.
+   *
+   * The first evaluation must receive `null` as handle.
+   * Subsequent evaluations will either:
+   *
+   * a) produce a new handle, the key and true value:
+   *
+   * `( o h -- o h' key true)`
+   *
+   * b) produce a false value only, indicating no more properties:
+   *
+   * `( o h -- false)`
+   */
+  OP_NEXT_PROP,
 
   /*
    * Copies the function object at TOS and assigns current scope
@@ -16372,6 +16390,7 @@ static const char *op_names[] = {
   "DROP",
   "DUP",
   "2DUP",
+  "SWAP",
   "STASH",
   "UNSTASH",
   "SWAP_DROP",
@@ -16419,6 +16438,7 @@ static const char *op_names[] = {
   "JMP_TRUE_DROP",
   "CREATE_OBJ",
   "CREATE_ARR",
+  "NEXT_PROP",
   "FUNC_LIT",
   "CALL",
   "RET",
@@ -17049,6 +17069,12 @@ restart:
         PUSH(v1);
         PUSH(v2);
         break;
+      case OP_SWAP:
+        v1 = POP();
+        v2 = POP();
+        PUSH(v1);
+        PUSH(v2);
+        break;
       case OP_STASH:
         v7->stash = TOS();
         break;
@@ -17308,6 +17334,27 @@ restart:
       case OP_CREATE_ARR:
         PUSH(v7_create_array(v7));
         break;
+      case OP_NEXT_PROP: {
+        void *h;
+        v1 = POP(); /* handle */
+        v2 = POP(); /* object */
+
+        if (v7_is_null(v1)) {
+          v1 = v7_create_foreign(NULL);
+        }
+
+        h = v7_next_prop(v7_to_foreign(v1), v2, &res, NULL, NULL);
+
+        if (h == NULL) {
+          PUSH(v7_create_boolean(0));
+        } else {
+          PUSH(v2);
+          PUSH(v7_create_foreign(h));
+          PUSH(res);
+          PUSH(v7_create_boolean(1));
+        }
+        break;
+      }
       case OP_FUNC_LIT: {
         v1 = POP();
         v2 = bcode_instantiate_function(v7, v1);
@@ -18150,6 +18197,32 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
     case AST_URSHIFT_ASSIGN:
       compile_assign(v7, a, pos, tag, bcode);
       break;
+    case AST_COND: {
+      /*
+      * A ? B : C
+      *
+      * ->
+      *
+      *   <A>
+      *   JMP_FALSE false
+      *   <B>
+      *   JMP end
+      * false:
+      *   <C>
+      * end:
+      *
+      */
+      bcode_off_t false_label, end_label;
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_DUP);
+      false_label = bcode_op_target(bcode, OP_JMP_FALSE);
+      BTRY(compile_expr(v7, a, pos, bcode));
+      end_label = bcode_op_target(bcode, OP_JMP);
+      bcode_patch_target(bcode, false_label, bcode_pos(bcode));
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      break;
+    }
     case AST_LOGICAL_OR:
     case AST_LOGICAL_AND: {
       /*
@@ -18917,6 +18990,123 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       }
       body_label = bcode_add_target(bcode);
       bcode_patch_target(bcode, body_label, body_target);
+
+      v7->is_stack_neutral = 1;
+      break;
+    }
+    /*
+     * for(I in O) {
+     *   B...
+     * }
+     *
+     * ->
+     *
+     *   DUP
+     *   <O>
+     *   SWAP
+     *   STASH
+     *   DROP
+     *   PUSH_NULL
+     * loop:
+     *   NEXT_PROP
+     *   JMP_FALSE end
+     *   SET_VAR <I>
+     *   UNSTASH
+     *   <B>
+     *   STASH
+     *   DROP
+     *   JMP loop
+     * end:
+     *   UNSTASH
+     *
+     */
+    case AST_FOR_IN: {
+      uint8_t lit;
+      bcode_off_t loop_label, loop_target, end_label;
+      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+
+      ast_move_to_children(a, pos);
+
+      tag = ast_fetch_tag(a, pos);
+      /* TODO(mkm) accept any l-value */
+      if (tag == AST_VAR) {
+        ast_move_to_children(a, pos);
+        tag = ast_fetch_tag(a, pos);
+        BCHECK_INTERNAL(tag == AST_VAR_DECL);
+        lit = string_lit(v7, a, pos, bcode);
+        ast_skip_tree(a, pos);
+      } else {
+        BCHECK_INTERNAL(tag == AST_IDENT);
+        lit = string_lit(v7, a, pos, bcode);
+      }
+
+      /*
+       * preserve previous statement value.
+       * We need to feed the previous value into the stash
+       * because it's required for the loop steady state.
+       *
+       * The stash register is required to simplify the steady state stack
+       * management, in particular the removal of value in 3rd position in case
+       * a of not taken exit.
+       *
+       * TODO(mkm): consider having a stash OP that moves a value to the stash
+       * register instead of copying it. The current behaviour has been
+       * optimized for the `assign` use case which seems more common.
+       */
+      bcode_op(bcode, OP_DUP);
+      BTRY(compile_expr(v7, a, pos, bcode));
+      bcode_op(bcode, OP_SWAP);
+      bcode_op(bcode, OP_STASH);
+      bcode_op(bcode, OP_DROP);
+
+      /*
+       * OP_NEXT_PROP keeps the current position in an opaque handler.
+       * Feeding a null as initial value.
+       */
+      bcode_op(bcode, OP_PUSH_NULL);
+
+      /* loop: */
+      loop_target = bcode_pos(bcode);
+
+      /*
+       * The loop stead state begins with the following stack layout:
+       * `( S:v o h )`
+       */
+
+      bcode_op(bcode, OP_NEXT_PROP);
+      end_label = bcode_op_target(bcode, OP_JMP_FALSE);
+      bcode_op(bcode, OP_SET_VAR);
+      bcode_op(bcode, lit);
+
+      /*
+       * The stash register contains the value of the previous statement,
+       * being it the statement before the for..in statement or
+       * the previous iteration. We move it to the data stack. It will
+       * be replaced by the values of the body statements as usual.
+       */
+      bcode_op(bcode, OP_UNSTASH);
+
+      /*
+       * This node is always a NOP, for compatibility
+       * with the layout of the AST_FOR node.
+       */
+      ast_skip_tree(a, pos);
+
+      BTRY(compile_stmts(v7, a, pos, end, bcode));
+
+      /*
+       * Save the last body statement. If next evaluation of NEXT_PROP returns
+       * false, we'll unstash it.
+       */
+      bcode_op(bcode, OP_STASH);
+      bcode_op(bcode, OP_DROP);
+
+      loop_label = bcode_op_target(bcode, OP_JMP);
+      bcode_patch_target(bcode, loop_label, loop_target);
+
+      /* end: */
+      bcode_patch_target(bcode, end_label, bcode_pos(bcode));
+      bcode_op(bcode, OP_UNSTASH);
 
       v7->is_stack_neutral = 1;
       break;
