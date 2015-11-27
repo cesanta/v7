@@ -2402,6 +2402,9 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "false||2", 2);
   ASSERT_BCODE_EVAL_EQ(v7, "0||false", "false");
 
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "true ? 1 : 2", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "false ? 1 : 2", 2);
+
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x={a:1,b:2};x.a+x.b", 3);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=[42];a[0]", 42);
