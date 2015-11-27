@@ -2868,7 +2868,7 @@ static const char *test_exec_bcode(void) {
 
   /* }}} */
 
-  /* switch {{{ */
+  /* switch: fallthrough {{{ */
 
   ASSERT_BCODE_EVAL_NUM_EQ(
       v7, STRINGIFY(
@@ -3198,6 +3198,106 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_ERR(
       v7, "print('foo');", V7_OK
       );
+
+  /* }}} */
+
+  /* switch: break {{{ */
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          switch(1) {
+            case 1:
+              1;
+              break;
+            case 2:
+              2;
+              break;
+          }
+        ), 1
+      );
+
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, STRINGIFY(
+          try {
+            switch(1) {
+              case 1:
+                nonExisting;
+              case 2:
+                2;
+            }
+          } catch(e) {
+            42
+          }
+        ), 42
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+          x="";
+          switch(1) {
+            case 1:
+              try {
+                x+="1-";
+                break;
+              } finally {
+                x+="f-";
+              }
+            case 2:
+              x+="2-";
+          }
+          x
+        ), "1-f-"
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+          x="";
+          switch(1) {
+            case 1:
+              try {
+                x+="1-";
+                switch(20) {
+                  case 10:
+                    x+="10-";
+                    break;
+                  case 20:
+                    x+="20-";
+                    break;
+                }
+                break;
+              } finally {
+                x+="f-";
+              }
+            case 2:
+              x+="2-";
+          }
+          x
+        ), "1-20-f-"
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+          x="";
+          switch(1) {
+            case 1:
+              try {
+                try {
+                  x+="1-";
+                  break;
+                } finally {
+                  x+="f1-";
+                }
+              } finally {
+                x+="f2-";
+              }
+            case 2:
+              x+="2-";
+          }
+          x
+        ), "1-f1-f2-"
+      );
+
+  /* }}} */
 
   /* clang-format on */
 
