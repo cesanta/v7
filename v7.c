@@ -3352,11 +3352,19 @@ enum opcode {
   OP_GE,
   OP_INSTANCEOF,
 
+  OP_TYPEOF,
+
   OP_IN,
   OP_GET,
   OP_SET,
   OP_SET_VAR,
   OP_GET_VAR, /* takes index of var name */
+
+  /*
+   * Like OP_GET_VAR but returns undefined
+   * instead of throwing reference error.
+   */
+  OP_SAFE_GET_VAR,
 
   OP_JMP,
   OP_JMP_TRUE,
@@ -16398,11 +16406,13 @@ static const char *op_names[] = {
   "GT",
   "GE",
   "INSTANCEOF",
+  "TYPEOF",
   "IN",
   "GET",
   "SET",
   "SET_VAR",
   "GET_VAR",
+  "SAFE_GET_VAR",
   "JMP",
   "JMP_TRUE",
   "JMP_FALSE",
@@ -16540,6 +16550,7 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   fprintf(f, "%zu: %s", p - (uint8_t *) bcode->ops.buf, op_names[*p]);
   switch (*p) {
     case OP_PUSH_LIT:
+    case OP_SAFE_GET_VAR:
     case OP_GET_VAR:
     case OP_SET_VAR:
     case OP_CALL:
@@ -17166,6 +17177,32 @@ restart:
         }
         break;
       }
+      case OP_TYPEOF:
+        v1 = POP();
+        switch (val_type(v7, v1)) {
+          case V7_TYPE_NUMBER:
+            res = v7_create_string(v7, "number", 6, 1);
+            break;
+          case V7_TYPE_STRING:
+            res = v7_create_string(v7, "string", 6, 1);
+            break;
+          case V7_TYPE_BOOLEAN:
+            res = v7_create_string(v7, "boolean", 7, 1);
+            break;
+          case V7_TYPE_FUNCTION_OBJECT:
+          case V7_TYPE_CFUNCTION_OBJECT:
+          case V7_TYPE_CFUNCTION:
+            res = v7_create_string(v7, "function", 8, 1);
+            break;
+          case V7_TYPE_UNDEFINED:
+            res = v7_create_string(v7, "undefined", 9, 1);
+            break;
+          default:
+            res = v7_create_string(v7, "object", 6, 1);
+            break;
+        }
+        PUSH(res);
+        break;
       case OP_IN:
         v2 = POP();
         v1 = POP();
@@ -17190,14 +17227,19 @@ restart:
         PUSH(v3);
         break;
       }
-      case OP_GET_VAR: {
+      case OP_GET_VAR:
+      case OP_SAFE_GET_VAR: {
         int arg;
         struct v7_property *p;
         assert(r.ops < r.end - 1);
         arg = (int) *(++r.ops);
         if ((p = v7_get_property_v(v7, v7->call_stack, r.lit[arg])) == NULL) {
-          /* variable does not exist: Reference Error */
-          BTRY(bcode_throw_reference_error(v7, &r, r.lit[arg]));
+          if (op == OP_SAFE_GET_VAR) {
+            PUSH(v7_create_undefined());
+          } else {
+            /* variable does not exist: Reference Error */
+            BTRY(bcode_throw_reference_error(v7, &r, r.lit[arg]));
+          }
           break;
         } else {
           PUSH(v7_property_value(v7, v7->call_stack, p));
@@ -18078,6 +18120,18 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       BTRY(compile_expr(v7, a, pos, bcode));
       bcode_op(bcode, OP_IN);
       break;
+    case AST_TYPEOF: {
+      ast_off_t peek = *pos;
+      if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
+        *pos = peek;
+        bcode_op(bcode, OP_SAFE_GET_VAR);
+        bcode_op(bcode, string_lit(v7, a, pos, bcode));
+      } else {
+        BTRY(compile_expr(v7, a, pos, bcode));
+      }
+      bcode_op(bcode, OP_TYPEOF);
+      break;
+    }
     case AST_ASSIGN:
     case AST_PREINC:
     case AST_PREDEC:

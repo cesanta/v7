@@ -2416,6 +2416,13 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_EQ(v7, "Number instanceof Function", "true");
   ASSERT_BCODE_EVAL_EQ(v7, "Object instanceof Number", "false");
 
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof 1", "number");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof null", "object");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof {}", "object");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof 'foox'", "string");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof undefined", "undefined");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof novar", "undefined");
+
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "Object.keys({a:1,b:2}).length", 2);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "var x=2; 2", 2);
