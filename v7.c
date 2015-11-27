@@ -18174,6 +18174,28 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       break;
     }
+    /*
+     * A, B, C
+     *
+     * ->
+     *
+     * <A>
+     * DROP
+     * <B>
+     * DROP
+     * <C>
+     */
+    case AST_SEQ: {
+      ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
+      ast_move_to_children(a, pos);
+      while (*pos < end) {
+        BTRY(compile_expr(v7, a, pos, bcode));
+        if (*pos < end) {
+          bcode_op(bcode, OP_DROP);
+        }
+      }
+      break;
+    }
     case AST_CALL: {
       /*
        * f()

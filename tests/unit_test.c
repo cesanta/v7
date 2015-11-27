@@ -2354,6 +2354,9 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x['a']", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "++x['a']", 2);
 
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1,2,3", 3);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=0;b=40; a++,b++,a+b", 42);
+
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(true) 1; else 2", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(false) 1; else 2", 2);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "if(true) 1", 1);
@@ -2798,6 +2801,11 @@ static const char *test_exec_bcode(void) {
         c;
         ), "1-2-4-a-b-d--test--e-f-_3_2|1-2-4-b-d--test--e-f-6-"
       );
+
+  /* exception in comma expression should abort the whole expression */
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; try { 1,2,b } catch(e) {}", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "66; try { 42; 1,2,b } catch(e) {}", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; try { 1,2,3 } catch(e) {}", 3);
 
   /* }}} */
 
