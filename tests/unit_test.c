@@ -3065,6 +3065,77 @@ static const char *test_exec_bcode(void) {
 
   /* }}} */
 
+  /* `this` {{{ */
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "a = 1; (function(){ return this.a + 1; })(); ",
+      "2");
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "'use strict'; (function(){ return this })(); ",
+      "undefined");
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "(function(){ 'use strict'; return this })(); ",
+      "undefined");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var a={i:1, f:function(a){return this.i+a;}}; a.f(2)",
+      "3");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var a={i:1, f:function(a){return this.i+a;}}; a['f'](2)",
+      "3");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var a={i:1, f:function(){this.i++;}}; a.f(); a.i",
+      "2");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var a={i:1, f:function(){this.i++;}}; a['f'](); a.i",
+      "2");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "i=10; a={i:1, f:function(){this.i++;}}; f=a.f; f(); i",
+      "11");
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var a = "";
+
+        function f1() {
+          a += "f1-";
+          return {f2: f2};
+        }
+
+        function f2() {
+          a += "f2-";
+          return 2;
+        }
+
+        function f3() {
+          a += "f3-";
+          return 3;
+        }
+
+        function f4() {
+          a += "f4-";
+          return 4;
+        }
+
+        f1().f2(f3(), f4());
+        a;
+        ), "f1-f3-f4-f2-"
+      );
+
+  /* }}} */
+
   /* function should be able to return itself */
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(
       v7, "(function foo() {return foo})()", "(function foo() {return foo})"
