@@ -2858,6 +2858,8 @@ struct v7 {
   unsigned int is_returned : 1;
   /* true if a finally block is executing while breaking */
   unsigned int is_breaking : 1;
+  /* true if some value is currently stashed */
+  unsigned int is_stashed : 1;
   /* true if last emitted statement does not affect data stack */
   unsigned int is_stack_neutral : 1;
 };
@@ -17085,12 +17087,16 @@ restart:
         PUSH(v2);
         break;
       case OP_STASH:
+        assert(!v7->is_stashed);
         v7->stash = TOS();
+        v7->is_stashed = 1;
         break;
       case OP_UNSTASH:
+        assert(v7->is_stashed);
         POP();
         PUSH(v7->stash);
         v7->stash = v7_create_undefined();
+        v7->is_stashed = 0;
         break;
 
       case OP_SWAP_DROP:
