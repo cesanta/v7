@@ -2424,6 +2424,10 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "true ? 1 : 2", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "false ? 1 : 2", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "true ? true ? 1 : 2 : 3", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "true ? false ? 1 : 2 : 3", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "false ? true ? 1 : 2 : 3", 3);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "false ? false ? 1 : 2 : 3", 3);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x={a:1,b:2};x.a+x.b", 3);
 
@@ -2448,6 +2452,9 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof 'foox'", "string");
   ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof undefined", "undefined");
   ASSERT_BCODE_EVAL_STR_EQ(v7, "typeof novar", "undefined");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "function a(){}; typeof a", "function");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "function a(){}; typeof a()", "undefined");
+  ASSERT_BCODE_EVAL_STR_EQ(v7, "var a = 1; typeof a", "number");
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "Object.keys({a:1,b:2}).length", 2);
 
