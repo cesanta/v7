@@ -2109,6 +2109,11 @@ void cr_context_free(struct cr_ctx *p_ctx);
  * Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
  * Socket API provides low-level socket API.
  *
+ * ==== File.eval(file_name)
+ * Parse and run `file_name`.
+ * Throws an exception if the file doesn't exist, cannot be parsed or if the
+ * script throws any exception.
+ *
  * ==== File.open(file_name [, mode]) -> file_object or null
  * Open a file `path`. For
  * list of valid `mode` values, see `fopen()` documentation. If `mode` is
