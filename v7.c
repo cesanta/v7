@@ -18100,6 +18100,13 @@ static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
           BTRY(compile_expr(v7, a, &fvar, bcode));
           bcode_op(bcode, OP_SET_VAR);
           bcode_op(bcode, lit);
+
+          /* function declarations are stack-neutral */
+          bcode_op(bcode, OP_DROP);
+          /*
+           * Note: the `is_stack_neutral` flag will be set by `compile_stmt`
+           * later, when it encounters `AST_FUNC_DECL` again.
+           */
         }
         bcode_add_name(bcode, v7_create_string(v7, name, name_len, 1));
       }
@@ -19224,20 +19231,29 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         if (tag == AST_FUNC_DECL) {
           /*
            * function declarations are already set during hoisting (see
-           * `compile_local_vars()`), so, skip it
+           * `compile_local_vars()`), so, skip it.
+           *
+           * Plus, they are stack-neutral, so don't forget to set
+           * `is_stack_neutral`.
            */
           ast_move_to_children(a, pos);
           ast_skip_tree(a, pos);
+          v7->is_stack_neutral = 1;
         } else {
           /*
-           * compile `var` declaration: basically it looks just like an
-           * assignment
+           * compile `var` declaration: basically it looks similar to an
+           * assignment, but it differs from an assignment is that it's
+           * stack-neutral: `1; var a = 5;` yields `1`, not `5`.
            */
           BCHECK_INTERNAL(tag == AST_VAR_DECL);
           lit = string_lit(v7, a, pos, bcode);
           BTRY(compile_expr(v7, a, pos, bcode));
           bcode_op(bcode, OP_SET_VAR);
           bcode_op(bcode, lit);
+
+          /* `var` declaration is stack-neutral */
+          bcode_op(bcode, OP_DROP);
+          v7->is_stack_neutral = 1;
         }
       }
       break;

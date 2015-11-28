@@ -2471,6 +2471,65 @@ static const char *test_exec_bcode(void) {
 
   /* clang-format off */
 
+  /* var and function declarations should be stack-neutral {{{ */
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var a = 5;",
+      "undefined");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "1; var a = 5;",
+      "1");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "a; var a = 5;",
+      "undefined");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "1; a; var a = 5;",
+      "undefined");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "1; var a = 5; a",
+      "5");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "1; a = 5;",
+      "5");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "function a(){};",
+      "undefined");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var a = function a(){};",
+      "undefined");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "1; function a(){};",
+      "1");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "1; var a = function a(){};",
+      "1");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "1; a = function a(){};",
+      "function a(){}; a;");
+
+  /* }}} */
+
   /* exceptions {{{ */
 
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "try{} finally{}", "undefined");
@@ -2760,6 +2819,7 @@ static const char *test_exec_bcode(void) {
         };
 
         var c = f1();
+        c;
         ), "1-2-3-5-test-6--ret2"
       );
 
@@ -2781,6 +2841,7 @@ static const char *test_exec_bcode(void) {
         };
 
         var c = f1();
+        c
         ), "1-2-3-5--ret1"
       );
 
@@ -3018,6 +3079,7 @@ static const char *test_exec_bcode(void) {
         }
 
         var res = s1 + ":" + s2;
+        res;
         ), "2012:234"
       );
 
@@ -3219,6 +3281,12 @@ static const char *test_exec_bcode(void) {
         };
         ), V7_EXEC_EXCEPTION
       );
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "a; function a(){};",
+      "function a(){}; a;");
+
 
   /* check several `var`s */
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(
