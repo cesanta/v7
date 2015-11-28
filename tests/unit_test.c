@@ -3244,8 +3244,6 @@ static const char *test_exec_bcode(void) {
       v7, "print('foo');", V7_OK
       );
 
-  /* }}} */
-
   /* switch: break {{{ */
 
   ASSERT_BCODE_EVAL_NUM_EQ(
@@ -3340,6 +3338,47 @@ static const char *test_exec_bcode(void) {
           }
           x
         ), "1-f1-f2-"
+      );
+
+  /* }}} */
+
+  /* constructor {{{ */
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "function A(){this.p=1;} var a = new A(); a.p",
+      "1"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "function A(){this.p=1; return {p:2};} var a = new A(); a.p",
+      "2"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "function A(){this.p=1; return null;} var a = new A(); a.p",
+      "1"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "function A(){this.p=1; return undefined;} var a = new A(); a.p",
+      "1"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "function A(){this.p=1; return 10;} var a = new A(); a.p",
+      "1"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+        function A(){
+          this.p = "1";
+        }
+        A.prototype.test = "2";
+        var a = new A();
+        a.p + "-" + a.test;
+        ),
+        "'1-2'"
       );
 
   /* }}} */
