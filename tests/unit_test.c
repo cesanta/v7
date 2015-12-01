@@ -2370,21 +2370,35 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; if(true) {} else {3}", 1);
 
   ASSERT_BCODE_EVAL_EQ(v7, "while(0) 1", "undefined");
+  ASSERT_BCODE_EVAL_EQ(v7, "while(1) break", "undefined");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=1;while(a) a-=1", 0);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=3;b=0;while(a) {a-=1;b+=1}", 3);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=3;b=0;while(a) {a-=1;b+=1};b", 3);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; while(false) {}", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; while(true) break", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; while(true) break; 2", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=4;while(a) {if(a<2) break; a--;}", 2);
+
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; do {break;} while(true)", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; do {break;} while(true); 2", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=4;do {if(a<2) break; a--;} while(a)", 2);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=0;b=0;for(i=0;i<10;i+=1) b+=1", 10);
   ASSERT_BCODE_EVAL_EQ(v7, "for(1;false;1) 1", "undefined");
   ASSERT_BCODE_EVAL_EQ(v7, "for(1;false;) 1", "undefined");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; for(;false;) {}", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; for(;true;) break", 1);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; for(;true;) break; 2", 2);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "o={a:40,b:2}; r=0; for(i in o) r+=o[i]; r", 42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {}) 0", 42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "0; for(i in {a:1}) 42", 42);
   ASSERT_BCODE_EVAL_STR_EQ(v7, "for(i in {a:1}) i", "a");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {a:1}) {}", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {a:1}) break", 42);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {a:1}) break; 2", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "n=0; for(i in {a:1,b:2,c:3,d:4}) {if(n>2) break; n++}", 2);
 
   /* clang-format off */
   ASSERT_BCODE_EVAL_NUM_EQ(v7, STRINGIFY(
