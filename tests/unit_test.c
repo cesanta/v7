@@ -3465,6 +3465,140 @@ static const char *test_exec_bcode(void) {
 
   /* }}} */
 
+  /* delete {{{ */
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "var a = 1; var res = delete a; res + '|' + a;",
+      "'false|1'"
+      );
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "a = 1; var res = delete a; res;", "true");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_ERR( v7, "a = 1; delete a; a;", V7_EXEC_EXCEPTION);
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_ERR( v7, "'use strict'; a = 5; delete a;", V7_SYNTAX_ERROR);
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_ERR( v7, "'use strict'; var a = 5; delete a;", V7_SYNTAX_ERROR);
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "'use strict'; var a = {p:1}; delete a.p;", "true");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "'use strict'; var a = {p:1}; var res = delete a.p; res + '|' + a.p",
+      "'true|undefined'"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete 1", "true");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete 'foo'", "true");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete {}", "true");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete []", "true");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete null", "true");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete (function(){})", "true");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete NaN", "false");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete undefined", "false");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7,
+      "function A(){}; A.prototype.prop = 'foo'; var a = new A(); "
+      "a.prop = 'bar'; delete a.prop; a.prop;",
+      "'foo'"
+      );
+
+  /* deletion of the object's property should not walk the prototype chain */
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7,
+      "function A(){}; A.prototype.prop = 'foo'; var a = new A(); "
+      "delete a.prop; a.prop;",
+      "'foo'"
+      );
+
+  /*
+   * TODO(dfrank): reimplement array's `length` as a real property,
+   * and uncomment this test (currently, it's '2|undefined|false')
+   */
+#if 0
+  v7_del_property(v7, v7->global_object, "arr", 3);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "var arr = [1,2,3]; delete arr[2]; arr.length + '|' + arr[2] + '|' + (2 in arr);",
+      "'3|undefined|false'"
+      );
+#endif
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "delete nonexisting;", "true");
+  ASSERT_BCODE_EVAL_ERR( v7, "'use strict'; delete nonexisting;",
+      V7_SYNTAX_ERROR
+      );
+
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ( v7, "a=10; delete 'a'; a", "10");
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_ERR( v7, "a = 5; (function(){ delete a; })(); a;",
+      V7_EXEC_EXCEPTION
+      );
+
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "a = 5; del = (function(){ var a=10; return delete a; })(); del + '|' + a",
+      "'false|5'"
+      );
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "a = 5; del = (function(){ var a=10; return (function(){ return delete a;})(); })(); del + '|' + a",
+      "'false|5'"
+      );
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "a = 5; del = (function(){ a=10; return (function(){ return delete a;})(); })(); del + '|' + a",
+      V7_EXEC_EXCEPTION
+      );
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "a = 5; del = (function(){ b=10; return (function(){ return delete b;})(); })(); del + '|' + a",
+      "'true|5'"
+      );
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "a = 5; del = (function(){ b=10; return (function(){ delete b; return b;})(); })(); del + '|' + a",
+      V7_EXEC_EXCEPTION
+      );
+
+
+  v7_del_property(v7, v7->global_object, "a", 1);
+  v7_del_property(v7, v7->global_object, "f", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "function f(a, b){ del_a = delete a; del_b = delete b; del_f = delete f; return del_a + '|' + del_b + '|' + del_f; }; f();",
+      "'false|false|false'"
+      );
+
+  v7_del_property(v7, v7->global_object, "o", 1);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, "o = {}; Object.defineProperty(o, 'x', {value: 1}); delete o.x;",
+      "false"
+      );
+
+  v7_del_property(v7, v7->global_object, "o", 1);
+  ASSERT_BCODE_EVAL_ERR(
+      v7, "'use strict'; o = {}; Object.defineProperty(o, 'x', {value: 1}); delete o.x;",
+      V7_EXEC_EXCEPTION
+      );
+
+  /* }}} */
+
   /* clang-format on */
 
   v7_destroy(v7);

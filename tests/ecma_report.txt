@@ -912,15 +912,15 @@
 911	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T2.js (tail -c +700990 tests/ecmac.db|head -c 1214): [{"message":"syntax error at line 27 col 9:\n  $ERROR(\"#10: decodeURICom;\n        ^"}]
 912	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T3.js (tail -c +702205 tests/ecmac.db|head -c 1767)
 913	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T4.js (tail -c +703973 tests/ecmac.db|head -c 405)
-914	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T1.js (tail -c +704379 tests/ecmac.db|head -c 527): [{"message":"#1: 'Infinity' have attribute DontEnum"}]
+914	PASS ch10/10.2/10.2.3/S10.2.3_A2.1_T1.js (tail -c +704379 tests/ecmac.db|head -c 527)
 915	PASS ch10/10.2/10.2.3/S10.2.3_A2.1_T2.js (tail -c +704907 tests/ecmac.db|head -c 1106)
 916	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T3.js (tail -c +706014 tests/ecmac.db|head -c 1605): [{"message":"#1: 'Function' have attribute DontEnum"}]
 917	FAIL ch10/10.2/10.2.3/S10.2.3_A2.1_T4.js (tail -c +707620 tests/ecmac.db|head -c 348): [{"message":"#1: 'Math' have attribute DontEnum"}]
-918	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T1.js (tail -c +707969 tests/ecmac.db|head -c 578): [{"message":"#1: 'Infinity' have attribute DontEnum"}]
+918	PASS ch10/10.2/10.2.3/S10.2.3_A2.2_T1.js (tail -c +707969 tests/ecmac.db|head -c 578)
 919	PASS ch10/10.2/10.2.3/S10.2.3_A2.2_T2.js (tail -c +708548 tests/ecmac.db|head -c 1181)
 920	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T3.js (tail -c +709730 tests/ecmac.db|head -c 1705): [{"message":"#1: 'Function' have attribute DontEnum"}]
 921	FAIL ch10/10.2/10.2.3/S10.2.3_A2.2_T4.js (tail -c +711436 tests/ecmac.db|head -c 391): [{"message":"#1: 'Math' have attribute DontEnum"}]
-922	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T1.js (tail -c +711828 tests/ecmac.db|head -c 619): [{"message":"#1: 'Infinity' have attribute DontEnum"}]
+922	PASS ch10/10.2/10.2.3/S10.2.3_A2.3_T1.js (tail -c +711828 tests/ecmac.db|head -c 619)
 923	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T2.js (tail -c +712448 tests/ecmac.db|head -c 1282): [{"message":"syntax error at line 14 col 11:\n    $ERROR(\"#1:}\n          ^"}]
 924	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T3.js (tail -c +713731 tests/ecmac.db|head -c 1856): [{"message":"syntax error at line 14 col 11:\n    $ERROR(\"#1: 'Boolean' }\n          ^"}]
 925	FAIL ch10/10.2/10.2.3/S10.2.3_A2.3_T4.js (tail -c +715588 tests/ecmac.db|head -c 413): [{"message":"#1: 'Math' have attribute DontEnum"}]
@@ -3175,11 +3175,11 @@ function FACTORY()
 3157	PASS ch15/15.1/15.1.1/15.1.1.1/S15.1.1.1_A1.js (tail -c +3373348 tests/ecmac.db|head -c 516)
 3158	PASS ch15/15.1/15.1.1/15.1.1.1/S15.1.1.1_A3.1.js (tail -c +3373865 tests/ecmac.db|head -c 297)
 3159	PASS ch15/15.1/15.1.1/15.1.1.1/S15.1.1.1_A3.2.js (tail -c +3374163 tests/ecmac.db|head -c 292)
-3160	FAIL ch15/15.1/15.1.1/15.1.1.2/15.1.1.2-0.js (tail -c +3374456 tests/ecmac.db|head -c 482): [{"message":"Test case returned non-true value!"}]
+3160	PASS ch15/15.1/15.1.1/15.1.1.2/15.1.1.2-0.js (tail -c +3374456 tests/ecmac.db|head -c 482)
 3161	PASS ch15/15.1/15.1.1/15.1.1.2/S15.1.1.2_A1.js (tail -c +3374939 tests/ecmac.db|head -c 725)
 3162	PASS ch15/15.1/15.1.1/15.1.1.2/S15.1.1.2_A2_T2.js (tail -c +3375665 tests/ecmac.db|head -c 354)
-3163	FAIL ch15/15.1/15.1.1/15.1.1.2/S15.1.1.2_A3.1.js (tail -c +3376020 tests/ecmac.db|head -c 316): [{"message":"#1: delete Infinity === false. Actual: true"}]
-3164	FAIL ch15/15.1/15.1.1/15.1.1.2/S15.1.1.2_A3.2.js (tail -c +3376337 tests/ecmac.db|head -c 307): [{"message":"#1: The Infinity is DontEnum"}]
+3163	PASS ch15/15.1/15.1.1/15.1.1.2/S15.1.1.2_A3.1.js (tail -c +3376020 tests/ecmac.db|head -c 316)
+3164	PASS ch15/15.1/15.1.1/15.1.1.2/S15.1.1.2_A3.2.js (tail -c +3376337 tests/ecmac.db|head -c 307)
 3165	FAIL ch15/15.1/15.1.1/15.1.1.3/15.1.1.3-0.js (tail -c +3376645 tests/ecmac.db|head -c 484): [{"message":"cannot read property 'writable' of undefined"}]
 3166	FAIL ch15/15.1/15.1.1/15.1.1.3/15.1.1.3-1.js (tail -c +3377130 tests/ecmac.db|head -c 453): [{"message":"Invalid left-hand side in assignment"}]
 3167	FAIL ch15/15.1/15.1.1/15.1.1.3/15.1.1.3-2.js (tail -c +3377584 tests/ecmac.db|head -c 529): [{"message":"Test case returned non-true value!"}]
@@ -4648,7 +4648,7 @@ err
 4599	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-176.js (tail -c +4865273 tests/ecmac.db|head -c 532)
 4600	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-177.js (tail -c +4865806 tests/ecmac.db|head -c 520)
 4601	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-178.js (tail -c +4866327 tests/ecmac.db|head -c 686)
-4602	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-179.js (tail -c +4867014 tests/ecmac.db|head -c 697): [{"message":"Test case returned non-true value!"}]
+4602	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-179.js (tail -c +4867014 tests/ecmac.db|head -c 697)
 4603	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-18.js (tail -c +4867712 tests/ecmac.db|head -c 552)
 4604	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-180.js (tail -c +4868265 tests/ecmac.db|head -c 699): [{"message":"cannot read property 'writable' of undefined"}]
 4605	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-182.js (tail -c +4868965 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
