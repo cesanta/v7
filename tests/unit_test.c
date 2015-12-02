@@ -2378,17 +2378,25 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; while(true) break", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; while(true) break; 2", 2);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=4;while(a) {if(a<2) break; a--;}", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=4; while(a) {a--; if(a<2) continue; }", 1);
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, "b=''; a=4; while(a) {a--; if(a<2) continue; b+='c-'};b", "c-c-");
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; do {break;} while(true)", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; do {break;} while(true); 2", 2);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=4;do {if(a<2) break; a--;} while(a)", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "do {42; continue; 24} while(false);", 42);
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, "b=''; a=4; do {a--; if(a<2) continue; b+='c-'} while(a); b", "c-c-");
 
-  ASSERT_BCODE_EVAL_NUM_EQ(v7, "a=0;b=0;for(i=0;i<10;i+=1) b+=1", 10);
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "b=0;for(i=0;i<10;i+=1) b+=1", 10);
   ASSERT_BCODE_EVAL_EQ(v7, "for(1;false;1) 1", "undefined");
   ASSERT_BCODE_EVAL_EQ(v7, "for(1;false;) 1", "undefined");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; for(;false;) {}", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; for(;true;) break", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1; for(;true;) break; 2", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "b=0;for(i=0;i<10;i+=1) {if(i<5) continue; b+=1}", 5);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "o={a:40,b:2}; r=0; for(i in o) r+=o[i]; r", 42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {}) 0", 42);
@@ -2399,6 +2407,8 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {a:1}) break; 2", 2);
   ASSERT_BCODE_EVAL_NUM_EQ(
       v7, "n=0; for(i in {a:1,b:2,c:3,d:4}) {if(n>2) break; n++}", 2);
+  ASSERT_BCODE_EVAL_NUM_EQ(
+      v7, "n=0; for(i in {a:1,b:2,c:3,d:4}) {n++; if(n<2) continue}", 3);
 
   /* clang-format off */
   ASSERT_BCODE_EVAL_NUM_EQ(v7, STRINGIFY(
@@ -3422,6 +3432,71 @@ static const char *test_exec_bcode(void) {
         ), "1-f1-f2-"
       );
 
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+          x="";
+          switch(1) {
+            case 1:
+              while(true) {
+                x+="1-";
+                break;
+              }
+              /* fallthrough */
+            case 2:
+              x+="2-";
+          }
+          x
+        ), "1-2-"
+      );
+
+  ASSERT_BCODE_EVAL_STR_EQ(
+      v7, STRINGIFY(
+          x="";
+          for(i=0; i<2; i++) {
+            switch(i) {
+              case 0:
+                x+="0-";
+                continue;
+              case 1:
+                x+="1-";
+            }
+            x+="f-";
+          }
+          x
+        ), "0-1-f-"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+          var i = 0;
+          var a = 0;
+          for (i = 0; i < 10; i++) {
+            try {
+              continue;
+              a = 500;
+            } finally {
+              a += 10;
+            }
+            a = 500;
+          }
+          a
+        ), "100"
+      );
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+          var i = 0;
+          var a = 0;
+          do {
+            i++;
+            a += 2;
+            continue;
+            a = 500;
+          } while (i < 10);
+          a
+        ), "20"
+      )
+      ;
   /* }}} */
 
   /* constructor {{{ */
