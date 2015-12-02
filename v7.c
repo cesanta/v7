@@ -17085,8 +17085,7 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
       break;
   }
   target = bcode_get_target(&r->ops);
-  v7_array_set(v7, arr, v7_array_length(v7, arr),
-               v7_create_number((uint64_t) target | offset_tag));
+  v7_array_push(v7, arr, v7_create_number((uint64_t) target | offset_tag));
 
   tmp_frame_cleanup(&tf);
 }
@@ -17094,7 +17093,8 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
 /*
  * Evaluate `OP_TRY_POP`: just pop latest item from "try stack", ignoring it
  */
-V7_PRIVATE void eval_try_pop(struct v7 *v7) {
+V7_PRIVATE enum v7_err eval_try_pop(struct v7 *v7) {
+  enum v7_err ret = V7_OK;
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   tmp_stack_push(&tf, &arr);
@@ -17102,19 +17102,18 @@ V7_PRIVATE void eval_try_pop(struct v7 *v7) {
 
   /* get "try stack" array, which must be defined and must not be emtpy */
   arr = v7_get(v7, v7->call_stack, "____t", 5);
-  if (arr == V7_UNDEFINED) {
-    throw_exception(v7, INTERNAL_ERROR, "TRY_POP when ____t does not exist");
-  }
+  BCHECK_MSG(!v7_is_undefined(arr), V7_INTERNAL_ERROR,
+             "TRY_POP when ____t does not exist");
 
   length = v7_array_length(v7, arr);
-  if (length == 0) {
-    throw_exception(v7, INTERNAL_ERROR, "TRY_POP when ____t is empty");
-  }
+  BCHECK_MSG(length != 0, V7_INTERNAL_ERROR, "TRY_POP when ____t is empty");
 
   /* delete the latest element of this array */
   v7_array_del(v7, arr, length - 1);
 
+clean:
   tmp_frame_cleanup(&tf);
+  return ret;
 }
 
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
@@ -17686,7 +17685,7 @@ restart:
         eval_try_push(v7, op, &r);
         break;
       case OP_TRY_POP:
-        eval_try_pop(v7);
+        BTRY(eval_try_pop(v7));
         break;
       case OP_AFTER_FINALLY:
         /*
