@@ -2718,7 +2718,7 @@
 2717	FAIL ch12/12.14/S12.14_A4.js (tail -c +2996596 tests/ecmac.db|head -c 727): [{"message":"#1.2: Exception has DontDelete property"}]
 2718	PASS ch12/12.14/S12.14_A5.js (tail -c +2997324 tests/ecmac.db|head -c 1211)
 2719	PASS ch12/12.14/S12.14_A6.js (tail -c +2998536 tests/ecmac.db|head -c 1052)
-2720	FAIL ch12/12.14/S12.14_A7_T1.js (tail -c +2999589 tests/ecmac.db|head -c 3243): [{"message":"#7.3: Exception ===\"ex1\". Actual:  Exception ===ex2"}]
+2720	FAIL ch12/12.14/S12.14_A7_T1.js (tail -c +2999589 tests/ecmac.db|head -c 3243): [{"message":"#7.3: Exception ===\"ex1\". Actual:  Exception ===undefined"}]
 2721	FAIL ch12/12.14/S12.14_A7_T2.js (tail -c +3002833 tests/ecmac.db|head -c 2799): [{"message":"#4.3: \"finally\" block must be evaluated"}]
 2722	FAIL ch12/12.14/S12.14_A7_T3.js (tail -c +3005633 tests/ecmac.db|head -c 3922): [{"message":"#1.2: Exception === \"ex3\". Actual:  Exception ===ex1"}]
 2723	PASS ch12/12.14/S12.14_A8.js (tail -c +3009556 tests/ecmac.db|head -c 775)
@@ -9320,7 +9320,7 @@ err
 9271	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-12.js (tail -c +8398911 tests/ecmac.db|head -c 1112): [{"message":"cannot read property 'call' of undefined"}]
 9272	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-13.js (tail -c +8400024 tests/ecmac.db|head -c 909): [{"message":"cannot read property 'call' of undefined"}]
 9273	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-14.js (tail -c +8400934 tests/ecmac.db|head -c 604): [{"message":"cannot read property 'call' of undefined"}]
-9274	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-15.js (tail -c +8401539 tests/ecmac.db|head -c 1002): [{"message":"cannot read property 'call' of undefined"}]
+9274	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-15.js (tail -c +8401539 tests/ecmac.db|head -c 1002): [undefined]
 9275	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-17.js (tail -c +8402542 tests/ecmac.db|head -c 710): [{"message":"cannot read property 'call' of undefined"}]
 9276	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-18.js (tail -c +8403253 tests/ecmac.db|head -c 733): [{"message":"cannot read property 'call' of undefined"}]
 9277	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-2-19.js (tail -c +8403987 tests/ecmac.db|head -c 706): [{"message":"cannot read property 'call' of undefined"}]
@@ -9416,7 +9416,7 @@ err
 9367	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-20.js (tail -c +8473718 tests/ecmac.db|head -c 962): [{"message":"value is not a function"}]
 9368	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-21.js (tail -c +8474681 tests/ecmac.db|head -c 951): [{"message":"cannot read property 'call' of undefined"}]
 9369	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-22.js (tail -c +8475633 tests/ecmac.db|head -c 905): [{"message":"value is not a function"}]
-9370	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-23.js (tail -c +8476539 tests/ecmac.db|head -c 1043): [{"message":"cannot read property 'call' of undefined"}]
+9370	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-23.js (tail -c +8476539 tests/ecmac.db|head -c 1043): [undefined]
 9371	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-25.js (tail -c +8477583 tests/ecmac.db|head -c 754): [{"message":"cannot read property 'call' of undefined"}]
 9372	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-26.js (tail -c +8478338 tests/ecmac.db|head -c 751): [{"message":"cannot read property 'call' of undefined"}]
 9373	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-8-b-iii-1-27.js (tail -c +8479090 tests/ecmac.db|head -c 763): [{"message":"cannot read property 'call' of undefined"}]
@@ -9495,7 +9495,7 @@ err
 9446	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-20.js (tail -c +8543772 tests/ecmac.db|head -c 974): [{"message":"value is not a function"}]
 9447	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-21.js (tail -c +8544747 tests/ecmac.db|head -c 968): [{"message":"cannot read property 'call' of undefined"}]
 9448	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-22.js (tail -c +8545716 tests/ecmac.db|head -c 918): [{"message":"value is not a function"}]
-9449	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-23.js (tail -c +8546635 tests/ecmac.db|head -c 1053): [{"message":"cannot read property 'call' of undefined"}]
+9449	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-23.js (tail -c +8546635 tests/ecmac.db|head -c 1053): [undefined]
 9450	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-25.js (tail -c +8547689 tests/ecmac.db|head -c 765): [{"message":"cannot read property 'call' of undefined"}]
 9451	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-26.js (tail -c +8548455 tests/ecmac.db|head -c 762): [{"message":"cannot read property 'call' of undefined"}]
 9452	FAIL ch15/15.4/15.4.4/15.4.4.22/15.4.4.22-9-c-i-27.js (tail -c +8549218 tests/ecmac.db|head -c 774): [{"message":"cannot read property 'call' of undefined"}]

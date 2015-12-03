@@ -1603,7 +1603,6 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "new TypeError instanceof TypeError", "true");
   ASSERT_EVAL_EQ(v7, "new Error instanceof Object", "true");
   ASSERT_EVAL_EQ(v7, "new Error instanceof TypeError", "false");
-  /* TODO(mkm): fix parser: should not require parenthesis */
   ASSERT_EVAL_EQ(v7, "({}) instanceof Object", "true");
 
   c = "\"Error: foo\"";
