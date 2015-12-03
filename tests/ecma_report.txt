@@ -4111,7 +4111,7 @@ err
 4062	PASS ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-0-7.js (tail -c +4551418 tests/ecmac.db|head -c 644)
 4063	PASS ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-0-8.js (tail -c +4552063 tests/ecmac.db|head -c 535)
 4064	PASS ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-0-9.js (tail -c +4552599 tests/ecmac.db|head -c 602)
-4065	FAIL ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-g1-1.js (tail -c +4553202 tests/ecmac.db|head -c 609): [{"message":"Test case returned non-true value!"}]
+4065	PASS ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-g1-1.js (tail -c +4553202 tests/ecmac.db|head -c 609)
 4066	FAIL ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-g1-2.js (tail -c +4553812 tests/ecmac.db|head -c 537): [{"message":"Test case returned non-true value!"}]
 4067	FAIL ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-g1-3.js (tail -c +4554350 tests/ecmac.db|head -c 537): [{"message":"Test case returned non-true value!"}]
 4068	FAIL ch15/15.12/15.12.1/15.12.1.1/15.12.1.1-g1-4.js (tail -c +4554888 tests/ecmac.db|head -c 533): [{"message":"Test case returned non-true value!"}]

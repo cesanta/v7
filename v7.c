@@ -14396,9 +14396,7 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
     return V7_AST_TOO_LARGE;
   }
   if (err == V7_OK && v7->cur_tok != TOK_END_OF_INPUT) {
-#ifndef NO_LIBC
-    fprintf(stderr, "WARNING parse input not consumed\n");
-#endif
+    err = V7_SYNTAX_ERROR;
   }
   if (verbose && err != V7_OK) {
     unsigned long col = get_column(v7->pstate.source_code, v7->tok);
