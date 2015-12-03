@@ -3673,6 +3673,17 @@ static const char *test_exec_bcode(void) {
 
   /* }}} */
 
+  /* calling cfunctions from bcode {{{ */
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "var a = new Object(); a", "({})");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "'foo'.valueOf()", "'foo'");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+      "var a = new String('bar'); a.valueOf();",
+      "'bar'");
+  ASSERT_BCODE_EVAL_ERR(v7, "String.prototype.valueOf()", V7_EXEC_EXCEPTION);
+
+  /* }}} */
+
   /* clang-format on */
 
   v7_destroy(v7);
