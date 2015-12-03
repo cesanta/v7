@@ -16665,7 +16665,7 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   uint8_t *p = *ops;
 
   assert(*p < OP_MAX);
-  fprintf(f, "%zu: %s", p - (uint8_t *) bcode->ops.buf, op_names[*p]);
+  fprintf(f, "%zu: %s", (size_t)(p - (uint8_t *) bcode->ops.buf), op_names[*p]);
   switch (*p) {
     case OP_PUSH_LIT:
     case OP_SAFE_GET_VAR:
@@ -21805,9 +21805,16 @@ int main(int argc, char **argv) {
 #define NOINSTR __attribute__((no_instrument_function))
 #endif
 
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 IRAM NOINSTR void __cyg_profile_func_enter(void *this_fn, void *call_site);
 
 IRAM NOINSTR void __cyg_profile_func_exit(void *this_fn, void *call_site);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
 
 IRAM void __cyg_profile_func_enter(void *this_fn, void *call_site) {
 #if defined(V7_STACK_GUARD_MIN_SIZE)
