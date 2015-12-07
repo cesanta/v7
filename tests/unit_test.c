@@ -2511,6 +2511,9 @@ static const char *test_exec_bcode(void) {
 
   /* clang-format off */
 
+  /* for loop with var declaration containing more than one variable */
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "for(var i=0,a=10;i<10;i++){a+=i};a", "55");
+
   /* var and function declarations should be stack-neutral {{{ */
 
   v7_del_property(v7, v7->global_object, "a", 1);
