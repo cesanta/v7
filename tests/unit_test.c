@@ -2416,6 +2416,12 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "0; for(i in {a:1}) 42", 42);
   ASSERT_BCODE_EVAL_STR_EQ(v7, "for(i in {a:1}) i", "a");
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {a:1}) {}", 42);
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "for(i in {a:1}){break}", "undefined");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;for(i in {a:1}){break}", "1");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;for(i in {a:1}){2;break}", "2");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "for(i in {a:1}){continue}", "undefined");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;for(i in {a:1}){continue}", "1");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;for(i in {a:1}){2;continue}", "2");
 /* TODO(dfrank) fix stack usage when `break` is used inside `for .. in` */
 #if 0
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "42; for(i in {a:1}) break", 42);

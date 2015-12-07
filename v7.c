@@ -20198,15 +20198,25 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *   JMP loop
      * end:
      *   UNSTASH
+     *   JMP try_pop:
      * brend:
+     *              # got here after a `break` or `continue` from a loop body:
      *   JMP_IF_CONTINUE next
+     *
+     *              # we're not going to `continue`, so, need to remove an
+     *              # extra stuff that was needed for the NEXT_PROP
+     *
+     *   SWAP_DROP  # drop handle
+     *   SWAP_DROP  # drop <O>
+     *   SWAP_DROP  # drop the value preceding the loop
+     * try_pop:
      *   TRY_POP
      *
      */
     case AST_FOR_IN: {
       uint8_t lit;
       bcode_off_t loop_label, loop_target, end_label, brend_label,
-          continue_label, continue_target;
+          continue_label, pop_label, continue_target;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
 
       ast_move_to_children(a, pos);
@@ -20296,11 +20306,21 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
       bcode_patch_target(bcode, end_label, bcode_pos(bcode));
       bcode_op(bcode, OP_UNSTASH);
 
+      pop_label = bcode_op_target(bcode, OP_JMP);
+
       /* brend: */
       bcode_patch_target(bcode, brend_label, bcode_pos(bcode));
 
       continue_label = bcode_op_target(bcode, OP_JMP_IF_CONTINUE);
       bcode_patch_target(bcode, continue_label, continue_target);
+
+      bcode_op(bcode, OP_SWAP_DROP);
+      bcode_op(bcode, OP_SWAP_DROP);
+      bcode_op(bcode, OP_SWAP_DROP);
+
+      /* try_pop: */
+      bcode_patch_target(bcode, pop_label, bcode_pos(bcode));
+
       bcode_op(bcode, OP_TRY_POP);
 
       v7->is_stack_neutral = 1;
