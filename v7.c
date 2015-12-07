@@ -3639,6 +3639,7 @@ V7_PRIVATE enum v7_err v7_exec_bcode_dump(struct v7 *v7, const char *src,
 V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op);
 V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, v7_val_t val);
 V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx);
+V7_PRIVATE void bcode_op_lit(struct bcode *bcode, enum opcode op, size_t idx);
 V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx);
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, v7_val_t v);
 V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode);
@@ -16933,11 +16934,11 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   fprintf(f, "%zu: %s", (size_t)(p - (uint8_t *) bcode->ops.buf), op_names[*p]);
   switch (*p) {
     case OP_PUSH_LIT:
-      fprintf(f, "(%lu)", (unsigned long) bcode_get_varint(&p));
-      break;
     case OP_SAFE_GET_VAR:
     case OP_GET_VAR:
     case OP_SET_VAR:
+      fprintf(f, "(%lu)", (unsigned long) bcode_get_varint(&p));
+      break;
     case OP_CALL:
     case OP_NEW:
       p++;
@@ -17844,10 +17845,10 @@ restart:
       }
       case OP_GET_VAR:
       case OP_SAFE_GET_VAR: {
-        int arg;
+        size_t arg;
         struct v7_property *p;
         assert(r.ops < r.end - 1);
-        arg = (int) *(++r.ops);
+        arg = bcode_get_varint(&r.ops);
         if ((p = v7_get_property_v(v7, v7->call_stack, r.lit[arg])) == NULL) {
           if (op == OP_SAFE_GET_VAR) {
             PUSH(v7_create_undefined());
@@ -17863,7 +17864,7 @@ restart:
       }
       case OP_SET_VAR: {
         struct v7_property *prop;
-        int arg = (int) *(++r.ops);
+        size_t arg = bcode_get_varint(&r.ops);
         v3 = POP();
         v2 = r.lit[arg];
         v1 = v7->call_stack;
@@ -18178,44 +18179,53 @@ restart:
           v1 = v7->call_stack;
         }
 
-        assert(v7_is_object(v1));
+        if (!v7_is_object(v1)) {
+          /*
+           * the "object" to delete a property from is not actually an object
+           * (at least this can happen with cfunction pointers), will just
+           * return `true`
+           */
+          goto delete_clean;
+        }
 
         name_len = v7_stringify_value(v7, v2, buf, sizeof(buf));
 
         prop = v7_get_property(v7, v1, buf, name_len);
-        if (prop != NULL) {
-          /* found needed property */
-
-          if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
-            /*
-             * this property is undeletable. In non-strict mode, we just
-             * return `false`; otherwise, we throw.
-             */
-            if (!r.bcode->strict_mode) {
-              res = v7_create_boolean(0);
-            } else {
-              BTRY(bcode_throw_exception(v7, &r, TYPE_ERROR,
-                                         "Cannot delete property '%s'", buf));
-              goto restart;
-            }
-          } else {
-            /*
-             * delete property: when we operate on the current scope, we should
-             * walk the prototype chain when deleting property.
-             *
-             * But when we operate on a "real" object, we should delete own
-             * properties only.
-             */
-            if (op == OP_DELETE) {
-              v7_del_property(v7, v1, buf, name_len);
-            } else {
-              del_property_deep(v7, v1, buf, name_len);
-            }
-          }
-        } else {
+        if (prop == NULL) {
           /* not found a property; will just return `true` */
+          goto delete_clean;
         }
 
+        /* found needed property */
+
+        if (prop->attributes & V7_PROPERTY_DONT_DELETE) {
+          /*
+           * this property is undeletable. In non-strict mode, we just
+           * return `false`; otherwise, we throw.
+           */
+          if (!r.bcode->strict_mode) {
+            res = v7_create_boolean(0);
+          } else {
+            BTRY(bcode_throw_exception(v7, &r, TYPE_ERROR,
+                                       "Cannot delete property '%s'", buf));
+            goto restart;
+          }
+        } else {
+          /*
+           * delete property: when we operate on the current scope, we should
+           * walk the prototype chain when deleting property.
+           *
+           * But when we operate on a "real" object, we should delete own
+           * properties only.
+           */
+          if (op == OP_DELETE) {
+            v7_del_property(v7, v1, buf, name_len);
+          } else {
+            del_property_deep(v7, v1, buf, name_len);
+          }
+        }
+
+      delete_clean:
         PUSH(res);
         break;
       }
@@ -18487,7 +18497,7 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
      */
 
     /* call func */
-    uint8_t lit = 0;
+    size_t lit = 0;
     int args_cnt = v7_array_length(v7, args);
 
     bcode_op(v7->bcode, OP_PUSH_UNDEFINED);
@@ -18674,9 +18684,13 @@ V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx) {
   return ret;
 }
 
-V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx) {
-  bcode_op(bcode, OP_PUSH_LIT);
+V7_PRIVATE void bcode_op_lit(struct bcode *bcode, enum opcode op, size_t idx) {
+  bcode_op(bcode, op);
   bcode_add_varint(bcode, idx);
+}
+
+V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx) {
+  bcode_op_lit(bcode, OP_PUSH_LIT, idx);
 }
 
 V7_PRIVATE void bcode_add_name(struct bcode *bcode, val_t v) {
@@ -18881,16 +18895,16 @@ clean:
   return ret;
 }
 
-static int string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                      struct bcode *bcode) {
+static size_t string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         struct bcode *bcode) {
   size_t name_len;
   char *name = ast_get_inlined_data(a, *pos, &name_len);
   ast_move_to_children(a, pos);
   return bcode_add_lit(bcode, v7_create_string(v7, name, name_len, 1));
 }
 
-static int regexp_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
-                      struct bcode *bcode) {
+static size_t regexp_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
+                         struct bcode *bcode) {
   size_t name_len;
   char *p;
   char *name = ast_get_inlined_data(a, *pos, &name_len);
@@ -18952,7 +18966,7 @@ clean:
 
 static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
                                   enum ast_tag tag, struct bcode *bcode) {
-  uint8_t lit;
+  size_t lit;
   enum ast_tag ntag;
   ntag = ast_fetch_tag(a, pos);
   enum v7_err ret = V7_OK;
@@ -18961,13 +18975,11 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
     case AST_IDENT:
       lit = string_lit(v7, a, pos, bcode);
       if (tag != AST_ASSIGN) {
-        bcode_op(bcode, OP_GET_VAR);
-        bcode_op(bcode, lit);
+        bcode_op_lit(bcode, OP_GET_VAR, lit);
       }
 
       BTRY(eval_assign_rhs(v7, a, pos, tag, bcode));
-      bcode_op(bcode, OP_SET_VAR);
-      bcode_op(bcode, lit);
+      bcode_op_lit(bcode, OP_SET_VAR, lit);
 
       fixup_post_op(tag, bcode);
       break;
@@ -19016,7 +19028,7 @@ static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
   ast_off_t next, fvar_end;
   char *name;
   size_t name_len;
-  uint8_t lit;
+  size_t lit;
   enum v7_err ret = V7_OK;
 
   if (fvar != start) {
@@ -19054,8 +19066,7 @@ static enum v7_err compile_local_vars(struct v7 *v7, struct ast *a,
            */
           lit = string_lit(v7, a, &fvar, bcode);
           BTRY(compile_expr(v7, a, &fvar, bcode));
-          bcode_op(bcode, OP_SET_VAR);
-          bcode_op(bcode, lit);
+          bcode_op_lit(bcode, OP_SET_VAR, lit);
 
           /* function declarations are stack-neutral */
           bcode_op(bcode, OP_DROP);
@@ -19098,7 +19109,7 @@ V7_PRIVATE enum v7_err compile_expr_ext(struct v7 *v7, struct ast *a,
 
   switch (tag) {
     case AST_MEMBER: {
-      uint8_t lit = string_lit(v7, a, pos, bcode);
+      size_t lit = string_lit(v7, a, pos, bcode);
       BTRY(compile_expr(v7, a, pos, bcode));
       if (for_call) {
         /* current TOS will be used as `this` */
@@ -19145,7 +19156,7 @@ V7_PRIVATE enum v7_err compile_delete(struct v7 *v7, struct ast *a,
   switch (tag) {
     case AST_MEMBER: {
       /* Delete a specified property of an object */
-      uint8_t lit = string_lit(v7, a, pos, bcode);
+      size_t lit = string_lit(v7, a, pos, bcode);
       /* put an object to delete property from */
       BTRY(compile_expr(v7, a, pos, bcode));
       /* put a property name */
@@ -19245,8 +19256,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       bcode_op(bcode, OP_NEG);
       break;
     case AST_IDENT:
-      bcode_op(bcode, OP_GET_VAR);
-      bcode_op(bcode, string_lit(v7, a, pos, bcode));
+      bcode_op_lit(bcode, OP_GET_VAR, string_lit(v7, a, pos, bcode));
       break;
     case AST_MEMBER:
     case AST_INDEX:
@@ -19270,8 +19280,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       ast_off_t peek = *pos;
       if ((tag = ast_fetch_tag(a, &peek)) == AST_IDENT) {
         *pos = peek;
-        bcode_op(bcode, OP_SAFE_GET_VAR);
-        bcode_op(bcode, string_lit(v7, a, pos, bcode));
+        bcode_op_lit(bcode, OP_SAFE_GET_VAR, string_lit(v7, a, pos, bcode));
       } else {
         BTRY(compile_expr(v7, a, pos, bcode));
       }
@@ -19443,7 +19452,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
        * properties, since duplicates are not allowed
        */
       struct mbuf cur_literals;
-      uint8_t lit;
+      size_t lit;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
       mbuf_init(&cur_literals, 0);
 
@@ -19552,7 +19561,7 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
       break;
     }
     case AST_FUNC: {
-      uint8_t flit = 0;
+      size_t flit = 0;
       val_t funv = create_function(v7);
       struct v7_function *func = v7_to_function(funv);
       func->scope = NULL;
@@ -19905,16 +19914,12 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
          * When we enter `catch` block, the TOS contains thrown value.
          * Let's add code that saves thrown error into specified identifier
          */
-        {
-          uint8_t lit = string_lit(v7, a, pos, bcode);
-          bcode_op(bcode, OP_SET_VAR);
-          bcode_op(bcode, lit);
-          /*
-           * Exception value should not stay on stack; we have on stack the
-           * latest element from `try` block. So, just drop exception value.
-           */
-          bcode_op(bcode, OP_DROP);
-        }
+        bcode_op_lit(bcode, OP_SET_VAR, string_lit(v7, a, pos, bcode));
+        /*
+         * Exception value should not stay on stack; we have on stack the
+         * latest element from `try` block. So, just drop exception value.
+         */
+        bcode_op(bcode, OP_DROP);
 
         /*
          * compile statements until the end of `catch` clause
@@ -20124,7 +20129,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
         ast_off_t fvar_end;
         *pos = lookahead;
         fvar_end = ast_get_skip(a, *pos, AST_END_SKIP);
-        uint8_t lit;
+        size_t lit;
         ast_move_to_children(a, pos);
 
         /*
@@ -20139,8 +20144,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
           BTRY(compile_expr(v7, a, pos, bcode));
 
           /* Just like an assigment */
-          bcode_op(bcode, OP_SET_VAR);
-          bcode_op(bcode, lit);
+          bcode_op_lit(bcode, OP_SET_VAR, lit);
 
           /* INIT is stack-neutral */
           bcode_op(bcode, OP_DROP);
@@ -20233,7 +20237,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
      *
      */
     case AST_FOR_IN: {
-      uint8_t lit;
+      size_t lit;
       bcode_off_t loop_label, loop_target, end_label, brend_label,
           continue_label, pop_label, continue_target;
       ast_off_t end = ast_get_skip(a, *pos, AST_END_SKIP);
@@ -20290,8 +20294,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
 
       bcode_op(bcode, OP_NEXT_PROP);
       end_label = bcode_op_target(bcode, OP_JMP_FALSE);
-      bcode_op(bcode, OP_SET_VAR);
-      bcode_op(bcode, lit);
+      bcode_op_lit(bcode, OP_SET_VAR, lit);
 
       /*
        * The stash register contains the value of the previous statement,
@@ -20392,7 +20395,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        * no new variables should be created in it. A var decl thus
        * behaves as a normal assignment at runtime.
        */
-      uint8_t lit;
+      size_t lit;
       end = ast_get_skip(a, *pos, AST_END_SKIP);
       ast_move_to_children(a, pos);
       while (*pos < end) {
@@ -20417,8 +20420,7 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
           BCHECK_INTERNAL(tag == AST_VAR_DECL);
           lit = string_lit(v7, a, pos, bcode);
           BTRY(compile_expr(v7, a, pos, bcode));
-          bcode_op(bcode, OP_SET_VAR);
-          bcode_op(bcode, lit);
+          bcode_op_lit(bcode, OP_SET_VAR, lit);
 
           /* `var` declaration is stack-neutral */
           bcode_op(bcode, OP_DROP);
