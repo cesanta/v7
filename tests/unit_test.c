@@ -2577,6 +2577,9 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{2} finally{}", "2");
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{2} finally{3}", "3");
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "try{foo} catch(e){}", "undefined");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "try{1+foo} catch(e){}", "undefined");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "2;try{1+foo} catch(e){}", "2");
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "2;try{3;1+foo} catch(e){}", "3");
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{foo} catch(e){}", "1");
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "1;try{2;foo} catch(e){}", "2");
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
