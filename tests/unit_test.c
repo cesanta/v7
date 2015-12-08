@@ -2233,10 +2233,12 @@ static const char *test_file(void) {
               " f.write(ts); f.close();") == V7_OK);
   ASSERT(check_file(v7, data_str, test_file_name));
   ASSERT_EQ(remove(test_file_name), 0);
+  ASSERT_EVAL_EQ(v7, "File.open('\\0test.mk')", "null");
+  ASSERT_EVAL_EQ(v7, "File.open('test.mk', '\\0')", "null");
   ASSERT_EQ(eval(v7, &v, "f = File.open('test.mk'); f.readAll()"), V7_OK);
   ASSERT(check_file(v7, v, "test.mk"));
-  ASSERT_EQ(eval(v7, &v, "l = File.list('non existent directory')"), V7_OK);
-  ASSERT(v7_is_undefined(v));
+  ASSERT_EVAL_EQ(v7, "File.list('non existent directory')", "undefined");
+  ASSERT_EVAL_EQ(v7, "File.list('bad\\0file')", "undefined");
   ASSERT_EQ(eval(v7, &v, "l = File.list('.');"), V7_OK);
   ASSERT(v7_is_array(v7, v));
   ASSERT_EVAL_EQ(v7, "l.indexOf('unit_test.c') >= 0", "true");

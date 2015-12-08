@@ -6870,8 +6870,10 @@ static v7_val_t File_eval(struct v7 *v7) {
   v7_val_t res = v7_create_undefined();
 
   if (v7_is_string(arg0)) {
-    size_t n;
-    const char *s = v7_get_string_data(v7, &arg0, &n);
+    const char *s = v7_to_cstring(v7, &arg0);
+    if (s == NULL) {
+      return v7_throw(v7, "TypeError", "Invalid string");
+    }
     if (v7_exec_file(v7, s, &res) != V7_OK) {
       return v7_throw_value(v7, res);
     }
@@ -6954,12 +6956,17 @@ static v7_val_t File_open(struct v7 *v7) {
   FILE *fp = NULL;
 
   if (v7_is_string(arg0)) {
-    size_t n1, n2;
-    const char *s1 = v7_get_string_data(v7, &arg0, &n1);
+    const char *s1 = v7_to_cstring(v7, &arg0);
     const char *s2 = "rb"; /* Open files in read mode by default */
+
     if (v7_is_string(arg1)) {
-      s2 = v7_get_string_data(v7, &arg1, &n2);
+      s2 = v7_to_cstring(v7, &arg1);
     }
+
+    if (s1 == NULL || s2 == NULL) {
+      return v7_create_null();
+    }
+
     fp = fopen(s1, s2);
     if (fp != NULL) {
       v7_val_t obj = v7_create_object(v7);
@@ -6979,9 +6986,12 @@ static v7_val_t File_rename(struct v7 *v7) {
   int res = -1;
 
   if (v7_is_string(arg0) && v7_is_string(arg1)) {
-    size_t n1, n2;
-    const char *from = v7_get_string_data(v7, &arg0, &n1);
-    const char *to = v7_get_string_data(v7, &arg1, &n2);
+    const char *from = v7_to_cstring(v7, &arg0);
+    const char *to = v7_to_cstring(v7, &arg1);
+    if (from == NULL || to == NULL) {
+      return v7_create_number(ENOENT);
+    }
+
     res = rename(from, to);
   }
 
@@ -6991,8 +7001,9 @@ static v7_val_t File_rename(struct v7 *v7) {
 static v7_val_t File_loadJSON(struct v7 *v7) {
   v7_val_t arg0 = v7_arg(v7, 0), result = v7_create_undefined();
   if (v7_is_string(arg0)) {
-    size_t file_name_size;
-    const char *file_name = v7_get_string_data(v7, &arg0, &file_name_size);
+    const char *file_name = v7_to_cstring(v7, &arg0);
+    if (file_name == NULL) return result;
+
     if (v7_parse_json_file(v7, file_name, &result) != V7_OK) {
       result = v7_create_undefined();
     }
@@ -7004,8 +7015,10 @@ static v7_val_t File_remove(struct v7 *v7) {
   v7_val_t arg0 = v7_arg(v7, 0);
   int res = -1;
   if (v7_is_string(arg0)) {
-    size_t n;
-    const char *path = v7_get_string_data(v7, &arg0, &n);
+    const char *path = v7_to_cstring(v7, &arg0);
+    if (path == NULL) {
+      return v7_create_number(ENOENT);
+    }
     res = remove(path);
   }
   return v7_create_number(res == 0 ? 0 : errno);
@@ -7017,10 +7030,13 @@ static v7_val_t File_list(struct v7 *v7) {
   v7_val_t result = v7_create_undefined();
 
   if (v7_is_string(arg0)) {
-    size_t n;
-    const char *path = v7_get_string_data(v7, &arg0, &n);
+    const char *path = v7_to_cstring(v7, &arg0);
     struct dirent *dp;
     DIR *dirp;
+
+    if (path == NULL) {
+      return result;
+    }
 
     if ((dirp = (opendir(path))) != NULL) {
       result = v7_create_array(v7);
