@@ -1499,6 +1499,37 @@ size_t strnlen(const char *s, size_t maxlen);
 #endif
 #endif
 #ifdef V7_MODULE_LINES
+#line 1 "./src/../../common/cs_dirent.h"
+/**/
+#endif
+#ifndef DIRENT_H_INCLUDED
+#define DIRENT_H_INCLUDED
+
+#ifdef CS_ENABLE_SPIFFS
+
+#include <spiffs.h>
+
+typedef struct {
+  spiffs_DIR dh;
+  struct spiffs_dirent de;
+} DIR;
+
+#define d_name name
+#define dirent spiffs_dirent
+
+int rmdir(const char *path);
+int mkdir(const char *path, mode_t mode);
+
+#endif
+
+#if defined(_WIN32) || defined(CS_ENABLE_SPIFFS)
+DIR *opendir(const char *dir_name);
+int closedir(DIR *dir);
+struct dirent *readdir(DIR *dir);
+#endif
+
+#endif
+#ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/ubjson.h"
 /**/
 #endif
@@ -6358,7 +6389,7 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 1 "./src/../../common/dirent.c"
+#line 1 "./src/../../common/cs_dirent.c"
 /**/
 #endif
 /*
@@ -6369,6 +6400,7 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 #ifndef EXCLUDE_COMMON
 
 /* Amalgamated: #include "osdep.h" */
+/* Amalgamated: #include "cs_dirent.h" */
 
 /*
  * This file contains POSIX opendir/closedir/readdir API implementation
@@ -6449,6 +6481,48 @@ struct dirent *readdir(DIR *dir) {
   return result;
 }
 #endif
+
+#ifdef CS_ENABLE_SPIFFS
+
+DIR *opendir(const char *dir_name) {
+  DIR *dir = NULL;
+  extern spiffs fs;
+
+  if (dir_name != NULL && (dir = (DIR *) malloc(sizeof(*dir))) != NULL &&
+      SPIFFS_opendir(&fs, (char *) dir_name, &dir->dh) == NULL) {
+    free(dir);
+    dir = NULL;
+  }
+
+  return dir;
+}
+
+int closedir(DIR *dir) {
+  if (dir != NULL) {
+    SPIFFS_closedir(&dir->dh);
+    free(dir);
+  }
+  return 0;
+}
+
+struct dirent *readdir(DIR *dir) {
+  return SPIFFS_readdir(&dir->dh, &dir->de);
+}
+
+/* SPIFFs doesn't support directory operations */
+int rmdir(const char *path) {
+  (void) path;
+  return ENOTDIR;
+}
+
+int mkdir(const char *path, mode_t mode) {
+  (void) path;
+  (void) mode;
+  /* for spiffs supports only root dir, which comes from mongoose as '.' */
+  return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
+}
+
+#endif /* CS_ENABLE_SPIFFS */
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
@@ -6838,45 +6912,9 @@ void cr_context_free(struct cr_ctx *p_ctx) {
 /* Amalgamated: #include "mbuf.h" */
 /* Amalgamated: #include "cs_file.h" */
 /* Amalgamated: #include "v7_features.h" */
+/* Amalgamated: #include "dirent.h" */
 
 #if defined(V7_ENABLE_FILE) && !defined(V7_NO_FS)
-
-#ifdef V7_ENABLE_SPIFFS
-#include <spiffs.h>
-
-typedef struct {
-  spiffs_DIR dh;
-  struct spiffs_dirent de;
-} DIR;
-
-DIR *opendir(const char *dir_name) {
-  DIR *dir = NULL;
-  extern spiffs fs;
-
-  if (dir_name != NULL && (dir = (DIR *) malloc(sizeof(*dir))) != NULL &&
-      SPIFFS_opendir(&fs, (char *) dir_name, &dir->dh) == NULL) {
-    free(dir);
-    dir = NULL;
-  }
-
-  return dir;
-}
-
-int closedir(DIR *dir) {
-  if (dir != NULL) {
-    SPIFFS_closedir(&dir->dh);
-    free(dir);
-  }
-  return 0;
-}
-
-#define d_name name
-#define dirent spiffs_dirent
-
-struct dirent *readdir(DIR *dir) {
-  return SPIFFS_readdir(&dir->dh, &dir->de);
-}
-#endif /* V7_ENABLE_SPIFFS */
 
 static v7_val_t s_file_proto;
 static const char s_fd_prop[] = "__fd";
