@@ -11203,6 +11203,7 @@ enum v7_err v7_exec_file(struct v7 *v7, const char *path, val_t *res) {
 enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
   return exec_file(v7, path, res, 1);
 }
+#endif /* V7_NO_FS */
 
 V7_PRIVATE enum v7_err apply_private(struct v7 *v7, v7_val_t *volatile result,
                                      v7_val_t func, v7_val_t this_obj,
@@ -11242,8 +11243,6 @@ cleanup:
   return APPLY(v7, result, func, this_obj, args, 0);
 #endif
 }
-
-#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/gc.c"
 /**/
