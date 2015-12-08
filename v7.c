@@ -17184,8 +17184,8 @@ static enum local_block unwind_local_blocks_stack(
  */
 static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
   enum local_block found;
-  v7->is_breaking = 0;
   unsigned int mask;
+  v7->is_breaking = 0;
   if (v7->is_continuing) {
     mask = LOCAL_BLOCK_LOOP;
   } else {
@@ -17476,9 +17476,10 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
 V7_PRIVATE enum v7_err eval_try_pop(struct v7 *v7) {
   enum v7_err ret = V7_OK;
   val_t arr = v7_create_undefined();
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
-  tmp_stack_push(&tf, &arr);
   unsigned long length;
+  struct gc_tmp_frame tf = new_tmp_frame(v7);
+
+  tmp_stack_push(&tf, &arr);
 
   /* get "try stack" array, which must be defined and must not be emtpy */
   arr = v7_get(v7, v7->call_stack, "____t", 5);
@@ -17549,12 +17550,13 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
 
 restart:
   while (r.ops < r.end && ret == V7_OK) {
+    enum opcode op = (enum opcode) * r.ops;
+
     if (v7->need_gc) {
       maybe_gc(v7);
       v7->need_gc = 0;
     }
 
-    enum opcode op = (enum opcode) * r.ops;
     r.need_inc_ops = 1;
 #ifdef V7_BCODE_TRACE
     {
@@ -18968,8 +18970,9 @@ static enum v7_err compile_assign(struct v7 *v7, struct ast *a, ast_off_t *pos,
                                   enum ast_tag tag, struct bcode *bcode) {
   size_t lit;
   enum ast_tag ntag;
-  ntag = ast_fetch_tag(a, pos);
   enum v7_err ret = V7_OK;
+
+  ntag = ast_fetch_tag(a, pos);
 
   switch (ntag) {
     case AST_IDENT:
@@ -20127,9 +20130,10 @@ V7_PRIVATE enum v7_err compile_stmt(struct v7 *v7, struct ast *a,
        */
       if (tag == AST_VAR) {
         ast_off_t fvar_end;
+        size_t lit;
+
         *pos = lookahead;
         fvar_end = ast_get_skip(a, *pos, AST_END_SKIP);
-        size_t lit;
         ast_move_to_children(a, pos);
 
         /*
