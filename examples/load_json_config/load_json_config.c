@@ -21,7 +21,7 @@ int main(void) {
   /* Lookup values in JSON configuration object */
   domain = v7_get(v7, config, "domain", 6);
   port0 = v7_array_get(v7, v7_get(v7, config, "ports", 5), 0);
-  domain_str = v7_to_string(v7, &domain, &n);
+  domain_str = v7_get_string_data(v7, &domain, &n);
 
   printf("Domain: [%.*s], port 0: [%d]\n",
          (int) n, domain_str, (int) v7_to_number(port0));

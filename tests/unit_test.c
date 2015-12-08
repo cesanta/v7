@@ -153,7 +153,7 @@ static int check_bool(val_t v, int is_true) {
 
 static int check_str(struct v7 *v7, val_t v, const char *expected) {
   size_t n1, n2 = strlen(expected);
-  const char *actual = v7_to_string(v7, &v, &n1);
+  const char *actual = v7_get_string_data(v7, &v, &n1);
   int ret = (n1 == n2 && memcmp(actual, expected, n1) == 0);
   if (!ret) {
     _strfail(actual, expected, -1);
@@ -650,17 +650,31 @@ static const char *test_runtime(void) {
 
   v = v7_create_string(v7, "foo", 3, 1);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_STRING);
-  v7_to_string(v7, &v, &n);
+  v7_get_string_data(v7, &v, &n);
   ASSERT_EQ(n, 3);
   s = "\"foo\"";
   ASSERT(check_value(v7, v, s));
 
+  v = v7_create_string(v7, "foo", 3, 1);
+  s = v7_to_cstring(v7, &v);
+  ASSERT(strcmp("foo", s) == 0);
+
+  /* short strings are embedded even if unowned */
+  v = v7_create_string(v7, "foobarbaz", 8, 0);
+  s = v7_to_cstring(v7, &v);
+  /* null because at index 8 there is 'z' instead of a null */
+  ASSERT(s == NULL);
+
+  v = v7_create_string(v7, "foo\0bar", 7, 1);
+  s = v7_to_cstring(v7, &v);
+  ASSERT(s == NULL);
+
   for (i = 1; i < (int) sizeof(test_str); i++) {
     v = v7_create_string(v7, 0, i, 1);
-    s = v7_to_string(v7, &v, &n);
+    s = v7_get_string_data(v7, &v, &n);
     memcpy((char *) s, test_str, i);
     ASSERT_EQ(val_type(v7, v), V7_TYPE_STRING);
-    s = v7_to_string(v7, &v, &n);
+    s = v7_get_string_data(v7, &v, &n);
     ASSERT(n == (size_t) i);
     ASSERT(memcmp(s, test_str, n) == 0);
   }
@@ -740,7 +754,7 @@ static const char *test_runtime(void) {
 
   v = v7_create_string(v7, "fooakbar", 8, 1);
   for (i = 0; i < 100; i++) {
-    s = v7_to_string(v7, &v, &n);
+    s = v7_get_string_data(v7, &v, &n);
     v7_create_string(v7, s, 8, 1);
   }
 
@@ -2016,7 +2030,7 @@ static const char *test_json_parse(void) {
     size_t len;
 
     eval(v7, &res, "JSON.stringify('\"\\n\"')");
-    s = v7_to_string(v7, &res, &len);
+    s = v7_get_string_data(v7, &res, &len);
 
     c1 = "\"\\\"\\n\\\"\"";
     ASSERT_STREQ(s, c1);
@@ -2177,13 +2191,13 @@ static const char *test_gc_own(void) {
    * area and ASAN will complain.
    */
   v7_gc(v7, 1);
-  s = v7_to_string(v7, &v2, &len);
+  s = v7_get_string_data(v7, &v2, &len);
   ASSERT_STREQ(s, "barfoo");
 
   ASSERT_EQ(v7_disown(v7, &v2), 1);
 
   v7_gc(v7, 1);
-  s = v7_to_string(v7, &v1, &len);
+  s = v7_get_string_data(v7, &v1, &len);
   ASSERT_STREQ(s, "foobar");
 
   ASSERT_EQ(v7_disown(v7, &v2), 0);
@@ -2197,7 +2211,7 @@ static const char *test_gc_own(void) {
 static int check_file(struct v7 *v7, v7_val_t s, const char *file_name) {
   size_t n1, n2;
   char *s1 = read_file(file_name, &n1);
-  const char *s2 = v7_to_string(v7, &s, &n2);
+  const char *s2 = v7_get_string_data(v7, &s, &n2);
   int result = n1 == n2 && memcmp(s1, s2, n1) == 0;
   free(s1);
   if (result == 0) {
