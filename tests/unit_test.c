@@ -2450,6 +2450,14 @@ static const char *test_exec_bcode(void) {
       v7, "n=0; for(i in {a:1,b:2,c:3,d:4}) {n++; if(n<2) continue}", 3);
 #endif
 
+/*
+ * TODO(dfrank) uncomment it when we switch to bcode completely.
+ * Now we can't since `v7_get` throws via longjmp
+ */
+#if 0
+  ASSERT_BCODE_EVAL_ERR(v7, "var u=undefined; u.b", V7_EXEC_EXCEPTION);
+#endif
+
   /* clang-format off */
   ASSERT_BCODE_EVAL_NUM_EQ(v7, STRINGIFY(
                            3;

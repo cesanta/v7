@@ -17100,7 +17100,7 @@ static size_t bcode_get_varint(uint8_t **ops) {
   return ret;
 }
 
-#ifdef V7_BCODE_DUMP
+#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   uint8_t *p = *ops;
 
@@ -17140,7 +17140,9 @@ V7_PRIVATE void dump_op(FILE *f, struct bcode *bcode, uint8_t **ops) {
   fprintf(f, "\n");
   *ops = p;
 }
+#endif
 
+#ifdef V7_BCODE_DUMP
 V7_PRIVATE void dump_bcode(FILE *f, struct bcode *bcode) {
   uint8_t *p = (uint8_t *) bcode->ops.buf;
   uint8_t *end = p + bcode->ops.len;
@@ -18007,6 +18009,11 @@ restart:
         v2 = POP();
         v1 = POP();
         PUSH(v7_get_v(v7, v1, v2));
+        /* `v7_get_v` can throw: check it, and throw for real if needed */
+        if (v7_has_thrown(v7)) {
+          POP(); /* undo recent PUSH: not necessary, but let it be */
+          BTRY(bcode_perform_throw(v7, &r, 0 /*don't take value from stack*/));
+        }
         break;
       case OP_SET: {
         v3 = POP();
@@ -18760,6 +18767,10 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   } else {
     /* some exception happened. */
     r = v7->thrown_error;
+
+    /* clear thrown error from the v7 context */
+    v7->thrown_error = v7_create_undefined();
+    v7->is_thrown = 0;
 
     /*
      * After an exception, stack might have any arbitrary length, so, just
