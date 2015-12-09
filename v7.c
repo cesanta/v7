@@ -276,13 +276,24 @@ int v7_is_instanceof(struct v7 *, v7_val_t o, const char *c);
 /* Return true if the object is an instance of a given constructor */
 int v7_is_instanceof_v(struct v7 *, v7_val_t o, v7_val_t c);
 
-/* Return `void *` pointer stored in `v7_val_t` */
+/*
+ * Return `void *` pointer stored in `v7_val_t`.
+ *
+ * Returns NULL if the value is not a foreign pointer.
+ */
 void *v7_to_foreign(v7_val_t);
 
-/* Return boolean stored in `v7_val_t`: 0 for `false`, non-0 for `true` */
+/*
+ * Return boolean stored in `v7_val_t`:
+ *  0 for `false` or non-boolean, non-0 for `true`
+ */
 int v7_to_boolean(v7_val_t);
 
-/* Return `double` value stored in `v7_val_t` */
+/*
+ * Return `double` value stored in `v7_val_t`
+ *
+ * Returns NaN for non-numbers.
+ */
 double v7_to_number(v7_val_t);
 
 /* Return `v7_cfunction_t` callback pointer stored in `v7_val_t` */
@@ -294,7 +305,7 @@ v7_cfunction_t v7_to_cfunction(v7_val_t);
  * String length returned in `string_len`.
  *
  * JS strings can contain embedded NUL chars and might or not might be NUL
- *terminated.
+ * terminated.
  *
  * CAUTION: creating new JavaScript object, array, or string may kick in a
  * garbage collector, which in turn may relocate string data and invalidate
@@ -9542,6 +9553,9 @@ v7_val_t v7_create_cfunction(v7_cfunction_t f) {
 }
 
 void *v7_to_foreign(val_t v) {
+  if (!v7_is_foreign(v)) {
+    return NULL;
+  }
   return v7_to_pointer(v);
 }
 
@@ -9550,7 +9564,11 @@ v7_val_t v7_create_boolean(int v) {
 }
 
 int v7_to_boolean(val_t v) {
-  return v & 1;
+  if (v7_is_boolean(v)) {
+    return v & 1;
+  } else {
+    return 0;
+  }
 }
 
 v7_val_t v7_create_number(double v) {
@@ -9575,6 +9593,7 @@ double v7_to_number(val_t v) {
     val_t v;
   } u;
   u.v = v;
+  /* Due to NaN packing, any non-numeric value is already a valid NaN value */
   return u.d;
 }
 
@@ -11045,7 +11064,7 @@ static void object_destructor(struct v7 *v7, void *ptr) {
 
 #if V7_ENABLE__RegExp
   if (p != NULL && (p->value & V7_TAG_MASK) == V7_TAG_REGEXP) {
-    struct v7_regexp *rp = (struct v7_regexp *) v7_to_foreign(p->value);
+    struct v7_regexp *rp = (struct v7_regexp *) v7_to_pointer(p->value);
     v7_disown(v7, &rp->regexp_string);
     slre_free(rp->compiled_regexp);
     free(rp);
@@ -16885,6 +16904,7 @@ enum local_block {
   LOCAL_BLOCK_SWITCH = (1 << 3),
 };
 
+#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
 /* clang-format off */
 static const char *op_names[] = {
   "DROP",
@@ -16960,6 +16980,7 @@ static const char *op_names[] = {
 /* clang-format on */
 
 V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
+#endif
 
 V7_PRIVATE void stack_push(struct mbuf *s, val_t v) {
   mbuf_append(s, &v, sizeof(v));
