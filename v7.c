@@ -50,16 +50,17 @@
 
 #define V7_VERSION "1.0"
 
-#if (defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64__)) || \
-    (defined(_MSC_VER) && _MSC_VER <= 1200)
-#define V7_WINDOWS
-#endif
+#ifdef _MSC_VER
 
-#ifdef V7_WINDOWS
+#if _MSC_VER >= 1900
+#define timezone _timezone
+#define tzname _tzname
+#endif
 typedef unsigned __int64 uint64_t;
 #else
 #include <inttypes.h>
 #endif
+
 typedef uint64_t v7_val_t;
 
 #ifdef __cplusplus
@@ -403,7 +404,7 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  *
  * Result can be NULL if you don't care about the return value.
  */
-enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
+enum v7_err v7_apply(struct v7 *, v7_val_t * volatile result, v7_val_t func,
                      v7_val_t this_obj, v7_val_t args);
 
 /*
@@ -1188,6 +1189,7 @@ char *utfutf(char *s1, char *s2);
 #endif
 #include <windows.h>
 #include <process.h>
+#include <errno.h>
 #ifndef EINPROGRESS
 #define EINPROGRESS WSAEINPROGRESS
 #endif
@@ -1199,9 +1201,7 @@ char *utfutf(char *s1, char *s2);
 #define STR(x) STRX(x)
 #define __func__ __FILE__ ":" STR(__LINE__)
 #endif
-#define snprintf _snprintf
 #define fileno _fileno
-#define vsnprintf _vsnprintf
 #define sleep(x) Sleep((x) *1000)
 #define to64(x) _atoi64(x)
 #define popen(x, y) _popen((x), (y))
@@ -2679,17 +2679,33 @@ struct gc_arena {
 /* Public API. Implemented in api.c */
 /* Amalgamated: #include "../v7.h" */
 
-#ifdef V7_WINDOWS
+#ifdef _MSC_VER
+#if _MSC_VER < 1900
+#define tzset _tzset
 #define vsnprintf _vsnprintf
-#define snprintf _snprintf
 
-/* VS2015 Update 1 has ISO C99 `isnan` and `isinf` defined in math.h */
-#if _MSC_FULL_VER < 190023506
+/* Emulate snprintf() on MSVC<2015, _snprintf() doesn't zero-terminate the buffer
+ * on overflow..
+*/
+static int snprintf(char* buf, size_t len, const char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+
+  int n = _vscprintf(fmt, ap);
+  vsnprintf_s(buf, len, _TRUNCATE, fmt, ap);
+
+  va_end(ap);
+  return n;
+}
+#endif
+
+#if _MSC_VER < 1800  // VS2013 and above have ISO C99 `isnan` and `isinf` defined in math.h
+
 #define isnan(x) _isnan(x)
 #define isinf(x) (!_finite(x))
 #endif
 
-#define __unused __pragma(warning(suppress : 4100))
+#define __unused __pragma(warning(suppress: 4100))
 typedef __int64 int64_t;
 typedef int int32_t;
 typedef unsigned int uint32_t;
@@ -3984,7 +4000,7 @@ struct slre_loot {
 struct slre_prog;
 
 int slre_compile(const char *regexp, size_t regexp_len, const char *flags,
-                 size_t flags_len, struct slre_prog **, int is_regex);
+                 volatile size_t flags_len, struct slre_prog **, int is_regex);
 int slre_exec(struct slre_prog *prog, int flag_g, const char *start,
               const char *end, struct slre_loot *loot);
 void slre_free(struct slre_prog *prog);
@@ -10128,7 +10144,7 @@ void v7_print(struct v7 *v7, v7_val_t v) {
   v7_fprint(stdout, v7, v);
 }
 
-void v7_fprint(FILE *f, struct v7 *v7, val_t v) {
+void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v) {
   char buf[16];
   char *s = v7_stringify(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEBUG);
   fprintf(f, "%s", s);
@@ -10139,7 +10155,7 @@ void v7_println(struct v7 *v7, v7_val_t v) {
   v7_fprintln(stdout, v7, v);
 }
 
-void v7_fprintln(FILE *f, struct v7 *v7, val_t v) {
+void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v) {
   v7_fprint(f, v7, v);
   fprintf(f, ENDL);
 }
@@ -15033,7 +15049,7 @@ static double i_int_bin_op(struct v7 *v7, enum ast_tag tag, double a,
 }
 
 /* Visual studio 2012+ has signbit() */
-#if defined(V7_WINDOWS) && _MSC_VER < 1700
+#if defined(_MSC_VER) && _MSC_VER < 1700
 static int signbit(double x) {
   double s = _copysign(1, x);
   return s < 0;
@@ -24369,7 +24385,7 @@ static val_t m_two_arg(struct v7 *v7, double (*f)(double, double)) {
 
 /* Visual studio 2012+ has round() */
 #if V7_ENABLE__Math__round && \
-    ((defined(V7_WINDOWS) && _MSC_VER < 1700) || defined(__WATCOM__))
+    ((defined(_MSC_VER) && _MSC_VER < 1700) || defined(__WATCOM__))
 static double round(double n) {
   return n;
 }
@@ -25427,14 +25443,6 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 #ifndef _WIN32
 extern long timezone;
 #include <sys/time.h>
-#endif
-
-#if defined(_MSC_VER)
-#define timezone _timezone
-#define tzname _tzname
-#if _MSC_VER >= 1800
-#define tzset _tzset
-#endif
 #endif
 
 typedef double etime_t; /* double is suitable type for ECMA time */
