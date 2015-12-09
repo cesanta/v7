@@ -2344,6 +2344,8 @@ static const char *test_exec_bcode(void) {
   struct v7 *v7 = v7_create();
   const char *c;
 
+  v7_set(v7, v7_get_global(v7), "ES", ~0, 0, v7_create_string(v7, "", 0, 0));
+
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "0+1", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "2+3", 5);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1+2*3", 7);
@@ -2693,7 +2695,7 @@ static const char *test_exec_bcode(void) {
   /* TODO(dfrank): avoid depending on exact error message */
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = '';
+        var a = ES;
 
         var b = (function() {
           try {foo}
@@ -2719,7 +2721,7 @@ static const char *test_exec_bcode(void) {
 
         var a;
         try {
-          f1('', 10);
+          f1(ES, 10);
         } catch (e) {
           a = e;
         }
@@ -3135,8 +3137,8 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var s1 = '';
-        var s2 = '';
+        var s1 = ES;
+        var s2 = ES;
 
         var f=function(v){
           s1 += v;
@@ -3292,7 +3294,7 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = '';
+        var a = ES;
 
         function f1() {
           a += 'f1-';
@@ -3422,7 +3424,7 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x='';
+          x=ES;
           switch(1) {
             case 1:
               try {
@@ -3440,7 +3442,7 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x='';
+          x=ES;
           switch(1) {
             case 1:
               try {
@@ -3466,7 +3468,7 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x='';
+          x=ES;
           switch(1) {
             case 1:
               try {
@@ -3488,7 +3490,7 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x='';
+          x=ES;
           switch(1) {
             case 1:
               while(true) {
@@ -3505,7 +3507,7 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x='';
+          x=ES;
           for(i=0; i<2; i++) {
             switch(i) {
               case 0:
