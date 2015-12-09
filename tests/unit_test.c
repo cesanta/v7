@@ -2342,12 +2342,14 @@ static const char *test_ubjson(void) {
 
 static const char *test_exec_bcode(void) {
   struct v7 *v7 = v7_create();
+  const char *c;
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "0+1", 1);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "2+3", 5);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "1+2*3", 7);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "(1+2)*3", 9);
-  ASSERT_BCODE_EVAL_EQ(v7, "1+'2'", "\"12\"");
+  c = "\"12\"";
+  ASSERT_BCODE_EVAL_EQ(v7, "1+'2'", c);
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x=42", 42);
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "x", 42);
@@ -2638,9 +2640,9 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
         var a;
-        try       { a = "a-"; throw "test"; }
-        catch (e) { a = a + "b-"; }
-        finally   { a = a + "c-"; }
+        try       { a = 'a-'; throw 'test'; }
+        catch (e) { a = a + 'b-'; }
+        finally   { a = a + 'c-'; }
         a
         ), "a-b-c-"
       );
@@ -2648,7 +2650,7 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
         var a;
-        try       { a = "a-"; throw "test"; }
+        try       { a = 'a-'; throw 'test'; }
         catch (e) { a = a + e; }
         a
         ), "a-test"
@@ -2665,14 +2667,14 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
         var f1 = function(){
-          var a = "1-";
+          var a = '1-';
           try {
-            try { a += "2-" }
-            catch (e) { a += e + "-3-"; }
-            finally { a += "4-"; }
+            try { a += '2-' }
+            catch (e) { a += e + '-3-'; }
+            finally { a += '4-'; }
           }
-          catch (e) { a += e + "-5-"; }
-          finally { a += "6-"; }
+          catch (e) { a += e + '-5-'; }
+          finally { a += '6-'; }
 
           return a;
         };
@@ -2683,17 +2685,17 @@ static const char *test_exec_bcode(void) {
   /* TODO(dfrank): avoid depending on exact error message */
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = "";
+        var a = '';
 
         var b = (function() {
           try {foo}
-          catch(e) { a += "GOT:" + e + ";"; }
-          finally { a += "FINALLY;"; return 42 };
+          catch(e) { a += 'GOT:' + e + ';'; }
+          finally { a += 'FINALLY;'; return 42 };
           return 10;
         }
         )();
 
-        var c = a + "|" + b;
+        var c = a + '|' + b;
         c;
         ), "GOT:Error: [foo] is not defined;FINALLY;|42"
       );
@@ -2704,12 +2706,12 @@ static const char *test_exec_bcode(void) {
           if (val == 0) {
             throw acc;
           }
-          f1(acc + ".", val - 1);
+          f1(acc + '.', val - 1);
         };
 
         var a;
         try {
-          f1("", 10);
+          f1('', 10);
         } catch (e) {
           a = e;
         }
@@ -2722,28 +2724,28 @@ static const char *test_exec_bcode(void) {
    */
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = "1-";
+        var a = '1-';
 
         var f1 = function(){
-          var b = "1-";
+          var b = '1-';
           try {
-            try { a += "2-";
-                  b += "2-";
-                  return b + "_1"; }
-            catch (e) { a += e + "-3-";
-                        b += e + "-3-"; }
-            finally { a += "4-";
-                      b += "4-"; }
+            try { a += '2-';
+                  b += '2-';
+                  return b + '_1'; }
+            catch (e) { a += e + '-3-';
+                        b += e + '-3-'; }
+            finally { a += '4-';
+                      b += '4-'; }
           }
-          catch (e) { a += e + "-5-";
-                      b += e + "-5-"; }
-          finally { a += "6-";
-                    b += "6-"; }
+          catch (e) { a += e + '-5-';
+                      b += e + '-5-'; }
+          finally { a += '6-';
+                    b += '6-'; }
 
-          return b + "_2";
+          return b + '_2';
         };
 
-        var c = f1() + "|" + a;
+        var c = f1() + '|' + a;
         c;
         ), "1-2-_1|1-2-4-6-"
       );
@@ -2754,29 +2756,29 @@ static const char *test_exec_bcode(void) {
    */
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = "1-";
+        var a = '1-';
 
         var f1 = function(){
-          var b = "1-";
+          var b = '1-';
           try {
-            try { a += "2-";
-                  b += "2-";
-                  return b + "_1"; }
-            catch (e) { a += e + "-3-";
-                        b += e + "-3-"; }
-            finally { a += "4-";
-                      b += "4-";
-                      return b + "_2"; }
+            try { a += '2-';
+                  b += '2-';
+                  return b + '_1'; }
+            catch (e) { a += e + '-3-';
+                        b += e + '-3-'; }
+            finally { a += '4-';
+                      b += '4-';
+                      return b + '_2'; }
           }
-          catch (e) { a += e + "-5-";
-                      b += e + "-5-"; }
-          finally { a += "6-";
-                    b += "6-"; }
+          catch (e) { a += e + '-5-';
+                      b += e + '-5-'; }
+          finally { a += '6-';
+                    b += '6-'; }
 
-          return b + "_3";
+          return b + '_3';
         };
 
-        var c = f1() + "|" + a;
+        var c = f1() + '|' + a;
         c;
         ), "1-2-4-_2|1-2-4-6-"
       );
@@ -2787,30 +2789,30 @@ static const char *test_exec_bcode(void) {
    */
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = "1-";
+        var a = '1-';
 
         var f1 = function(){
-          var b = "1-";
+          var b = '1-';
           try {
-            try { a += "2-";
-                  b += "2-";
-                  return b + "_1"; }
-            catch (e) { a += e + "-3-";
-                        b += e + "-3-"; }
-            finally { a += "4-";
-                      b += "4-";
-                      return b + "_2"; }
+            try { a += '2-';
+                  b += '2-';
+                  return b + '_1'; }
+            catch (e) { a += e + '-3-';
+                        b += e + '-3-'; }
+            finally { a += '4-';
+                      b += '4-';
+                      return b + '_2'; }
           }
-          catch (e) { a += e + "-5-";
-                      b += e + "-5-"; }
-          finally { a += "6-";
-                    b += "6-";
-                    return b + "_3"; }
+          catch (e) { a += e + '-5-';
+                      b += e + '-5-'; }
+          finally { a += '6-';
+                    b += '6-';
+                    return b + '_3'; }
 
-          return b + "_4";
+          return b + '_4';
         };
 
-        var c = f1() + "|" + a;
+        var c = f1() + '|' + a;
         c;
         ), "1-2-4-6-_3|1-2-4-6-"
       );
@@ -2821,48 +2823,48 @@ static const char *test_exec_bcode(void) {
    */
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = "1-";
+        var a = '1-';
 
         var f1 = function(){
-          var b = "1-";
+          var b = '1-';
           try {
-            try { a += "2-";
-                  b += "2-";
-                  return b + "_1"; }
-            catch (e) { a += e + "-3-";
-                        b += e + "-3-"; }
-            finally { a += "4-";
-                      b += "4-";
-                      return b + f2() + "_2"; }
+            try { a += '2-';
+                  b += '2-';
+                  return b + '_1'; }
+            catch (e) { a += e + '-3-';
+                        b += e + '-3-'; }
+            finally { a += '4-';
+                      b += '4-';
+                      return b + f2() + '_2'; }
           }
-          catch (e) { a += e + "-5-";
-                      b += e + "-5-"; }
-          finally { a += "6-";
-                    b += "6-"; }
+          catch (e) { a += e + '-5-';
+                      b += e + '-5-'; }
+          finally { a += '6-';
+                    b += '6-'; }
 
-          return b + "_4";
+          return b + '_4';
         };
 
         var f2 = function(){
-          var b = "a-";
+          var b = 'a-';
           try {
-            try { a += "b-";
-                  b += "b-";
-                  return b + "_1"; }
-            catch (e) { a += e + "-c-";
-                        b += e + "-c-"; }
-            finally { a += "d-";
-                      b += "d-";
-                      return b + "_2"; }
+            try { a += 'b-';
+                  b += 'b-';
+                  return b + '_1'; }
+            catch (e) { a += e + '-c-';
+                        b += e + '-c-'; }
+            finally { a += 'd-';
+                      b += 'd-';
+                      return b + '_2'; }
           }
-          catch (e) { a += e + "-e-";
-                      b += e + "-e-"; }
-          finally { a += "f-";
-                    b += "f-";
-                    return b + "_3"; }
+          catch (e) { a += e + '-e-';
+                      b += e + '-e-'; }
+          finally { a += 'f-';
+                    b += 'f-';
+                    return b + '_3'; }
         };
 
-        var c = f1() + "|" + a;
+        var c = f1() + '|' + a;
         c;
         ), "1-2-4-a-b-d-f-_3_2|1-2-4-b-d-f-6-"
       );
@@ -2874,16 +2876,16 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
         var f1 = function(){
-          var b = "1-";
+          var b = '1-';
           try {
-            b += "2-";
-            try       { b += "3-"; return b + "-ret1"; }
-            catch (e) { b += "4-"; }
-            finally   { b += "5-"; throw "test"; }
+            b += '2-';
+            try       { b += '3-'; return b + '-ret1'; }
+            catch (e) { b += '4-'; }
+            finally   { b += '5-'; throw 'test'; }
           }
-          catch (e) { b += e + "-"; }
-          finally { b += "6-"; }
-          return b + "-ret2";
+          catch (e) { b += e + '-'; }
+          finally { b += '6-'; }
+          return b + '-ret2';
         };
 
         var c = f1();
@@ -2897,15 +2899,15 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
         var f1 = function(){
-          var b = "1-";
+          var b = '1-';
           try {
-            b += "2-";
-            try       { b += "3-"; throw "test"; }
-            finally   { b += "5-"; return b + "-ret1"; }
+            b += '2-';
+            try       { b += '3-'; throw 'test'; }
+            finally   { b += '5-'; return b + '-ret1'; }
           }
-          catch (e) { b += e + "-"; }
-          finally { b += "6-"; }
-          return b + "-ret2";
+          catch (e) { b += e + '-'; }
+          finally { b += '6-'; }
+          return b + '-ret2';
         };
 
         var c = f1();
@@ -2915,48 +2917,48 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = "1-";
+        var a = '1-';
 
         var f1 = function(){
-          var b = "1-";
+          var b = '1-';
           try {
-            try { a += "2-";
-                  b += "2-";
-                  return b + "_1"; }
-            catch (e) { a += e + "-3-";
-                        b += e + "-3-"; }
-            finally { a += "4-";
-                      b += "4-";
-                      return b + f2() + "_2"; }
+            try { a += '2-';
+                  b += '2-';
+                  return b + '_1'; }
+            catch (e) { a += e + '-3-';
+                        b += e + '-3-'; }
+            finally { a += '4-';
+                      b += '4-';
+                      return b + f2() + '_2'; }
           }
-          catch (e) { a += e + "-5-";
-                      b += e + "-5-"; }
-          finally { a += "6-";
-                    b += "6-"; }
+          catch (e) { a += e + '-5-';
+                      b += e + '-5-'; }
+          finally { a += '6-';
+                    b += '6-'; }
 
-          return b + "_4";
+          return b + '_4';
         };
 
         var f2 = function(){
-          var b = "a-";
+          var b = 'a-';
           try {
-            try { a += "b-";
-                  b += "b-";
-                  return b + "_1"; }
-            catch (e) { a += e + "-c-";
-                        b += e + "-c-"; }
-            finally { a += "d-";
-                      b += "d-";
-                      throw "-test-"; }
+            try { a += 'b-';
+                  b += 'b-';
+                  return b + '_1'; }
+            catch (e) { a += e + '-c-';
+                        b += e + '-c-'; }
+            finally { a += 'd-';
+                      b += 'd-';
+                      throw '-test-'; }
           }
-          catch (e) { a += e + "-e-";
-                      b += e + "-e-"; }
-          finally { a += "f-";
-                    b += "f-";
-                    return b + "_3"; }
+          catch (e) { a += e + '-e-';
+                      b += e + '-e-'; }
+          finally { a += 'f-';
+                    b += 'f-';
+                    return b + '_3'; }
         };
 
-        var c = f1() + "|" + a;
+        var c = f1() + '|' + a;
         c;
         ), "1-2-4-a-b-d--test--e-f-_3_2|1-2-4-b-d--test--e-f-6-"
       );
@@ -3125,28 +3127,28 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var s1 = "";
-        var s2 = "";
+        var s1 = '';
+        var s2 = '';
 
         var f=function(v){
           s1 += v;
           return v;
         };
 
-        switch (f("2")){
-          case f("0"):
-            s2 += "0";
-          case f("1"):
-            s2 += "1";
-          case f("2"):
-            s2 += "2";
-          case f("3"):
-            s2 += "3";
-          case f("4"):
-            s2 += "4";
+        switch (f('2')){
+          case f('0'):
+            s2 += '0';
+          case f('1'):
+            s2 += '1';
+          case f('2'):
+            s2 += '2';
+          case f('3'):
+            s2 += '3';
+          case f('4'):
+            s2 += '4';
         }
 
-        var res = s1 + ":" + s2;
+        var res = s1 + ':' + s2;
         res;
         ), "2012:234"
       );
@@ -3282,25 +3284,25 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-        var a = "";
+        var a = '';
 
         function f1() {
-          a += "f1-";
+          a += 'f1-';
           return {f2: f2};
         }
 
         function f2() {
-          a += "f2-";
+          a += 'f2-';
           return 2;
         }
 
         function f3() {
-          a += "f3-";
+          a += 'f3-';
           return 3;
         }
 
         function f4() {
-          a += "f4-";
+          a += 'f4-';
           return 4;
         }
 
@@ -3412,17 +3414,17 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x="";
+          x='';
           switch(1) {
             case 1:
               try {
-                x+="1-";
+                x+='1-';
                 break;
               } finally {
-                x+="f-";
+                x+='f-';
               }
             case 2:
-              x+="2-";
+              x+='2-';
           }
           x
         ), "1-f-"
@@ -3430,25 +3432,25 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x="";
+          x='';
           switch(1) {
             case 1:
               try {
-                x+="1-";
+                x+='1-';
                 switch(20) {
                   case 10:
-                    x+="10-";
+                    x+='10-';
                     break;
                   case 20:
-                    x+="20-";
+                    x+='20-';
                     break;
                 }
                 break;
               } finally {
-                x+="f-";
+                x+='f-';
               }
             case 2:
-              x+="2-";
+              x+='2-';
           }
           x
         ), "1-20-f-"
@@ -3456,21 +3458,21 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x="";
+          x='';
           switch(1) {
             case 1:
               try {
                 try {
-                  x+="1-";
+                  x+='1-';
                   break;
                 } finally {
-                  x+="f1-";
+                  x+='f1-';
                 }
               } finally {
-                x+="f2-";
+                x+='f2-';
               }
             case 2:
-              x+="2-";
+              x+='2-';
           }
           x
         ), "1-f1-f2-"
@@ -3478,16 +3480,16 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x="";
+          x='';
           switch(1) {
             case 1:
               while(true) {
-                x+="1-";
+                x+='1-';
                 break;
               }
               /* fallthrough */
             case 2:
-              x+="2-";
+              x+='2-';
           }
           x
         ), "1-2-"
@@ -3495,16 +3497,16 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_STR_EQ(
       v7, STRINGIFY(
-          x="";
+          x='';
           for(i=0; i<2; i++) {
             switch(i) {
               case 0:
-                x+="0-";
+                x+='0-';
                 continue;
               case 1:
-                x+="1-";
+                x+='1-';
             }
-            x+="f-";
+            x+='f-';
           }
           x
         ), "0-1-f-"
@@ -3573,11 +3575,11 @@ static const char *test_exec_bcode(void) {
   ASSERT_BCODE_EVAL_JS_EXPR_EQ(
       v7, STRINGIFY(
         function A(){
-          this.p = "1";
+          this.p = '1';
         }
-        A.prototype.test = "2";
+        A.prototype.test = '2';
         var a = new A();
-        a.p + "-" + a.test;
+        a.p + '-' + a.test;
         ),
         "'1-2'"
       );
