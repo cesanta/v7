@@ -16984,6 +16984,14 @@ static int del_property_deep(struct v7 *v7, val_t obj, const char *name,
   return -1;
 }
 
+/* Visual studio 2012+ has signbit() */
+#if defined(_MSC_VER) && _MSC_VER < 1700
+static int signbit(double x) {
+  double s = _copysign(1, x);
+  return s < 0;
+}
+#endif
+
 static double b_int_bin_op(enum opcode op, double a, double b) {
   int32_t ia = isnan(a) || isinf(a) ? 0 : (int32_t)(int64_t) a;
   int32_t ib = isnan(b) || isinf(b) ? 0 : (int32_t)(int64_t) b;
