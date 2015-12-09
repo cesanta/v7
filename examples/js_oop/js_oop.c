@@ -28,7 +28,7 @@ int main(void) {
   v7_val_t ctor_func, proto, eval_result;
 
   proto = v7_create_object(v7);
-  ctor_func = v7_create_constructor(v7, proto, MyThing_ctor, 1);
+  ctor_func = v7_create_constructor_nargs(v7, proto, MyThing_ctor, 1);
   v7_set(v7, ctor_func, "MY_CONST", ~0,
          V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
          v7_create_number(123));
