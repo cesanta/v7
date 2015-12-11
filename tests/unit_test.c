@@ -55,7 +55,7 @@
 
 extern long timezone;
 
-#include "test_util.h"
+#include "../../common/test_util.h"
 
 #ifdef _WIN32
 #define isnan(x) _isnan(x)
