@@ -1124,10 +1124,10 @@ static const char *test_parser(void) {
 
     if (want_ast_len == 0) {
       printf("Test case not found in %s:\n", want_ast_db);
-      v7_compile(cases[i], 0, stdout);
+      v7_compile(cases[i], 0, 0, stdout);
       abort();
     }
-    v7_compile(cases[i], 0, fp);
+    v7_compile(cases[i], 0, 0, fp);
     fclose(fp);
 
     ASSERT((fp = fopen("/tmp/got_ast", "r")) != NULL);
