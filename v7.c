@@ -2655,6 +2655,10 @@ extern "C" {
 #endif /* __cplusplus */
 
 /*
+ * ==== Instructions
+ *
+ * Bytecode instructions consist of 1-byte opcode, optionally followed by N
+ * bytes of arguments.
  *
  * Stack diagrams follow the syntax and semantics of:
  *
@@ -2668,12 +2672,49 @@ extern "C" {
  *
  */
 enum opcode {
-  OP_DROP,    /* `( a -- )` */
-  OP_DUP,     /* `( a -- a a )` */
-  OP_2DUP,    /* `( a b -- a b a b )` */
-  OP_SWAP,    /* `( a b -- b a )` */
-  OP_STASH,   /* `( a S: b -- a S: a)` saves TOS to stash reg */
-  OP_UNSTASH, /* `( a S: b -- b S: nil )` replaces tos with stash reg */
+  /*
+   * Removes an item from the top of the stack. It is undefined what happens if
+   * the stack is empty.
+   *
+   * `( a -- )`
+  */
+  OP_DROP,
+  /*
+   * Duplicates a value on top of the stack.
+   *
+   * `( a -- a a)`
+  */
+  OP_DUP,
+  /*
+   * Duplicates 2 values from the top of the stack in the same order.
+   *
+   * `( a b -- a b a b)`
+  */
+  OP_2DUP,
+  /*
+   * Swap the top two items on the stack.
+   *
+   * `( a b -- b a )`
+   */
+  OP_SWAP,
+  /*
+   * Copy current top of the stack to the temporary stash register.
+   *
+   * The content of the stash register will be cleared in the event of an
+   * exception.
+   *
+   * `( a S: b -- a S: a)` saves TOS to stash reg
+   */
+  OP_STASH,
+  /*
+   * Replace the top of the stack with the content of the temporary stash
+   * register.
+   *
+   * The stash register is cleared afterwards.
+   *
+   * `( a S: b -- b S: nil )` replaces tos with stash reg
+   */
+  OP_UNSTASH,
 
   /*
    * Effectively drops the last-but-one element from stack
@@ -2682,59 +2723,192 @@ enum opcode {
    */
   OP_SWAP_DROP,
 
+  /*
+   * Pushes `undefined` onto the stack.
+   *
+   * `( -- undefined )`
+   */
   OP_PUSH_UNDEFINED,
+  /*
+   * Pushes `null` onto the stack.
+   *
+   * `( -- null )`
+   */
   OP_PUSH_NULL,
+  /*
+   * Pushes current value of `this` onto the stack.
+   *
+   * `( -- this )`
+   */
   OP_PUSH_THIS,
+  /*
+   * Pushes `true` onto the stack.
+   *
+   * `( -- true )`
+   */
   OP_PUSH_TRUE,
+  /*
+   * Pushes `false` onto the stack.
+   *
+   * `( -- false )`
+   */
   OP_PUSH_FALSE,
+  /*
+   * Pushes `0` onto the stack.
+   *
+   * `( -- 0 )`
+   */
   OP_PUSH_ZERO,
+  /*
+   * Pushes `1` onto the stack.
+   *
+   * `( -- 1 )`
+   */
   OP_PUSH_ONE,
-  OP_PUSH_LIT, /* 1 byte operand */
+
+  /*
+   * Pushes a value from literals table onto the stack.
+   *
+   * The opcode takes a varint operand interpreted as an index in the current
+   * literal table.
+   *
+   * ( -- a )
+   */
+  OP_PUSH_LIT,
 
   OP_NOT,
   OP_LOGICAL_NOT,
 
+  /*
+   * Takes a number from the top of the stack, inverts the sign and pushes it
+   * back.
+   *
+   * `( a -- -a )`
+   */
   OP_NEG,
+  /*
+   * Takes a number from the top of the stack pushes the evaluation of
+   * `Number()`.
+   *
+   * `( a -- Number(a) )`
+   */
   OP_POS,
 
+  /*
+   * Takes 2 values from the top of the stack and performs addition operation:
+   * If any of the two values is not `undefined`, number or boolean, both values
+   * are converted into strings and concatenated.
+   * Otherwise, both values are treated as numbers:
+   * * `undefined` is converted into NaN
+   * * `true` is converted into 1
+   * * `false` is converted into 0
+   *
+   * Result is pushed back onto the stack.
+   *
+   * TODO: make it behave exactly like JavaScript's `+` operator.
+   *
+   * `( a b -- a+b )`
+   */
   OP_ADD,
-  OP_SUB,
-  OP_REM,
-  OP_MUL,
-  OP_DIV,
-  OP_LSHIFT,
-  OP_RSHIFT,
-  OP_URSHIFT,
-  OP_OR,
-  OP_XOR,
-  OP_AND,
+  OP_SUB,     /* ( a b -- a-b ) */
+  OP_REM,     /* ( a b -- a%b ) */
+  OP_MUL,     /* ( a b -- a*b ) */
+  OP_DIV,     /* ( a b -- a/b ) */
+  OP_LSHIFT,  /* ( a b -- a<<b ) */
+  OP_RSHIFT,  /* ( a b -- a>>b ) */
+  OP_URSHIFT, /* ( a b -- a>>>b ) */
+  OP_OR,      /* ( a b -- a|b ) */
+  OP_XOR,     /* ( a b -- a^b ) */
+  OP_AND,     /* ( a b -- a&b ) */
 
+  /*
+   * Takes two numbers form the top of the stack and pushes `true` if they are
+   * equal, or `false` if they are not equal.
+   *
+   * ( a b -- a===b )
+   */
   OP_EQ_EQ,
-  OP_EQ,
-  OP_NE,
-  OP_NE_NE,
-  OP_LT,
-  OP_LE,
-  OP_GT,
-  OP_GE,
+  OP_EQ,    /* ( a b -- a==b ) */
+  OP_NE,    /* ( a b -- a!=b ) */
+  OP_NE_NE, /* ( a b -- a!==b ) */
+  OP_LT,    /* ( a b -- a<b ) */
+  OP_LE,    /* ( a b -- a<=b ) */
+  OP_GT,    /* ( a b -- a>b ) */
+  OP_GE,    /* ( a b -- a>=b ) */
   OP_INSTANCEOF,
 
   OP_TYPEOF,
 
   OP_IN,
+  /*
+   * Takes 2 values from the stack, treats the top of the stack as property name
+   * and the next value must be an object, an array or a string.
+   * If it's an object, pushes the value of its named property onto the stack.
+   * If it's an array or a string, returns a value at a given position.
+  */
   OP_GET,
+  /*
+   * Takes 3 items from the stack: value, property name, object. Sets the given
+   * property of a given object to a given value, pushes value back onto the
+   *stack.
+   *
+   * `( a b c -- a[b]=c )`
+  */
   OP_SET,
+  /*
+   * Takes 1 value from the stack and a varint argument -- index of the var name
+   * in the literals table. Tries to find the variable in the current scope
+   * chain and assign the value to it. If the varialble is not found -- creates
+   * a new one in the global scope. Pushes the value back to the stack.
+   *
+   * `( a -- a )`
+   */
   OP_SET_VAR,
-  OP_GET_VAR, /* takes index of var name */
+  /*
+   * Takes a varint argument -- index of the var name in the literals table.
+   * Looks up that variable in the scope chain and pushes its value onto the
+   * stack.
+   *
+   * `( -- a )`
+   */
+  OP_GET_VAR,
 
   /*
    * Like OP_GET_VAR but returns undefined
    * instead of throwing reference error.
+   *
+   * `( -- a )`
    */
   OP_SAFE_GET_VAR,
 
+  /*
+   * ==== Jumps
+   *
+   * All jump instructions take one 4-byte argument: offset to jump to. Offset
+   *is a
+   * index of the byte in the instruction stream, starting with 0. No byte order
+   * conversion is applied.
+   *
+   * TODO: specify byte order for the offset.
+   */
+
+  /*
+   * Unconditiona jump.
+   */
   OP_JMP,
+  /*
+   * Takes one value from the stack and performs a jump if conversion of that
+   * value to boolean results in `true`.
+   *
+   * `( a -- )`
+  */
   OP_JMP_TRUE,
+  /*
+   * Takes one value from the stack and performs a jump if conversion of that
+   * value to boolean results in `false`.
+   *
+   * `( a -- )`
+   */
   OP_JMP_FALSE,
   /*
    * Like OP_JMP_TRUE but if the branch
@@ -2753,8 +2927,18 @@ enum opcode {
    */
   OP_JMP_IF_CONTINUE,
 
-  OP_CREATE_OBJ, /* creates an empty object */
-  OP_CREATE_ARR, /* creates an empty array */
+  /*
+   * Constructs a new empty object and pushes it onto the stack.
+   *
+   * `( -- {} )`
+   */
+  OP_CREATE_OBJ,
+  /*
+   * Constructs a new empty array and pushes it onto the stack.
+   *
+   * `( -- [] )`
+   */
+  OP_CREATE_ARR,
 
   /*
    * Yields the next property name.
@@ -2780,8 +2964,25 @@ enum opcode {
    * `( a -- a )`
    */
   OP_FUNC_LIT,
-  OP_CALL, /* takes number of args */
-  OP_NEW,  /* takes number of args */
+  /*
+   * Takes the number of arguments as parameter.
+   *
+   * Pops N function arguments from stack, then pops function, then pops `this`.
+   * Calls a function and populates TOS with the returned value.
+   *
+   * `( this f a0 a1 ... aN -- f(a0,a1,...) )`
+   */
+  OP_CALL,
+  OP_NEW,
+  /*
+   * Returns the current function.
+   *
+   * It has no stack side effects. The function upon return will leave the
+   * return value on the stack. The return value must be pushed on the stack
+   * prior to invoking a RET.
+   *
+   * `( -- )`
+   */
   OP_RET,
 
   /*
