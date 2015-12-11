@@ -3745,6 +3745,9 @@ static const char *test_exec_bcode(void) {
 
   /* clang-format on */
 
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "(function() {var x = 42; return eval('x')})()",
+                           42);
+
   v7_destroy(v7);
   return NULL;
 }
