@@ -3254,6 +3254,82 @@ static const char *test_exec_bcode(void) {
 
   /* }}} */
 
+  /*
+   * We have to run these tests only if `V7_USE_BCODE` is defined, since
+   * otherwise `eval` stuff is handled by the interpreter, and it doesn't
+   * work correctly
+   */
+#if defined(V7_USE_BCODE)
+  /* eval {{{ */
+
+  {
+    const char *src;
+
+    src = STRINGIFY(
+        var x="1-";
+        (function() {var x = "2-"; eval("var x='3-';"); return x})() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "3-1-");
+
+    src = STRINGIFY(
+        "use strict";
+        var x="1-";
+        (function() {var x = "2-"; eval("var x='3-';"); return x})() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "2-1-");
+
+    src = STRINGIFY(
+        var x="1-";
+        (function() {
+         "use strict";
+         var x = "2-"; eval("var x='3-';"); return x
+        })() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "2-1-");
+
+    src = STRINGIFY(
+        var x="1-";
+        (function() {
+         var x = "2-"; eval("'use strict'; var x='3-';"); return x
+         })() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "2-1-");
+
+    src = STRINGIFY(
+        var x="1-";
+        (function() {var x = "2-"; eval("x='3-';"); return x})() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "3-1-");
+
+    src = STRINGIFY(
+        "use strict";
+        var x="1-";
+        (function() {var x = "2-"; eval("x='3-';"); return x})() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "3-1-");
+
+    src = STRINGIFY(
+        var x="1-";
+        (function() {
+         "use strict";
+         var x = "2-"; eval("x='3-';"); return x
+         })() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "3-1-");
+
+    src = STRINGIFY(
+        var x="1-";
+        (function() {
+         var x = "2-"; eval("'use strict'; x='3-';"); return x
+         })() + x;
+        );
+    ASSERT_BCODE_EVAL_STR_EQ(v7, src, "3-1-");
+
+  }
+
+  /* }}} */
+#endif
+
   /* `this` {{{ */
 
   v7_del_property(v7, v7->global_object, "a", 1);

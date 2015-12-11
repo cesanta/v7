@@ -9939,12 +9939,17 @@ static void bcode_adjust_retval(struct v7 *v7, uint8_t is_explicit_return) {
   }
 }
 
-static void bcode_restore_registers(struct bcode *bcode,
+static void bcode_restore_registers(struct v7 *v7, struct bcode *bcode,
                                     struct bcode_registers *r) {
   r->bcode = bcode;
   r->ops = (uint8_t *) bcode->ops.buf;
   r->end = r->ops + bcode->ops.len;
   r->lit = (val_t *) bcode->lit.buf;
+
+  /*
+   * TODO(dfrank): modifying `v7->bcode` from this function looks like a hack
+   */
+  v7->bcode = bcode;
 }
 
 /*
@@ -9988,7 +9993,7 @@ static enum v7_err bcode_perform_call(struct v7 *v7, struct bcode *bcode,
 
   v7_to_object(frame)->prototype = func->scope;
   v7->call_stack = frame;
-  bcode_restore_registers(func->bcode, r);
+  bcode_restore_registers(v7, func->bcode, r);
 
   /* `ops` already points to the needed instruction, no need to increment it */
   r->need_inc_ops = 0;
@@ -10003,7 +10008,7 @@ static void unwind_stack_1level(struct v7 *v7, struct bcode_registers *r) {
 
   struct bcode *bcode =
       (struct bcode *) v7_to_foreign(v7_get(v7, v7->call_stack, "___rb", 5));
-  bcode_restore_registers(bcode, r);
+  bcode_restore_registers(v7, bcode, r);
 
   r->ops = (uint8_t *) v7_to_foreign(v7_get(v7, v7->call_stack, "___ro", 5));
   /* adjust data stack length (restore saved) */
@@ -10285,6 +10290,33 @@ static enum v7_err bcode_throw_reference_error(struct v7 *v7,
 }
 
 /*
+ * Creates new "private" scope. Used when evaluating sub-scripts in strict
+ * mode: all `var`s created in inner script will not be visible from the
+ * outer script.
+ */
+static enum v7_err bcode_private_scope_push(struct v7 *v7) {
+  val_t frame = v7_create_object(v7);
+  v7_to_object(frame)->prototype = v7_to_object(v7->call_stack);
+  v7->call_stack = frame;
+  return V7_OK;
+}
+
+/*
+ * Destroys top "private" scope. See `bcode_private_scope_push()`
+ */
+static enum v7_err bcode_private_scope_pop(struct v7 *v7) {
+  val_t prototype = v_get_prototype(v7, v7->call_stack);
+  /*
+   * TODO(dfrank): throw instead of assert
+   */
+  assert(v7_is_object(prototype));
+
+  v7->call_stack = prototype;
+
+  return V7_OK;
+}
+
+/*
  * Copy a function literal prototype and binds it to the current scope.
  *
  * Assumes `func` is owned by the caller.
@@ -10466,7 +10498,7 @@ V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode) {
         v4 = v7_create_undefined(), frame = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
 
-  bcode_restore_registers(bcode, &r);
+  bcode_restore_registers(v7, bcode, &r);
 
   tmp_stack_push(&tf, &res);
   tmp_stack_push(&tf, &v1);
@@ -11384,7 +11416,11 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   /* init new bcode */
   v7->bcode = (struct bcode *) calloc(1, sizeof(*v7->bcode));
 #ifndef V7_FORCE_STRICT_MODE
-  bcode_init(v7->bcode, 0);
+  /*
+   * TODO(dfrank): add an option, like, whether we should inherit strict_mode:
+   * we hardly want to inherit it for, say, `File.eval()`
+   */
+  bcode_init(v7->bcode, (saved_bcode != NULL ? saved_bcode->strict_mode : 0));
 #else
   bcode_init(v7->bcode, 1);
 #endif
@@ -11523,19 +11559,38 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   /* We now have bcode to evaluate; proceed to it */
 
   /*
-   * Set current call stack as the "bottom" call stack, so that bcode evaluator
-   * will exit when it reaches this "bottom"
-   */
-  v7->bottom_call_stack = v7->call_stack;
-
-  /*
    * Exceptions in "nested" script should not percolate into the "outer"
    * script, so, reset the try stack (it will be restored later)
    */
   v7_set(v7, v7->call_stack, "____t", 5, V7_PROPERTY_HIDDEN,
          v7_create_dense_array(v7));
 
+  /*
+   * In strict mode, `eval`'d code should run in its own private frame, so
+   * that `var`s will be private to `eval`.
+   */
+  if (v7->bcode->strict_mode) {
+    bcode_private_scope_push(v7);
+  }
+
+  /*
+   * Set current call stack as the "bottom" call stack, so that bcode evaluator
+   * will exit when it reaches this "bottom"
+   */
+  v7->bottom_call_stack = v7->call_stack;
+
+  /* Evaluate bcode */
   err = eval_bcode(v7, v7->bcode);
+
+  assert(v7->bottom_call_stack == v7->call_stack);
+
+  /*
+   * Pop private frame if we pushed it
+   */
+  if (v7->bcode->strict_mode) {
+    bcode_private_scope_pop(v7);
+  }
+
   if (err == V7_OK) {
     /*
      * bcode evaluated successfully. Make sure try stack is empty.
