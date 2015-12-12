@@ -55,7 +55,7 @@
 
 extern long timezone;
 
-#include "../../common/test_util.h"
+#include "common/test_util.h"
 
 #ifdef _WIN32
 #define isnan(x) _isnan(x)
@@ -372,7 +372,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_OK(v7, "new Number(21.23)");
 
 /* Cesanta-specific String API */
-#ifdef V7_ENABLE__UTF
+#ifdef CS_ENABLE_UTF8
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.length", 1);
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.charCodeAt(0)", 1099);
 #endif
@@ -396,7 +396,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', false)", 0.0);
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', true)", 1.0);
 
-#ifdef V7_ENABLE__UTF
+#ifdef CS_ENABLE_UTF8
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д')", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 2)", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 3)", 9.0);
@@ -536,7 +536,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1234');", "['123']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('');", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'111'.split('1');", "['','','','']");
-#ifdef V7_ENABLE__UTF
+#ifdef CS_ENABLE_UTF8
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('б');", "['а','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('');", "['а','б','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'rбв'.split('');", "['r','б','в']");
@@ -1073,7 +1073,7 @@ static const char *test_parser(void) {
     "{} {}",
     "if(1){function d(){}var x}",
     "if(1){} else {function d(){}var x}",
-#if V7_ENABLE__UTF
+#if CS_ENABLE_UTF8
     "var \\u0076, _\\u0077, a\\u0078b, жабоскрипт;",
 #else
     "",
@@ -3887,7 +3887,14 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 int main(int argc, char *argv[]) {
   const char *filter = argc > 1 ? argv[1] : "";
   double total_elapsed = 0.0;
-  const char *fail_msg = run_all_tests(filter, &total_elapsed);
+  const char *fail_msg;
+#ifdef V7_TEST_DIR
+#define xstr(s) str(s)
+#define str(s) #s
+  chdir(xstr(V7_TEST_DIR));
+#endif
+
+  fail_msg = run_all_tests(filter, &total_elapsed);
   printf("%s, run %d in %.3fs\n", fail_msg ? "FAIL" : "PASS", num_tests,
          total_elapsed);
   return fail_msg == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
