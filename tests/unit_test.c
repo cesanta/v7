@@ -1640,12 +1640,9 @@ static const char *test_interpreter(void) {
       "(function(){try {throw new Error}catch(e){c=e}})();c instanceof Error",
       "true");
   c = "\"undefined\"";
-/* TODO(dfrank): fix this case on bcode */
-#if !defined(V7_USE_BCODE)
   ASSERT_EVAL_EQ(
       v7, "delete e;(function(){try {throw new Error}catch(e){}})();typeof e",
       c);
-#endif
   ASSERT_EVAL_EQ(
       v7, "x=(function(){c=1;try {throw 1}catch(e){c=0};return c})()", "0");
   ASSERT_EVAL_EQ(
@@ -3255,6 +3252,10 @@ static const char *test_exec_bcode(void) {
   /* }}} */
 
   /*
+   * TODO(dfrank): uncomment when `eval`-as-an-operator is implemented
+   */
+#if 0
+  /*
    * We have to run these tests only if `V7_USE_BCODE` is defined, since
    * otherwise `eval` stuff is handled by the interpreter, and it doesn't
    * work correctly
@@ -3328,6 +3329,7 @@ static const char *test_exec_bcode(void) {
   }
 
   /* }}} */
+#endif
 #endif
 
   /* `this` {{{ */
@@ -3823,6 +3825,9 @@ static const char *test_exec_bcode(void) {
 
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "(function() {var x = 42; return eval('x')})()",
                            42);
+
+  /* `catch` block should execute in its own private scope */
+  ASSERT_BCODE_EVAL_NUM_EQ(v7, "e=1;try{throw foo}catch(e){e=2};e", 1);
 
   v7_destroy(v7);
   return NULL;
