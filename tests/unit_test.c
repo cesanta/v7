@@ -559,11 +559,8 @@ static const char *test_stdlib(void) {
     if host have strange date/time setting it won't be work */
 
 #ifdef V7_ENABLE__Date
-/* TODO(dfrank): fix Date support for bcode */
-#if !defined(V7_USE_BCODE)
   ASSERT_EVAL_EQ(v7, "Number(new Date('IncDec 01 2015 00:00:00'))", "NaN");
   ASSERT_EVAL_EQ(v7, "Number(new Date('My Jul 01 2015 00:00:00'))", "NaN");
-#endif
 #endif
 
   ASSERT_EVAL_NUM_EQ(v7, "(function() {var x = 42; return eval('x')})()", 42);
