@@ -11228,6 +11228,19 @@ restart:
               }
             }
 
+            /* populate `arguments` object */
+            /*
+             * TODO(dfrank): it's actually much more complicated than that:
+             * it's not an array, it's an array-like object. More, in
+             * non-strict mode, elements of `arguments` object are just aliases
+             * for actual arguments, so this one:
+             *
+             *   `(function(a){arguments[0]=2; return a;})(1);`
+             *
+             * yields 2.
+             */
+            v7_set(v7, frame, "arguments", 9, V7_PROPERTY_DONT_DELETE, v2);
+
             /* populate local variables */
             for (; name < locals_end; ++name) {
               v7_set_v(v7, frame, *name, V7_PROPERTY_DONT_DELETE,

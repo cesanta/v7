@@ -800,8 +800,6 @@ static const char *test_apply(void) {
             V7_EXEC_EXCEPTION);
   ASSERT(check_num(v7, v, 2));
 
-/* TODO(dfrank): add `arguments` support for bcode */
-#if !defined(V7_USE_BCODE)
   ASSERT_EQ(eval(v7, &v, "function test1(){return arguments}"), V7_OK);
   fn = v7_get(v7, v7->global_object, "test1", 5);
   args = v7_create_array(v7);
@@ -810,7 +808,6 @@ static const char *test_apply(void) {
   v7_array_push(v7, args, v7_create_number(3));
   ASSERT_EQ(v7_apply(v7, &v, fn, v7->global_object, args), V7_OK);
   ASSERT(v7_array_length(v7, v) == 3);
-#endif
 
   v7_destroy(v7);
   return NULL;
@@ -3825,6 +3822,15 @@ static const char *test_exec_bcode(void) {
 
   /* `catch` block should execute in its own private scope */
   ASSERT_BCODE_EVAL_NUM_EQ(v7, "e=1;try{throw foo}catch(e){e=2};e", 1);
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7,
+                               "(function(a){return "
+                               "arguments[0]+arguments[1]+arguments.length})('"
+                               "1-', '2-');",
+                               "'1-2-2'");
+
+  ASSERT_BCODE_EVAL_JS_EXPR_EQ(v7, "(function(a){return delete arguments})();",
+                               "false");
 
   v7_destroy(v7);
   return NULL;
