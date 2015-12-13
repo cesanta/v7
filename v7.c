@@ -10232,13 +10232,15 @@ static void bcode_perform_break(struct v7 *v7, struct bcode_registers *r) {
      */
     found = unwind_local_blocks_stack(v7, r, mask | LOCAL_BLOCK_FINALLY, 0);
     if (found == LOCAL_BLOCK_NONE) {
-      /*
-       * no blocks found: this may happen if only the `break` or `continue` has
-       * occurred inside "private" frame. So, unwind this frame, make sure it
-       * is indeed "private" (not "function"), and keep unwinding local blocks.
-       */
+/*
+ * no blocks found: this may happen if only the `break` or `continue` has
+ * occurred inside "private" frame. So, unwind this frame, make sure it
+ * is indeed "private" (not "function"), and keep unwinding local blocks.
+ */
+#if !defined(NDEBUG)
       uint8_t is_func_frame = unwind_stack_1level(v7, r);
       assert(!is_func_frame);
+#endif
     } else {
       /* found some block to transfer control into, stop unwinding */
       break;
@@ -11374,6 +11376,9 @@ restart:
         is_func_frame = unwind_stack_1level(v7, &r);
         /* make sure the unwound frame is the "private" frame */
         assert(is_func_frame == 0);
+#if defined(NDEBUG)
+        (void) is_func_frame;
+#endif
         break;
       }
       default:
@@ -11695,13 +11700,13 @@ V7_PRIVATE enum v7_err b_exec2(struct v7 *v7, const char *src, int src_len,
   assert(v7->bottom_call_stack == v7->call_stack);
 
   if (err == V7_OK) {
-    /*
-     * bcode evaluated successfully. Make sure try stack is empty.
-     * (data stack will be checked below, in `cleanup`)
-     */
+/*
+ * bcode evaluated successfully. Make sure try stack is empty.
+ * (data stack will be checked below, in `cleanup`)
+ */
+#ifndef NDEBUG
     unsigned long try_stack_len =
         v7_array_length(v7, v7_get(v7, v7->call_stack, "____t", 5));
-#ifndef NDEBUG
     if (try_stack_len != 0) {
       printf("try_stack_len=%lu, should be 0\n", try_stack_len);
     }
