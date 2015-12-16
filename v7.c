@@ -70,7 +70,7 @@ extern "C" {
 struct v7;
 
 /* JavaScript -> C call interface */
-typedef v7_val_t (*v7_cfunction_t)(struct v7 *);
+typedef v7_val_t(v7_cfunction_t)(struct v7 *);
 
 /* Create V7 instance */
 struct v7 *v7_create(void);
@@ -171,10 +171,11 @@ v7_val_t v7_create_array(struct v7 *v7);
  * will be used as the prototype of objects created when calling the function
  * with the `new` operator.
  */
-v7_val_t v7_create_function(struct v7 *, v7_cfunction_t func);
+v7_val_t v7_create_function(struct v7 *, v7_cfunction_t *func);
 
 /* Make f a JS constructor function for objects with prototype in proto. */
-v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto, v7_cfunction_t f);
+v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
+                               v7_cfunction_t *f);
 
 /* Create numeric primitive value */
 v7_val_t v7_create_number(double num);
@@ -231,7 +232,7 @@ v7_val_t v7_create_foreign(void *ptr);
  * user defined properties. You should use `v7_create_function` unless you know
  * what you're doing.
  */
-v7_val_t v7_create_cfunction(v7_cfunction_t func);
+v7_val_t v7_create_cfunction(v7_cfunction_t *func);
 
 /* Return true if given value is a JavaScript object */
 int v7_is_object(v7_val_t);
@@ -292,8 +293,8 @@ int v7_to_boolean(v7_val_t);
  */
 double v7_to_number(v7_val_t);
 
-/* Return `v7_cfunction_t` callback pointer stored in `v7_val_t` */
-v7_cfunction_t v7_to_cfunction(v7_val_t);
+/* Return `v7_cfunction_t *` callback pointer stored in `v7_val_t` */
+v7_cfunction_t *v7_to_cfunction(v7_val_t);
 
 /*
  * Return a pointer to the string stored in `v7_val_t`.
@@ -435,7 +436,7 @@ int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
  * Return value is the same as for `v7_set()`.
  */
 int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
-                  v7_cfunction_t func);
+                  v7_cfunction_t *func);
 
 /*
  * Delete own property of an object `obj`. Does not follow the prototype chain.
@@ -3903,10 +3904,11 @@ V7_PRIVATE void init_date(struct v7 *v7);
 V7_PRIVATE void init_function(struct v7 *v7);
 V7_PRIVATE void init_stdlib(struct v7 *v7);
 
-V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *, v7_cfunction_t);
+V7_PRIVATE int set_cfunc_prop(struct v7 *, val_t, const char *,
+                              v7_cfunction_t *func);
 
-V7_PRIVATE int set_method(struct v7 *, val_t, const char *, v7_cfunction_t,
-                          int);
+V7_PRIVATE int set_method(struct v7 *, val_t, const char *,
+                          v7_cfunction_t *func, int);
 
 V7_PRIVATE val_t v_get_prototype(struct v7 *, val_t);
 V7_PRIVATE int is_prototype_of(struct v7 *, val_t, val_t);
@@ -3948,7 +3950,7 @@ V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
  * users can just use `v7_set` to set the length.
  */
 V7_PRIVATE
-v7_val_t v7_create_function_nargs(struct v7 *, v7_cfunction_t func, int nargs);
+v7_val_t v7_create_function_nargs(struct v7 *, v7_cfunction_t *func, int nargs);
 
 /*
  * Like v7_create_constructor but also sets the function's `length` property.
@@ -3960,7 +3962,7 @@ v7_val_t v7_create_function_nargs(struct v7 *, v7_cfunction_t func, int nargs);
  */
 V7_PRIVATE
 v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
-                                     v7_cfunction_t f, int num_args);
+                                     v7_cfunction_t *f, int num_args);
 
 /*
  * If `len` is -1/MAXUINT/~0, then `name` must be 0-terminated
@@ -12317,11 +12319,11 @@ V7_PRIVATE void *v7_to_pointer(val_t v) {
   return (void *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
-v7_cfunction_t v7_to_cfunction(val_t v) {
+v7_cfunction_t *v7_to_cfunction(val_t v) {
   /* Implementation is identical to v7_to_pointer but is separate since
    * object pointers are not directly convertible to function pointers
    * according to ISO C and generates a warning in -Wpedantic mode. */
-  return (v7_cfunction_t)(uintptr_t)(v & 0xFFFFFFFFFFFFUL);
+  return (v7_cfunction_t *) (uintptr_t)(v & 0xFFFFFFFFFFFFUL);
 }
 
 val_t v7_object_to_value(struct v7_object *o) {
@@ -12343,10 +12345,10 @@ struct v7_function *v7_to_function(val_t v) {
   return (struct v7_function *) v7_to_pointer(v);
 }
 
-v7_val_t v7_create_cfunction(v7_cfunction_t f) {
+v7_val_t v7_create_cfunction(v7_cfunction_t *f) {
   union {
     void *p;
-    v7_cfunction_t f;
+    v7_cfunction_t *f;
   } u;
   u.f = f;
   return v7_pointer_to_value(u.p) | V7_TAG_CFUNCTION;
@@ -13192,7 +13194,7 @@ int v7_del_property(struct v7 *v7, val_t obj, const char *name, size_t len) {
 }
 
 V7_PRIVATE
-v7_val_t v7_create_function_nargs(struct v7 *v7, v7_cfunction_t f,
+v7_val_t v7_create_function_nargs(struct v7 *v7, v7_cfunction_t *f,
                                   int num_args) {
   val_t obj = create_object(v7, v7->function_prototype);
   struct gc_tmp_frame tf = new_tmp_frame(v7);
@@ -13208,12 +13210,12 @@ v7_val_t v7_create_function_nargs(struct v7 *v7, v7_cfunction_t f,
   return obj;
 }
 
-v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t f) {
+v7_val_t v7_create_function(struct v7 *v7, v7_cfunction_t *f) {
   return v7_create_function_nargs(v7, f, -1);
 }
 
 V7_PRIVATE v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
-                                                v7_cfunction_t f,
+                                                v7_cfunction_t *f,
                                                 int num_args) {
   v7_val_t res = v7_create_function_nargs(v7, f, num_args);
 
@@ -13226,23 +13228,23 @@ V7_PRIVATE v7_val_t v7_create_constructor_nargs(struct v7 *v7, v7_val_t proto,
 }
 
 v7_val_t v7_create_constructor(struct v7 *v7, v7_val_t proto,
-                               v7_cfunction_t f) {
+                               v7_cfunction_t *f) {
   return v7_create_constructor_nargs(v7, proto, f, -1);
 }
 
 V7_PRIVATE int set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                          v7_cfunction_t func, int num_args) {
+                          v7_cfunction_t *func, int num_args) {
   return v7_set_property(v7, obj, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_function_nargs(v7, func, num_args));
 }
 
 int v7_set_method(struct v7 *v7, v7_val_t obj, const char *name,
-                  v7_cfunction_t func) {
+                  v7_cfunction_t *func) {
   return set_method(v7, obj, name, func, -1);
 }
 
 V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                              v7_cfunction_t f) {
+                              v7_cfunction_t *f) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction(f));
 }
@@ -25059,7 +25061,7 @@ static val_t Date_UTC(struct v7 *v7) {
  * TODO(mkm): check other objects
 */
 static int d_set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
-                            v7_cfunction_t f) {
+                            v7_cfunction_t *f) {
   return v7_set_property(v7, o, name, strlen(name), V7_PROPERTY_DONT_ENUM,
                          v7_create_cfunction(f));
 }
