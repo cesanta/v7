@@ -66,6 +66,24 @@ typedef uint64_t v7_val_t;
 extern "C" {
 #endif /* __cplusplus */
 
+/*
+ * Property attributes bitmask
+ */
+typedef unsigned char v7_prop_attr_t;
+#define V7_PROPERTY_READ_ONLY (1 << 0)
+#define V7_PROPERTY_DONT_ENUM (1 << 1)
+#define V7_PROPERTY_DONT_DELETE (1 << 2)
+#define V7_PROPERTY_HIDDEN (1 << 3)
+#define V7_PROPERTY_GETTER (1 << 4)
+#define V7_PROPERTY_SETTER (1 << 5)
+
+/*
+ * Object attributes bitmask
+ */
+typedef unsigned char v7_obj_attr_t;
+#define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
+#define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
+
 /* Opaque structure. V7 engine handler. */
 struct v7;
 
@@ -416,20 +434,13 @@ v7_val_t v7_throw_value(struct v7 *, v7_val_t v);
 /* Returns 1 if some value is currently thrown, 0 otherwise */
 int v7_has_thrown(struct v7 *v7);
 
-#define V7_PROPERTY_READ_ONLY 1
-#define V7_PROPERTY_DONT_ENUM 2
-#define V7_PROPERTY_DONT_DELETE 4
-#define V7_PROPERTY_HIDDEN 8
-#define V7_PROPERTY_GETTER 16
-#define V7_PROPERTY_SETTER 32
-
 /*
  * Set object property. `name`, `name_len` specify property name, `attrs`
  * specify property attributes, `val` is a property value. Return non-zero
  * on success, 0 on error (e.g. out of memory).
  */
 int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
-           unsigned int attrs, v7_val_t val);
+           v7_prop_attr_t attrs, v7_val_t val);
 
 /*
  * A helper function to define object's method backed by a C function `func`.
@@ -480,7 +491,7 @@ v7_val_t v7_set_proto(v7_val_t obj, v7_val_t proto);
  *     }
  */
 void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   unsigned int *attrs);
+                   v7_prop_attr_t *attrs);
 
 /* Returns last parser error message. */
 const char *v7_get_parser_error(struct v7 *v7);
@@ -3795,7 +3806,7 @@ typedef uint64_t val_t;
 
 struct v7_property {
   struct v7_property *next; /* Linkage in struct v7_object::properties */
-  unsigned int attributes;
+  v7_prop_attr_t attributes;
   val_t name;  /* Property name (a string) */
   val_t value; /* Property value */
 };
@@ -3824,9 +3835,7 @@ struct v7_object {
   /* First HIDDEN property in a chain is an internal object value */
   struct v7_property *properties;
   struct v7_object *prototype;
-  uint8_t attributes;
-#define V7_OBJ_NOT_EXTENSIBLE 1 /* TODO(lsm): store this in LSB */
-#define V7_OBJ_DENSE_ARRAY 2    /* TODO(mkm): store in some tag */
+  v7_obj_attr_t attributes;
 };
 
 /*
@@ -3857,7 +3866,14 @@ struct v7_function {
    */
   struct v7_property *properties;
   struct v7_object *scope; /* lexical scope of the closure */
-  uintptr_t debug;
+
+  /*
+   * TODO(dfrank) : make v7_function actually inherit v7_object, instead of
+   * this crazy hack: it's located at exactly the same offset as the
+   * `v7_object.attributes`, and it's needed to not corrupt memory when
+   * function is used as an object, and its attributes changed
+   */
+  v7_obj_attr_t attr_dummy;
   /* bytecode, might be shared between functions */
   struct bcode *bcode;
 };
@@ -3926,8 +3942,9 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *);
 V7_PRIVATE struct v7_property *v7_get_own_property(struct v7 *, val_t,
                                                    const char *, size_t);
 V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *, val_t obj,
-                                                    const char *name, size_t,
-                                                    unsigned int attrs);
+                                                    const char *name,
+                                                    size_t len,
+                                                    v7_prop_attr_t attrs);
 
 /*
  * Like v7_create_function but also sets the function's `length` property.
@@ -3983,15 +4000,16 @@ V7_PRIVATE v7_val_t v7_get_v(struct v7 *, v7_val_t, v7_val_t);
 
 V7_PRIVATE void v7_invoke_setter(struct v7 *, struct v7_property *, val_t,
                                  val_t);
-int v7_set_v(struct v7 *v7, v7_val_t obj, v7_val_t name, unsigned int attrs,
+int v7_set_v(struct v7 *v7, v7_val_t obj, v7_val_t name, v7_prop_attr_t attrs,
              v7_val_t val);
 V7_PRIVATE int v7_set_property_v(struct v7 *, v7_val_t obj, v7_val_t name,
-                                 unsigned int attributes, v7_val_t val);
+                                 v7_prop_attr_t attributes, v7_val_t val);
 V7_PRIVATE int v7_set_property(struct v7 *, v7_val_t obj, const char *name,
-                               size_t len, unsigned int attributes,
+                               size_t len, v7_prop_attr_t attributes,
                                v7_val_t val);
 V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
-                                           unsigned int attributes, val_t val);
+                                           v7_prop_attr_t attributes,
+                                           val_t val);
 
 /* Return address of property value or NULL if the passed property is NULL */
 V7_PRIVATE val_t v7_property_value(struct v7 *, val_t, struct v7_property *);
@@ -10999,7 +11017,7 @@ restart:
         }
 
         if (v7_is_object(v2)) {
-          unsigned int attrs;
+          v7_prop_attr_t attrs;
           do {
             /* iterate properties until we find a non-hidden enumerable one */
             do {
@@ -12706,7 +12724,7 @@ V7_PRIVATE int to_str(struct v7 *v7, val_t v, char *buf, size_t size,
       char *b = buf;
       void *h = NULL;
       v7_val_t name = v7_create_undefined(), val = v7_create_undefined();
-      unsigned attrs;
+      v7_prop_attr_t attrs;
       if (flags == V7_STRINGIFY_DEFAULT) {
         /* TODO(dfrank): check return value */
         b_apply(v7, &val, v7_get(v7, v, "toString", 8), v, V7_UNDEFINED, 0);
@@ -12908,7 +12926,7 @@ V7_PRIVATE struct v7_property *v7_create_property(struct v7 *v7) {
 V7_PRIVATE struct v7_property *v7_get_own_property2(struct v7 *v7, val_t obj,
                                                     const char *name,
                                                     size_t len,
-                                                    unsigned int attrs) {
+                                                    v7_prop_attr_t attrs) {
   struct v7_property *p;
   struct v7_object *o;
   val_t ss;
@@ -13046,7 +13064,7 @@ V7_PRIVATE void v7_destroy_property(struct v7_property **p) {
   *p = NULL;
 }
 
-int v7_set_v(struct v7 *v7, val_t obj, val_t name, unsigned int attrs,
+int v7_set_v(struct v7 *v7, val_t obj, val_t name, v7_prop_attr_t attrs,
              val_t val) {
   size_t len;
   const char *n = v7_get_string_data(v7, &name, &len);
@@ -13059,7 +13077,7 @@ int v7_set_v(struct v7 *v7, val_t obj, val_t name, unsigned int attrs,
 }
 
 int v7_set(struct v7 *v7, val_t obj, const char *name, size_t len,
-           unsigned int attrs, val_t val) {
+           v7_prop_attr_t attrs, val_t val) {
   struct v7_property *p = v7_get_own_property(v7, obj, name, len);
   if (p == NULL || !(p->attributes & V7_PROPERTY_READ_ONLY)) {
     return v7_set_property(v7, obj, name, len,
@@ -13087,7 +13105,8 @@ V7_PRIVATE void v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
 }
 
 V7_PRIVATE struct v7_property *v7_set_prop(struct v7 *v7, val_t obj, val_t name,
-                                           unsigned int attributes, val_t val) {
+                                           v7_prop_attr_t attributes,
+                                           val_t val) {
   struct v7_property *prop;
   size_t len;
   const char *n = v7_get_string_data(v7, &name, &len);
@@ -13140,13 +13159,13 @@ cleanup:
 }
 
 int v7_set_property_v(struct v7 *v7, val_t obj, val_t name,
-                      unsigned int attributes, v7_val_t val) {
+                      v7_prop_attr_t attributes, v7_val_t val) {
   struct v7_property *prop = v7_set_prop(v7, obj, name, attributes, val);
   return prop == NULL ? -1 : 0;
 }
 
 int v7_set_property(struct v7 *v7, val_t obj, const char *name, size_t len,
-                    unsigned int attributes, v7_val_t val) {
+                    v7_prop_attr_t attributes, v7_val_t val) {
   val_t n;
   int res;
   /* set_property_v can trigger GC */
@@ -13294,7 +13313,7 @@ V7_PRIVATE val_t ulong_to_str(struct v7 *v7, unsigned long n) {
 #define IS_PACKED_ITER(p) ((uintptr_t) p & 1)
 
 void *v7_next_prop(struct v7 *v7, val_t obj, void *h, val_t *name, val_t *val,
-                   unsigned int *attrs) {
+                   v7_prop_attr_t *attrs) {
   struct v7_property *p = (struct v7_property *) h;
 
   if (v7_to_object(obj)->attributes & V7_OBJ_DENSE_ARRAY) {
@@ -14016,7 +14035,7 @@ unsigned long v7_argc(struct v7 *v7) {
 }
 
 void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
-                   unsigned *attrs) {
+                   v7_prop_attr_t *attrs) {
   struct v7_property *p;
   if (handle == NULL) {
     p = v7_to_object(obj)->properties;
@@ -19651,7 +19670,7 @@ static v7_val_t Std_exit(struct v7 *v7) {
 #endif
 
 V7_PRIVATE void init_stdlib(struct v7 *v7) {
-  unsigned int attr_internal =
+  v7_prop_attr_t attr_internal =
       V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
 
   /*
@@ -21761,7 +21780,7 @@ static val_t Obj_isPrototypeOf(struct v7 *v7) {
  * This will be obsoleted when arrays will have a special object type.
  */
 static void _Obj_append_reverse(struct v7 *v7, struct v7_property *p, val_t res,
-                                int i, unsigned int ignore_flags) {
+                                int i, v7_prop_attr_t ignore_flags) {
   while (p && p->attributes & ignore_flags) p = p->next;
   if (p == NULL) return;
   if (p->next) _Obj_append_reverse(v7, p->next, res, i + 1, ignore_flags);
@@ -21833,7 +21852,7 @@ static val_t Obj_getOwnPropertyDescriptor(struct v7 *v7) {
 #endif
 
 static void o_set_attr(struct v7 *v7, val_t desc, const char *name, size_t n,
-                       struct v7_property *prop, unsigned int attr) {
+                       struct v7_property *prop, v7_prop_attr_t attr) {
   val_t v = v7_get(v7, desc, name, n);
   if (v7_is_true(v7, v)) {
     prop->attributes &= ~attr;
@@ -22280,7 +22299,7 @@ static val_t n_isNaN(struct v7 *v7) {
 }
 
 V7_PRIVATE void init_number(struct v7 *v7) {
-  unsigned int attrs =
+  v7_prop_attr_t attrs =
       V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_ENUM | V7_PROPERTY_DONT_DELETE;
   val_t num =
       v7_create_constructor_nargs(v7, v7->number_prototype, Number_ctor, 1);
