@@ -2249,7 +2249,7 @@
 2248	PASS ch11/11.8/11.8.1/S11.8.1_A4.7.js (tail -c +2424997 tests/ecmac.db|head -c 913)
 2249	PASS ch11/11.8/11.8.1/S11.8.1_A4.8.js (tail -c +2425911 tests/ecmac.db|head -c 914)
 2250	PASS ch11/11.8/11.8.1/S11.8.1_A4.9.js (tail -c +2426826 tests/ecmac.db|head -c 1000)
-2251	FAIL ch11/11.8/11.8.2/11.8.2-1.js (tail -c +2427827 tests/ecmac.db|head -c 754): [{"message":"Test case returned non-true value!"}]
+2251	PASS ch11/11.8/11.8.2/11.8.2-1.js (tail -c +2427827 tests/ecmac.db|head -c 754)
 2252	PASS ch11/11.8/11.8.2/11.8.2-2.js (tail -c +2428582 tests/ecmac.db|head -c 756)
 2253	PASS ch11/11.8/11.8.2/11.8.2-3.js (tail -c +2429339 tests/ecmac.db|head -c 756)
 2254	PASS ch11/11.8/11.8.2/11.8.2-4.js (tail -c +2430096 tests/ecmac.db|head -c 758)
@@ -2289,11 +2289,11 @@
 2288	PASS ch11/11.8/11.8.2/S11.8.2_A4.7.js (tail -c +2461260 tests/ecmac.db|head -c 914)
 2289	PASS ch11/11.8/11.8.2/S11.8.2_A4.8.js (tail -c +2462175 tests/ecmac.db|head -c 913)
 2290	PASS ch11/11.8/11.8.2/S11.8.2_A4.9.js (tail -c +2463089 tests/ecmac.db|head -c 1003)
-2291	FAIL ch11/11.8/11.8.3/11.8.3-1.js (tail -c +2464093 tests/ecmac.db|head -c 767): [{"message":"Test case returned non-true value!"}]
+2291	PASS ch11/11.8/11.8.3/11.8.3-1.js (tail -c +2464093 tests/ecmac.db|head -c 767)
 2292	FAIL ch11/11.8/11.8.3/11.8.3-2.js (tail -c +2464861 tests/ecmac.db|head -c 769): [{"message":"Test case returned non-true value!"}]
 2293	FAIL ch11/11.8/11.8.3/11.8.3-3.js (tail -c +2465631 tests/ecmac.db|head -c 769): [{"message":"Test case returned non-true value!"}]
 2294	FAIL ch11/11.8/11.8.3/11.8.3-4.js (tail -c +2466401 tests/ecmac.db|head -c 771): [{"message":"Test case returned non-true value!"}]
-2295	FAIL ch11/11.8/11.8.3/11.8.3-5.js (tail -c +2467173 tests/ecmac.db|head -c 767): [{"message":"Test case returned non-true value!"}]
+2295	PASS ch11/11.8/11.8.3/11.8.3-5.js (tail -c +2467173 tests/ecmac.db|head -c 767)
 2296	FAIL ch11/11.8/11.8.3/S11.8.3_A1.js (tail -c +2467941 tests/ecmac.db|head -c 1495): [{"message":"#5: (1\\u00A0<=\\u00A01) === true"}]
 2297	PASS ch11/11.8/11.8.3/S11.8.3_A2.1_T1.js (tail -c +2469437 tests/ecmac.db|head -c 880)
 2298	PASS ch11/11.8/11.8.3/S11.8.3_A2.1_T2.js (tail -c +2470318 tests/ecmac.db|head -c 443)
