@@ -1,7 +1,6 @@
 V7: Embedded JavaScript engine
 ==============================
 
-[![Circle CI](https://circleci.com/gh/cesanta/v7.svg?style=shield)](https://circleci.com/gh/cesanta/v7)
 [![License](https://img.shields.io/badge/license-GPL_2-green.svg)](https://github.com/cesanta/v7/blob/master/LICENSE)
 
 V7 is a JavaScript engine written in C.
