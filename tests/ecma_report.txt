@@ -1969,7 +1969,7 @@
 1968	PASS ch11/11.5/11.5.1/S11.5.1_A2.1_T2.js (tail -c +1489977 tests/ecmac.db|head -c 439)
 1969	PASS ch11/11.5/11.5.1/S11.5.1_A2.1_T3.js (tail -c +1490417 tests/ecmac.db|head -c 439)
 1970	FAIL ch11/11.5/11.5.1/S11.5.1_A2.2_T1.js (tail -c +1490857 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 * {toString: function() {return 1}} === 1. Actual: NaN"}]
-1971	FAIL ch11/11.5/11.5.1/S11.5.1_A2.3_T1.js (tail -c +1493809 tests/ecmac.db|head -c 858): [{"message":"#1.3: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x * y throw \"x\". Actual: Test262 Error: #1.1: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x * y throw \"x\". Actual: NaN"}]
+1971	FAIL ch11/11.5/11.5.1/S11.5.1_A2.3_T1.js (tail -c +1493809 tests/ecmac.db|head -c 858): [{"message":"#1.3: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x * y throw \"x\". Actual: Test262 Error: #1.1: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x * y throw \"x\". Actual: 0"}]
 1972	PASS ch11/11.5/11.5.1/S11.5.1_A2.4_T1.js (tail -c +1494668 tests/ecmac.db|head -c 464)
 1973	PASS ch11/11.5/11.5.1/S11.5.1_A2.4_T2.js (tail -c +1495133 tests/ecmac.db|head -c 762)
 1974	PASS ch11/11.5/11.5.1/S11.5.1_A2.4_T3.js (tail -c +1495896 tests/ecmac.db|head -c 590)
@@ -2068,7 +2068,7 @@
 2067	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T1.js (tail -c +1599798 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 + {toString: function() {return 1}} === 2. Actual: 11"}]
 2068	SKIP ch11/11.6/11.6.1/S11.6.1_A2.2_T2.js (tail -c +1602750 tests/ecmac.db|head -c 1064)
 2069	FAIL ch11/11.6/11.6.1/S11.6.1_A2.2_T3.js (tail -c +1603815 tests/ecmac.db|head -c 1141): [{"message":"#1: function f1() {return 0;}; f1 + 1 === f1.toString() + 1"}]
-2070	FAIL ch11/11.6/11.6.1/S11.6.1_A2.3_T1.js (tail -c +1604957 tests/ecmac.db|head -c 858): [{"message":"#1.3: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x + y throw \"x\". Actual: Test262 Error: #1.1: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x + y throw \"x\". Actual: xy"}]
+2070	PASS ch11/11.6/11.6.1/S11.6.1_A2.3_T1.js (tail -c +1604957 tests/ecmac.db|head -c 858)
 2071	PASS ch11/11.6/11.6.1/S11.6.1_A2.4_T1.js (tail -c +1605816 tests/ecmac.db|head -c 464)
 2072	PASS ch11/11.6/11.6.1/S11.6.1_A2.4_T2.js (tail -c +1606281 tests/ecmac.db|head -c 762)
 2073	PASS ch11/11.6/11.6.1/S11.6.1_A2.4_T3.js (tail -c +1607044 tests/ecmac.db|head -c 590)
@@ -2100,7 +2100,7 @@
 2099	PASS ch11/11.6/11.6.2/S11.6.2_A2.1_T2.js (tail -c +1635805 tests/ecmac.db|head -c 438)
 2100	PASS ch11/11.6/11.6.2/S11.6.2_A2.1_T3.js (tail -c +1636244 tests/ecmac.db|head -c 438)
 2101	FAIL ch11/11.6/11.6.2/S11.6.2_A2.2_T1.js (tail -c +1636683 tests/ecmac.db|head -c 2951): [{"message":"#5: 1 - {toString: function() {return 1}} === 0. Actual: NaN"}]
-2102	FAIL ch11/11.6/11.6.2/S11.6.2_A2.3_T1.js (tail -c +1639635 tests/ecmac.db|head -c 858): [{"message":"#1.3: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x - y throw \"x\". Actual: Test262 Error: #1.1: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x - y throw \"x\". Actual: NaN"}]
+2102	FAIL ch11/11.6/11.6.2/S11.6.2_A2.3_T1.js (tail -c +1639635 tests/ecmac.db|head -c 858): [{"message":"#1.3: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x - y throw \"x\". Actual: Test262 Error: #1.1: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x - y throw \"x\". Actual: 0"}]
 2103	PASS ch11/11.6/11.6.2/S11.6.2_A2.4_T1.js (tail -c +1640494 tests/ecmac.db|head -c 466)
 2104	PASS ch11/11.6/11.6.2/S11.6.2_A2.4_T2.js (tail -c +1640961 tests/ecmac.db|head -c 762)
 2105	PASS ch11/11.6/11.6.2/S11.6.2_A2.4_T3.js (tail -c +1641724 tests/ecmac.db|head -c 590)
@@ -2335,7 +2335,7 @@
 2334	PASS ch11/11.8/11.8.4/S11.8.4_A2.1_T2.js (tail -c +2503816 tests/ecmac.db|head -c 444)
 2335	PASS ch11/11.8/11.8.4/S11.8.4_A2.1_T3.js (tail -c +2504261 tests/ecmac.db|head -c 444)
 2336	FAIL ch11/11.8/11.8.4/S11.8.4_A2.2_T1.js (tail -c +2504706 tests/ecmac.db|head -c 3016): [{"message":"#5: 1 >= {toString: function() {return 0}} === true. Actual: false"}]
-2337	FAIL ch11/11.8/11.8.4/S11.8.4_A2.3_T1.js (tail -c +2507723 tests/ecmac.db|head -c 862): [{"message":"#1.3: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x >= y throw \"x\". Actual: Test262 Error: #1.1: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x >= y throw \"x\". Actual: false"}]
+2337	FAIL ch11/11.8/11.8.4/S11.8.4_A2.3_T1.js (tail -c +2507723 tests/ecmac.db|head -c 862): [{"message":"#1.3: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x >= y throw \"x\". Actual: Test262 Error: #1.1: var x = { valueOf: function () { throw \"x\"; } }; var y = { valueOf: function () { throw \"y\"; } }; x >= y throw \"x\". Actual: true"}]
 2338	PASS ch11/11.8/11.8.4/S11.8.4_A2.4_T1.js (tail -c +2508586 tests/ecmac.db|head -c 430)
 2339	PASS ch11/11.8/11.8.4/S11.8.4_A2.4_T2.js (tail -c +2509017 tests/ecmac.db|head -c 766)
 2340	PASS ch11/11.8/11.8.4/S11.8.4_A2.4_T3.js (tail -c +2509784 tests/ecmac.db|head -c 576)
@@ -9759,7 +9759,7 @@ err
 9709	PASS ch15/15.5/15.5.4/S15.5.4.3_A2_T1.js (tail -c +8859561 tests/ecmac.db|head -c 1227)
 9710	FAIL ch15/15.5/15.5.4/S15.5.4.3_A2_T2.js (tail -c +8860789 tests/ecmac.db|head -c 1285): [{"message":"#2.1: Exception is instance of TypeError. Actual: exception is Test262 Error: #2: \"var __obj={valueOf : String.prototype.valueOf}; var x = (__obj == 1)\" lead to throwing exception"}]
 9711	FAIL ch15/15.5/15.5.4/S15.5.4_A1.js (tail -c +8862075 tests/ecmac.db|head -c 809): [{"message":"#1: delete String.prototype.toString; String.prototype.toString() === \"[object \"+\"String\"+\"]\". Actual: String.prototype.toString() ===[object Object]"}]
-9712	FAIL ch15/15.5/15.5.4/S15.5.4_A2.js (tail -c +8862885 tests/ecmac.db|head -c 533): [{"message":"String.valueOf called on non-string object"}]
+9712	PASS ch15/15.5/15.5.4/S15.5.4_A2.js (tail -c +8862885 tests/ecmac.db|head -c 533)
 9713	FAIL ch15/15.5/15.5.4/S15.5.4_A3.js (tail -c +8863419 tests/ecmac.db|head -c 1130): [{"message":"#1: Object.prototype.isPrototypeOf(String.prototype) return true. Actual: false"}]
 9714	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A10.js (tail -c +8864550 tests/ecmac.db|head -c 1182): [{"message":"value is not a function"}]
 9715	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A11.js (tail -c +8865733 tests/ecmac.db|head -c 908): [{"message":"value is not a function"}]
@@ -10425,7 +10425,7 @@ err
 10369	PASS ch15/15.6/15.6.3/S15.6.3_A1.js (tail -c +9492703 tests/ecmac.db|head -c 348)
 10370	FAIL ch15/15.6/15.6.3/S15.6.3_A2.js (tail -c +9493052 tests/ecmac.db|head -c 482): [{"message":"#1: the value of the internal [[Prototype]] property of the Boolean constructor is the Function prototype object."}]
 10371	PASS ch15/15.6/15.6.3/S15.6.3_A3.js (tail -c +9493535 tests/ecmac.db|head -c 437)
-10372	FAIL ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A1.js (tail -c +9493973 tests/ecmac.db|head -c 647): [{"message":"#2: Boolean.prototype == false"}]
+10372	FAIL ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A1.js (tail -c +9493973 tests/ecmac.db|head -c 647): [{"message":"Boolean.valueOf called on non-boolean object"}]
 10373	PASS ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A2.js (tail -c +9494621 tests/ecmac.db|head -c 398)
 10374	PASS ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A3.js (tail -c +9495020 tests/ecmac.db|head -c 368)
 10375	PASS ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A4.js (tail -c +9495389 tests/ecmac.db|head -c 490)
@@ -10444,7 +10444,7 @@ err
 10388	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T3.js (tail -c +9508051 tests/ecmac.db|head -c 1072)
 10389	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T4.js (tail -c +9509124 tests/ecmac.db|head -c 1078)
 10390	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T5.js (tail -c +9510203 tests/ecmac.db|head -c 1065)
-10391	FAIL ch15/15.6/15.6.4/S15.6.4_A1.js (tail -c +9511269 tests/ecmac.db|head -c 680): [{"message":"#2: Boolean.prototype == false"}]
+10391	FAIL ch15/15.6/15.6.4/S15.6.4_A1.js (tail -c +9511269 tests/ecmac.db|head -c 680): [{"message":"Boolean.valueOf called on non-boolean object"}]
 10392	FAIL ch15/15.6/15.6.4/S15.6.4_A2.js (tail -c +9511950 tests/ecmac.db|head -c 463): [{"message":"#1: Object prototype object is the prototype of Boolean prototype object"}]
 10393	PASS ch15/15.7/15.7.1/S15.7.1.1_A1.js (tail -c +9512414 tests/ecmac.db|head -c 1197)
 10394	PASS ch15/15.7/15.7.1/S15.7.1.1_A2.js (tail -c +9513612 tests/ecmac.db|head -c 519)
@@ -10469,7 +10469,7 @@ err
 10413	PASS ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A1_T3.js (tail -c +9522839 tests/ecmac.db|head -c 532)
 10414	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A2_T1.js (tail -c +9523372 tests/ecmac.db|head -c 580): [{"message":"#3: The [[Class]] property of the Number prototype object is set to \"Number\""}]
 10415	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A2_T2.js (tail -c +9523953 tests/ecmac.db|head -c 607): [{"message":"#3: The [[Class]] property of the Number prototype object is set to \"Number\""}]
-10416	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A3.js (tail -c +9524561 tests/ecmac.db|head -c 398): [{"message":"#2: Number.prototype == +0"}]
+10416	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A3.js (tail -c +9524561 tests/ecmac.db|head -c 398): [{"message":"Number.valueOf called on non-number object"}]
 10417	PASS ch15/15.7/15.7.3/15.7.3.2/S15.7.3.2_A1.js (tail -c +9524960 tests/ecmac.db|head -c 445)
 10418	PASS ch15/15.7/15.7.3/15.7.3.2/S15.7.3.2_A2.js (tail -c +9525406 tests/ecmac.db|head -c 391)
 10419	PASS ch15/15.7/15.7.3/15.7.3.2/S15.7.3.2_A3.js (tail -c +9525798 tests/ecmac.db|head -c 337)
@@ -10491,7 +10491,7 @@ err
 10435	PASS ch15/15.7/15.7.3/15.7.3.6/S15.7.3.6_A3.js (tail -c +9532541 tests/ecmac.db|head -c 369)
 10436	PASS ch15/15.7/15.7.3/15.7.3.6/S15.7.3.6_A4.js (tail -c +9532911 tests/ecmac.db|head -c 523)
 10437	FAIL ch15/15.7/15.7.4/15.7.4-1.js (tail -c +9533435 tests/ecmac.db|head -c 393): [{"message":"Test case returned non-true value!"}]
-10438	FAIL ch15/15.7/15.7.4/S15.7.4_A1.js (tail -c +9533829 tests/ecmac.db|head -c 766): [{"message":"#2: Number.prototype == +0"}]
+10438	FAIL ch15/15.7/15.7.4/S15.7.4_A1.js (tail -c +9533829 tests/ecmac.db|head -c 766): [{"message":"Number.valueOf called on non-number object"}]
 10439	FAIL ch15/15.7/15.7.4/S15.7.4_A2.js (tail -c +9534596 tests/ecmac.db|head -c 459): [{"message":"#1: Object prototype object is the prototype of Number prototype object"}]
 10440	PASS ch15/15.7/15.7.4/S15.7.4_A3.1.js (tail -c +9535056 tests/ecmac.db|head -c 378)
 10441	PASS ch15/15.7/15.7.4/S15.7.4_A3.2.js (tail -c +9535435 tests/ecmac.db|head -c 369)
