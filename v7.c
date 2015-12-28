@@ -18014,9 +18014,22 @@ clean:
 
 static size_t string_lit(struct v7 *v7, struct ast *a, ast_off_t *pos,
                          struct bcode *bcode) {
-  size_t name_len;
+  size_t i, name_len;
+  val_t v;
+  struct mbuf *m = &bcode->lit;
   char *name = ast_get_inlined_data(a, *pos, &name_len);
+
   ast_move_to_children(a, pos);
+  for (i = 0; i < m->len / sizeof(val_t); i++) {
+    v = ((val_t *) m->buf)[i];
+    if (v7_is_string(v)) {
+      size_t l;
+      const char *s = v7_get_string_data(v7, &v, &l);
+      if (name_len == l && memcmp(name, s, name_len) == 0) {
+        return i;
+      }
+    }
+  }
   return bcode_add_lit(bcode, v7_create_string(v7, name, name_len, 1));
 }
 
