@@ -3250,6 +3250,14 @@ V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *, uint8_t op);
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
                                    bcode_off_t target);
 
+V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value);
+V7_PRIVATE size_t bcode_get_varint(uint8_t **ops);
+
+#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
+V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
+                        uint8_t **ops);
+#endif
+
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
@@ -9994,6 +10002,19 @@ V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value) {
   encode_varint(value, (unsigned char *) bcode->ops.buf + offset);
 }
 
+/*
+ * Reads varint-encoded integer from the provided pointer, and adjusts
+ * the pointer appropriately
+ */
+V7_PRIVATE size_t bcode_get_varint(uint8_t **ops) {
+  size_t ret = 0;
+  int len = 0;
+  (*ops)++;
+  ret = decode_varint(*ops, &len);
+  *ops += len - 1;
+  return ret;
+}
+
 V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, val_t val) {
   size_t idx = bcode->lit.len / sizeof(val);
   mbuf_append(&bcode->lit, &val, sizeof(val));
@@ -10575,19 +10596,6 @@ static bcode_off_t bcode_get_target(uint8_t **ops) {
   memcpy(&target, *ops, sizeof(target));
   *ops += sizeof(target) - 1;
   return target;
-}
-
-/*
- * Reads varint-encoded integer from the provided pointer, and adjusts
- * the pointer appropriately
- */
-static size_t bcode_get_varint(uint8_t **ops) {
-  size_t ret = 0;
-  int len = 0;
-  (*ops)++;
-  ret = decode_varint(*ops, &len);
-  *ops += len - 1;
-  return ret;
 }
 
 struct bcode_registers {
@@ -11288,7 +11296,7 @@ restart:
     {
       uint8_t *dops = r.ops;
       fprintf(stderr, "eval ");
-      dump_op(stderr, r.bcode, &dops);
+      dump_op(v7, stderr, r.bcode, &dops);
     }
 #endif
 
@@ -11538,8 +11546,8 @@ restart:
         BTRY(i_value_of(v7, v2, &v3));
 
         if (!v7_is_function(v2) && !v7_is_cfunction(v3)) {
-          V7_TRY(bcode_throw_exception(
-              v7, &r, TYPE_ERROR, "Expecting a function in instanceof check"));
+          BTRY(v7_throwf(v7, TYPE_ERROR,
+                         "Expecting a function in instanceof check"));
           goto op_done;
         } else {
           PUSH(v7_create_boolean(
@@ -11740,8 +11748,7 @@ restart:
         uint8_t is_constructor = (op == OP_NEW);
 
         if (SP() < (args + 1 /*func*/ + 1 /*this*/)) {
-          V7_TRY(
-              bcode_throw_exception(v7, &r, INTERNAL_ERROR, "stack underflow"));
+          BTRY(v7_throwf(v7, INTERNAL_ERROR, "stack underflow"));
           goto op_done;
           break;
         } else {
@@ -11772,15 +11779,14 @@ restart:
             v4 = v7_get(v7, v1 /*func*/, "prototype", 9);
             if (!v7_is_object(v4)) {
               /* TODO(dfrank): box primitive value */
-              V7_TRY(bcode_throw_exception(
-                  v7, &r, TYPE_ERROR,
+              BTRY(v7_throwf(
+                  v7, TYPE_ERROR,
                   "Cannot set a primitive value as object prototype"));
               goto op_done;
             } else if (v7_is_function(v4) || v7_is_cfunction(v4)) {
               /* TODO(dfrank): add support for a function to be a prototype */
-              V7_TRY(bcode_throw_exception(
-                  v7, &r, TYPE_ERROR,
-                  "Not implemented: function as a prototype"));
+              BTRY(v7_throwf(v7, TYPE_ERROR,
+                             "Not implemented: function as a prototype"));
               goto op_done;
             }
 
@@ -11811,8 +11817,7 @@ restart:
              *
              * We have `1` here, but not `"foo"`.
              */
-            V7_TRY(bcode_throw_exception(v7, &r, TYPE_ERROR,
-                                         "value is not a function"));
+            BTRY(v7_throwf(v7, TYPE_ERROR, "value is not a function"));
             goto op_done;
           } else if (v7_is_cfunction(v1)) {
             /* call cfunction */
@@ -11955,8 +11960,7 @@ restart:
           if (!r.bcode->strict_mode) {
             res = v7_create_boolean(0);
           } else {
-            V7_TRY(bcode_throw_exception(v7, &r, TYPE_ERROR,
-                                         "Cannot delete property '%s'", buf));
+            BTRY(v7_throwf(v7, TYPE_ERROR, "Cannot delete property '%s'", buf));
             goto op_done;
           }
         } else {
@@ -12049,8 +12053,7 @@ restart:
         break;
       }
       default:
-        V7_TRY(bcode_throw_exception(v7, &r, INTERNAL_ERROR,
-                                     "Unknown opcode: %d", (int) op));
+        BTRY(v7_throwf(v7, INTERNAL_ERROR, "Unknown opcode: %d", (int) op));
         goto op_done;
         break;
     }
