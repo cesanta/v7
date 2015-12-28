@@ -300,14 +300,17 @@ static const char *test_closure(void) {
   return NULL;
 }
 
-static val_t adder(struct v7 *v7) {
+static enum v7_err adder(struct v7 *v7, v7_val_t *res) {
+  enum v7_err rcode = V7_OK;
   double sum = 0;
   unsigned long i;
 
   for (i = 0; i < v7_argc(v7); i++) {
     sum += v7_to_number(v7_arg(v7, i));
   }
-  return v7_create_number(sum);
+  *res = v7_create_number(sum);
+
+  return rcode;
 }
 
 static const char *test_native_functions(void) {

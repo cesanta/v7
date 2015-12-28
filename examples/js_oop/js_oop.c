@@ -11,16 +11,25 @@
  * This example demonstrates how to do JS OOP in C.
  */
 
-static v7_val_t MyThing_ctor(struct v7 *v7) {
+static enum v7_err MyThing_ctor(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t arg0 = v7_arg(v7, 0);
   v7_set(v7, this_obj, "__arg", ~0 /* = strlen */, V7_PROPERTY_DONT_ENUM, arg0);
-  return this_obj;
+
+  /*
+   * A constructor function can access the newly created object with
+   * `v7_get_this()`. The constructor can override the result of the `new`
+   * expression by explicitly setting `res` to another object. Any non-object
+   * value set into `res` will be ignored. This matches the JavaScript
+   * constructor return value semantics.
+   */
+  return V7_OK;
 }
 
-static v7_val_t MyThing_myMethod(struct v7 *v7) {
+static enum v7_err MyThing_myMethod(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
-  return v7_get(v7, this_obj, "__arg", ~0);
+  *res = v7_get(v7, this_obj, "__arg", ~0);
+  return V7_OK;
 }
 
 int main(void) {
