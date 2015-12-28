@@ -3234,8 +3234,6 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
                                   const char *data);
 #endif
 
-V7_PRIVATE enum v7_err eval_bcode(struct v7 *, struct bcode *);
-
 #ifdef V7_BCODE_DUMP
 V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *, struct bcode *);
 #endif
@@ -3252,6 +3250,30 @@ V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *, uint8_t op);
 V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
                                    bcode_off_t target);
 
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* BCODE_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./src/eval.h"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef EVAL_H_INCLUDED
+#define EVAL_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/internal.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode);
 V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
                                v7_val_t this_obj, v7_val_t args,
                                uint8_t is_constructor);
@@ -3411,6 +3433,7 @@ typedef unsigned long uintptr_t;
 /* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/parser.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
+/* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
 /* Amalgamated: #include "v7/src/mm.h" */
 /* Amalgamated: #include "v7/builtin/builtin.h" */
@@ -9781,6 +9804,503 @@ V7_PRIVATE void ast_free(struct ast *ast) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 
+#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
+/* clang-format off */
+static const char *op_names[] = {
+  "DROP",
+  "DUP",
+  "2DUP",
+  "SWAP",
+  "STASH",
+  "UNSTASH",
+  "SWAP_DROP",
+  "PUSH_UNDEFINED",
+  "PUSH_NULL",
+  "PUSH_THIS",
+  "PUSH_TRUE",
+  "PUSH_FALSE",
+  "PUSH_ZERO",
+  "PUSH_ONE",
+  "PUSH_LIT",
+  "NOT",
+  "LOGICAL_NOT",
+  "NEG",
+  "POS",
+  "ADD",
+  "SUB",
+  "REM",
+  "MUL",
+  "DIV",
+  "LSHIFT",
+  "RSHIFT",
+  "URSHIFT",
+  "OR",
+  "XOR",
+  "AND",
+  "EQ_EQ",
+  "EQ",
+  "NE",
+  "NE_NE",
+  "LT",
+  "LE",
+  "GT",
+  "GE",
+  "INSTANCEOF",
+  "TYPEOF",
+  "IN",
+  "GET",
+  "SET",
+  "SET_VAR",
+  "GET_VAR",
+  "SAFE_GET_VAR",
+  "JMP",
+  "JMP_TRUE",
+  "JMP_FALSE",
+  "JMP_TRUE_DROP",
+  "JMP_IF_CONTINUE",
+  "CREATE_OBJ",
+  "CREATE_ARR",
+  "NEXT_PROP",
+  "FUNC_LIT",
+  "CALL",
+  "NEW",
+  "RET",
+  "DELETE",
+  "DELETE_VAR",
+  "TRY_PUSH_CATCH",
+  "TRY_PUSH_FINALLY",
+  "TRY_PUSH_LOOP",
+  "TRY_PUSH_SWITCH",
+  "TRY_POP",
+  "AFTER_FINALLY",
+  "THROW",
+  "BREAK",
+  "CONTINUE",
+  "ENTER_CATCH",
+  "EXIT_CATCH",
+};
+/* clang-format on */
+
+V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
+#endif
+
+#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
+V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
+                        uint8_t **ops) {
+  uint8_t *p = *ops;
+
+  assert(*p < OP_MAX);
+  fprintf(f, "%zu: %s", (size_t)(p - (uint8_t *) bcode->ops.buf), op_names[*p]);
+  switch (*p) {
+    case OP_PUSH_LIT:
+    case OP_SAFE_GET_VAR:
+    case OP_GET_VAR:
+    case OP_SET_VAR: {
+      size_t idx = bcode_get_varint(&p);
+      fprintf(f, "(%lu): ", (unsigned long) idx);
+      v7_fprint(f, v7, ((val_t *) bcode->lit.buf)[idx]);
+      break;
+    }
+    case OP_CALL:
+    case OP_NEW:
+      p++;
+      fprintf(f, "(%d)", *p);
+      break;
+    case OP_JMP:
+    case OP_JMP_FALSE:
+    case OP_JMP_TRUE:
+    case OP_JMP_TRUE_DROP:
+    case OP_JMP_IF_CONTINUE:
+    case OP_TRY_PUSH_CATCH:
+    case OP_TRY_PUSH_FINALLY:
+    case OP_TRY_PUSH_LOOP:
+    case OP_TRY_PUSH_SWITCH: {
+      bcode_off_t target;
+      p++;
+      memcpy(&target, p, sizeof(target));
+      fprintf(f, "(%lu)", (unsigned long) target);
+      p += sizeof(target) - 1;
+      break;
+    }
+    default:
+      break;
+  }
+  fprintf(f, "\n");
+  *ops = p;
+}
+#endif
+
+#ifdef V7_BCODE_DUMP
+V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *f, struct bcode *bcode) {
+  uint8_t *p = (uint8_t *) bcode->ops.buf;
+  uint8_t *end = p + bcode->ops.len;
+  for (; p < end; p++) {
+    dump_op(v7, f, bcode, &p);
+  }
+}
+#endif
+
+V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode) {
+  mbuf_init(&bcode->ops, 0);
+  mbuf_init(&bcode->lit, 0);
+  mbuf_init(&bcode->names, 0);
+  bcode->refcnt = 0;
+  bcode->args = 0;
+  bcode->strict_mode = strict_mode;
+}
+
+V7_PRIVATE void bcode_free(struct bcode *bcode) {
+  mbuf_free(&bcode->ops);
+  mbuf_free(&bcode->lit);
+  mbuf_free(&bcode->names);
+  bcode->refcnt = 0;
+}
+
+V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *b) {
+  (void) v7;
+  b->refcnt++;
+}
+
+V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
+  (void) v7;
+
+  assert(b->refcnt > 0);
+  if (b->refcnt != 0) b->refcnt--;
+
+  if (b->refcnt == 0) {
+#if V7_ENABLE__Memory__stats
+    v7->function_arena_bcode_size -= b->ops.size + b->lit.size;
+#endif
+    bcode_free(b);
+    free(b);
+  }
+}
+
+V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op) {
+  mbuf_append(&bcode->ops, &op, 1);
+}
+
+/*
+ * Appends varint-encoded integer to the `ops` mbuf
+ */
+V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value) {
+  int k = calc_llen(value); /* Calculate how many bytes length takes */
+  int offset = bcode->ops.len;
+
+  /* Allocate buffer */
+  mbuf_append(&bcode->ops, NULL, k);
+
+  /* Write value */
+  encode_varint(value, (unsigned char *) bcode->ops.buf + offset);
+}
+
+V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, val_t val) {
+  size_t idx = bcode->lit.len / sizeof(val);
+  mbuf_append(&bcode->lit, &val, sizeof(val));
+  return idx;
+}
+
+V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx) {
+  val_t ret;
+  memcpy(&ret, bcode->lit.buf + (size_t) idx * sizeof(ret), sizeof(ret));
+  return ret;
+}
+
+V7_PRIVATE void bcode_op_lit(struct bcode *bcode, enum opcode op, size_t idx) {
+  bcode_op(bcode, op);
+  bcode_add_varint(bcode, idx);
+}
+
+V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx) {
+  bcode_op_lit(bcode, OP_PUSH_LIT, idx);
+}
+
+V7_PRIVATE void bcode_add_name(struct bcode *bcode, val_t v) {
+  mbuf_append(&bcode->names, &v, sizeof(v));
+}
+
+V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode) {
+  return bcode->ops.len;
+}
+
+/*
+ * Appends a branch target and returns its location.
+ * This location can be updated with bcode_patch_target.
+ * To be issued following a JMP_* bytecode
+ */
+V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode) {
+  bcode_off_t pos = bcode_pos(bcode);
+  bcode_off_t zero = 0;
+  mbuf_append(&bcode->ops, &zero, sizeof(bcode_off_t));
+  return pos;
+}
+
+/* Appends an op requiring a branch target. See bcode_add_target. */
+V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *bcode, uint8_t op) {
+  bcode_op(bcode, op);
+  return bcode_add_target(bcode);
+}
+
+V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
+                                   bcode_off_t target) {
+  memcpy(bcode->ops.buf + label, &target, sizeof(target));
+}
+
+#ifndef V7_NO_FS
+
+static void bcode_serialize_varint(int n, FILE *out) {
+  unsigned char buf[8];
+  int k = calc_llen(n);
+  encode_varint(n, buf);
+  fwrite(buf, k, 1, out);
+}
+
+static void bcode_serialize_emit_type_tag(enum bcode_ser_lit_tag tag,
+                                          FILE *out) {
+  uint8_t t = (uint8_t) tag;
+  fwrite(&t, 1, 1, out);
+}
+
+static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode, FILE *out);
+
+static void bcode_serialize_string(struct v7 *v7, val_t v, FILE *out) {
+  size_t len;
+  const char *s = v7_get_string_data(v7, &v, &len);
+
+  bcode_serialize_varint(len, out);
+  fwrite(s, len + 1 /* NUL char */, 1, out);
+}
+
+static void bcode_serialize_lit(struct v7 *v7, val_t v, FILE *out) {
+  int t = val_type(v7, v);
+  switch (t) {
+    case V7_TYPE_NUMBER: {
+      double num = v7_to_number(v);
+      char buf[18];
+      const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
+      size_t len = snprintf(buf, sizeof(buf), fmt, num);
+
+      bcode_serialize_emit_type_tag(BCODE_SER_NUMBER, out);
+      bcode_serialize_varint(len, out);
+      fwrite(buf, len, 1, out);
+      break;
+    }
+    case V7_TYPE_STRING: {
+      bcode_serialize_emit_type_tag(BCODE_SER_STRING, out);
+      bcode_serialize_string(v7, v, out);
+      break;
+    }
+    /* TODO(mkm):
+     * case V7_TYPE_REGEXP_OBJECT:
+     */
+    case V7_TYPE_FUNCTION_OBJECT: {
+      struct v7_function *func;
+      func = v7_to_function(v);
+      assert(func->bcode != NULL);
+
+      bcode_serialize_emit_type_tag(BCODE_SER_FUNCTION, out);
+      bcode_serialize_func(v7, func->bcode, out);
+      break;
+    }
+    default:
+      fprintf(stderr, "Unhandled type: %d", t);
+      assert(1 == 0);
+  }
+}
+
+static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode,
+                                 FILE *out) {
+  val_t *vp;
+  struct mbuf *mbuf;
+  (void) v7;
+
+  /*
+   * literals table:
+   * <varint> // number of literals
+   * <bcode_ser_literal>*
+   */
+  mbuf = &bcode->lit;
+  bcode_serialize_varint(mbuf->len / sizeof(val_t), out);
+  for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
+    bcode_serialize_lit(v7, *vp, out);
+  }
+
+  /*
+   * names:
+   * <varint> // number of names
+   * <string>*
+   */
+  mbuf = &bcode->names;
+  bcode_serialize_varint(mbuf->len / sizeof(val_t), out);
+  for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
+    bcode_serialize_string(v7, *vp, out);
+  }
+
+  /* args */
+  bcode_serialize_varint(bcode->args, out);
+
+  /*
+   * bcode:
+   * <varint> // opcodes length
+   * <opcode>*
+   */
+  mbuf = &bcode->ops;
+  bcode_serialize_varint(mbuf->len, out);
+  fwrite(mbuf->buf, mbuf->len, 1, out);
+}
+
+V7_PRIVATE void bcode_serialize(struct v7 *v7, struct bcode *bcode, FILE *out) {
+  (void) v7;
+  (void) bcode;
+
+  fwrite(BIN_BCODE_SIGNATURE, sizeof(BIN_BCODE_SIGNATURE), 1, out);
+  bcode_serialize_func(v7, bcode, out);
+}
+
+static size_t bcode_deserialize_varint(const char **data) {
+  size_t ret = 0;
+  int len = 0;
+  ret = decode_varint((const unsigned char *) (*data), &len);
+  *data += len;
+  return ret;
+}
+
+static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
+                                          const char *data);
+
+static val_t bcode_deserialize_string(struct v7 *v7, const char **data) {
+  val_t v;
+  size_t lit_len = 0;
+  lit_len = bcode_deserialize_varint(data);
+  v = v7_create_string(v7, *data, lit_len, 0);
+  *data += lit_len + 1 /*NULL-terminator*/;
+
+  return v;
+}
+
+static const char *bcode_deserialize_lit(struct v7 *v7, struct bcode *bcode,
+                                         const char *data) {
+  enum bcode_ser_lit_tag lit_tag;
+  size_t lit_len = 0;
+
+  (void) v7;
+
+  lit_tag = (enum bcode_ser_lit_tag) * data++;
+
+  switch (lit_tag) {
+    case BCODE_SER_NUMBER: {
+      double val;
+      char buf[12];
+      char *p = buf;
+      lit_len = bcode_deserialize_varint(&data);
+
+      if (lit_len > sizeof(buf) - 1) {
+        p = (char *) malloc(lit_len + 1);
+      }
+      strncpy(p, data, lit_len);
+      data += lit_len;
+      p[lit_len] = '\0';
+      val = strtod(p, NULL);
+      if (p != buf) free(p);
+
+      bcode_add_lit(bcode, v7_create_number(val));
+      break;
+    }
+
+    case BCODE_SER_STRING: {
+      bcode_add_lit(bcode, bcode_deserialize_string(v7, &data));
+      break;
+    }
+
+    case BCODE_SER_REGEX: {
+      /* TODO */
+      assert(0);
+      break;
+    }
+
+    case BCODE_SER_FUNCTION: {
+      val_t funv = create_function(v7);
+      struct v7_function *func = v7_to_function(funv);
+      func->scope = NULL;
+      func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
+      bcode_init(func->bcode, bcode->strict_mode);
+      retain_bcode(v7, func->bcode);
+      bcode_add_lit(bcode, funv);
+      data = bcode_deserialize_func(v7, func->bcode, data);
+      break;
+    }
+
+    default:
+      assert(0);
+      break;
+  }
+
+  return data;
+}
+
+static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
+                                          const char *data) {
+  size_t size;
+
+  /* get number of literals */
+  size = bcode_deserialize_varint(&data);
+  /* deserialize all literals */
+  for (; size > 0; --size) {
+    data = bcode_deserialize_lit(v7, bcode, data);
+  }
+
+  /* get number of names */
+  size = bcode_deserialize_varint(&data);
+  /* deserialize all names */
+  for (; size > 0; --size) {
+    bcode_add_name(bcode, bcode_deserialize_string(v7, &data));
+  }
+
+  /* get number of args */
+  bcode->args = bcode_deserialize_varint(&data);
+
+  /* get opcode size */
+  size = bcode_deserialize_varint(&data);
+
+  bcode->ops.buf = (char *) data;
+  bcode->ops.size = size;
+  bcode->ops.len = size;
+
+  /*
+   * prevent freeing of this bcode by "retaining" it multiple times, since it's
+   * actually backed by the buffer that is managed differently.
+   *
+   * TODO(dfrank) : this looks like a total hack, we need to find better
+   * solution
+   */
+  retain_bcode(v7, bcode);
+  retain_bcode(v7, bcode);
+
+  bcode->refcnt++; /* prevent freeing */
+
+  data += size;
+
+  return data;
+}
+
+V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
+                                  const char *data) {
+  data = bcode_deserialize_func(v7, bcode, data);
+}
+
+#endif
+#ifdef V7_MODULE_LINES
+#line 1 "./src/eval.c"
+/**/
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/gc.h" */
+
 /*
  * Bcode offsets in "try stack" (`____p`) are stored in JS numbers, i.e.
  * in `double`s. Apart from the offset itself, we also need some additional
@@ -9901,86 +10421,6 @@ enum local_block {
       goto op_done;                                                           \
     }                                                                         \
   } while (0)
-
-#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
-/* clang-format off */
-static const char *op_names[] = {
-  "DROP",
-  "DUP",
-  "2DUP",
-  "SWAP",
-  "STASH",
-  "UNSTASH",
-  "SWAP_DROP",
-  "PUSH_UNDEFINED",
-  "PUSH_NULL",
-  "PUSH_THIS",
-  "PUSH_TRUE",
-  "PUSH_FALSE",
-  "PUSH_ZERO",
-  "PUSH_ONE",
-  "PUSH_LIT",
-  "NOT",
-  "LOGICAL_NOT",
-  "NEG",
-  "POS",
-  "ADD",
-  "SUB",
-  "REM",
-  "MUL",
-  "DIV",
-  "LSHIFT",
-  "RSHIFT",
-  "URSHIFT",
-  "OR",
-  "XOR",
-  "AND",
-  "EQ_EQ",
-  "EQ",
-  "NE",
-  "NE_NE",
-  "LT",
-  "LE",
-  "GT",
-  "GE",
-  "INSTANCEOF",
-  "TYPEOF",
-  "IN",
-  "GET",
-  "SET",
-  "SET_VAR",
-  "GET_VAR",
-  "SAFE_GET_VAR",
-  "JMP",
-  "JMP_TRUE",
-  "JMP_FALSE",
-  "JMP_TRUE_DROP",
-  "JMP_IF_CONTINUE",
-  "CREATE_OBJ",
-  "CREATE_ARR",
-  "NEXT_PROP",
-  "FUNC_LIT",
-  "CALL",
-  "NEW",
-  "RET",
-  "DELETE",
-  "DELETE_VAR",
-  "TRY_PUSH_CATCH",
-  "TRY_PUSH_FINALLY",
-  "TRY_PUSH_LOOP",
-  "TRY_PUSH_SWITCH",
-  "TRY_POP",
-  "AFTER_FINALLY",
-  "THROW",
-  "BREAK",
-  "CONTINUE",
-  "ENTER_CATCH",
-  "EXIT_CATCH",
-};
-/* clang-format on */
-
-V7_STATIC_ASSERT(OP_MAX == ARRAY_SIZE(op_names), bad_op_names);
-#endif
 
 V7_PRIVATE void stack_push(struct mbuf *s, val_t v) {
   mbuf_append(s, &v, sizeof(v));
@@ -10149,62 +10589,6 @@ static size_t bcode_get_varint(uint8_t **ops) {
   *ops += len - 1;
   return ret;
 }
-
-#if defined(V7_BCODE_DUMP) || defined(V7_BCODE_TRACE)
-V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
-                        uint8_t **ops) {
-  uint8_t *p = *ops;
-
-  assert(*p < OP_MAX);
-  fprintf(f, "%zu: %s", (size_t)(p - (uint8_t *) bcode->ops.buf), op_names[*p]);
-  switch (*p) {
-    case OP_PUSH_LIT:
-    case OP_SAFE_GET_VAR:
-    case OP_GET_VAR:
-    case OP_SET_VAR: {
-      size_t idx = bcode_get_varint(&p);
-      fprintf(f, "(%lu): ", (unsigned long) idx);
-      v7_fprint(f, v7, ((val_t *) bcode->lit.buf)[idx]);
-      break;
-    }
-    case OP_CALL:
-    case OP_NEW:
-      p++;
-      fprintf(f, "(%d)", *p);
-      break;
-    case OP_JMP:
-    case OP_JMP_FALSE:
-    case OP_JMP_TRUE:
-    case OP_JMP_TRUE_DROP:
-    case OP_JMP_IF_CONTINUE:
-    case OP_TRY_PUSH_CATCH:
-    case OP_TRY_PUSH_FINALLY:
-    case OP_TRY_PUSH_LOOP:
-    case OP_TRY_PUSH_SWITCH: {
-      bcode_off_t target;
-      p++;
-      memcpy(&target, p, sizeof(target));
-      fprintf(f, "(%lu)", (unsigned long) target);
-      p += sizeof(target) - 1;
-      break;
-    }
-    default:
-      break;
-  }
-  fprintf(f, "\n");
-  *ops = p;
-}
-#endif
-
-#ifdef V7_BCODE_DUMP
-V7_PRIVATE void dump_bcode(struct v7 *v7, FILE *f, struct bcode *bcode) {
-  uint8_t *p = (uint8_t *) bcode->ops.buf;
-  uint8_t *end = p + bcode->ops.len;
-  for (; p < end; p++) {
-    dump_op(v7, f, bcode, &p);
-  }
-}
-#endif
 
 struct bcode_registers {
   struct bcode *bcode;
@@ -10757,8 +11141,8 @@ clean:
  * Evaluate `OP_TRY_PUSH_CATCH` or `OP_TRY_PUSH_FINALLY`: Take an offset (from
  * the parameter of opcode) and push it onto "try stack"
  */
-V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
-                              struct bcode_registers *r) {
+static void eval_try_push(struct v7 *v7, enum opcode op,
+                          struct bcode_registers *r) {
   val_t arr = v7_create_undefined();
   struct gc_tmp_frame tf = new_tmp_frame(v7);
   bcode_off_t target;
@@ -10803,7 +11187,7 @@ V7_PRIVATE void eval_try_push(struct v7 *v7, enum opcode op,
 /*
  * Evaluate `OP_TRY_POP`: just pop latest item from "try stack", ignoring it
  */
-V7_PRIVATE enum v7_err eval_try_pop(struct v7 *v7) {
+static enum v7_err eval_try_pop(struct v7 *v7) {
   enum v7_err rcode = V7_OK;
   val_t arr = v7_create_undefined();
   unsigned long length;
@@ -11726,42 +12110,6 @@ clean:
   return rcode;
 }
 
-V7_PRIVATE void bcode_init(struct bcode *bcode, uint8_t strict_mode) {
-  mbuf_init(&bcode->ops, 0);
-  mbuf_init(&bcode->lit, 0);
-  mbuf_init(&bcode->names, 0);
-  bcode->refcnt = 0;
-  bcode->args = 0;
-  bcode->strict_mode = strict_mode;
-}
-
-V7_PRIVATE void bcode_free(struct bcode *bcode) {
-  mbuf_free(&bcode->ops);
-  mbuf_free(&bcode->lit);
-  mbuf_free(&bcode->names);
-  bcode->refcnt = 0;
-}
-
-V7_PRIVATE void retain_bcode(struct v7 *v7, struct bcode *b) {
-  (void) v7;
-  b->refcnt++;
-}
-
-V7_PRIVATE void release_bcode(struct v7 *v7, struct bcode *b) {
-  (void) v7;
-
-  assert(b->refcnt > 0);
-  if (b->refcnt != 0) b->refcnt--;
-
-  if (b->refcnt == 0) {
-#if V7_ENABLE__Memory__stats
-    v7->function_arena_bcode_size -= b->ops.size + b->lit.size;
-#endif
-    bcode_free(b);
-    free(b);
-  }
-}
-
 /*
  * TODO(dfrank) this function is probably too overloaded: it handles both
  * `v7_exec` and `v7_apply`. Read below why it's written this way, but it's
@@ -12090,320 +12438,6 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
   return b_exec(v7, NULL, 0, func, args, result, this_obj, 0, 0,
                 is_constructor);
 }
-
-V7_PRIVATE void bcode_op(struct bcode *bcode, uint8_t op) {
-  mbuf_append(&bcode->ops, &op, 1);
-}
-
-/*
- * Appends varint-encoded integer to the `ops` mbuf
- */
-V7_PRIVATE void bcode_add_varint(struct bcode *bcode, size_t value) {
-  int k = calc_llen(value); /* Calculate how many bytes length takes */
-  int offset = bcode->ops.len;
-
-  /* Allocate buffer */
-  mbuf_append(&bcode->ops, NULL, k);
-
-  /* Write value */
-  encode_varint(value, (unsigned char *) bcode->ops.buf + offset);
-}
-
-V7_PRIVATE size_t bcode_add_lit(struct bcode *bcode, val_t val) {
-  size_t idx = bcode->lit.len / sizeof(val);
-  mbuf_append(&bcode->lit, &val, sizeof(val));
-  return idx;
-}
-
-V7_PRIVATE v7_val_t bcode_get_lit(struct bcode *bcode, size_t idx) {
-  val_t ret;
-  memcpy(&ret, bcode->lit.buf + (size_t) idx * sizeof(ret), sizeof(ret));
-  return ret;
-}
-
-V7_PRIVATE void bcode_op_lit(struct bcode *bcode, enum opcode op, size_t idx) {
-  bcode_op(bcode, op);
-  bcode_add_varint(bcode, idx);
-}
-
-V7_PRIVATE void bcode_push_lit(struct bcode *bcode, size_t idx) {
-  bcode_op_lit(bcode, OP_PUSH_LIT, idx);
-}
-
-V7_PRIVATE void bcode_add_name(struct bcode *bcode, val_t v) {
-  mbuf_append(&bcode->names, &v, sizeof(v));
-}
-
-V7_PRIVATE bcode_off_t bcode_pos(struct bcode *bcode) {
-  return bcode->ops.len;
-}
-
-/*
- * Appends a branch target and returns its location.
- * This location can be updated with bcode_patch_target.
- * To be issued following a JMP_* bytecode
- */
-V7_PRIVATE bcode_off_t bcode_add_target(struct bcode *bcode) {
-  bcode_off_t pos = bcode_pos(bcode);
-  bcode_off_t zero = 0;
-  mbuf_append(&bcode->ops, &zero, sizeof(bcode_off_t));
-  return pos;
-}
-
-/* Appends an op requiring a branch target. See bcode_add_target. */
-V7_PRIVATE bcode_off_t bcode_op_target(struct bcode *bcode, uint8_t op) {
-  bcode_op(bcode, op);
-  return bcode_add_target(bcode);
-}
-
-V7_PRIVATE void bcode_patch_target(struct bcode *bcode, bcode_off_t label,
-                                   bcode_off_t target) {
-  memcpy(bcode->ops.buf + label, &target, sizeof(target));
-}
-
-#ifndef V7_NO_FS
-
-static void bcode_serialize_varint(int n, FILE *out) {
-  unsigned char buf[8];
-  int k = calc_llen(n);
-  encode_varint(n, buf);
-  fwrite(buf, k, 1, out);
-}
-
-static void bcode_serialize_emit_type_tag(enum bcode_ser_lit_tag tag,
-                                          FILE *out) {
-  uint8_t t = (uint8_t) tag;
-  fwrite(&t, 1, 1, out);
-}
-
-static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode, FILE *out);
-
-static void bcode_serialize_string(struct v7 *v7, val_t v, FILE *out) {
-  size_t len;
-  const char *s = v7_get_string_data(v7, &v, &len);
-
-  bcode_serialize_varint(len, out);
-  fwrite(s, len + 1 /* NUL char */, 1, out);
-}
-
-static void bcode_serialize_lit(struct v7 *v7, val_t v, FILE *out) {
-  int t = val_type(v7, v);
-  switch (t) {
-    case V7_TYPE_NUMBER: {
-      double num = v7_to_number(v);
-      char buf[18];
-      const char *fmt = num > 1e10 ? "%.21g" : "%.10g";
-      size_t len = snprintf(buf, sizeof(buf), fmt, num);
-
-      bcode_serialize_emit_type_tag(BCODE_SER_NUMBER, out);
-      bcode_serialize_varint(len, out);
-      fwrite(buf, len, 1, out);
-      break;
-    }
-    case V7_TYPE_STRING: {
-      bcode_serialize_emit_type_tag(BCODE_SER_STRING, out);
-      bcode_serialize_string(v7, v, out);
-      break;
-    }
-    /* TODO(mkm):
-     * case V7_TYPE_REGEXP_OBJECT:
-     */
-    case V7_TYPE_FUNCTION_OBJECT: {
-      struct v7_function *func;
-      func = v7_to_function(v);
-      assert(func->bcode != NULL);
-
-      bcode_serialize_emit_type_tag(BCODE_SER_FUNCTION, out);
-      bcode_serialize_func(v7, func->bcode, out);
-      break;
-    }
-    default:
-      fprintf(stderr, "Unhandled type: %d", t);
-      assert(1 == 0);
-  }
-}
-
-static void bcode_serialize_func(struct v7 *v7, struct bcode *bcode,
-                                 FILE *out) {
-  val_t *vp;
-  struct mbuf *mbuf;
-  (void) v7;
-
-  /*
-   * literals table:
-   * <varint> // number of literals
-   * <bcode_ser_literal>*
-   */
-  mbuf = &bcode->lit;
-  bcode_serialize_varint(mbuf->len / sizeof(val_t), out);
-  for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
-    bcode_serialize_lit(v7, *vp, out);
-  }
-
-  /*
-   * names:
-   * <varint> // number of names
-   * <string>*
-   */
-  mbuf = &bcode->names;
-  bcode_serialize_varint(mbuf->len / sizeof(val_t), out);
-  for (vp = (val_t *) mbuf->buf; (char *) vp < mbuf->buf + mbuf->len; vp++) {
-    bcode_serialize_string(v7, *vp, out);
-  }
-
-  /* args */
-  bcode_serialize_varint(bcode->args, out);
-
-  /*
-   * bcode:
-   * <varint> // opcodes length
-   * <opcode>*
-   */
-  mbuf = &bcode->ops;
-  bcode_serialize_varint(mbuf->len, out);
-  fwrite(mbuf->buf, mbuf->len, 1, out);
-}
-
-V7_PRIVATE void bcode_serialize(struct v7 *v7, struct bcode *bcode, FILE *out) {
-  (void) v7;
-  (void) bcode;
-
-  fwrite(BIN_BCODE_SIGNATURE, sizeof(BIN_BCODE_SIGNATURE), 1, out);
-  bcode_serialize_func(v7, bcode, out);
-}
-
-static size_t bcode_deserialize_varint(const char **data) {
-  size_t ret = 0;
-  int len = 0;
-  ret = decode_varint((const unsigned char *) (*data), &len);
-  *data += len;
-  return ret;
-}
-
-static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
-                                          const char *data);
-
-static val_t bcode_deserialize_string(struct v7 *v7, const char **data) {
-  val_t v;
-  size_t lit_len = 0;
-  lit_len = bcode_deserialize_varint(data);
-  v = v7_create_string(v7, *data, lit_len, 0);
-  *data += lit_len + 1 /*NULL-terminator*/;
-
-  return v;
-}
-
-static const char *bcode_deserialize_lit(struct v7 *v7, struct bcode *bcode,
-                                         const char *data) {
-  enum bcode_ser_lit_tag lit_tag;
-  size_t lit_len = 0;
-
-  (void) v7;
-
-  lit_tag = (enum bcode_ser_lit_tag) * data++;
-
-  switch (lit_tag) {
-    case BCODE_SER_NUMBER: {
-      double val;
-      char buf[12];
-      char *p = buf;
-      lit_len = bcode_deserialize_varint(&data);
-
-      if (lit_len > sizeof(buf) - 1) {
-        p = (char *) malloc(lit_len + 1);
-      }
-      strncpy(p, data, lit_len);
-      data += lit_len;
-      p[lit_len] = '\0';
-      val = strtod(p, NULL);
-      if (p != buf) free(p);
-
-      bcode_add_lit(bcode, v7_create_number(val));
-      break;
-    }
-
-    case BCODE_SER_STRING: {
-      bcode_add_lit(bcode, bcode_deserialize_string(v7, &data));
-      break;
-    }
-
-    case BCODE_SER_REGEX: {
-      /* TODO */
-      assert(0);
-      break;
-    }
-
-    case BCODE_SER_FUNCTION: {
-      val_t funv = create_function(v7);
-      struct v7_function *func = v7_to_function(funv);
-      func->scope = NULL;
-      func->bcode = (struct bcode *) calloc(1, sizeof(*bcode));
-      bcode_init(func->bcode, bcode->strict_mode);
-      retain_bcode(v7, func->bcode);
-      bcode_add_lit(bcode, funv);
-      data = bcode_deserialize_func(v7, func->bcode, data);
-      break;
-    }
-
-    default:
-      assert(0);
-      break;
-  }
-
-  return data;
-}
-
-static const char *bcode_deserialize_func(struct v7 *v7, struct bcode *bcode,
-                                          const char *data) {
-  size_t size;
-
-  /* get number of literals */
-  size = bcode_deserialize_varint(&data);
-  /* deserialize all literals */
-  for (; size > 0; --size) {
-    data = bcode_deserialize_lit(v7, bcode, data);
-  }
-
-  /* get number of names */
-  size = bcode_deserialize_varint(&data);
-  /* deserialize all names */
-  for (; size > 0; --size) {
-    bcode_add_name(bcode, bcode_deserialize_string(v7, &data));
-  }
-
-  /* get number of args */
-  bcode->args = bcode_deserialize_varint(&data);
-
-  /* get opcode size */
-  size = bcode_deserialize_varint(&data);
-
-  bcode->ops.buf = (char *) data;
-  bcode->ops.size = size;
-  bcode->ops.len = size;
-
-  /*
-   * prevent freeing of this bcode by "retaining" it multiple times, since it's
-   * actually backed by the buffer that is managed differently.
-   *
-   * TODO(dfrank) : this looks like a total hack, we need to find better
-   * solution
-   */
-  retain_bcode(v7, bcode);
-  retain_bcode(v7, bcode);
-
-  bcode->refcnt++; /* prevent freeing */
-
-  data += size;
-
-  return data;
-}
-
-V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
-                                  const char *data) {
-  data = bcode_deserialize_func(v7, bcode, data);
-}
-
-#endif
 #ifdef V7_MODULE_LINES
 #line 1 "./src/vm.c"
 /**/
