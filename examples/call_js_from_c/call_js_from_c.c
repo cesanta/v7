@@ -20,10 +20,18 @@ static void call_sum(struct v7 *v7) {
 }
 
 int main(void) {
+  enum v7_err rcode = V7_OK;
   v7_val_t result;
   struct v7 *v7 = v7_create();
-  v7_exec(v7, "var sum = function(a, b) { return a + b; };", &result);
+  rcode = v7_exec(v7, "var sum = function(a, b) { return a + b; };", &result);
+  if (rcode != V7_OK) {
+    fprintf(stderr, "exec error: %d\n", (int)rcode);
+    goto clean;
+  }
+
   call_sum(v7);
+
+clean:
   v7_destroy(v7);
-  return 0;
+  return (int)rcode;
 }

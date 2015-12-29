@@ -1096,6 +1096,7 @@ static const char *test_parser(void) {
   char want_ast[102400];
   char *next_want_ast = want_ast;
   size_t want_ast_len;
+  enum v7_err rcode = V7_OK;
   ast_init(&a, 0);
 
 /* Save with `make save_want_ast` */
@@ -1123,10 +1124,12 @@ static const char *test_parser(void) {
 
     if (want_ast_len == 0) {
       printf("Test case not found in %s:\n", want_ast_db);
-      v7_compile(cases[i], 0, 0, stdout);
+      rcode = v7_compile(cases[i], 0, 0, stdout);
+      (void) rcode;
       abort();
     }
-    v7_compile(cases[i], 0, 0, fp);
+    rcode = v7_compile(cases[i], 0, 0, fp);
+    (void) rcode;
     fclose(fp);
 
     ASSERT((fp = fopen("/tmp/got_ast", "r")) != NULL);
