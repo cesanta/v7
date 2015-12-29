@@ -683,9 +683,11 @@ static const char *test_runtime(void) {
 
   v = v7_create_object(v7);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v7_to_object(v) != NULL);
-  ASSERT(v7_to_object(v)->prototype != NULL);
-  ASSERT(v7_to_object(v)->prototype->prototype == NULL);
+  ASSERT(v7_to_generic_object(v) != NULL);
+  ASSERT(v7_to_generic_object(v)->prototype != NULL);
+  ASSERT(v7_to_generic_object(
+             v7_object_to_value(v7_to_generic_object(v)->prototype))
+             ->prototype == NULL);
 
   ASSERT_EQ(v7_set_property(v7, v, "foo", -1, 0, v7_create_null()), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
@@ -2060,9 +2062,9 @@ static const char *test_gc_ptr_check(void) {
 
   eval(v7, &v, "o=({})");
   assert(gc_check_val(v7, v));
-  ASSERT(gc_check_ptr(&v7->object_arena, v7_to_object(v)));
+  ASSERT(gc_check_ptr(&v7->generic_object_arena, v7_to_generic_object(v)));
 #ifndef V7_MALLOC_GC
-  ASSERT(!gc_check_ptr(&v7->object_arena, "foo"));
+  ASSERT(!gc_check_ptr(&v7->generic_object_arena, "foo"));
 #endif
 
   v7_destroy(v7);
@@ -2075,35 +2077,35 @@ static const char *test_gc_mark(void) {
 
   eval(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
   gc_mark(v7, v);
-  ASSERT(MARKED(v7_to_object(v)));
+  ASSERT(MARKED(v7_to_generic_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, &v, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o");
   gc_mark(v7, v7->global_object);
-  ASSERT(MARKED(v7_to_object(v)));
+  ASSERT(MARKED(v7_to_generic_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, &v, "function f() {}; o=new f;o");
   gc_mark(v7, v);
-  ASSERT(MARKED(v7_to_object(v)));
+  ASSERT(MARKED(v7_to_generic_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, &v, "function f() {}; Object.getPrototypeOf(new f)");
   gc_mark(v7, v7->global_object);
-  ASSERT(MARKED(v7_to_object(v)));
+  ASSERT(MARKED(v7_to_generic_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, &v, "({a:1})");
   gc_mark(v7, v7->global_object);
-  ASSERT(!MARKED(v7_to_object(v)));
+  ASSERT(!MARKED(v7_to_generic_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
@@ -2112,7 +2114,7 @@ static const char *test_gc_mark(void) {
        "var f;(function() {var x={a:1};f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `x` is reachable through `f`'s closure scope */
-  ASSERT(MARKED(v7_to_object(v)));
+  ASSERT(MARKED(v7_to_generic_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
@@ -2121,7 +2123,7 @@ static const char *test_gc_mark(void) {
        "(function() {var x={a:1};var f=function(){return x};return x})()");
   gc_mark(v7, v7->global_object);
   /* `f` is unreachable, hence `x` is not marked through the scope */
-  ASSERT(!MARKED(v7_to_object(v)));
+  ASSERT(!MARKED(v7_to_generic_object(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
 
@@ -2138,20 +2140,20 @@ static const char *test_gc_sweep(void) {
 
   v7_gc(v7, 0);
 #if V7_ENABLE__Memory__stats
-  alive = v7->object_arena.alive;
+  alive = v7->generic_object_arena.alive;
 #endif
   eval(v7, &v, "x=({a:1})");
-  v7_to_object(v);
+  v7_to_generic_object(v);
   v7_gc(v7, 0);
 #if V7_ENABLE__Memory__stats
-  ASSERT(v7->object_arena.alive > alive);
+  ASSERT(v7->generic_object_arena.alive > alive);
 #endif
   ASSERT_EVAL_EQ(v7, "x.a", "1");
 
   ASSERT_EVAL_OK(v7, "x=null");
   v7_gc(v7, 0);
 #if V7_ENABLE__Memory__stats
-  ASSERT_EQ(v7->object_arena.alive, alive);
+  ASSERT_EQ(v7->generic_object_arena.alive, alive);
 #endif
 
   v7_destroy(v7);
