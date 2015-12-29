@@ -1863,6 +1863,21 @@ static const char *test_strings(void) {
                 "\x13with embedded \x00 one\x00",
                 33) == 0);
 
+  {
+    const char *lit = "foobarbaz";
+    size_t l;
+    const char *p;
+    s = v7_create_string(v7, lit, ~0, 0);
+    p = v7_get_string_data(v7, &s, &l);
+    /* ASSERT_EQ(l, (size_t) 9); */
+    ASSERT(p == lit);
+
+    if (sizeof(void *) <= 4) {
+      val_t n = v7_create_string(v7, lit, ~0, 0);
+      ASSERT(n == s);
+    }
+  }
+
   v7_destroy(v7);
 
   return NULL;
