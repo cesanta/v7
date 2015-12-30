@@ -4518,8 +4518,8 @@ V7_PRIVATE enum v7_err to_str(struct v7 *v7, val_t v, char *buf, size_t size,
                               enum v7_stringify_flags flags) WARN_UNUSED_RESULT;
 V7_PRIVATE void v7_destroy_property(struct v7_property **p);
 
-V7_PRIVATE val_t
-create_exception(struct v7 *v7, const char *typ, const char *msg);
+V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
+                                        const char *msg, val_t *res);
 
 V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v,
                                   val_t *res) WARN_UNUSED_RESULT;
@@ -10854,7 +10854,11 @@ enum local_block {
 };
 
 /*
- * Like `V7_TRY()`, but to be used inside `eval_bcode()` only.
+ * Like `V7_TRY()`, but to be used inside `eval_bcode()` only: you should
+ * wrap all calls to cfunctions into `BTRY()` instead of `V7_TRY()`.
+ *
+ * If the provided function returns something other than `V7_OK`, this macro
+ * calls `bcode_perform_throw`, which performs bcode stack unwinding.
  */
 #define BTRY(call)                                                            \
   do {                                                                        \
@@ -11415,13 +11419,16 @@ static enum v7_err bcode_perform_return(struct v7 *v7,
 }
 
 /*
- * Perform throw.
+ * Perform throw inside `eval_bcode()`.
  *
  * If `take_thrown_value` is non-zero, value to return will be popped from
  * stack (and saved into `v7->thrown_error`), otherwise, it won't be affected.
  *
  * Returns `V7_OK` if thrown exception was caught, `V7_EXEC_EXCEPTION`
  * otherwise (in this case, evaluation of current script must be stopped)
+ *
+ * When calling this function from `eval_bcode()`, you should wrap this call
+ * into the `V7_TRY()` macro.
  */
 static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
                                        int take_thrown_value) {
@@ -11475,34 +11482,23 @@ static enum v7_err bcode_perform_throw(struct v7 *v7, struct bcode_registers *r,
 }
 
 /*
- * Create an error value, push it on TOS, and perform an exception throw.
- *
- * Returns `V7_OK` if thrown exception was caught, `V7_EXEC_EXCEPTION`
- * otherwise (in this case, evaluation of current script must be stopped)
+ * Throws reference error from `eval_bcode()`. Always wrap a call to this
+ * function into `V7_TRY()`.
  */
-static enum v7_err bcode_throw_exception(struct v7 *v7,
-                                         struct bcode_registers *r,
-                                         const char *ex, const char *err_fmt,
-                                         ...) {
-  va_list ap;
-  va_start(ap, err_fmt);
-  c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
-  va_end(ap);
-  PUSH(create_exception(v7, ex, v7->error_msg));
-  return bcode_perform_throw(v7, r, 1);
-} /* LCOV_EXCL_LINE */
-
 static enum v7_err bcode_throw_reference_error(struct v7 *v7,
                                                struct bcode_registers *r,
                                                val_t var_name) {
+  enum v7_err rcode = V7_OK;
   const char *s;
   size_t name_len;
 
   assert(v7_is_string(var_name));
   s = v7_get_string_data(v7, &var_name, &name_len);
 
-  return bcode_throw_exception(v7, r, REFERENCE_ERROR, "[%.*s] is not defined",
-                               (int) name_len, s);
+  rcode = v7_throwf(v7, REFERENCE_ERROR, "[%.*s] is not defined",
+                    (int) name_len, s);
+  (void) rcode;
+  return bcode_perform_throw(v7, r, 0);
 }
 
 /*
@@ -15284,18 +15280,19 @@ enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
  * Create an instance of exception with type `typ` (see `TYPE_ERROR`,
  * `SYNTAX_ERROR`, etc) and message `msg`.
  */
-V7_PRIVATE val_t
-create_exception(struct v7 *v7, const char *typ, const char *msg) {
+V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
+                                        const char *msg, val_t *res) {
   enum v7_err rcode = V7_OK;
-  val_t e = v7_create_undefined(), ctor_args = v7_create_undefined(),
-        ctor_func = v7_create_undefined();
+  uint8_t saved_creating_exception = v7->creating_exception;
+  val_t ctor_args = v7_create_undefined(), ctor_func = v7_create_undefined();
 #if 0
   assert(v7_is_undefined(v7->thrown_error));
 #endif
 
+  *res = v7_create_undefined();
+
   v7_own(v7, &ctor_args);
   v7_own(v7, &ctor_func);
-  v7_own(v7, &e);
 
   if (v7->creating_exception) {
 #ifndef NO_LIBC
@@ -15316,23 +15313,21 @@ create_exception(struct v7 *v7, const char *typ, const char *msg) {
     }
 
     /* Create an error object, with prototype from constructor function */
-    e = create_object(v7, v7_get(v7, ctor_func, "prototype", 9));
+    *res = create_object(v7, v7_get(v7, ctor_func, "prototype", 9));
 
-    /* Finally, call the constructor, passing an error as `this` */
-    V7_TRY(b_apply(v7, NULL, ctor_func, e, ctor_args, 0));
-
-    v7_disown(v7, &ctor_func);
-    v7_disown(v7, &e);
-    v7_disown(v7, &ctor_args);
-
-    v7->creating_exception = 0;
+    /*
+     * Finally, call the error constructor, passing an error object as `this`
+     */
+    V7_TRY(b_apply(v7, NULL, ctor_func, *res, ctor_args, 0));
   }
 
 clean:
-  (void) rcode;
-  /* TODO(dfrank) : make create_exception() to return v7_err? */
-  assert(rcode == V7_OK);
-  return e;
+  v7->creating_exception = saved_creating_exception;
+
+  v7_disown(v7, &ctor_func);
+  v7_disown(v7, &ctor_args);
+
+  return rcode;
 }
 
 V7_PRIVATE enum v7_err i_value_of(struct v7 *v7, val_t v, val_t *res) {
@@ -15403,12 +15398,24 @@ enum v7_err v7_throw(struct v7 *v7, v7_val_t val) {
 enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt,
                       ...) {
   /* TODO(dfrank) : get rid of v7->error_msg, allocate mem right here */
+  enum v7_err rcode = V7_OK;
   va_list ap;
+  val_t e = v7_create_undefined();
   va_start(ap, err_fmt);
   c_vsnprintf(v7->error_msg, sizeof(v7->error_msg), err_fmt, ap);
   va_end(ap);
 
-  return v7_throw(v7, create_exception(v7, typ, v7->error_msg));
+  v7_own(v7, &e);
+  rcode = create_exception(v7, typ, v7->error_msg, &e);
+  if (rcode != V7_OK) {
+    goto clean;
+  }
+
+  rcode = v7_throw(v7, e);
+
+clean:
+  v7_disown(v7, &e);
+  return rcode;
 }
 
 enum v7_err v7_rethrow(struct v7 *v7) {
