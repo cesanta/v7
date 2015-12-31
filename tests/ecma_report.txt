@@ -10277,7 +10277,7 @@ err
 10224	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A4_T1.js (tail -c +9363855 tests/ecmac.db|head -c 859)
 10225	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A4_T2.js (tail -c +9364715 tests/ecmac.db|head -c 893)
 10226	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A4_T3.js (tail -c +9365609 tests/ecmac.db|head -c 896)
-10227	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A5.js (tail -c +9366506 tests/ecmac.db|head -c 908): [{"message":"#1.1: Exception === 'intostring'. Actual: exception ===Error: value is not a function"}]
+10227	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A5.js (tail -c +9366506 tests/ecmac.db|head -c 908)
 10228	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A6.js (tail -c +9367415 tests/ecmac.db|head -c 577)
 10229	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A7.js (tail -c +9367993 tests/ecmac.db|head -c 584)
 10230	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A8.js (tail -c +9368578 tests/ecmac.db|head -c 1456): [{"message":"value is not a function"}]
@@ -10296,7 +10296,7 @@ err
 10243	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A1_T9.js (tail -c +9380952 tests/ecmac.db|head -c 735): [{"message":"#1: new String(42).charCodeAt(function(){}()) === 0x34. Actual: new String(42).charCodeAt(function(){}()) ===NaN"}]
 10244	PASS ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A2.js (tail -c +9381688 tests/ecmac.db|head -c 827)
 10245	PASS ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A3.js (tail -c +9382516 tests/ecmac.db|head -c 673)
-10246	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A4.js (tail -c +9383190 tests/ecmac.db|head -c 841): [{"message":"#1.1: Exception === 'intostring'. Actual: exception ===Error: value is not a function"}]
+10246	PASS ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A4.js (tail -c +9383190 tests/ecmac.db|head -c 841)
 10247	PASS ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A6.js (tail -c +9384032 tests/ecmac.db|head -c 597)
 10248	PASS ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A7.js
  * @description Checking if creating the String.prototype
