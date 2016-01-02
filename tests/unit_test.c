@@ -84,7 +84,7 @@ int STOP = 0; /* For xcode breakpoints conditions */
 static int check_value(struct v7 *v7, val_t v, const char *str) {
   int res = 1;
   char buf[2048];
-  char *p = v7_to_json(v7, v, buf, sizeof(buf));
+  char *p = v7_stringify(v7, v, buf, sizeof(buf), V7_STRINGIFY_DEBUG);
   if (strcmp(p, str) != 0) {
     _strfail(p, str, -1);
     res = 0;
@@ -1986,6 +1986,11 @@ static const char *test_to_json(void) {
   eval(v7, &v, "({a: function(){}, b: 123.45})");
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   c = "{\"b\":123.45}";
+  ASSERT_STREQ(p, c);
+
+  eval(v7, &v, "[1, function(){}, 2]");
+  ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
+  c = "[1,null,2]";
   ASSERT_STREQ(p, c);
 
   eval(v7, &v, "({a: new Date(2015, 10, 3)})");
