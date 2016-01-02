@@ -3312,10 +3312,10 @@ function FACTORY()
 3294	PASS ch15/15.1/15.1.2/15.1.2.3/S15.1.2.3_A7.7.js (tail -c +3504710 tests/ecmac.db|head -c 546)
 3295	FAIL ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A1_T1.js (tail -c +3505257 tests/ecmac.db|head -c 1554): [{"message":"#11: true !== Not-a-Number"}]
 3296	FAIL ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A1_T2.js (tail -c +3506812 tests/ecmac.db|head -c 1002): [{"message":"#3: new String(\"1\") === Not-a-Number. Actual: 1"}]
-3297	FAIL ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.1.js (tail -c +3507815 tests/ecmac.db|head -c 660): [{"message":"value is not a function"}]
-3298	FAIL ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.2.js (tail -c +3508476 tests/ecmac.db|head -c 734): [{"message":"value is not a function"}]
+3297	PASS ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.1.js (tail -c +3507815 tests/ecmac.db|head -c 660)
+3298	FAIL ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.2.js (tail -c +3508476 tests/ecmac.db|head -c 734): [{"message":"#1: isNaN.hasOwnProperty('length') === true. Actual: false"}]
 3299	PASS ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.3.js (tail -c +3509211 tests/ecmac.db|head -c 449)
-3300	FAIL ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.4.js (tail -c +3509661 tests/ecmac.db|head -c 302): [{"message":"#1: isNaN.length === 1. Actual: undefined"}]
+3300	FAIL ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.4.js (tail -c +3509661 tests/ecmac.db|head -c 302): [{"message":"#1: isNaN.length === 1. Actual: 0"}]
 3301	PASS ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.5.js (tail -c +3509964 tests/ecmac.db|head -c 640)
 3302	PASS ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.6.js (tail -c +3510605 tests/ecmac.db|head -c 343)
 3303	PASS ch15/15.1/15.1.2/15.1.2.4/S15.1.2.4_A2.7.js (tail -c +3510949 tests/ecmac.db|head -c 521)
@@ -3927,8 +3927,8 @@ err
 3881	PASS ch15/15.10/15.10.6/S15.10.6_A1_T1.js (tail -c +4363391 tests/ecmac.db|head -c 453)
 3882	PASS ch15/15.10/15.10.6/S15.10.6_A1_T2.js (tail -c +4363845 tests/ecmac.db|head -c 521)
 3883	PASS ch15/15.10/15.10.6/15.10.6.2/15.10.6.2-9-e-1.js (tail -c +4364367 tests/ecmac.db|head -c 478)
-3884	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A10.js (tail -c +4364846 tests/ecmac.db|head -c 795): [{"message":"value is not a function"}]
-3885	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A11.js (tail -c +4365642 tests/ecmac.db|head -c 531): [{"message":"value is not a function"}]
+3884	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A10.js (tail -c +4364846 tests/ecmac.db|head -c 795): [{"message":"#1: RegExp.prototype.exec.hasOwnProperty('length') === true"}]
+3885	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A11.js (tail -c +4365642 tests/ecmac.db|head -c 531): [{"message":"#1: RegExp.prototype.exec.hasOwnProperty('length') === true"}]
 3886	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A12.js (tail -c +4366174 tests/ecmac.db|head -c 495): [{"message":"cannot read property '0' of null"}]
 3887	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T1.js (tail -c +4366670 tests/ecmac.db|head -c 1466): [{"message":"#3: __executed = /1|12/.exec(\"123\"); __executed.input === 123. Actual: undefined"}]
 3888	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A1_T10.js (tail -c +4368137 tests/ecmac.db|head -c 1461): [{"message":"#3: __executed = /1|12/.exec(1.01); __executed.input === 1.01. Actual: undefined"}]
@@ -3985,10 +3985,10 @@ err
 3939	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A5_T3.js (tail -c +4471224 tests/ecmac.db|head -c 1308): [{"message":"#1: __re = /(?:ab|cd)\\d?/g; __re.lastIndex=-1; __executed = __re.test(\"aacd22 \"); __executed === true"}]
 3940	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A6.js (tail -c +4472533 tests/ecmac.db|head -c 412)
 3941	PASS ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A7.js (tail -c +4472946 tests/ecmac.db|head -c 575)
-3942	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A8.js (tail -c +4473522 tests/ecmac.db|head -c 837): [{"message":"value is not a function"}]
-3943	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A9.js (tail -c +4474360 tests/ecmac.db|head -c 757): [{"message":"value is not a function"}]
-3944	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A10.js (tail -c +4475118 tests/ecmac.db|head -c 796): [{"message":"value is not a function"}]
-3945	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A11.js (tail -c +4475915 tests/ecmac.db|head -c 531): [{"message":"value is not a function"}]
+3942	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A8.js (tail -c +4473522 tests/ecmac.db|head -c 837): [{"message":"#0: RegExp.prototype.exec.hasOwnProperty('length') === true"}]
+3943	FAIL ch15/15.10/15.10.6/15.10.6.2/S15.10.6.2_A9.js (tail -c +4474360 tests/ecmac.db|head -c 757): [{"message":"#0: RegExp.prototype.exec.hasOwnProperty('length') === true"}]
+3944	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A10.js (tail -c +4475118 tests/ecmac.db|head -c 796): [{"message":"#1: RegExp.prototype.test.hasOwnProperty('length') === true"}]
+3945	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A11.js (tail -c +4475915 tests/ecmac.db|head -c 531): [{"message":"#1: RegExp.prototype.test.hasOwnProperty('length') === true"}]
 3946	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T1.js (tail -c +4476447 tests/ecmac.db|head -c 482)
 3947	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T10.js (tail -c +4476930 tests/ecmac.db|head -c 480)
 3948	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A1_T11.js (tail -c +4477411 tests/ecmac.db|head -c 520)
@@ -4022,8 +4022,8 @@ err
 3976	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A2_T9.js (tail -c +4494770 tests/ecmac.db|head -c 783): [{"message":"#1.2: __instance = 1.0; Object.prototype.test = RegExp.prototype.test; __instance.test(\"message to investigate\"). Actual: Test262 Error: #1.1: __instance = 1.0; Object.prototype.test = RegExp.prototype.test; __instance.test(\"message to investigate\"). Actual: false"}]
 3977	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A6.js (tail -c +4495554 tests/ecmac.db|head -c 413)
 3978	PASS ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A7.js (tail -c +4495968 tests/ecmac.db|head -c 575)
-3979	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A8.js (tail -c +4496544 tests/ecmac.db|head -c 837): [{"message":"value is not a function"}]
-3980	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A9.js (tail -c +4497382 tests/ecmac.db|head -c 753): [{"message":"value is not a function"}]
+3979	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A8.js (tail -c +4496544 tests/ecmac.db|head -c 837): [{"message":"#0: RegExp.prototype.test.hasOwnProperty('length') === true"}]
+3980	FAIL ch15/15.10/15.10.6/15.10.6.3/S15.10.6.3_A9.js (tail -c +4497382 tests/ecmac.db|head -c 753): [{"message":"#0: RegExp.prototype.exec.hasOwnProperty('length') === true"}]
 3981	PASS ch15/15.10/15.10.6/15.10.6.4/S15.10.6.4_A10.js (tail -c +4498136 tests/ecmac.db|head -c 838)
 3982	PASS ch15/15.10/15.10.6/15.10.6.4/S15.10.6.4_A11.js (tail -c +4498975 tests/ecmac.db|head -c 557)
 3983	PASS ch15/15.10/15.10.6/15.10.6.4/S15.10.6.4_A6.js (tail -c +4499533 tests/ecmac.db|head -c 432)
@@ -7008,10 +7008,10 @@ err
 6959	PASS ch15/15.2/15.2.4/15.2.4.3/S15.2.4.3_A7.js (tail -c +6758573 tests/ecmac.db|head -c 462)
 6960	FAIL ch15/15.2/15.2.4/15.2.4.3/S15.2.4.3_A8.js (tail -c +6759036 tests/ecmac.db|head -c 823): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
 6961	FAIL ch15/15.2/15.2.4/15.2.4.3/S15.2.4.3_A9.js (tail -c +6759860 tests/ecmac.db|head -c 814): [{"message":"cannot read property 'hasOwnProperty' of undefined"}]
-6962	FAIL ch15/15.2/15.2.4/15.2.4.4/15.2.4.4-1.js (tail -c +6760675 tests/ecmac.db|head -c 352): [{"message":"value is not a function"}]
-6963	FAIL ch15/15.2/15.2.4/15.2.4.4/15.2.4.4-2.js (tail -c +6761028 tests/ecmac.db|head -c 354): [{"message":"value is not a function"}]
-6964	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A10.js (tail -c +6761383 tests/ecmac.db|head -c 687): [{"message":"value is not a function"}]
-6965	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A11.js (tail -c +6762071 tests/ecmac.db|head -c 497): [{"message":"value is not a function"}]
+6962	FAIL ch15/15.2/15.2.4/15.2.4.4/15.2.4.4-1.js (tail -c +6760675 tests/ecmac.db|head -c 352): [{"message":"Test case returned non-true value!"}]
+6963	FAIL ch15/15.2/15.2.4/15.2.4.4/15.2.4.4-2.js (tail -c +6761028 tests/ecmac.db|head -c 354): [{"message":"Test case returned non-true value!"}]
+6964	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A10.js (tail -c +6761383 tests/ecmac.db|head -c 687): [{"message":"#1: the Object.prototype.valueOf has length property."}]
+6965	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A11.js (tail -c +6762071 tests/ecmac.db|head -c 497): [{"message":"#1: The length property of the toObject method is 0"}]
 6966	PASS ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A1_T1.js (tail -c +6762569 tests/ecmac.db|head -c 543)
 6967	PASS ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A1_T2.js (tail -c +6763113 tests/ecmac.db|head -c 546)
 6968	PASS ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A1_T3.js (tail -c +6763660 tests/ecmac.db|head -c 561)
@@ -7021,33 +7021,33 @@ err
 6972	PASS ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A1_T7.js (tail -c +6765858 tests/ecmac.db|head -c 546)
 6973	PASS ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A6.js (tail -c +6766405 tests/ecmac.db|head -c 450)
 6974	PASS ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A7.js (tail -c +6766856 tests/ecmac.db|head -c 434)
-6975	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A8.js (tail -c +6767291 tests/ecmac.db|head -c 767): [{"message":"value is not a function"}]
-6976	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A9.js (tail -c +6768059 tests/ecmac.db|head -c 758): [{"message":"value is not a function"}]
-6977	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A10.js (tail -c +6768818 tests/ecmac.db|head -c 743): [{"message":"value is not a function"}]
-6978	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A11.js (tail -c +6769562 tests/ecmac.db|head -c 525): [{"message":"value is not a function"}]
+6975	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A8.js (tail -c +6767291 tests/ecmac.db|head -c 767): [{"message":"#0: the Object.prototype.valueOf has length property."}]
+6976	FAIL ch15/15.2/15.2.4/15.2.4.4/S15.2.4.4_A9.js (tail -c +6768059 tests/ecmac.db|head -c 758): [{"message":"#0: the Object.prototype.valueOf has length property"}]
+6977	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A10.js (tail -c +6768818 tests/ecmac.db|head -c 743): [{"message":"#1: the Object.prototype.hasOwnProperty has length property."}]
+6978	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A11.js (tail -c +6769562 tests/ecmac.db|head -c 525): [{"message":"#1: The length property of the toObject method is 1"}]
 6979	PASS ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A1_T1.js (tail -c +6770088 tests/ecmac.db|head -c 721)
 6980	PASS ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A1_T2.js (tail -c +6770810 tests/ecmac.db|head -c 951)
 6981	PASS ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A1_T3.js (tail -c +6771762 tests/ecmac.db|head -c 1019)
 6982	PASS ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A6.js (tail -c +6772782 tests/ecmac.db|head -c 485)
 6983	PASS ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A7.js (tail -c +6773268 tests/ecmac.db|head -c 462)
-6984	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A8.js (tail -c +6773731 tests/ecmac.db|head -c 823): [{"message":"value is not a function"}]
-6985	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A9.js (tail -c +6774555 tests/ecmac.db|head -c 798): [{"message":"value is not a function"}]
+6984	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A8.js (tail -c +6773731 tests/ecmac.db|head -c 823): [{"message":"#0: the Object.prototype.hasOwnProperty has length property."}]
+6985	FAIL ch15/15.2/15.2.4/15.2.4.5/S15.2.4.5_A9.js (tail -c +6774555 tests/ecmac.db|head -c 798): [{"message":"#0: the Object.prototype.hasOwnProperty has length property"}]
 6986	PASS ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A1.js (tail -c +6775354 tests/ecmac.db|head -c 1390)
-6987	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A10.js (tail -c +6776745 tests/ecmac.db|head -c 746): [{"message":"value is not a function"}]
-6988	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A11.js (tail -c +6777492 tests/ecmac.db|head -c 530): [{"message":"value is not a function"}]
+6987	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A10.js (tail -c +6776745 tests/ecmac.db|head -c 746): [{"message":"#1: the Object.prototype.isPrototypeOf has length property"}]
+6988	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A11.js (tail -c +6777492 tests/ecmac.db|head -c 530): [{"message":"#1: the Object.prototype.isPrototypeOf has length property"}]
 6989	PASS ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A6.js (tail -c +6778023 tests/ecmac.db|head -c 480)
 6990	PASS ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A7.js (tail -c +6778504 tests/ecmac.db|head -c 458)
-6991	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A8.js (tail -c +6778963 tests/ecmac.db|head -c 814): [{"message":"value is not a function"}]
-6992	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A9.js (tail -c +6779778 tests/ecmac.db|head -c 614): [{"message":"value is not a function"}]
-6993	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A10.js (tail -c +6780393 tests/ecmac.db|head -c 802): [{"message":"value is not a function"}]
-6994	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A11.js (tail -c +6781196 tests/ecmac.db|head -c 560): [{"message":"value is not a function"}]
+6991	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A8.js (tail -c +6778963 tests/ecmac.db|head -c 814): [{"message":"#0: the Object.prototype.isPrototypeOf has length property"}]
+6992	FAIL ch15/15.2/15.2.4/15.2.4.6/S15.2.4.6_A9.js (tail -c +6779778 tests/ecmac.db|head -c 614): [{"message":"#0: the Object.prototype.isPrototypeOf has length property"}]
+6993	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A10.js (tail -c +6780393 tests/ecmac.db|head -c 802): [{"message":"#1: the Object.prototype.propertyIsEnumerable has length property"}]
+6994	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A11.js (tail -c +6781196 tests/ecmac.db|head -c 560): [{"message":"#1: the Object.prototype.propertyIsEnumerable has length property"}]
 6995	PASS ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A1_T1.js (tail -c +6781757 tests/ecmac.db|head -c 992)
 6996	PASS ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A2_T1.js (tail -c +6782750 tests/ecmac.db|head -c 811)
 6997	PASS ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A2_T2.js (tail -c +6783562 tests/ecmac.db|head -c 1103)
 6998	PASS ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A6.js (tail -c +6784666 tests/ecmac.db|head -c 515)
 6999	PASS ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A7.js (tail -c +6785182 tests/ecmac.db|head -c 486)
-7000	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A8.js (tail -c +6785669 tests/ecmac.db|head -c 870): [{"message":"value is not a function"}]
-7001	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A9.js (tail -c +6786540 tests/ecmac.db|head -c 659): [{"message":"value is not a function"}]
+7000	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A8.js (tail -c +6785669 tests/ecmac.db|head -c 870): [{"message":"#0: the Object.prototype.propertyIsEnumerable has length property"}]
+7001	FAIL ch15/15.2/15.2.4/15.2.4.7/S15.2.4.7_A9.js (tail -c +6786540 tests/ecmac.db|head -c 659): [{"message":"#0: the Object.prototype.propertyIsEnumerable has length property"}]
 7002	PASS ch15/15.3/S15.3.1_A1_T1.js (tail -c +6787200 tests/ecmac.db|head -c 761)
 7003	PASS ch15/15.3/S15.3_A1.js (tail -c +6787962 tests/ecmac.db|head -c 319)
 7004	PASS ch15/15.3/S15.3_A2_T1.js (tail -c +6788282 tests/ecmac.db|head -c 511)
@@ -9733,7 +9733,7 @@ err
 9684	PASS ch15/15.5/15.5.3/S15.5.3.1_A2.js (tail -c +8838307 tests/ecmac.db|head -c 1307)
 9685	PASS ch15/15.5/15.5.3/S15.5.3.1_A3.js (tail -c +8839615 tests/ecmac.db|head -c 960)
 9686	PASS ch15/15.5/15.5.3/S15.5.3.1_A4.js (tail -c +8840576 tests/ecmac.db|head -c 1035)
-9687	FAIL ch15/15.5/15.5.3/S15.5.3.2_A1.js (tail -c +8841612 tests/ecmac.db|head -c 1246): [{"message":"#3: String.fromCharCode.length === 1. Actual: String.fromCharCode.length ===undefined"}]
+9687	FAIL ch15/15.5/15.5.3/S15.5.3.2_A1.js (tail -c +8841612 tests/ecmac.db|head -c 1246): [{"message":"#3: String.fromCharCode.length === 1. Actual: String.fromCharCode.length ===0"}]
 9688	PASS ch15/15.5/15.5.3/S15.5.3.2_A2.js (tail -c +8842859 tests/ecmac.db|head -c 509)
 9689	PASS ch15/15.5/15.5.3/S15.5.3.2_A3_T1.js (tail -c +8843369 tests/ecmac.db|head -c 599)
 9690	PASS ch15/15.5/15.5.3/S15.5.3.2_A3_T2.js (tail -c +8843969 tests/ecmac.db|head -c 780)
@@ -9751,7 +9751,7 @@ err
 9701	PASS ch15/15.5/15.5.4/S15.5.4.2_A2_T1.js (tail -c +8852752 tests/ecmac.db|head -c 1331)
 9702	PASS ch15/15.5/15.5.4/S15.5.4.2_A2_T2.js (tail -c +8854084 tests/ecmac.db|head -c 1244)
 9703	PASS ch15/15.5/15.5.4/S15.5.4.2_A3_T1.js (tail -c +8855329 tests/ecmac.db|head -c 889)
-9704	FAIL ch15/15.5/15.5.4/S15.5.4.2_A4_T1.js (tail -c +8856219 tests/ecmac.db|head -c 662): [{"message":"value is not a function"}]
+9704	FAIL ch15/15.5/15.5.4/S15.5.4.2_A4_T1.js (tail -c +8856219 tests/ecmac.db|head -c 662): [{"message":"#1: String.prototype.toString.hasOwnProperty('length')===true. Actual: false"}]
 9705	PASS ch15/15.5/15.5.4/S15.5.4.3_A1_T1.js (tail -c +8856882 tests/ecmac.db|head -c 646)
 9706	PASS ch15/15.5/15.5.4/S15.5.4.3_A1_T2.js (tail -c +8857529 tests/ecmac.db|head -c 661)
 9707	PASS ch15/15.5/15.5.4/S15.5.4.3_A1_T3.js (tail -c +8858191 tests/ecmac.db|head -c 669)
@@ -9761,8 +9761,8 @@ err
 9711	FAIL ch15/15.5/15.5.4/S15.5.4_A1.js (tail -c +8862075 tests/ecmac.db|head -c 809): [{"message":"#1: delete String.prototype.toString; String.prototype.toString() === \"[object \"+\"String\"+\"]\". Actual: String.prototype.toString() ===[object Object]"}]
 9712	FAIL ch15/15.5/15.5.4/S15.5.4_A2.js (tail -c +8862885 tests/ecmac.db|head -c 533): [{"message":"String.valueOf called on non-string object"}]
 9713	FAIL ch15/15.5/15.5.4/S15.5.4_A3.js (tail -c +8863419 tests/ecmac.db|head -c 1130): [{"message":"#2: delete String.prototype.toString; String.prototype.toString() == \"[object \"+\"String\"+\"]\". Actual: String.prototype.toString() ==[object Object]"}]
-9714	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A10.js (tail -c +8864550 tests/ecmac.db|head -c 1182): [{"message":"value is not a function"}]
-9715	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A11.js (tail -c +8865733 tests/ecmac.db|head -c 908): [{"message":"value is not a function"}]
+9714	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A10.js (tail -c +8864550 tests/ecmac.db|head -c 1182): [{"message":"#1: String.prototype.match.hasOwnProperty('length') return true. Actual: false"}]
+9715	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A11.js (tail -c +8865733 tests/ecmac.db|head -c 908): [{"message":"#1: String.prototype.match.hasOwnProperty(\"length\") return true. Actual: false"}]
 9716	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T1.js (tail -c +8866642 tests/ecmac.db|head -c 686)
 9717	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T10.js (tail -c +8867329 tests/ecmac.db|head -c 714): [{"message":"not implemented"}]
 9718	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T11.js (tail -c +8868044 tests/ecmac.db|head -c 859): [{"message":"not implemented"}]
@@ -9770,7 +9770,7 @@ err
 9720	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T13.js (tail -c +8869756 tests/ecmac.db|head -c 1276)
 9721	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T14.js (tail -c +8871033 tests/ecmac.db|head -c 693)
 9722	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T2.js (tail -c +8871727 tests/ecmac.db|head -c 778)
-9723	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T3.js (tail -c +8872506 tests/ecmac.db|head -c 812): [{"message":"value is not a function"}]
+9723	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T3.js (tail -c +8872506 tests/ecmac.db|head -c 812)
 9724	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T4.js (tail -c +8873319 tests/ecmac.db|head -c 1808)
 9725	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T5.js (tail -c +8875128 tests/ecmac.db|head -c 701)
 9726	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A1_T6.js (tail -c +8875830 tests/ecmac.db|head -c 2017)
@@ -9798,11 +9798,11 @@ err
 9748	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A6.js (tail -c +8909580 tests/ecmac.db|head -c 573)
 9749	PASS ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A7.js
  * @description Checking if creating "String.prototype.
-9750	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A8.js (tail -c +8910697 tests/ecmac.db|head -c 1372): [{"message":"value is not a function"}]
-9751	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A9.js (tail -c +8912070 tests/ecmac.db|head -c 1346): [{"message":"value is not a function"}]
+9750	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A8.js (tail -c +8910697 tests/ecmac.db|head -c 1372): [{"message":"#0: String.prototype.match.hasOwnProperty('length') return true. Actual: false"}]
+9751	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A9.js (tail -c +8912070 tests/ecmac.db|head -c 1346): [{"message":"#0: String.prototype.match.hasOwnProperty('length') return true. Actual: false"}]
 9752	FAIL ch15/15.5/15.5.4/15.5.4.11/15.5.4.11-1.js (tail -c +8913417 tests/ecmac.db|head -c 657): [{"message":"Test case returned non-true value!"}]
-9753	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A10.js (tail -c +8914075 tests/ecmac.db|head -c 1206): [{"message":"value is not a function"}]
-9754	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A11.js (tail -c +8915282 tests/ecmac.db|head -c 924): [{"message":"value is not a function"}]
+9753	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A10.js (tail -c +8914075 tests/ecmac.db|head -c 1206): [{"message":"#1: String.prototype.replace.hasOwnProperty('length') return true. Actual: false"}]
+9754	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A11.js (tail -c +8915282 tests/ecmac.db|head -c 924): [{"message":"#1: String.prototype.replace.hasOwnProperty(\"length\") return true. Actual: false"}]
 9755	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A12.js (tail -c +8916207 tests/ecmac.db|head -c 561): [{"message":"#2: replaceValue should be called with this===undefined. Actual: x"}]
 9756	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T1.js (tail -c +8916769 tests/ecmac.db|head -c 722)
 9757	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A1_T10.js (tail -c +8917492 tests/ecmac.db|head -c 919): [{"message":"not implemented"}]
@@ -9841,11 +9841,11 @@ err
 9790	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A6.js (tail -c +8945851 tests/ecmac.db|head -c 584)
 9791	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A7.js
  * @description Checking if creating the String.prototy
-9792	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A8.js (tail -c +8946955 tests/ecmac.db|head -c 1385): [{"message":"value is not a function"}]
-9793	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A9.js (tail -c +8948341 tests/ecmac.db|head -c 1368): [{"message":"value is not a function"}]
+9792	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A8.js (tail -c +8946955 tests/ecmac.db|head -c 1385): [{"message":"#0: String.prototype.replace.hasOwnProperty('length') return true. Actual: false"}]
+9793	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A9.js (tail -c +8948341 tests/ecmac.db|head -c 1368): [{"message":"#0: String.prototype.replace.hasOwnProperty('length') return true. Actual: false"}]
 9794	PASS ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A1.1_T1.js (tail -c +8949710 tests/ecmac.db|head -c 477)
-9795	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A10.js (tail -c +8950188 tests/ecmac.db|head -c 1194): [{"message":"value is not a function"}]
-9796	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A11.js (tail -c +8951383 tests/ecmac.db|head -c 916): [{"message":"value is not a function"}]
+9795	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A10.js (tail -c +8950188 tests/ecmac.db|head -c 1194): [{"message":"#1: String.prototype.search.hasOwnProperty('length') return true. Actual: false"}]
+9796	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A11.js (tail -c +8951383 tests/ecmac.db|head -c 916): [{"message":"#1: String.prototype.search.hasOwnProperty(\"length\") return true. Actual: false"}]
 9797	PASS ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A1_T1.js (tail -c +8952300 tests/ecmac.db|head -c 674)
 9798	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A1_T10.js (tail -c +8952975 tests/ecmac.db|head -c 732): [{"message":"not implemented"}]
 9799	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A1_T11.js (tail -c +8953708 tests/ecmac.db|head -c 816): [{"message":"not implemented"}]
@@ -9870,10 +9870,10 @@ err
 9818	PASS ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A3_T2.js (tail -c +8967300 tests/ecmac.db|head -c 934)
 9819	PASS ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A6.js (tail -c +8968235 tests/ecmac.db|head -c 578)
 9820	PASS ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A7.js (tail -c +8968814 tests/ecmac.db|head -c 651)
-9821	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A8.js (tail -c +8969466 tests/ecmac.db|head -c 1381): [{"message":"value is not a function"}]
-9822	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A9.js (tail -c +8970848 tests/ecmac.db|head -c 1357): [{"message":"value is not a function"}]
-9823	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A10.js (tail -c +8972206 tests/ecmac.db|head -c 1182): [{"message":"value is not a function"}]
-9824	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A11.js (tail -c +8973389 tests/ecmac.db|head -c 908): [{"message":"value is not a function"}]
+9821	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A8.js (tail -c +8969466 tests/ecmac.db|head -c 1381): [{"message":"#0: String.prototype.search.hasOwnProperty('length') return true. Actual: false"}]
+9822	FAIL ch15/15.5/15.5.4/15.5.4.12/S15.5.4.12_A9.js (tail -c +8970848 tests/ecmac.db|head -c 1357): [{"message":"#0: String.prototype.search.hasOwnProperty('length') return true. Actual: false"}]
+9823	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A10.js (tail -c +8972206 tests/ecmac.db|head -c 1182): [{"message":"#1: String.prototype.slice.hasOwnProperty('length') return true. Actual: false"}]
+9824	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A11.js (tail -c +8973389 tests/ecmac.db|head -c 908): [{"message":"#1: String.prototype.slice.hasOwnProperty(\"length\") return true. Actual: false"}]
 9825	PASS ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A1_T1.js (tail -c +8974298 tests/ecmac.db|head -c 707)
 9826	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A1_T10.js (tail -c +8975006 tests/ecmac.db|head -c 852): [{"message":"not implemented"}]
 9827	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A1_T11.js (tail -c +8975859 tests/ecmac.db|head -c 921): [{"message":"not implemented"}]
@@ -9903,10 +9903,10 @@ err
 9851	PASS ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A3_T4.js (tail -c +8993773 tests/ecmac.db|head -c 870)
 9852	PASS ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A6.js (tail -c +8994644 tests/ecmac.db|head -c 573)
 9853	PASS ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A7.js (tail -c +8995218 tests/ecmac.db|head -c 477)
-9854	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A8.js (tail -c +8995696 tests/ecmac.db|head -c 1372): [{"message":"value is not a function"}]
-9855	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A9.js (tail -c +8997069 tests/ecmac.db|head -c 1346): [{"message":"value is not a function"}]
-9856	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A10.js (tail -c +8998416 tests/ecmac.db|head -c 1182): [{"message":"value is not a function"}]
-9857	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A11.js (tail -c +8999599 tests/ecmac.db|head -c 908): [{"message":"value is not a function"}]
+9854	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A8.js (tail -c +8995696 tests/ecmac.db|head -c 1372): [{"message":"#0: String.prototype.slice.hasOwnProperty('length') return true. Actual: false"}]
+9855	FAIL ch15/15.5/15.5.4/15.5.4.13/S15.5.4.13_A9.js (tail -c +8997069 tests/ecmac.db|head -c 1346): [{"message":"#0: String.prototype.slice.hasOwnProperty('length') return true. Actual: false"}]
+9856	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A10.js (tail -c +8998416 tests/ecmac.db|head -c 1182): [{"message":"#1: String.prototype.split.hasOwnProperty('length') return true. Actual: false"}]
+9857	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A11.js (tail -c +8999599 tests/ecmac.db|head -c 908): [{"message":"#1: String.prototype.split.hasOwnProperty(\"length\") return true. Actual: false"}]
 9858	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T1.js (tail -c +9000508 tests/ecmac.db|head -c 1779)
 9859	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T10.js (tail -c +9002288 tests/ecmac.db|head -c 2552): [{"message":"not implemented"}]
 9860	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T11.js (tail -c +9004841 tests/ecmac.db|head -c 1231): [{"message":"not implemented"}]
@@ -9918,7 +9918,7 @@ err
 9866	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T17.js (tail -c +9014148 tests/ecmac.db|head -c 3334): [{"message":"#3: var __re = /u0037u0037/g; Number.prototype.split=String.prototype.split; __split = 6776767677.006771122677555.split(__re); __split.length === 4. Actual: 3"}]
 9867	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T18.js (tail -c +9017483 tests/ecmac.db|head -c 2266): [{"message":"#3: var __re =  new RegExp(\"00\"); Number.prototype.split=String.prototype.split; __split = 6776767677.006771122677555.split(__re, eval(\"\"1\"\")); __split[0] === \"6776767677.\". Actual: 6776767677"}]
 9868	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T2.js (tail -c +9019750 tests/ecmac.db|head -c 1917)
-9869	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T3.js (tail -c +9021668 tests/ecmac.db|head -c 2142): [{"message":"value is not a function"}]
+9869	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T3.js (tail -c +9021668 tests/ecmac.db|head -c 2142)
 9870	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T4.js (tail -c +9023811 tests/ecmac.db|head -c 1753)
 9871	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T5.js (tail -c +9025565 tests/ecmac.db|head -c 2263)
 9872	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A1_T6.js (tail -c +9027829 tests/ecmac.db|head -c 1950): [{"message":"#3: var x; __split = new String(\"1undefined\").split(x); __split.length === 1. Actual: 2"}]
@@ -10007,10 +10007,10 @@ err
 9955	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A6.js (tail -c +9183869 tests/ecmac.db|head -c 573)
 9956	PASS ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A7.js
  * @description Checking if creating the String.prototy
-9957	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A8.js (tail -c +9184954 tests/ecmac.db|head -c 1372): [{"message":"value is not a function"}]
-9958	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A9.js (tail -c +9186327 tests/ecmac.db|head -c 1346): [{"message":"value is not a function"}]
-9959	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A10.js (tail -c +9187674 tests/ecmac.db|head -c 1230): [{"message":"value is not a function"}]
-9960	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A11.js (tail -c +9188905 tests/ecmac.db|head -c 940): [{"message":"value is not a function"}]
+9957	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A8.js (tail -c +9184954 tests/ecmac.db|head -c 1372): [{"message":"#0: String.prototype.split.hasOwnProperty('length') return true. Actual: false"}]
+9958	FAIL ch15/15.5/15.5.4/15.5.4.14/S15.5.4.14_A9.js (tail -c +9186327 tests/ecmac.db|head -c 1346): [{"message":"#0: String.prototype.split.hasOwnProperty('length') return true. Actual: false"}]
+9959	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A10.js (tail -c +9187674 tests/ecmac.db|head -c 1230): [{"message":"#1: String.prototype.substring.hasOwnProperty('length') return true. Actual: false"}]
+9960	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A11.js (tail -c +9188905 tests/ecmac.db|head -c 940): [{"message":"#1: String.prototype.substring.hasOwnProperty(\"length\") return true. Actual: false"}]
 9961	PASS ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A1_T1.js (tail -c +9189846 tests/ecmac.db|head -c 739)
 9962	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A1_T10.js (tail -c +9190586 tests/ecmac.db|head -c 873): [{"message":"not implemented"}]
 9963	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A1_T11.js (tail -c +9191460 tests/ecmac.db|head -c 930): [{"message":"not implemented"}]
@@ -10048,10 +10048,10 @@ err
 9995	PASS ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A3_T9.js (tail -c +9216828 tests/ecmac.db|head -c 837)
 9996	PASS ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A6.js (tail -c +9217666 tests/ecmac.db|head -c 593)
 9997	PASS ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A7.js (tail -c +9218260 tests/ecmac.db|head -c 611)
-9998	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A8.js (tail -c +9218872 tests/ecmac.db|head -c 1411): [{"message":"value is not a function"}]
-9999	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A9.js (tail -c +9220284 tests/ecmac.db|head -c 1390): [{"message":"value is not a function"}]
-10000	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A10.js (tail -c +9221675 tests/ecmac.db|head -c 1254): [{"message":"value is not a function"}]
-10001	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A11.js (tail -c +9222930 tests/ecmac.db|head -c 956): [{"message":"value is not a function"}]
+9998	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A8.js (tail -c +9218872 tests/ecmac.db|head -c 1411): [{"message":"#0: String.prototype.substring.hasOwnProperty('length') return true. Actual: false"}]
+9999	FAIL ch15/15.5/15.5.4/15.5.4.15/S15.5.4.15_A9.js (tail -c +9220284 tests/ecmac.db|head -c 1390): [{"message":"#0: String.prototype.substring.hasOwnProperty('length') return true. Actual: false"}]
+10000	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A10.js (tail -c +9221675 tests/ecmac.db|head -c 1254): [{"message":"#1: String.prototype.toLowerCase.hasOwnProperty('length') return true. Actual: false"}]
+10001	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A11.js (tail -c +9222930 tests/ecmac.db|head -c 956): [{"message":"#1: String.prototype.toLowerCase.hasOwnProperty(\"length\") return true. Actual: false"}]
 10002	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T1.js (tail -c +9223887 tests/ecmac.db|head -c 706)
 10003	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T10.js (tail -c +9224594 tests/ecmac.db|head -c 744)
 10004	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A1_T11.js (tail -c +9225339 tests/ecmac.db|head -c 770)
@@ -10069,10 +10069,10 @@ err
 10016	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A2_T1.js (tail -c +9236429 tests/ecmac.db|head -c 1264)
 10017	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A6.js (tail -c +9237694 tests/ecmac.db|head -c 603)
 10018	PASS ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A7.js (tail -c +9238298 tests/ecmac.db|head -c 674)
-10019	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A8.js (tail -c +9238973 tests/ecmac.db|head -c 1426): [{"message":"value is not a function"}]
-10020	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A9.js (tail -c +9240400 tests/ecmac.db|head -c 1412): [{"message":"value is not a function"}]
-10021	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A10.js (tail -c +9241813 tests/ecmac.db|head -c 1322): [{"message":"value is not a function"}]
-10022	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A11.js (tail -c +9243136 tests/ecmac.db|head -c 1004): [{"message":"value is not a function"}]
+10019	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A8.js (tail -c +9238973 tests/ecmac.db|head -c 1426): [{"message":"#0: String.prototype.toLowerCase.hasOwnProperty('length') return true. Actual: false"}]
+10020	FAIL ch15/15.5/15.5.4/15.5.4.16/S15.5.4.16_A9.js (tail -c +9240400 tests/ecmac.db|head -c 1412): [{"message":"#0: String.prototype.toLowerCase.hasOwnProperty('length') return true. Actual: false"}]
+10021	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A10.js (tail -c +9241813 tests/ecmac.db|head -c 1322): [{"message":"#1: String.prototype.toLocaleLowerCase.hasOwnProperty('length') return true. Actual: false"}]
+10022	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A11.js (tail -c +9243136 tests/ecmac.db|head -c 1004): [{"message":"#1: String.prototype.toLocaleLowerCase.hasOwnProperty(\"length\") return true. Actual: false"}]
 10023	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T1.js (tail -c +9244141 tests/ecmac.db|head -c 754)
 10024	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T10.js (tail -c +9244896 tests/ecmac.db|head -c 797)
 10025	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A1_T11.js (tail -c +9245694 tests/ecmac.db|head -c 806)
@@ -10090,10 +10090,10 @@ err
 10037	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A2_T1.js (tail -c +9257342 tests/ecmac.db|head -c 1319)
 10038	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A6.js (tail -c +9258662 tests/ecmac.db|head -c 633)
 10039	PASS ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A7.js (tail -c +9259296 tests/ecmac.db|head -c 718)
-10040	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A8.js (tail -c +9260015 tests/ecmac.db|head -c 1484): [{"message":"value is not a function"}]
-10041	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A9.js (tail -c +9261500 tests/ecmac.db|head -c 1478): [{"message":"value is not a function"}]
-10042	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A10.js (tail -c +9262979 tests/ecmac.db|head -c 1254): [{"message":"value is not a function"}]
-10043	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A11.js (tail -c +9264234 tests/ecmac.db|head -c 956): [{"message":"value is not a function"}]
+10040	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A8.js (tail -c +9260015 tests/ecmac.db|head -c 1484): [{"message":"#0: String.prototype.toLocaleLowerCase.hasOwnProperty('length') return true. Actual: false"}]
+10041	FAIL ch15/15.5/15.5.4/15.5.4.17/S15.5.4.17_A9.js (tail -c +9261500 tests/ecmac.db|head -c 1478): [{"message":"#0: String.prototype.toLocaleLowerCase.hasOwnProperty('length') return true. Actual: false"}]
+10042	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A10.js (tail -c +9262979 tests/ecmac.db|head -c 1254): [{"message":"#1: String.prototype.toUpperCase.hasOwnProperty('length') return true. Actual: false"}]
+10043	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A11.js (tail -c +9264234 tests/ecmac.db|head -c 956): [{"message":"#1: String.prototype.toUpperCase.hasOwnProperty(\"length\") return true. Actual: false"}]
 10044	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T1.js (tail -c +9265191 tests/ecmac.db|head -c 706)
 10045	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T10.js (tail -c +9265898 tests/ecmac.db|head -c 743)
 10046	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A1_T11.js (tail -c +9266642 tests/ecmac.db|head -c 769)
@@ -10111,10 +10111,10 @@ err
 10058	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A2_T1.js (tail -c +9277730 tests/ecmac.db|head -c 1264)
 10059	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A6.js (tail -c +9278995 tests/ecmac.db|head -c 603)
 10060	PASS ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A7.js (tail -c +9279599 tests/ecmac.db|head -c 671)
-10061	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A8.js (tail -c +9280271 tests/ecmac.db|head -c 1426): [{"message":"value is not a function"}]
-10062	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A9.js (tail -c +9281698 tests/ecmac.db|head -c 1412): [{"message":"value is not a function"}]
-10063	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A10.js (tail -c +9283111 tests/ecmac.db|head -c 1326): [{"message":"value is not a function"}]
-10064	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A11.js (tail -c +9284438 tests/ecmac.db|head -c 1004): [{"message":"value is not a function"}]
+10061	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A8.js (tail -c +9280271 tests/ecmac.db|head -c 1426): [{"message":"#0: String.prototype.toUpperCase.hasOwnProperty('length') return true. Actual: false"}]
+10062	FAIL ch15/15.5/15.5.4/15.5.4.18/S15.5.4.18_A9.js (tail -c +9281698 tests/ecmac.db|head -c 1412): [{"message":"#0: String.prototype.toUpperCase.hasOwnProperty('length') return true. Actual: false"}]
+10063	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A10.js (tail -c +9283111 tests/ecmac.db|head -c 1326): [{"message":"#1: String.prototype.toLocaleUpperCase.hasOwnProperty('length') return true. Actual: false"}]
+10064	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A11.js (tail -c +9284438 tests/ecmac.db|head -c 1004): [{"message":"#1: String.prototype.toLocaleUpperCase.hasOwnProperty(\"length\") return true. Actual: false"}]
 10065	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T1.js (tail -c +9285443 tests/ecmac.db|head -c 754)
 10066	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T10.js (tail -c +9286198 tests/ecmac.db|head -c 797)
 10067	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A1_T11.js (tail -c +9286996 tests/ecmac.db|head -c 803)
@@ -10132,69 +10132,69 @@ err
 10079	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A2_T1.js (tail -c +9298622 tests/ecmac.db|head -c 1317)
 10080	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A6.js (tail -c +9299940 tests/ecmac.db|head -c 633)
 10081	PASS ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A7.js (tail -c +9300574 tests/ecmac.db|head -c 674)
-10082	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A8.js (tail -c +9301249 tests/ecmac.db|head -c 1484): [{"message":"value is not a function"}]
-10083	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A9.js (tail -c +9302734 tests/ecmac.db|head -c 1478): [{"message":"value is not a function"}]
+10082	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A8.js (tail -c +9301249 tests/ecmac.db|head -c 1484): [{"message":"#0: String.prototype.toLocaleUpperCase.hasOwnProperty('length') return true. Actual: false"}]
+10083	FAIL ch15/15.5/15.5.4/15.5.4.19/S15.5.4.19_A9.js (tail -c +9302734 tests/ecmac.db|head -c 1478): [{"message":"#0: String.prototype.toLocaleUpperCase.hasOwnProperty('length') return true. Actual: false"}]
 10084	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-0-1.js (tail -c +9304213 tests/ecmac.db|head -c 342)
-10085	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-0-2.js (tail -c +9304556 tests/ecmac.db|head -c 338): [{"message":"Test case returned non-true value!"}]
-10086	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-1.js (tail -c +9304895 tests/ecmac.db|head -c 407)
-10087	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-2.js (tail -c +9305303 tests/ecmac.db|head -c 397)
-10088	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-3.js (tail -c +9305701 tests/ecmac.db|head -c 369): [{"message":"Test case returned non-true value!"}]
-10089	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-4.js (tail -c +9306071 tests/ecmac.db|head -c 363): [{"message":"Test case returned non-true value!"}]
-10090	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-5.js (tail -c +9306435 tests/ecmac.db|head -c 363): [{"message":"Test case returned non-true value!"}]
-10091	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-6.js (tail -c +9306799 tests/ecmac.db|head -c 360): [{"message":"Test case returned non-true value!"}]
-10092	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-7.js (tail -c +9307160 tests/ecmac.db|head -c 368): [{"message":"Test case returned non-true value!"}]
+10085	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-0-2.js (tail -c +9304556 tests/ecmac.db|head -c 338)
+10086	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-1.js (tail -c +9304895 tests/ecmac.db|head -c 407): [{"message":"Test case returned non-true value!"}]
+10087	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-2.js (tail -c +9305303 tests/ecmac.db|head -c 397): [{"message":"Test case returned non-true value!"}]
+10088	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-3.js (tail -c +9305701 tests/ecmac.db|head -c 369)
+10089	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-4.js (tail -c +9306071 tests/ecmac.db|head -c 363)
+10090	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-5.js (tail -c +9306435 tests/ecmac.db|head -c 363)
+10091	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-6.js (tail -c +9306799 tests/ecmac.db|head -c 360)
+10092	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-7.js (tail -c +9307160 tests/ecmac.db|head -c 368)
 10093	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-8.js (tail -c +9307529 tests/ecmac.db|head -c 396)
 10094	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-1-9.js (tail -c +9307926 tests/ecmac.db|head -c 371)
-10095	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-1.js (tail -c +9308298 tests/ecmac.db|head -c 343): [{"message":"value is not a function"}]
-10096	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-10.js (tail -c +9308642 tests/ecmac.db|head -c 376): [{"message":"value is not a function"}]
-10097	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-11.js (tail -c +9309019 tests/ecmac.db|head -c 377): [{"message":"value is not a function"}]
-10098	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-12.js (tail -c +9309397 tests/ecmac.db|head -c 413): [{"message":"value is not a function"}]
-10099	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-13.js (tail -c +9309811 tests/ecmac.db|head -c 398): [{"message":"value is not a function"}]
-10100	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-14.js (tail -c +9310210 tests/ecmac.db|head -c 399): [{"message":"value is not a function"}]
-10101	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-15.js (tail -c +9310610 tests/ecmac.db|head -c 381): [{"message":"value is not a function"}]
-10102	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-16.js (tail -c +9310992 tests/ecmac.db|head -c 363): [{"message":"value is not a function"}]
-10103	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-17.js (tail -c +9311356 tests/ecmac.db|head -c 363): [{"message":"value is not a function"}]
-10104	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-18.js (tail -c +9311720 tests/ecmac.db|head -c 374): [{"message":"value is not a function"}]
-10105	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-19.js (tail -c +9312095 tests/ecmac.db|head -c 381): [{"message":"value is not a function"}]
-10106	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-2.js (tail -c +9312477 tests/ecmac.db|head -c 340): [{"message":"value is not a function"}]
-10107	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-20.js (tail -c +9312818 tests/ecmac.db|head -c 374): [{"message":"value is not a function"}]
-10108	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-21.js (tail -c +9313193 tests/ecmac.db|head -c 362): [{"message":"value is not a function"}]
-10109	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-22.js (tail -c +9313556 tests/ecmac.db|head -c 366): [{"message":"value is not a function"}]
-10110	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-23.js (tail -c +9313923 tests/ecmac.db|head -c 365): [{"message":"value is not a function"}]
-10111	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-24.js (tail -c +9314289 tests/ecmac.db|head -c 361): [{"message":"value is not a function"}]
-10112	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-25.js (tail -c +9314651 tests/ecmac.db|head -c 372): [{"message":"value is not a function"}]
-10113	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-26.js (tail -c +9315024 tests/ecmac.db|head -c 421): [{"message":"value is not a function"}]
-10114	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-27.js (tail -c +9315446 tests/ecmac.db|head -c 383): [{"message":"value is not a function"}]
-10115	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-28.js (tail -c +9315830 tests/ecmac.db|head -c 322): [{"message":"value is not a function"}]
-10116	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-29.js (tail -c +9316153 tests/ecmac.db|head -c 353): [{"message":"value is not a function"}]
-10117	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-3.js (tail -c +9316507 tests/ecmac.db|head -c 356): [{"message":"value is not a function"}]
-10118	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-30.js (tail -c +9316864 tests/ecmac.db|head -c 355): [{"message":"value is not a function"}]
-10119	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-31.js (tail -c +9317220 tests/ecmac.db|head -c 340): [{"message":"value is not a function"}]
-10120	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-32.js (tail -c +9317561 tests/ecmac.db|head -c 354): [{"message":"value is not a function"}]
-10121	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-33.js (tail -c +9317916 tests/ecmac.db|head -c 330): [{"message":"value is not a function"}]
-10122	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-34.js (tail -c +9318247 tests/ecmac.db|head -c 335): [{"message":"value is not a function"}]
-10123	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-35.js (tail -c +9318583 tests/ecmac.db|head -c 358): [{"message":"value is not a function"}]
-10124	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-36.js (tail -c +9318942 tests/ecmac.db|head -c 362): [{"message":"value is not a function"}]
-10125	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-37.js (tail -c +9319305 tests/ecmac.db|head -c 356): [{"message":"value is not a function"}]
-10126	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-38.js (tail -c +9319662 tests/ecmac.db|head -c 463): [{"message":"value is not a function"}]
-10127	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-39.js (tail -c +9320126 tests/ecmac.db|head -c 473): [{"message":"value is not a function"}]
-10128	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-4.js (tail -c +9320600 tests/ecmac.db|head -c 352): [{"message":"value is not a function"}]
-10129	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-40.js (tail -c +9320953 tests/ecmac.db|head -c 812): [{"message":"value is not a function"}]
-10130	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-41.js (tail -c +9321766 tests/ecmac.db|head -c 757): [{"message":"value is not a function"}]
-10131	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-42.js (tail -c +9322524 tests/ecmac.db|head -c 912): [{"message":"Test case returned non-true value!"}]
-10132	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-43.js (tail -c +9323437 tests/ecmac.db|head -c 937): [{"message":"value is not a function"}]
+10095	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-1.js (tail -c +9308298 tests/ecmac.db|head -c 343)
+10096	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-10.js (tail -c +9308642 tests/ecmac.db|head -c 376)
+10097	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-11.js (tail -c +9309019 tests/ecmac.db|head -c 377)
+10098	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-12.js (tail -c +9309397 tests/ecmac.db|head -c 413)
+10099	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-13.js (tail -c +9309811 tests/ecmac.db|head -c 398)
+10100	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-14.js (tail -c +9310210 tests/ecmac.db|head -c 399)
+10101	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-15.js (tail -c +9310610 tests/ecmac.db|head -c 381)
+10102	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-16.js (tail -c +9310992 tests/ecmac.db|head -c 363)
+10103	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-17.js (tail -c +9311356 tests/ecmac.db|head -c 363)
+10104	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-18.js (tail -c +9311720 tests/ecmac.db|head -c 374): [{"message":"Test case returned non-true value!"}]
+10105	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-19.js (tail -c +9312095 tests/ecmac.db|head -c 381): [{"message":"Test case returned non-true value!"}]
+10106	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-2.js (tail -c +9312477 tests/ecmac.db|head -c 340)
+10107	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-20.js (tail -c +9312818 tests/ecmac.db|head -c 374): [{"message":"Test case returned non-true value!"}]
+10108	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-21.js (tail -c +9313193 tests/ecmac.db|head -c 362): [{"message":"Test case returned non-true value!"}]
+10109	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-22.js (tail -c +9313556 tests/ecmac.db|head -c 366): [{"message":"Test case returned non-true value!"}]
+10110	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-23.js (tail -c +9313923 tests/ecmac.db|head -c 365): [{"message":"Test case returned non-true value!"}]
+10111	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-24.js (tail -c +9314289 tests/ecmac.db|head -c 361)
+10112	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-25.js (tail -c +9314651 tests/ecmac.db|head -c 372)
+10113	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-26.js (tail -c +9315024 tests/ecmac.db|head -c 421)
+10114	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-27.js (tail -c +9315446 tests/ecmac.db|head -c 383)
+10115	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-28.js (tail -c +9315830 tests/ecmac.db|head -c 322)
+10116	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-29.js (tail -c +9316153 tests/ecmac.db|head -c 353)
+10117	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-3.js (tail -c +9316507 tests/ecmac.db|head -c 356)
+10118	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-30.js (tail -c +9316864 tests/ecmac.db|head -c 355)
+10119	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-31.js (tail -c +9317220 tests/ecmac.db|head -c 340)
+10120	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-32.js (tail -c +9317561 tests/ecmac.db|head -c 354)
+10121	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-33.js (tail -c +9317916 tests/ecmac.db|head -c 330)
+10122	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-34.js (tail -c +9318247 tests/ecmac.db|head -c 335)
+10123	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-35.js (tail -c +9318583 tests/ecmac.db|head -c 358)
+10124	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-36.js (tail -c +9318942 tests/ecmac.db|head -c 362)
+10125	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-37.js (tail -c +9319305 tests/ecmac.db|head -c 356)
+10126	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-38.js (tail -c +9319662 tests/ecmac.db|head -c 463)
+10127	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-39.js (tail -c +9320126 tests/ecmac.db|head -c 473)
+10128	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-4.js (tail -c +9320600 tests/ecmac.db|head -c 352)
+10129	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-40.js (tail -c +9320953 tests/ecmac.db|head -c 812)
+10130	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-41.js (tail -c +9321766 tests/ecmac.db|head -c 757)
+10131	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-42.js (tail -c +9322524 tests/ecmac.db|head -c 912)
+10132	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-43.js (tail -c +9323437 tests/ecmac.db|head -c 937)
 10133	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-44.js (tail -c +9324375 tests/ecmac.db|head -c 375)
 10134	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-45.js (tail -c +9324751 tests/ecmac.db|head -c 476)
-10135	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-46.js (tail -c +9325228 tests/ecmac.db|head -c 415): [{"message":"value is not a function"}]
-10136	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-47.js (tail -c +9325644 tests/ecmac.db|head -c 353): [{"message":"value is not a function"}]
-10137	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-49.js (tail -c +9325998 tests/ecmac.db|head -c 390): [{"message":"value is not a function"}]
-10138	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-5.js (tail -c +9326389 tests/ecmac.db|head -c 354): [{"message":"value is not a function"}]
-10139	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-50.js (tail -c +9326744 tests/ecmac.db|head -c 393): [{"message":"value is not a function"}]
-10140	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-51.js (tail -c +9327138 tests/ecmac.db|head -c 433): [{"message":"value is not a function"}]
-10141	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-6.js (tail -c +9327572 tests/ecmac.db|head -c 354): [{"message":"value is not a function"}]
-10142	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-7.js (tail -c +9327927 tests/ecmac.db|head -c 368): [{"message":"value is not a function"}]
-10143	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-8.js (tail -c +9328296 tests/ecmac.db|head -c 370): [{"message":"value is not a function"}]
-10144	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-9.js (tail -c +9328667 tests/ecmac.db|head -c 373): [{"message":"value is not a function"}]
+10135	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-46.js (tail -c +9325228 tests/ecmac.db|head -c 415)
+10136	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-47.js (tail -c +9325644 tests/ecmac.db|head -c 353)
+10137	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-49.js (tail -c +9325998 tests/ecmac.db|head -c 390)
+10138	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-5.js (tail -c +9326389 tests/ecmac.db|head -c 354)
+10139	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-50.js (tail -c +9326744 tests/ecmac.db|head -c 393)
+10140	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-51.js (tail -c +9327138 tests/ecmac.db|head -c 433): [{"message":"Test case returned non-true value!"}]
+10141	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-6.js (tail -c +9327572 tests/ecmac.db|head -c 354): [{"message":"Test case returned non-true value!"}]
+10142	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-7.js (tail -c +9327927 tests/ecmac.db|head -c 368)
+10143	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-8.js (tail -c +9328296 tests/ecmac.db|head -c 370)
+10144	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-2-9.js (tail -c +9328667 tests/ecmac.db|head -c 373)
 10145	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-3-1.js (tail -c +9329041 tests/ecmac.db|head -c 386): [{"message":"Test case returned non-true value!"}]
 10146	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-3-10.js (tail -c +9329428 tests/ecmac.db|head -c 324)
 10147	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-3-11.js (tail -c +9329753 tests/ecmac.db|head -c 335)
@@ -10261,8 +10261,8 @@ err
 10208	FAIL ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-4-60.js (tail -c +9352507 tests/ecmac.db|head -c 344): [{"message":"Test case returned non-true value!"}]
 10209	PASS ch15/15.5/15.5.4/15.5.4.20/15.5.4.20-4-8.js (tail -c +9352852 tests/ecmac.db|head -c 337)
 10210	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A1.1.js (tail -c +9353190 tests/ecmac.db|head -c 751): [{"message":"not implemented"}]
-10211	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A10.js (tail -c +9353942 tests/ecmac.db|head -c 1195): [{"message":"value is not a function"}]
-10212	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A11.js (tail -c +9355138 tests/ecmac.db|head -c 916): [{"message":"value is not a function"}]
+10211	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A10.js (tail -c +9353942 tests/ecmac.db|head -c 1195): [{"message":"#1: String.prototype.charAt.hasOwnProperty('length') return true. Actual: false"}]
+10212	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A11.js (tail -c +9355138 tests/ecmac.db|head -c 916): [{"message":"#1: String.prototype.charAt.hasOwnProperty(\"length\") return true. Actual: false"}]
 10213	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A1_T1.js (tail -c +9356055 tests/ecmac.db|head -c 825): [{"message":"#1: __instance = new Object(42); __instance.charAt = String.prototype.charAt;  __instance = new Object(42); __instance.charAt = String.prototype.charAt; __instance.charAt(false)+__instance.charAt(true) === \"42\". Actual: "}]
 10214	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A1_T10.js (tail -c +9356881 tests/ecmac.db|head -c 658): [{"message":"not implemented"}]
 10215	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A1_T2.js (tail -c +9357540 tests/ecmac.db|head -c 918): [{"message":"#1: __instance = new Boolean; __instance.charAt = String.prototype.charAt;  __instance = new Boolean; __instance.charAt = String.prototype.charAt; __instance.charAt(false)+__instance.charAt(true)+__instance.charAt(true+1) === \"fal\". Actual: l"}]
@@ -10280,11 +10280,11 @@ err
 10227	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A5.js (tail -c +9366506 tests/ecmac.db|head -c 908)
 10228	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A6.js (tail -c +9367415 tests/ecmac.db|head -c 577)
 10229	PASS ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A7.js (tail -c +9367993 tests/ecmac.db|head -c 584)
-10230	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A8.js (tail -c +9368578 tests/ecmac.db|head -c 1456): [{"message":"value is not a function"}]
-10231	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A9.js (tail -c +9370035 tests/ecmac.db|head -c 1359): [{"message":"value is not a function"}]
+10230	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A8.js (tail -c +9368578 tests/ecmac.db|head -c 1456): [{"message":"#0: String.prototype.charAt.hasOwnProperty('length') return true. Actual: false"}]
+10231	FAIL ch15/15.5/15.5.4/15.5.4.4/S15.5.4.4_A9.js (tail -c +9370035 tests/ecmac.db|head -c 1359): [{"message":"#0: String.prototype.charAt.hasOwnProperty('length') return true. Actual: false"}]
 10232	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A1.1.js (tail -c +9371395 tests/ecmac.db|head -c 839): [{"message":"not implemented"}]
-10233	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A10.js (tail -c +9372235 tests/ecmac.db|head -c 1243): [{"message":"value is not a function"}]
-10234	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A11.js (tail -c +9373479 tests/ecmac.db|head -c 948): [{"message":"value is not a function"}]
+10233	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A10.js (tail -c +9372235 tests/ecmac.db|head -c 1243): [{"message":"#1: String.prototype.charCodeAt.hasOwnProperty('length') return true. Actual: false"}]
+10234	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A11.js (tail -c +9373479 tests/ecmac.db|head -c 948): [{"message":"#1: String.prototype.charCodeAt.hasOwnProperty(\"length\") return true. Actual: false"}]
 10235	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A1_T1.js (tail -c +9374428 tests/ecmac.db|head -c 885): [{"message":"#1: __instance = new Object(42); __instance.charCodeAt = String.prototype.charCodeAt;  __instance.charCodeAt(false) === 52 and __instance.charCodeAt(true) === 50. Actual: __instance.charCodeAt(false) ===NaN and __instance.charCodeAt(true) ===NaN"}]
 10236	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A1_T10.js (tail -c +9375314 tests/ecmac.db|head -c 684): [{"message":"not implemented"}]
 10237	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A1_T2.js (tail -c +9375999 tests/ecmac.db|head -c 1510): [{"message":"#1: __instance = new Boolean; __instance.charCodeAt = String.prototype.charCodeAt; __instance.charCodeAt(false)===0x66. Actual: NaN"}]
@@ -10300,10 +10300,10 @@ err
 10247	PASS ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A6.js (tail -c +9384032 tests/ecmac.db|head -c 597)
 10248	PASS ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A7.js
  * @description Checking if creating the String.prototype
-10249	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A8.js (tail -c +9385159 tests/ecmac.db|head -c 1494): [{"message":"value is not a function"}]
-10250	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A9.js (tail -c +9386654 tests/ecmac.db|head -c 1401): [{"message":"value is not a function"}]
-10251	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A10.js (tail -c +9388056 tests/ecmac.db|head -c 1195): [{"message":"value is not a function"}]
-10252	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A11.js (tail -c +9389252 tests/ecmac.db|head -c 916): [{"message":"value is not a function"}]
+10249	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A8.js (tail -c +9385159 tests/ecmac.db|head -c 1494): [{"message":"#0: String.prototype.charCodeAt.hasOwnProperty('length') return true. Actual: false"}]
+10250	FAIL ch15/15.5/15.5.4/15.5.4.5/S15.5.4.5_A9.js (tail -c +9386654 tests/ecmac.db|head -c 1401): [{"message":"#0: String.prototype.charCodeAt.hasOwnProperty('length') return true. Actual: false"}]
+10251	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A10.js (tail -c +9388056 tests/ecmac.db|head -c 1195): [{"message":"#1: String.prototype.concat.hasOwnProperty('length') return true. Actual: false"}]
+10252	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A11.js (tail -c +9389252 tests/ecmac.db|head -c 916): [{"message":"#1: String.prototype.concat.hasOwnProperty(\"length\") return true. Actual: false"}]
 10253	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A1_T1.js (tail -c +9390169 tests/ecmac.db|head -c 724)
 10254	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A1_T10.js (tail -c +9390894 tests/ecmac.db|head -c 979): [{"message":"not implemented"}]
 10255	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A1_T2.js (tail -c +9391874 tests/ecmac.db|head -c 771)
@@ -10316,14 +10316,14 @@ err
 10262	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A2.js (tail -c +9396775 tests/ecmac.db|head -c 1180): [{"message":"too many arguments"}]
 10263	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A3.js (tail -c +9397956 tests/ecmac.db|head -c 712): [{"message":"#1: __instance = new String(\"one\"); __instance.concat(\"two\");  __instance = new String(\"one\"); __instance.concat(\"two\"); __instance == \"one\". Actual: one"}]
 10264	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A4_T1.js (tail -c +9398669 tests/ecmac.db|head -c 833)
-10265	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A4_T2.js (tail -c +9399503 tests/ecmac.db|head -c 943): [{"message":"#1: e === \"intostring\". Actual: Error: value is not a function"}]
+10265	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A4_T2.js (tail -c +9399503 tests/ecmac.db|head -c 943)
 10266	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A6.js (tail -c +9400447 tests/ecmac.db|head -c 577)
 10267	PASS ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A7.js
  * @description Checking if creating the String.prototype
-10268	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A8.js (tail -c +9401535 tests/ecmac.db|head -c 1446): [{"message":"value is not a function"}]
-10269	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A9.js (tail -c +9402982 tests/ecmac.db|head -c 1357): [{"message":"value is not a function"}]
-10270	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A10.js (tail -c +9404340 tests/ecmac.db|head -c 1206): [{"message":"value is not a function"}]
-10271	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A11.js (tail -c +9405547 tests/ecmac.db|head -c 924): [{"message":"value is not a function"}]
+10268	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A8.js (tail -c +9401535 tests/ecmac.db|head -c 1446): [{"message":"#0: String.prototype.concat.hasOwnProperty('length') return true. Actual: false"}]
+10269	FAIL ch15/15.5/15.5.4/15.5.4.6/S15.5.4.6_A9.js (tail -c +9402982 tests/ecmac.db|head -c 1357): [{"message":"#0: String.prototype.concat.hasOwnProperty('length') return true. Actual: false"}]
+10270	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A10.js (tail -c +9404340 tests/ecmac.db|head -c 1206): [{"message":"#1: String.prototype.indexOf.hasOwnProperty('length') return true. Actual: false"}]
+10271	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A11.js (tail -c +9405547 tests/ecmac.db|head -c 924): [{"message":"#1: String.prototype.indexOf.hasOwnProperty(\"length\") return true. Actual: false"}]
 10272	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T1.js (tail -c +9406472 tests/ecmac.db|head -c 729)
 10273	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T10.js (tail -c +9407202 tests/ecmac.db|head -c 862): [{"message":"not implemented"}]
 10274	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A1_T11.js (tail -c +9408065 tests/ecmac.db|head -c 869)
@@ -10355,10 +10355,10 @@ err
 10300	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A5_T6.js (tail -c +9429344 tests/ecmac.db|head -c 1012)
 10301	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A6.js (tail -c +9430357 tests/ecmac.db|head -c 582)
 10302	PASS ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A7.js (tail -c +9430940 tests/ecmac.db|head -c 662)
-10303	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A8.js (tail -c +9431603 tests/ecmac.db|head -c 1391): [{"message":"value is not a function"}]
-10304	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A9.js (tail -c +9432995 tests/ecmac.db|head -c 1368): [{"message":"value is not a function"}]
-10305	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A10.js (tail -c +9434364 tests/ecmac.db|head -c 1252): [{"message":"value is not a function"}]
-10306	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A11.js (tail -c +9435617 tests/ecmac.db|head -c 954): [{"message":"value is not a function"}]
+10303	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A8.js (tail -c +9431603 tests/ecmac.db|head -c 1391): [{"message":"#0: String.prototype.indexOf.hasOwnProperty('length') return true. Actual: false"}]
+10304	FAIL ch15/15.5/15.5.4/15.5.4.7/S15.5.4.7_A9.js (tail -c +9432995 tests/ecmac.db|head -c 1368): [{"message":"#0: String.prototype.indexOf.hasOwnProperty('length') return true. Actual: false"}]
+10305	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A10.js (tail -c +9434364 tests/ecmac.db|head -c 1252): [{"message":"#1: String.prototype.lastIndexOf.hasOwnProperty('length') return true. Actual: false"}]
+10306	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A11.js (tail -c +9435617 tests/ecmac.db|head -c 954): [{"message":"#1: String.prototype.lastIndexOf.hasOwnProperty(\"length\") return true. Actual: false"}]
 10307	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T1.js (tail -c +9436572 tests/ecmac.db|head -c 760)
 10308	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T10.js (tail -c +9437333 tests/ecmac.db|head -c 872): [{"message":"not implemented"}]
 10309	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A1_T12.js (tail -c +9438206 tests/ecmac.db|head -c 1031)
@@ -10376,19 +10376,19 @@ err
 10321	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A4_T5.js (tail -c +9448862 tests/ecmac.db|head -c 1251)
 10322	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A6.js (tail -c +9450114 tests/ecmac.db|head -c 601)
 10323	PASS ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A7.js (tail -c +9450716 tests/ecmac.db|head -c 497)
-10324	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A8.js (tail -c +9451214 tests/ecmac.db|head -c 1490): [{"message":"value is not a function"}]
-10325	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A9.js (tail -c +9452705 tests/ecmac.db|head -c 1410): [{"message":"value is not a function"}]
+10324	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A8.js (tail -c +9451214 tests/ecmac.db|head -c 1490): [{"message":"#0: String.prototype.lastIndexOf.hasOwnProperty('length') return true. Actual: false"}]
+10325	FAIL ch15/15.5/15.5.4/15.5.4.8/S15.5.4.8_A9.js (tail -c +9452705 tests/ecmac.db|head -c 1410): [{"message":"#0: String.prototype.lastIndexOf.hasOwnProperty('length') return true. Actual: false"}]
 10326	PASS  (tail -c +9454116 tests/ecmac.db|head -c 814)
 10327	FAIL  (tail -c +9454931 tests/ecmac.db|head -c 2076): [{"message":"String.prototype.localeCompare considers ö (\\u006f\\u0308) ≠ ö (\\u00f6)."}]
-10328	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A10.js (tail -c +9457008 tests/ecmac.db|head -c 1277): [{"message":"value is not a function"}]
-10329	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A11.js (tail -c +9458286 tests/ecmac.db|head -c 970): [{"message":"value is not a function"}]
+10328	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A10.js (tail -c +9457008 tests/ecmac.db|head -c 1277): [{"message":"#1: String.prototype.localeCompare.hasOwnProperty('length') return true. Actual: false"}]
+10329	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A11.js (tail -c +9458286 tests/ecmac.db|head -c 970): [{"message":"#1: String.prototype.localeCompare.hasOwnProperty(\"length\") return true. Actual: false"}]
 10330	PASS ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A1_T1.js (tail -c +9459257 tests/ecmac.db|head -c 926)
 10331	PASS ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A1_T2.js (tail -c +9460184 tests/ecmac.db|head -c 507)
 10332	PASS ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A6.js (tail -c +9460692 tests/ecmac.db|head -c 611)
 10333	PASS ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A7.js
  * @description Checking if creating the String.prototype
-10334	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A8.js (tail -c +9461843 tests/ecmac.db|head -c 1443): [{"message":"value is not a function"}]
-10335	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A9.js (tail -c +9463287 tests/ecmac.db|head -c 1434): [{"message":"value is not a function"}]
+10334	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A8.js (tail -c +9461843 tests/ecmac.db|head -c 1443): [{"message":"#0: String.prototype.localeCompare.hasOwnProperty('length') return true. Actual: false"}]
+10335	FAIL ch15/15.5/15.5.4/15.5.4.9/S15.5.4.9_A9.js (tail -c +9463287 tests/ecmac.db|head -c 1434): [{"message":"#0: String.prototype.localeCompare.hasOwnProperty('length') return true. Actual: false"}]
 10336	PASS ch15/15.5/15.5.5/S15.5.5.1_A1.js (tail -c +9464722 tests/ecmac.db|head -c 1193)
 10337	FAIL ch15/15.5/15.5.5/S15.5.5.1_A2.js (tail -c +9465916 tests/ecmac.db|head -c 985): [{"message":"#1: var __str__instance = new String(\"globglob\"); __str__instance.hasOwnProperty(\"length\") return true. Actual: false"}]
 10338	FAIL ch15/15.5/15.5.5/S15.5.5.1_A3.js (tail -c +9466902 tests/ecmac.db|head -c 1402): [{"message":"#1: var __str__instance = new String(\"globglob\"); __str__instance.hasOwnProperty(\"length\") return true. Actual: false"}]
@@ -10559,7 +10559,7 @@ err
 10503	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.3_T01.js (tail -c +9609153 tests/ecmac.db|head -c 1821): [{"message":"#1: (new Number(\"a\")).prototype.toFixed() === \"NaN\""}]
 10504	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.3_T02.js (tail -c +9610975 tests/ecmac.db|head -c 1640): [{"message":"#1: Number.NaN.prototype.toFixed() === \"NaN\""}]
 10505	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.4_T01.js (tail -c +9612616 tests/ecmac.db|head -c 1937): [{"message":"#1: (new Number(1e21)).prototype.toFixed() === String(1e21)"}]
-10506	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A2_T01.js (tail -c +9614554 tests/ecmac.db|head -c 488): [{"message":"value is not a function"}]
+10506	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A2_T01.js (tail -c +9614554 tests/ecmac.db|head -c 488): [{"message":"#1: The length property of the toFixed method is 1"}]
 10507	PASS ch15/15.7/15.7.5/S15.7.5_A1_T01.js (tail -c +9615043 tests/ecmac.db|head -c 601)
 10508	PASS ch15/15.7/15.7.5/S15.7.5_A1_T02.js (tail -c +9615645 tests/ecmac.db|head -c 583)
 10509	PASS ch15/15.7/15.7.5/S15.7.5_A1_T03.js (tail -c +9616229 tests/ecmac.db|head -c 619)
@@ -10612,12 +10612,12 @@ err
 10556	FAIL ch15/15.8/15.8.2/15.8.2.11/S15.8.2.11_A1.js (tail -c +9641629 tests/ecmac.db|head -c 326): [{"message":"#1: 'Math.max() != -Infinity'"}]
 10557	FAIL ch15/15.8/15.8.2/15.8.2.11/S15.8.2.11_A2.js (tail -c +9641956 tests/ecmac.db|head -c 1269): [{"message":"#2: 'isNaN(Math.max(NaN, -Infinity)) === false"}]
 10558	FAIL ch15/15.8/15.8.2/15.8.2.11/S15.8.2.11_A3.js (tail -c +9643226 tests/ecmac.db|head -c 418): [{"message":"#1: 'Math.max(-0, +0) !== +0'"}]
-10559	FAIL ch15/15.8/15.8.2/15.8.2.11/S15.8.2.11_A4.js (tail -c +9643645 tests/ecmac.db|head -c 591): [{"message":"#2: length property of Math.max method is undefined"}]
+10559	FAIL ch15/15.8/15.8.2/15.8.2.11/S15.8.2.11_A4.js (tail -c +9643645 tests/ecmac.db|head -c 591): [{"message":"#3: The length property of the Math.max method is not 2"}]
 10560	PASS ch15/15.8/15.8.2/15.8.2.12/15.8.2.12-1.js (tail -c +9644237 tests/ecmac.db|head -c 257)
 10561	FAIL ch15/15.8/15.8.2/15.8.2.12/S15.8.2.12_A1.js (tail -c +9644495 tests/ecmac.db|head -c 326): [{"message":"#1: 'Math.min() != +Infinity'"}]
 10562	FAIL ch15/15.8/15.8.2/15.8.2.12/S15.8.2.12_A2.js (tail -c +9644822 tests/ecmac.db|head -c 1269): [{"message":"#2: 'isNaN(Math.min(NaN, -Infinity)) === false"}]
 10563	FAIL ch15/15.8/15.8.2/15.8.2.12/S15.8.2.12_A3.js (tail -c +9646092 tests/ecmac.db|head -c 418): [{"message":"#2: 'Math.max(+0, -0) !== -0'"}]
-10564	FAIL ch15/15.8/15.8.2/15.8.2.12/S15.8.2.12_A4.js (tail -c +9646511 tests/ecmac.db|head -c 591): [{"message":"#2: length property of Math.min method is undefined"}]
+10564	FAIL ch15/15.8/15.8.2/15.8.2.12/S15.8.2.12_A4.js (tail -c +9646511 tests/ecmac.db|head -c 591): [{"message":"#3: The length property of the Math.min method is not 2"}]
 10565	PASS ch15/15.8/15.8.2/15.8.2.13/S15.8.2.13_A1.js (tail -c +9647103 tests/ecmac.db|head -c 659)
 10566	PASS ch15/15.8/15.8.2/15.8.2.13/S15.8.2.13_A10.js (tail -c +9647763 tests/ecmac.db|head -c 581)
 10567	PASS ch15/15.8/15.8.2/15.8.2.13/S15.8.2.13_A11.js (tail -c +9648345 tests/ecmac.db|head -c 591)
@@ -10811,19 +10811,19 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 10740	PASS ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A1_T1.js (tail -c +9912650 tests/ecmac.db|head -c 399)
 10741	PASS ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A1_T2.js (tail -c +9913050 tests/ecmac.db|head -c 469)
 10742	PASS ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A1_T3.js (tail -c +9913520 tests/ecmac.db|head -c 449)
-10743	FAIL ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A2_T1.js (tail -c +9913970 tests/ecmac.db|head -c 424): [{"message":"value is not a function"}]
+10743	FAIL ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A2_T1.js (tail -c +9913970 tests/ecmac.db|head -c 424): [{"message":"#1: The parse has a \"length\" property"}]
 10744	PASS ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A3_T1.js (tail -c +9914395 tests/ecmac.db|head -c 404)
 10745	FAIL ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A3_T2.js (tail -c +9914800 tests/ecmac.db|head -c 508): [{"message":"#1: The Date.parse.length property has the attributes DontDelete"}]
-10746	FAIL ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A3_T3.js (tail -c +9915309 tests/ecmac.db|head -c 506): [{"message":"value is not a function"}]
+10746	PASS ch15/15.9/15.9.4/15.9.4.2/S15.9.4.2_A3_T3.js (tail -c +9915309 tests/ecmac.db|head -c 506)
 10747	PASS ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A1_T1.js (tail -c +9915816 tests/ecmac.db|head -c 387)
 10748	PASS ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A1_T2.js (tail -c +9916204 tests/ecmac.db|head -c 459)
 10749	PASS ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A1_T3.js (tail -c +9916664 tests/ecmac.db|head -c 439)
-10750	FAIL ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A2_T1.js (tail -c +9917104 tests/ecmac.db|head -c 412): [{"message":"value is not a function"}]
+10750	FAIL ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A2_T1.js (tail -c +9917104 tests/ecmac.db|head -c 412): [{"message":"#1: The UTC has a \"length\" property"}]
 10751	PASS ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A3_T1.js (tail -c +9917517 tests/ecmac.db|head -c 394)
 10752	FAIL ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A3_T2.js (tail -c +9917912 tests/ecmac.db|head -c 498): [{"message":"#1: The Date.UTC.length property has the attributes DontDelete"}]
-10753	FAIL ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A3_T3.js (tail -c +9918411 tests/ecmac.db|head -c 496): [{"message":"value is not a function"}]
+10753	PASS ch15/15.9/15.9.4/15.9.4.3/S15.9.4.3_A3_T3.js (tail -c +9918411 tests/ecmac.db|head -c 496)
 10754	PASS ch15/15.9/15.9.4/15.9.4.4/15.9.4.4-0-1.js (tail -c +9918908 tests/ecmac.db|head -c 286)
-10755	FAIL ch15/15.9/15.9.4/15.9.4.4/15.9.4.4-0-2.js (tail -c +9919195 tests/ecmac.db|head -c 297): [{"message":"Test case returned non-true value!"}]
+10755	PASS ch15/15.9/15.9.4/15.9.4.4/15.9.4.4-0-2.js (tail -c +9919195 tests/ecmac.db|head -c 297)
 10756	PASS ch15/15.9/15.9.4/15.9.4.4/15.9.4.4-0-3.js (tail -c +9919493 tests/ecmac.db|head -c 316)
 10757	PASS ch15/15.9/15.9.4/15.9.4.4/15.9.4.4-0-4.js (tail -c +9919810 tests/ecmac.db|head -c 286)
 10758	PASS ch15/15.9/15.9.5/S15.9.5_A01_T1.js (tail -c +9920097 tests/ecmac.db|head -c 366)
@@ -10878,269 +10878,269 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 10807	PASS ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A1_T1.js (tail -c +9939281 tests/ecmac.db|head -c 497)
 10808	PASS ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A1_T2.js (tail -c +9939779 tests/ecmac.db|head -c 551)
 10809	PASS ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A1_T3.js (tail -c +9940331 tests/ecmac.db|head -c 531)
-10810	FAIL ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A2_T1.js (tail -c +9940863 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+10810	FAIL ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A2_T1.js (tail -c +9940863 tests/ecmac.db|head -c 482): [{"message":"#1: The getFullYear has a \"length\" property"}]
 10811	PASS ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A3_T1.js (tail -c +9941346 tests/ecmac.db|head -c 486)
 10812	FAIL ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A3_T2.js (tail -c +9941833 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.getFullYear.length property has the attributes DontDelete"}]
-10813	FAIL ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A3_T3.js (tail -c +9942424 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+10813	PASS ch15/15.9/15.9.5/15.9.5.10/S15.9.5.10_A3_T3.js (tail -c +9942424 tests/ecmac.db|head -c 588)
 10814	PASS ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A1_T1.js (tail -c +9943013 tests/ecmac.db|head -c 515)
 10815	PASS ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A1_T2.js (tail -c +9943529 tests/ecmac.db|head -c 566)
 10816	PASS ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A1_T3.js (tail -c +9944096 tests/ecmac.db|head -c 546)
-10817	FAIL ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A2_T1.js (tail -c +9944643 tests/ecmac.db|head -c 500): [{"message":"value is not a function"}]
+10817	FAIL ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A2_T1.js (tail -c +9944643 tests/ecmac.db|head -c 500): [{"message":"#1: The getUTCFullYear has a \"length\" property"}]
 10818	PASS ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A3_T1.js (tail -c +9945144 tests/ecmac.db|head -c 501)
 10819	FAIL ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A3_T2.js (tail -c +9945646 tests/ecmac.db|head -c 605): [{"message":"#1: The Date.prototype.getUTCFullYear.length property has the attributes DontDelete"}]
-10820	FAIL ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A3_T3.js (tail -c +9946252 tests/ecmac.db|head -c 603): [{"message":"value is not a function"}]
+10820	PASS ch15/15.9/15.9.5/15.9.5.11/S15.9.5.11_A3_T3.js (tail -c +9946252 tests/ecmac.db|head -c 603)
 10821	PASS ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A1_T1.js (tail -c +9946856 tests/ecmac.db|head -c 479)
 10822	PASS ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A1_T2.js (tail -c +9947336 tests/ecmac.db|head -c 536)
 10823	PASS ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A1_T3.js (tail -c +9947873 tests/ecmac.db|head -c 516)
-10824	FAIL ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A2_T1.js (tail -c +9948390 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+10824	FAIL ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A2_T1.js (tail -c +9948390 tests/ecmac.db|head -c 464): [{"message":"#1: The getMonth has a \"length\" property"}]
 10825	PASS ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A3_T1.js (tail -c +9948855 tests/ecmac.db|head -c 471)
 10826	FAIL ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A3_T2.js (tail -c +9949327 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.getMonth.length property has the attributes DontDelete"}]
-10827	FAIL ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A3_T3.js (tail -c +9949903 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+10827	PASS ch15/15.9/15.9.5/15.9.5.12/S15.9.5.12_A3_T3.js (tail -c +9949903 tests/ecmac.db|head -c 573)
 10828	PASS ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A1_T1.js (tail -c +9950477 tests/ecmac.db|head -c 497)
 10829	PASS ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A1_T2.js (tail -c +9950975 tests/ecmac.db|head -c 551)
 10830	PASS ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A1_T3.js (tail -c +9951527 tests/ecmac.db|head -c 531)
-10831	FAIL ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A2_T1.js (tail -c +9952059 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+10831	FAIL ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A2_T1.js (tail -c +9952059 tests/ecmac.db|head -c 482): [{"message":"#1: The getUTCMonth has a \"length\" property"}]
 10832	PASS ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A3_T1.js (tail -c +9952542 tests/ecmac.db|head -c 486)
 10833	FAIL ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A3_T2.js (tail -c +9953029 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.getUTCMonth.length property has the attributes DontDelete"}]
-10834	FAIL ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A3_T3.js (tail -c +9953620 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+10834	PASS ch15/15.9/15.9.5/15.9.5.13/S15.9.5.13_A3_T3.js (tail -c +9953620 tests/ecmac.db|head -c 588)
 10835	PASS ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A1_T1.js (tail -c +9954209 tests/ecmac.db|head -c 473)
 10836	PASS ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A1_T2.js (tail -c +9954683 tests/ecmac.db|head -c 531)
 10837	PASS ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A1_T3.js (tail -c +9955215 tests/ecmac.db|head -c 511)
-10838	FAIL ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A2_T1.js (tail -c +9955727 tests/ecmac.db|head -c 458): [{"message":"value is not a function"}]
+10838	FAIL ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A2_T1.js (tail -c +9955727 tests/ecmac.db|head -c 458): [{"message":"#1: The getDate has a \"length\" property"}]
 10839	PASS ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A3_T1.js (tail -c +9956186 tests/ecmac.db|head -c 466)
 10840	FAIL ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A3_T2.js (tail -c +9956653 tests/ecmac.db|head -c 570): [{"message":"#1: The Date.prototype.getDate.length property has the attributes DontDelete"}]
-10841	FAIL ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A3_T3.js (tail -c +9957224 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
+10841	PASS ch15/15.9/15.9.5/15.9.5.14/S15.9.5.14_A3_T3.js (tail -c +9957224 tests/ecmac.db|head -c 568)
 10842	PASS ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A1_T1.js (tail -c +9957793 tests/ecmac.db|head -c 491)
 10843	PASS ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A1_T2.js (tail -c +9958285 tests/ecmac.db|head -c 546)
 10844	PASS ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A1_T3.js (tail -c +9958832 tests/ecmac.db|head -c 526)
-10845	FAIL ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A2_T1.js (tail -c +9959359 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10845	FAIL ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A2_T1.js (tail -c +9959359 tests/ecmac.db|head -c 476): [{"message":"#1: The getUTCDate has a \"length\" property"}]
 10846	PASS ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A3_T1.js (tail -c +9959836 tests/ecmac.db|head -c 481)
 10847	FAIL ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A3_T2.js (tail -c +9960318 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.getUTCDate.length property has the attributes DontDelete"}]
-10848	FAIL ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A3_T3.js (tail -c +9960904 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10848	PASS ch15/15.9/15.9.5/15.9.5.15/S15.9.5.15_A3_T3.js (tail -c +9960904 tests/ecmac.db|head -c 583)
 10849	PASS ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A1_T1.js (tail -c +9961488 tests/ecmac.db|head -c 467)
 10850	PASS ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A1_T2.js (tail -c +9961956 tests/ecmac.db|head -c 526)
 10851	PASS ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A1_T3.js (tail -c +9962483 tests/ecmac.db|head -c 506)
-10852	FAIL ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A2_T1.js (tail -c +9962990 tests/ecmac.db|head -c 452): [{"message":"value is not a function"}]
+10852	FAIL ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A2_T1.js (tail -c +9962990 tests/ecmac.db|head -c 452): [{"message":"#1: The getDay has a \"length\" property"}]
 10853	PASS ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A3_T1.js (tail -c +9963443 tests/ecmac.db|head -c 461)
 10854	FAIL ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A3_T2.js (tail -c +9963905 tests/ecmac.db|head -c 565): [{"message":"#1: The Date.prototype.getDay.length property has the attributes DontDelete"}]
-10855	FAIL ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A3_T3.js (tail -c +9964471 tests/ecmac.db|head -c 563): [{"message":"value is not a function"}]
+10855	PASS ch15/15.9/15.9.5/15.9.5.16/S15.9.5.16_A3_T3.js (tail -c +9964471 tests/ecmac.db|head -c 563)
 10856	PASS ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A1_T1.js (tail -c +9965035 tests/ecmac.db|head -c 485)
 10857	PASS ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A1_T2.js (tail -c +9965521 tests/ecmac.db|head -c 541)
 10858	PASS ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A1_T3.js (tail -c +9966063 tests/ecmac.db|head -c 521)
-10859	FAIL ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A2_T1.js (tail -c +9966585 tests/ecmac.db|head -c 470): [{"message":"value is not a function"}]
+10859	FAIL ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A2_T1.js (tail -c +9966585 tests/ecmac.db|head -c 470): [{"message":"#1: The getUTCDay has a \"length\" property"}]
 10860	PASS ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A3_T1.js (tail -c +9967056 tests/ecmac.db|head -c 476)
 10861	FAIL ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A3_T2.js (tail -c +9967533 tests/ecmac.db|head -c 580): [{"message":"#1: The Date.prototype.getUTCDay.length property has the attributes DontDelete"}]
-10862	FAIL ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A3_T3.js (tail -c +9968114 tests/ecmac.db|head -c 578): [{"message":"value is not a function"}]
+10862	PASS ch15/15.9/15.9.5/15.9.5.17/S15.9.5.17_A3_T3.js (tail -c +9968114 tests/ecmac.db|head -c 578)
 10863	PASS ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A1_T1.js (tail -c +9968693 tests/ecmac.db|head -c 479)
 10864	PASS ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A1_T2.js (tail -c +9969173 tests/ecmac.db|head -c 536)
 10865	PASS ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A1_T3.js (tail -c +9969710 tests/ecmac.db|head -c 516)
-10866	FAIL ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A2_T1.js (tail -c +9970227 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+10866	FAIL ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A2_T1.js (tail -c +9970227 tests/ecmac.db|head -c 464): [{"message":"#1: The getHours has a \"length\" property"}]
 10867	PASS ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A3_T1.js (tail -c +9970692 tests/ecmac.db|head -c 471)
 10868	FAIL ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A3_T2.js (tail -c +9971164 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.getHours.length property has the attributes DontDelete"}]
-10869	FAIL ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A3_T3.js (tail -c +9971740 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+10869	PASS ch15/15.9/15.9.5/15.9.5.18/S15.9.5.18_A3_T3.js (tail -c +9971740 tests/ecmac.db|head -c 573)
 10870	PASS ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A1_T1.js (tail -c +9972314 tests/ecmac.db|head -c 497)
 10871	PASS ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A1_T2.js (tail -c +9972812 tests/ecmac.db|head -c 551)
 10872	PASS ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A1_T3.js (tail -c +9973364 tests/ecmac.db|head -c 531)
-10873	FAIL ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A2_T1.js (tail -c +9973896 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+10873	FAIL ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A2_T1.js (tail -c +9973896 tests/ecmac.db|head -c 482): [{"message":"#1: The getUTCHours has a \"length\" property"}]
 10874	PASS ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A3_T1.js (tail -c +9974379 tests/ecmac.db|head -c 486)
 10875	FAIL ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A3_T2.js (tail -c +9974866 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.getUTCHours.length property has the attributes DontDelete"}]
-10876	FAIL ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A3_T3.js (tail -c +9975457 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+10876	PASS ch15/15.9/15.9.5/15.9.5.19/S15.9.5.19_A3_T3.js (tail -c +9975457 tests/ecmac.db|head -c 588)
 10877	PASS ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A1_T1.js (tail -c +9976046 tests/ecmac.db|head -c 477)
 10878	PASS ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A1_T2.js (tail -c +9976524 tests/ecmac.db|head -c 534)
 10879	PASS ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A1_T3.js (tail -c +9977059 tests/ecmac.db|head -c 514)
-10880	FAIL ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A2_T1.js (tail -c +9977574 tests/ecmac.db|head -c 462): [{"message":"value is not a function"}]
+10880	FAIL ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A2_T1.js (tail -c +9977574 tests/ecmac.db|head -c 462): [{"message":"#1: The toString has a \"length\" property"}]
 10881	PASS ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A3_T1.js (tail -c +9978037 tests/ecmac.db|head -c 469)
 10882	FAIL ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A3_T2.js (tail -c +9978507 tests/ecmac.db|head -c 573): [{"message":"#1: The Date.prototype.toString.length property has the attributes DontDelete"}]
-10883	FAIL ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A3_T3.js (tail -c +9979081 tests/ecmac.db|head -c 571): [{"message":"value is not a function"}]
+10883	PASS ch15/15.9/15.9.5/15.9.5.2/S15.9.5.2_A3_T3.js (tail -c +9979081 tests/ecmac.db|head -c 571)
 10884	PASS ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A1_T1.js (tail -c +9979653 tests/ecmac.db|head -c 491)
 10885	PASS ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A1_T2.js (tail -c +9980145 tests/ecmac.db|head -c 546)
 10886	PASS ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A1_T3.js (tail -c +9980692 tests/ecmac.db|head -c 526)
-10887	FAIL ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A2_T1.js (tail -c +9981219 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10887	FAIL ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A2_T1.js (tail -c +9981219 tests/ecmac.db|head -c 476): [{"message":"#1: The getMinutes has a \"length\" property"}]
 10888	PASS ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A3_T1.js (tail -c +9981696 tests/ecmac.db|head -c 481)
 10889	FAIL ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A3_T2.js (tail -c +9982178 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.getMinutes.length property has the attributes DontDelete"}]
-10890	FAIL ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A3_T3.js (tail -c +9982764 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10890	PASS ch15/15.9/15.9.5/15.9.5.20/S15.9.5.20_A3_T3.js (tail -c +9982764 tests/ecmac.db|head -c 583)
 10891	PASS ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A1_T1.js (tail -c +9983348 tests/ecmac.db|head -c 509)
 10892	PASS ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A1_T2.js (tail -c +9983858 tests/ecmac.db|head -c 561)
 10893	PASS ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A1_T3.js (tail -c +9984420 tests/ecmac.db|head -c 541)
-10894	FAIL ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A2_T1.js (tail -c +9984962 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10894	FAIL ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A2_T1.js (tail -c +9984962 tests/ecmac.db|head -c 494): [{"message":"#1: The getUTCMinutes has a \"length\" property"}]
 10895	PASS ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A3_T1.js (tail -c +9985457 tests/ecmac.db|head -c 496)
 10896	FAIL ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A3_T2.js (tail -c +9985954 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.getUTCMinutes.length property has the attributes DontDelete"}]
-10897	FAIL ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A3_T3.js (tail -c +9986555 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10897	PASS ch15/15.9/15.9.5/15.9.5.21/S15.9.5.21_A3_T3.js (tail -c +9986555 tests/ecmac.db|head -c 598)
 10898	PASS ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A1_T1.js (tail -c +9987154 tests/ecmac.db|head -c 491)
 10899	PASS ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A1_T2.js (tail -c +9987646 tests/ecmac.db|head -c 546)
 10900	PASS ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A1_T3.js (tail -c +9988193 tests/ecmac.db|head -c 526)
-10901	FAIL ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A2_T1.js (tail -c +9988720 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10901	FAIL ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A2_T1.js (tail -c +9988720 tests/ecmac.db|head -c 476): [{"message":"#1: The getSeconds has a \"length\" property"}]
 10902	PASS ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A3_T1.js (tail -c +9989197 tests/ecmac.db|head -c 481)
 10903	FAIL ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A3_T2.js (tail -c +9989679 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.getSeconds.length property has the attributes DontDelete"}]
-10904	FAIL ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A3_T3.js (tail -c +9990265 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10904	PASS ch15/15.9/15.9.5/15.9.5.22/S15.9.5.22_A3_T3.js (tail -c +9990265 tests/ecmac.db|head -c 583)
 10905	PASS ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A1_T1.js (tail -c +9990849 tests/ecmac.db|head -c 509)
 10906	PASS ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A1_T2.js (tail -c +9991359 tests/ecmac.db|head -c 561)
 10907	PASS ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A1_T3.js (tail -c +9991921 tests/ecmac.db|head -c 541)
-10908	FAIL ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A2_T1.js (tail -c +9992463 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10908	FAIL ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A2_T1.js (tail -c +9992463 tests/ecmac.db|head -c 494): [{"message":"#1: The getUTCSeconds has a \"length\" property"}]
 10909	PASS ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A3_T1.js (tail -c +9992958 tests/ecmac.db|head -c 496)
 10910	FAIL ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A3_T2.js (tail -c +9993455 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.getUTCSeconds.length property has the attributes DontDelete"}]
-10911	FAIL ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A3_T3.js (tail -c +9994056 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10911	PASS ch15/15.9/15.9.5/15.9.5.23/S15.9.5.23_A3_T3.js (tail -c +9994056 tests/ecmac.db|head -c 598)
 10912	PASS ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A1_T1.js (tail -c +9994655 tests/ecmac.db|head -c 521)
 10913	PASS ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A1_T2.js (tail -c +9995177 tests/ecmac.db|head -c 571)
 10914	PASS ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A1_T3.js (tail -c +9995749 tests/ecmac.db|head -c 551)
-10915	FAIL ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A2_T1.js (tail -c +9996301 tests/ecmac.db|head -c 506): [{"message":"value is not a function"}]
+10915	FAIL ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A2_T1.js (tail -c +9996301 tests/ecmac.db|head -c 506): [{"message":"#1: The getMilliseconds has a \"length\" property"}]
 10916	PASS ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A3_T1.js (tail -c +9996808 tests/ecmac.db|head -c 506)
 10917	FAIL ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A3_T2.js (tail -c +9997315 tests/ecmac.db|head -c 610): [{"message":"#1: The Date.prototype.getMilliseconds.length property has the attributes DontDelete"}]
-10918	FAIL ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A3_T3.js (tail -c +9997926 tests/ecmac.db|head -c 608): [{"message":"value is not a function"}]
+10918	PASS ch15/15.9/15.9.5/15.9.5.24/S15.9.5.24_A3_T3.js (tail -c +9997926 tests/ecmac.db|head -c 608)
 10919	PASS ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A1_T1.js (tail -c +9998535 tests/ecmac.db|head -c 539)
 10920	PASS ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A1_T2.js (tail -c +9999075 tests/ecmac.db|head -c 586)
 10921	PASS ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A1_T3.js (tail -c +9999662 tests/ecmac.db|head -c 566)
-10922	FAIL ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A2_T1.js (tail -c +10000229 tests/ecmac.db|head -c 524): [{"message":"value is not a function"}]
+10922	FAIL ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A2_T1.js (tail -c +10000229 tests/ecmac.db|head -c 524): [{"message":"#1: The getUTCMilliseconds has a \"length\" property"}]
 10923	PASS ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A3_T1.js (tail -c +10000754 tests/ecmac.db|head -c 521)
 10924	FAIL ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A3_T2.js (tail -c +10001276 tests/ecmac.db|head -c 625): [{"message":"#1: The Date.prototype.getUTCMilliseconds.length property has the attributes DontDelete"}]
-10925	FAIL ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A3_T3.js (tail -c +10001902 tests/ecmac.db|head -c 623): [{"message":"value is not a function"}]
+10925	PASS ch15/15.9/15.9.5/15.9.5.25/S15.9.5.25_A3_T3.js (tail -c +10001902 tests/ecmac.db|head -c 623)
 10926	PASS ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A1_T1.js (tail -c +10002526 tests/ecmac.db|head -c 533)
 10927	PASS ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A1_T2.js (tail -c +10003060 tests/ecmac.db|head -c 581)
 10928	PASS ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A1_T3.js (tail -c +10003642 tests/ecmac.db|head -c 561)
-10929	FAIL ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A2_T1.js (tail -c +10004204 tests/ecmac.db|head -c 518): [{"message":"value is not a function"}]
+10929	FAIL ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A2_T1.js (tail -c +10004204 tests/ecmac.db|head -c 518): [{"message":"#1: The getTimezoneOffset has a \"length\" property"}]
 10930	PASS ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A3_T1.js (tail -c +10004723 tests/ecmac.db|head -c 516)
 10931	FAIL ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A3_T2.js (tail -c +10005240 tests/ecmac.db|head -c 620): [{"message":"#1: The Date.prototype.getTimezoneOffset.length property has the attributes DontDelete"}]
-10932	FAIL ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A3_T3.js (tail -c +10005861 tests/ecmac.db|head -c 618): [{"message":"value is not a function"}]
+10932	PASS ch15/15.9/15.9.5/15.9.5.26/S15.9.5.26_A3_T3.js (tail -c +10005861 tests/ecmac.db|head -c 618)
 10933	PASS ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A1_T1.js (tail -c +10006480 tests/ecmac.db|head -c 473)
 10934	PASS ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A1_T2.js (tail -c +10006954 tests/ecmac.db|head -c 531)
 10935	PASS ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A1_T3.js (tail -c +10007486 tests/ecmac.db|head -c 511)
-10936	FAIL ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A2_T1.js (tail -c +10007998 tests/ecmac.db|head -c 458): [{"message":"value is not a function"}]
+10936	FAIL ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A2_T1.js (tail -c +10007998 tests/ecmac.db|head -c 458): [{"message":"#1: The setTime has a \"length\" property"}]
 10937	PASS ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A3_T1.js (tail -c +10008457 tests/ecmac.db|head -c 466)
 10938	FAIL ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A3_T2.js (tail -c +10008924 tests/ecmac.db|head -c 570): [{"message":"#1: The Date.prototype.setTime.length property has the attributes DontDelete"}]
-10939	FAIL ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A3_T3.js (tail -c +10009495 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
+10939	PASS ch15/15.9/15.9.5/15.9.5.27/S15.9.5.27_A3_T3.js (tail -c +10009495 tests/ecmac.db|head -c 568)
 10940	PASS ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A1_T1.js (tail -c +10010064 tests/ecmac.db|head -c 521)
 10941	PASS ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A1_T2.js (tail -c +10010586 tests/ecmac.db|head -c 571)
 10942	PASS ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A1_T3.js (tail -c +10011158 tests/ecmac.db|head -c 551)
-10943	FAIL ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A2_T1.js (tail -c +10011710 tests/ecmac.db|head -c 506): [{"message":"value is not a function"}]
+10943	FAIL ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A2_T1.js (tail -c +10011710 tests/ecmac.db|head -c 506): [{"message":"#1: The setMilliseconds has a \"length\" property"}]
 10944	PASS ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A3_T1.js (tail -c +10012217 tests/ecmac.db|head -c 506)
 10945	FAIL ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A3_T2.js (tail -c +10012724 tests/ecmac.db|head -c 610): [{"message":"#1: The Date.prototype.setMilliseconds.length property has the attributes DontDelete"}]
-10946	FAIL ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A3_T3.js (tail -c +10013335 tests/ecmac.db|head -c 608): [{"message":"value is not a function"}]
+10946	PASS ch15/15.9/15.9.5/15.9.5.28/S15.9.5.28_A3_T3.js (tail -c +10013335 tests/ecmac.db|head -c 608)
 10947	PASS ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A1_T1.js (tail -c +10013944 tests/ecmac.db|head -c 539)
 10948	PASS ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A1_T2.js (tail -c +10014484 tests/ecmac.db|head -c 586)
 10949	PASS ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A1_T3.js (tail -c +10015071 tests/ecmac.db|head -c 566)
-10950	FAIL ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A2_T1.js (tail -c +10015638 tests/ecmac.db|head -c 524): [{"message":"value is not a function"}]
+10950	FAIL ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A2_T1.js (tail -c +10015638 tests/ecmac.db|head -c 524): [{"message":"#1: The setUTCMilliseconds has a \"length\" property"}]
 10951	PASS ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A3_T1.js (tail -c +10016163 tests/ecmac.db|head -c 521)
 10952	FAIL ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A3_T2.js (tail -c +10016685 tests/ecmac.db|head -c 625): [{"message":"#1: The Date.prototype.setUTCMilliseconds.length property has the attributes DontDelete"}]
-10953	FAIL ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A3_T3.js (tail -c +10017311 tests/ecmac.db|head -c 623): [{"message":"value is not a function"}]
+10953	PASS ch15/15.9/15.9.5/15.9.5.29/S15.9.5.29_A3_T3.js (tail -c +10017311 tests/ecmac.db|head -c 623)
 10954	PASS ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A1_T1.js (tail -c +10017935 tests/ecmac.db|head -c 501)
 10955	PASS ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A1_T2.js (tail -c +10018437 tests/ecmac.db|head -c 554)
 10956	PASS ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A1_T3.js (tail -c +10018992 tests/ecmac.db|head -c 534)
-10957	FAIL ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A2_T1.js (tail -c +10019527 tests/ecmac.db|head -c 486): [{"message":"value is not a function"}]
+10957	FAIL ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A2_T1.js (tail -c +10019527 tests/ecmac.db|head -c 486): [{"message":"#1: The toDateString has a \"length\" property"}]
 10958	PASS ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A3_T1.js (tail -c +10020014 tests/ecmac.db|head -c 489)
 10959	FAIL ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A3_T2.js (tail -c +10020504 tests/ecmac.db|head -c 593): [{"message":"#1: The Date.prototype.toDateString.length property has the attributes DontDelete"}]
-10960	FAIL ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A3_T3.js (tail -c +10021098 tests/ecmac.db|head -c 591): [{"message":"value is not a function"}]
+10960	PASS ch15/15.9/15.9.5/15.9.5.3/S15.9.5.3_A3_T3.js (tail -c +10021098 tests/ecmac.db|head -c 591)
 10961	PASS ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A1_T1.js (tail -c +10021690 tests/ecmac.db|head -c 491)
 10962	PASS ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A1_T2.js (tail -c +10022182 tests/ecmac.db|head -c 546)
 10963	PASS ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A1_T3.js (tail -c +10022729 tests/ecmac.db|head -c 526)
-10964	FAIL ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A2_T1.js (tail -c +10023256 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10964	FAIL ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A2_T1.js (tail -c +10023256 tests/ecmac.db|head -c 476): [{"message":"#1: The setSeconds has a \"length\" property"}]
 10965	PASS ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A3_T1.js (tail -c +10023733 tests/ecmac.db|head -c 481)
 10966	FAIL ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A3_T2.js (tail -c +10024215 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.setSeconds.length property has the attributes DontDelete"}]
-10967	FAIL ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A3_T3.js (tail -c +10024801 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10967	PASS ch15/15.9/15.9.5/15.9.5.30/S15.9.5.30_A3_T3.js (tail -c +10024801 tests/ecmac.db|head -c 583)
 10968	PASS ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A1_T1.js (tail -c +10025385 tests/ecmac.db|head -c 509)
 10969	PASS ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A1_T2.js (tail -c +10025895 tests/ecmac.db|head -c 561)
 10970	PASS ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A1_T3.js (tail -c +10026457 tests/ecmac.db|head -c 541)
-10971	FAIL ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A2_T1.js (tail -c +10026999 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10971	FAIL ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A2_T1.js (tail -c +10026999 tests/ecmac.db|head -c 494): [{"message":"#1: The setUTCSeconds has a \"length\" property"}]
 10972	PASS ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A3_T1.js (tail -c +10027494 tests/ecmac.db|head -c 496)
 10973	FAIL ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A3_T2.js (tail -c +10027991 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.setUTCSeconds.length property has the attributes DontDelete"}]
-10974	FAIL ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A3_T3.js (tail -c +10028592 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10974	PASS ch15/15.9/15.9.5/15.9.5.31/S15.9.5.31_A3_T3.js (tail -c +10028592 tests/ecmac.db|head -c 598)
 10975	PASS ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A1_T1.js (tail -c +10029191 tests/ecmac.db|head -c 491)
 10976	PASS ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A1_T2.js (tail -c +10029683 tests/ecmac.db|head -c 546)
 10977	PASS ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A1_T3.js (tail -c +10030230 tests/ecmac.db|head -c 526)
-10978	FAIL ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A2_T1.js (tail -c +10030757 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+10978	FAIL ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A2_T1.js (tail -c +10030757 tests/ecmac.db|head -c 476): [{"message":"#1: The setMinutes has a \"length\" property"}]
 10979	PASS ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A3_T1.js (tail -c +10031234 tests/ecmac.db|head -c 481)
 10980	FAIL ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A3_T2.js (tail -c +10031716 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.setMinutes.length property has the attributes DontDelete"}]
-10981	FAIL ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A3_T3.js (tail -c +10032302 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+10981	PASS ch15/15.9/15.9.5/15.9.5.32/S15.9.5.32_A3_T3.js (tail -c +10032302 tests/ecmac.db|head -c 583)
 10982	PASS ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A1_T1.js (tail -c +10032886 tests/ecmac.db|head -c 509)
 10983	PASS ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A1_T2.js (tail -c +10033396 tests/ecmac.db|head -c 561)
 10984	PASS ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A1_T3.js (tail -c +10033958 tests/ecmac.db|head -c 541)
-10985	FAIL ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A2_T1.js (tail -c +10034500 tests/ecmac.db|head -c 494): [{"message":"value is not a function"}]
+10985	FAIL ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A2_T1.js (tail -c +10034500 tests/ecmac.db|head -c 494): [{"message":"#1: The setUTCMinutes has a \"length\" property"}]
 10986	PASS ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A3_T1.js (tail -c +10034995 tests/ecmac.db|head -c 496)
 10987	FAIL ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A3_T2.js (tail -c +10035492 tests/ecmac.db|head -c 600): [{"message":"#1: The Date.prototype.setUTCMinutes.length property has the attributes DontDelete"}]
-10988	FAIL ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A3_T3.js (tail -c +10036093 tests/ecmac.db|head -c 598): [{"message":"value is not a function"}]
+10988	PASS ch15/15.9/15.9.5/15.9.5.33/S15.9.5.33_A3_T3.js (tail -c +10036093 tests/ecmac.db|head -c 598)
 10989	PASS ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A1_T1.js (tail -c +10036692 tests/ecmac.db|head -c 479)
 10990	PASS ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A1_T2.js (tail -c +10037172 tests/ecmac.db|head -c 536)
 10991	PASS ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A1_T3.js (tail -c +10037709 tests/ecmac.db|head -c 516)
-10992	FAIL ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A2_T1.js (tail -c +10038226 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+10992	FAIL ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A2_T1.js (tail -c +10038226 tests/ecmac.db|head -c 464): [{"message":"#1: The setHours has a \"length\" property"}]
 10993	PASS ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A3_T1.js (tail -c +10038691 tests/ecmac.db|head -c 471)
 10994	FAIL ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A3_T2.js (tail -c +10039163 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.setHours.length property has the attributes DontDelete"}]
-10995	FAIL ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A3_T3.js (tail -c +10039739 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+10995	PASS ch15/15.9/15.9.5/15.9.5.34/S15.9.5.34_A3_T3.js (tail -c +10039739 tests/ecmac.db|head -c 573)
 10996	PASS ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A1_T1.js (tail -c +10040313 tests/ecmac.db|head -c 497)
 10997	PASS ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A1_T2.js (tail -c +10040811 tests/ecmac.db|head -c 551)
 10998	PASS ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A1_T3.js (tail -c +10041363 tests/ecmac.db|head -c 531)
-10999	FAIL ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A2_T1.js (tail -c +10041895 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+10999	FAIL ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A2_T1.js (tail -c +10041895 tests/ecmac.db|head -c 482): [{"message":"#1: The setUTCHours has a \"length\" property"}]
 11000	PASS ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A3_T1.js (tail -c +10042378 tests/ecmac.db|head -c 486)
 11001	FAIL ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A3_T2.js (tail -c +10042865 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.setUTCHours.length property has the attributes DontDelete"}]
-11002	FAIL ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A3_T3.js (tail -c +10043456 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+11002	PASS ch15/15.9/15.9.5/15.9.5.35/S15.9.5.35_A3_T3.js (tail -c +10043456 tests/ecmac.db|head -c 588)
 11003	PASS ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A1_T1.js (tail -c +10044045 tests/ecmac.db|head -c 473)
 11004	PASS ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A1_T2.js (tail -c +10044519 tests/ecmac.db|head -c 531)
 11005	PASS ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A1_T3.js (tail -c +10045051 tests/ecmac.db|head -c 511)
-11006	FAIL ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A2_T1.js (tail -c +10045563 tests/ecmac.db|head -c 458): [{"message":"value is not a function"}]
+11006	FAIL ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A2_T1.js (tail -c +10045563 tests/ecmac.db|head -c 458): [{"message":"#1: The setDate has a \"length\" property"}]
 11007	PASS ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A3_T1.js (tail -c +10046022 tests/ecmac.db|head -c 466)
 11008	FAIL ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A3_T2.js (tail -c +10046489 tests/ecmac.db|head -c 570): [{"message":"#1: The Date.prototype.setDate.length property has the attributes DontDelete"}]
-11009	FAIL ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A3_T3.js (tail -c +10047060 tests/ecmac.db|head -c 568): [{"message":"value is not a function"}]
+11009	PASS ch15/15.9/15.9.5/15.9.5.36/S15.9.5.36_A3_T3.js (tail -c +10047060 tests/ecmac.db|head -c 568)
 11010	PASS ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A1_T1.js (tail -c +10047629 tests/ecmac.db|head -c 491)
 11011	PASS ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A1_T2.js (tail -c +10048121 tests/ecmac.db|head -c 546)
 11012	PASS ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A1_T3.js (tail -c +10048668 tests/ecmac.db|head -c 526)
-11013	FAIL ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A2_T1.js (tail -c +10049195 tests/ecmac.db|head -c 476): [{"message":"value is not a function"}]
+11013	FAIL ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A2_T1.js (tail -c +10049195 tests/ecmac.db|head -c 476): [{"message":"#1: The setUTCDate has a \"length\" property"}]
 11014	PASS ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A3_T1.js (tail -c +10049672 tests/ecmac.db|head -c 481)
 11015	FAIL ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A3_T2.js (tail -c +10050154 tests/ecmac.db|head -c 585): [{"message":"#1: The Date.prototype.setUTCDate.length property has the attributes DontDelete"}]
-11016	FAIL ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A3_T3.js (tail -c +10050740 tests/ecmac.db|head -c 583): [{"message":"value is not a function"}]
+11016	PASS ch15/15.9/15.9.5/15.9.5.37/S15.9.5.37_A3_T3.js (tail -c +10050740 tests/ecmac.db|head -c 583)
 11017	PASS ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A1_T1.js (tail -c +10051324 tests/ecmac.db|head -c 479)
 11018	PASS ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A1_T2.js (tail -c +10051804 tests/ecmac.db|head -c 536)
 11019	PASS ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A1_T3.js (tail -c +10052341 tests/ecmac.db|head -c 516)
-11020	FAIL ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A2_T1.js (tail -c +10052858 tests/ecmac.db|head -c 464): [{"message":"value is not a function"}]
+11020	FAIL ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A2_T1.js (tail -c +10052858 tests/ecmac.db|head -c 464): [{"message":"#1: The setMonth has a \"length\" property"}]
 11021	PASS ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A3_T1.js (tail -c +10053323 tests/ecmac.db|head -c 471)
 11022	FAIL ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A3_T2.js (tail -c +10053795 tests/ecmac.db|head -c 575): [{"message":"#1: The Date.prototype.setMonth.length property has the attributes DontDelete"}]
-11023	FAIL ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A3_T3.js (tail -c +10054371 tests/ecmac.db|head -c 573): [{"message":"value is not a function"}]
+11023	PASS ch15/15.9/15.9.5/15.9.5.38/S15.9.5.38_A3_T3.js (tail -c +10054371 tests/ecmac.db|head -c 573)
 11024	PASS ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A1_T1.js (tail -c +10054945 tests/ecmac.db|head -c 497)
 11025	PASS ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A1_T2.js (tail -c +10055443 tests/ecmac.db|head -c 551)
 11026	PASS ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A1_T3.js (tail -c +10055995 tests/ecmac.db|head -c 531)
-11027	FAIL ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A2_T1.js (tail -c +10056527 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+11027	FAIL ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A2_T1.js (tail -c +10056527 tests/ecmac.db|head -c 482): [{"message":"#1: The setUTCMonth has a \"length\" property"}]
 11028	PASS ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A3_T1.js (tail -c +10057010 tests/ecmac.db|head -c 486)
 11029	FAIL ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A3_T2.js (tail -c +10057497 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.setUTCMonth.length property has the attributes DontDelete"}]
-11030	FAIL ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A3_T3.js (tail -c +10058088 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+11030	PASS ch15/15.9/15.9.5/15.9.5.39/S15.9.5.39_A3_T3.js (tail -c +10058088 tests/ecmac.db|head -c 588)
 11031	PASS ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A1_T1.js (tail -c +10058677 tests/ecmac.db|head -c 501)
 11032	PASS ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A1_T2.js (tail -c +10059179 tests/ecmac.db|head -c 554)
 11033	PASS ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A1_T3.js (tail -c +10059734 tests/ecmac.db|head -c 534)
-11034	FAIL ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A2_T1.js (tail -c +10060269 tests/ecmac.db|head -c 486): [{"message":"value is not a function"}]
+11034	FAIL ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A2_T1.js (tail -c +10060269 tests/ecmac.db|head -c 486): [{"message":"#1: The toTimeString has a \"length\" property"}]
 11035	PASS ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A3_T1.js (tail -c +10060756 tests/ecmac.db|head -c 489)
 11036	FAIL ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A3_T2.js (tail -c +10061246 tests/ecmac.db|head -c 593): [{"message":"#1: The Date.prototype.toTimeString.length property has the attributes DontDelete"}]
-11037	FAIL ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A3_T3.js (tail -c +10061840 tests/ecmac.db|head -c 591): [{"message":"value is not a function"}]
+11037	PASS ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A3_T3.js (tail -c +10061840 tests/ecmac.db|head -c 591)
 11038	FAIL ch15/15.9/15.9.5/15.9.5.40/15.9.5.40_1.js (tail -c +10062432 tests/ecmac.db|head -c 506): [{"message":"Date.valueOf called on non-Date object"}]
 11039	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A1_T1.js (tail -c +10062939 tests/ecmac.db|head -c 497)
 11040	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A1_T2.js (tail -c +10063437 tests/ecmac.db|head -c 551)
 11041	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A1_T3.js (tail -c +10063989 tests/ecmac.db|head -c 531)
-11042	FAIL ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A2_T1.js (tail -c +10064521 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+11042	FAIL ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A2_T1.js (tail -c +10064521 tests/ecmac.db|head -c 482): [{"message":"#1: The setFullYear has a \"length\" property"}]
 11043	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A3_T1.js (tail -c +10065004 tests/ecmac.db|head -c 486)
 11044	FAIL ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A3_T2.js (tail -c +10065491 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.setFullYear.length property has the attributes DontDelete"}]
-11045	FAIL ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A3_T3.js (tail -c +10066082 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+11045	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A3_T3.js (tail -c +10066082 tests/ecmac.db|head -c 588)
 11046	PASS ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A1_T1.js (tail -c +10066671 tests/ecmac.db|head -c 515)
 11047	PASS ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A1_T2.js (tail -c +10067187 tests/ecmac.db|head -c 566)
 11048	PASS ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A1_T3.js (tail -c +10067754 tests/ecmac.db|head -c 546)
-11049	FAIL ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A2_T1.js (tail -c +10068301 tests/ecmac.db|head -c 500): [{"message":"value is not a function"}]
+11049	FAIL ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A2_T1.js (tail -c +10068301 tests/ecmac.db|head -c 500): [{"message":"#1: The setUTCFullYear has a \"length\" property"}]
 11050	PASS ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A3_T1.js (tail -c +10068802 tests/ecmac.db|head -c 501)
 11051	FAIL ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A3_T2.js (tail -c +10069304 tests/ecmac.db|head -c 605): [{"message":"#1: The Date.prototype.setUTCFullYear.length property has the attributes DontDelete"}]
-11052	FAIL ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A3_T3.js (tail -c +10069910 tests/ecmac.db|head -c 603): [{"message":"value is not a function"}]
+11052	PASS ch15/15.9/15.9.5/15.9.5.41/S15.9.5.41_A3_T3.js (tail -c +10069910 tests/ecmac.db|head -c 603)
 11053	PASS ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A1_T1.js (tail -c +10070514 tests/ecmac.db|head -c 497)
 11054	PASS ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A1_T2.js (tail -c +10071012 tests/ecmac.db|head -c 551)
 11055	PASS ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A1_T3.js (tail -c +10071564 tests/ecmac.db|head -c 531)
-11056	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A2_T1.js (tail -c +10072096 tests/ecmac.db|head -c 482): [{"message":"value is not a function"}]
+11056	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A2_T1.js (tail -c +10072096 tests/ecmac.db|head -c 482): [{"message":"#1: The toUTCString has a \"length\" property"}]
 11057	PASS ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T1.js (tail -c +10072579 tests/ecmac.db|head -c 486)
 11058	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T2.js (tail -c +10073066 tests/ecmac.db|head -c 590): [{"message":"#1: The Date.prototype.toUTCString.length property has the attributes DontDelete"}]
-11059	FAIL ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T3.js (tail -c +10073657 tests/ecmac.db|head -c 588): [{"message":"value is not a function"}]
+11059	PASS ch15/15.9/15.9.5/15.9.5.42/S15.9.5.42_A3_T3.js (tail -c +10073657 tests/ecmac.db|head -c 588)
 11060	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-10.js (tail -c +10074246 tests/ecmac.db|head -c 941)
 11061	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-11.js (tail -c +10075188 tests/ecmac.db|head -c 622)
 11062	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-12.js (tail -c +10075811 tests/ecmac.db|head -c 620)
 11063	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-13.js (tail -c +10076432 tests/ecmac.db|head -c 921): [{"message":"Test case returned non-true value!"}]
 11064	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-14.js (tail -c +10077354 tests/ecmac.db|head -c 504): [{"message":"Test case returned non-true value!"}]
 11065	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-15.js (tail -c +10077859 tests/ecmac.db|head -c 497): [{"message":"Test case returned non-true value!"}]
-11066	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-16.js (tail -c +10078357 tests/ecmac.db|head -c 596)
-11067	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-2.js (tail -c +10078954 tests/ecmac.db|head -c 335): [{"message":"Test case returned non-true value!"}]
+11066	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-16.js (tail -c +10078357 tests/ecmac.db|head -c 596): [{"message":"Test case returned non-true value!"}]
+11067	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-2.js (tail -c +10078954 tests/ecmac.db|head -c 335)
 11068	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-3.js (tail -c +10079290 tests/ecmac.db|head -c 326)
 11069	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-4.js (tail -c +10079617 tests/ecmac.db|head -c 535)
 11070	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-5.js (tail -c +10080153 tests/ecmac.db|head -c 383)
-11071	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483)
-11072	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463)
+11071	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483): [{"message":"Test case returned non-true value!"}]
+11072	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463): [{"message":"Test case returned non-true value!"}]
 11073	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-8.js (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"Test case returned non-true value!"}]
 11074	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-9.js (tail -c +10082327 tests/ecmac.db|head -c 940)
 11075	PASS ch15/15.9/15.9.5/15.9.5.44/15.9.5.44-0-1.js (tail -c +10083268 tests/ecmac.db|head -c 342)
@@ -11148,35 +11148,35 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11077	PASS ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A1_T1.js (tail -c +10083949 tests/ecmac.db|head -c 513)
 11078	PASS ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A1_T2.js (tail -c +10084463 tests/ecmac.db|head -c 564)
 11079	PASS ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A1_T3.js (tail -c +10085028 tests/ecmac.db|head -c 544)
-11080	FAIL ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A2_T1.js (tail -c +10085573 tests/ecmac.db|head -c 498): [{"message":"value is not a function"}]
+11080	FAIL ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A2_T1.js (tail -c +10085573 tests/ecmac.db|head -c 498): [{"message":"#1: The toLocaleString has a \"length\" property"}]
 11081	PASS ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A3_T1.js (tail -c +10086072 tests/ecmac.db|head -c 499)
 11082	FAIL ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A3_T2.js (tail -c +10086572 tests/ecmac.db|head -c 603): [{"message":"#1: The Date.prototype.toLocaleString.length property has the attributes DontDelete"}]
-11083	FAIL ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A3_T3.js (tail -c +10087176 tests/ecmac.db|head -c 601): [{"message":"value is not a function"}]
+11083	PASS ch15/15.9/15.9.5/15.9.5.5/S15.9.5.5_A3_T3.js (tail -c +10087176 tests/ecmac.db|head -c 601)
 11084	PASS ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A1_T1.js (tail -c +10087778 tests/ecmac.db|head -c 537)
 11085	PASS ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A1_T2.js (tail -c +10088316 tests/ecmac.db|head -c 584)
 11086	PASS ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A1_T3.js (tail -c +10088901 tests/ecmac.db|head -c 564)
-11087	FAIL ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A2_T1.js (tail -c +10089466 tests/ecmac.db|head -c 522): [{"message":"value is not a function"}]
+11087	FAIL ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A2_T1.js (tail -c +10089466 tests/ecmac.db|head -c 522): [{"message":"#1: The toLocaleDateString has a \"length\" property"}]
 11088	PASS ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A3_T1.js (tail -c +10089989 tests/ecmac.db|head -c 519)
 11089	FAIL ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A3_T2.js (tail -c +10090509 tests/ecmac.db|head -c 623): [{"message":"#1: The Date.prototype.toLocaleDateString.length property has the attributes DontDelete"}]
-11090	FAIL ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A3_T3.js (tail -c +10091133 tests/ecmac.db|head -c 621): [{"message":"value is not a function"}]
+11090	PASS ch15/15.9/15.9.5/15.9.5.6/S15.9.5.6_A3_T3.js (tail -c +10091133 tests/ecmac.db|head -c 621)
 11091	PASS ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A1_T1.js (tail -c +10091755 tests/ecmac.db|head -c 537)
 11092	PASS ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A1_T2.js (tail -c +10092293 tests/ecmac.db|head -c 584)
 11093	PASS ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A1_T3.js (tail -c +10092878 tests/ecmac.db|head -c 564)
-11094	FAIL ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A2_T1.js (tail -c +10093443 tests/ecmac.db|head -c 522): [{"message":"value is not a function"}]
+11094	FAIL ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A2_T1.js (tail -c +10093443 tests/ecmac.db|head -c 522): [{"message":"#1: The toLocaleTimeString has a \"length\" property"}]
 11095	PASS ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A3_T1.js (tail -c +10093966 tests/ecmac.db|head -c 519)
 11096	FAIL ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A3_T2.js (tail -c +10094486 tests/ecmac.db|head -c 623): [{"message":"#1: The Date.prototype.toLocaleTimeString.length property has the attributes DontDelete"}]
-11097	FAIL ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A3_T3.js (tail -c +10095110 tests/ecmac.db|head -c 621): [{"message":"value is not a function"}]
+11097	PASS ch15/15.9/15.9.5/15.9.5.7/S15.9.5.7_A3_T3.js (tail -c +10095110 tests/ecmac.db|head -c 621)
 11098	PASS ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A1_T1.js (tail -c +10095732 tests/ecmac.db|head -c 471)
 11099	PASS ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A1_T2.js (tail -c +10096204 tests/ecmac.db|head -c 529)
 11100	PASS ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A1_T3.js (tail -c +10096734 tests/ecmac.db|head -c 509)
-11101	FAIL ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A2_T1.js (tail -c +10097244 tests/ecmac.db|head -c 456): [{"message":"value is not a function"}]
+11101	FAIL ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A2_T1.js (tail -c +10097244 tests/ecmac.db|head -c 456): [{"message":"#1: The valueOf has a \"length\" property"}]
 11102	PASS ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A3_T1.js (tail -c +10097701 tests/ecmac.db|head -c 464)
 11103	FAIL ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A3_T2.js (tail -c +10098166 tests/ecmac.db|head -c 568): [{"message":"#1: The Date.prototype.valueOf.length property has the attributes DontDelete"}]
-11104	FAIL ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A3_T3.js (tail -c +10098735 tests/ecmac.db|head -c 566): [{"message":"value is not a function"}]
+11104	PASS ch15/15.9/15.9.5/15.9.5.8/S15.9.5.8_A3_T3.js (tail -c +10098735 tests/ecmac.db|head -c 566)
 11105	PASS ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A1_T1.js (tail -c +10099302 tests/ecmac.db|head -c 471)
 11106	PASS ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A1_T2.js (tail -c +10099774 tests/ecmac.db|head -c 529)
 11107	PASS ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A1_T3.js (tail -c +10100304 tests/ecmac.db|head -c 509)
-11108	FAIL ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A2_T1.js (tail -c +10100814 tests/ecmac.db|head -c 456): [{"message":"value is not a function"}]
+11108	FAIL ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A2_T1.js (tail -c +10100814 tests/ecmac.db|head -c 456): [{"message":"#1: The getTime has a \"length\" property"}]
 11109	PASS ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A3_T1.js (tail -c +10101271 tests/ecmac.db|head -c 464)
 11110	FAIL ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A3_T2.js (tail -c +10101736 tests/ecmac.db|head -c 568): [{"message":"#1: The Date.prototype.getTime.length property has the attributes DontDelete"}]
-11111	FAIL ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A3_T3.js (tail -c +10102305 tests/ecmac.db|head -c 566): [{"message":"value is not a function"}]
+11111	PASS ch15/15.9/15.9.5/15.9.5.9/S15.9.5.9_A3_T3.js (tail -c +10102305 tests/ecmac.db|head -c 566)

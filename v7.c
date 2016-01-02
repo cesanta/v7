@@ -14163,7 +14163,7 @@ enum v7_err v7_get_throwing(struct v7 *v7, val_t obj, const char *name,
                       (int) name_len, name);
     goto clean;
   } else if (v7_is_cfunction_ptr(obj)) {
-    v = V7_UNDEFINED;
+    v = v7->function_prototype;
   }
 
   V7_TRY(
