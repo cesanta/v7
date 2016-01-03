@@ -9834,9 +9834,9 @@ err
 9783	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T2.js (tail -c +8940309 tests/ecmac.db|head -c 656)
 9784	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A3_T3.js (tail -c +8940966 tests/ecmac.db|head -c 664)
 9785	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T1.js (tail -c +8941631 tests/ecmac.db|head -c 852): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc def34'. Actual: \u0000\}]
-9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: \u000}]
+9786	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T2.js (tail -c +8942484 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"abc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/g; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12abc 34def'. Actual: \u00}]
 9787	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T3.js (tail -c +8943340 tests/ecmac.db|head -c 855): [{"message":"#1: var __str = \"aBc12 def34\"; var __pattern = /([a-z]+)([0-9]+)/i; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc def34'. Actual: \u0000\}]
-9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = \"aBc12 dEf34\"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: \u000}]
+9788	FAIL ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A4_T4.js (tail -c +8944196 tests/ecmac.db|head -c 858): [{"message":"#1: var __str = \"aBc12 dEf34\"; var __pattern = /([a-z]+)([0-9]+)/ig; function __replFN() {return arguments[2] + arguments[1];}; __str.replace(__pattern, __replFN)==='12aBc 34dEf'. Actual: \u00}]
 9789	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A5_T1.js (tail -c +8945055 tests/ecmac.db|head -c 795)
 9790	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A6.js (tail -c +8945851 tests/ecmac.db|head -c 584)
 9791	PASS ch15/15.5/15.5.4/15.5.4.11/S15.5.4.11_A7.js
