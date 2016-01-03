@@ -7954,6 +7954,9 @@ void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
    * By "zero-sized" I mean `cr_zero_size_type_t`.
    */
   assert(arg_retval_size < sizeof(cr_zero_size_type_t));
+#ifdef NDEBUG
+  (void) arg_retval_size;
+#endif
 
   memset(p_ctx, 0x00, sizeof(*p_ctx));
 
@@ -13732,7 +13735,7 @@ static int snquote(char *buf, size_t size, const char *s, size_t len) {
       if (buf < limit) *buf++ = '\\';
       if (buf < limit) *buf++ = specials[*s - '\b'];
       continue;
-    } else if ((*s >= '\0' && *s < '\b') || (*s > '\r' && *s < ' ')) {
+    } else if ((unsigned char) *s < '\b' || (*s > '\r' && *s < ' ')) {
       if (buf < limit) *buf++ = '\\';
       buf = append_hex(buf, limit, (uint8_t) *s);
       continue;
@@ -15965,6 +15968,9 @@ clean:
 
 enum v7_err v7_rethrow(struct v7 *v7) {
   assert(v7->is_thrown);
+#ifdef NDEBUG
+  (void) v7;
+#endif
   return V7_EXEC_EXCEPTION;
 }
 
