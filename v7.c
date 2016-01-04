@@ -502,8 +502,8 @@ int v7_is_true(struct v7 *v7, v7_val_t v);
  * Result can be NULL if you don't care about the return value.
  */
 WARN_UNUSED_RESULT
-enum v7_err v7_apply(struct v7 *, v7_val_t *result, v7_val_t func,
-                     v7_val_t this_obj, v7_val_t args);
+enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                     v7_val_t args, v7_val_t *res);
 
 /* Throw an already existing value. */
 WARN_UNUSED_RESULT
@@ -3359,15 +3359,15 @@ WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err eval_bcode(struct v7 *v7, struct bcode *bcode);
 
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
-                               v7_val_t this_obj, v7_val_t args,
-                               uint8_t is_constructor);
+V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                               v7_val_t args, uint8_t is_constructor,
+                               v7_val_t *res);
 
 WARN_UNUSED_RESULT
 V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
-                              v7_val_t func, v7_val_t args, v7_val_t *res,
+                              v7_val_t func, v7_val_t args,
                               v7_val_t this_object, int is_json, int fr,
-                              uint8_t is_constructor);
+                              uint8_t is_constructor, v7_val_t *res);
 
 #if defined(__cplusplus)
 }
@@ -8782,7 +8782,7 @@ static void _ubjson_call_cb(struct v7 *v7, struct ubjson_ctx *ctx) {
     goto cleanup;
   }
 
-  if (v7_apply(v7, &res, cb, v7_create_undefined(), args) != V7_OK) {
+  if (v7_apply(v7, cb, v7_create_undefined(), args, &res) != V7_OK) {
     fprintf(stderr, "Got error while calling ubjson cb: ");
     v7_fprintln(stderr, v7, res);
   }
@@ -8895,8 +8895,8 @@ static enum v7_err _ubjson_render_cont(struct v7 *v7, struct ubjson_ctx *ctx) {
         ctx->bin = obj;
         v7_set(v7, obj, "ctx", ~0, 0, v7_create_foreign(ctx));
         pop_visit(stack);
-        rcode = v7_apply(v7, NULL, v7_get(v7, obj, "user", ~0), obj,
-                         v7_create_undefined());
+        rcode = v7_apply(v7, v7_get(v7, obj, "user", ~0), obj,
+                         v7_create_undefined(), NULL);
         if (rcode != V7_OK) {
           goto clean;
         }
@@ -12851,9 +12851,9 @@ clean:
  * it suck less.
  */
 V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
-                              val_t func, val_t args, val_t *res,
-                              val_t this_object, int is_json, int fr,
-                              uint8_t is_constructor) {
+                              val_t func, val_t args, val_t this_object,
+                              int is_json, int fr, uint8_t is_constructor,
+                              val_t *res) {
 #if defined(V7_BCODE_TRACE_SRC)
   fprintf(stderr, "src:'%s'\n", src);
 #endif
@@ -13124,11 +13124,10 @@ clean:
 }
 
 WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
-                               v7_val_t this_obj, v7_val_t args,
-                               uint8_t is_constructor) {
-  return b_exec(v7, NULL, 0, func, args, result, this_obj, 0, 0,
-                is_constructor);
+V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                               v7_val_t args, uint8_t is_constructor,
+                               v7_val_t *res) {
+  return b_exec(v7, NULL, 0, func, args, this_obj, 0, 0, is_constructor, res);
 }
 #ifdef V7_MODULE_LINES
 #line 1 "./src/vm.c"
@@ -13953,7 +13952,7 @@ V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
         V7_TRY(v7_get_throwing(v7, v, "toJSON", 6, &func));
       }
 #endif
-      V7_TRY(b_apply(v7, &val, func, v, V7_UNDEFINED, 0));
+      V7_TRY(b_apply(v7, func, v, V7_UNDEFINED, 0, &val));
       V7_TRY(to_json_or_debug(v7, val, buf, size, &len, is_debug));
       goto clean;
     }
@@ -14420,7 +14419,7 @@ V7_PRIVATE enum v7_err v7_invoke_setter(struct v7 *v7, struct v7_property *prop,
   v7_disown(v7, &val);
   {
     val_t val = v7_create_undefined();
-    V7_TRY(b_apply(v7, &val, setter, obj, args, 0));
+    V7_TRY(b_apply(v7, setter, obj, args, 0, &val));
   }
 
 clean:
@@ -14645,7 +14644,7 @@ V7_PRIVATE enum v7_err v7_property_value(struct v7 *v7, val_t obj,
       getter = v7_array_get(v7, p->value, 0);
     }
     {
-      V7_TRY(b_apply(v7, res, getter, obj, V7_UNDEFINED, 0));
+      V7_TRY(b_apply(v7, getter, obj, V7_UNDEFINED, 0, res));
       goto clean;
     }
   }
@@ -15486,18 +15485,18 @@ void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
  * That is a dirty workaround.
  */
 enum v7_err v7_exec_with(struct v7 *v7, const char *src, val_t t, val_t *res) {
-  return b_exec(v7, src, 0, v7_create_undefined(), v7_create_undefined(), res,
-                t, 0, 0, 0);
+  return b_exec(v7, src, 0, v7_create_undefined(), v7_create_undefined(), t, 0,
+                0, 0, res);
 }
 
 enum v7_err v7_exec(struct v7 *v7, const char *src, val_t *res) {
-  return b_exec(v7, src, 0, v7_create_undefined(), v7_create_undefined(), res,
-                v7_create_undefined(), 0, 0, 0);
+  return b_exec(v7, src, 0, v7_create_undefined(), v7_create_undefined(),
+                v7_create_undefined(), 0, 0, 0, res);
 }
 
-enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *result) {
+enum v7_err v7_parse_json(struct v7 *v7, const char *str, val_t *res) {
   return b_exec(v7, str, 0, v7_create_undefined(), v7_create_undefined(),
-                result, v7_create_undefined(), 1, 0, 0);
+                v7_create_undefined(), 1, 0, 0, res);
 }
 
 #ifndef V7_NO_FS
@@ -15541,7 +15540,7 @@ static enum v7_err exec_file(struct v7 *v7, const char *path, val_t *res,
 #endif
     rcode =
         b_exec(v7, p, file_size, v7_create_undefined(), v7_create_undefined(),
-               res, v7_create_undefined(), is_json, fr, 0);
+               v7_create_undefined(), is_json, fr, 0, res);
     if (rcode != V7_OK) {
       goto clean;
     }
@@ -15560,9 +15559,9 @@ enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res) {
 }
 #endif /* V7_NO_FS */
 
-enum v7_err v7_apply(struct v7 *v7, v7_val_t *result, v7_val_t func,
-                     v7_val_t this_obj, v7_val_t args) {
-  return b_apply(v7, result, func, this_obj, args, 0);
+enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                     v7_val_t args, v7_val_t *res) {
+  return b_apply(v7, func, this_obj, args, 0, res);
 }
 
 /*
@@ -15607,7 +15606,7 @@ V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
     /*
      * Finally, call the error constructor, passing an error object as `this`
      */
-    V7_TRY(b_apply(v7, NULL, ctor_func, *res, ctor_args, 0));
+    V7_TRY(b_apply(v7, ctor_func, *res, ctor_args, 0, NULL));
   }
 
 clean:
@@ -15640,7 +15639,7 @@ V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res) {
   V7_TRY(v7_get_throwing(v7, v, "valueOf", 7, &func_valueOf));
 
   if (v7_is_callable(v7, func_valueOf)) {
-    V7_TRY(b_apply(v7, res, func_valueOf, v, v7_create_undefined(), 0));
+    V7_TRY(b_apply(v7, func_valueOf, v, v7_create_undefined(), 0, res));
   }
 
 clean:
@@ -15674,7 +15673,7 @@ V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res) {
    */
   V7_TRY(v7_get_throwing(v7, v, "toString", 8, &to_string_func));
   if (v7_is_callable(v7, to_string_func)) {
-    V7_TRY(b_apply(v7, res, to_string_func, v, v7_create_undefined(), 0));
+    V7_TRY(b_apply(v7, to_string_func, v, v7_create_undefined(), 0, res));
   } else {
     *res = v;
   }
@@ -24809,7 +24808,7 @@ static enum v7_err a_cmp(struct v7 *v7, void *user_data, const void *pa,
     v7_array_push(v7, args, a);
     v7_array_push(v7, args, b);
     v7->inhibit_gc = 0;
-    rcode = b_apply(v7, &vres, func, V7_UNDEFINED, args, 0);
+    rcode = b_apply(v7, func, V7_UNDEFINED, args, 0, &vres);
     if (rcode != V7_OK) {
       goto clean;
     }
@@ -25191,7 +25190,7 @@ static enum v7_err a_prep2(struct v7 *v7, val_t cb, val_t v, val_t n,
   v7_array_push(v7, args, this_obj);
 
   v7->inhibit_gc = 0;
-  rcode = b_apply(v7, res, cb, this_obj, args, 0);
+  rcode = b_apply(v7, cb, this_obj, args, 0, res);
   if (rcode != V7_OK) {
     goto clean;
   }
@@ -26527,7 +26526,7 @@ static enum v7_err Str_replace(struct v7 *v7, v7_val_t *res) {
         {
           val_t val = v7_create_undefined();
 
-          rcode = b_apply(v7, &val, str_func, this_obj, arr, 0);
+          rcode = b_apply(v7, str_func, this_obj, arr, 0, &val);
           if (rcode != V7_OK) {
             goto clean;
           }
@@ -28416,7 +28415,7 @@ static enum v7_err Function_apply(struct v7 *v7, v7_val_t *res) {
     goto clean;
   }
 
-  rcode = b_apply(v7, res, this_obj, this_arg, func_args, 0);
+  rcode = b_apply(v7, this_obj, this_arg, func_args, 0, res);
   if (rcode != V7_OK) {
     goto clean;
   }

@@ -15,7 +15,7 @@ static void call_sum(struct v7 *v7) {
   v7_array_push(v7, args, v7_create_number(123.0));
   v7_array_push(v7, args, v7_create_number(456.789));
 
-  v7_apply(v7, &result, func, v7_create_undefined(), args);
+  v7_apply(v7, func, v7_create_undefined(), args, &result);
   printf("Result: %g\n", v7_to_number(result));
 }
 
