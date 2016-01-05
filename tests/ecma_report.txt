@@ -11134,13 +11134,13 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11063	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-13.js (tail -c +10076432 tests/ecmac.db|head -c 921): [{"message":"Test case returned non-true value!"}]
 11064	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-14.js (tail -c +10077354 tests/ecmac.db|head -c 504): [{"message":"Test case returned non-true value!"}]
 11065	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-15.js (tail -c +10077859 tests/ecmac.db|head -c 497): [{"message":"Test case returned non-true value!"}]
-11066	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-16.js (tail -c +10078357 tests/ecmac.db|head -c 596): [{"message":"Test case returned non-true value!"}]
+11066	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-16.js (tail -c +10078357 tests/ecmac.db|head -c 596)
 11067	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-2.js (tail -c +10078954 tests/ecmac.db|head -c 335)
 11068	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-3.js (tail -c +10079290 tests/ecmac.db|head -c 326)
 11069	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-4.js (tail -c +10079617 tests/ecmac.db|head -c 535)
 11070	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-5.js (tail -c +10080153 tests/ecmac.db|head -c 383)
-11071	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483): [{"message":"Test case returned non-true value!"}]
-11072	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463): [{"message":"Test case returned non-true value!"}]
+11071	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-6.js (tail -c +10080537 tests/ecmac.db|head -c 483)
+11072	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-7.js (tail -c +10081021 tests/ecmac.db|head -c 463)
 11073	FAIL ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-8.js (tail -c +10081485 tests/ecmac.db|head -c 841): [{"message":"Test case returned non-true value!"}]
 11074	PASS ch15/15.9/15.9.5/15.9.5.43/15.9.5.43-0-9.js (tail -c +10082327 tests/ecmac.db|head -c 940)
 11075	PASS ch15/15.9/15.9.5/15.9.5.44/15.9.5.44-0-1.js (tail -c +10083268 tests/ecmac.db|head -c 342)
