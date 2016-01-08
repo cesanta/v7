@@ -711,20 +711,20 @@ static const char *test_runtime(void) {
   s = "\"zar\"";
   ASSERT(check_value(v7, p->value, s));
 
-  ASSERT_EQ(v7_del_property(v7, v, "foo", ~0), 0);
+  ASSERT_EQ(v7_del(v7, v, "foo", ~0), 0);
   ASSERT(v7_to_object(v)->properties == NULL);
-  ASSERT_EQ(v7_del_property(v7, v, "foo", -1), -1);
+  ASSERT_EQ(v7_del(v7, v, "foo", -1), -1);
   ASSERT(v7_set_property(v7, v, "foo", -1, 0,
                          v7_create_string(v7, "bar", 3, 1)) == 0);
   ASSERT(v7_set_property(v7, v, "bar", -1, 0,
                          v7_create_string(v7, "foo", 3, 1)) == 0);
   ASSERT(v7_set_property(v7, v, "aba", -1, 0,
                          v7_create_string(v7, "bab", 3, 1)) == 0);
-  ASSERT_EQ(v7_del_property(v7, v, "foo", -1), 0);
+  ASSERT_EQ(v7_del(v7, v, "foo", -1), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) == NULL);
-  ASSERT_EQ(v7_del_property(v7, v, "aba", -1), 0);
+  ASSERT_EQ(v7_del(v7, v, "aba", -1), 0);
   ASSERT((p = v7_get_property(v7, v, "aba", -1)) == NULL);
-  ASSERT_EQ(v7_del_property(v7, v, "bar", -1), 0);
+  ASSERT_EQ(v7_del(v7, v, "bar", -1), 0);
   ASSERT((p = v7_get_property(v7, v, "bar", -1)) == NULL);
 
   v = v7_create_object(v7);
@@ -2556,57 +2556,57 @@ static const char *test_exec_generic(void) {
 
   /* var and function declarations should be stack-neutral {{{ */
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "var a = 5;",
       "undefined");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "1; var a = 5;",
       "1");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "a; var a = 5;",
       "undefined");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "1; a; var a = 5;",
       "undefined");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "1; var a = 5; a",
       "5");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "1; a = 5;",
       "5");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "function a(){};",
       "undefined");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "var a = function a(){};",
       "undefined");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "1; function a(){};",
       "1");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "1; var a = function a(){};",
       "1");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "1; a = function a(){};",
       "function a(){}; a;");
@@ -3175,63 +3175,63 @@ static const char *test_exec_generic(void) {
 
   /*
    * TODO(dfrank): invent some more centralized way of cleaning up the
-   * Global Object than invoking `v7_del_property()` all the time
+   * Global Object than invoking `v7_del()` all the time
    */
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_NUM_EQ(
       v7, "a = 1;", 1
       );
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_ERR(
       v7, "'use strict'; a = 1;", V7_EXEC_EXCEPTION
       );
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
   ASSERT_EVAL_NUM_EQ(
       v7, "b=1;(function(a){'use strict'; var b = 2; return a+b})(39)+b",
       42);
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
   ASSERT_EVAL_NUM_EQ(
       v7, "b=1;(function(a){'use strict'; b = 2; return a+b})(39)+b",
       43);
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
   ASSERT_EVAL_NUM_EQ(
       v7, "b=1;(function(a){var b = 2; return a+b})(39)+b",
       42);
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
   ASSERT_EVAL_NUM_EQ(
       v7, "b=1;(function(a){b = 2; return a+b})(39)+b",
       43);
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
   ASSERT_EVAL_ERR(
       v7, "'use strict'; b=1;(function(a){b = 2; return a+b})(39)+b",
       V7_EXEC_EXCEPTION);
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
-  v7_del_property(v7, v7->vals.global_object, "c", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "c", 1);
   ASSERT_EVAL_ERR(
       v7, "'use strict'; var b=1;(function(a){c = 2; return a+b})(39)+b",
       V7_EXEC_EXCEPTION);
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
-  v7_del_property(v7, v7->vals.global_object, "c", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "c", 1);
   ASSERT_EVAL_STR_EQ(
       v7, "b='1-';(function(a){c = '2-'; return a+b+c})('39-')+b",
       "39-1-2-1-");
 
-  v7_del_property(v7, v7->vals.global_object, "b", 1);
-  v7_del_property(v7, v7->vals.global_object, "c", 1);
+  v7_del(v7, v7->vals.global_object, "b", 1);
+  v7_del(v7, v7->vals.global_object, "c", 1);
   ASSERT_EVAL_ERR(
       v7, "b='1-';(function(a){'use strict'; c = '2-'; return a+b+c})('39-')+b",
       V7_EXEC_EXCEPTION);
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_STR_EQ(
       v7, STRINGIFY(
         a = '1-';
@@ -3334,7 +3334,7 @@ static const char *test_exec_generic(void) {
 
   /* `this` {{{ */
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "a = 1; (function(){ return this.a + 1; })(); ",
       "2");
@@ -3347,27 +3347,27 @@ static const char *test_exec_generic(void) {
       "(function(){ 'use strict'; return this })(); ",
       "undefined");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "var a={i:1, f:function(a){return this.i+a;}}; a.f(2)",
       "3");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "var a={i:1, f:function(a){return this.i+a;}}; a['f'](2)",
       "3");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "var a={i:1, f:function(){this.i++;}}; a.f(); a.i",
       "2");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "var a={i:1, f:function(){this.i++;}}; a['f'](); a.i",
       "2");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "i=10; a={i:1, f:function(){this.i++;}}; f=a.f; f(); i",
       "11");
@@ -3442,7 +3442,7 @@ static const char *test_exec_generic(void) {
         ), V7_EXEC_EXCEPTION
       );
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "a; function a(){};",
       "function a(){}; a;");
@@ -3678,28 +3678,28 @@ static const char *test_exec_generic(void) {
 
   /* delete {{{ */
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "var a = 1; var res = delete a; res + '|' + a;",
       "'false|1'"
       );
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ( v7, "a = 1; var res = delete a; res;", "true");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_ERR( v7, "a = 1; delete a; a;", V7_EXEC_EXCEPTION);
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_ERR( v7, "'use strict'; a = 5; delete a;", V7_SYNTAX_ERROR);
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_ERR( v7, "'use strict'; var a = 5; delete a;", V7_SYNTAX_ERROR);
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ( v7, "'use strict'; var a = {p:1}; delete a.p;", "true");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "'use strict'; var a = {p:1}; var res = delete a.p; res + '|' + a.p",
       "'true|undefined'"
@@ -3714,7 +3714,7 @@ static const char *test_exec_generic(void) {
   ASSERT_EVAL_JS_EXPR_EQ( v7, "delete NaN", "false");
   ASSERT_EVAL_JS_EXPR_EQ( v7, "delete undefined", "false");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7,
       "function A(){}; A.prototype.prop = 'foo'; var a = new A(); "
@@ -3723,7 +3723,7 @@ static const char *test_exec_generic(void) {
       );
 
   /* deletion of the object's property should not walk the prototype chain */
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7,
       "function A(){}; A.prototype.prop = 'foo'; var a = new A(); "
@@ -3736,7 +3736,7 @@ static const char *test_exec_generic(void) {
    * and uncomment this test (currently, it's '2|undefined|false')
    */
 #if 0
-  v7_del_property(v7, v7->vals.global_object, "arr", 3);
+  v7_del(v7, v7->vals.global_object, "arr", 3);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "var arr = [1,2,3]; delete arr[2]; arr.length + '|' + arr[2] + '|' + (2 in arr);",
       "'3|undefined|false'"
@@ -3749,60 +3749,60 @@ static const char *test_exec_generic(void) {
       );
 
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ( v7, "a=10; delete 'a'; a", "10");
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_ERR( v7, "a = 5; (function(){ delete a; })(); a;",
       V7_EXEC_EXCEPTION
       );
 
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "a = 5; del = (function(){ var a=10; return delete a; })(); del + '|' + a",
       "'false|5'"
       );
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "a = 5; del = (function(){ var a=10; return (function(){ return delete a;})(); })(); del + '|' + a",
       "'false|5'"
       );
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_ERR(
       v7, "a = 5; del = (function(){ a=10; return (function(){ return delete a;})(); })(); del + '|' + a",
       V7_EXEC_EXCEPTION
       );
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "a = 5; del = (function(){ b=10; return (function(){ return delete b;})(); })(); del + '|' + a",
       "'true|5'"
       );
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_ERR(
       v7, "a = 5; del = (function(){ b=10; return (function(){ delete b; return b;})(); })(); del + '|' + a",
       V7_EXEC_EXCEPTION
       );
 
 
-  v7_del_property(v7, v7->vals.global_object, "a", 1);
-  v7_del_property(v7, v7->vals.global_object, "f", 1);
+  v7_del(v7, v7->vals.global_object, "a", 1);
+  v7_del(v7, v7->vals.global_object, "f", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "function f(a, b){ del_a = delete a; del_b = delete b; del_f = delete f; return del_a + '|' + del_b + '|' + del_f; }; f();",
       "'false|false|false'"
       );
 
-  v7_del_property(v7, v7->vals.global_object, "o", 1);
+  v7_del(v7, v7->vals.global_object, "o", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
       v7, "o = {}; Object.defineProperty(o, 'x', {value: 1}); delete o.x;",
       "false"
       );
 
-  v7_del_property(v7, v7->vals.global_object, "o", 1);
+  v7_del(v7, v7->vals.global_object, "o", 1);
   ASSERT_EVAL_ERR(
       v7, "'use strict'; o = {}; Object.defineProperty(o, 'x', {value: 1}); delete o.x;",
       V7_EXEC_EXCEPTION
