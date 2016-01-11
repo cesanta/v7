@@ -14,7 +14,7 @@
 static enum v7_err MyThing_ctor(struct v7 *v7, v7_val_t *res) {
   v7_val_t this_obj = v7_get_this(v7);
   v7_val_t arg0 = v7_arg(v7, 0);
-  v7_set(v7, this_obj, "__arg", ~0 /* = strlen */, V7_PROPERTY_DONT_ENUM, arg0);
+  v7_def(v7, this_obj, "__arg", ~0 /* = strlen */, V7_DESC_ENUMERABLE(0), arg0);
 
   /*
    * A constructor function can access the newly created object with
@@ -39,11 +39,11 @@ int main(void) {
 
   proto = v7_create_object(v7);
   ctor_func = v7_create_constructor(v7, proto, MyThing_ctor);
-  v7_set(v7, ctor_func, "MY_CONST", ~0,
-         V7_PROPERTY_READ_ONLY | V7_PROPERTY_DONT_DELETE,
-         v7_create_number(123));
+  v7_def(v7, ctor_func, "MY_CONST", ~0,
+      (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
+      v7_create_number(123));
   v7_set_method(v7, proto, "myMethod", &MyThing_myMethod);
-  v7_set(v7, v7_get_global(v7), "MyThing", ~0, 0, ctor_func);
+  v7_set(v7, v7_get_global(v7), "MyThing", ~0, ctor_func);
 
   rcode = v7_exec(v7,
           "\

@@ -319,9 +319,8 @@ static enum v7_err adder(struct v7 *v7, v7_val_t *res) {
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
 
-  ASSERT_EQ(v7_set_property(v7, v7_get_global(v7), "adder", 5, 0,
-                            v7_create_cfunction(adder)),
-            0);
+  ASSERT_EQ(
+      v7_set(v7, v7_get_global(v7), "adder", 5, v7_create_cfunction(adder)), 0);
   ASSERT_EVAL_EQ(v7, "adder(1, 2, 3 + 4);", "10");
   v7_destroy(v7);
 
@@ -689,24 +688,22 @@ static const char *test_runtime(void) {
              v7_object_to_value(v7_to_generic_object(v)->prototype))
              ->prototype == NULL);
 
-  ASSERT_EQ(v7_set_property(v7, v, "foo", -1, 0, v7_create_null()), 0);
+  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_create_null()), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT_EQ(p->attributes, 0);
   ASSERT(v7_is_null(p->value));
   ASSERT(check_value(v7, p->value, "null"));
 
-  ASSERT_EQ(v7_set_property(v7, v, "foo", -1, 0, v7_create_undefined()), 0);
+  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_create_undefined()), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "undefined"));
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0,
-                         v7_create_string(v7, "bar", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "foo", -1, v7_create_string(v7, "bar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   s = "\"bar\"";
   ASSERT(check_value(v7, p->value, s));
 
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0,
-                         v7_create_string(v7, "zar", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "foo", -1, v7_create_string(v7, "zar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   s = "\"zar\"";
   ASSERT(check_value(v7, p->value, s));
@@ -714,12 +711,9 @@ static const char *test_runtime(void) {
   ASSERT_EQ(v7_del(v7, v, "foo", ~0), 0);
   ASSERT(v7_to_object(v)->properties == NULL);
   ASSERT_EQ(v7_del(v7, v, "foo", -1), -1);
-  ASSERT(v7_set_property(v7, v, "foo", -1, 0,
-                         v7_create_string(v7, "bar", 3, 1)) == 0);
-  ASSERT(v7_set_property(v7, v, "bar", -1, 0,
-                         v7_create_string(v7, "foo", 3, 1)) == 0);
-  ASSERT(v7_set_property(v7, v, "aba", -1, 0,
-                         v7_create_string(v7, "bab", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "foo", -1, v7_create_string(v7, "bar", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "bar", -1, v7_create_string(v7, "foo", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "aba", -1, v7_create_string(v7, "bab", 3, 1)) == 0);
   ASSERT_EQ(v7_del(v7, v, "foo", -1), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) == NULL);
   ASSERT_EQ(v7_del(v7, v, "aba", -1), 0);
@@ -728,33 +722,37 @@ static const char *test_runtime(void) {
   ASSERT((p = v7_get_property(v7, v, "bar", -1)) == NULL);
 
   v = v7_create_object(v7);
-  ASSERT_EQ(v7_set_property(v7, v, "foo", -1, 0, v7_create_number(1.0)), 0);
+  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_create_number(1.0)), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT((p = v7_get_property(v7, v, "f", -1)) == NULL);
 
   v = v7_create_object(v7);
-  ASSERT_EQ(v7_set_property(v7, v, "foo", -1, 0, v), 0);
+  ASSERT_EQ(v7_set(v7, v, "foo", -1, v), 0);
   s = "{\"foo\":[Circular]}";
   ASSERT(check_value(v7, v, s));
 
   v = v7_create_object(v7);
-  ASSERT(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_DONT_DELETE,
-                         v7_create_number(1.0)) == 0);
+  ASSERT(v7_def(v7, v, "foo", -1, V7_DESC_CONFIGURABLE(0),
+                v7_create_number(1.0)) == 0);
   s = "{\"foo\":1}";
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_set(v7, v, "foo", -1, V7_PROPERTY_DONT_DELETE,
+  ASSERT(v7_def(v7, v, "foo", -1, V7_DESC_CONFIGURABLE(0),
                 v7_create_number(2.0)) == 0);
   s = "{\"foo\":2}";
   ASSERT(check_value(v7, v, s));
   ASSERT_EQ(v7_to_number(v7_get(v7, v, "foo", -1)), 2.0);
   ASSERT(v7_get_property(v7, v, "foo", -1)->attributes &
-         V7_PROPERTY_DONT_DELETE);
-  ASSERT_EQ(v7_set_property(v7, v, "foo", -1, V7_PROPERTY_READ_ONLY,
-                            v7_create_number(1.0)),
-            0);
-  ASSERT(v7_set(v7, v, "foo", -1, 0, v7_create_number(2.0)) != 0);
+         V7_PROPERTY_NON_CONFIGURABLE);
+
+#if 0
+  ASSERT_EQ(
+      v7_def(v7, v, "foo", -1, (V7_PROPERTY_NON_WRITABLE | V7_OVERRIDE_ATTRIBUTES),
+             v7_create_number(1.0)),
+      0);
+  ASSERT(v7_def(v7, v, "foo", -1, 0, v7_create_number(2.0)) != 0);
   s = "{\"foo\":1}";
   ASSERT(check_value(v7, v, s));
+#endif
 
   v = v7_create_string(v7, "fooakbar", 8, 1);
   for (i = 0; i < 100; i++) {
@@ -1358,8 +1356,7 @@ static const char *test_interpreter(void) {
   val_t v;
   const char *s, *c, *c0;
 
-  v7_set_property(v7, v7->vals.global_object, "x", -1, 0,
-                  v7_create_number(42.0));
+  v7_set(v7, v7->vals.global_object, "x", -1, v7_create_number(42.0));
 
   ASSERT_EVAL_EQ(v7, "1%2/2", "0.5");
 
@@ -2251,7 +2248,7 @@ static const char *test_file(void) {
   v7_val_t v, data_str = v7_create_string(v7, data, strlen(data), 1);
 
   v7_own(v7, &data_str);
-  v7_set(v7, v7_get_global(v7), "ts", 2, 0, data_str);
+  v7_set(v7, v7_get_global(v7), "ts", 2, data_str);
   ASSERT(eval(v7,
               "f = File.open('ft.txt', 'w+'); "
               " f.write(ts); f.close();",
@@ -2352,7 +2349,7 @@ static const char *test_exec_generic(void) {
   struct v7 *v7 = v7_create();
   const char *c;
 
-  v7_set(v7, v7_get_global(v7), "ES", ~0, 0, v7_create_string(v7, "", 0, 0));
+  v7_set(v7, v7_get_global(v7), "ES", ~0, v7_create_string(v7, "", 0, 0));
 
   ASSERT_EVAL_NUM_EQ(v7, "0+1", 1);
   ASSERT_EVAL_NUM_EQ(v7, "2+3", 5);
