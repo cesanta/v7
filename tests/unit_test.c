@@ -311,7 +311,7 @@ static enum v7_err adder(struct v7 *v7, v7_val_t *res) {
   for (i = 0; i < v7_argc(v7); i++) {
     sum += v7_to_number(v7_arg(v7, i));
   }
-  *res = v7_create_number(sum);
+  *res = v7_mk_number(sum);
 
   return rcode;
 }
@@ -319,8 +319,8 @@ static enum v7_err adder(struct v7 *v7, v7_val_t *res) {
 static const char *test_native_functions(void) {
   struct v7 *v7 = v7_create();
 
-  ASSERT_EQ(
-      v7_set(v7, v7_get_global(v7), "adder", 5, v7_create_cfunction(adder)), 0);
+  ASSERT_EQ(v7_set(v7, v7_get_global(v7), "adder", 5, v7_mk_cfunction(adder)),
+            0);
   ASSERT_EVAL_EQ(v7, "adder(1, 2, 3 + 4);", "10");
   v7_destroy(v7);
 
@@ -328,7 +328,7 @@ static const char *test_native_functions(void) {
 }
 
 static const char *test_stdlib(void) {
-  v7_val_t v = v7_create_undefined();
+  v7_val_t v = v7_mk_undefined();
   struct v7 *v7 = v7_create();
 #if V7_ENABLE__RegExp
   const char *c;
@@ -452,7 +452,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_STR_EQ(v7, "'hi there'.substr(0, 300)", "hi there");
 #if V7_ENABLE__RegExp
   ASSERT_EQ(eval(v7, "'dew dee'.match(/\\d+/)", &v), V7_OK);
-  ASSERT_EQ(v, v7_create_null());
+  ASSERT_EQ(v, v7_mk_null());
   ASSERT_EVAL_OK(v7, "m = 'foo 1234 bar'.match(/\\S+ (\\d+)/)");
   ASSERT_EVAL_NUM_EQ(v7, "m.length", 2.0);
   ASSERT_EVAL_STR_EQ(v7, "m[0]", "foo 1234");
@@ -624,54 +624,54 @@ static const char *test_runtime(void) {
       "sint occaecat cupidatat non proident, sunt in culpa qui "
       "officia deserunt mollit anim id est laborum.";
 
-  v = v7_create_null();
+  v = v7_mk_null();
   ASSERT(v7_is_null(v));
 
   v7_own(v7, &v);
 
-  v = v7_create_undefined();
+  v = v7_mk_undefined();
   ASSERT(v7_is_undefined(v));
 
-  v = v7_create_number(1.0);
+  v = v7_mk_number(1.0);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_NUMBER);
   ASSERT_EQ(v7_to_number(v), 1.0);
   ASSERT(check_value(v7, v, "1"));
 
-  v = v7_create_number(1.5);
+  v = v7_mk_number(1.5);
   ASSERT_EQ(v7_to_number(v), 1.5);
   ASSERT(check_value(v7, v, "1.5"));
 
-  v = v7_create_boolean(1);
+  v = v7_mk_boolean(1);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_BOOLEAN);
   ASSERT_EQ(v7_to_boolean(v), 1);
   ASSERT(check_value(v7, v, "true"));
 
-  v = v7_create_boolean(0);
+  v = v7_mk_boolean(0);
   ASSERT(check_value(v7, v, "false"));
 
-  v = v7_create_string(v7, "foo", 3, 1);
+  v = v7_mk_string(v7, "foo", 3, 1);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_STRING);
   v7_get_string_data(v7, &v, &n);
   ASSERT_EQ(n, 3);
   s = "\"foo\"";
   ASSERT(check_value(v7, v, s));
 
-  v = v7_create_string(v7, "foo", 3, 1);
+  v = v7_mk_string(v7, "foo", 3, 1);
   s = v7_to_cstring(v7, &v);
   ASSERT(strcmp("foo", s) == 0);
 
   /* short strings are embedded even if unowned */
-  v = v7_create_string(v7, "foobarbaz", 8, 0);
+  v = v7_mk_string(v7, "foobarbaz", 8, 0);
   s = v7_to_cstring(v7, &v);
   /* null because at index 8 there is 'z' instead of a null */
   ASSERT(s == NULL);
 
-  v = v7_create_string(v7, "foo\0bar", 7, 1);
+  v = v7_mk_string(v7, "foo\0bar", 7, 1);
   s = v7_to_cstring(v7, &v);
   ASSERT(s == NULL);
 
   for (i = 1; i < (int) sizeof(test_str); i++) {
-    v = v7_create_string(v7, 0, i, 1);
+    v = v7_mk_string(v7, 0, i, 1);
     s = v7_get_string_data(v7, &v, &n);
     memcpy((char *) s, test_str, i);
     ASSERT_EQ(val_type(v7, v), V7_TYPE_STRING);
@@ -680,7 +680,7 @@ static const char *test_runtime(void) {
     ASSERT(memcmp(s, test_str, n) == 0);
   }
 
-  v = v7_create_object(v7);
+  v = v7_mk_object(v7);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_GENERIC_OBJECT);
   ASSERT(v7_to_generic_object(v) != NULL);
   ASSERT(v7_to_generic_object(v)->prototype != NULL);
@@ -688,22 +688,22 @@ static const char *test_runtime(void) {
              v7_object_to_value(v7_to_generic_object(v)->prototype))
              ->prototype == NULL);
 
-  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_create_null()), 0);
+  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_mk_null()), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT_EQ(p->attributes, 0);
   ASSERT(v7_is_null(p->value));
   ASSERT(check_value(v7, p->value, "null"));
 
-  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_create_undefined()), 0);
+  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_mk_undefined()), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT(check_value(v7, p->value, "undefined"));
 
-  ASSERT(v7_set(v7, v, "foo", -1, v7_create_string(v7, "bar", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "foo", -1, v7_mk_string(v7, "bar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   s = "\"bar\"";
   ASSERT(check_value(v7, p->value, s));
 
-  ASSERT(v7_set(v7, v, "foo", -1, v7_create_string(v7, "zar", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "foo", -1, v7_mk_string(v7, "zar", 3, 1)) == 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   s = "\"zar\"";
   ASSERT(check_value(v7, p->value, s));
@@ -711,9 +711,9 @@ static const char *test_runtime(void) {
   ASSERT_EQ(v7_del(v7, v, "foo", ~0), 0);
   ASSERT(v7_to_object(v)->properties == NULL);
   ASSERT_EQ(v7_del(v7, v, "foo", -1), -1);
-  ASSERT(v7_set(v7, v, "foo", -1, v7_create_string(v7, "bar", 3, 1)) == 0);
-  ASSERT(v7_set(v7, v, "bar", -1, v7_create_string(v7, "foo", 3, 1)) == 0);
-  ASSERT(v7_set(v7, v, "aba", -1, v7_create_string(v7, "bab", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "foo", -1, v7_mk_string(v7, "bar", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "bar", -1, v7_mk_string(v7, "foo", 3, 1)) == 0);
+  ASSERT(v7_set(v7, v, "aba", -1, v7_mk_string(v7, "bab", 3, 1)) == 0);
   ASSERT_EQ(v7_del(v7, v, "foo", -1), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) == NULL);
   ASSERT_EQ(v7_del(v7, v, "aba", -1), 0);
@@ -721,23 +721,23 @@ static const char *test_runtime(void) {
   ASSERT_EQ(v7_del(v7, v, "bar", -1), 0);
   ASSERT((p = v7_get_property(v7, v, "bar", -1)) == NULL);
 
-  v = v7_create_object(v7);
-  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_create_number(1.0)), 0);
+  v = v7_mk_object(v7);
+  ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_mk_number(1.0)), 0);
   ASSERT((p = v7_get_property(v7, v, "foo", -1)) != NULL);
   ASSERT((p = v7_get_property(v7, v, "f", -1)) == NULL);
 
-  v = v7_create_object(v7);
+  v = v7_mk_object(v7);
   ASSERT_EQ(v7_set(v7, v, "foo", -1, v), 0);
   s = "{\"foo\":[Circular]}";
   ASSERT(check_value(v7, v, s));
 
-  v = v7_create_object(v7);
-  ASSERT(v7_def(v7, v, "foo", -1, V7_DESC_CONFIGURABLE(0),
-                v7_create_number(1.0)) == 0);
+  v = v7_mk_object(v7);
+  ASSERT(v7_def(v7, v, "foo", -1, V7_DESC_CONFIGURABLE(0), v7_mk_number(1.0)) ==
+         0);
   s = "{\"foo\":1}";
   ASSERT(check_value(v7, v, s));
-  ASSERT(v7_def(v7, v, "foo", -1, V7_DESC_CONFIGURABLE(0),
-                v7_create_number(2.0)) == 0);
+  ASSERT(v7_def(v7, v, "foo", -1, V7_DESC_CONFIGURABLE(0), v7_mk_number(2.0)) ==
+         0);
   s = "{\"foo\":2}";
   ASSERT(check_value(v7, v, s));
   ASSERT_EQ(v7_to_number(v7_get(v7, v, "foo", -1)), 2.0);
@@ -747,29 +747,29 @@ static const char *test_runtime(void) {
 #if 0
   ASSERT_EQ(
       v7_def(v7, v, "foo", -1, (V7_PROPERTY_NON_WRITABLE | V7_OVERRIDE_ATTRIBUTES),
-             v7_create_number(1.0)),
+             v7_mk_number(1.0)),
       0);
-  ASSERT(v7_def(v7, v, "foo", -1, 0, v7_create_number(2.0)) != 0);
+  ASSERT(v7_def(v7, v, "foo", -1, 0, v7_mk_number(2.0)) != 0);
   s = "{\"foo\":1}";
   ASSERT(check_value(v7, v, s));
 #endif
 
-  v = v7_create_string(v7, "fooakbar", 8, 1);
+  v = v7_mk_string(v7, "fooakbar", 8, 1);
   for (i = 0; i < 100; i++) {
     s = v7_get_string_data(v7, &v, &n);
-    v7_create_string(v7, s, 8, 1);
+    v7_mk_string(v7, s, 8, 1);
   }
 
-  v = v7_create_array(v7);
+  v = v7_mk_array(v7);
   ASSERT(v7_is_instanceof_v(v7, v,
                             v7_get(v7, v7->vals.global_object, "Array", ~0)));
   ASSERT(v7_is_instanceof(v7, v, "Array"));
 
-  v = v7_create_number(42);
+  v = v7_mk_number(42);
   ASSERT(!v7_is_instanceof(v7, v, "Object"));
   ASSERT(!v7_is_instanceof(v7, v, "Number"));
 
-  v = v7_create_string(v7, "fooakbar", 8, 1);
+  v = v7_mk_string(v7, "fooakbar", 8, 1);
   ASSERT(!v7_is_instanceof(v7, v, "Object"));
   ASSERT(!v7_is_instanceof(v7, v, "String"));
 
@@ -779,38 +779,36 @@ static const char *test_runtime(void) {
 
 static const char *test_apply(void) {
   struct v7 *v7 = v7_create();
-  val_t v = v7_create_undefined(), fn = v7_create_undefined(),
-        args = v7_create_undefined();
+  val_t v = v7_mk_undefined(), fn = v7_mk_undefined(), args = v7_mk_undefined();
   v7_own(v7, &v);
   v7_own(v7, &fn);
   v7_own(v7, &args);
 
   fn = v7_get(v7, v7->vals.global_object, "test0", 5); /* no such function */
-  ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, v7_create_undefined(), &v),
+  ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, v7_mk_undefined(), &v),
             V7_EXEC_EXCEPTION);
 
   ASSERT_EQ(eval(v7, "function test1(){return 1}", &v), V7_OK);
   fn = v7_get(v7, v7->vals.global_object, "test1", 5);
-  ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, v7_create_undefined(), &v),
+  ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, v7_mk_undefined(), &v),
             V7_OK);
   ASSERT(check_num(v7, v, 1));
 
-  ASSERT_EQ(
-      v7_apply(v7, fn, v7->vals.global_object, v7_create_undefined(), NULL),
-      V7_OK);
+  ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, v7_mk_undefined(), NULL),
+            V7_OK);
 
   ASSERT_EQ(eval(v7, "function test2(){throw 2}", &v), V7_OK);
   fn = v7_get(v7, v7->vals.global_object, "test2", 5);
-  ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, v7_create_undefined(), &v),
+  ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, v7_mk_undefined(), &v),
             V7_EXEC_EXCEPTION);
   ASSERT(check_num(v7, v, 2));
 
   ASSERT_EQ(eval(v7, "function test1(){return arguments}", &v), V7_OK);
   fn = v7_get(v7, v7->vals.global_object, "test1", 5);
-  args = v7_create_array(v7);
-  v7_array_push(v7, args, v7_create_number(1));
-  v7_array_push(v7, args, v7_create_number(2));
-  v7_array_push(v7, args, v7_create_number(3));
+  args = v7_mk_array(v7);
+  v7_array_push(v7, args, v7_mk_number(1));
+  v7_array_push(v7, args, v7_mk_number(2));
+  v7_array_push(v7, args, v7_mk_number(3));
   ASSERT_EQ(v7_apply(v7, fn, v7->vals.global_object, args, &v), V7_OK);
   ASSERT(v7_array_length(v7, v) == 3);
 
@@ -823,24 +821,24 @@ static const char *test_dense_arrays(void) {
   struct v7 *v7 = v7_create();
   val_t a;
 
-  a = v7_create_dense_array(v7);
+  a = v7_mk_dense_array(v7);
 
-  v7_array_set(v7, a, 0, v7_create_number(42));
+  v7_array_set(v7, a, 0, v7_mk_number(42));
   ASSERT(check_num(v7, v7_array_get(v7, a, 0), 42));
   ASSERT_EQ(v7_array_length(v7, a), 1);
 
-  v7_array_set(v7, a, 1, v7_create_number(24));
+  v7_array_set(v7, a, 1, v7_mk_number(24));
   ASSERT(check_num(v7, v7_array_get(v7, a, 0), 42));
   ASSERT(check_num(v7, v7_array_get(v7, a, 1), 24));
   ASSERT_EQ(v7_array_length(v7, a), 2);
 
-  a = v7_create_dense_array(v7);
-  v7_array_set(v7, a, 0, v7_create_number(42));
-  v7_array_set(v7, a, 2, v7_create_number(42));
+  a = v7_mk_dense_array(v7);
+  v7_array_set(v7, a, 0, v7_mk_number(42));
+  v7_array_set(v7, a, 2, v7_mk_number(42));
   ASSERT_EQ(v7_array_length(v7, a), 3);
 
-  a = v7_create_dense_array(v7);
-  v7_array_set(v7, a, 1, v7_create_number(42));
+  a = v7_mk_dense_array(v7);
+  v7_array_set(v7, a, 1, v7_mk_number(42));
   ASSERT_EQ(v7_array_length(v7, a), 2);
 
   ASSERT_EVAL_OK(v7, "function mka(){return arguments}");
@@ -860,7 +858,7 @@ static const char *test_dense_arrays(void) {
       v7, "(function(){return arguments}).apply(this, [1,2,3]).length", 3);
 
   /* ensure that a zero length dense arrays is correctly recognized */
-  a = v7_create_dense_array(v7);
+  a = v7_mk_dense_array(v7);
   ASSERT(v7_next_prop(v7, a, NULL) == NULL);
 
   v7_destroy(v7);
@@ -1356,7 +1354,7 @@ static const char *test_interpreter(void) {
   val_t v;
   const char *s, *c, *c0;
 
-  v7_set(v7, v7->vals.global_object, "x", -1, v7_create_number(42.0));
+  v7_set(v7, v7->vals.global_object, "x", -1, v7_mk_number(42.0));
 
   ASSERT_EVAL_EQ(v7, "1%2/2", "0.5");
 
@@ -1712,10 +1710,10 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "r=1;for(var i in undefined){r=0};r", "1");
   ASSERT_EVAL_EQ(v7, "r=1;for(var i in 42){r=0};r", "1");
 
-  ASSERT_EQ(v7_exec_with(v7, "this", v7_create_number(42), &v), V7_OK);
+  ASSERT_EQ(v7_exec_with(v7, "this", v7_mk_number(42), &v), V7_OK);
   ASSERT(check_value(v7, v, "42"));
   ASSERT(v7_exec_with(v7, "a=666;(function(a){return a})(this)",
-                      v7_create_number(42), &v) == V7_OK);
+                      v7_mk_number(42), &v) == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
   c = "\"aa bb\"";
@@ -1804,7 +1802,7 @@ static const char *test_interpreter(void) {
   c = "\"\"";
   ASSERT_EVAL_EQ(v7, "'' && {}", c);
 
-  ASSERT_EQ(v7_exec_with(v7, "a=this;a", v7_create_foreign((void *) "foo"), &v),
+  ASSERT_EQ(v7_exec_with(v7, "a=this;a", v7_mk_foreign((void *) "foo"), &v),
             V7_OK);
   ASSERT(v7_is_foreign(v));
   ASSERT_EQ(strcmp((char *) v7_to_foreign(v), "foo"), 0);
@@ -1842,23 +1840,23 @@ static const char *test_strings(void) {
   off = v7->owned_strings.len;
   ASSERT(off > 0); /* properties names use it */
 
-  s = v7_create_string(v7, "hi", 2, 1);
+  s = v7_mk_string(v7, "hi", 2, 1);
   ASSERT_EQ(memcmp(&s, "\x02\x68\x69\x00\x00\x00\xfa\xff", sizeof(s)), 0);
   ASSERT_EQ(v7->foreign_strings.len, 0);
   ASSERT_EQ(v7->owned_strings.len, off);
 
   /* Make sure strings with length 5 & 6 are nan-packed */
-  s = v7_create_string(v7, "length", 4, 1);
+  s = v7_mk_string(v7, "length", 4, 1);
   ASSERT_EQ(v7->owned_strings.len, off);
-  s = v7_create_string(v7, "length", 5, 1);
+  s = v7_mk_string(v7, "length", 5, 1);
   ASSERT_EQ(v7->owned_strings.len, off);
   ASSERT_EQ(memcmp(&s, "\x6c\x65\x6e\x67\x74\x00\xf9\xff", sizeof(s)), 0);
 
-  s = v7_create_string(v7, "longer one", ~0 /* use strlen */, 1);
+  s = v7_mk_string(v7, "longer one", ~0 /* use strlen */, 1);
   ASSERT(v7->owned_strings.len == off + 12);
   ASSERT_EQ(memcmp(v7->owned_strings.buf + off, "\x0alonger one\x00", 12), 0);
 
-  s = v7_create_string(v7, "with embedded \x00 one", 19, 1);
+  s = v7_mk_string(v7, "with embedded \x00 one", 19, 1);
 
   ASSERT(v7->owned_strings.len == off + 33);
   ASSERT(memcmp(v7->owned_strings.buf + off,
@@ -1870,13 +1868,13 @@ static const char *test_strings(void) {
     const char *lit = "foobarbaz";
     size_t l;
     const char *p;
-    s = v7_create_string(v7, lit, ~0, 0);
+    s = v7_mk_string(v7, lit, ~0, 0);
     p = v7_get_string_data(v7, &s, &l);
     /* ASSERT_EQ(l, (size_t) 9); */
     ASSERT(p == lit);
 
     if (sizeof(void *) <= 4) {
-      val_t n = v7_create_string(v7, lit, ~0, 0);
+      val_t n = v7_mk_string(v7, lit, ~0, 0);
       ASSERT(n == s);
     }
   }
@@ -1924,7 +1922,7 @@ static const char *test_to_json(void) {
   char buf[100], *p;
   const char *c;
   struct v7 *v7 = v7_create();
-  val_t v = v7_create_undefined();
+  val_t v = v7_mk_undefined();
   v7_own(v7, &v);
 
   c = "123.45";
@@ -1950,7 +1948,7 @@ static const char *test_to_json(void) {
   ASSERT_STREQ(p, c);
 #endif
 
-  ASSERT((p = v7_to_json(v7, v7_create_null(), buf, sizeof(buf))) == buf);
+  ASSERT((p = v7_to_json(v7, v7_mk_null(), buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, "null");
 
   c = "{\"a\":null}";
@@ -2200,8 +2198,8 @@ static const char *test_gc_own(void) {
   const char *s;
   size_t len;
 
-  v1 = v7_create_string(v7, "foobar", 6, 1);
-  v2 = v7_create_string(v7, "barfoo", 6, 1);
+  v1 = v7_mk_string(v7, "foobar", 6, 1);
+  v2 = v7_mk_string(v7, "barfoo", 6, 1);
 
   v7_own(v7, &v1);
   v7_own(v7, &v2);
@@ -2245,7 +2243,7 @@ static int check_file(struct v7 *v7, v7_val_t s, const char *file_name) {
 static const char *test_file(void) {
   const char *data = "some test string", *test_file_name = "ft.txt";
   struct v7 *v7 = v7_create();
-  v7_val_t v, data_str = v7_create_string(v7, data, strlen(data), 1);
+  v7_val_t v, data_str = v7_mk_string(v7, data, strlen(data), 1);
 
   v7_own(v7, &data_str);
   v7_set(v7, v7_get_global(v7), "ts", 2, data_str);
@@ -2349,7 +2347,7 @@ static const char *test_exec_generic(void) {
   struct v7 *v7 = v7_create();
   const char *c;
 
-  v7_set(v7, v7_get_global(v7), "ES", ~0, v7_create_string(v7, "", 0, 0));
+  v7_set(v7, v7_get_global(v7), "ES", ~0, v7_mk_string(v7, "", 0, 0));
 
   ASSERT_EVAL_NUM_EQ(v7, "0+1", 1);
   ASSERT_EVAL_NUM_EQ(v7, "2+3", 5);

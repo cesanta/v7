@@ -15,7 +15,7 @@ static v7_val_t js_sum(struct v7 *v7) {
   double arg0 = v7_to_number(v7_arg(v7, 0));
   double arg1 = v7_to_number(v7_arg(v7, 1));
   double result = sum(arg0, arg1);
-  return v7_create_number(result);
+  return v7_mk_number(result);
 }
 
 int main(void) {
