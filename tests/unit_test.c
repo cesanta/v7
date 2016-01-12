@@ -39,6 +39,7 @@
 #include "common/mbuf.h"
 #include "v7/src/varint.h"
 #include "v7/src/vm.h"
+#include "v7/src/types.h"
 #include "v7/src/string.h"
 #include "../v7.h"
 #include "../src/internal.h"
