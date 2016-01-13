@@ -38,7 +38,7 @@ int main(void) {
   v7_val_t ctor_func, proto, eval_result;
 
   proto = v7_mk_object(v7);
-  ctor_func = v7_mk_constructor(v7, proto, MyThing_ctor);
+  ctor_func = v7_mk_function_with_proto(v7, MyThing_ctor, proto);
   v7_def(v7, ctor_func, "MY_CONST", ~0,
       (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)),
       v7_mk_number(123));
