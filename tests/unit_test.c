@@ -169,7 +169,7 @@ static int check_str(struct v7 *v7, val_t v, const char *expected) {
 static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   val_t v;
   if (v7_exec(v7, expr, &v) != V7_OK) return 0;
-  return result == (v7_is_true(v7, v) ? 1 : 0);
+  return result == (v7_is_truthy(v7, v) ? 1 : 0);
 }
 
 /*
