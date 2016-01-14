@@ -2266,6 +2266,15 @@ static const char *test_file(void) {
   ASSERT(v7_is_array(v7, v));
   ASSERT_EVAL_EQ(v7, "l.indexOf('unit_test.c') >= 0", "true");
 
+  ASSERT_EVAL_EQ(v7, "require('require-module.js').test()", "1");
+  /* require should cache modules */
+  ASSERT_EVAL_EQ(v7, "require('require-module.js').test()", "1");
+  ASSERT_EVAL_EQ(v7,
+                 "try{shouldBeInvisible;invisibleToo} catch(e) {"
+                 "if(e instanceof ReferenceError) 42;"
+                 "}",
+                 "42");
+
   v7_disown(v7, &data_str);
   v7_destroy(v7);
   return NULL;
