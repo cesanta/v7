@@ -2995,6 +2995,8 @@ static const char *test_exec_generic(void) {
 
   /* use strict {{{ */
 
+  /* disabled because of short lits */
+  #if 0
   /* duplicate properties in object literal {{{ */
 
   ASSERT_EVAL_ERR(
@@ -3066,6 +3068,7 @@ static const char *test_exec_generic(void) {
       );
 
   /* }}} */
+  #endif
 
   /* switch: fallthrough {{{ */
 

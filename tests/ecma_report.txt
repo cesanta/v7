@@ -1233,7 +1233,7 @@
 1232	PASS ch11/11.1/11.1.5/11.1.5-1-s.js (tail -c +878218 tests/ecmac.db|head -c 580)
 1233	PASS ch11/11.1/11.1.5/11.1.5-2-s.js (tail -c +878799 tests/ecmac.db|head -c 593)
 1234	PASS ch11/11.1/11.1.5/11.1.5-3-s.js (tail -c +879393 tests/ecmac.db|head -c 580)
-1235	PASS ch11/11.1/11.1.5/11.1.5-4-4-a-1-s.js (tail -c +879974 tests/ecmac.db|head -c 824)
+1235	FAIL ch11/11.1/11.1.5/11.1.5-4-4-a-1-s.js (tail -c +879974 tests/ecmac.db|head -c 824): [{"message":"Test case returned non-true value!"}]
 1236	PASS ch11/11.1/11.1.5/11.1.5-4-s.js (tail -c +880799 tests/ecmac.db|head -c 586)
 1237	PASS ch11/11.1/11.1.5/11.1.5_3-3-1.js (tail -c +881386 tests/ecmac.db|head -c 917)
 1238	PASS ch11/11.1/11.1.5/11.1.5_4-4-a-2.js (tail -c +882304 tests/ecmac.db|head -c 708)
