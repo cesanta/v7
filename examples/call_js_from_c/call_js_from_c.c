@@ -15,8 +15,11 @@ static void call_sum(struct v7 *v7) {
   v7_array_push(v7, args, v7_mk_number(123.0));
   v7_array_push(v7, args, v7_mk_number(456.789));
 
-  v7_apply(v7, func, v7_mk_undefined(), args, &result);
-  printf("Result: %g\n", v7_to_number(result));
+  if (v7_apply(v7, func, v7_mk_undefined(), args, &result) == V7_OK) {
+    printf("Result: %g\n", v7_to_number(result));
+  } else {
+    v7_print_error(stderr, v7, "Error while calling sum", result);
+  }
 }
 
 int main(void) {
@@ -25,7 +28,7 @@ int main(void) {
   struct v7 *v7 = v7_create();
   rcode = v7_exec(v7, "var sum = function(a, b) { return a + b; };", &result);
   if (rcode != V7_OK) {
-    fprintf(stderr, "exec error: %d\n", (int)rcode);
+    v7_print_error(stderr, v7, "Evaluation error", result);
     goto clean;
   }
 
@@ -33,5 +36,5 @@ int main(void) {
 
 clean:
   v7_destroy(v7);
-  return (int)rcode;
+  return (int) rcode;
 }
