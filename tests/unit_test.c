@@ -3831,8 +3831,6 @@ static const char *test_exec_generic(void) {
 
   /* }}} */
 
-  /* clang-format on */
-
   ASSERT_EVAL_NUM_EQ(v7, "(function() {var x = 42; return eval('x')})()", 42);
 
   /* `catch` block should execute in its own private scope */
@@ -3846,6 +3844,27 @@ static const char *test_exec_generic(void) {
 
   ASSERT_EVAL_JS_EXPR_EQ(v7, "(function(a){return delete arguments})();",
                          "false");
+
+  /*
+   * functions instantiated from the same function literal should have
+   * different prototypes
+   */
+  ASSERT_EVAL_JS_EXPR_EQ(
+      v7, STRINGIFY(
+          var f = function(a) {
+          var f = function() {};
+          f.prototype.a = a;
+            return new f;
+          };
+
+          var f1 = f(10);
+          var f2 = f(20);
+
+          f1.a != f2.a;
+        ), "true"
+      );
+
+  /* clang-format on */
 
   v7_destroy(v7);
   return NULL;
