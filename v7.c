@@ -28,6 +28,309 @@
 #define V7_EXTERN static
 #endif
 #ifdef V7_MODULE_LINES
+#line 0 "./common/platform.h"
+#endif
+#ifndef _CS_PLATFORM_H_
+#define _CS_PLATFORM_H_
+
+/*
+ * For the "custom" platform, includes and dependencies can be
+ * provided through mg_locals.h.
+ */
+#define CS_P_CUSTOM 0
+#define CS_P_UNIX 1
+#define CS_P_WINDOWS 2
+#define CS_P_ESP_LWIP 3
+#define CS_P_CC3200 4
+
+/* If not specified explicitly, we guess platform by defines. */
+#ifndef CS_PLATFORM
+
+#if defined(__unix__) || defined(__APPLE__)
+#define CS_PLATFORM CS_P_UNIX
+#elif defined(_WIN32)
+#define CS_PLATFORM CS_P_WINDOWS
+#endif
+
+#ifndef CS_PLATFORM
+#error "CS_PLATFORM is not specified and we couldn't guess it."
+#endif
+
+#endif /* !defined(CS_PLATFORM) */
+
+/* Amalgamated: #include "common/platforms/platform_unix.h" */
+/* Amalgamated: #include "common/platforms/platform_windows.h" */
+/* Amalgamated: #include "common/platforms/platform_esp_lwip.h" */
+/* Amalgamated: #include "common/platforms/platform_cc3200.h" */
+
+/* Common stuff */
+
+#ifdef __GNUC__
+#define NORETURN __attribute__((noreturn))
+#define UNUSED __attribute__((unused))
+#define NOINLINE __attribute__((noinline))
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+#define NORETURN
+#define UNUSED
+#define NOINLINE
+#define WARN_UNUSED_RESULT
+#endif /* __GNUC__ */
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
+
+#endif /* _CS_PLATFORM_H_ */
+#ifdef V7_MODULE_LINES
+#line 0 "./common/platforms/platform_windows.h"
+#endif
+#ifndef _CS_PLATFORM_WINDOWS_H_
+#define _CS_PLATFORM_WINDOWS_H_
+#if CS_PLATFORM == CS_P_WINDOWS
+
+/*
+ * MSVC++ 14.0 _MSC_VER == 1900 (Visual Studio 2015)
+ * MSVC++ 12.0 _MSC_VER == 1800 (Visual Studio 2013)
+ * MSVC++ 11.0 _MSC_VER == 1700 (Visual Studio 2012)
+ * MSVC++ 10.0 _MSC_VER == 1600 (Visual Studio 2010)
+ * MSVC++ 9.0  _MSC_VER == 1500 (Visual Studio 2008)
+ * MSVC++ 8.0  _MSC_VER == 1400 (Visual Studio 2005)
+ * MSVC++ 7.1  _MSC_VER == 1310 (Visual Studio 2003)
+ * MSVC++ 7.0  _MSC_VER == 1300
+ * MSVC++ 6.0  _MSC_VER == 1200
+ * MSVC++ 5.0  _MSC_VER == 1100
+ */
+#ifdef _MSC_VER
+#pragma warning(disable : 4127) /* FD_SET() emits warning, disable it */
+#pragma warning(disable : 4204) /* missing c99 support */
+#endif
+
+#include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+
+#define random() rand()
+#ifdef _MSC_VER
+#pragma comment(lib, "ws2_32.lib") /* Linking with winsock library */
+#endif
+#include <windows.h>
+#include <process.h>
+#ifndef EINPROGRESS
+#define EINPROGRESS WSAEINPROGRESS
+#endif
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
+#ifndef __func__
+#define STRX(x) #x
+#define STR(x) STRX(x)
+#define __func__ __FILE__ ":" STR(__LINE__)
+#endif
+#define snprintf _snprintf
+#define fileno _fileno
+#define vsnprintf _vsnprintf
+#define sleep(x) Sleep((x) *1000)
+#define to64(x) _atoi64(x)
+#define popen(x, y) _popen((x), (y))
+#define pclose(x) _pclose(x)
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define fseeko(x, y, z) _fseeki64((x), (y), (z))
+#else
+#define fseeko(x, y, z) fseek((x), (y), (z))
+#endif
+#define random() rand()
+typedef int socklen_t;
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+typedef int int32_t;
+typedef unsigned int uint32_t;
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+typedef SOCKET sock_t;
+typedef uint32_t in_addr_t;
+#ifndef UINT16_MAX
+#define UINT16_MAX 65535
+#endif
+#ifndef UINT32_MAX
+#define UINT32_MAX 4294967295
+#endif
+#ifndef pid_t
+#define pid_t HANDLE
+#endif
+#define INT64_FMT "I64d"
+#define INT64_X_FMT "I64x"
+#define SIZE_T_FMT "Iu"
+#ifdef __MINGW32__
+typedef struct stat cs_stat_t;
+#else
+typedef struct _stati64 cs_stat_t;
+#endif
+#ifndef S_ISDIR
+#define S_ISDIR(x) (((x) &_S_IFMT) == _S_IFDIR)
+#endif
+#ifndef S_ISREG
+#define S_ISREG(x) (((x) &_S_IFMT) == _S_IFREG)
+#endif
+#define DIRSEP '\\'
+
+/* POSIX opendir/closedir/readdir API for Windows. */
+struct dirent {
+  char d_name[MAX_PATH];
+};
+
+typedef struct DIR {
+  HANDLE handle;
+  WIN32_FIND_DATAW info;
+  struct dirent result;
+} DIR;
+
+DIR *opendir(const char *name);
+int closedir(DIR *dir);
+struct dirent *readdir(DIR *dir);
+
+#ifndef va_copy
+#ifdef __va_copy
+#define va_copy __va_copy
+#else
+#define va_copy(x, y) (x) = (y)
+#endif
+#endif
+
+#endif /* CS_PLATFORM == CS_P_WINDOWS */
+#endif /* _CS_PLATFORM_WINDOWS_H_ */
+#ifdef V7_MODULE_LINES
+#line 0 "./common/platforms/platform_unix.h"
+#endif
+#ifndef _CS_PLATFORM_UNIX_H_
+#define _CS_PLATFORM_UNIX_H_
+#if CS_PLATFORM == CS_P_UNIX
+
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 600
+#endif
+
+/* <inttypes.h> wants this for C++ */
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+
+/* C++ wants that for INT64_MAX */
+#ifndef __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
+#endif
+
+/* Enable fseeko() and ftello() functions */
+#ifndef _LARGEFILE_SOURCE
+#define _LARGEFILE_SOURCE
+#endif
+
+/* Enable 64-bit file offsets */
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
+#endif
+
+#include <arpa/inet.h>
+#include <assert.h>
+#include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <math.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+typedef int sock_t;
+#define INVALID_SOCKET (-1)
+#define SIZE_T_FMT "zu"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
+
+#ifndef va_copy
+#ifdef __va_copy
+#define va_copy __va_copy
+#else
+#define va_copy(x, y) (x) = (y)
+#endif
+#endif
+
+#define closesocket(x) close(x)
+
+#endif /* CS_PLATFORM == CS_P_UNIX */
+#endif /* _CS_PLATFORM_UNIX_H_ */
+#ifdef V7_MODULE_LINES
+#line 0 "./common/platforms/platform_esp_lwip.h"
+#endif
+#ifndef _CS_PLATFORM_ESP_LWIP_H_
+#define _CS_PLATFORM_ESP_LWIP_H_
+#if CS_PLATFORM == CS_P_ESP_LWIP
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+
+#include <lwip/err.h>
+#include <lwip/ip_addr.h>
+#include <lwip/inet.h>
+#include <lwip/netdb.h>
+#include <lwip/dns.h>
+
+#define LWIP_TIMEVAL_PRIVATE 0
+
+#if LWIP_SOCKET
+#include <lwip/sockets.h>
+#define SOMAXCONN 10
+#else
+/* We really need the definitions from sockets.h. */
+#undef LWIP_SOCKET
+#define LWIP_SOCKET 1
+#include <lwip/sockets.h>
+#undef LWIP_SOCKET
+#define LWIP_SOCKET 0
+#endif
+
+typedef int sock_t;
+#define INVALID_SOCKET (-1)
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
+
+#endif /* CS_PLATFORM == CS_P_ESP_LWIP */
+#endif /* _CS_PLATFORM_ESP_LWIP_H_ */
+#ifdef V7_MODULE_LINES
 #line 0 "./common/mbuf.h"
 #endif
 /*
@@ -109,267 +412,195 @@ void mbuf_trim(struct mbuf *);
 
 #endif /* MBUF_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 0 "./common/osdep.h"
+#line 0 "./common/platforms/platform_cc3200.h"
 #endif
 /*
- * Copyright (c) 2015 Cesanta Software Limited
+ * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef OSDEP_HEADER_INCLUDED
-#define OSDEP_HEADER_INCLUDED
-
-#if !defined(MG_DISABLE_FILESYSTEM) && defined(AVR_NOFS)
-#define MG_DISABLE_FILESYSTEM
-#endif
-
-#undef UNICODE                /* Use ANSI WinAPI functions */
-#undef _UNICODE               /* Use multibyte encoding on Windows */
-#define _MBCS                 /* Use multibyte encoding on Windows */
-#define _INTEGRAL_MAX_BITS 64 /* Enable _stati64() on Windows */
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005+ */
-#endif
-#undef WIN32_LEAN_AND_MEAN /* Let windows.h always include winsock2.h */
-#undef _XOPEN_SOURCE
-#define _XOPEN_SOURCE 600    /* For flockfile() on Linux */
-#define __STDC_FORMAT_MACROS /* <inttypes.h> wants this for C++ */
-#define __STDC_LIMIT_MACROS  /* C++ wants that for INT64_MAX */
-#ifndef _LARGEFILE_SOURCE
-#define _LARGEFILE_SOURCE /* Enable fseeko() and ftello() functions */
-#endif
-#define _FILE_OFFSET_BITS 64 /* Enable 64-bit file offsets */
-
-#if !(defined(AVR_LIBC) || defined(PICOTCP))
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <time.h>
-#include <signal.h>
-#endif
-
-#ifndef BYTE_ORDER
-#define LITTLE_ENDIAN 0x41424344
-#define BIG_ENDIAN 0x44434241
-#define PDP_ENDIAN 0x42414443
-/* TODO(lsm): fix for big-endian machines. 'ABCD' is not portable */
-/*#define BYTE_ORDER 'ABCD'*/
-#define BYTE_ORDER LITTLE_ENDIAN
-#endif
-
-/*
- * MSVC++ 14.0 _MSC_VER == 1900 (Visual Studio 2015)
- * MSVC++ 12.0 _MSC_VER == 1800 (Visual Studio 2013)
- * MSVC++ 11.0 _MSC_VER == 1700 (Visual Studio 2012)
- * MSVC++ 10.0 _MSC_VER == 1600 (Visual Studio 2010)
- * MSVC++ 9.0  _MSC_VER == 1500 (Visual Studio 2008)
- * MSVC++ 8.0  _MSC_VER == 1400 (Visual Studio 2005)
- * MSVC++ 7.1  _MSC_VER == 1310 (Visual Studio 2003)
- * MSVC++ 7.0  _MSC_VER == 1300
- * MSVC++ 6.0  _MSC_VER == 1200
- * MSVC++ 5.0  _MSC_VER == 1100
- */
-#ifdef _MSC_VER
-#pragma warning(disable : 4127) /* FD_SET() emits warning, disable it */
-#pragma warning(disable : 4204) /* missing c99 support */
-#endif
-
-#ifdef PICOTCP
-#define time(x) PICO_TIME()
-/* Amalgamated: #include "common/pico_config.h" */
-/* Amalgamated: #include "common/pico_bsd_sockets.h" */
-/* Amalgamated: #include "common/pico_bsd_syscalls.h" */
-#ifndef SOMAXCONN
-#define SOMAXCONN (16)
-#endif
-#ifdef _POSIX_VERSION
-#define signal(...)
-#endif
-#endif
+#ifndef _CS_PLATFORM_CC3200_H_
+#define _CS_PLATFORM_CC3200_H_
+#if CS_PLATFORM == CS_P_CC3200
 
 #include <assert.h>
 #include <ctype.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#ifndef va_copy
-#ifdef __va_copy
-#define va_copy __va_copy
-#else
-#define va_copy(x, y) (x) = (y)
-#endif
-#endif
-
-#ifdef _WIN32
-#define random() rand()
-#ifdef _MSC_VER
-#pragma comment(lib, "ws2_32.lib") /* Linking with winsock library */
-#endif
-#include <windows.h>
-#include <process.h>
-#ifndef EINPROGRESS
-#define EINPROGRESS WSAEINPROGRESS
-#endif
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK WSAEWOULDBLOCK
-#endif
-#ifndef __func__
-#define STRX(x) #x
-#define STR(x) STRX(x)
-#define __func__ __FILE__ ":" STR(__LINE__)
-#endif
-#define snprintf _snprintf
-#define fileno _fileno
-#define vsnprintf _vsnprintf
-#define sleep(x) Sleep((x) *1000)
-#define to64(x) _atoi64(x)
-#define popen(x, y) _popen((x), (y))
-#define pclose(x) _pclose(x)
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-#define fseeko(x, y, z) _fseeki64((x), (y), (z))
-#else
-#define fseeko(x, y, z) fseek((x), (y), (z))
-#endif
-#define random() rand()
-typedef int socklen_t;
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef int int32_t;
-typedef unsigned int uint32_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-typedef SOCKET sock_t;
-typedef uint32_t in_addr_t;
-#ifndef UINT16_MAX
-#define UINT16_MAX 65535
-#endif
-#ifndef UINT32_MAX
-#define UINT32_MAX 4294967295
-#endif
-#ifndef pid_t
-#define pid_t HANDLE
-#endif
-#define INT64_FMT "I64d"
-#define INT64_X_FMT "I64x"
-#define SIZE_T_FMT "Iu"
-#ifdef __MINGW32__
-typedef struct stat cs_stat_t;
-#else
-typedef struct _stati64 cs_stat_t;
-#endif
-#ifndef S_ISDIR
-#define S_ISDIR(x) ((x) &_S_IFDIR)
-#endif
-#define DIRSEP '\\'
-
-/* POSIX opendir/closedir/readdir API for Windows. */
-struct dirent {
-  char d_name[MAX_PATH];
-};
-
-typedef struct DIR {
-  HANDLE handle;
-  WIN32_FIND_DATAW info;
-  struct dirent result;
-} DIR;
-
-DIR *opendir(const char *name);
-int closedir(DIR *dir);
-struct dirent *readdir(DIR *dir);
-
-#elif /* not _WIN32 */ defined(MG_CC3200)
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <cc3200_libc.h>
-#include <cc3200_socket.h>
-
-#elif /* not CC3200 */ defined(MG_LWIP)
-
-#include <lwip/sockets.h>
-#include <lwip/netdb.h>
-#include <lwip/dns.h>
-
-#if defined(MG_ESP8266) && defined(RTOS_SDK)
-#include <esp_libc.h>
-#define random() os_random()
-#endif
-
-/* TODO(alashkin): check if zero is OK */
-#define SOMAXCONN 0
-#include <stdlib.h>
-
-#elif /* not ESP8266 RTOS */ !defined(NO_LIBC) && !defined(NO_BSD_SOCKETS)
-
-#include <dirent.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <arpa/inet.h> /* For inet_pton() when MG_ENABLE_IPV6 is defined */
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#endif
-
-#ifndef LWIP_PROVIDE_ERRNO
 #include <errno.h>
-#endif
-
-#ifndef _WIN32
+#include <fcntl.h>
 #include <inttypes.h>
-#include <stdarg.h>
+#include <stdint.h>
+#include <time.h>
 
-#ifndef AVR_LIBC
-#ifndef MG_ESP8266
-#define closesocket(x) close(x)
-#endif
-#ifndef __cdecl
-#define __cdecl
-#endif
+#include <simplelink.h>
 
-#define INVALID_SOCKET (-1)
-#define INT64_FMT PRId64
-#define INT64_X_FMT PRIx64
-#if defined(ESP8266) || defined(MG_ESP8266) || defined(MG_CC3200)
-#define SIZE_T_FMT "u"
-#else
-#define SIZE_T_FMT "zu"
-#endif
-#define to64(x) strtoll(x, NULL, 10)
+#define SOMAXCONN 8
+
+/* Undefine a bunch of conflicting symbols so we can use SDK defs verbatim. */
+
+#undef FD_CLR
+#undef FD_SET
+#undef FD_ZERO
+#undef FD_ISSET
+#undef FD_SETSIZE
+#undef fd_set
+
+#undef EACCES
+#undef EBADF
+#undef EAGAIN
+#undef EWOULDBLOCK
+#undef ENOMEM
+#undef EFAULT
+#undef EINVAL
+#undef EDESTADDRREQ
+#undef EPROTOTYPE
+#undef ENOPROTOOPT
+#undef EPROTONOSUPPORT
+#undef EOPNOTSUPP
+#undef EAFNOSUPPORT
+#undef EAFNOSUPPORT
+#undef EADDRINUSE
+#undef EADDRNOTAVAIL
+#undef ENETUNREACH
+#undef ENOBUFS
+#undef EISCONN
+#undef ENOTCONN
+#undef ETIMEDOUT
+#undef ECONNREFUSED
+
+/* The following comes from $SDK/simplelink/include/socket.h */
+/* clang-format off */
+#define FD_SETSIZE                          SL_FD_SETSIZE
+
+#define SOCK_STREAM                         SL_SOCK_STREAM
+#define SOCK_DGRAM                          SL_SOCK_DGRAM
+#define SOCK_RAW                            SL_SOCK_RAW
+#define IPPROTO_TCP                         SL_IPPROTO_TCP
+#define IPPROTO_UDP                         SL_IPPROTO_UDP
+#define IPPROTO_RAW                         SL_IPPROTO_RAW
+
+#define AF_INET                             SL_AF_INET
+#define AF_INET6                            SL_AF_INET6
+#define AF_INET6_EUI_48                     SL_AF_INET6_EUI_48
+#define AF_RF                               SL_AF_RF
+#define AF_PACKET                           SL_AF_PACKET
+
+#define PF_INET                             SL_PF_INET
+#define PF_INET6                            SL_PF_INET6
+
+#define INADDR_ANY                          SL_INADDR_ANY
+#define ERROR                               SL_SOC_ERROR
+#define INEXE                               SL_INEXE
+#define EBADF                               SL_EBADF
+#define ENSOCK                              SL_ENSOCK
+#define EAGAIN                              SL_EAGAIN
+#define EWOULDBLOCK                         SL_EWOULDBLOCK
+#define ENOMEM                              SL_ENOMEM
+#define EACCES                              SL_EACCES
+#define EFAULT                              SL_EFAULT
+#define EINVAL                              SL_EINVAL
+#define EDESTADDRREQ                        SL_EDESTADDRREQ
+#define EPROTOTYPE                          SL_EPROTOTYPE
+#define ENOPROTOOPT                         SL_ENOPROTOOPT
+#define EPROTONOSUPPORT                     SL_EPROTONOSUPPORT
+#define ESOCKTNOSUPPORT                     SL_ESOCKTNOSUPPORT
+#define EOPNOTSUPP                          SL_EOPNOTSUPP
+#define EAFNOSUPPORT                        SL_EAFNOSUPPORT
+#define EADDRINUSE                          SL_EADDRINUSE
+#define EADDRNOTAVAIL                       SL_EADDRNOTAVAIL
+#define ENETUNREACH                         SL_ENETUNREACH
+#define ENOBUFS                             SL_ENOBUFS
+#define EOBUFF                              SL_EOBUFF
+#define EISCONN                             SL_EISCONN
+#define ENOTCONN                            SL_ENOTCONN
+#define ETIMEDOUT                           SL_ETIMEDOUT
+#define ECONNREFUSED                        SL_ECONNREFUSED
+
+#define SOL_SOCKET                          SL_SOL_SOCKET
+#define IPPROTO_IP                          SL_IPPROTO_IP
+#define SO_KEEPALIVE                        SL_SO_KEEPALIVE
+
+#define SO_RCVTIMEO                         SL_SO_RCVTIMEO
+#define SO_NONBLOCKING                      SL_SO_NONBLOCKING
+
+#define IP_MULTICAST_IF                     SL_IP_MULTICAST_IF
+#define IP_MULTICAST_TTL                    SL_IP_MULTICAST_TTL
+#define IP_ADD_MEMBERSHIP                   SL_IP_ADD_MEMBERSHIP
+#define IP_DROP_MEMBERSHIP                  SL_IP_DROP_MEMBERSHIP
+
+#define socklen_t                           SlSocklen_t
+#define timeval                             SlTimeval_t
+#define sockaddr                            SlSockAddr_t
+#define in6_addr                            SlIn6Addr_t
+#define sockaddr_in6                        SlSockAddrIn6_t
+#define in_addr                             SlInAddr_t
+#define sockaddr_in                         SlSockAddrIn_t
+
+#define MSG_DONTWAIT                        SL_MSG_DONTWAIT
+
+#define FD_SET                              SL_FD_SET
+#define FD_CLR                              SL_FD_CLR
+#define FD_ISSET                            SL_FD_ISSET
+#define FD_ZERO                             SL_FD_ZERO
+#define fd_set                              SlFdSet_t
+
+#define socket                              sl_Socket
+#define close                               sl_Close
+#define accept                              sl_Accept
+#define bind                                sl_Bind
+#define listen                              sl_Listen
+#define connect                             sl_Connect
+#define select                              sl_Select
+#define setsockopt                          sl_SetSockOpt
+#define getsockopt                          sl_GetSockOpt
+#define recv                                sl_Recv
+#define recvfrom                            sl_RecvFrom
+#define write                               sl_Write
+#define send                                sl_Send
+#define sendto                              sl_SendTo
+/* rojer: gethostbyname() and sl_NetAppDnsGetHostByName are NOT compatible. */
+/* #define gethostbyname                    sl_NetAppDnsGetHostByName */
+#define htonl                               sl_Htonl
+#define ntohl                               sl_Ntohl
+#define htons                               sl_Htons
+#define ntohs                               sl_Ntohs
+/* clang-format on */
+
 typedef int sock_t;
+#define INVALID_SOCKET (-1)
+#define SIZE_T_FMT "u"
 typedef struct stat cs_stat_t;
 #define DIRSEP '/'
-#endif /* !AVR_LIBC */
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
 
-#ifdef __APPLE__
-int64_t strtoll(const char *str, char **endptr, int base);
-#endif
-#endif /* !_WIN32 */
+#define closesocket(x) close(x)
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
-#endif
+/* Some functions we implement for Mongoose. */
 
-#ifdef __GNUC__
-#define NORETURN __attribute__((noreturn))
-#define UNUSED __attribute__((unused))
-#define NOINLINE __attribute__((noinline))
-#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
-#else
-#define NORETURN
-#define UNUSED
-#define NOINLINE
-#define WARN_UNUSED_RESULT
-#endif
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+char *inet_ntoa(struct in_addr in);
+int inet_pton(int af, const char *src, void *dst);
 
-#endif /* OSDEP_HEADER_INCLUDED */
+void cc3200_set_non_blocking_mode(int fd);
+
+struct hostent {
+  char *h_name;       /* official name of host */
+  char **h_aliases;   /* alias list */
+  int h_addrtype;     /* host address type */
+  int h_length;       /* length of address */
+  char **h_addr_list; /* list of addresses */
+};
+struct hostent *gethostbyname(const char *name);
+
+struct timeval;
+int gettimeofday(struct timeval *t, void *tz);
+
+long int random(void);
+
+#endif /* CS_PLATFORM == CS_P_CC3200 */
+#endif /* _CS_PLATFORM_CC3200_H_ */
 #ifdef V7_MODULE_LINES
 #line 0 "./common/utf.h"
 #endif
@@ -494,7 +725,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst);
 #ifndef MD5_HEADER_DEFINED
 #define MD5_HEADER_DEFINED
 
-/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/platform.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -542,7 +773,7 @@ void cs_to_hex(char *to, const unsigned char *p, size_t len);
 #if !defined(MG_SHA1_HEADER_INCLUDED) && !defined(DISABLE_SHA1)
 #define MG_SHA1_HEADER_INCLUDED
 
-/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/platform.h" */
 
 #ifdef __cplusplus
 extern "C" {
@@ -644,8 +875,8 @@ struct dirent *readdir(DIR *dir);
 #ifndef CS_UBJSON_H_INCLUDED
 #define CS_UBJSON_H_INCLUDED
 
-/* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/mbuf.h" */
+/* Amalgamated: #include "common/platform.h" */
 
 void cs_ubjson_emit_null(struct mbuf *buf);
 void cs_ubjson_emit_boolean(struct mbuf *buf, int v);
@@ -690,9 +921,8 @@ void cs_ubjson_close_array(struct mbuf *buf);
 #ifndef _COROUTINE_H
 #define _COROUTINE_H
 
-/* Amalgamated: #include "common/osdep.h" */
-
 /* Amalgamated: #include "common/mbuf.h" */
+/* Amalgamated: #include "common/platform.h" */
 
 /* user-defined union, this module only operates on the pointer */
 union user_arg_ret;
@@ -1465,7 +1695,7 @@ void cr_context_free(struct cr_ctx *p_ctx);
 
 /* Public API. Implemented in api.c */
 /* Amalgamated: #include "v7/v7.h" */
-/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/platform.h" */
 
 #ifdef V7_WINDOWS
 #define vsnprintf _vsnprintf
@@ -1592,6 +1822,8 @@ struct v7_vec {
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
  */
+
+/* Amalgamated: #include "common/platform.h" */
 
 /*
  * Read whole file `path` in memory. It is responsibility of the caller
@@ -4837,12 +5069,9 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
 
 /* clang-format off */
 
-#ifndef NO_LIBC
-#include <ctype.h>
-#endif
 #include <stdarg.h>
 #include <string.h>
-/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/platform.h" */
 /* Amalgamated: #include "common/utf.h" */
 
 #if CS_ENABLE_UTF8
@@ -6309,6 +6538,7 @@ void cs_base64_encode(const unsigned char *src, int src_len, char *dst) {
 #undef BASE64_OUT
 #undef BASE64_FLUSH
 
+#ifndef CS_DISABLE_STDIO
 #define BASE64_OUT(ch)      \
   do {                      \
     fprintf(f, "%c", (ch)); \
@@ -6323,6 +6553,7 @@ void cs_fprint_base64(FILE *f, const unsigned char *src, int src_len) {
 
 #undef BASE64_OUT
 #undef BASE64_FLUSH
+#endif /* !CS_DISABLE_STDIO */
 
 /* Convert one byte of encoded base64 input stream to 6-bit chunk */
 static unsigned char from_b64(unsigned char ch) {
@@ -6895,7 +7126,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t keylen,
 
 #ifndef EXCLUDE_COMMON
 
-/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/platform.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
 #ifdef _MG_PROVIDE_STRNLEN
@@ -7108,7 +7339,8 @@ int c_snprintf(char *buf, size_t buf_size, const char *fmt, ...) {
 }
 
 #ifdef _WIN32
-void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
+int to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
+  int ret;
   char buf[MAX_PATH * 2], buf2[MAX_PATH * 2], *p;
 
   strncpy(buf, path, sizeof(buf));
@@ -7118,17 +7350,21 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
   p = buf + strlen(buf) - 1;
   while (p > buf && p[-1] != ':' && (p[0] == '\\' || p[0] == '/')) *p-- = '\0';
 
-  /*
-   * Convert to Unicode and back. If doubly-converted string does not
-   * match the original, something is fishy, reject.
-   */
   memset(wbuf, 0, wbuf_len * sizeof(wchar_t));
-  MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, (int) wbuf_len);
+  ret = MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, (int) wbuf_len);
+
+  /*
+   * Convert back to Unicode. If doubly-converted string does not match the
+   * original, something is fishy, reject.
+   */
   WideCharToMultiByte(CP_UTF8, 0, wbuf, (int) wbuf_len, buf2, sizeof(buf2),
                       NULL, NULL);
   if (strcmp(buf, buf2) != 0) {
     wbuf[0] = L'\0';
+    ret = 0;
   }
+
+  return ret;
 }
 #endif /* _WIN32 */
 
@@ -7143,7 +7379,6 @@ void to_wchar(const char *path, wchar_t *wbuf, size_t wbuf_len) {
 
 #ifndef EXCLUDE_COMMON
 
-/* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/cs_dirent.h" */
 
 /*
@@ -7201,7 +7436,7 @@ int closedir(DIR *dir) {
 }
 
 struct dirent *readdir(DIR *dir) {
-  struct dirent *result = 0;
+  struct dirent *result = NULL;
 
   if (dir) {
     if (dir->handle != INVALID_HANDLE_VALUE) {
@@ -7665,7 +7900,6 @@ void cr_context_free(struct cr_ctx *p_ctx) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/v7.h" */
-/* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "common/cs_file.h" */
 /* Amalgamated: #include "v7/src/v7_features.h" */
@@ -7997,8 +8231,8 @@ void init_file(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/v7.h" */
-/* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/mbuf.h" */
+/* Amalgamated: #include "common/platform.h" */
 
 #ifdef V7_ENABLE_SOCKET
 
@@ -12916,7 +13150,6 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
  * All rights reserved
  */
 
-/* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/str_util.h" */
 /* Amalgamated: #include "v7/builtin/builtin.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
@@ -13552,7 +13785,6 @@ int v7_is_truthy(struct v7 *v7, val_t v) {
  */
 
 /* osdep.h must be included before `cs_file.h` TODO(dfrank) : fix this */
-/* Amalgamated: #include "common/osdep.h" */
 /* Amalgamated: #include "common/cs_file.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/types.h" */
@@ -29633,7 +29865,7 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/freeze.h" */
-/* Amalgamated: #include "common/osdep.h" */
+/* Amalgamated: #include "common/platform.h" */
 /* Amalgamated: #include "common/cs_file.h" */
 
 #if defined(_MSC_VER) && _MSC_VER >= 1800
