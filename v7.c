@@ -10667,7 +10667,7 @@ static int bcode_is_inline_string(struct v7 *v7, val_t val) {
 V7_PRIVATE lit_t bcode_add_lit(struct v7 *v7, struct bcode *bcode, val_t val) {
   lit_t lit;
   memset(&lit, 0, sizeof(lit));
-  if (bcode_is_inline_string(v7, val)) {
+  if (bcode_is_inline_string(v7, val) || v7_is_number(val)) {
     lit.val = val;
   } else {
     lit.val = v7_mk_undefined();
@@ -10713,7 +10713,13 @@ bcode_decode_lit(struct v7 *v7, struct bcode *bcode, uint8_t **ops) {
       return res;
       break;
     }
-    /* TODO(mkm): implement number */
+    case BCODE_INLINE_NUMBER_TYPE_TAG: {
+      val_t res;
+      memcpy(&res, *ops + 1, sizeof(res));
+      *ops += sizeof(res);
+      return res;
+      break;
+    }
     default:
       return ((val_t *) mbuf->buf)[idx - BCODE_MAX_INLINE_TYPE_TAG];
   }
@@ -10729,6 +10735,17 @@ V7_PRIVATE void bcode_op_lit(struct v7 *v7, struct bcode *bcode, enum opcode op,
     bcode_add_varint(v7, bcode, BCODE_INLINE_STRING_TYPE_TAG);
     bcode_add_varint(v7, bcode, len);
     bcode_ops_append(v7, bcode, s, len + 1 /* nul term */);
+  } else if (v7_is_number(lit.val)) {
+    bcode_add_varint(v7, bcode, BCODE_INLINE_NUMBER_TYPE_TAG);
+    /*
+     * TODO(dfrank): we can save some ROM by storing string representation of a
+     * number here, instead of wasting 8 bytes for each number.
+     *
+     * Alternatively, we can add more tags for integers, like
+     * `BCODE_INLINE_S08_TYPE_TAG`, `BCODE_INLINE_S16_TYPE_TAG`, etc,
+     * since integers are the most common numbers for sure.
+     */
+    bcode_ops_append(v7, bcode, &lit.val, sizeof(lit.val));
   } else {
     bcode_add_varint(v7, bcode, lit.idx + BCODE_MAX_INLINE_TYPE_TAG);
   }
@@ -13082,6 +13099,9 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 
   /* We now have bcode to evaluate; proceed to it */
 
+  release_ast(v7, a);
+  a = NULL;
+
   /* Evaluate bcode */
   V7_TRY(eval_bcode(v7, bcode));
 
@@ -13163,7 +13183,10 @@ clean:
 
   v7->call_stack->vals.try_stack = saved_try_stack;
 
-  release_ast(v7, a);
+  if (a != NULL) {
+    release_ast(v7, a);
+    a = NULL;
+  }
 
   if (is_constructor && !v7_is_object(r)) {
     /* constructor returned non-object: replace it with `this` */
@@ -14050,6 +14073,7 @@ void v7_fprint_stack_trace(FILE *f, struct v7 *v7, val_t e) {
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/vm.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
+/* Amalgamated: #include "v7/src/heapusage.h" */
 
 /*
  * Dictionary of read-only strings with length > 5.
@@ -14402,7 +14426,9 @@ V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
   size_t tot_len = k + n + !!(flags & EMBSTR_ZERO_TERM);
 
   /* Allocate buffer */
+  heapusage_dont_count(1);
   mbuf_insert(m, offset, NULL, tot_len);
+  heapusage_dont_count(0);
 
   /* Fixup p if it was relocated by mbuf_insert() above */
   if (p_backed_by_mbuf) {
@@ -14467,7 +14493,9 @@ v7_val_t v7_mk_string(struct v7 *v7, const char *p, size_t len, int copy) {
      * need to preallocate some extra space (`_V7_STRING_BUF_RESERVE`)
      */
     if ((m->len + len) > m->size) {
+      heapusage_dont_count(1);
       mbuf_resize(m, m->len + len + _V7_STRING_BUF_RESERVE);
+      heapusage_dont_count(0);
     }
     embed_string(m, m->len, p, len, EMBSTR_ZERO_TERM);
     tag = V7_TAG_STRING_O;
@@ -14486,7 +14514,9 @@ v7_val_t v7_mk_string(struct v7 *v7, const char *p, size_t len, int copy) {
       int llen = calc_llen(len);
 
       /* allocate space for len and ptr */
+      heapusage_dont_count(1);
       mbuf_insert(m, pos, NULL, llen + sizeof(p));
+      heapusage_dont_count(0);
 
       encode_varint(len, (uint8_t *) (m->buf + pos));
       memcpy(m->buf + pos + llen, &p, sizeof(p));
@@ -16789,11 +16819,13 @@ static struct gc_block *gc_new_block(struct gc_arena *a, size_t size) {
 
   heapusage_dont_count(1);
   b = (struct gc_block *) calloc(1, sizeof(*b));
+  heapusage_dont_count(0);
   if (b == NULL) abort();
 
   b->size = size;
   heapusage_dont_count(1);
   b->base = (struct gc_cell *) calloc(a->cell_size, b->size);
+  heapusage_dont_count(0);
   if (b->base == NULL) abort();
 
   for (cur = GC_CELL_OP(a, b->base, +, 0);
@@ -16812,6 +16844,7 @@ V7_PRIVATE void *gc_alloc_cell(struct v7 *v7, struct gc_arena *a) {
   maybe_gc(v7);
   heapusage_dont_count(1);
   r = (struct gc_cell *) calloc(1, a->cell_size);
+  heapusage_dont_count(0);
   mbuf_append(&v7->malloc_trace, &r, sizeof(r));
   return r;
 #else
@@ -17523,7 +17556,9 @@ void v7_gc(struct v7 *v7, int full) {
      */
     size_t trimmed_size = v7->owned_strings.len + _V7_STRING_BUF_RESERVE;
     if (trimmed_size < v7->owned_strings.size) {
+      heapusage_dont_count(1);
       mbuf_resize(&v7->owned_strings, trimmed_size);
+      heapusage_dont_count(0);
     }
   }
 #endif /* V7_DISABLE_GC */
@@ -24451,8 +24486,6 @@ static void cell_allocated(void *p, size_t size) {
         registry.allocated_size);
 #endif
   }
-
-  heap_dont_count = 0;
 }
 
 /*
