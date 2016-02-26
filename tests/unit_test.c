@@ -2250,10 +2250,14 @@ static const char *test_file(void) {
 
   v7_own(v7, &data_str);
   v7_set(v7, v7_get_global(v7), "ts", 2, data_str);
+  remove(test_file_name);
+  ASSERT_EVAL_EQ(v7, "File.exists('.')", "true"); /* A directory. */
+  ASSERT_EVAL_EQ(v7, "File.exists('ft.txt')", "false");
   ASSERT(eval(v7,
               "f = File.open('ft.txt', 'w+'); "
               " f.write(ts); f.close();",
               &v) == V7_OK);
+  ASSERT_EVAL_EQ(v7, "File.exists('ft.txt')", "true");
   ASSERT(check_file(v7, data_str, test_file_name));
   ASSERT_EQ(remove(test_file_name), 0);
   ASSERT_EVAL_EQ(v7, "File.open('\\0test.mk')", "null");
