@@ -33,14 +33,12 @@ can make contributions. Note that the CLA isn't a copyright
 _assigment_ but rather a copyright _license_.
 You retain the copyright on your contributions.
 
-## Licensing
+# Licensing
 
-V7 is released under commercial and
-[GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open
-source licenses. The GPLv2 open source License does not generally permit
-incorporating this software into non-open source programs.
-For those customers who do not wish to comply with the GPLv2 open
-source license requirements,
-[Cesanta](https://www.cesanta.com) offers a full,
-royalty-free commercial license and professional support
-without any of the GPL restrictions.
+V7 is released under commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
+
+Commercial Projects:
+Once your project becomes commercialised GPLv2 licensing dictates that you need to either open your source fully or purchase a commercial license. Cesanta offer full, royalty-free commercial licenses without any GPL restrictions. If your needs require a custom license, we’d be happy to work on a solution with you. [Contact us for pricing.] (https://www.cesanta.com/contact)
+
+Prototyping:
+While your project is still in prototyping stage and not for sale, you can use V7’s open source code without license restrictions.
