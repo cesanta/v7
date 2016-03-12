@@ -553,6 +553,13 @@ enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
 /* Delete value in array `arr` at index `index`, if it exists. */
 void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
 
+/* Stringify mode, see `v7_stringify()` and `v7_stringify_throwing()` */
+enum v7_stringify_mode {
+  V7_STRINGIFY_DEFAULT,
+  V7_STRINGIFY_JSON,
+  V7_STRINGIFY_DEBUG,
+};
+
 /*
  * Generate string representation of the JavaScript value `val` into a buffer
  * `buf`, `len`. If `len` is too small to hold a generated string,
@@ -562,7 +569,7 @@ void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
  *
  * Available stringification modes are:
  *
- * - V7_STRINGIFY_DEFAULT:
+ * - `V7_STRINGIFY_DEFAULT`:
  *   Convert JS value to string, using common JavaScript semantics:
  *   - If value is an object:
  *     - call `toString()`;
@@ -570,10 +577,10 @@ void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
  *     - If `valueOf()` returned non-primitive value, throw `TypeError`.
  *   - Now we have a primitive, and if it's not a string, then stringify it.
  *
- * - V7_STRINGIFY_JSON:
+ * - `V7_STRINGIFY_JSON`:
  *   Generate JSON output
  *
- * - V7_STRINGIFY_DEBUG:
+ * - `V7_STRINGIFY_DEBUG`:
  *   Mostly like JSON, but will not omit non-JSON objects like functions.
  *
  * Example code:
@@ -585,11 +592,6 @@ void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
  *       free(p);
  *     }
  */
-enum v7_stringify_mode {
-  V7_STRINGIFY_DEFAULT,
-  V7_STRINGIFY_JSON,
-  V7_STRINGIFY_DEBUG,
-};
 char *v7_stringify(struct v7 *v7, v7_val_t v, char *buf, size_t len,
                    enum v7_stringify_mode mode);
 
