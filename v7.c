@@ -8188,11 +8188,6 @@ static enum v7_err f_read(struct v7 *v7, int all, v7_val_t *res) {
       }
     }
 
-    /* Proactively close the file on EOF or read error */
-    if (n <= 0) {
-      fclose(fp);
-    }
-
     if (m.len > 0) {
       *res = v7_mk_string(v7, m.buf, m.len, 1);
       mbuf_free(&m);
