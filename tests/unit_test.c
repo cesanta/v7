@@ -38,7 +38,9 @@
 #ifdef V7_UNAMALGAMATED_UNIT_TEST
 #include "common/mbuf.h"
 #include "v7/src/varint.h"
-#include "v7/src/vm.h"
+#include "v7/src/core.h"
+#include "v7/src/util.h"
+#include "v7/src/function.h"
 #include "v7/src/types.h"
 #include "v7/src/string.h"
 #include "v7/src/object.h"
