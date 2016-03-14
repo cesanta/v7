@@ -1715,7 +1715,6 @@ void cr_context_free(struct cr_ctx *p_ctx);
 #include <setjmp.h>
 
 /* Public API. Implemented in api.c */
-/* Amalgamated: #include "v7/v7.h" */
 /* Amalgamated: #include "common/platform.h" */
 
 #ifdef V7_WINDOWS
@@ -1828,255 +1827,210 @@ extern void *v7_sp_limit;
 
 #endif /* V7_INTERNAL_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./common/cs_file.h"
-#endif
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-/* Amalgamated: #include "common/platform.h" */
-
-/*
- * Read whole file `path` in memory. It is responsibility of the caller
- * to `free()` allocated memory. File content is guaranteed to be
- * '\0'-terminated. File size is returned in `size` variable, which does not
- * count terminating `\0`.
- * Return: allocated memory, or NULL on error.
- */
-char *cs_read_file(const char *path, size_t *size);
-
-#ifdef CS_MMAP
-char *cs_mmap_file(const char *path, size_t *size);
-#endif
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/builtin/builtin.h"
-#endif
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-/*
- * === Non-Standard API
- *
- *   V7 has several non-standard extensions for `String.prototype` in
- *   order to give a compact and fast API to access raw data obtained from
- *   File, Socket, and hardware input/output such as I2C.
- *   V7 IO API functions return
- *   string data as a result of read operations, and that string data is a
- *   raw byte array. ECMA6 provides `ArrayBuffer` and `DataView` API for dealing
- *   with raw bytes, because strings in JavaScript are Unicode. That standard
- *   API is too bloated for the embedded use, and does not allow to use handy
- *   String API (e.g. `.match()`) against data.
- *
- *   V7 internally stores strings as byte arrays. All strings created by the
- *   String API are UTF8 encoded. Strings that are the result of
- *   input/output API calls might not be a valid UTF8 strings, but nevertheless
- *   they are represented as strings, and the following API allows to access
- *   underlying byte sequence:
- *
- * ==== String.prototype.at(position) -> number or NaN
- *      Return byte at index
- *     `position`. Byte value is in 0,255 range. If `position` is out of bounds
- *     (either negative or larger then the byte array length), NaN is returned.
- *     Example: `"ы".at(0)` returns 0xd1.
- *
- * ==== String.prototype.blen -> number
- *     Return string length in bytes.
- *     Example: `"ы".blen` returns 2. Note that `"ы".length` is 1, since that
- *     string consists of a single Unicode character (2-byte).
- *
- * === Builtin API
- *
- * Builtin API provides additional JavaScript interfaces available for V7
- * scripts.
- * File API is a wrapper around standard C calls `fopen()`, `fclose()`,
- * `fread()`, `fwrite()`, `rename()`, `remove()`.
- * Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
- * Socket API provides low-level socket API.
- *
- * ==== File.eval(file_name)
- * Parse and run `file_name`.
- * Throws an exception if the file doesn't exist, cannot be parsed or if the
- * script throws any exception.
- *
- * ==== File.open(file_name [, mode]) -> file_object or null
- * Open a file `path`. For
- * list of valid `mode` values, see `fopen()` documentation. If `mode` is
- * not specified, mode `rb` is used, i.e. file is opened in read-only mode.
- * Return an opened file object, or null on error. Example:
- * `var f = File.open('/etc/passwd'); f.close();`
- *
- * ==== file_obj.close() -> undefined
- * Close opened file object.
- * NOTE: it is user's responsibility to close all opened file streams. V7
- * does not do that automatically.
- *
- * ==== file_obj.read() -> string
- * Read portion of data from
- * an opened file stream. Return string with data, or empty string on EOF
- * or error.
- *
- * ==== file_obj.readAll() -> string
- * Same as `read()`, but keeps reading data until EOF.
- *
- * ==== file_obj.write(str) -> num_bytes_written
- * Write string `str` to the opened file object. Return number of bytes written.
- *
- * ==== File.rename(old_name, new_name) -> errno
- * Rename file `old_name` to
- * `new_name`. Return 0 on success, or `errno` value on error.
- *
- * ==== File.list(dir_name) -> array_of_names
- * Return a list of files in a given directory, or `undefined` on error.
- *
- * ==== File.remove(file_name) -> errno
- * Delete file `file_name`.
- * Return 0 on success, or `errno` value on error.
- *
- * ==== Crypto.base64_encode(str)
- * Base64-encode input string `str` and return encoded string.
- *
- * ==== Crypto.base64_decode(str)
- * Base64-decode input string `str` and return decoded string.
- *
- * ==== Crypto.md5(str), Crypto.md5_hex(str)
- * Generate MD5 hash from input string `str`. Return 16-byte hash (`md5()`),
- * or stringified hexadecimal representation of the hash (`md5_hex`).
- *
- * ==== Crypto.sha1(str), Crypto.sha1_hex(str)
- * Generate SHA1 hash from input string `str`. Return 20-byte hash (`sha1()`),
- * or stringified hexadecimal representation of the hash (`sha1_hex`).
- *
- * ==== Socket.connect(host, port [, is_udp]) -> socket_obj
- * Connect to a given host. `host` can be a string IP address, or a host name.
- * Optional `is_udp` parameter, if true, indicates that socket should be UDP.
- * Return socket object on success, null on error.
- *
- * ==== Socket.listen(port [, ip_address [,is_udp]]) -> socket_obj
- * Create a listening socket on a given port. Optional `ip_address` argument
- * specifies and IP address to bind to. Optional `is_udp` parameter, if true,
- * indicates that socket should be UDP. Return socket object on success,
- * null on error.
- *
- * ==== socket_obj.accept() -> socket_obj
- * Sleep until new incoming connection is arrived. Return accepted socket
- * object on success, or `null` on error.
- *
- * ==== socket_obj.close() -> numeric_errno
- * Close socket object. Return 0 on success, or system errno on error.
- *
- * ==== socket_obj.recv() -> string
- * Read data from socket. Return data string, or empty string if peer has
- * disconnected, or `null` on error.
- *
- * ==== socket_obj.recvAll() -> string
- * Same as `recv()`, but keeps reading data until socket is closed.
- *
- * ==== sock.send(string) -> num_bytes_sent
- * Send string to the socket. Return number of bytes sent, or 0 on error.
- * Simple HTTP client example:
- *
- *    var s = Socket.connect("google.com", 80);
- *    s.send("GET / HTTP/1.0\n\n");
- *    var reply = s.recv();
- */
-
-#ifndef BUILTIN_HEADER_DEFINED
-#define BUILTIN_HEADER_DEFINED
-
-struct v7;
-
-void init_file(struct v7 *);
-void init_socket(struct v7 *);
-void init_crypto(struct v7 *);
-void init_ubjson(struct v7 *);
-void init_ubjson(struct v7 *v7);
-
-#endif
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/core.h"
+#line 1 "./v7/src/core_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef CORE_H_INCLUDED
-#define CORE_H_INCLUDED
-
 /*
- *  Double-precision floating-point number, IEEE 754
- *
- *  64 bit (8 bytes) in total
- *  1  bit sign
- *  11 bits exponent
- *  52 bits mantissa
- *      7         6        5        4        3        2        1        0
- *  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
- *
- * If an exponent is all-1 and mantissa is all-0, then it is an INFINITY:
- *  11111111|11110000|00000000|00000000|00000000|00000000|00000000|00000000
- *
- * If an exponent is all-1 and mantissa's MSB is 1, it is a quiet NaN:
- *  11111111|11111000|00000000|00000000|00000000|00000000|00000000|00000000
- *
- *  V7 NaN-packing:
- *    sign and exponent is 0xfff
- *    4 bits specify type (tag), must be non-zero
- *    48 bits specify value
- *
- *  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
- *   NaN marker |type|  48-bit placeholder for values: pointers, strings
- *
- * On 64-bit platforms, pointers are really 48 bit only, so they can fit,
- * provided they are sign extended
+ * === Core
  */
 
+#ifndef CORE_PUBLIC_H_INCLUDED
+#define CORE_PUBLIC_H_INCLUDED
+
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
+/* Amalgamated: #include "v7/src/license.h" */
+/* Amalgamated: #include "v7/src/v7_features.h" */
+
+#include <stddef.h> /* For size_t */
+#include <stdio.h>  /* For FILE */
+
 /*
- * A tag is made of the sign bit and the 4 lower order bits of byte 6.
- * So in total we have 32 possible tags.
+ * TODO(dfrank) : improve amalgamation, so that we'll be able to include
+ * files here, and include common/platform.h
  *
- * Tag (1,0) however cannot hold a zero payload otherwise it's interpreted as an
- * INFINITY; for simplicity we're just not going to use that combination.
+ * For now, copy-pasting `WARN_UNUSED_RESULT` here
  */
-#define MAKE_TAG(s, t) \
-  ((uint64_t)(s) << 63 | (uint64_t) 0x7ff0 << 48 | (uint64_t)(t) << 48)
+#ifdef __GNUC__
+#define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
+#else
+#define WARN_UNUSED_RESULT
+#endif
 
-#define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
-#define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
-#define V7_TAG_UNDEFINED MAKE_TAG(1, 0xD)
-#define V7_TAG_BOOLEAN MAKE_TAG(1, 0xC)
-#define V7_TAG_NAN MAKE_TAG(1, 0xB)
-#define V7_TAG_STRING_I MAKE_TAG(1, 0xA)  /* Inlined string len < 5 */
-#define V7_TAG_STRING_5 MAKE_TAG(1, 0x9)  /* Inlined string len 5 */
-#define V7_TAG_STRING_O MAKE_TAG(1, 0x8)  /* Owned string */
-#define V7_TAG_STRING_F MAKE_TAG(1, 0x7)  /* Foreign string */
-#define V7_TAG_STRING_C MAKE_TAG(1, 0x6)  /* String chunk */
-#define V7_TAG_FUNCTION MAKE_TAG(1, 0x5)  /* JavaScript function */
-#define V7_TAG_CFUNCTION MAKE_TAG(1, 0x4) /* C function */
-#define V7_TAG_STRING_D MAKE_TAG(1, 0x3)  /* Dictionary string  */
-#define V7_TAG_REGEXP MAKE_TAG(1, 0x2)    /* Regex */
-#define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
-#define V7_TAG_MASK MAKE_TAG(1, 0xF)
+#define V7_VERSION "1.0"
 
-#define V7_NULL V7_TAG_FOREIGN
-#define V7_UNDEFINED V7_TAG_UNDEFINED
+#if (defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64__)) || \
+    (defined(_MSC_VER) && _MSC_VER <= 1200)
+#define V7_WINDOWS
+#endif
 
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
+#ifdef V7_WINDOWS
+typedef unsigned __int64 uint64_t;
+#else
+#include <inttypes.h>
+#endif
+typedef uint64_t v7_val_t;
+
+/* Opaque structure. V7 engine context. */
+struct v7;
+
+enum v7_err {
+  V7_OK,
+  V7_SYNTAX_ERROR,
+  V7_EXEC_EXCEPTION,
+  V7_STACK_OVERFLOW,
+  V7_AST_TOO_LARGE,
+  V7_INVALID_ARG,
+  V7_INTERNAL_ERROR,
+};
+
+/* JavaScript -> C call interface */
+WARN_UNUSED_RESULT
+typedef enum v7_err(v7_cfunction_t)(struct v7 *v7, v7_val_t *res);
+
+/* Create V7 instance */
+struct v7 *v7_create(void);
 
 /*
- * At the moment, all core functions are public, and are declared in `v7.h`
+ * Customizations of initial V7 state; used by `v7_create_opt()`.
  */
+struct v7_create_opts {
+  size_t object_arena_size;
+  size_t function_arena_size;
+  size_t property_arena_size;
+#ifdef V7_STACK_SIZE
+  void *c_stack_base;
+#endif
+#ifdef V7_FREEZE
+  /* if not NULL, dump JS heap after init */
+  char *freeze_file;
+#endif
+};
 
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
+/*
+ * Like `v7_create()`, but allows to customize initial v7 state, see `struct
+ * v7_create_opts`.
+ */
+struct v7 *v7_create_opt(struct v7_create_opts opts);
 
-#endif /* CORE_H_INCLUDED */
+/* Destroy V7 instance */
+void v7_destroy(struct v7 *v7);
+
+/* Return root level (`global`) object of the given V7 instance. */
+v7_val_t v7_get_global(struct v7 *v);
+
+/* Return current `this` object. */
+v7_val_t v7_get_this(struct v7 *v);
+
+/* Return current `arguments` array */
+v7_val_t v7_get_arguments(struct v7 *v);
+
+/* Return i-th argument */
+v7_val_t v7_arg(struct v7 *v, unsigned long i);
+
+/* Return the length of `arguments` */
+unsigned long v7_argc(struct v7 *v7);
+
+/*
+ * Tells the GC about a JS value variable/field owned
+ * by C code.
+ *
+ * User C code should own v7_val_t variables
+ * if the value's lifetime crosses any invocation
+ * to the v7 runtime that creates new objects or new
+ * properties and thus can potentially trigger GC.
+ *
+ * The registration of the variable prevents the GC from mistakenly treat
+ * the object as garbage. The GC might be triggered potentially
+ * allows the GC to update pointers
+ *
+ * User code should also explicitly disown the variables with v7_disown once
+ * it goes out of scope or the structure containing the v7_val_t field is freed.
+ *
+ * Example:
+ *
+ *  ```
+ *    struct v7_val cb;
+ *    v7_own(v7, &cb);
+ *    cb = v7_array_get(v7, args, 0);
+ *    // do something with cb
+ *    v7_disown(v7, &cb);
+ *  ```
+ */
+void v7_own(struct v7 *v7, v7_val_t *v);
+
+/*
+ * Returns 1 if value is found, 0 otherwise
+ */
+int v7_disown(struct v7 *v7, v7_val_t *v);
+
+/*
+ * Enable or disable GC.
+ *
+ * Must be called before invoking v7_exec or v7_apply
+ * from within a cfunction unless you know what you're doing.
+ *
+ * GC is disabled during execution of cfunctions in order to simplify
+ * memory management of simple cfunctions.
+ * However executing even small snippets of JS code causes a lot of memory
+ * pressure. Enabling GC solves that but forces you to take care of the
+ * reachability of your temporary V7 v7_val_t variables, as the GC needs
+ * to know where they are since objects and strings can be either reclaimed
+ * or relocated during a GC pass.
+ */
+void v7_set_gc_enabled(struct v7 *v7, int enabled);
+
+/*
+ * Set an optional C stack limit.
+ *
+ * It sets a flag that will cause the interpreter
+ * to throw an InterruptedError.
+ * It's safe to call it from signal handlers and ISRs
+ * on single threaded environments.
+ */
+void v7_interrupt(struct v7 *v7);
+
+/* Returns last parser error message. TODO: rename it to `v7_get_error()` */
+const char *v7_get_parser_error(struct v7 *v7);
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+/*
+ * Available if only `V7_ENABLE_STACK_TRACKING` is defined.
+ *
+ * Stack metric id. See `v7_stack_stat()`
+ */
+enum v7_stack_stat_what {
+  /* max stack size consumed by `i_exec()` */
+  V7_STACK_STAT_EXEC,
+  /* max stack size consumed by `parse()` (which is called from `i_exec()`) */
+  V7_STACK_STAT_PARSER,
+
+  V7_STACK_STATS_CNT
+};
+
+/*
+ * Available if only `V7_ENABLE_STACK_TRACKING` is defined.
+ *
+ * Returns stack metric specified by the metric id `what`. See
+ * `v7_stack_stat_clean()`
+ */
+int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what);
+
+/*
+ * Available if only `V7_ENABLE_STACK_TRACKING` is defined.
+ *
+ * Clean all stack statistics gathered so far. See `v7_stack_stat()`
+ */
+void v7_stack_stat_clean(struct v7 *v7);
+#endif
+
+#endif /* CORE_PUBLIC_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/std_error.h"
 #endif
@@ -2180,6 +2134,7 @@ struct gc_arena {
 #define V7_PARSER_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core_public.h" */
 
 struct v7;
 struct ast;
@@ -2209,6 +2164,180 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *ast, const char *, int,
 #endif /* __cplusplus */
 
 #endif /* V7_PARSER_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/object_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Objects
+ */
+
+#ifndef V7_OBJECT_PUBLIC_H_INCLUDED
+#define V7_OBJECT_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Property attributes bitmask
+ */
+typedef unsigned short v7_prop_attr_t;
+#define V7_PROPERTY_NON_WRITABLE (1 << 0)
+#define V7_PROPERTY_NON_ENUMERABLE (1 << 1)
+#define V7_PROPERTY_NON_CONFIGURABLE (1 << 2)
+#define V7_PROPERTY_GETTER (1 << 3)
+#define V7_PROPERTY_SETTER (1 << 4)
+#define _V7_PROPERTY_HIDDEN (1 << 5)
+/* property not managed by V7 HEAP */
+#define _V7_PROPERTY_OFF_HEAP (1 << 6)
+/*
+ * not a property attribute, but a flag for `v7_def()`. It's here in order to
+ * keep all offsets in one place
+ */
+#define _V7_DESC_PRESERVE_VALUE (1 << 7)
+
+/*
+ * Internal helpers for `V7_DESC_...` macros
+ */
+#define _V7_DESC_SHIFT 16
+#define _V7_DESC_MASK ((1 << _V7_DESC_SHIFT) - 1)
+#define _V7_MK_DESC(v, n) \
+  (((v7_prop_attr_desc_t)(n)) << _V7_DESC_SHIFT | ((v) ? (n) : 0))
+#define _V7_MK_DESC_INV(v, n) _V7_MK_DESC(!(v), (n))
+
+/*
+ * Property attribute descriptors that may be given to `v7_def()`: for each
+ * attribute (`v7_prop_attr_t`), there is a corresponding macro, which takes
+ * param: either 1 (set attribute) or 0 (clear attribute). If some particular
+ * attribute isn't mentioned at all, it's left unchanged (or default, if the
+ * property is being created)
+ *
+ * There is additional flag: `V7_DESC_PRESERVE_VALUE`. If it is set, the
+ * property value isn't changed (or set to `undefined` if the property is being
+ * created)
+ */
+typedef unsigned long v7_prop_attr_desc_t;
+#define V7_DESC_WRITABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_WRITABLE)
+#define V7_DESC_ENUMERABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_ENUMERABLE)
+#define V7_DESC_CONFIGURABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_CONFIGURABLE)
+#define V7_DESC_GETTER(v) _V7_MK_DESC(v, V7_PROPERTY_GETTER)
+#define V7_DESC_SETTER(v) _V7_MK_DESC(v, V7_PROPERTY_SETTER)
+#define V7_DESC_PRESERVE_VALUE _V7_DESC_PRESERVE_VALUE
+
+#define _V7_DESC_HIDDEN(v) _V7_MK_DESC(v, _V7_PROPERTY_HIDDEN)
+#define _V7_DESC_OFF_HEAP(v) _V7_MK_DESC(v, _V7_PROPERTY_OFF_HEAP)
+
+/* Make an empty object */
+v7_val_t v7_mk_object(struct v7 *v7);
+
+/*
+ * Returns true if the given value is an object or function.
+ * i.e. it returns true if the value holds properties and can be
+ * used as argument to `v7_get`, `v7_set` and `v7_def`.
+ */
+int v7_is_object(v7_val_t v);
+
+/* Set object's prototype. Return old prototype or undefined on error. */
+v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto);
+
+/*
+ * Lookup property `name` in object `obj`. If `obj` holds no such property,
+ * an `undefined` value is returned.
+ *
+ * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
+ * `strlen(name)` is used.
+ */
+v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
+
+/*
+ * Like `v7_get()`, but "returns" value through `res` pointer argument.
+ * `res` must not be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_get_throwing(struct v7 *v7, v7_val_t obj, const char *name,
+                            size_t name_len, v7_val_t *res);
+
+/*
+ * Define object property, similar to JavaScript `Object.defineProperty()`.
+ *
+ * `name`, `name_len` specify property name, `val` is a property value.
+ * `attrs_desc` is a set of flags which can affect property's attributes,
+ * see comment of `v7_prop_attr_desc_t` for details.
+ *
+ * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
+ * `strlen(name)` is used.
+ *
+ * Returns non-zero on success, 0 on error (e.g. out of memory).
+ *
+ * See also `v7_set()`.
+ */
+int v7_def(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
+           v7_prop_attr_desc_t attrs_desc, v7_val_t v);
+
+/*
+ * Set object property. Behaves just like JavaScript assignment.
+ *
+ * See also `v7_def()`.
+ */
+int v7_set(struct v7 *v7, v7_val_t obj, const char *name, size_t len,
+           v7_val_t val);
+
+/*
+ * A helper function to define object's method backed by a C function `func`.
+ * `name` must be NUL-terminated.
+ *
+ * Return value is the same as for `v7_set()`.
+ */
+int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
+                  v7_cfunction_t *func);
+
+/*
+ * Delete own property `name` of the object `obj`. Does not follow the
+ * prototype chain.
+ *
+ * If `name_len` is ~0, `name` is assumed to be NUL-terminated and
+ * `strlen(name)` is used.
+ *
+ * Returns 0 on success, -1 on error.
+ */
+int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
+
+/*
+ * Iterate over the `obj`'s properties.
+ *
+ * Usage example:
+ *
+ *     void *h = NULL;
+ *     v7_val_t name, val;
+ *     unsigned int attrs;
+ *     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
+ *       ...
+ *     }
+ */
+void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
+                   v7_prop_attr_t *attrs);
+
+/* Returns true if the object is an instance of a given constructor. */
+int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
+
+/* Returns true if the object is an instance of a given constructor. */
+int v7_is_instanceof_v(struct v7 *v7, v7_val_t o, v7_val_t c);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_OBJECT_PUBLIC_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/tokenizer.h"
 #endif
@@ -2351,21 +2480,28 @@ V7_PRIVATE int is_reserved_word_token(enum v7_tok tok);
 
 #endif /* V7_TOKENIZER_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/types.h"
+#line 1 "./v7/src/core.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef V7_TYPES_H_INCLUDED
-#define V7_TYPES_H_INCLUDED
+#ifndef CORE_H_INCLUDED
+#define CORE_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
 
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
 /* Amalgamated: #include "v7/src/mm.h" */
 /* Amalgamated: #include "v7/src/parser.h" */
+/* Amalgamated: #include "v7/src/object_public.h" */
 /* Amalgamated: #include "v7/src/tokenizer.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
 
 typedef uint64_t val_t;
 
@@ -2387,6 +2523,73 @@ typedef unsigned char entity_id_part_t;
 #define V7_ENTITY_ID_PART_NONE 0xa5
 
 #endif
+
+/*
+ *  Double-precision floating-point number, IEEE 754
+ *
+ *  64 bit (8 bytes) in total
+ *  1  bit sign
+ *  11 bits exponent
+ *  52 bits mantissa
+ *      7         6        5        4        3        2        1        0
+ *  seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
+ *
+ * If an exponent is all-1 and mantissa is all-0, then it is an INFINITY:
+ *  11111111|11110000|00000000|00000000|00000000|00000000|00000000|00000000
+ *
+ * If an exponent is all-1 and mantissa's MSB is 1, it is a quiet NaN:
+ *  11111111|11111000|00000000|00000000|00000000|00000000|00000000|00000000
+ *
+ *  V7 NaN-packing:
+ *    sign and exponent is 0xfff
+ *    4 bits specify type (tag), must be non-zero
+ *    48 bits specify value
+ *
+ *  11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv
+ *   NaN marker |type|  48-bit placeholder for values: pointers, strings
+ *
+ * On 64-bit platforms, pointers are really 48 bit only, so they can fit,
+ * provided they are sign extended
+ */
+
+/*
+ * A tag is made of the sign bit and the 4 lower order bits of byte 6.
+ * So in total we have 32 possible tags.
+ *
+ * Tag (1,0) however cannot hold a zero payload otherwise it's interpreted as an
+ * INFINITY; for simplicity we're just not going to use that combination.
+ */
+#define MAKE_TAG(s, t) \
+  ((uint64_t)(s) << 63 | (uint64_t) 0x7ff0 << 48 | (uint64_t)(t) << 48)
+
+#define V7_TAG_OBJECT MAKE_TAG(1, 0xF)
+#define V7_TAG_FOREIGN MAKE_TAG(1, 0xE)
+#define V7_TAG_UNDEFINED MAKE_TAG(1, 0xD)
+#define V7_TAG_BOOLEAN MAKE_TAG(1, 0xC)
+#define V7_TAG_NAN MAKE_TAG(1, 0xB)
+#define V7_TAG_STRING_I MAKE_TAG(1, 0xA)  /* Inlined string len < 5 */
+#define V7_TAG_STRING_5 MAKE_TAG(1, 0x9)  /* Inlined string len 5 */
+#define V7_TAG_STRING_O MAKE_TAG(1, 0x8)  /* Owned string */
+#define V7_TAG_STRING_F MAKE_TAG(1, 0x7)  /* Foreign string */
+#define V7_TAG_STRING_C MAKE_TAG(1, 0x6)  /* String chunk */
+#define V7_TAG_FUNCTION MAKE_TAG(1, 0x5)  /* JavaScript function */
+#define V7_TAG_CFUNCTION MAKE_TAG(1, 0x4) /* C function */
+#define V7_TAG_STRING_D MAKE_TAG(1, 0x3)  /* Dictionary string  */
+#define V7_TAG_REGEXP MAKE_TAG(1, 0x2)    /* Regex */
+#define V7_TAG_NOVALUE MAKE_TAG(1, 0x1)   /* Sentinel for no value */
+#define V7_TAG_MASK MAKE_TAG(1, 0xF)
+
+#define V7_NULL V7_TAG_FOREIGN
+#define V7_UNDEFINED V7_TAG_UNDEFINED
+
+/*
+ * Object attributes bitmask
+ */
+typedef unsigned char v7_obj_attr_t;
+#define V7_OBJ_NOT_EXTENSIBLE (1 << 0) /* TODO(lsm): store this in LSB */
+#define V7_OBJ_DENSE_ARRAY (1 << 1)    /* TODO(mkm): store in some tag */
+#define V7_OBJ_FUNCTION (1 << 2)       /* function object */
+#define V7_OBJ_OFF_HEAP (1 << 3)       /* object not managed by V7 HEAP */
 
 /*
  * JavaScript value is either a primitive, or an object.
@@ -2742,7 +2945,423 @@ struct v7_vec_const {
 #define V7_VEC(str) \
   { (str), sizeof(str) - 1 }
 
-#endif /* V7_TYPES_H_INCLUDED */
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* CORE_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/primitive_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Primitives
+ *
+ * All primitive values but strings.
+ *
+ * "foreign" values are also here, see `v7_mk_foreign()`.
+ */
+
+#ifndef V7_PRIMITIVE_PUBLIC_H_INCLUDED
+#define V7_PRIMITIVE_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/* Make numeric primitive value */
+v7_val_t v7_mk_number(double num);
+
+/*
+ * Returns `double` value stored in `v7_val_t`.
+ *
+ * Returns NaN for non-numbers.
+ */
+double v7_to_number(v7_val_t v);
+
+/* Returns true if given value is a primitive number value */
+int v7_is_number(v7_val_t v);
+
+/* Make boolean primitive value (either `true` or `false`) */
+v7_val_t v7_mk_boolean(int is_true);
+
+/*
+ * Returns boolean stored in `v7_val_t`:
+ *  0 for `false` or non-boolean, non-0 for `true`
+ */
+int v7_to_boolean(v7_val_t v);
+
+/* Returns true if given value is a primitive boolean value */
+int v7_is_boolean(v7_val_t v);
+
+/* Make `null` primitive value */
+v7_val_t v7_mk_null(void);
+
+/* Returns true if given value is a primitive `null` value */
+int v7_is_null(v7_val_t v);
+
+/* Make `undefined` primitive value */
+v7_val_t v7_mk_undefined(void);
+
+/* Returns true if given value is a primitive `undefined` value */
+int v7_is_undefined(v7_val_t v);
+
+/*
+ * Make JavaScript value that holds C/C++ `void *` pointer.
+ *
+ * A foreign value is completely opaque and JS code cannot do anything useful
+ * with it except holding it in properties and passing it around.
+ * It behaves like a sealed object with no properties.
+ *
+ * NOTE:
+ * Only valid pointers (as defined by each supported architecture) will fully
+ * preserved. In particular, all supported 64-bit architectures (x86_64, ARM-64)
+ * actually define a 48-bit virtual address space.
+ * Foreign values will be sign-extended as required, i.e creating a foreign
+ * value of something like `(void *) -1` will work as expected. This is
+ * important because in some 64-bit OSs (e.g. Solaris) the user stack grows
+ * downwards from the end of the address space.
+ *
+ * If you need to store exactly sizeof(void*) bytes of raw data where
+ * `sizeof(void*)` >= 8, please use byte arrays instead.
+ */
+v7_val_t v7_mk_foreign(void *ptr);
+
+/*
+ * Returns `void *` pointer stored in `v7_val_t`.
+ *
+ * Returns NULL if the value is not a foreign pointer.
+ */
+void *v7_to_foreign(v7_val_t v);
+
+/* Returns true if given value holds `void *` pointer */
+int v7_is_foreign(v7_val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_PRIMITIVE_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/primitive.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef PRIMITIVE_H_INCLUDED
+#define PRIMITIVE_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/primitive_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
+
+/* Returns true if given value is a number, not NaN and not Infinity. */
+V7_PRIVATE int is_finite(v7_val_t v);
+
+V7_PRIVATE val_t pointer_to_value(void *p);
+V7_PRIVATE void *v7_to_pointer(val_t v);
+
+#endif /* PRIMITIVE_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/string_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Strings
+ */
+
+#ifndef V7_STRING_PUBLIC_H_INCLUDED
+#define V7_STRING_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Creates a string primitive value.
+ * `str` must point to the utf8 string of length `len`.
+ * If `len` is ~0, `str` is assumed to be NUL-terminated and `strlen(str)` is
+ * used.
+ *
+ * If `copy` is non-zero, the string data is copied and owned by the GC. The
+ * caller can free the string data afterwards. Otherwise (`copy` is zero), the
+ * caller owns the string data, and is responsible for not freeing it while it
+ * is used.
+ */
+v7_val_t v7_mk_string(struct v7 *v7, const char *str, size_t len, int copy);
+
+/* Returns true if given value is a primitive string value */
+int v7_is_string(v7_val_t v);
+
+/*
+ * Returns a pointer to the string stored in `v7_val_t`.
+ *
+ * String length returned in `len`.
+ *
+ * JS strings can contain embedded NUL chars and may or may not be NUL
+ * terminated.
+ *
+ * CAUTION: creating new JavaScript object, array, or string may kick in a
+ * garbage collector, which in turn may relocate string data and invalidate
+ * pointer returned by `v7_get_string_data()`.
+ *
+ * Short JS strings are embedded inside the `v7_val_t` value itself. This is why
+ * a pointer to a `v7_val_t` is required. It also means that the string data
+ * will become invalid once that `v7_val_t` value goes out of scope.
+ */
+const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
+
+/*
+ * Returns a pointer to the string stored in `v7_val_t`.
+ *
+ * Returns NULL if the value is not a string or if the string is not compatible
+ * with a C string.
+ *
+ * C compatible strings contain exactly one NUL char, in terminal position.
+ *
+ * All strings owned by the V7 engine (see v7_mk_string) are guaranteed to
+ * be NUL terminated.
+ * Out of these, those that don't include embedded NUL chars are guaranteed to
+ * be C compatible.
+ */
+const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_STRING_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/string.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_STRING_H_INCLUDED
+#define V7_STRING_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/string_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
+
+/*
+ * Size of the extra space for strings mbuf that is needed to avoid frequent
+ * reallocations
+ */
+#define _V7_STRING_BUF_RESERVE 500
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
+                                       double *res);
+V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
+V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
+
+/*
+ * Convert a C string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err str_to_ulong(struct v7 *v7, val_t v, int *ok,
+                                    unsigned long *res);
+
+/*
+ * Convert a V7 string to to an unsigned integer.
+ * `ok` will be set to true if the string conforms to
+ * an unsigned long.
+ *
+ * Use it if only you need strong conformity of the value to an integer;
+ * otherwise, use `to_long()` or `to_number_v()` instead.
+ */
+V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok);
+
+enum embstr_flags {
+  EMBSTR_ZERO_TERM = (1 << 0),
+  EMBSTR_UNESCAPE = (1 << 1),
+};
+
+V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
+                             size_t len, uint8_t /*enum embstr_flags*/ flags);
+
+V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_STRING_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/exceptions_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Exceptions
+ */
+
+#ifndef V7_EXCEPTIONS_PUBLIC_H_INCLUDED
+#define V7_EXCEPTIONS_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/* Throw an exception with an already existing value. */
+WARN_UNUSED_RESULT
+enum v7_err v7_throw(struct v7 *v7, v7_val_t v);
+
+/*
+ * Throw an exception with given formatted message.
+ *
+ * Pass "Error" as typ for a generic error.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_throwf(struct v7 *v7, const char *typ, const char *err_fmt, ...);
+
+/*
+ * Rethrow the currently thrown object. In fact, it just returns
+ * V7_EXEC_EXCEPTION.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_rethrow(struct v7 *v7);
+
+/*
+ * Returns the value that is being thrown at the moment, or `undefined` if
+ * nothing is being thrown. If `is_thrown` is not `NULL`, it will be set
+ * to either 0 or 1, depending on whether something is thrown at the moment.
+ */
+v7_val_t v7_get_thrown_value(struct v7 *v7, unsigned char *is_thrown);
+
+/* Clears currently thrown value, if any. */
+void v7_clear_thrown_value(struct v7 *v7);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_EXCEPTIONS_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/exceptions.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef EXCEPTIONS_H_INCLUDED
+#define EXCEPTIONS_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/exceptions_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
+
+/*
+ * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
+ * "throws" an error with `V7_THROW()`
+ */
+#define V7_TRY2(call, clean_label)           \
+  do {                                       \
+    enum v7_err _e = call;                   \
+    V7_CHECK2(_e == V7_OK, _e, clean_label); \
+  } while (0)
+
+/*
+ * Sets return value to the provided one, and `goto`s `clean`.
+ *
+ * For this to work, you should have local `enum v7_err rcode` variable,
+ * and a `clean` label.
+ */
+#define V7_THROW2(err_code, clean_label)                              \
+  do {                                                                \
+    (void) v7;                                                        \
+    rcode = (err_code);                                               \
+    assert(rcode != V7_OK);                                           \
+    assert(!v7_is_undefined(v7->vals.thrown_error) && v7->is_thrown); \
+    goto clean_label;                                                 \
+  } while (0)
+
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * provided `err_code` (see `V7_THROW()`)
+ */
+#define V7_CHECK2(cond, err_code, clean_label) \
+  do {                                         \
+    if (!(cond)) {                             \
+      V7_THROW2(err_code, clean_label);        \
+    }                                          \
+  } while (0)
+
+/*
+ * Checks provided condition `cond`, and if it's false, then "throws"
+ * internal error
+ *
+ * TODO(dfrank): it would be good to have formatted string: then, we can
+ * specify file and line.
+ */
+#define V7_CHECK_INTERNAL2(cond, clean_label)                       \
+  do {                                                              \
+    if (!(cond)) {                                                  \
+      enum v7_err rcode = v7_throwf(v7, "Error", "Internal error"); \
+      (void) rcode;                                                 \
+      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                    \
+    }                                                               \
+  } while (0)
+
+/*
+ * Shortcuts for the macros above, but they assume the clean label `clean`.
+ */
+
+#define V7_TRY(call) V7_TRY2(call, clean)
+#define V7_THROW(err_code) V7_THROW2(err_code, clean)
+#define V7_CHECK(cond, err_code) V7_CHECK2(cond, err_code, clean)
+#define V7_CHECK_INTERNAL(cond) V7_CHECK_INTERNAL2(cond, clean)
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * At the moment, most of the exception-related functions are public, and are
+ * declared in `exceptions_public.h`
+ */
+
+/*
+ * Create an instance of the exception with type `typ` (see `TYPE_ERROR`,
+ * `SYNTAX_ERROR`, etc), and message `msg`.
+ */
+V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
+                                        const char *msg, val_t *res);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* EXCEPTIONS_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/object.h"
 #endif
@@ -2754,8 +3373,10 @@ struct v7_vec_const {
 #ifndef OBJECT_H_INCLUDED
 #define OBJECT_H_INCLUDED
 
+/* Amalgamated: #include "v7/src/object_public.h" */
+
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 V7_PRIVATE val_t mk_object(struct v7 *v7, val_t prototype);
 V7_PRIVATE val_t v7_object_to_value(struct v7_object *o);
@@ -2890,6 +3511,928 @@ V7_PRIVATE int is_prototype_of(struct v7 *v7, val_t o, val_t p);
 
 #endif /* OBJECT_H_INCLUDED */
 #ifdef V7_MODULE_LINES
+#line 1 "./v7/src/exec_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Execution of JavaScript code
+ */
+
+#ifndef V7_EXEC_PUBLIC_H_INCLUDED
+#define V7_EXEC_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+/*
+ * Execute JavaScript `js_code`. The result of evaluation is stored in
+ * the `result` variable.
+ *
+ * Return:
+ *
+ *  - V7_OK on success. `result` contains the result of execution.
+ *  - V7_SYNTAX_ERROR if `js_code` in not a valid code. `result` is undefined.
+ *  - V7_EXEC_EXCEPTION if `js_code` threw an exception. `result` stores
+ *    an exception object.
+ *  - V7_AST_TOO_LARGE if `js_code` contains an AST segment longer than 16 bit.
+ *    `result` is undefined. To avoid this error, build V7 with V7_LARGE_AST.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *result);
+
+/*
+ * Same as `v7_exec()`, but loads source code from `path` file.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_exec_file(struct v7 *v7, const char *path, v7_val_t *result);
+
+/*
+ * Same as `v7_exec()`, but passes `this_obj` as `this` to the execution
+ * context.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_exec_with(struct v7 *v7, const char *js_code, v7_val_t this_obj,
+                         v7_val_t *result);
+
+/*
+ * Parse `str` and store corresponding JavaScript object in `res` variable.
+ * String `str` should be '\0'-terminated.
+ * Return value and semantic is the same as for `v7_exec()`.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res);
+
+/*
+ * Same as `v7_parse_json()`, but loads JSON string from `path`.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_parse_json_file(struct v7 *v7, const char *path, v7_val_t *res);
+
+/*
+ * Compile JavaScript code `js_code` into the byte code and write generated
+ * byte code into opened file stream `fp`. If `generate_binary_output` is 0,
+ * then generated byte code is in human-readable text format. Otherwise, it is
+ * in the binary format, suitable for execution by V7 instance.
+ * NOTE: `fp` must be a valid, opened, writable file stream.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_compile(const char *js_code, int generate_binary_output,
+                       int use_bcode, FILE *fp);
+
+/*
+ * Call function `func` with arguments `args`, using `this_obj` as `this`.
+ * `args` should be an array containing arguments or `undefined`.
+ *
+ * `res` can be `NULL` if return value is not required.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
+                     v7_val_t args, v7_val_t *res);
+
+#endif /* V7_EXEC_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/exec.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_EXEC_H_INCLUDED
+#define V7_EXEC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/exec_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * At the moment, all exec-related functions are public, and are declared in
+ * `exec_public.h`
+ */
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_EXEC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/array_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Arrays
+ */
+
+#ifndef V7_ARRAY_PUBLIC_H_INLUCDED
+#define V7_ARRAY_PUBLIC_H_INLUCDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/* Make an empty array object */
+v7_val_t v7_mk_array(struct v7 *v7);
+
+/* Returns true if given value is an array object */
+int v7_is_array(struct v7 *v7, v7_val_t v);
+
+/* Returns length on an array. If `arr` is not an array, 0 is returned. */
+unsigned long v7_array_length(struct v7 *v7, v7_val_t arr);
+
+/* Insert value `v` in array `arr` at the end of the array. */
+int v7_array_push(struct v7 *, v7_val_t arr, v7_val_t v);
+
+/*
+ * Like `v7_array_push()`, but "returns" value through the `res` pointer
+ * argument. `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
+                                   int *res);
+
+/*
+ * Return array member at index `index`. If `index` is out of bounds, undefined
+ * is returned.
+ */
+v7_val_t v7_array_get(struct v7 *, v7_val_t arr, unsigned long index);
+
+/* Insert value `v` into `arr` at index `index`. */
+int v7_array_set(struct v7 *v7, v7_val_t arr, unsigned long index, v7_val_t v);
+
+/*
+ * Like `v7_array_set()`, but "returns" value through the `res` pointer
+ * argument. `res` is allowed to be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
+                                  unsigned long index, v7_val_t v, int *res);
+
+/* Delete value in array `arr` at index `index`, if it exists. */
+void v7_array_del(struct v7 *v7, v7_val_t arr, unsigned long index);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ARRAY_PUBLIC_H_INLUCDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/array.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_ARRAY_H_INCLUDED
+#define V7_ARRAY_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/array_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE v7_val_t v7_mk_dense_array(struct v7 *v7);
+V7_PRIVATE val_t
+v7_array_get2(struct v7 *v7, v7_val_t arr, unsigned long index, int *has);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_ARRAY_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./common/cs_file.h"
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/* Amalgamated: #include "common/platform.h" */
+
+/*
+ * Read whole file `path` in memory. It is responsibility of the caller
+ * to `free()` allocated memory. File content is guaranteed to be
+ * '\0'-terminated. File size is returned in `size` variable, which does not
+ * count terminating `\0`.
+ * Return: allocated memory, or NULL on error.
+ */
+char *cs_read_file(const char *path, size_t *size);
+
+#ifdef CS_MMAP
+char *cs_mmap_file(const char *path, size_t *size);
+#endif
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/conversion_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Conversion
+ */
+
+#ifndef V7_CONVERSION_PUBLIC_H_INCLUDED
+#define V7_CONVERSION_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/* Stringify mode, see `v7_stringify()` and `v7_stringify_throwing()` */
+enum v7_stringify_mode {
+  V7_STRINGIFY_DEFAULT,
+  V7_STRINGIFY_JSON,
+  V7_STRINGIFY_DEBUG,
+};
+
+/*
+ * Generate string representation of the JavaScript value `val` into a buffer
+ * `buf`, `len`. If `len` is too small to hold a generated string,
+ * `v7_stringify()` allocates required memory. In that case, it is caller's
+ * responsibility to free the allocated buffer. Generated string is guaranteed
+ * to be 0-terminated.
+ *
+ * Available stringification modes are:
+ *
+ * - `V7_STRINGIFY_DEFAULT`:
+ *   Convert JS value to string, using common JavaScript semantics:
+ *   - If value is an object:
+ *     - call `toString()`;
+ *     - If `toString()` returned non-primitive value, call `valueOf()`;
+ *     - If `valueOf()` returned non-primitive value, throw `TypeError`.
+ *   - Now we have a primitive, and if it's not a string, then stringify it.
+ *
+ * - `V7_STRINGIFY_JSON`:
+ *   Generate JSON output
+ *
+ * - `V7_STRINGIFY_DEBUG`:
+ *   Mostly like JSON, but will not omit non-JSON objects like functions.
+ *
+ * Example code:
+ *
+ *     char buf[100], *p;
+ *     p = v7_stringify(v7, obj, buf, sizeof(buf), V7_STRINGIFY_DEFAULT);
+ *     printf("JSON string: [%s]\n", p);
+ *     if (p != buf) {
+ *       free(p);
+ *     }
+ */
+char *v7_stringify(struct v7 *v7, v7_val_t v, char *buf, size_t len,
+                   enum v7_stringify_mode mode);
+
+/*
+ * Like `v7_stringify()`, but "returns" value through the `res` pointer
+ * argument. `res` must not be `NULL`.
+ *
+ * Caller should check the error code returned, and if it's something other
+ * than `V7_OK`, perform cleanup and return this code further.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
+                                  size_t size, enum v7_stringify_mode mode,
+                                  char **res);
+
+/*
+ * A shortcut for `v7_stringify()` with `V7_STRINGIFY_JSON`
+ */
+#define v7_to_json(a, b, c, d) v7_stringify(a, b, c, d, V7_STRINGIFY_JSON)
+
+/* Returns true if given value evaluates to true, as in `if (v)` statement. */
+int v7_is_truthy(struct v7 *v7, v7_val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_CONVERSION_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/conversion.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CONVERSION_H_INCLUDED
+#define CONVERSION_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/conversion_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Conversion API
+ * ==============
+ *
+ * - If you need to convert any JS value to string using common JavaScript
+ *   semantics, use `to_string()`, which can convert to both `v7_val_t` or your
+ *   C buffer.
+ *
+ * - If you need to convert any JS value to number using common JavaScript
+ *   semantics, use `to_number_v()`;
+ *
+ * - If you need to convert any JS value to primitive, without forcing it to
+ *   string or number, use `to_primitive()` (see comments for this function for
+ *   details);
+ *
+ * - If you have a primitive value, and you want to convert it to either string
+ *   or number, you can still use functions above: `to_string()` and
+ *   `to_number_v()`. But if you want to save a bit of work, use:
+ *   - `primitive_to_str()`
+ *   - `primitive_to_number()`
+ *
+ *   In fact, these are a bit lower level functions, which are used by
+ *   `to_string()` and `to_number_v()` after converting value to
+ *   primitive.
+ *
+ * - If you want to call `valueOf()` on the object, use `obj_value_of()`;
+ * - If you want to call `toString()` on the object, use `obj_to_string()`;
+ *
+ * - If you need to convert any JS value to boolean using common JavaScript
+ *   semantics (as in the expression `if (v)` or `Boolean(v)`), use
+ *   `to_boolean_v()`.
+ *
+ * - If you want to get the JSON representation of a value, use
+ *   `to_json_or_debug()`, passing `0` as `is_debug` : writes data to your C
+ *   buffer;
+ *
+ * - There is one more kind of representation: `DEBUG`. It's very similar to
+ *   JSON, but it will not omit non-JSON values, such as functions. Again, use
+ *   `to_json_or_debug()`, but pass `1` as `is_debug` this time: writes data to
+ *   your C buffer;
+ *
+ * Additionally, for any kind of to-string conversion into C buffer, you can
+ * use a convenience wrapper function (mostly for public API), which can
+ * allocate the buffer for you:
+ *
+ *   - `v7_stringify_throwing()`;
+ *   - `v7_stringify()` : the same as above, but doesn't throw.
+ *
+ * There are a couple of more specific conversions, which I'd like to probably
+ * refactor or remove in the future:
+ *
+ * - `to_long()` : if given value is `undefined`, returns provided default
+ *   value; otherwise, converts value to number, and then truncates to `long`.
+ * - `str_to_ulong()` : converts the value to string, and tries to parse it as
+ *   an integer. Use it if only you need strong conformity ov the value to an
+ *   integer (currently, it's used only when examining keys of array object)
+ *
+ * ----------------------------------------------------------------------------
+ *
+ * TODO(dfrank):
+ *   - Rename functions like `v7_to_number()`, `v7_to_object()` to something
+ *     that will clearly identify that they convert to some C entity, not
+ *     `v7_val_t`
+ *   - Maybe make `to_string()` private? But then, there will be no way
+ *     in public API to convert value to `v7_val_t` string, so, for now
+ *     it's here.
+ *   - When we agree on what goes to public API, and what does not, write
+ *     similar conversion guide for public API (in `conversion_public.h`)
+ */
+
+/*
+ * Convert any JS value to number, using common JavaScript semantics:
+ *
+ * - If value is an object:
+ *   - call `valueOf()`;
+ *   - If `valueOf()` returned non-primitive value, call `toString()`;
+ *   - If `toString()` returned non-primitive value, throw `TypeError`.
+ * - Now we have a primitive, and if it's not a number, then:
+ *   - If `undefined`, return `NaN`
+ *   - If `null`, return 0.0
+ *   - If boolean, return either 1 or 0
+ *   - If string, try to parse it.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_number_v(struct v7 *v7, v7_val_t v, v7_val_t *res);
+
+/*
+ * Convert any JS value to string, using common JavaScript semantics,
+ * see `v7_stringify()` and `V7_STRINGIFY_DEFAULT`.
+ *
+ * This function can return multiple things:
+ *
+ * - String as a `v7_val_t` (if `res` is not `NULL`)
+ * - String copied to buffer `buf` with max size `buf_size` (if `buf` is not
+ *   `NULL`)
+ * - Length of actual string, independently of `buf_size` (if `res_len` is not
+ *   `NULL`)
+ *
+ * The rationale of having multiple formats of returned value is the following:
+ *
+ * Initially, to-string conversion always returned `v7_val_t`. But it turned
+ * out that there are situations where such an approach adds useless pressure
+ * on GC: e.g. when converting `undefined` to string, and the caller actually
+ * needs a C buffer, not a `v7_val_t`.
+ *
+ * Always returning string through `buf`+`buf_size` is bad as well: if we
+ * convert from object to string, and either `toString()` or `valueOf()`
+ * returned string, then we'd have to get string data from it, write to buffer,
+ * and if caller actually need `v7_val_t`, then it will have to create new
+ * instance of the same string: again, useless GC pressure.
+ *
+ * So, we have to use the combined approach. This function will make minimal
+ * work depending on give `res` and `buf`.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_string(struct v7 *v7, v7_val_t v, v7_val_t *res,
+                                 char *buf, size_t buf_size, size_t *res_len);
+
+/*
+ * Convert value to primitive, if it's not already.
+ *
+ * For object-to-primitive conversion, each object in JavaScript has two
+ * methods: `toString()` and `valueOf()`.
+ *
+ * When converting object to string, JavaScript does the following:
+ *   - call `toString()`;
+ *   - If `toString()` returned non-primitive value, call `valueOf()`;
+ *   - If `valueOf()` returned non-primitive value, throw `TypeError`.
+ *
+ * When converting object to number, JavaScript calls the same functions,
+ * but in reverse:
+ *   - call `valueOf()`;
+ *   - If `valueOf()` returned non-primitive value, call `toString()`;
+ *   - If `toString()` returned non-primitive value, throw `TypeError`.
+ *
+ * This function `to_primitive()` performs either type of conversion,
+ * depending on the `hint` argument (see `enum to_primitive_hint`).
+ */
+enum to_primitive_hint {
+  /* Call `valueOf()` first, then `toString()` if needed */
+  V7_TO_PRIMITIVE_HINT_NUMBER,
+
+  /* Call `toString()` first, then `valueOf()` if needed */
+  V7_TO_PRIMITIVE_HINT_STRING,
+
+  /* STRING for Date, NUMBER for everything else */
+  V7_TO_PRIMITIVE_HINT_AUTO,
+};
+WARN_UNUSED_RESULT
+enum v7_err to_primitive(struct v7 *v7, v7_val_t v, enum to_primitive_hint hint,
+                         v7_val_t *res);
+
+/*
+ * Convert primitive value to string, using common JavaScript semantics. If
+ * you need to convert any value to string (either object or primitive),
+ * see `to_string()` or `v7_stringify_throwing()`.
+ *
+ * This function can return multiple things:
+ *
+ * - String as a `v7_val_t` (if `res` is not `NULL`)
+ * - String copied to buffer `buf` with max size `buf_size` (if `buf` is not
+ *   `NULL`)
+ * - Length of actual string, independently of `buf_size` (if `res_len` is not
+ *   `NULL`)
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
+                                        char *buf, size_t buf_size,
+                                        size_t *res_len);
+
+/*
+ * Convert primitive value to number, using common JavaScript semantics. If you
+ * need to convert any value to number (either object or primitive), see
+ * `to_number_v()`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err primitive_to_number(struct v7 *v7, val_t v, val_t *res);
+
+/*
+ * Convert value to JSON or "debug" representation, depending on whether
+ * `is_debug` is non-zero. The "debug" is the same as JSON, but non-JSON values
+ * (functions, `undefined`, etc) will not be omitted.
+ *
+ * See also `v7_stringify()`, `v7_stringify_throwing()`.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
+                                        size_t size, size_t *res_len,
+                                        uint8_t is_debug);
+
+/*
+ * Calls `valueOf()` on given object `v`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res);
+
+/*
+ * Calls `toString()` on given object `v`
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res);
+
+/*
+ * If given value is `undefined`, returns `default_value`; otherwise,
+ * converts value to number, and then truncates to `long`.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
+                               long *res);
+
+/*
+ * Converts value to boolean as in the expression `if (v)` or `Boolean(v)`.
+ *
+ * NOTE: it can't throw (even if the given value is an object with `valueOf()`
+ * that throws), so it returns `val_t` directly.
+ */
+WARN_UNUSED_RESULT
+V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* CONVERSION_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/builtin/builtin.h"
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Non-Standard API
+ *
+ *   V7 has several non-standard extensions for `String.prototype` in
+ *   order to give a compact and fast API to access raw data obtained from
+ *   File, Socket, and hardware input/output such as I2C.
+ *   V7 IO API functions return
+ *   string data as a result of read operations, and that string data is a
+ *   raw byte array. ECMA6 provides `ArrayBuffer` and `DataView` API for dealing
+ *   with raw bytes, because strings in JavaScript are Unicode. That standard
+ *   API is too bloated for the embedded use, and does not allow to use handy
+ *   String API (e.g. `.match()`) against data.
+ *
+ *   V7 internally stores strings as byte arrays. All strings created by the
+ *   String API are UTF8 encoded. Strings that are the result of
+ *   input/output API calls might not be a valid UTF8 strings, but nevertheless
+ *   they are represented as strings, and the following API allows to access
+ *   underlying byte sequence:
+ *
+ * ==== String.prototype.at(position) -> number or NaN
+ *      Return byte at index
+ *     `position`. Byte value is in 0,255 range. If `position` is out of bounds
+ *     (either negative or larger then the byte array length), NaN is returned.
+ *     Example: `"ы".at(0)` returns 0xd1.
+ *
+ * ==== String.prototype.blen -> number
+ *     Return string length in bytes.
+ *     Example: `"ы".blen` returns 2. Note that `"ы".length` is 1, since that
+ *     string consists of a single Unicode character (2-byte).
+ *
+ * === Builtin API
+ *
+ * Builtin API provides additional JavaScript interfaces available for V7
+ * scripts.
+ * File API is a wrapper around standard C calls `fopen()`, `fclose()`,
+ * `fread()`, `fwrite()`, `rename()`, `remove()`.
+ * Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
+ * Socket API provides low-level socket API.
+ *
+ * ==== File.eval(file_name)
+ * Parse and run `file_name`.
+ * Throws an exception if the file doesn't exist, cannot be parsed or if the
+ * script throws any exception.
+ *
+ * ==== File.open(file_name [, mode]) -> file_object or null
+ * Open a file `path`. For
+ * list of valid `mode` values, see `fopen()` documentation. If `mode` is
+ * not specified, mode `rb` is used, i.e. file is opened in read-only mode.
+ * Return an opened file object, or null on error. Example:
+ * `var f = File.open('/etc/passwd'); f.close();`
+ *
+ * ==== file_obj.close() -> undefined
+ * Close opened file object.
+ * NOTE: it is user's responsibility to close all opened file streams. V7
+ * does not do that automatically.
+ *
+ * ==== file_obj.read() -> string
+ * Read portion of data from
+ * an opened file stream. Return string with data, or empty string on EOF
+ * or error.
+ *
+ * ==== file_obj.readAll() -> string
+ * Same as `read()`, but keeps reading data until EOF.
+ *
+ * ==== file_obj.write(str) -> num_bytes_written
+ * Write string `str` to the opened file object. Return number of bytes written.
+ *
+ * ==== File.rename(old_name, new_name) -> errno
+ * Rename file `old_name` to
+ * `new_name`. Return 0 on success, or `errno` value on error.
+ *
+ * ==== File.list(dir_name) -> array_of_names
+ * Return a list of files in a given directory, or `undefined` on error.
+ *
+ * ==== File.remove(file_name) -> errno
+ * Delete file `file_name`.
+ * Return 0 on success, or `errno` value on error.
+ *
+ * ==== Crypto.base64_encode(str)
+ * Base64-encode input string `str` and return encoded string.
+ *
+ * ==== Crypto.base64_decode(str)
+ * Base64-decode input string `str` and return decoded string.
+ *
+ * ==== Crypto.md5(str), Crypto.md5_hex(str)
+ * Generate MD5 hash from input string `str`. Return 16-byte hash (`md5()`),
+ * or stringified hexadecimal representation of the hash (`md5_hex`).
+ *
+ * ==== Crypto.sha1(str), Crypto.sha1_hex(str)
+ * Generate SHA1 hash from input string `str`. Return 20-byte hash (`sha1()`),
+ * or stringified hexadecimal representation of the hash (`sha1_hex`).
+ *
+ * ==== Socket.connect(host, port [, is_udp]) -> socket_obj
+ * Connect to a given host. `host` can be a string IP address, or a host name.
+ * Optional `is_udp` parameter, if true, indicates that socket should be UDP.
+ * Return socket object on success, null on error.
+ *
+ * ==== Socket.listen(port [, ip_address [,is_udp]]) -> socket_obj
+ * Create a listening socket on a given port. Optional `ip_address` argument
+ * specifies and IP address to bind to. Optional `is_udp` parameter, if true,
+ * indicates that socket should be UDP. Return socket object on success,
+ * null on error.
+ *
+ * ==== socket_obj.accept() -> socket_obj
+ * Sleep until new incoming connection is arrived. Return accepted socket
+ * object on success, or `null` on error.
+ *
+ * ==== socket_obj.close() -> numeric_errno
+ * Close socket object. Return 0 on success, or system errno on error.
+ *
+ * ==== socket_obj.recv() -> string
+ * Read data from socket. Return data string, or empty string if peer has
+ * disconnected, or `null` on error.
+ *
+ * ==== socket_obj.recvAll() -> string
+ * Same as `recv()`, but keeps reading data until socket is closed.
+ *
+ * ==== sock.send(string) -> num_bytes_sent
+ * Send string to the socket. Return number of bytes sent, or 0 on error.
+ * Simple HTTP client example:
+ *
+ *    var s = Socket.connect("google.com", 80);
+ *    s.send("GET / HTTP/1.0\n\n");
+ *    var reply = s.recv();
+ */
+
+#ifndef BUILTIN_HEADER_DEFINED
+#define BUILTIN_HEADER_DEFINED
+
+struct v7;
+
+void init_file(struct v7 *);
+void init_socket(struct v7 *);
+void init_crypto(struct v7 *);
+void init_ubjson(struct v7 *);
+void init_ubjson(struct v7 *v7);
+
+#endif
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/util_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Utility functions
+ */
+
+#ifndef V7_UTIL_PUBLIC_H_INCLUDED
+#define V7_UTIL_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/* Output a string representation of the value to stdout.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_print(struct v7 *v7, v7_val_t v);
+
+/* Output a string representation of the value to stdout followed by a newline.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_println(struct v7 *v7, v7_val_t v);
+
+/* Output a string representation of the value to a file.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
+
+/* Output a string representation of the value to a file followed by a newline.
+ * V7_STRINGIFY_DEBUG mode is used. */
+void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
+
+/* Output stack trace recorded in the exception `e` to file `f` */
+void v7_fprint_stack_trace(FILE *f, struct v7 *v7, v7_val_t e);
+
+/* Output error object message and possibly stack trace to f */
+void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, v7_val_t e);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_UTIL_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/util.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef V7_UTIL_H_INCLUDED
+#define V7_UTIL_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/util_public.h" */
+
+V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
+
+/*
+ * At the moment, all other utility functions are public, and are declared in
+ * `util_public.h`
+ */
+
+#endif /* V7_UTIL_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/function_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === Functions
+ */
+
+#ifndef V7_FUNCTION_PUBLIC_H_INCLUDED
+#define V7_FUNCTION_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Make a JS function object backed by a cfunction.
+ *
+ * `func` is a C callback.
+ *
+ * A function object is JS object having the Function prototype that holds a
+ * cfunction value in a hidden property.
+ *
+ * The function object will have a `prototype` property holding an object that
+ * will be used as the prototype of objects created when calling the function
+ * with the `new` operator.
+ */
+v7_val_t v7_mk_function(struct v7 *, v7_cfunction_t *func);
+
+/*
+ * Make f a JS function with specified prototype `proto`, so that the resulting
+ * function is better suited for the usage as a constructor.
+ */
+v7_val_t v7_mk_function_with_proto(struct v7 *v7, v7_cfunction_t *f,
+                                   v7_val_t proto);
+
+/*
+ * Make a JS value that holds C/C++ callback pointer.
+ *
+ * CAUTION: This is a low-level function value. It's not a real object and
+ * cannot hold user defined properties. You should use `v7_mk_function` unless
+ * you know what you're doing.
+ */
+v7_val_t v7_mk_cfunction(v7_cfunction_t *func);
+
+/*
+ * Returns true if given value is callable (i.e. it's either a JS function or
+ * cfunction)
+ */
+int v7_is_callable(struct v7 *v7, v7_val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_FUNCTION_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/function.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef FUNCTION_H_INCLUDED
+#define FUNCTION_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/function_public.h" */
+
+/* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+V7_PRIVATE struct v7_js_function *to_js_function(val_t v);
+V7_PRIVATE val_t
+mk_js_function(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
+V7_PRIVATE int is_js_function(val_t v);
+V7_PRIVATE v7_val_t mk_cfunction_lite(v7_cfunction_t *f);
+
+/* Returns true if given value holds a pointer to C callback */
+V7_PRIVATE int is_cfunction_lite(v7_val_t v);
+
+/* Returns true if given value holds an object which represents C callback */
+V7_PRIVATE int is_cfunction_obj(struct v7 *v7, v7_val_t v);
+
+/*
+ * Returns `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
+ * if given value is neither cfunction pointer nor cfunction object.
+ */
+V7_PRIVATE v7_cfunction_t *to_cfunction(struct v7 *v7, v7_val_t v);
+
+/*
+ * Like v7_mk_function but also sets the function's `length` property.
+ *
+ * The `length` property is useful for introspection and the stdlib defines it
+ * for many core functions mostly because the ECMA test suite requires it and we
+ * don't want to skip otherwise useful tests just because the `length` property
+ * check fails early in the test. User defined functions don't need to specify
+ * the length and passing -1 is a safe choice, as it will also reduce the
+ * footprint.
+ *
+ * The subtle difference between set `length` explicitly to 0 rather than
+ * just defaulting the `0` value from the prototype is that in the former case
+ * the property cannot be change since it's read only. This again, is important
+ * only for ecma compliance and your user code might or might not find this
+ * relevant.
+ *
+ * NODO(lsm): please don't combine v7_mk_function_arg and v7_mk_function
+ * into one function. Currently `num_args` is useful only internally. External
+ * users can just use `v7_def` to set the length.
+ */
+V7_PRIVATE
+v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *func, int num_args);
+
+/*
+ * Like v7_mk_function_with_proto but also sets the function's `length`
+ *property.
+ *
+ * NODO(lsm): please don't combine mk_cfunction_obj_with_proto and
+ * v7_mk_function_with_proto.
+ * into one function. Currently `num_args` is useful only internally. External
+ * users can just use `v7_def` to set the length.
+ */
+V7_PRIVATE
+v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7, v7_cfunction_t *f,
+                                     int num_args, v7_val_t proto);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* FUNCTION_H_INCLUDED */
+#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/varint.h"
 #endif
 /*
@@ -2929,6 +4472,7 @@ V7_PRIVATE int calc_llen(size_t len);
 #include <stdio.h>
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -3133,69 +4677,6 @@ V7_PRIVATE void release_ast(struct v7 *, struct ast *);
 
 #endif /* AST_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/string.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_STRING_H_INCLUDED
-#define V7_STRING_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-/*
- * Size of the extra space for strings mbuf that is needed to avoid frequent
- * reallocations
- */
-#define _V7_STRING_BUF_RESERVE 500
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err v7_char_code_at(struct v7 *v7, v7_val_t s, v7_val_t at,
-                                       double *res);
-V7_PRIVATE int s_cmp(struct v7 *, val_t a, val_t b);
-V7_PRIVATE val_t s_concat(struct v7 *, val_t, val_t);
-
-/*
- * Convert a C string to to an unsigned integer.
- * `ok` will be set to true if the string conforms to
- * an unsigned long.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err str_to_ulong(struct v7 *v7, val_t v, int *ok,
-                                    unsigned long *res);
-
-/*
- * Convert a V7 string to to an unsigned integer.
- * `ok` will be set to true if the string conforms to
- * an unsigned long.
- *
- * Use it if only you need strong conformity of the value to an integer;
- * otherwise, use `to_long()` or `to_number_v()` instead.
- */
-V7_PRIVATE unsigned long cstr_to_ulong(const char *s, size_t len, int *ok);
-
-enum embstr_flags {
-  EMBSTR_ZERO_TERM = (1 << 0),
-  EMBSTR_UNESCAPE = (1 << 1),
-};
-
-V7_PRIVATE void embed_string(struct mbuf *m, size_t offset, const char *p,
-                             size_t len, uint8_t /*enum embstr_flags*/ flags);
-
-V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_STRING_H_INCLUDED */
-#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/bcode.h"
 #endif
 /*
@@ -3220,7 +4701,10 @@ V7_PRIVATE size_t unescape(const char *s, size_t len, char *to);
 #define V7_ARGS_CNT_MAX ((1 << V7_ARGS_CNT_WIDTH) - 1)
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "common/mbuf.h" */
 
 enum bcode_inline_lit_type_tag {
@@ -3979,100 +5463,66 @@ V7_PRIVATE void dump_op(struct v7 *v7, FILE *f, struct bcode *bcode,
 
 #endif /* BCODE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/exceptions.h"
+#line 1 "./v7/src/gc_public.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef EXCEPTIONS_H_INCLUDED
-#define EXCEPTIONS_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
 /*
- * Try to perform some arbitrary call, and if the result is other than `V7_OK`,
- * "throws" an error with `V7_THROW()`
- */
-#define V7_TRY2(call, clean_label)           \
-  do {                                       \
-    enum v7_err _e = call;                   \
-    V7_CHECK2(_e == V7_OK, _e, clean_label); \
-  } while (0)
-
-/*
- * Sets return value to the provided one, and `goto`s `clean`.
- *
- * For this to work, you should have local `enum v7_err rcode` variable,
- * and a `clean` label.
- */
-#define V7_THROW2(err_code, clean_label)                              \
-  do {                                                                \
-    (void) v7;                                                        \
-    rcode = (err_code);                                               \
-    assert(rcode != V7_OK);                                           \
-    assert(!v7_is_undefined(v7->vals.thrown_error) && v7->is_thrown); \
-    goto clean_label;                                                 \
-  } while (0)
-
-/*
- * Checks provided condition `cond`, and if it's false, then "throws"
- * provided `err_code` (see `V7_THROW()`)
- */
-#define V7_CHECK2(cond, err_code, clean_label) \
-  do {                                         \
-    if (!(cond)) {                             \
-      V7_THROW2(err_code, clean_label);        \
-    }                                          \
-  } while (0)
-
-/*
- * Checks provided condition `cond`, and if it's false, then "throws"
- * internal error
- *
- * TODO(dfrank): it would be good to have formatted string: then, we can
- * specify file and line.
- */
-#define V7_CHECK_INTERNAL2(cond, clean_label)                       \
-  do {                                                              \
-    if (!(cond)) {                                                  \
-      enum v7_err rcode = v7_throwf(v7, "Error", "Internal error"); \
-      (void) rcode;                                                 \
-      V7_THROW2(V7_INTERNAL_ERROR, clean_label);                    \
-    }                                                               \
-  } while (0)
-
-/*
- * Shortcuts for the macros above, but they assume the clean label `clean`.
+ * === Garbage Collector
  */
 
-#define V7_TRY(call) V7_TRY2(call, clean)
-#define V7_THROW(err_code) V7_THROW2(err_code, clean)
-#define V7_CHECK(cond, err_code) V7_CHECK2(cond, err_code, clean)
-#define V7_CHECK_INTERNAL(cond) V7_CHECK_INTERNAL2(cond, clean)
+#ifndef V7_GC_PUBLIC_H_INCLUDED
+#define V7_GC_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
 
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
 
-/*
- * At the moment, most of the exception-related functions are public, and are
- * declared in `v7.h`
- */
+#if V7_ENABLE__Memory__stats
+
+/* Heap metric id, see `v7_heap_stat()` */
+enum v7_heap_stat_what {
+  V7_HEAP_STAT_HEAP_SIZE,
+  V7_HEAP_STAT_HEAP_USED,
+  V7_HEAP_STAT_STRING_HEAP_RESERVED,
+  V7_HEAP_STAT_STRING_HEAP_USED,
+  V7_HEAP_STAT_OBJ_HEAP_MAX,
+  V7_HEAP_STAT_OBJ_HEAP_FREE,
+  V7_HEAP_STAT_OBJ_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_FUNC_HEAP_MAX,
+  V7_HEAP_STAT_FUNC_HEAP_FREE,
+  V7_HEAP_STAT_FUNC_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_PROP_HEAP_MAX,
+  V7_HEAP_STAT_PROP_HEAP_FREE,
+  V7_HEAP_STAT_PROP_HEAP_CELL_SIZE,
+  V7_HEAP_STAT_FUNC_AST_SIZE,
+  V7_HEAP_STAT_BCODE_OPS_SIZE,
+  V7_HEAP_STAT_BCODE_LIT_TOTAL_SIZE,
+  V7_HEAP_STAT_BCODE_LIT_DESER_SIZE,
+  V7_HEAP_STAT_FUNC_OWNED,
+  V7_HEAP_STAT_FUNC_OWNED_MAX
+};
+
+/* Returns a given heap statistics */
+int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
+#endif
 
 /*
- * Create an instance of the exception with type `typ` (see `TYPE_ERROR`,
- * `SYNTAX_ERROR`, etc), and message `msg`.
+ * Perform garbage collection.
+ * Pass true to full in order to reclaim unused heap back to the OS.
  */
-V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
-                                        const char *msg, val_t *res);
+void v7_gc(struct v7 *v7, int full);
 
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
 
-#endif /* EXCEPTIONS_H_INCLUDED */
+#endif /* V7_GC_PUBLIC_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/gc.h"
 #endif
@@ -4084,8 +5534,10 @@ V7_PRIVATE enum v7_err create_exception(struct v7 *v7, const char *typ,
 #ifndef GC_H_INCLUDED
 #define GC_H_INCLUDED
 
+/* Amalgamated: #include "v7/src/gc_public.h" */
+
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 /*
  * Macros for marking reachable things: use bit 0.
@@ -4171,104 +5623,6 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *);
 
 #endif /* GC_H_INCLUDED */
 #ifdef V7_MODULE_LINES
-#line 1 "./v7/src/function.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef FUNCTION_H_INCLUDED
-#define FUNCTION_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE struct v7_js_function *to_js_function(val_t v);
-V7_PRIVATE val_t
-mk_js_function(struct v7 *v7, struct v7_generic_object *scope, val_t proto);
-V7_PRIVATE int is_js_function(val_t v);
-V7_PRIVATE v7_val_t mk_cfunction_lite(v7_cfunction_t *f);
-
-/* Returns true if given value holds a pointer to C callback */
-V7_PRIVATE int is_cfunction_lite(v7_val_t v);
-
-/* Returns true if given value holds an object which represents C callback */
-V7_PRIVATE int is_cfunction_obj(struct v7 *v7, v7_val_t v);
-
-/*
- * Returns `v7_cfunction_t *` callback pointer stored in `v7_val_t`, or NULL
- * if given value is neither cfunction pointer nor cfunction object.
- */
-V7_PRIVATE v7_cfunction_t *to_cfunction(struct v7 *v7, v7_val_t v);
-
-/*
- * Like v7_mk_function but also sets the function's `length` property.
- *
- * The `length` property is useful for introspection and the stdlib defines it
- * for many core functions mostly because the ECMA test suite requires it and we
- * don't want to skip otherwise useful tests just because the `length` property
- * check fails early in the test. User defined functions don't need to specify
- * the length and passing -1 is a safe choice, as it will also reduce the
- * footprint.
- *
- * The subtle difference between set `length` explicitly to 0 rather than
- * just defaulting the `0` value from the prototype is that in the former case
- * the property cannot be change since it's read only. This again, is important
- * only for ecma compliance and your user code might or might not find this
- * relevant.
- *
- * NODO(lsm): please don't combine v7_mk_function_arg and v7_mk_function
- * into one function. Currently `num_args` is useful only internally. External
- * users can just use `v7_def` to set the length.
- */
-V7_PRIVATE
-v7_val_t mk_cfunction_obj(struct v7 *v7, v7_cfunction_t *func, int num_args);
-
-/*
- * Like v7_mk_function_with_proto but also sets the function's `length`
- *property.
- *
- * NODO(lsm): please don't combine mk_cfunction_obj_with_proto and
- * v7_mk_function_with_proto.
- * into one function. Currently `num_args` is useful only internally. External
- * users can just use `v7_def` to set the length.
- */
-V7_PRIVATE
-v7_val_t mk_cfunction_obj_with_proto(struct v7 *v7, v7_cfunction_t *f,
-                                     int num_args, v7_val_t proto);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* FUNCTION_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/util.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_UTIL_H_INCLUDED
-#define V7_UTIL_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v);
-
-/*
- * At the moment, all other utility functions are public, and are declared in
- * `util_public.h`
- */
-
-#endif /* V7_UTIL_H_INCLUDED */
-#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/eval.h"
 #endif
 /*
@@ -4305,32 +5659,6 @@ V7_PRIVATE enum v7_err b_exec(struct v7 *v7, const char *src, size_t src_len,
 #endif /* __cplusplus */
 
 #endif /* BCODE_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/array.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef V7_ARRAY_H_INCLUDED
-#define V7_ARRAY_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-V7_PRIVATE v7_val_t v7_mk_dense_array(struct v7 *v7);
-V7_PRIVATE val_t
-v7_array_get2(struct v7 *v7, v7_val_t arr, unsigned long index, int *has);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* V7_ARRAY_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/compiler.h"
 #endif
@@ -4419,265 +5747,6 @@ void v7_stack_stat_clean(struct v7 *v7);
 #endif /* V7_ENABLE_STACK_TRACKING */
 
 #endif /* CYG_PROFILE_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/conversion.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CONVERSION_H_INCLUDED
-#define CONVERSION_H_INCLUDED
-
-#if defined(__cplusplus)
-extern "C" {
-#endif /* __cplusplus */
-
-/*
- * Conversion API
- * ==============
- *
- * - If you need to convert any JS value to string using common JavaScript
- *   semantics, use `to_string()`, which can convert to both `v7_val_t` or your
- *   C buffer.
- *
- * - If you need to convert any JS value to number using common JavaScript
- *   semantics, use `to_number_v()`;
- *
- * - If you need to convert any JS value to primitive, without forcing it to
- *   string or number, use `to_primitive()` (see comments for this function for
- *   details);
- *
- * - If you have a primitive value, and you want to convert it to either string
- *   or number, you can still use functions above: `to_string()` and
- *   `to_number_v()`. But if you want to save a bit of work, use:
- *   - `primitive_to_str()`
- *   - `primitive_to_number()`
- *
- *   In fact, these are a bit lower level functions, which are used by
- *   `to_string()` and `to_number_v()` after converting value to
- *   primitive.
- *
- * - If you want to call `valueOf()` on the object, use `obj_value_of()`;
- * - If you want to call `toString()` on the object, use `obj_to_string()`;
- *
- * - If you need to convert any JS value to boolean using common JavaScript
- *   semantics (as in the expression `if (v)` or `Boolean(v)`), use
- *   `to_boolean_v()`.
- *
- * - If you want to get the JSON representation of a value, use
- *   `to_json_or_debug()`, passing `0` as `is_debug` : writes data to your C
- *   buffer;
- *
- * - There is one more kind of representation: `DEBUG`. It's very similar to
- *   JSON, but it will not omit non-JSON values, such as functions. Again, use
- *   `to_json_or_debug()`, but pass `1` as `is_debug` this time: writes data to
- *   your C buffer;
- *
- * Additionally, for any kind of to-string conversion into C buffer, you can
- * use a convenience wrapper function (mostly for public API), which can
- * allocate the buffer for you:
- *
- *   - `v7_stringify_throwing()`;
- *   - `v7_stringify()` : the same as above, but doesn't throw.
- *
- * There are a couple of more specific conversions, which I'd like to probably
- * refactor or remove in the future:
- *
- * - `to_long()` : if given value is `undefined`, returns provided default
- *   value; otherwise, converts value to number, and then truncates to `long`.
- * - `str_to_ulong()` : converts the value to string, and tries to parse it as
- *   an integer. Use it if only you need strong conformity ov the value to an
- *   integer (currently, it's used only when examining keys of array object)
- *
- * ----------------------------------------------------------------------------
- *
- * TODO(dfrank):
- *   - Rename functions like `v7_to_number()`, `v7_to_object()` to something
- *     that will clearly identify that they convert to some C entity, not
- *     `v7_val_t`
- *   - Maybe make `to_string()` private? But then, there will be no way
- *     in public API to convert value to `v7_val_t` string, so, for now
- *     it's here.
- *   - When we agree on what goes to public API, and what does not, write
- *     similar conversion guide for public API (in `v7.h`)
- */
-
-/*
- * Convert any JS value to number, using common JavaScript semantics:
- *
- * - If value is an object:
- *   - call `valueOf()`;
- *   - If `valueOf()` returned non-primitive value, call `toString()`;
- *   - If `toString()` returned non-primitive value, throw `TypeError`.
- * - Now we have a primitive, and if it's not a number, then:
- *   - If `undefined`, return `NaN`
- *   - If `null`, return 0.0
- *   - If boolean, return either 1 or 0
- *   - If string, try to parse it.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_number_v(struct v7 *v7, v7_val_t v, v7_val_t *res);
-
-/*
- * Convert any JS value to string, using common JavaScript semantics,
- * see `v7_stringify()` and `V7_STRINGIFY_DEFAULT`.
- *
- * This function can return multiple things:
- *
- * - String as a `v7_val_t` (if `res` is not `NULL`)
- * - String copied to buffer `buf` with max size `buf_size` (if `buf` is not
- *   `NULL`)
- * - Length of actual string, independently of `buf_size` (if `res_len` is not
- *   `NULL`)
- *
- * The rationale of having multiple formats of returned value is the following:
- *
- * Initially, to-string conversion always returned `v7_val_t`. But it turned
- * out that there are situations where such an approach adds useless pressure
- * on GC: e.g. when converting `undefined` to string, and the caller actually
- * needs a C buffer, not a `v7_val_t`.
- *
- * Always returning string through `buf`+`buf_size` is bad as well: if we
- * convert from object to string, and either `toString()` or `valueOf()`
- * returned string, then we'd have to get string data from it, write to buffer,
- * and if caller actually need `v7_val_t`, then it will have to create new
- * instance of the same string: again, useless GC pressure.
- *
- * So, we have to use the combined approach. This function will make minimal
- * work depending on give `res` and `buf`.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_string(struct v7 *v7, v7_val_t v, v7_val_t *res,
-                                 char *buf, size_t buf_size, size_t *res_len);
-
-/*
- * Convert value to primitive, if it's not already.
- *
- * For object-to-primitive conversion, each object in JavaScript has two
- * methods: `toString()` and `valueOf()`.
- *
- * When converting object to string, JavaScript does the following:
- *   - call `toString()`;
- *   - If `toString()` returned non-primitive value, call `valueOf()`;
- *   - If `valueOf()` returned non-primitive value, throw `TypeError`.
- *
- * When converting object to number, JavaScript calls the same functions,
- * but in reverse:
- *   - call `valueOf()`;
- *   - If `valueOf()` returned non-primitive value, call `toString()`;
- *   - If `toString()` returned non-primitive value, throw `TypeError`.
- *
- * This function `to_primitive()` performs either type of conversion,
- * depending on the `hint` argument (see `enum to_primitive_hint`).
- */
-enum to_primitive_hint {
-  /* Call `valueOf()` first, then `toString()` if needed */
-  V7_TO_PRIMITIVE_HINT_NUMBER,
-
-  /* Call `toString()` first, then `valueOf()` if needed */
-  V7_TO_PRIMITIVE_HINT_STRING,
-
-  /* STRING for Date, NUMBER for everything else */
-  V7_TO_PRIMITIVE_HINT_AUTO,
-};
-WARN_UNUSED_RESULT
-enum v7_err to_primitive(struct v7 *v7, v7_val_t v, enum to_primitive_hint hint,
-                         v7_val_t *res);
-
-/*
- * Convert primitive value to string, using common JavaScript semantics. If
- * you need to convert any value to string (either object or primitive),
- * see `to_string()` or `v7_stringify_throwing()`.
- *
- * This function can return multiple things:
- *
- * - String as a `v7_val_t` (if `res` is not `NULL`)
- * - String copied to buffer `buf` with max size `buf_size` (if `buf` is not
- *   `NULL`)
- * - Length of actual string, independently of `buf_size` (if `res_len` is not
- *   `NULL`)
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err primitive_to_str(struct v7 *v7, val_t v, val_t *res,
-                                        char *buf, size_t buf_size,
-                                        size_t *res_len);
-
-/*
- * Convert primitive value to number, using common JavaScript semantics. If you
- * need to convert any value to number (either object or primitive), see
- * `to_number_v()`
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err primitive_to_number(struct v7 *v7, val_t v, val_t *res);
-
-/*
- * Convert value to JSON or "debug" representation, depending on whether
- * `is_debug` is non-zero. The "debug" is the same as JSON, but non-JSON values
- * (functions, `undefined`, etc) will not be omitted.
- *
- * See also `v7_stringify()`, `v7_stringify_throwing()`.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_json_or_debug(struct v7 *v7, val_t v, char *buf,
-                                        size_t size, size_t *res_len,
-                                        uint8_t is_debug);
-
-/*
- * Calls `valueOf()` on given object `v`
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err obj_value_of(struct v7 *v7, val_t v, val_t *res);
-
-/*
- * Calls `toString()` on given object `v`
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err obj_to_string(struct v7 *v7, val_t v, val_t *res);
-
-/*
- * If given value is `undefined`, returns `default_value`; otherwise,
- * converts value to number, and then truncates to `long`.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE enum v7_err to_long(struct v7 *v7, val_t v, long default_value,
-                               long *res);
-
-/*
- * Converts value to boolean as in the expression `if (v)` or `Boolean(v)`.
- *
- * NOTE: it can't throw (even if the given value is an object with `valueOf()`
- * that throws), so it returns `val_t` directly.
- */
-WARN_UNUSED_RESULT
-V7_PRIVATE val_t to_boolean_v(struct v7 *v7, val_t v);
-
-#if defined(__cplusplus)
-}
-#endif /* __cplusplus */
-
-#endif /* CONVERSION_H_INCLUDED */
-#ifdef V7_MODULE_LINES
-#line 1 "./v7/src/primitive.h"
-#endif
-/*
- * Copyright (c) 2014 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef PRIMITIVE_H_INCLUDED
-#define PRIMITIVE_H_INCLUDED
-
-/* Amalgamated: #include "v7/src/types.h" */
-
-/* Returns true if given value is a number, not NaN and not Infinity. */
-V7_PRIVATE int is_finite(v7_val_t v);
-
-V7_PRIVATE val_t pointer_to_value(void *p);
-V7_PRIVATE void *v7_to_pointer(val_t v);
-
-#endif /* PRIMITIVE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/slre.h"
 #endif
@@ -4783,6 +5852,7 @@ int slre_get_flags(struct slre_prog *);
 #define STDLIB_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -4845,6 +5915,46 @@ size_t heapusage_allocs_cnt(void);
 
 #endif /* _HEAPUSAGE_H_INCLUDED */
 #ifdef V7_MODULE_LINES
+#line 1 "./v7/src/regexp_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === RegExp
+ */
+
+#ifndef V7_REGEXP_PUBLIC_H_INCLUDED
+#define V7_REGEXP_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Make RegExp object.
+ * `regex`, `regex_len` specify a pattern, `flags` and `flags_len` specify
+ * flags. Both utf8 encoded. For example, `regex` is `(.+)`, `flags` is `gi`.
+ * If `regex_len` is ~0, `regex` is assumed to be NUL-terminated and
+ * `strlen(regex)` is used.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_mk_regexp(struct v7 *v7, const char *regex, size_t regex_len,
+                         const char *flags, size_t flags_len, v7_val_t *res);
+
+/* Returns true if given value is a JavaScript RegExp object*/
+int v7_is_regexp(struct v7 *v7, v7_val_t v);
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_REGEXP_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
 #line 1 "./v7/src/regexp.h"
 #endif
 /*
@@ -4854,6 +5964,10 @@ size_t heapusage_allocs_cnt(void);
 
 #ifndef V7_REGEXP_H_INCLUDED
 #define V7_REGEXP_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/regexp_public.h" */
+
+/* Amalgamated: #include "v7/src/core.h" */
 
 #if V7_ENABLE__RegExp
 V7_PRIVATE struct v7_regexp *v7_to_regexp(struct v7 *, v7_val_t);
@@ -5078,6 +6192,7 @@ V7_PRIVATE void init_number(struct v7 *v7);
 #define STD_OBJECT_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 struct v7;
 
@@ -5107,6 +6222,7 @@ V7_PRIVATE enum v7_err Obj_valueOf(struct v7 *v7, v7_val_t *res);
 #define STD_REGEX_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 #if V7_ENABLE__RegExp
 
@@ -5139,6 +6255,7 @@ V7_PRIVATE void init_regex(struct v7 *v7);
 #define STD_STRING_H_INCLUDED
 
 /* Amalgamated: #include "v7/src/internal.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 /* Max captures for String.replace() */
 #define V7_RE_MAX_REPL_SUB 20
@@ -5178,6 +6295,63 @@ V7_PRIVATE void init_js_stdlib(struct v7 *);
 #endif /* __cplusplus */
 
 #endif /* JS_STDLIB_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/main_public.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+/*
+ * === v7 main()
+ */
+
+#ifndef V7_MAIN_PUBLIC_H_INCLUDED
+#define V7_MAIN_PUBLIC_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/core_public.h" */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * V7 executable main function.
+ *
+ * There are various callbacks available:
+ *
+ * `pre_freeze_init()` and `pre_init()` are optional intialization functions,
+ * aimed to export any extra functionality into vanilla v7 engine. They are
+ * called after v7 initialization, before executing given files or inline
+ * expressions. `pre_freeze_init()` is called before "freezing" v7 state;
+ * whereas `pre_init` called afterwards.
+ *
+ * `post_init()`, if provided, is called after executing files and expressions,
+ * before destroying v7 instance and exiting.
+ */
+int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
+            void (*pre_init)(struct v7 *), void (*post_init)(struct v7 *));
+
+#if defined(__cplusplus)
+}
+#endif /* __cplusplus */
+
+#endif /* V7_MAIN_PUBLIC_H_INCLUDED */
+#ifdef V7_MODULE_LINES
+#line 1 "./v7/src/main.h"
+#endif
+/*
+ * Copyright (c) 2014 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef MAIN_H_INCLUDED
+#define MAIN_H_INCLUDED
+
+/* Amalgamated: #include "v7/src/main_public.h" */
+
+#endif /* MAIN_H_INCLUDED */
 #ifndef V7_EXPORT_INTERNAL_HEADERS
 #ifdef V7_MODULE_LINES
 #line 1 "./src/../../common/mbuf.c"
@@ -8149,7 +9323,13 @@ void cr_context_free(struct cr_ctx *p_ctx) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
+/* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "common/cs_file.h" */
 /* Amalgamated: #include "v7/src/v7_features.h" */
@@ -8494,7 +9674,11 @@ void init_file(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "common/platform.h" */
 
@@ -8763,7 +9947,10 @@ void init_socket(struct v7 *v7) {
 #include <string.h>
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/v7.h" */
+/* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "common/md5.h" */
 /* Amalgamated: #include "common/sha1.h" */
 /* Amalgamated: #include "common/base64.h" */
@@ -8926,14 +10113,18 @@ void init_crypto(struct v7 *v7) {
 #include <string.h>
 #include <assert.h>
 
-/* Amalgamated: #include "v7/v7.h" */
-
 /* Amalgamated: #include "common/ubjson.h" */
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/object.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/array.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
+/* Amalgamated: #include "v7/src/function.h" */
 
 struct ubjson_ctx {
   struct mbuf out;   /* output buffer */
@@ -9302,7 +10493,7 @@ V7_PRIVATE int encode_varint(size_t len, unsigned char *p) {
 
 /* Amalgamated: #include "common/utf.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 
 /*
  * NOTE(lsm): Must be in the same order as enum for keywords. See comment
@@ -9779,7 +10970,6 @@ int main(void) {
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
@@ -11488,7 +12678,6 @@ V7_PRIVATE void bcode_deserialize(struct v7 *v7, struct bcode *bcode,
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/util.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 
@@ -13700,11 +14889,11 @@ V7_PRIVATE enum v7_err b_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
  */
 
 /* Amalgamated: #include "v7/builtin/builtin.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
@@ -13784,12 +14973,12 @@ static void property_destructor(struct v7 *v7, void *ptr) {
 #endif
 
 struct v7 *v7_create(void) {
-  struct v7_mk_opts opts;
+  struct v7_create_opts opts;
   memset(&opts, 0, sizeof(opts));
   return v7_create_opt(opts);
 }
 
-struct v7 *v7_create_opt(struct v7_mk_opts opts) {
+struct v7 *v7_create_opt(struct v7_create_opts opts) {
   struct v7 *v7 = NULL;
   char z = 0;
 
@@ -13971,6 +15160,23 @@ void v7_set_gc_enabled(struct v7 *v7, int enabled) {
 void v7_interrupt(struct v7 *v7) {
   v7->interrupt = 1;
 }
+
+const char *v7_get_parser_error(struct v7 *v7) {
+  return v7->error_msg;
+}
+
+#if defined(V7_ENABLE_STACK_TRACKING)
+
+int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what) {
+  assert(what < V7_STACK_STATS_CNT);
+  return v7->stack_stat[what];
+}
+
+void v7_stack_stat_clean(struct v7 *v7) {
+  memset(v7->stack_stat, 0x00, sizeof(v7->stack_stat));
+}
+
+#endif /* V7_ENABLE_STACK_TRACKING */
 #ifdef V7_MODULE_LINES
 #line 1 "./src/primitive.c"
 #endif
@@ -13980,8 +15186,8 @@ void v7_interrupt(struct v7 *v7) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 
 /* Number {{{ */
 
@@ -14103,7 +15309,6 @@ int v7_is_foreign(val_t v) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
@@ -14288,10 +15493,11 @@ int v7_is_callable(struct v7 *v7, val_t v) {
 /* osdep.h must be included before `cs_file.h` TODO(dfrank) : fix this */
 /* Amalgamated: #include "common/cs_file.h" */
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
 /* Amalgamated: #include "v7/src/compiler.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 
 /*
  * TODO(alashkin): we need src_len only in case of
@@ -14445,9 +15651,11 @@ enum v7_err v7_compile(const char *code, int binary, int use_bcode, FILE *fp) {
  */
 
 /* Amalgamated: #include "v7/src/internal.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 
 void v7_print(struct v7 *v7, v7_val_t v) {
   v7_fprint(stdout, v7, v);
@@ -14551,6 +15759,7 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/varint.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/core.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/heapusage.h" */
 
@@ -15103,7 +16312,7 @@ const char *v7_to_cstring(struct v7 *v7, v7_val_t *value) {
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 
 /* like c_snprintf but returns `size` if write is truncated */
@@ -15479,6 +16688,7 @@ enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 
 /*
  * Default property attributes (see `v7_prop_attr_t`)
@@ -16075,7 +17285,7 @@ V7_PRIVATE int set_cfunc_prop(struct v7 *v7, val_t o, const char *name,
 }
 
 /*
- * See comments in `v7.h`
+ * See comments in `object_public.h`
  */
 int v7_del(struct v7 *v7, val_t obj, const char *name, size_t len) {
   struct v7_property *prop, *prev;
@@ -16237,6 +17447,8 @@ v7_val_t v7_set_proto(struct v7 *v7, v7_val_t obj, v7_val_t proto) {
 /* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/regexp.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 
 #if V7_ENABLE__RegExp
@@ -16311,7 +17523,6 @@ int v7_is_regexp(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 
@@ -16431,7 +17642,6 @@ clean:
 /* Amalgamated: #include "v7/src/util.h" */
 /* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/function.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
@@ -17226,16 +18436,14 @@ int v7_is_truthy(struct v7 *v7, val_t v) {
 /* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/heapusage.h" */
 
 #include <stdio.h>
 
 #ifdef V7_STACK_GUARD_MIN_SIZE
 void *v7_sp_limit = NULL;
-#endif
-
-#if V7_ENABLE__Memory__stats
-int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what);
 #endif
 
 void gc_mark_string(struct v7 *, val_t *);
@@ -17616,6 +18824,9 @@ V7_PRIVATE size_t gc_arena_size(struct gc_arena *a) {
   return size;
 }
 
+/*
+ * TODO(dfrank): move to core
+ */
 int v7_heap_stat(struct v7 *v7, enum v7_heap_stat_what what) {
   switch (what) {
     case V7_HEAP_STAT_HEAP_SIZE:
@@ -18103,7 +19314,6 @@ V7_PRIVATE int gc_check_ptr(const struct gc_arena *a, const void *ptr) {
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/util.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/freeze.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
@@ -18269,9 +19479,9 @@ V7_PRIVATE void freeze_prop(struct v7 *v7, FILE *f, struct v7_property *prop) {
 /* Amalgamated: #include "v7/src/parser.h" */
 /* Amalgamated: #include "v7/src/tokenizer.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
 /* Amalgamated: #include "v7/src/ast.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
 
 #define ACCEPT(t) (((v7)->cur_tok == (t)) ? next_tok((v7)), 1 : 0)
@@ -20842,10 +22052,6 @@ V7_PRIVATE enum v7_err parse(struct v7 *v7, struct ast *a, const char *src,
 clean:
   return rcode;
 }
-
-const char *v7_get_parser_error(struct v7 *v7) {
-  return v7->error_msg;
-}
 #ifdef V7_MODULE_LINES
 #line 1 "./src/compiler.c"
 #endif
@@ -20859,8 +22065,9 @@ const char *v7_get_parser_error(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/std_error.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/regexp.h" */
 
 /*
  * The bytecode compiler takes an AST as input and produces one or more
@@ -22831,7 +24038,6 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/primitive.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/std_array.h" */
@@ -22847,6 +24053,9 @@ V7_PRIVATE enum v7_err compile_expr(struct v7 *v7, struct ast *a,
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/js_stdlib.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
 
 #ifdef NO_LIBC
 void print_str(const char *str);
@@ -23147,7 +24356,8 @@ V7_PRIVATE void init_stdlib(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
+/* Amalgamated: #include "v7/src/util.h" */
 
 #define STRINGIFY(x) #x
 
@@ -25166,7 +26376,6 @@ size_t heapusage_allocs_cnt(void) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/cyg_profile.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 
 #if defined(V7_CYG_PROFILE_ON)
 
@@ -25388,15 +26597,6 @@ int v7_stack_track_end(struct v7 *v7, struct stack_track_ctx *ctx) {
   return (int) diff;
 }
 
-int v7_stack_stat(struct v7 *v7, enum v7_stack_stat_what what) {
-  assert(what < V7_STACK_STATS_CNT);
-  return v7->stack_stat[what];
-}
-
-void v7_stack_stat_clean(struct v7 *v7) {
-  memset(v7->stack_stat, 0x00, sizeof(v7->stack_stat));
-}
-
 #endif /* V7_ENABLE_STACK_TRACKING */
 #endif /* V7_CYG_PROFILE_ON */
 #ifdef V7_MODULE_LINES
@@ -25411,10 +26611,14 @@ void v7_stack_stat_clean(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/regexp.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
 
 #if V7_ENABLE__Object__getPrototypeOf
 WARN_UNUSED_RESULT
@@ -25963,10 +27167,11 @@ V7_PRIVATE void init_object(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/std_error.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/util.h" */
 
 void v7_print_error(FILE *f, struct v7 *v7, const char *ctx, val_t e) {
   /* TODO(mkm): figure out if this is an error object and which kind */
@@ -26063,11 +27268,13 @@ V7_PRIVATE void init_error(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/std_object.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -26316,8 +27523,10 @@ V7_PRIVATE void init_number(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/stdlib.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -26367,6 +27576,7 @@ V7_PRIVATE void init_json(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -27215,8 +28425,10 @@ V7_PRIVATE void init_array(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/object.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/string.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -27321,8 +28533,8 @@ V7_PRIVATE void init_boolean(struct v7 *v7) {
 
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 
 #if V7_ENABLE__Math
 
@@ -27585,7 +28797,6 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/std_string.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/string.h" */
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/std_regex.h" */
@@ -27595,6 +28806,7 @@ V7_PRIVATE void init_math(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/regexp.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 
 /* Substring implementations: RegExp-based and String-based {{{ */
 
@@ -28821,8 +30033,10 @@ V7_PRIVATE void init_string(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/util.h" */
 /* Amalgamated: #include "v7/src/function.h" */
 /* Amalgamated: #include "v7/src/object.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/string.h" */
 
 #if V7_ENABLE__Date
 
@@ -30007,11 +31221,12 @@ V7_PRIVATE void init_date(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/bcode.h" */
 /* Amalgamated: #include "v7/src/eval.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/object.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
 
 #if defined(__cplusplus)
 extern "C" {
@@ -30231,11 +31446,13 @@ V7_PRIVATE void init_function(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/slre.h" */
 /* Amalgamated: #include "v7/src/core.h" */
 /* Amalgamated: #include "v7/src/function.h" */
-/* Amalgamated: #include "v7/src/types.h" */
 /* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "v7/src/array.h" */
 /* Amalgamated: #include "v7/src/object.h" */
 /* Amalgamated: #include "v7/src/regexp.h" */
+/* Amalgamated: #include "v7/src/exceptions.h" */
+/* Amalgamated: #include "v7/src/string.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
 
 #if V7_ENABLE__RegExp
 
@@ -30571,6 +31788,11 @@ V7_PRIVATE void init_regex(struct v7 *v7) {
 /* Amalgamated: #include "v7/src/internal.h" */
 /* Amalgamated: #include "v7/src/gc.h" */
 /* Amalgamated: #include "v7/src/freeze.h" */
+/* Amalgamated: #include "v7/src/main.h" */
+/* Amalgamated: #include "v7/src/primitive.h" */
+/* Amalgamated: #include "v7/src/exec.h" */
+/* Amalgamated: #include "v7/src/util.h" */
+/* Amalgamated: #include "v7/src/conversion.h" */
 /* Amalgamated: #include "common/platform.h" */
 /* Amalgamated: #include "common/cs_file.h" */
 
@@ -30635,7 +31857,7 @@ int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *),
             void (*pre_init)(struct v7 *), void (*post_init)(struct v7 *)) {
   int exit_rcode = EXIT_SUCCESS;
   struct v7 *v7;
-  struct v7_mk_opts opts;
+  struct v7_create_opts opts;
   int as_json = 0;
   int i, j, show_ast = 0, binary_ast = 0, dump_bcode = 0, dump_stats = 0;
   val_t res = v7_mk_undefined();
