@@ -1,0 +1,11 @@
+{
+  "items": [
+    { "type": "section", "name": "usage" },
+    { "type": "section", "name": "examples" },
+    { "type": "section", "name": "build-options" },
+    { "type": "flat_sections_set", "name": "c-api" },
+    { "type": "section", "name": "non-standard-api" },
+    { "type": "section", "name": "builtin-api" },
+    { "type": "section", "name": "v7-internals" }
+  ]
+}

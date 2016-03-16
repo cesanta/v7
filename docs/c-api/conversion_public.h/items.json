@@ -1,0 +1,28 @@
+{
+    "items": [
+        {
+            "type": "markdown",
+            "name": "intro.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_stringify.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_stringify_throwing.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_to_json.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_is_truthy.md"
+        },
+        {
+            "type": "markdown",
+            "name": "enum_v7_stringify_mode.md"
+        }
+    ]
+}
