@@ -66,7 +66,15 @@
         },
         {
             "type": "markdown",
+            "name": "struct_v7.md"
+        },
+        {
+            "type": "markdown",
             "name": "struct_v7_create_opts.md"
+        },
+        {
+            "type": "markdown",
+            "name": "enum_v7_err.md"
         },
         {
             "type": "markdown",

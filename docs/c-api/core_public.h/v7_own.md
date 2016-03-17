@@ -1,5 +1,7 @@
 ---
-title: v7 own()
+title: v7_own()
+decl_name: v7_own
+symbol_kind: func
 signature: |
   void v7_own(struct v7 *v7, v7_val_t *v);
 ---

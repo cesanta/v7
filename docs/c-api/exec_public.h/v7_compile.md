@@ -1,5 +1,7 @@
 ---
-title: v7 compile()
+title: v7_compile()
+decl_name: v7_compile
+symbol_kind: func
 signature: |
   enum v7_err v7_compile(const char *js_code, int generate_binary_output,
                          int use_bcode, FILE *fp);

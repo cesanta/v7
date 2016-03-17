@@ -1,5 +1,7 @@
 ---
-title: v7 def()
+title: v7_def()
+decl_name: v7_def
+symbol_kind: func
 signature: |
   int v7_def(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len,
              v7_prop_attr_desc_t attrs_desc, v7_val_t v);

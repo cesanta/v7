@@ -1,5 +1,7 @@
 ---
-title: v7 fprint()
+title: v7_fprint()
+decl_name: v7_fprint
+symbol_kind: func
 signature: |
   void v7_fprint(FILE *f, struct v7 *v7, v7_val_t v);
 ---

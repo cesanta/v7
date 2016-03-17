@@ -1,5 +1,7 @@
 ---
-title: enum v7 heap stat what
+title: enum v7_heap_stat_what
+decl_name: enum v7_heap_stat_what
+symbol_kind: enum
 signature: |
   enum v7_heap_stat_what {
     V7_HEAP_STAT_HEAP_SIZE,

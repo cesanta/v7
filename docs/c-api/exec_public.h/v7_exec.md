@@ -1,5 +1,7 @@
 ---
-title: v7 exec()
+title: v7_exec()
+decl_name: v7_exec
+symbol_kind: func
 signature: |
   enum v7_err v7_exec(struct v7 *v7, const char *js_code, v7_val_t *result);
 ---

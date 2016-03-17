@@ -1,5 +1,7 @@
 ---
-title: v7 mk foreign()
+title: v7_mk_foreign()
+decl_name: v7_mk_foreign
+symbol_kind: func
 signature: |
   v7_val_t v7_mk_foreign(void *ptr);
 ---

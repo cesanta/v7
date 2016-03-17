@@ -1,5 +1,7 @@
 ---
-title: v7 disown()
+title: v7_disown()
+decl_name: v7_disown
+symbol_kind: func
 signature: |
   int v7_disown(struct v7 *v7, v7_val_t *v);
 ---

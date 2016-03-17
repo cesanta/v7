@@ -1,5 +1,7 @@
 ---
-title: v7 create opt()
+title: v7_create_opt()
+decl_name: v7_create_opt
+symbol_kind: func
 signature: |
   struct v7 *v7_create_opt(struct v7_create_opts opts);
 ---

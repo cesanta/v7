@@ -1,5 +1,7 @@
 ---
-title: v7 get thrown value()
+title: v7_get_thrown_value()
+decl_name: v7_get_thrown_value
+symbol_kind: func
 signature: |
   v7_val_t v7_get_thrown_value(struct v7 *v7, unsigned char *is_thrown);
 ---

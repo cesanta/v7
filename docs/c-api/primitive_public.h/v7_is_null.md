@@ -1,5 +1,7 @@
 ---
-title: v7 is null()
+title: v7_is_null()
+decl_name: v7_is_null
+symbol_kind: func
 signature: |
   int v7_is_null(v7_val_t v);
 ---

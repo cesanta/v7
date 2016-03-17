@@ -1,5 +1,7 @@
 ---
-title: enum v7 stack stat what
+title: enum v7_stack_stat_what
+decl_name: enum v7_stack_stat_what
+symbol_kind: enum
 signature: |
   enum v7_stack_stat_what {
     /* max stack size consumed by `i_exec()` */

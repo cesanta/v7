@@ -1,5 +1,7 @@
 ---
-title: v7 interrupt()
+title: v7_interrupt()
+decl_name: v7_interrupt
+symbol_kind: func
 signature: |
   void v7_interrupt(struct v7 *v7);
 ---

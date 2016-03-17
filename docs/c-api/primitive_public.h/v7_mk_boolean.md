@@ -1,5 +1,7 @@
 ---
-title: v7 mk boolean()
+title: v7_mk_boolean()
+decl_name: v7_mk_boolean
+symbol_kind: func
 signature: |
   v7_val_t v7_mk_boolean(int is_true);
 ---

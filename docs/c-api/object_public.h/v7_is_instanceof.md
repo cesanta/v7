@@ -1,5 +1,7 @@
 ---
-title: v7 is instanceof()
+title: v7_is_instanceof()
+decl_name: v7_is_instanceof
+symbol_kind: func
 signature: |
   int v7_is_instanceof(struct v7 *v7, v7_val_t o, const char *c);
 ---

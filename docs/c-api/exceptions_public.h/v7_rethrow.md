@@ -1,5 +1,7 @@
 ---
-title: v7 rethrow()
+title: v7_rethrow()
+decl_name: v7_rethrow
+symbol_kind: func
 signature: |
   enum v7_err v7_rethrow(struct v7 *v7);
 ---

@@ -1,5 +1,7 @@
 ---
-title: v7 array set throwing()
+title: v7_array_set_throwing()
+decl_name: v7_array_set_throwing
+symbol_kind: func
 signature: |
   enum v7_err v7_array_set_throwing(struct v7 *v7, v7_val_t arr,
                                     unsigned long index, v7_val_t v, int *res);

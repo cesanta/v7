@@ -1,5 +1,7 @@
 ---
-title: v7 println()
+title: v7_println()
+decl_name: v7_println
+symbol_kind: func
 signature: |
   void v7_println(struct v7 *v7, v7_val_t v);
 ---

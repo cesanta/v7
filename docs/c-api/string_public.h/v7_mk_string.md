@@ -1,5 +1,7 @@
 ---
-title: v7 mk string()
+title: v7_mk_string()
+decl_name: v7_mk_string
+symbol_kind: func
 signature: |
   v7_val_t v7_mk_string(struct v7 *v7, const char *str, size_t len, int copy);
 ---

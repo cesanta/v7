@@ -1,5 +1,7 @@
 ---
-title: v7 get()
+title: v7_get()
+decl_name: v7_get
+symbol_kind: func
 signature: |
   v7_val_t v7_get(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
 ---

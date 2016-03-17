@@ -1,5 +1,7 @@
 ---
-title: v7 to cstring()
+title: v7_to_cstring()
+decl_name: v7_to_cstring
+symbol_kind: func
 signature: |
   const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
 ---
@@ -11,8 +13,7 @@ with a C string.
 
 C compatible strings contain exactly one NUL char, in terminal position.
 
-All strings owned by the V7 engine (see v7_mk_string) are guaranteed to
-be NUL terminated.
-Out of these, those that don't include embedded NUL chars are guaranteed to
-be C compatible. 
+All strings owned by the V7 engine (see `v7_mk_string()`) are guaranteed to
+be NUL terminated. Out of these, those that don't include embedded NUL chars
+are guaranteed to be C compatible. 
 

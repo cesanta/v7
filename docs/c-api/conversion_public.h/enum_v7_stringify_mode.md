@@ -1,5 +1,7 @@
 ---
-title: enum v7 stringify mode
+title: enum v7_stringify_mode
+decl_name: enum v7_stringify_mode
+symbol_kind: enum
 signature: |
   enum v7_stringify_mode {
     V7_STRINGIFY_DEFAULT,
