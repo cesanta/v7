@@ -13,7 +13,7 @@ Usage example:
 
     void *h = NULL;
     v7_val_t name, val;
-    unsigned int attrs;
+    v7_prop_attr_t attrs;
     while ((h = v7_next_prop(h, obj, &name, &val, &attrs)) != NULL) {
       ...
     } 

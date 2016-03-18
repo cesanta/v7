@@ -51,6 +51,14 @@
         {
             "type": "markdown",
             "name": "v7_is_instanceof_v.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_prop_attr_t.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_prop_attr_desc_t.md"
         }
     ]
 }

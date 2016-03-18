@@ -66,6 +66,14 @@
         },
         {
             "type": "markdown",
+            "name": "v7_val_t.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_cfunction_t.md"
+        },
+        {
+            "type": "markdown",
             "name": "struct_v7.md"
         },
         {
