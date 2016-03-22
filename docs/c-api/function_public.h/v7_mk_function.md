@@ -1,7 +1,7 @@
 ---
-title: v7_mk_function()
-decl_name: v7_mk_function
-symbol_kind: func
+title: "v7_mk_function()"
+decl_name: "v7_mk_function"
+symbol_kind: "func"
 signature: |
   v7_val_t v7_mk_function(struct v7 *, v7_cfunction_t *func);
 ---

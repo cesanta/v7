@@ -1,7 +1,7 @@
 ---
-title: v7_stack_stat_clean()
-decl_name: v7_stack_stat_clean
-symbol_kind: func
+title: "v7_stack_stat_clean()"
+decl_name: "v7_stack_stat_clean"
+symbol_kind: "func"
 signature: |
   void v7_stack_stat_clean(struct v7 *v7);
 ---

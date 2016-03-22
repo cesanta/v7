@@ -1,7 +1,7 @@
 ---
-title: struct v7
-decl_name: struct v7
-symbol_kind: struct
+title: "struct v7"
+decl_name: "struct v7"
+symbol_kind: "struct"
 signature: |
   struct v7 {
     /* ... */

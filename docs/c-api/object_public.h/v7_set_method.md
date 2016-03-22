@@ -1,7 +1,7 @@
 ---
-title: v7_set_method()
-decl_name: v7_set_method
-symbol_kind: func
+title: "v7_set_method()"
+decl_name: "v7_set_method"
+symbol_kind: "func"
 signature: |
   int v7_set_method(struct v7 *, v7_val_t obj, const char *name,
                     v7_cfunction_t *func);

@@ -1,7 +1,7 @@
 ---
-title: v7_next_prop()
-decl_name: v7_next_prop
-symbol_kind: func
+title: "v7_next_prop()"
+decl_name: "v7_next_prop"
+symbol_kind: "func"
 signature: |
   void *v7_next_prop(void *handle, v7_val_t obj, v7_val_t *name, v7_val_t *value,
                      v7_prop_attr_t *attrs);

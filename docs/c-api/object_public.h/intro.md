@@ -1,7 +1,7 @@
 ---
-title: Objects
-symbol_kind: intro
-decl_name: object_public.h
+title: "Objects"
+symbol_kind: "intro"
+decl_name: "object_public.h"
 ---
 
 

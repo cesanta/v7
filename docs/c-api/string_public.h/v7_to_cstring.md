@@ -1,7 +1,7 @@
 ---
-title: v7_to_cstring()
-decl_name: v7_to_cstring
-symbol_kind: func
+title: "v7_to_cstring()"
+decl_name: "v7_to_cstring"
+symbol_kind: "func"
 signature: |
   const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
 ---

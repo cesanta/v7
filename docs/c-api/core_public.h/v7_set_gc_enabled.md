@@ -1,7 +1,7 @@
 ---
-title: v7_set_gc_enabled()
-decl_name: v7_set_gc_enabled
-symbol_kind: func
+title: "v7_set_gc_enabled()"
+decl_name: "v7_set_gc_enabled"
+symbol_kind: "func"
 signature: |
   void v7_set_gc_enabled(struct v7 *v7, int enabled);
 ---

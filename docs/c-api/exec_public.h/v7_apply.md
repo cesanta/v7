@@ -1,7 +1,7 @@
 ---
-title: v7_apply()
-decl_name: v7_apply
-symbol_kind: func
+title: "v7_apply()"
+decl_name: "v7_apply"
+symbol_kind: "func"
 signature: |
   enum v7_err v7_apply(struct v7 *v7, v7_val_t func, v7_val_t this_obj,
                        v7_val_t args, v7_val_t *res);

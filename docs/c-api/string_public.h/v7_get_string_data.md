@@ -1,7 +1,7 @@
 ---
-title: v7_get_string_data()
-decl_name: v7_get_string_data
-symbol_kind: func
+title: "v7_get_string_data()"
+decl_name: "v7_get_string_data"
+symbol_kind: "func"
 signature: |
   const char *v7_get_string_data(struct v7 *v7, v7_val_t *v, size_t *len);
 ---

@@ -1,7 +1,7 @@
 ---
-title: v7_gc()
-decl_name: v7_gc
-symbol_kind: func
+title: "v7_gc()"
+decl_name: "v7_gc"
+symbol_kind: "func"
 signature: |
   void v7_gc(struct v7 *v7, int full);
 ---

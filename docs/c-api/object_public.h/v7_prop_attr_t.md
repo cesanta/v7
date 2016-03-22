@@ -1,7 +1,7 @@
 ---
-title: v7_prop_attr_t
-decl_name: v7_prop_attr_t
-symbol_kind: typedef
+title: "v7_prop_attr_t"
+decl_name: "v7_prop_attr_t"
+symbol_kind: "typedef"
 signature: |
   typedef unsigned short v7_prop_attr_t;
   #define V7_PROPERTY_NON_WRITABLE (1 << 0)

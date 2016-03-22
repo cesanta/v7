@@ -1,7 +1,7 @@
 ---
-title: v7_prop_attr_desc_t
-decl_name: v7_prop_attr_desc_t
-symbol_kind: typedef
+title: "v7_prop_attr_desc_t"
+decl_name: "v7_prop_attr_desc_t"
+symbol_kind: "typedef"
 signature: |
   typedef unsigned long v7_prop_attr_desc_t;
   #define V7_DESC_WRITABLE(v) _V7_MK_DESC_INV(v, V7_PROPERTY_NON_WRITABLE)

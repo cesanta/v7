@@ -1,7 +1,7 @@
 ---
-title: v7_to_boolean()
-decl_name: v7_to_boolean
-symbol_kind: func
+title: "v7_to_boolean()"
+decl_name: "v7_to_boolean"
+symbol_kind: "func"
 signature: |
   int v7_to_boolean(v7_val_t v);
 ---

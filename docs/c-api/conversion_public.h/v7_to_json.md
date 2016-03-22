@@ -1,7 +1,7 @@
 ---
-title: v7_to_json()
-decl_name: v7_to_json
-symbol_kind: func
+title: "v7_to_json()"
+decl_name: "v7_to_json"
+symbol_kind: "func"
 signature: |
   #define v7_to_json(a, b, c, d);
 ---

@@ -1,7 +1,7 @@
 ---
-title: v7_del()
-decl_name: v7_del
-symbol_kind: func
+title: "v7_del()"
+decl_name: "v7_del"
+symbol_kind: "func"
 signature: |
   int v7_del(struct v7 *v7, v7_val_t obj, const char *name, size_t name_len);
 ---

@@ -1,7 +1,7 @@
 ---
-title: v7_main()
-decl_name: v7_main
-symbol_kind: func
+title: "v7_main()"
+decl_name: "v7_main"
+symbol_kind: "func"
 signature: |
   int v7_main(int argc, char *argv[], void (*pre_freeze_init);
 ---

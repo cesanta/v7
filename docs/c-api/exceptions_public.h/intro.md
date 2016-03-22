@@ -1,7 +1,7 @@
 ---
-title: Exceptions
-symbol_kind: intro
-decl_name: exceptions_public.h
+title: "Exceptions"
+symbol_kind: "intro"
+decl_name: "exceptions_public.h"
 ---
 
 

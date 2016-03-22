@@ -1,7 +1,7 @@
 ---
-title: v7_array_push_throwing()
-decl_name: v7_array_push_throwing
-symbol_kind: func
+title: "v7_array_push_throwing()"
+decl_name: "v7_array_push_throwing"
+symbol_kind: "func"
 signature: |
   enum v7_err v7_array_push_throwing(struct v7 *v7, v7_val_t arr, v7_val_t v,
                                      int *res);

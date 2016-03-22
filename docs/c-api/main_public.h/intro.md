@@ -1,7 +1,7 @@
 ---
-title: v7 main()
-symbol_kind: intro
-decl_name: main_public.h
+title: "v7 main()"
+symbol_kind: "intro"
+decl_name: "main_public.h"
 ---
 
 

@@ -1,7 +1,7 @@
 ---
-title: v7_stringify_throwing()
-decl_name: v7_stringify_throwing
-symbol_kind: func
+title: "v7_stringify_throwing()"
+decl_name: "v7_stringify_throwing"
+symbol_kind: "func"
 signature: |
   enum v7_err v7_stringify_throwing(struct v7 *v7, v7_val_t v, char *buf,
                                     size_t size, enum v7_stringify_mode mode,

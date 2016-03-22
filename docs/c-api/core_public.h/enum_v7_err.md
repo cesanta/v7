@@ -1,7 +1,7 @@
 ---
-title: enum v7_err
-decl_name: enum v7_err
-symbol_kind: enum
+title: "enum v7_err"
+decl_name: "enum v7_err"
+symbol_kind: "enum"
 signature: |
   enum v7_err {
     V7_OK,

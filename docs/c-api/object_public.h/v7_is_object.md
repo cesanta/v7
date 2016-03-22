@@ -1,7 +1,7 @@
 ---
-title: v7_is_object()
-decl_name: v7_is_object
-symbol_kind: func
+title: "v7_is_object()"
+decl_name: "v7_is_object"
+symbol_kind: "func"
 signature: |
   int v7_is_object(v7_val_t v);
 ---

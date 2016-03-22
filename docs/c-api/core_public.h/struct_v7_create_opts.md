@@ -1,7 +1,7 @@
 ---
-title: struct v7_create_opts
-decl_name: struct v7_create_opts
-symbol_kind: struct
+title: "struct v7_create_opts"
+decl_name: "struct v7_create_opts"
+symbol_kind: "struct"
 signature: |
   struct v7_create_opts {
     size_t object_arena_size;

@@ -1,7 +1,7 @@
 ---
-title: v7_fprintln()
-decl_name: v7_fprintln
-symbol_kind: func
+title: "v7_fprintln()"
+decl_name: "v7_fprintln"
+symbol_kind: "func"
 signature: |
   void v7_fprintln(FILE *f, struct v7 *v7, v7_val_t v);
 ---

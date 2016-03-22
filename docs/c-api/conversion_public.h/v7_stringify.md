@@ -1,7 +1,7 @@
 ---
-title: v7_stringify()
-decl_name: v7_stringify
-symbol_kind: func
+title: "v7_stringify()"
+decl_name: "v7_stringify"
+symbol_kind: "func"
 signature: |
   char *v7_stringify(struct v7 *v7, v7_val_t v, char *buf, size_t len,
                      enum v7_stringify_mode mode);
