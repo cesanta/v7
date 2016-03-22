@@ -310,7 +310,6 @@ typedef struct stat cs_stat_t;
 
 #include <assert.h>
 #include <ctype.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <string.h>
@@ -322,6 +321,10 @@ typedef struct stat cs_stat_t;
 #include <lwip/inet.h>
 #include <lwip/netdb.h>
 #include <lwip/dns.h>
+
+#ifndef LWIP_PROVIDE_ERRNO
+#include <errno.h>
+#endif
 
 #define LWIP_TIMEVAL_PRIVATE 0
 
@@ -346,6 +349,9 @@ typedef struct stat cs_stat_t;
 #define INT64_FMT PRId64
 #define INT64_X_FMT PRIx64
 #define __cdecl
+
+unsigned long os_random(void);
+#define random os_random
 
 #endif /* CS_PLATFORM == CS_P_ESP_LWIP */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP_LWIP_H_ */
@@ -618,7 +624,7 @@ int gettimeofday(struct timeval *t, void *tz);
 
 long int random(void);
 
-#ifdef CC3200_ENABLE_SPIFFS
+#ifdef CC3200_FS_SPIFFS
 #include <common/spiffs/spiffs.h>
 
 typedef struct {
@@ -632,7 +638,7 @@ typedef struct {
 DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
-#endif
+#endif /* CC3200_FS_SPIFFS */
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
@@ -17285,11 +17291,10 @@ V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
                                     struct v7_property **res) {
   enum v7_err rcode = V7_OK;
   val_t name_val = v7_mk_undefined();
-  /* def_property_v can trigger GC */
-  struct gc_tmp_frame tf = new_tmp_frame(v7);
 
-  tmp_stack_push(&tf, &val);
-  tmp_stack_push(&tf, &name_val);
+  v7_own(v7, &obj);
+  v7_own(v7, &val);
+  v7_own(v7, &name_val);
 
   if (len == (size_t) ~0) {
     len = strlen(name);
@@ -17299,7 +17304,10 @@ V7_PRIVATE enum v7_err def_property(struct v7 *v7, val_t obj, const char *name,
   V7_TRY(def_property_v(v7, obj, name_val, attrs_desc, val, as_assign, res));
 
 clean:
-  tmp_frame_cleanup(&tf);
+  v7_disown(v7, &name_val);
+  v7_disown(v7, &val);
+  v7_disown(v7, &obj);
+
   return rcode;
 }
 
