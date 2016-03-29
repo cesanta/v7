@@ -46,7 +46,9 @@
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
 
-#if defined(__unix__) || defined(__APPLE__)
+#ifdef cc3200
+#define CS_PLATFORM CS_P_CC3200
+#elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
 #elif defined(_WIN32)
 #define CS_PLATFORM CS_P_WINDOWS
@@ -458,6 +460,10 @@ void mbuf_trim(struct mbuf *);
 #include <stdint.h>
 #include <time.h>
 
+#define MG_SOCKET_SIMPLELINK 1
+#define MG_DISABLE_SOCKETPAIR 1
+#define MG_DISABLE_SYNC_RESOLVER 1
+
 #include <simplelink.h>
 
 #define SOMAXCONN 8
@@ -608,8 +614,6 @@ typedef struct stat cs_stat_t;
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 char *inet_ntoa(struct in_addr in);
 int inet_pton(int af, const char *src, void *dst);
-
-void cc3200_set_non_blocking_mode(int fd);
 
 struct timeval;
 int gettimeofday(struct timeval *t, void *tz);
@@ -15846,21 +15850,28 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
 /* clang-format off */
 static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC(" is not a function"),
+    V7_VEC("ANYEDGE"),  /* sjs */
     V7_VEC("Boolean"),
     V7_VEC("CLOSED"),  /* sjs */
     V7_VEC("Clubby"),  /* sjs */
     V7_VEC("Crypto"),
     V7_VEC("EvalError"),
     V7_VEC("Function"),
+    V7_VEC("HILEVEL"),  /* sjs */
     V7_VEC("Infinity"),
     V7_VEC("InternalError"),
     V7_VEC("LOG10E"),
+    V7_VEC("LOLEVEL"),  /* sjs */
     V7_VEC("MAX_VALUE"),
     V7_VEC("MIN_VALUE"),
     V7_VEC("NEGATIVE_INFINITY"),
+    V7_VEC("NEGEDGE"),  /* sjs */
     V7_VEC("Number"),
     V7_VEC("Object"),
+    V7_VEC("POSEDGE"),  /* sjs */
     V7_VEC("POSITIVE_INFINITY"),
+    V7_VEC("PULLDOWN"),  /* sjs */
+    V7_VEC("PULLUP"),  /* sjs */
     V7_VEC("RangeError"),
     V7_VEC("ReferenceError"),
     V7_VEC("RegExp"),
