@@ -463,6 +463,8 @@ void mbuf_trim(struct mbuf *);
 #define MG_SOCKET_SIMPLELINK 1
 #define MG_DISABLE_SOCKETPAIR 1
 #define MG_DISABLE_SYNC_RESOLVER 1
+#define MG_DISABLE_POPEN 1
+#define MG_DISABLE_CGI 1
 
 #include <simplelink.h>
 
@@ -608,6 +610,8 @@ typedef struct stat cs_stat_t;
 #define __cdecl
 
 #define closesocket(x) sl_Close(x)
+
+#define fileno(x) -1
 
 /* Some functions we implement for Mongoose. */
 
@@ -6500,18 +6504,17 @@ size_t mbuf_insert(struct mbuf *a, size_t off, const void *buf, size_t len) {
       memcpy(a->buf + off, buf, len);
     }
     a->len += len;
-  } else if ((p = (char *) MBUF_REALLOC(
-                  a->buf, (size_t)((a->len + len) * MBUF_SIZE_MULTIPLIER))) !=
-             NULL) {
-    a->buf = p;
-    memmove(a->buf + off + len, a->buf + off, a->len - off);
-    if (buf != NULL) {
-      memcpy(a->buf + off, buf, len);
-    }
-    a->len += len;
-    a->size = (size_t)(a->len * MBUF_SIZE_MULTIPLIER);
   } else {
-    len = 0;
+    size_t new_size = (a->len + len) * MBUF_SIZE_MULTIPLIER;
+    if ((p = (char *) MBUF_REALLOC(a->buf, new_size)) != NULL) {
+      a->buf = p;
+      memmove(a->buf + off + len, a->buf + off, a->len - off);
+      if (buf != NULL) memcpy(a->buf + off, buf, len);
+      a->len += len;
+      a->size = new_size;
+    } else {
+      len = 0;
+    }
   }
 
   return len;
