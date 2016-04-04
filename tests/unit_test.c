@@ -2251,6 +2251,7 @@ static const char *test_file(void) {
   const char *data = "some test string", *test_file_name = "ft.txt";
   struct v7 *v7 = v7_create();
   v7_val_t v, data_str = v7_mk_string(v7, data, strlen(data), 1);
+  const char *hello = "\"hello\"";
 
   v7_own(v7, &data_str);
   v7_set(v7, v7_get_global(v7), "ts", 2, data_str);
@@ -2265,9 +2266,14 @@ static const char *test_file(void) {
   ASSERT(check_file(v7, data_str, test_file_name));
   ASSERT_EQ(remove(test_file_name), 0);
   ASSERT_EVAL_EQ(v7, "File.open('\\0test.mk')", "null");
-  ASSERT_EVAL_EQ(v7, "File.open('test.mk', '\\0')", "null");
-  ASSERT_EQ(eval(v7, "f = File.open('test.mk'); f.readAll()", &v), V7_OK);
+  ASSERT_EVAL_EQ(v7, "File.write('x.txt', 'hello')", "true");
+  ASSERT_EVAL_EQ(v7, "File.read('x.txt')", hello);
+  ASSERT_EVAL_EQ(v7, "File.remove('x.txt')", "0");
+  ASSERT_EVAL_EQ(v7, "File.open('x.txt')", "null");
+  ASSERT_EVAL_EQ(v7, "File.write('x.txt', 'hello')", "true");
+  ASSERT_EQ(eval(v7, "File.read('test.mk')", &v), V7_OK);
   ASSERT(check_file(v7, v, "test.mk"));
+  ASSERT_EVAL_EQ(v7, "File.open('test.mk', '\\0')", "null");
   ASSERT_EVAL_EQ(v7, "File.list('non existent directory')", "undefined");
   ASSERT_EVAL_EQ(v7, "File.list('bad\\0file')", "undefined");
   ASSERT_EQ(eval(v7, "l = File.list('.');", &v), V7_OK);
