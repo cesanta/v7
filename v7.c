@@ -42,11 +42,15 @@
 #define CS_P_WINDOWS 2
 #define CS_P_ESP_LWIP 3
 #define CS_P_CC3200 4
+#define CS_P_MSP432 5
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
 
-#ifdef cc3200
+#if defined(TARGET_IS_MSP432P4XX) || defined(__MSP432P401R__)
+
+#define CS_PLATFORM CS_P_MSP432
+#elif defined(cc3200)
 #define CS_PLATFORM CS_P_CC3200
 #elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
@@ -463,43 +467,18 @@ void mbuf_trim(struct mbuf *);
 
 #endif /* CS_COMMON_MBUF_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "./common/platforms/platform_cc3200.h"
+#line 1 "./common/platforms/simplelink/cs_simplelink.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#if CS_PLATFORM == CS_P_CC3200
-
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <stdint.h>
-#include <string.h>
-#include <time.h>
-
-#ifndef __TI_COMPILER_VERSION__
-#include <fcntl.h>
-#include <sys/time.h>
-#endif
-
-#define MG_SOCKET_SIMPLELINK 1
-#define MG_DISABLE_SOCKETPAIR 1
-#define MG_DISABLE_SYNC_RESOLVER 1
-#define MG_DISABLE_POPEN 1
-#define MG_DISABLE_CGI 1
-/* Only SPIFFS supports directories, SLFS does not. */
-#ifndef CC3200_FS_SPIFFS
-#define MG_DISABLE_DAV 1
-#define MG_DISABLE_DIRECTORY_LISTING 1
-#endif
+#ifndef CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
+#define CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
 
 /* If simplelink.h is already included, all bets are off. */
-#ifndef __SIMPLELINK_H__
+#if defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__)
 
 #ifndef __TI_COMPILER_VERSION__
 #undef __CONCAT
@@ -550,10 +529,12 @@ void mbuf_trim(struct mbuf *);
 #define listen sl_Listen
 #define recv sl_Recv
 #define recvfrom sl_RecvFrom
-#define select sl_Select
 #define send sl_Send
 #define sendto sl_SendTo
 #define socket sl_Socket
+
+#define select(nfds, rfds, wfds, efds, tout) \
+  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *)(tout))
 
 #ifndef EACCES
 #define EACCES SL_EACCES
@@ -579,7 +560,50 @@ void mbuf_trim(struct mbuf *);
 
 #define SOMAXCONN 8
 
-#endif /* !__SIMPLELINK_H__ */
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+char *inet_ntoa(struct in_addr in);
+int inet_pton(int af, const char *src, void *dst);
+
+#endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
+
+#endif /* CS_SMARTJS_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./common/platforms/platform_cc3200.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
+#if CS_PLATFORM == CS_P_CC3200
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#ifndef __TI_COMPILER_VERSION__
+#include <fcntl.h>
+#include <sys/time.h>
+#endif
+
+#define MG_SOCKET_SIMPLELINK 1
+#define MG_DISABLE_SOCKETPAIR 1
+#define MG_DISABLE_SYNC_RESOLVER 1
+#define MG_DISABLE_POPEN 1
+#define MG_DISABLE_CGI 1
+/* Only SPIFFS supports directories, SLFS does not. */
+#ifndef CC3200_FS_SPIFFS
+#define MG_DISABLE_DAV 1
+#define MG_DISABLE_DIRECTORY_LISTING 1
+#endif
+
+/* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
 
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
@@ -595,22 +619,13 @@ typedef struct stat cs_stat_t;
 
 /* Some functions we implement for Mongoose. */
 
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
-char *inet_ntoa(struct in_addr in);
-int inet_pton(int af, const char *src, void *dst);
-
 #ifdef __TI_COMPILER_VERSION__
+struct SlTimeval_t;
 #define timeval SlTimeval_t
 int gettimeofday(struct timeval *t, void *tz);
-#else
-#undef timeval
 #endif
 
 long int random(void);
-
-#undef select
-#define select(nfds, rfds, wfds, efds, tout) \
-  sl_Select((nfds), (rfds), (wfds), (efds), (struct SlTimeval_t *)(tout))
 
 /* TI's libc does not have stat & friends, add them. */
 #ifdef __TI_COMPILER_VERSION__
@@ -666,6 +681,10 @@ DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 #endif /* CC3200_FS_SPIFFS */
+
+#ifdef CC3200_FS_SLFS
+#define MG_FS_SLFS
+#endif
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
@@ -15879,29 +15898,19 @@ V7_PRIVATE enum v7_type val_type(struct v7 *v7, val_t v) {
 /* clang-format off */
 static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC(" is not a function"),
-    V7_VEC("ANYEDGE"),  /* sjs */
     V7_VEC("Boolean"),
-    V7_VEC("CLOSED"),  /* sjs */
-    V7_VEC("Clubby"),  /* sjs */
-    V7_VEC("Console"), /* sjs */
     V7_VEC("Crypto"),
     V7_VEC("EvalError"),
     V7_VEC("Function"),
-    V7_VEC("HILEVEL"),  /* sjs */
     V7_VEC("Infinity"),
     V7_VEC("InternalError"),
     V7_VEC("LOG10E"),
-    V7_VEC("LOLEVEL"),  /* sjs */
     V7_VEC("MAX_VALUE"),
     V7_VEC("MIN_VALUE"),
     V7_VEC("NEGATIVE_INFINITY"),
-    V7_VEC("NEGEDGE"),  /* sjs */
     V7_VEC("Number"),
     V7_VEC("Object"),
-    V7_VEC("POSEDGE"),  /* sjs */
     V7_VEC("POSITIVE_INFINITY"),
-    V7_VEC("PULLDOWN"),  /* sjs */
-    V7_VEC("PULLUP"),  /* sjs */
     V7_VEC("RangeError"),
     V7_VEC("ReferenceError"),
     V7_VEC("RegExp"),
@@ -15911,32 +15920,23 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("SyntaxError"),
     V7_VEC("TypeError"),
     V7_VEC("UBJSON"),
-    V7_VEC("WebSocket"),  /* sjs */
     V7_VEC("_modcache"),
-    V7_VEC("_writeRegAddr"),  /* sjs */
+    V7_VEC("_writeRegAddr"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("accept"),
-    V7_VEC("address"), /* sjs */
+    V7_VEC("address"), /* cannot be frozen yet: see #3279 */
     V7_VEC("arguments"),
     V7_VEC("base64_decode"),
     V7_VEC("base64_encode"),
     V7_VEC("boolean"),
-    V7_VEC("changed"),  /* sjs */
     V7_VEC("charAt"),
     V7_VEC("charCodeAt"),
-    V7_VEC("clearInterval"),  /* sjs */
-    V7_VEC("clearTimeout"),  /* sjs */
     V7_VEC("concat"),
     V7_VEC("configurable"),
     V7_VEC("connect"),
     V7_VEC("constructor"),
     V7_VEC("create"),
-    V7_VEC("createConnection"),  /* sjs */
-    V7_VEC("createServer"),  /* sjs */
-    V7_VEC("createSocket"),  /* sjs */
     V7_VEC("defineProperties"),
     V7_VEC("defineProperty"),
-    V7_VEC("destroy"), /* sjs */
-    V7_VEC("disconnect"),  /* sjs */
     V7_VEC("every"),
     V7_VEC("exists"),
     V7_VEC("exports"),
@@ -15944,7 +15944,6 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("forEach"),
     V7_VEC("fromCharCode"),
     V7_VEC("function"),
-    V7_VEC("getConnections"), /* sjs */
     V7_VEC("getDate"),
     V7_VEC("getDay"),
     V7_VEC("getFullYear"),
@@ -15983,49 +15982,37 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("md5_hex"),
     V7_VEC("module"),
     V7_VEC("multiline"),
-    V7_VEC("nbytes"),  /* sjs */
+    V7_VEC("nbytes"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("number"),
-    V7_VEC("onclick"),  /* sjs */
-    V7_VEC("onclose"),  /* sjs */
-    V7_VEC("onopen"),  /* sjs */
     V7_VEC("parseFloat"),
     V7_VEC("parseInt"),
     V7_VEC("preventExtensions"),
     V7_VEC("propertyIsEnumerable"),
     V7_VEC("prototype"),
-    V7_VEC("publish"),  /* sjs */
     V7_VEC("random"),
-    V7_VEC("readByte"),  /* sjs */
-    V7_VEC("readRegB"),  /* sjs */
-    V7_VEC("readRegW"),  /* sjs */
-    V7_VEC("readString"),  /* sjs */
-    V7_VEC("readVoltage"),  /* sjs */
-    V7_VEC("readyState"),  /* sjs */
-    V7_VEC("reboot"),  /* sjs */
+    V7_VEC("readByte"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readRegB"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readRegW"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readString"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readVoltage"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("readyState"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("recvAll"),
     V7_VEC("reduce"),
     V7_VEC("remove"),
     V7_VEC("rename"),
     V7_VEC("render"),
     V7_VEC("replace"),
-    V7_VEC("request"),  /* sjs */
     V7_VEC("require"),
-    V7_VEC("resume"), /* sjs */
     V7_VEC("reverse"),
-    V7_VEC("sayHello"),  /* sjs */
     V7_VEC("search"),
-    V7_VEC("sendAck"),  /* sjs */
     V7_VEC("setDate"),
     V7_VEC("setFullYear"),
     V7_VEC("setHours"),
-    V7_VEC("setInterval"),  /* sjs */
-    V7_VEC("setLogLevel"),  /* sjs */
     V7_VEC("setMilliseconds"),
     V7_VEC("setMinutes"),
     V7_VEC("setMonth"),
     V7_VEC("setSeconds"),
     V7_VEC("setTime"),
-    V7_VEC("setTimeout"),  /* sjs */
     V7_VEC("setUTCDate"),
     V7_VEC("setUTCFullYear"),
     V7_VEC("setUTCHours"),
@@ -16033,15 +16020,13 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("setUTCMinutes"),
     V7_VEC("setUTCMonth"),
     V7_VEC("setUTCSeconds"),
-    V7_VEC("setisr"),  /* sjs */
-    V7_VEC("setmode"),  /* sjs */
+    V7_VEC("setisr"),  /* cannot be frozen yet: see #3279 */
+    V7_VEC("setmode"),  /* cannot be frozen yet: see #3279 */
     V7_VEC("sha1_hex"),
     V7_VEC("source"),
     V7_VEC("splice"),
-    V7_VEC("status"),  /* sjs */
     V7_VEC("string"),
     V7_VEC("stringify"),
-    V7_VEC("subscribe"),  /* sjs */
     V7_VEC("substr"),
     V7_VEC("substring"),
     V7_VEC("toDateString"),
@@ -16060,13 +16045,8 @@ static const struct v7_vec_const v_dictionary_strings[] = {
     V7_VEC("toTimeString"),
     V7_VEC("toUTCString"),
     V7_VEC("toUpperCase"),
-    V7_VEC("usleep"),  /* sjs */
     V7_VEC("valueOf"),
-    V7_VEC("wdtFeed"),  /* sjs */
     V7_VEC("writable"),
-    V7_VEC("writeHead"),  /* sjs */
-    V7_VEC("writeRegB"),  /* sjs */
-    V7_VEC("writeRegW")  /* sjs */
 };
 /* clang-format on */
 
@@ -19111,7 +19091,7 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
   val_t h, tmp = 0;
   char *s;
 
-/* clang-format off */
+  /* clang-format off */
 
   /*
    * If a value points to an unmarked string we shall:
@@ -19134,22 +19114,17 @@ void gc_mark_string(struct v7 *v7, val_t *v) {
    *  Note: 64-bit pointers can be represented with 48-bits
    */
 
-/* clang-format on */
-
-/*
- * Freeze.
- */
-#ifdef V7_FREEZE
-  if (v7->freeze_file != NULL && (*v & V7_TAG_MASK) == V7_TAG_STRING_O) {
-    printf("Cannot freeze unless all strings are STRING_D or STRING_F:");
-    v7_println(v7, *v);
-    abort();
-  }
-#endif
+  /* clang-format on */
 
   if ((*v & V7_TAG_MASK) != V7_TAG_STRING_O) {
     return;
   }
+
+#ifdef V7_FREEZE
+  if (v7->freeze_file != NULL) {
+    return;
+  }
+#endif
 
 #ifdef V7_GC_VERBOSE
   {
