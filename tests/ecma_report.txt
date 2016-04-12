@@ -4290,38 +4290,38 @@ err
 4241	PASS ch15/15.2/15.2.3/15.2.3.10/15.2.3.10-3-7.js (tail -c +4687041 tests/ecmac.db|head -c 508)
 4242	PASS ch15/15.2/15.2.3/15.2.3.10/15.2.3.10-3-8.js (tail -c +4687550 tests/ecmac.db|head -c 506)
 4243	PASS ch15/15.2/15.2.3/15.2.3.10/15.2.3.10-3-9.js (tail -c +4688057 tests/ecmac.db|head -c 505)
-4244	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-0-1.js (tail -c +4688563 tests/ecmac.db|head -c 330): [{"message":"Test case returned non-true value!"}]
-4245	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-0-2.js (tail -c +4688894 tests/ecmac.db|head -c 325): [{"message":"cannot read property 'length' of undefined"}]
+4244	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-0-1.js (tail -c +4688563 tests/ecmac.db|head -c 330)
+4245	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-0-2.js (tail -c +4688894 tests/ecmac.db|head -c 325)
 4246	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-1.js (tail -c +4689220 tests/ecmac.db|head -c 408)
-4247	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-1.js (tail -c +4689629 tests/ecmac.db|head -c 410): [{"message":"Object.isSealed is not a function"}]
-4248	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-10.js (tail -c +4690040 tests/ecmac.db|head -c 351): [{"message":"Object.isSealed is not a function"}]
-4249	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-11.js (tail -c +4690392 tests/ecmac.db|head -c 372): [{"message":"Object.isSealed is not a function"}]
-4250	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-12.js (tail -c +4690765 tests/ecmac.db|head -c 350): [{"message":"Object.isSealed is not a function"}]
-4251	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-13.js (tail -c +4691116 tests/ecmac.db|head -c 370): [{"message":"Object.isSealed is not a function"}]
-4252	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-14.js (tail -c +4691487 tests/ecmac.db|head -c 346): [{"message":"Object.isSealed is not a function"}]
-4253	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-15.js (tail -c +4691834 tests/ecmac.db|head -c 346): [{"message":"Object.isSealed is not a function"}]
-4254	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-16.js (tail -c +4692181 tests/ecmac.db|head -c 366): [{"message":"Object.isSealed is not a function"}]
-4255	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-17.js (tail -c +4692548 tests/ecmac.db|head -c 350): [{"message":"Object.isSealed is not a function"}]
-4256	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-18.js (tail -c +4692899 tests/ecmac.db|head -c 370): [{"message":"Object.isSealed is not a function"}]
-4257	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-19.js (tail -c +4693270 tests/ecmac.db|head -c 348): [{"message":"Object.isSealed is not a function"}]
-4258	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-2.js (tail -c +4693619 tests/ecmac.db|head -c 348): [{"message":"Object.isSealed is not a function"}]
-4259	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-20.js (tail -c +4693968 tests/ecmac.db|head -c 368): [{"message":"Object.isSealed is not a function"}]
-4260	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-21.js (tail -c +4694337 tests/ecmac.db|head -c 356): [{"message":"Object.isSealed is not a function"}]
-4261	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-22.js (tail -c +4694694 tests/ecmac.db|head -c 358): [{"message":"Object.isSealed is not a function"}]
-4262	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-23.js (tail -c +4695053 tests/ecmac.db|head -c 366): [{"message":"Object.isSealed is not a function"}]
-4263	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-24.js (tail -c +4695420 tests/ecmac.db|head -c 360): [{"message":"Object.isSealed is not a function"}]
-4264	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-25.js (tail -c +4695781 tests/ecmac.db|head -c 356): [{"message":"Object.isSealed is not a function"}]
+4247	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-1.js (tail -c +4689629 tests/ecmac.db|head -c 410)
+4248	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-10.js (tail -c +4690040 tests/ecmac.db|head -c 351)
+4249	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-11.js (tail -c +4690392 tests/ecmac.db|head -c 372)
+4250	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-12.js (tail -c +4690765 tests/ecmac.db|head -c 350)
+4251	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-13.js (tail -c +4691116 tests/ecmac.db|head -c 370)
+4252	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-14.js (tail -c +4691487 tests/ecmac.db|head -c 346)
+4253	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-15.js (tail -c +4691834 tests/ecmac.db|head -c 346)
+4254	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-16.js (tail -c +4692181 tests/ecmac.db|head -c 366)
+4255	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-17.js (tail -c +4692548 tests/ecmac.db|head -c 350)
+4256	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-18.js (tail -c +4692899 tests/ecmac.db|head -c 370)
+4257	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-19.js (tail -c +4693270 tests/ecmac.db|head -c 348)
+4258	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-2.js (tail -c +4693619 tests/ecmac.db|head -c 348)
+4259	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-20.js (tail -c +4693968 tests/ecmac.db|head -c 368)
+4260	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-21.js (tail -c +4694337 tests/ecmac.db|head -c 356)
+4261	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-22.js (tail -c +4694694 tests/ecmac.db|head -c 358)
+4262	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-23.js (tail -c +4695053 tests/ecmac.db|head -c 366)
+4263	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-24.js (tail -c +4695420 tests/ecmac.db|head -c 360)
+4264	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-25.js (tail -c +4695781 tests/ecmac.db|head -c 356)
 4265	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-26.js (tail -c +4696138 tests/ecmac.db|head -c 354): [{"message":"[URIError] is not defined"}]
-4266	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-27.js (tail -c +4696493 tests/ecmac.db|head -c 346): [{"message":"Object.isSealed is not a function"}]
-4267	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-3.js (tail -c +4696840 tests/ecmac.db|head -c 368): [{"message":"Object.isSealed is not a function"}]
-4268	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-4.js (tail -c +4697209 tests/ecmac.db|head -c 353): [{"message":"Object.isSealed is not a function"}]
-4269	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-5.js (tail -c +4697563 tests/ecmac.db|head -c 372): [{"message":"Object.isSealed is not a function"}]
-4270	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-6.js (tail -c +4697936 tests/ecmac.db|head -c 346): [{"message":"Object.isSealed is not a function"}]
-4271	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-7.js (tail -c +4698283 tests/ecmac.db|head -c 366): [{"message":"Object.isSealed is not a function"}]
-4272	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-8.js (tail -c +4698650 tests/ecmac.db|head -c 347): [{"message":"Object.isSealed is not a function"}]
-4273	FAIL ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-9.js (tail -c +4698998 tests/ecmac.db|head -c 368): [{"message":"Object.isSealed is not a function"}]
-4274	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-0-1.js (tail -c +4699367 tests/ecmac.db|head -c 330): [{"message":"Test case returned non-true value!"}]
-4275	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-0-2.js (tail -c +4699698 tests/ecmac.db|head -c 325): [{"message":"cannot read property 'length' of undefined"}]
+4266	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-27.js (tail -c +4696493 tests/ecmac.db|head -c 346)
+4267	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-3.js (tail -c +4696840 tests/ecmac.db|head -c 368)
+4268	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-4.js (tail -c +4697209 tests/ecmac.db|head -c 353)
+4269	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-5.js (tail -c +4697563 tests/ecmac.db|head -c 372)
+4270	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-6.js (tail -c +4697936 tests/ecmac.db|head -c 346)
+4271	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-7.js (tail -c +4698283 tests/ecmac.db|head -c 366)
+4272	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-8.js (tail -c +4698650 tests/ecmac.db|head -c 347)
+4273	PASS ch15/15.2/15.2.3/15.2.3.11/15.2.3.11-4-9.js (tail -c +4698998 tests/ecmac.db|head -c 368)
+4274	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-0-1.js (tail -c +4699367 tests/ecmac.db|head -c 330)
+4275	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-0-2.js (tail -c +4699698 tests/ecmac.db|head -c 325)
 4276	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-1-1.js (tail -c +4700024 tests/ecmac.db|head -c 418)
 4277	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-1-2.js (tail -c +4700443 tests/ecmac.db|head -c 408)
 4278	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-1-3.js (tail -c +4700852 tests/ecmac.db|head -c 413)
@@ -4330,52 +4330,52 @@ err
 4281	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-1-6.js (tail -c +4702009 tests/ecmac.db|head -c 407): [{"message":"Object.freeze is not a function"}]
 4282	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-1-7.js (tail -c +4702417 tests/ecmac.db|head -c 388): [{"message":"Object.freeze is not a function"}]
 4283	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-1.js (tail -c +4702806 tests/ecmac.db|head -c 408)
-4284	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-1.js (tail -c +4703215 tests/ecmac.db|head -c 657): [{"message":"Object.isFrozen is not a function"}]
-4285	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-2.js (tail -c +4703873 tests/ecmac.db|head -c 774): [{"message":"Object.isFrozen is not a function"}]
-4286	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-1.js (tail -c +4704648 tests/ecmac.db|head -c 505): [{"message":"Object.isFrozen is not a function"}]
-4287	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-11.js (tail -c +4705154 tests/ecmac.db|head -c 437): [{"message":"Object.isFrozen is not a function"}]
-4288	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-12.js (tail -c +4705592 tests/ecmac.db|head -c 399): [{"message":"Object.isFrozen is not a function"}]
-4289	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-13.js (tail -c +4705992 tests/ecmac.db|head -c 532): [{"message":"Object.isFrozen is not a function"}]
-4290	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-14.js (tail -c +4706525 tests/ecmac.db|head -c 383): [{"message":"Object.isFrozen is not a function"}]
-4291	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-2.js (tail -c +4706909 tests/ecmac.db|head -c 803): [{"message":"Object.isFrozen is not a function"}]
-4292	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-3.js (tail -c +4707713 tests/ecmac.db|head -c 801): [{"message":"Object.isFrozen is not a function"}]
-4293	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-4.js (tail -c +4708515 tests/ecmac.db|head -c 526): [{"message":"Object.isFrozen is not a function"}]
-4294	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-5.js (tail -c +4709042 tests/ecmac.db|head -c 799): [{"message":"Object.isFrozen is not a function"}]
-4295	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-6.js (tail -c +4709842 tests/ecmac.db|head -c 857): [{"message":"Object.isFrozen is not a function"}]
-4296	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-7.js (tail -c +4710700 tests/ecmac.db|head -c 509): [{"message":"Object.isFrozen is not a function"}]
-4297	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-8.js (tail -c +4711210 tests/ecmac.db|head -c 837): [{"message":"Object.isFrozen is not a function"}]
-4298	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-b-i-1.js (tail -c +4712048 tests/ecmac.db|head -c 533): [{"message":"Object.isFrozen is not a function"}]
-4299	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-c-1.js (tail -c +4712582 tests/ecmac.db|head -c 537): [{"message":"Object.isFrozen is not a function"}]
-4300	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-c-2.js (tail -c +4713120 tests/ecmac.db|head -c 646): [{"message":"Object.isFrozen is not a function"}]
-4301	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-1.js (tail -c +4713767 tests/ecmac.db|head -c 410): [{"message":"Object.isFrozen is not a function"}]
-4302	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-10.js (tail -c +4714178 tests/ecmac.db|head -c 351): [{"message":"Object.isFrozen is not a function"}]
-4303	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-11.js (tail -c +4714530 tests/ecmac.db|head -c 371): [{"message":"Object.isFrozen is not a function"}]
-4304	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-12.js (tail -c +4714902 tests/ecmac.db|head -c 349): [{"message":"Object.isFrozen is not a function"}]
-4305	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-13.js (tail -c +4715252 tests/ecmac.db|head -c 369): [{"message":"Object.isFrozen is not a function"}]
-4306	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-14.js (tail -c +4715622 tests/ecmac.db|head -c 345): [{"message":"Object.isFrozen is not a function"}]
-4307	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-15.js (tail -c +4715968 tests/ecmac.db|head -c 345): [{"message":"Object.isFrozen is not a function"}]
-4308	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-16.js (tail -c +4716314 tests/ecmac.db|head -c 365): [{"message":"Object.isFrozen is not a function"}]
-4309	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-17.js (tail -c +4716680 tests/ecmac.db|head -c 349): [{"message":"Object.isFrozen is not a function"}]
-4310	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-18.js (tail -c +4717030 tests/ecmac.db|head -c 369): [{"message":"Object.isFrozen is not a function"}]
-4311	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-19.js (tail -c +4717400 tests/ecmac.db|head -c 347): [{"message":"Object.isFrozen is not a function"}]
-4312	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-2.js (tail -c +4717748 tests/ecmac.db|head -c 348): [{"message":"Object.isFrozen is not a function"}]
-4313	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-20.js (tail -c +4718097 tests/ecmac.db|head -c 367): [{"message":"Object.isFrozen is not a function"}]
-4314	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-21.js (tail -c +4718465 tests/ecmac.db|head -c 355): [{"message":"Object.isFrozen is not a function"}]
-4315	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-22.js (tail -c +4718821 tests/ecmac.db|head -c 357): [{"message":"Object.isFrozen is not a function"}]
-4316	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-23.js (tail -c +4719179 tests/ecmac.db|head -c 365): [{"message":"Object.isFrozen is not a function"}]
-4317	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-24.js (tail -c +4719545 tests/ecmac.db|head -c 359): [{"message":"Object.isFrozen is not a function"}]
-4318	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-25.js (tail -c +4719905 tests/ecmac.db|head -c 355): [{"message":"Object.isFrozen is not a function"}]
+4284	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-1.js (tail -c +4703215 tests/ecmac.db|head -c 657)
+4285	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-2.js (tail -c +4703873 tests/ecmac.db|head -c 774)
+4286	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-1.js (tail -c +4704648 tests/ecmac.db|head -c 505)
+4287	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-11.js (tail -c +4705154 tests/ecmac.db|head -c 437)
+4288	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-12.js (tail -c +4705592 tests/ecmac.db|head -c 399)
+4289	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-13.js (tail -c +4705992 tests/ecmac.db|head -c 532)
+4290	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-14.js (tail -c +4706525 tests/ecmac.db|head -c 383)
+4291	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-2.js (tail -c +4706909 tests/ecmac.db|head -c 803)
+4292	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-3.js (tail -c +4707713 tests/ecmac.db|head -c 801)
+4293	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-4.js (tail -c +4708515 tests/ecmac.db|head -c 526)
+4294	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-5.js (tail -c +4709042 tests/ecmac.db|head -c 799)
+4295	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-6.js (tail -c +4709842 tests/ecmac.db|head -c 857)
+4296	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-7.js (tail -c +4710700 tests/ecmac.db|head -c 509)
+4297	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-a-8.js (tail -c +4711210 tests/ecmac.db|head -c 837)
+4298	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-b-i-1.js (tail -c +4712048 tests/ecmac.db|head -c 533)
+4299	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-c-1.js (tail -c +4712582 tests/ecmac.db|head -c 537)
+4300	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-2-c-2.js (tail -c +4713120 tests/ecmac.db|head -c 646)
+4301	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-1.js (tail -c +4713767 tests/ecmac.db|head -c 410)
+4302	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-10.js (tail -c +4714178 tests/ecmac.db|head -c 351)
+4303	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-11.js (tail -c +4714530 tests/ecmac.db|head -c 371)
+4304	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-12.js (tail -c +4714902 tests/ecmac.db|head -c 349)
+4305	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-13.js (tail -c +4715252 tests/ecmac.db|head -c 369)
+4306	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-14.js (tail -c +4715622 tests/ecmac.db|head -c 345)
+4307	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-15.js (tail -c +4715968 tests/ecmac.db|head -c 345)
+4308	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-16.js (tail -c +4716314 tests/ecmac.db|head -c 365)
+4309	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-17.js (tail -c +4716680 tests/ecmac.db|head -c 349)
+4310	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-18.js (tail -c +4717030 tests/ecmac.db|head -c 369)
+4311	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-19.js (tail -c +4717400 tests/ecmac.db|head -c 347)
+4312	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-2.js (tail -c +4717748 tests/ecmac.db|head -c 348)
+4313	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-20.js (tail -c +4718097 tests/ecmac.db|head -c 367)
+4314	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-21.js (tail -c +4718465 tests/ecmac.db|head -c 355)
+4315	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-22.js (tail -c +4718821 tests/ecmac.db|head -c 357)
+4316	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-23.js (tail -c +4719179 tests/ecmac.db|head -c 365)
+4317	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-24.js (tail -c +4719545 tests/ecmac.db|head -c 359)
+4318	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-25.js (tail -c +4719905 tests/ecmac.db|head -c 355)
 4319	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-26.js (tail -c +4720261 tests/ecmac.db|head -c 353): [{"message":"[URIError] is not defined"}]
-4320	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-27.js (tail -c +4720615 tests/ecmac.db|head -c 345): [{"message":"Object.isFrozen is not a function"}]
-4321	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-28.js (tail -c +4720961 tests/ecmac.db|head -c 872): [{"message":"Object.isFrozen is not a function"}]
-4322	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-3.js (tail -c +4721834 tests/ecmac.db|head -c 368): [{"message":"Object.isFrozen is not a function"}]
-4323	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-4.js (tail -c +4722203 tests/ecmac.db|head -c 352): [{"message":"Object.isFrozen is not a function"}]
-4324	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-5.js (tail -c +4722556 tests/ecmac.db|head -c 372): [{"message":"Object.isFrozen is not a function"}]
-4325	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-6.js (tail -c +4722929 tests/ecmac.db|head -c 346): [{"message":"Object.isFrozen is not a function"}]
-4326	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-7.js (tail -c +4723276 tests/ecmac.db|head -c 366): [{"message":"Object.isFrozen is not a function"}]
-4327	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-8.js (tail -c +4723643 tests/ecmac.db|head -c 348): [{"message":"Object.isFrozen is not a function"}]
-4328	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-9.js (tail -c +4723992 tests/ecmac.db|head -c 368): [{"message":"Object.isFrozen is not a function"}]
-4329	FAIL ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-4-1.js (tail -c +4724361 tests/ecmac.db|head -c 296): [{"message":"Object.isFrozen is not a function"}]
+4320	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-27.js (tail -c +4720615 tests/ecmac.db|head -c 345)
+4321	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-28.js (tail -c +4720961 tests/ecmac.db|head -c 872)
+4322	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-3.js (tail -c +4721834 tests/ecmac.db|head -c 368)
+4323	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-4.js (tail -c +4722203 tests/ecmac.db|head -c 352)
+4324	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-5.js (tail -c +4722556 tests/ecmac.db|head -c 372)
+4325	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-6.js (tail -c +4722929 tests/ecmac.db|head -c 346)
+4326	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-7.js (tail -c +4723276 tests/ecmac.db|head -c 366)
+4327	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-8.js (tail -c +4723643 tests/ecmac.db|head -c 348)
+4328	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-3-9.js (tail -c +4723992 tests/ecmac.db|head -c 368)
+4329	PASS ch15/15.2/15.2.3/15.2.3.12/15.2.3.12-4-1.js (tail -c +4724361 tests/ecmac.db|head -c 296)
 4330	PASS ch15/15.2/15.2.3/15.2.3.13/15.2.3.13-0-1.js (tail -c +4724658 tests/ecmac.db|head -c 339)
 4331	PASS ch15/15.2/15.2.3/15.2.3.13/15.2.3.13-0-2.js (tail -c +4724998 tests/ecmac.db|head -c 333)
 4332	PASS ch15/15.2/15.2.3/15.2.3.13/15.2.3.13-0-3.js (tail -c +4725332 tests/ecmac.db|head -c 510)
@@ -4423,8 +4423,8 @@ err
 4374	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-2.js (tail -c +4742033 tests/ecmac.db|head -c 425)
 4375	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-3.js (tail -c +4742459 tests/ecmac.db|head -c 455)
 4376	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-4.js (tail -c +4742915 tests/ecmac.db|head -c 390)
-4377	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-5.js (tail -c +4743306 tests/ecmac.db|head -c 387): [{"message":"Object.isSealed is not a function"}]
-4378	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-6.js (tail -c +4743694 tests/ecmac.db|head -c 387): [{"message":"Object.isFrozen is not a function"}]
+4377	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-5.js (tail -c +4743306 tests/ecmac.db|head -c 387)
+4378	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-6.js (tail -c +4743694 tests/ecmac.db|head -c 387)
 4379	PASS ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-7.js (tail -c +4744082 tests/ecmac.db|head -c 751)
 4380	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-2-8.js (tail -c +4744834 tests/ecmac.db|head -c 904): [{"message":"Test case returned non-true value!"}]
 4381	FAIL ch15/15.2/15.2.3/15.2.3.14/15.2.3.14-3-1.js (tail -c +4745739 tests/ecmac.db|head -c 437): [{"message":"Test case returned non-true value!"}]
@@ -4704,7 +4704,7 @@ err
 4655	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-227.js (tail -c +4898692 tests/ecmac.db|head -c 507)
 4656	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-228.js (tail -c +4899200 tests/ecmac.db|head -c 659)
 4657	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-229.js (tail -c +4899860 tests/ecmac.db|head -c 667)
-4658	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-23.js (tail -c +4900528 tests/ecmac.db|head -c 534): [{"message":"cannot read property 'value' of undefined"}]
+4658	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-23.js (tail -c +4900528 tests/ecmac.db|head -c 534)
 4659	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-230.js (tail -c +4901063 tests/ecmac.db|head -c 738)
 4660	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-231.js (tail -c +4901802 tests/ecmac.db|head -c 511)
 4661	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-232.js (tail -c +4902314 tests/ecmac.db|head -c 669)
@@ -4715,7 +4715,7 @@ err
 4666	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-237.js (tail -c +4905585 tests/ecmac.db|head -c 673)
 4667	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-238.js (tail -c +4906259 tests/ecmac.db|head -c 760)
 4668	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-239.js (tail -c +4907020 tests/ecmac.db|head -c 667): [{"message":"Test case returned non-true value!"}]
-4669	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-24.js (tail -c +4907688 tests/ecmac.db|head -c 534): [{"message":"cannot read property 'value' of undefined"}]
+4669	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-24.js (tail -c +4907688 tests/ecmac.db|head -c 534)
 4670	PASS ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-240.js (tail -c +4908223 tests/ecmac.db|head -c 816)
 4671	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-241.js (tail -c +4909040 tests/ecmac.db|head -c 826): [{"message":"Test case returned non-true value!"}]
 4672	FAIL ch15/15.2/15.2.3/15.2.3.3/15.2.3.3-4-242.js (tail -c +4909867 tests/ecmac.db|head -c 887): [{"message":"Test case returned non-true value!"}]
@@ -6185,8 +6185,8 @@ err
 6136	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-604.js (tail -c +6101546 tests/ecmac.db|head -c 1238): [{"message":"cannot read property 'writable' of undefined"}]
 6137	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-605.js (tail -c +6102785 tests/ecmac.db|head -c 1256): [{"message":"cannot read property 'writable' of undefined"}]
 6138	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-606.js (tail -c +6104042 tests/ecmac.db|head -c 1355)
-6139	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-607.js (tail -c +6105398 tests/ecmac.db|head -c 1274): [{"message":"cannot read property 'writable' of undefined"}]
-6140	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-608.js (tail -c +6106673 tests/ecmac.db|head -c 1274): [{"message":"cannot read property 'writable' of undefined"}]
+6139	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-607.js (tail -c +6105398 tests/ecmac.db|head -c 1274)
+6140	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-608.js (tail -c +6106673 tests/ecmac.db|head -c 1274)
 6141	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-609.js (tail -c +6107948 tests/ecmac.db|head -c 1310)
 6142	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-61.js (tail -c +6109259 tests/ecmac.db|head -c 545)
 6143	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-610.js (tail -c +6109805 tests/ecmac.db|head -c 1238)
