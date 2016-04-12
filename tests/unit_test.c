@@ -1834,6 +1834,20 @@ static const char *test_interpreter(void) {
   /* check execution failure caused by bad parsing */
   ASSERT_EQ(eval(v7, "function", &v), V7_SYNTAX_ERROR);
 
+  /* check error reporting */
+  ASSERT_EVAL_STR_EQ(v7, "foo={};try{foo()}catch(e){e.message}",
+                     "foo is not a function");
+  ASSERT_EVAL_STR_EQ(v7, "foo={};try{foo.bar()}catch(e){e.message}",
+                     "foo.bar is not a function");
+  ASSERT_EVAL_STR_EQ(v7, "foo={};try{[1,2].bar()}catch(e){e.message}",
+                     "bar is not a function");
+  ASSERT_EVAL_STR_EQ(v7, "foo={};try{(true).bar()}catch(e){e.message}",
+                     "bar is not a function");
+  ASSERT_EVAL_STR_EQ(v7,
+                     "var s='';function side(){s='side effect:'};"
+                     "oo={};try{(true).bar(side())}catch(e){s+e.message}",
+                     "side effect:bar is not a function");
+
   v7_destroy(v7);
   return NULL;
 } /* test_interpreter */
