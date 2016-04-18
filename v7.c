@@ -151,8 +151,10 @@
 #define vsnprintf _vsnprintf
 #define sleep(x) Sleep((x) *1000)
 #define to64(x) _atoi64(x)
+#if !defined(__MINGW32__) && !defined(__MINGW64__)
 #define popen(x, y) _popen((x), (y))
 #define pclose(x) _pclose(x)
+#endif
 #define rmdir _rmdir
 #if defined(_MSC_VER) && _MSC_VER >= 1400
 #define fseeko(x, y, z) _fseeki64((x), (y), (z))
@@ -183,7 +185,7 @@ typedef uint32_t in_addr_t;
 #define INT64_FMT "I64d"
 #define INT64_X_FMT "I64x"
 #define SIZE_T_FMT "Iu"
-#ifdef __MINGW32__
+#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
 typedef struct stat cs_stat_t;
 #else
 typedef struct _stati64 cs_stat_t;
@@ -946,6 +948,10 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 #ifndef CS_COMMON_CS_DIRENT_H_
 #define CS_COMMON_CS_DIRENT_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #ifdef CS_ENABLE_SPIFFS
 
 #include <spiffs.h>
@@ -969,6 +975,10 @@ int closedir(DIR *dir);
 struct dirent *readdir(DIR *dir);
 #endif
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif /* CS_COMMON_CS_DIRENT_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/ubjson.h"
@@ -983,6 +993,10 @@ struct dirent *readdir(DIR *dir);
 
 /* Amalgamated: #include "common/mbuf.h" */
 /* Amalgamated: #include "common/platform.h" */
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 void cs_ubjson_emit_null(struct mbuf *buf);
 void cs_ubjson_emit_boolean(struct mbuf *buf, int v);
@@ -1008,7 +1022,46 @@ void cs_ubjson_close_object(struct mbuf *buf);
 void cs_ubjson_open_array(struct mbuf *buf);
 void cs_ubjson_close_array(struct mbuf *buf);
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif /* CS_COMMON_UBJSON_H_ */
+#ifdef V7_MODULE_LINES
+#line 1 "./common/cs_file.h"
+#endif
+/*
+ * Copyright (c) 2015 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_CS_FILE_H_
+#define CS_COMMON_CS_FILE_H_
+
+/* Amalgamated: #include "common/platform.h" */
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+/*
+ * Read whole file `path` in memory. It is responsibility of the caller
+ * to `free()` allocated memory. File content is guaranteed to be
+ * '\0'-terminated. File size is returned in `size` variable, which does not
+ * count terminating `\0`.
+ * Return: allocated memory, or NULL on error.
+ */
+char *cs_read_file(const char *path, size_t *size);
+
+#ifdef CS_MMAP
+char *cs_mmap_file(const char *path, size_t *size);
+#endif
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* CS_COMMON_CS_FILE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./common/coroutine.h"
 #endif
@@ -4334,28 +4387,6 @@ v7_array_get2(struct v7 *v7, v7_val_t arr, unsigned long index, int *has);
 #endif /* __cplusplus */
 
 #endif /* CS_V7_SRC_ARRAY_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "./common/cs_file.h"
-#endif
-/*
- * Copyright (c) 2015 Cesanta Software Limited
- * All rights reserved
- */
-
-/* Amalgamated: #include "common/platform.h" */
-
-/*
- * Read whole file `path` in memory. It is responsibility of the caller
- * to `free()` allocated memory. File content is guaranteed to be
- * '\0'-terminated. File size is returned in `size` variable, which does not
- * count terminating `\0`.
- * Return: allocated memory, or NULL on error.
- */
-char *cs_read_file(const char *path, size_t *size);
-
-#ifdef CS_MMAP
-char *cs_mmap_file(const char *path, size_t *size);
-#endif /* CS_COMMON_CS_FILE_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "./v7/src/conversion_public.h"
 #endif
@@ -9230,6 +9261,8 @@ void cs_ubjson_dummy();
  * Copyright (c) 2015 Cesanta Software Limited
  * All rights reserved
  */
+
+/* Amalgamated: #include "common/cs_file.h" */
 
 #include <sys/stat.h>
 #include <fcntl.h>

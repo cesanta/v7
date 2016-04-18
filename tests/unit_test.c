@@ -36,6 +36,8 @@
 #endif
 
 #ifdef V7_UNAMALGAMATED_UNIT_TEST
+#include "common/cs_file.h"
+#include "common/cs_time.h"
 #include "common/mbuf.h"
 #include "v7/src/varint.h"
 #include "v7/src/core.h"
