@@ -39,6 +39,7 @@
 #include "common/cs_file.h"
 #include "common/cs_time.h"
 #include "common/mbuf.h"
+#include "common/str_util.h"
 #include "v7/src/varint.h"
 #include "v7/src/core.h"
 #include "v7/src/util.h"
@@ -74,6 +75,39 @@ extern long timezone;
 #endif
 
 #define STRINGIFY(x) #x
+
+#define MAX_ECMA_REPORT_LINES 100000
+#define ECMA_WORKER_THREADS 4
+
+struct ecma_test {
+  int index;
+  const char *driver;
+  char *body;
+  char *tail_cmd;
+
+  /* it will be returned by test_acmac, making the unit test fail if not null */
+  const char *test_result;
+  char *report;
+  int passed; /* boolean */
+};
+
+#ifdef V7_PARALLEL_ECMA_TESTS
+struct ecma_test_worker_context {
+  struct ecma_test *tests;
+  int length;
+  pthread_mutex_t mutex;
+  int next_index;
+};
+#endif
+
+static void our_asprintf(char **out, const char *fmt, ...) {
+  char buf[1024];
+  va_list ap;
+  va_start(ap, fmt);
+  c_vsnprintf(buf, sizeof(buf), fmt, ap);
+  *out = strdup(buf);
+  va_end(ap);
+}
 
 static enum v7_err eval(struct v7 *v7, const char *code, v7_val_t *res) {
   return v7_exec(v7, code, res);
@@ -1215,32 +1249,100 @@ static const char *test_parser_large_ast(void) {
   return NULL;
 }
 
-static const char *test_ecmac(void) {
+const char *run_ecma_test(int i, const char *driver, const char *current_case,
+                          const char *tail_cmd, char **output, int *passed) {
   struct ast a;
-  int i, passed = 0;
+  struct v7 *v7;
+  val_t res;
+  clock_t start_time = clock(), execution_time;
+
+  v7 = v7_create();
+  ast_init(&a, 0);
+
+#if V7_VERBOSE_ECMA
+  printf("-- Parsing %d: \"%s\"\n", i, current_case);
+#endif
+  ASSERT_EQ(parse_js(v7, current_case, &a), V7_OK);
+  ast_free(&a);
+
+  if (eval(v7, driver, &res) != V7_OK) {
+    fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
+  } else {
+    if (eval(v7, current_case, &res) != V7_OK) {
+      char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
+      our_asprintf(output, "%d\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
+      if (err_str != buf) {
+        free(err_str);
+      }
+    } else {
+      *passed = 1;
+      our_asprintf(output, "%d\tPASS %s\n", i, tail_cmd);
+    }
+  }
+  v7_destroy(v7);
+  execution_time = clock() - start_time;
+#if 0
+    printf("--> %g %d [%s]\n",
+           execution_time / (double) CLOCKS_PER_SEC, i, tail_cmd);
+#else
+  (void) execution_time;
+#endif
+  return NULL;
+}
+
+void execute_ecma_test(struct ecma_test *test) {
+  const char *test_result;
+  test_result = run_ecma_test(test->index, test->driver, test->body,
+                              test->tail_cmd, &test->report, &test->passed);
+  test->test_result = test_result;
+}
+
+#ifdef V7_PARALLEL_ECMA_TESTS
+
+void *ecma_test_worker(void *data) {
+  int i;
+  struct ecma_test_worker_context *ctx =
+      (struct ecma_test_worker_context *) data;
+
+  while (1) {
+    pthread_mutex_lock(&ctx->mutex);
+    i = ctx->next_index;
+    ctx->next_index++;
+    pthread_mutex_unlock(&ctx->mutex);
+    if (i >= ctx->length) {
+      break;
+    }
+
+    if (ctx->tests[i].body != NULL) {
+      execute_ecma_test(&ctx->tests[i]);
+    }
+  }
+
+  return NULL;
+}
+#endif
+
+static const char *test_ecmac(void) {
+  int i, length, passed = 0;
   size_t db_len, driver_len;
   char *db = read_file("ecmac.db", &db_len);
   char *driver = read_file("ecma_driver.js", &driver_len);
   char *next_case = db - 1;
   FILE *r;
-  struct v7 *v7;
-  val_t res;
+  struct ecma_test *tests = (struct ecma_test *) calloc(
+      MAX_ECMA_REPORT_LINES, sizeof(struct ecma_test));
 
 #ifdef _WIN32
   fprintf(stderr, "Skipping ecma tests on windows\n");
   return NULL;
 #endif
 
-  ASSERT((r = fopen(".ecma_report.txt", "wb")) != NULL);
-
-  ast_init(&a, 0);
-
   for (i = 0; next_case < db + db_len; i++) {
-    char tail_cmd[100];
+    char tail_cmd_buf[100];
+    char *tail_cmd;
     char *current_case = next_case + 1;
     char *chap_begin = NULL, *chap_end = NULL;
     int chap_len = 0;
-    clock_t start_time = clock(), execution_time;
     ASSERT((next_case = strchr(current_case, '\0')) != NULL);
     if ((chap_begin = strstr(current_case, " * @path ")) != NULL) {
       chap_begin += 9;
@@ -1249,15 +1351,12 @@ static const char *test_ecmac(void) {
         chap_len = chap_end - chap_begin;
       }
     }
-    snprintf(tail_cmd, sizeof(tail_cmd),
+    snprintf(tail_cmd_buf, sizeof(tail_cmd_buf),
              "%.*s (tail -c +%lu tests/ecmac.db|head -c %lu)", chap_len,
              chap_begin == NULL ? "" : chap_begin,
              (unsigned long) (current_case - db + 1),
              (unsigned long) (next_case - current_case));
-
-#if 0
-    if (i != 1070) continue;
-#endif
+    tail_cmd = strdup(tail_cmd_buf);
 
     if (i == 1231 || i == 1250 || i == 1252 || i == 1253 || i == 1251 ||
         i == 1255 || i == 2649 || i == 2068 || i == 7445 || i == 7446 ||
@@ -1276,53 +1375,72 @@ static const char *test_ecmac(void) {
         i == 3426 || i == 3427 || i == 3451 || i == 3452 || i == 3453 ||
         i == 3454 || i == 3455 || i == 8101 || i == 8315 || i == 8710 ||
         i == 8929) {
-      fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
+      our_asprintf(&tests[i].report, "%d\tSKIP %s\n", i, tail_cmd);
       continue;
     }
 
 #if !defined(V7_ENABLE_JS_GETTERS) || !defined(V7_ENABLE_JS_SETTERS)
     if ((i >= 189 && i <= 204) || (i >= 253 && i <= 268) ||
         (i >= 568 && i <= 573) || (i >= 1066 && i <= 1083) || i == 1855) {
-      fprintf(r, "%i\tSKIP %s\n", i, tail_cmd);
+      our_asprintf(&tests[i].report, "%d\tSKIP %s\n", i, tail_cmd);
       continue;
     }
 #endif
 
-    v7 = v7_create();
-
-#if V7_VERBOSE_ECMA
-    printf("-- Parsing %d: \"%s\"\n", i, current_case);
-#endif
-    ASSERT_EQ(parse_js(v7, current_case, &a), V7_OK);
-    ast_free(&a);
-
-    if (eval(v7, driver, &res) != V7_OK) {
-      fprintf(stderr, "%s: %s\n", "Cannot load ECMA driver", v7->error_msg);
-    } else {
-      if (eval(v7, current_case, &res) != V7_OK) {
-        char buf[2048], *err_str = v7_to_json(v7, res, buf, sizeof(buf));
-        fprintf(r, "%i\tFAIL %s: [%s]\n", i, tail_cmd, err_str);
-        if (err_str != buf) {
-          free(err_str);
-        }
-      } else {
-        passed++;
-        fprintf(r, "%i\tPASS %s\n", i, tail_cmd);
-      }
-    }
-    v7_destroy(v7);
-    execution_time = clock() - start_time;
-    (void) execution_time;
-#if 0
-    printf("--> %g %d [%s]\n",
-           execution_time / (double) CLOCKS_PER_SEC, i, tail_cmd);
-#endif
+    tests[i].index = i;
+    tests[i].driver = driver;
+    tests[i].body = strdup(current_case);
+    tests[i].tail_cmd = tail_cmd;
   }
+  length = i;
+
+  ASSERT((r = fopen(".ecma_report.txt", "wb")) != NULL);
+
+#ifndef V7_PARALLEL_ECMA_TESTS
+  for (i = 0; i < length; i++) {
+    if (tests[i].body != NULL) {
+      execute_ecma_test(&tests[i]);
+    }
+  }
+#else
+  {
+    pthread_t threads[ECMA_WORKER_THREADS];
+    struct ecma_test_worker_context ctx;
+    ctx.tests = tests;
+    ctx.length = length;
+    ctx.next_index = 0;
+    pthread_mutex_init(&ctx.mutex, NULL);
+
+    for (i = 0; i < (int) ARRAY_SIZE(threads); i++) {
+      pthread_create(&threads[i], NULL, ecma_test_worker, &ctx);
+    }
+    for (i = 0; i < (int) ARRAY_SIZE(threads); i++) {
+      pthread_join(threads[i], NULL);
+    }
+  }
+#endif
+
+  for (i = 0; i < length; i++) {
+    if (tests[i].passed) {
+      passed++;
+    }
+    if (tests[i].test_result != NULL) {
+      return tests[i].test_result;
+    }
+
+    fprintf(r, "%s", tests[i].report);
+
+    free(tests[i].body);
+    free(tests[i].report);
+    free(tests[i].tail_cmd);
+  }
+
   printf("ECMA tests coverage: %.2f%% (%d of %d)\n",
-         (double) passed / i * 100.0, passed, i);
+         (double) passed / i * 100.0, passed, length);
 
   free(db);
   free(driver);
+  free(tests);
   fclose(r);
   rename(".ecma_report.txt", "ecma_report.txt");
   return NULL;
