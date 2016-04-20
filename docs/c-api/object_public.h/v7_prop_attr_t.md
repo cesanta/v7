@@ -12,11 +12,13 @@ signature: |
   #define _V7_PROPERTY_HIDDEN (1 << 5)
   /* property not managed by V7 HEAP */
   #define _V7_PROPERTY_OFF_HEAP (1 << 6)
+  /* special property holding user data and destructor cb */
+  #define _V7_PROPERTY_USER_DATA_AND_DESTRUCTOR (1 << 7)
   /*
    * not a property attribute, but a flag for `v7_def()`. It's here in order to
    * keep all offsets in one place
    */
-  #define _V7_DESC_PRESERVE_VALUE (1 << 7)
+  #define _V7_DESC_PRESERVE_VALUE (1 << 8)
 ---
 
 Property attributes bitmask 

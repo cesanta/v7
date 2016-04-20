@@ -2380,6 +2380,84 @@ static const char *test_ubjson(void) {
 }
 #endif
 
+static int s_global_user_data_destructed = 0;
+
+static void user_data_destructor(void *ud) {
+  if (ud == NULL) {
+    s_global_user_data_destructed = 1;
+  } else {
+    int *v = (int *) ud;
+    *v = 1;
+  }
+}
+
+static const char *test_user_data(void) {
+  struct v7 *v7 = v7_create();
+
+  v7_val_t obj = v7_mk_object(v7);
+  void *ud = (void *) 0xdeadbeef;
+  v7_own(v7, &obj);
+
+  ASSERT(v7_get_user_data(v7, obj) == NULL);
+
+  /* on an empty object */
+  v7_set_user_data(v7, obj, ud);
+  ASSERT(v7_get_user_data(v7, obj) == ud);
+
+  v7_set(v7, obj, "foo", ~0, v7_mk_number(42.0));
+  ASSERT(v7_get_user_data(v7, obj) == ud);
+  ASSERT(v7_to_number(v7_get(v7, obj, "foo", ~0)) == 42.0);
+
+  v7_set_user_data(v7, obj, NULL);
+  ASSERT(v7_get_user_data(v7, obj) == NULL);
+
+  ud = (void *) 0xfee1dead;
+  v7_set_user_data(v7, obj, ud);
+  ASSERT(v7_get_user_data(v7, obj) == ud);
+
+  v7_set_user_data(v7, obj, NULL);
+  ASSERT(v7_get_user_data(v7, obj) == NULL);
+
+  /* after existing property */
+  obj = v7_mk_object(v7);
+  v7_set(v7, obj, "bar", ~0, v7_mk_number(42.0));
+  v7_set_user_data(v7, obj, ud);
+  ASSERT(v7_get_user_data(v7, obj) == ud);
+  ASSERT(v7_to_number(v7_get(v7, obj, "bar", ~0)) == 42.0);
+
+  /* destructor */
+  {
+    int destructed = 0;
+    obj = v7_mk_object(v7);
+    v7_set_user_data(v7, obj, &destructed);
+    v7_set_destructor_cb(v7, obj, user_data_destructor);
+    obj = v7_mk_undefined();
+    v7_gc(v7, 0 /* full */);
+    ASSERT(destructed == 1);
+
+    obj = v7_mk_object(v7);
+    destructed = 0;
+    v7_set_user_data(v7, obj, &destructed);
+    v7_set_destructor_cb(v7, obj, user_data_destructor);
+    v7_set_destructor_cb(v7, obj, NULL);
+    obj = v7_mk_undefined();
+    v7_gc(v7, 0 /* full */);
+    ASSERT(destructed == 0);
+
+    /* destructor without user_data */
+    s_global_user_data_destructed = 0;
+    obj = v7_mk_object(v7);
+    v7_set_destructor_cb(v7, obj, user_data_destructor);
+    obj = v7_mk_undefined();
+    v7_gc(v7, 0 /* full */);
+    ASSERT(s_global_user_data_destructed == 1);
+  }
+
+  v7_disown(v7, &obj);
+  v7_destroy(v7);
+  return NULL;
+}
+
 #define MK_OP_PUSH_LIT(n) OP_PUSH_LIT, (enum opcode)(n)
 #define MK_OP_PUSH_VAR_NAME(n) OP_PUSH_VAR_NAME, (enum opcode)(n)
 #define MK_OP_GET_VAR(n) OP_GET_VAR, (enum opcode)(n)
@@ -3942,6 +4020,7 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
 #endif
   RUN_TEST(test_gc_own);
 #endif
+  RUN_TEST(test_user_data);
   RUN_TEST(test_exec_generic);
   RUN_TEST(test_ecmac);
   return NULL;

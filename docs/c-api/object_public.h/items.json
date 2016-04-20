@@ -54,11 +54,27 @@
         },
         {
             "type": "markdown",
+            "name": "v7_set_user_data.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_get_user_data.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_set_destructor_cb.md"
+        },
+        {
+            "type": "markdown",
             "name": "v7_prop_attr_t.md"
         },
         {
             "type": "markdown",
             "name": "v7_prop_attr_desc_t.md"
+        },
+        {
+            "type": "markdown",
+            "name": "v7_destructor_cb_t.md"
         }
     ]
 }
