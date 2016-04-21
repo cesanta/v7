@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "v7.h"
 
-int main(void) {
+int v7_example(void) {
   size_t n;
   const char *domain_str;
   struct v7 *v7 = v7_create();

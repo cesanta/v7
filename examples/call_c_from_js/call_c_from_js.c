@@ -20,13 +20,13 @@ static enum v7_err js_sum(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-int main(void) {
+int v7_example(void) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = v7_create();
   v7_val_t result;
   v7_set_method(v7, v7_get_global(v7), "sum", &js_sum);
 
-  rcode = v7_exec(v7, "print(sum(1.2, 3.4))", &result);
+  rcode = v7_exec(v7, "print('sum = ' + sum(1.2, 3.4))", &result);
   if (rcode != V7_OK) {
     v7_print_error(stderr, v7, "Evaluation error", result);
   }

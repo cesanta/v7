@@ -22,7 +22,7 @@ static void call_sum(struct v7 *v7) {
   }
 }
 
-int main(void) {
+int v7_example(void) {
   enum v7_err rcode = V7_OK;
   v7_val_t result;
   struct v7 *v7 = v7_create();

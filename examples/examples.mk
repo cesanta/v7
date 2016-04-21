@@ -1,5 +1,5 @@
-SOURCES = $(PROG).c ../../v7.c
-CFLAGS = -W -Wall -I../.. -Wno-unused-function $(CFLAGS_EXTRA) $(MODULE_CFLAGS)
+SOURCES = $(PROG).c main.c ../../v7.c
+CFLAGS = -W -Wall -I../.. $(CFLAGS_EXTRA) $(MODULE_CFLAGS)
 
 all: $(PROG)
 

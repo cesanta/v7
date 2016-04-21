@@ -33,7 +33,7 @@ static enum v7_err MyThing_myMethod(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-int main(void) {
+int v7_example(void) {
   enum v7_err rcode = V7_OK;
   struct v7 *v7 = v7_create();
   v7_val_t ctor_func, proto, eval_result;
