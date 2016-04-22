@@ -1,4 +1,2 @@
-all:
-
 clean:
-	make -C CC3200 clean
+	rm -rf */*/Debug */*/Release */*/.launches */*/.settings */*/.xdchelp */*/src
