@@ -2445,6 +2445,7 @@ static const char *test_file(void) {
   ASSERT_EVAL_EQ(v7, "File.remove('x.txt')", "0");
   ASSERT_EVAL_EQ(v7, "File.open('x.txt')", "null");
   ASSERT_EVAL_EQ(v7, "File.write('x.txt', 'hello')", "true");
+  ASSERT_EVAL_EQ(v7, "File.remove('x.txt')", "0");
   ASSERT_EQ(eval(v7, "File.read('test.mk')", &v), V7_OK);
   ASSERT(check_file(v7, v, "test.mk"));
   ASSERT_EVAL_EQ(v7, "File.open('test.mk', '\\0')", "null");
