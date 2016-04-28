@@ -213,6 +213,32 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   return result == (v7_is_truthy(v7, v) ? 1 : 0);
 }
 
+#if defined(V7_ENABLE_FILENAMES) && defined(V7_ENABLE_LINE_NUMBERS)
+/*
+ * Equivalent to `v7_exec()`, but passes "test_expr" as a filename to be used
+ * for stack traces
+ */
+static enum v7_err exec_filename_test_expr(struct v7 *v7, const char *js_code,
+                                           v7_val_t *result) {
+  struct v7_exec_opts opts;
+  memset(&opts, 0x00, sizeof(opts));
+  opts.filename = "test_expr";
+  return v7_exec_opt(v7, js_code, &opts, result);
+}
+#endif
+
+/*
+ * Equivalent to `v7_exec()`, but passes "test_expr" as a filename to be used
+ * for stack traces
+ */
+static enum v7_err exec_with(struct v7 *v7, const char *js_code,
+                             v7_val_t this_obj, v7_val_t *result) {
+  struct v7_exec_opts opts;
+  memset(&opts, 0x00, sizeof(opts));
+  opts.this_obj = this_obj;
+  return v7_exec_opt(v7, js_code, &opts, result);
+}
+
 /*
  * check that bcode stack is zero (should be zero after each call to
  * `v7_exec()`)
@@ -291,6 +317,9 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
 #define _ASSERT_EVAL_EQ(v7, js_expr, expected, check_fun) \
   _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, v7_exec)
 
+#define _ASSERT_EVAL_EQ_FN(v7, js_expr, expected, check_fun) \
+  _ASSERT_XXX_EVAL_EQ(v7, js_expr, expected, check_fun, exec_filename_test_expr)
+
 #define ASSERT_EVAL_EQ(v7, js_expr, expected) \
   _ASSERT_EVAL_EQ(v7, js_expr, expected, check_value)
 #define ASSERT_EVAL_JS_EXPR_EQ(v7, js_expr, expected) \
@@ -299,6 +328,15 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   _ASSERT_EVAL_EQ(v7, js_expr, expected, check_num)
 #define ASSERT_EVAL_STR_EQ(v7, js_expr, expected) \
   _ASSERT_EVAL_EQ(v7, js_expr, expected, check_str)
+
+#define ASSERT_EVAL_EQ_FN(v7, js_expr, expected) \
+  _ASSERT_EVAL_EQ_FN(v7, js_expr, expected, check_value)
+#define ASSERT_EVAL_JS_EXPR_EQ_FN(v7, js_expr, expected) \
+  _ASSERT_EVAL_EQ_FN(v7, js_expr, expected, check_js_expr)
+#define ASSERT_EVAL_NUM_EQ_FN(v7, js_expr, expected) \
+  _ASSERT_EVAL_EQ_FN(v7, js_expr, expected, check_num)
+#define ASSERT_EVAL_STR_EQ_FN(v7, js_expr, expected) \
+  _ASSERT_EVAL_EQ_FN(v7, js_expr, expected, check_str)
 
 #define ASSERT_EVAL_ERR(v7, js_expr, expected_err) \
   _ASSERT_XXX_EVAL_ERR(v7, js_expr, expected_err, v7_exec)
@@ -1837,10 +1875,10 @@ static const char *test_interpreter(void) {
   ASSERT_EVAL_EQ(v7, "r=1;for(var i in undefined){r=0};r", "1");
   ASSERT_EVAL_EQ(v7, "r=1;for(var i in 42){r=0};r", "1");
 
-  ASSERT_EQ(v7_exec_with(v7, "this", v7_mk_number(42), &v), V7_OK);
+  ASSERT_EQ(exec_with(v7, "this", v7_mk_number(42), &v), V7_OK);
   ASSERT(check_value(v7, v, "42"));
-  ASSERT(v7_exec_with(v7, "a=666;(function(a){return a})(this)",
-                      v7_mk_number(42), &v) == V7_OK);
+  ASSERT(exec_with(v7, "a=666;(function(a){return a})(this)", v7_mk_number(42),
+                   &v) == V7_OK);
   ASSERT(check_value(v7, v, "42"));
 
   c = "\"aa bb\"";
@@ -1929,7 +1967,7 @@ static const char *test_interpreter(void) {
   c = "\"\"";
   ASSERT_EVAL_EQ(v7, "'' && {}", c);
 
-  ASSERT_EQ(v7_exec_with(v7, "a=this;a", v7_mk_foreign((void *) "foo"), &v),
+  ASSERT_EQ(exec_with(v7, "a=this;a", v7_mk_foreign((void *) "foo"), &v),
             V7_OK);
   ASSERT(v7_is_foreign(v));
   ASSERT_EQ(strcmp((char *) v7_to_foreign(v), "foo"), 0);
@@ -4089,6 +4127,108 @@ static const char *test_exec_generic(void) {
           f1.a != f2.a;
         ), "true"
       );
+
+#if defined(V7_ENABLE_FILENAMES) && defined(V7_ENABLE_LINE_NUMBERS)
+  ASSERT_EVAL_JS_EXPR_EQ_FN(
+      v7,
+      "var err;\n"
+      "try {\n"
+      "  d \n"
+      "} catch (e) { err = e; }\n"
+      "err;\n"
+      ,
+      "({"
+      "'message': '[d] is not defined',"
+      "'stack':'"
+      "    at test_expr:3"
+      "'})"
+      );
+
+  ASSERT_EVAL_JS_EXPR_EQ(
+      v7,
+      "var err;\n"
+      "try {\n"
+      "  d \n"
+      "} catch (e) { err = e; }\n"
+      "err;\n"
+      ,
+      "({"
+      "'message': '[d] is not defined',"
+      "'stack':'"
+      "    at <no filename>:3"
+      "'})"
+      );
+
+  ASSERT_EVAL_JS_EXPR_EQ(
+      v7,
+      "var err;\n"
+      "try {\n"
+      "  function myTestFunc() { \n"
+      "    d\n"
+      "  }\n"
+      /* + 300 lines */
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+      "  myTestFunc();\n"
+      "} catch (e) { err = e; }\n"
+      "err;\n"
+      ,
+      "({"
+      "'message': '[d] is not defined',"
+      "'stack':'"
+      "    at myTestFunc (<no filename>:4)\\n"
+      "    at <no filename>:306"
+      "'})"
+      );
+
+  ASSERT_EVAL_JS_EXPR_EQ_FN(
+      v7,
+      "var err;\n"
+      "try {\n"
+      "  (function () { \n"
+      "    d\n"
+      "  })()\n"
+      "} catch (e) { err = e; }\n"
+      "err;\n"
+      ,
+      "({"
+      "'message': '[d] is not defined',"
+      "'stack':'"
+      "    at <anonymous> (test_expr:4)\\n"
+      "    at test_expr:3"
+      "'})"
+      );
+
+  ASSERT_EVAL_JS_EXPR_EQ_FN(
+      v7,
+      "var err;\n"
+      "try {\n"
+      "  (function () { \n"
+      "    eval('function myFunc(){d}; myFunc();')\n"
+      "  })()\n"
+      "} catch (e) { err = e; }\n"
+      "err;\n"
+      ,
+      "({"
+      "'message': '[d] is not defined',"
+      "'stack':\""
+      "    at myFunc (Eval'd code:1)\\n"
+      "    at Eval'd code:1\\n"
+      "    at <anonymous> (test_expr:4)\\n"
+      "    at test_expr:3"
+      "\"})"
+      );
+#endif
 
   /* clang-format on */
 

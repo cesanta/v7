@@ -10,11 +10,11 @@
         },
         {
             "type": "markdown",
-            "name": "v7_exec_file.md"
+            "name": "v7_exec_opt.md"
         },
         {
             "type": "markdown",
-            "name": "v7_exec_with.md"
+            "name": "v7_exec_file.md"
         },
         {
             "type": "markdown",
@@ -31,6 +31,10 @@
         {
             "type": "markdown",
             "name": "v7_apply.md"
+        },
+        {
+            "type": "markdown",
+            "name": "struct_v7_exec_opts.md"
         }
     ]
 }
