@@ -1276,6 +1276,7 @@ static char *read_file(const char *path, size_t *size) {
   return data;
 }
 
+#ifndef V7_LARGE_AST
 static const char *test_parser_large_ast(void) {
   struct ast a;
   struct v7 *v7 = v7_create();
@@ -1286,6 +1287,7 @@ static const char *test_parser_large_ast(void) {
   ASSERT_EQ(parse(v7, &a, script, 0, 0), V7_AST_TOO_LARGE);
   return NULL;
 }
+#endif
 
 const char *run_ecma_test(int i, const char *driver, const char *current_case,
                           const char *tail_cmd, char **output, int *passed) {

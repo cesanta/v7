@@ -552,6 +552,10 @@ void mbuf_trim(struct mbuf *);
 
 #define SOMAXCONN 8
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 char *inet_ntoa(struct in_addr in);
 int inet_pton(int af, const char *src, void *dst);
@@ -564,6 +568,10 @@ bool mg_start_task(int priority, int stack_size, mg_init_cb mg_init);
 void mg_run_in_task(void (*cb)(struct mg_mgr *mgr, void *arg), void *cb_arg);
 
 int sl_fs_init();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* defined(MG_SOCKET_SIMPLELINK) && !defined(__SIMPLELINK_H__) */
 
@@ -619,6 +627,10 @@ typedef struct stat cs_stat_t;
 #define fileno(x) -1
 
 /* Some functions we implement for Mongoose. */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef __TI_COMPILER_VERSION__
 struct SlTimeval_t;
@@ -685,6 +697,10 @@ struct dirent *readdir(DIR *dir);
 
 #ifdef CC3200_FS_SLFS
 #define MG_FS_SLFS
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* CS_PLATFORM == CS_P_CC3200 */
@@ -12206,17 +12222,15 @@ V7_PRIVATE void ast_modify_tag(struct ast *a, ast_off_t tag_off,
 
 #ifdef V7_ENABLE_LINE_NUMBERS
 V7_PRIVATE void ast_add_line_no(struct ast *a, ast_off_t tag_off, int line_no) {
-  uint8_t t = a->mbuf.buf[tag_off];
-  assert(t < AST_MAX_TAG);
-  {
-    const struct ast_node_def *d = &ast_node_defs[t];
-    int llen = calc_llen(line_no);
-    ast_off_t ln_off = tag_off + 1 /*tag*/ + d->num_skips * sizeof(ast_skip_t);
+  ast_off_t ln_off = tag_off + 1 /* tag byte */;
+  int llen = calc_llen(line_no);
 
-    mbuf_insert(&a->mbuf, ln_off, NULL, llen);
-    encode_varint(line_no, (unsigned char *) (a->mbuf.buf + ln_off));
-    a->mbuf.buf[tag_off] |= AST_TAG_LINENO_PRESENT;
-  }
+  ast_move_to_inlined_data(a, &ln_off);
+  mbuf_insert(&a->mbuf, ln_off, NULL, llen);
+  encode_varint(line_no, (unsigned char *) (a->mbuf.buf + ln_off));
+
+  assert(a->mbuf.buf[tag_off] < AST_MAX_TAG);
+  a->mbuf.buf[tag_off] |= AST_TAG_LINENO_PRESENT;
 }
 #endif
 
@@ -28477,7 +28491,9 @@ V7_PRIVATE enum v7_err Error_ctor(struct v7 *v7, v7_val_t *res) {
     char *st = NULL;
     char *stcur = NULL;
     val_t st_v = v7_mk_undefined();
+#if V7_ENABLE__StackTrace
     struct v7_call_frame *call_frame = v7->call_stack;
+#endif
 
     v7_own(v7, &st_v);
 
