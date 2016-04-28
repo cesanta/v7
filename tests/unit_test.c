@@ -213,7 +213,7 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   return result == (v7_is_truthy(v7, v) ? 1 : 0);
 }
 
-#if defined(V7_ENABLE_FILENAMES) && defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) || !defined(V7_DISABLE_LINE_NUMBERS)
 /*
  * Equivalent to `v7_exec()`, but passes "test_expr" as a filename to be used
  * for stack traces
@@ -4131,7 +4131,7 @@ static const char *test_exec_generic(void) {
         ), "true"
       );
 
-#if defined(V7_ENABLE_FILENAMES) && defined(V7_ENABLE_LINE_NUMBERS)
+#if !defined(V7_DISABLE_FILENAMES) || !defined(V7_DISABLE_LINE_NUMBERS)
   ASSERT_EVAL_JS_EXPR_EQ_FN(
       v7,
       "var err;\n"
