@@ -634,6 +634,9 @@ extern "C" {
 struct SlTimeval_t;
 #define timeval SlTimeval_t
 int gettimeofday(struct timeval *t, void *tz);
+
+int asprintf(char **strp, const char *fmt, ...);
+
 #endif
 
 long int random(void);
@@ -13941,6 +13944,7 @@ static v7_call_frame_mask_t unwind_stack_1level(struct v7 *v7,
                                                 struct bcode_registers *r) {
   v7_call_frame_mask_t type_mask;
 #ifdef V7_BCODE_TRACE
+  fprintf(stderr, "unwinding stack by 1 level\n");
 #endif
 
   type_mask = v7->call_stack->type_mask;
@@ -13951,6 +13955,11 @@ static v7_call_frame_mask_t unwind_stack_1level(struct v7 *v7,
     v7->call_stack = v7->call_stack->prev;
     free(tmp);
   }
+
+  /*
+   * depending on the unwound frame type, apply data from the top call frame(s)
+   * which are still alive (if any)
+   */
 
   if (type_mask & V7_CALL_FRAME_MASK_PRIVATE) {
     apply_frame_private(v7, find_call_frame_private(v7));
