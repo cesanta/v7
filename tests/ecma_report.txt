@@ -909,8 +909,8 @@
 908	FAIL ch10/10.2/10.2.3/S10.2.3_A1.2_T3.js (tail -c +698424 tests/ecmac.db|head -c 1582): [{"stack":"    at test (<no filename>:82)\n    at <no filename>:87","message":"[URIError] is not defined"}]
 909	PASS ch10/10.2/10.2.3/S10.2.3_A1.2_T4.js (tail -c +700007 tests/ecmac.db|head -c 388)
 910	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T1.js (tail -c +700396 tests/ecmac.db|head -c 593)
-911	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T2.js (tail -c +700990 tests/ecmac.db|head -c 1214): [{"stack":"    at Eval'd code:22\n    at <no filename>:57","message":"[decodeURI] is not defined"}]
-912	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T3.js (tail -c +702205 tests/ecmac.db|head -c 1767): [{"stack":"    at Eval'd code:58\n    at <no filename>:87","message":"[URIError] is not defined"}]
+911	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T2.js (tail -c +700990 tests/ecmac.db|head -c 1214): [{"stack":"    at Eval'd code:22\n    at cfunc\n    at <no filename>:57","message":"[decodeURI] is not defined"}]
+912	FAIL ch10/10.2/10.2.3/S10.2.3_A1.3_T3.js (tail -c +702205 tests/ecmac.db|head -c 1767): [{"stack":"    at Eval'd code:58\n    at cfunc\n    at <no filename>:87","message":"[URIError] is not defined"}]
 913	PASS ch10/10.2/10.2.3/S10.2.3_A1.3_T4.js (tail -c +703973 tests/ecmac.db|head -c 405)
 914	PASS ch10/10.2/10.2.3/S10.2.3_A2.1_T1.js (tail -c +704379 tests/ecmac.db|head -c 527)
 915	PASS ch10/10.2/10.2.3/S10.2.3_A2.1_T2.js (tail -c +704907 tests/ecmac.db|head -c 1106)
@@ -932,7 +932,7 @@
 931	FAIL ch10/10.4/10.4.2/10.4.2-1-2.js (tail -c +718557 tests/ecmac.db|head -c 851): [{"message":"Test case returned non-true value!"}]
 932	FAIL ch10/10.4/10.4.2/10.4.2-1-3.js (tail -c +719409 tests/ecmac.db|head -c 881): [{"message":"Test case returned non-true value!"}]
 933	FAIL ch10/10.4/10.4.2/10.4.2-1-4.js (tail -c +720291 tests/ecmac.db|head -c 804): [{"message":"not implemented"}]
-934	FAIL ch10/10.4/10.4.2/10.4.2-1-5.js (tail -c +721096 tests/ecmac.db|head -c 743): [{"stack":"    at cfunc:1\n    at testcase (<no filename>:12)\n    at runTestCase (<no filename>:901)\n    at <no filename>:18","message":"syntax error at line 1 col 0:\n\\\r\n^"}]
+934	FAIL ch10/10.4/10.4.2/10.4.2-1-5.js (tail -c +721096 tests/ecmac.db|head -c 743): [{"stack":"    at cfunc\n    at testcase (<no filename>:12)\n    at runTestCase (<no filename>:901)\n    at <no filename>:18","message":"syntax error at line 1 col 0:\n\\\r\n^"}]
 935	PASS ch10/10.4/10.4.2/10.4.2-2-c-1.js (tail -c +721840 tests/ecmac.db|head -c 396)
 936	PASS ch10/10.4/10.4.2/10.4.2-2-s.js (tail -c +722237 tests/ecmac.db|head -c 445)
 937	FAIL ch10/10.4/10.4.2/10.4.2-3-c-1-s.js (tail -c +722683 tests/ecmac.db|head -c 512): [{"message":"Test case returned non-true value!"}]
@@ -1228,7 +1228,7 @@
 1227	FAIL ch11/11.1/11.1.4/S11.1.4_A1.6.js (tail -c +869691 tests/ecmac.db|head -c 1513): [{"message":"#4: var array = [,,3,,,]; array.length === 5. Actual: 3"}]
 1228	PASS ch11/11.1/11.1.4/S11.1.4_A1.7.js (tail -c +871205 tests/ecmac.db|head -c 1500)
 1229	PASS ch11/11.1/11.1.4/S11.1.4_A2.js (tail -c +872706 tests/ecmac.db|head -c 3999)
-1230	FAIL ch11/11.1/11.1.5/11.1.5-0-1.js (tail -c +876706 tests/ecmac.db|head -c 664): [{"stack":"    at cfunc:1\n    at testcase (<no filename>:15)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"syntax error at line 1 col 13:\nvar o = {get foo(){ return s1;},set foo(arg){ret"}]
+1230	FAIL ch11/11.1/11.1.5/11.1.5-0-1.js (tail -c +876706 tests/ecmac.db|head -c 664): [{"stack":"    at cfunc\n    at testcase (<no filename>:15)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"syntax error at line 1 col 13:\nvar o = {get foo(){ return s1;},set foo(arg){ret"}]
 1231	SKIP ch11/11.1/11.1.5/11.1.5-0-2.js (tail -c +877371 tests/ecmac.db|head -c 846)
 1232	PASS ch11/11.1/11.1.5/11.1.5-1-s.js (tail -c +878218 tests/ecmac.db|head -c 580)
 1233	PASS ch11/11.1/11.1.5/11.1.5-2-s.js (tail -c +878799 tests/ecmac.db|head -c 593)
@@ -1254,8 +1254,8 @@
 1253	SKIP ch11/11.1/11.1.5/11.1.5_6-3-2.js (tail -c +894332 tests/ecmac.db|head -c 646)
 1254	PASS ch11/11.1/11.1.5/11.1.5_7-2-1-s.js (tail -c +894979 tests/ecmac.db|head -c 721)
 1255	SKIP ch11/11.1/11.1.5/11.1.5_7-2-2-s.js (tail -c +895701 tests/ecmac.db|head -c 751)
-1256	FAIL ch11/11.1/11.1.5/11.1.5_7-3-1.js (tail -c +896453 tests/ecmac.db|head -c 693): [{"stack":"    at cfunc:1\n    at testcase (<no filename>:15)\n    at runTestCase (<no filename>:901)\n    at <no filename>:21","message":"syntax error at line 1 col 13:\nvar o = {set foo(arg){return 1;}};\n            ^"}]
-1257	FAIL ch11/11.1/11.1.5/11.1.5_7-3-2.js (tail -c +897147 tests/ecmac.db|head -c 640): [{"stack":"    at cfunc:1\n    at testcase (<no filename>:15)\n    at runTestCase (<no filename>:901)\n    at <no filename>:19","message":"syntax error at line 1 col 13:\nvar o = {set foo(arg){}};\n            ^"}]
+1256	FAIL ch11/11.1/11.1.5/11.1.5_7-3-1.js (tail -c +896453 tests/ecmac.db|head -c 693): [{"stack":"    at cfunc\n    at testcase (<no filename>:15)\n    at runTestCase (<no filename>:901)\n    at <no filename>:21","message":"syntax error at line 1 col 13:\nvar o = {set foo(arg){return 1;}};\n            ^"}]
+1257	FAIL ch11/11.1/11.1.5/11.1.5_7-3-2.js (tail -c +897147 tests/ecmac.db|head -c 640): [{"stack":"    at cfunc\n    at testcase (<no filename>:15)\n    at runTestCase (<no filename>:901)\n    at <no filename>:19","message":"syntax error at line 1 col 13:\nvar o = {set foo(arg){}};\n            ^"}]
 1258	PASS ch11/11.1/11.1.5/S11.1.5_A1.1.js (tail -c +897788 tests/ecmac.db|head -c 864)
 1259	PASS ch11/11.1/11.1.5/S11.1.5_A1.2.js (tail -c +898653 tests/ecmac.db|head -c 997)
 1260	PASS ch11/11.1/11.1.5/S11.1.5_A1.3.js (tail -c +899651 tests/ecmac.db|head -c 1007)
@@ -1265,7 +1265,7 @@
 1264	PASS ch11/11.1/11.1.5/S11.1.5_A4.1.js (tail -c +904947 tests/ecmac.db|head -c 283)
 1265	PASS ch11/11.1/11.1.5/S11.1.5_A4.2.js (tail -c +905231 tests/ecmac.db|head -c 285)
 1266	PASS ch11/11.1/11.1.5/S11.1.5_A4.3.js (tail -c +905517 tests/ecmac.db|head -c 887)
-1267	FAIL ch11/11.1/11.1.6/S11.1.6_A1.js (tail -c +906405 tests/ecmac.db|head -c 1405): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n( 1 )\n^"}]
+1267	FAIL ch11/11.1/11.1.6/S11.1.6_A1.js (tail -c +906405 tests/ecmac.db|head -c 1405): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n( 1 )\n^"}]
 1268	PASS ch11/11.1/11.1.6/S11.1.6_A2.js (tail -c +907811 tests/ecmac.db|head -c 831)
 1269	PASS ch11/11.1/11.1.6/S11.1.6_A3_T1.js (tail -c +908643 tests/ecmac.db|head -c 435)
 1270	PASS ch11/11.1/11.1.6/S11.1.6_A3_T2.js (tail -c +909079 tests/ecmac.db|head -c 430)
@@ -1705,7 +1705,7 @@
 1704	PASS ch11/11.14/S11.14_A2.1_T3.js (tail -c +1263658 tests/ecmac.db|head -c 439)
 1705	PASS ch11/11.14/S11.14_A3.js (tail -c +1264098 tests/ecmac.db|head -c 832)
 1706	FAIL ch11/11.2/11.2.1/S11.2.1_A1.1.js (tail -c +1264931 tests/ecmac.db|head -c 2287): [{"message":"#5: Number\\u00A0.\\u00A0POSITIVE_INFINITY === Number.POSITIVE_INFINITY"}]
-1707	FAIL ch11/11.2/11.2.1/S11.2.1_A1.2.js (tail -c +1267219 tests/ecmac.db|head -c 2347): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 7:\nNumber[ \"POSITIVE_INFINITY\" ]\n      ^"}]
+1707	FAIL ch11/11.2/11.2.1/S11.2.1_A1.2.js (tail -c +1267219 tests/ecmac.db|head -c 2347): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 7:\nNumber[ \"POSITIVE_INFINITY\" ]\n      ^"}]
 1708	PASS ch11/11.2/11.2.1/S11.2.1_A2.js (tail -c +1269567 tests/ecmac.db|head -c 753)
 1709	PASS ch11/11.2/11.2.1/S11.2.1_A3_T1.js (tail -c +1270321 tests/ecmac.db|head -c 896)
 1710	PASS ch11/11.2/11.2.1/S11.2.1_A3_T2.js (tail -c +1271218 tests/ecmac.db|head -c 1087)
@@ -1716,13 +1716,13 @@
 1715	PASS ch11/11.2/11.2.1/S11.2.1_A4_T2.js (tail -c +1278004 tests/ecmac.db|head -c 1359)
 1716	FAIL ch11/11.2/11.2.1/S11.2.1_A4_T3.js (tail -c +1279364 tests/ecmac.db|head -c 1554): [{"message":"#1: typeof Function.prototype === \"function\". Actual: object"}]
 1717	PASS ch11/11.2/11.2.1/S11.2.1_A4_T4.js (tail -c +1280919 tests/ecmac.db|head -c 2387)
-1718	FAIL ch11/11.2/11.2.1/S11.2.1_A4_T5.js (tail -c +1283307 tests/ecmac.db|head -c 4903): [{"stack":"    at <no filename>:36","message":"String.valueOf called on non-string object"}]
+1718	FAIL ch11/11.2/11.2.1/S11.2.1_A4_T5.js (tail -c +1283307 tests/ecmac.db|head -c 4903): [{"stack":"    at cfunc\n    at cfunc\n    at <no filename>:36","message":"String.valueOf called on non-string object"}]
 1719	PASS ch11/11.2/11.2.1/S11.2.1_A4_T6.js (tail -c +1288211 tests/ecmac.db|head -c 1500)
 1720	PASS ch11/11.2/11.2.1/S11.2.1_A4_T7.js (tail -c +1289712 tests/ecmac.db|head -c 2711)
 1721	PASS ch11/11.2/11.2.1/S11.2.1_A4_T8.js (tail -c +1292424 tests/ecmac.db|head -c 6501)
 1722	PASS ch11/11.2/11.2.1/S11.2.1_A4_T9.js (tail -c +1298926 tests/ecmac.db|head -c 13756)
-1723	FAIL ch11/11.2/11.2.2/S11.2.2_A1.1.js (tail -c +1312683 tests/ecmac.db|head -c 1223): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 3:\nnew Number\n  ^"}]
-1724	FAIL ch11/11.2/11.2.2/S11.2.2_A1.2.js (tail -c +1313907 tests/ecmac.db|head -c 1246): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 3:\nnew Number()\n  ^"}]
+1723	FAIL ch11/11.2/11.2.2/S11.2.2_A1.1.js (tail -c +1312683 tests/ecmac.db|head -c 1223): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 3:\nnew Number\n  ^"}]
+1724	FAIL ch11/11.2/11.2.2/S11.2.2_A1.2.js (tail -c +1313907 tests/ecmac.db|head -c 1246): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 3:\nnew Number()\n  ^"}]
 1725	PASS ch11/11.2/11.2.2/S11.2.2_A2.js (tail -c +1315154 tests/ecmac.db|head -c 666)
 1726	PASS ch11/11.2/11.2.2/S11.2.2_A3_T1.js (tail -c +1315821 tests/ecmac.db|head -c 866)
 1727	PASS ch11/11.2/11.2.2/S11.2.2_A3_T2.js (tail -c +1316688 tests/ecmac.db|head -c 837)
@@ -1863,7 +1863,7 @@
 1862	FAIL ch11/11.4/11.4.1/11.4.1-5-a-8-s.js (tail -c +1405392 tests/ecmac.db|head -c 504): [{"message":"Test case returned non-true value!"}]
 1863	FAIL ch11/11.4/11.4.1/11.4.1-5-a-9-s.js (tail -c +1405897 tests/ecmac.db|head -c 522): [{"message":"Test case returned non-true value!"}]
 1864	PASS ch11/11.4/11.4.1/11.4.4-4.a-3-s.js (tail -c +1406420 tests/ecmac.db|head -c 834)
-1865	FAIL ch11/11.4/11.4.1/S11.4.1_A1.js (tail -c +1407255 tests/ecmac.db|head -c 1266): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 6:\ndelete 0\n     ^"}]
+1865	FAIL ch11/11.4/11.4.1/S11.4.1_A1.js (tail -c +1407255 tests/ecmac.db|head -c 1266): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 6:\ndelete 0\n     ^"}]
 1866	PASS ch11/11.4/11.4.1/S11.4.1_A2.1.js (tail -c +1408522 tests/ecmac.db|head -c 392)
 1867	PASS ch11/11.4/11.4.1/S11.4.1_A2.2_T1.js (tail -c +1408915 tests/ecmac.db|head -c 397)
 1868	PASS ch11/11.4/11.4.1/S11.4.1_A2.2_T2.js (tail -c +1409313 tests/ecmac.db|head -c 623)
@@ -1872,7 +1872,7 @@
 1871	PASS ch11/11.4/11.4.1/S11.4.1_A3.3.js (tail -c +1411619 tests/ecmac.db|head -c 1744)
 1872	PASS ch11/11.4/11.4.1/S11.4.1_A4.js (tail -c +1413364 tests/ecmac.db|head -c 459)
 1873	PASS ch11/11.4/11.4.1/S11.4.1_A5.js (tail -c +1413824 tests/ecmac.db|head -c 896)
-1874	FAIL ch11/11.4/11.4.2/S11.4.2_A1.js (tail -c +1414721 tests/ecmac.db|head -c 1324): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 4:\nvoid 0\n   ^"}]
+1874	FAIL ch11/11.4/11.4.2/S11.4.2_A1.js (tail -c +1414721 tests/ecmac.db|head -c 1324): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 4:\nvoid 0\n   ^"}]
 1875	PASS ch11/11.4/11.4.2/S11.4.2_A2_T1.js (tail -c +1416046 tests/ecmac.db|head -c 589)
 1876	PASS ch11/11.4/11.4.2/S11.4.2_A4_T1.js (tail -c +1416636 tests/ecmac.db|head -c 531)
 1877	PASS ch11/11.4/11.4.2/S11.4.2_A4_T2.js (tail -c +1417168 tests/ecmac.db|head -c 522)
@@ -1880,7 +1880,7 @@
 1879	PASS ch11/11.4/11.4.2/S11.4.2_A4_T4.js (tail -c +1418343 tests/ecmac.db|head -c 473)
 1880	PASS ch11/11.4/11.4.2/S11.4.2_A4_T5.js (tail -c +1418817 tests/ecmac.db|head -c 533)
 1881	PASS ch11/11.4/11.4.2/S11.4.2_A4_T6.js (tail -c +1419351 tests/ecmac.db|head -c 474)
-1882	FAIL ch11/11.4/11.4.3/S11.4.3_A1.js (tail -c +1419826 tests/ecmac.db|head -c 1756): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 17:\nvar x = 0; typeof x\n                ^"}]
+1882	FAIL ch11/11.4/11.4.3/S11.4.3_A1.js (tail -c +1419826 tests/ecmac.db|head -c 1756): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 17:\nvar x = 0; typeof x\n                ^"}]
 1883	PASS ch11/11.4/11.4.3/S11.4.3_A2_T1.js (tail -c +1421583 tests/ecmac.db|head -c 592)
 1884	PASS ch11/11.4/11.4.3/S11.4.3_A2_T2.js (tail -c +1422176 tests/ecmac.db|head -c 319)
 1885	PASS ch11/11.4/11.4.3/S11.4.3_A3.1.js (tail -c +1422496 tests/ecmac.db|head -c 491)
@@ -1893,7 +1893,7 @@
 1892	FAIL ch11/11.4/11.4.4/11.4.4-2-1-s.js (tail -c +1429429 tests/ecmac.db|head -c 476): [{"message":"Test case returned non-true value!"}]
 1893	FAIL ch11/11.4/11.4.4/11.4.4-2-2-s.js (tail -c +1429906 tests/ecmac.db|head -c 496): [{"message":"Test case returned non-true value!"}]
 1894	PASS ch11/11.4/11.4.4/11.4.4-2-3-s.js (tail -c +1430403 tests/ecmac.db|head -c 381)
-1895	FAIL ch11/11.4/11.4.4/S11.4.4_A1.js (tail -c +1430785 tests/ecmac.db|head -c 1532): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 13:\nvar x = 0; ++ x\n            ^"}]
+1895	FAIL ch11/11.4/11.4.4/S11.4.4_A1.js (tail -c +1430785 tests/ecmac.db|head -c 1532): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 13:\nvar x = 0; ++ x\n            ^"}]
 1896	PASS ch11/11.4/11.4.4/S11.4.4_A2.1_T1.js (tail -c +1432318 tests/ecmac.db|head -c 1036)
 1897	PASS ch11/11.4/11.4.4/S11.4.4_A2.1_T2.js (tail -c +1433355 tests/ecmac.db|head -c 441)
 1898	PASS ch11/11.4/11.4.4/S11.4.4_A2.2_T1.js (tail -c +1433797 tests/ecmac.db|head -c 4022)
@@ -1910,7 +1910,7 @@
 1909	FAIL ch11/11.4/11.4.5/11.4.5-2-1-s.js (tail -c +1442777 tests/ecmac.db|head -c 476): [{"message":"Test case returned non-true value!"}]
 1910	FAIL ch11/11.4/11.4.5/11.4.5-2-2-s.js (tail -c +1443254 tests/ecmac.db|head -c 496): [{"message":"Test case returned non-true value!"}]
 1911	PASS ch11/11.4/11.4.5/11.4.5-2-3-s.js (tail -c +1443751 tests/ecmac.db|head -c 381)
-1912	FAIL ch11/11.4/11.4.5/S11.4.5_A1.js (tail -c +1444133 tests/ecmac.db|head -c 1532): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 13:\nvar x = 1; -- x\n            ^"}]
+1912	FAIL ch11/11.4/11.4.5/S11.4.5_A1.js (tail -c +1444133 tests/ecmac.db|head -c 1532): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 13:\nvar x = 1; -- x\n            ^"}]
 1913	PASS ch11/11.4/11.4.5/S11.4.5_A2.1_T1.js (tail -c +1445666 tests/ecmac.db|head -c 1036)
 1914	PASS ch11/11.4/11.4.5/S11.4.5_A2.1_T2.js (tail -c +1446703 tests/ecmac.db|head -c 442)
 1915	PASS ch11/11.4/11.4.5/S11.4.5_A2.2_T1.js (tail -c +1447146 tests/ecmac.db|head -c 4022)
@@ -1925,7 +1925,7 @@
 1924	PASS ch11/11.4/11.4.5/S11.4.5_A4_T4.js (tail -c +1455213 tests/ecmac.db|head -c 417)
 1925	PASS ch11/11.4/11.4.5/S11.4.5_A4_T5.js (tail -c +1455631 tests/ecmac.db|head -c 494)
 1926	PASS ch11/11.4/11.4.6/11.4.6-2-1.js (tail -c +1456126 tests/ecmac.db|head -c 230)
-1927	FAIL ch11/11.4/11.4.6/S11.4.6_A1.js (tail -c +1456357 tests/ecmac.db|head -c 1100): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n+ 1\n^"}]
+1927	FAIL ch11/11.4/11.4.6/S11.4.6_A1.js (tail -c +1456357 tests/ecmac.db|head -c 1100): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n+ 1\n^"}]
 1928	PASS ch11/11.4/11.4.6/S11.4.6_A2.1_T1.js (tail -c +1457458 tests/ecmac.db|head -c 763)
 1929	PASS ch11/11.4/11.4.6/S11.4.6_A2.1_T2.js (tail -c +1458222 tests/ecmac.db|head -c 423)
 1930	PASS ch11/11.4/11.4.6/S11.4.6_A2.2_T1.js (tail -c +1458646 tests/ecmac.db|head -c 2869)
@@ -1935,7 +1935,7 @@
 1934	PASS ch11/11.4/11.4.6/S11.4.6_A3_T4.js (tail -c +1462862 tests/ecmac.db|head -c 385)
 1935	PASS ch11/11.4/11.4.6/S11.4.6_A3_T5.js (tail -c +1463248 tests/ecmac.db|head -c 459)
 1936	FAIL ch11/11.4/11.4.7/11.4.7-4-1.js (tail -c +1463708 tests/ecmac.db|head -c 230): [{"message":"Test case returned non-true value!"}]
-1937	FAIL ch11/11.4/11.4.7/S11.4.7_A1.js (tail -c +1463939 tests/ecmac.db|head -c 1120): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n- 1\n^"}]
+1937	FAIL ch11/11.4/11.4.7/S11.4.7_A1.js (tail -c +1463939 tests/ecmac.db|head -c 1120): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n- 1\n^"}]
 1938	PASS ch11/11.4/11.4.7/S11.4.7_A2.1_T1.js (tail -c +1465060 tests/ecmac.db|head -c 773)
 1939	PASS ch11/11.4/11.4.7/S11.4.7_A2.1_T2.js (tail -c +1465834 tests/ecmac.db|head -c 424)
 1940	PASS ch11/11.4/11.4.7/S11.4.7_A2.2_T1.js (tail -c +1466259 tests/ecmac.db|head -c 2888)
@@ -1946,7 +1946,7 @@
 1945	PASS ch11/11.4/11.4.7/S11.4.7_A3_T5.js (tail -c +1470872 tests/ecmac.db|head -c 460)
 1946	PASS ch11/11.4/11.4.7/S11.4.7_A4.1.js (tail -c +1471333 tests/ecmac.db|head -c 402)
 1947	PASS ch11/11.4/11.4.7/S11.4.7_A4.2.js (tail -c +1471736 tests/ecmac.db|head -c 660)
-1948	FAIL ch11/11.4/11.4.8/S11.4.8_A1.js (tail -c +1472397 tests/ecmac.db|head -c 1120): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n~ 0\n^"}]
+1948	FAIL ch11/11.4/11.4.8/S11.4.8_A1.js (tail -c +1472397 tests/ecmac.db|head -c 1120): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n~ 0\n^"}]
 1949	PASS ch11/11.4/11.4.8/S11.4.8_A2.1_T1.js (tail -c +1473518 tests/ecmac.db|head -c 767)
 1950	PASS ch11/11.4/11.4.8/S11.4.8_A2.1_T2.js (tail -c +1474286 tests/ecmac.db|head -c 424)
 1951	PASS ch11/11.4/11.4.8/S11.4.8_A2.2_T1.js (tail -c +1474711 tests/ecmac.db|head -c 2881)
@@ -1955,7 +1955,7 @@
 1954	FAIL ch11/11.4/11.4.8/S11.4.8_A3_T3.js (tail -c +1479029 tests/ecmac.db|head -c 682): [{"message":"#3: ~\"x\" === -1. Actual: 2147483647"}]
 1955	FAIL ch11/11.4/11.4.8/S11.4.8_A3_T4.js (tail -c +1479712 tests/ecmac.db|head -c 368): [{"message":"#1: ~void 0 === -1. Actual: 2147483647"}]
 1956	FAIL ch11/11.4/11.4.8/S11.4.8_A3_T5.js (tail -c +1480081 tests/ecmac.db|head -c 433): [{"message":"#1: ~({}) === -1. Actual: 2147483647"}]
-1957	FAIL ch11/11.4/11.4.9/S11.4.9_A1.js (tail -c +1480515 tests/ecmac.db|head -c 1240): [{"stack":"    at cfunc:1\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n! true\n^"}]
+1957	FAIL ch11/11.4/11.4.9/S11.4.9_A1.js (tail -c +1480515 tests/ecmac.db|head -c 1240): [{"stack":"    at cfunc\n    at <no filename>:30","message":"syntax error at line 1 col 1:\n! true\n^"}]
 1958	PASS ch11/11.4/11.4.9/S11.4.9_A2.1_T1.js (tail -c +1481756 tests/ecmac.db|head -c 726)
 1959	PASS ch11/11.4/11.4.9/S11.4.9_A2.1_T2.js (tail -c +1482483 tests/ecmac.db|head -c 424)
 1960	PASS ch11/11.4/11.4.9/S11.4.9_A2.2_T1.js (tail -c +1482908 tests/ecmac.db|head -c 2153)
@@ -2623,18 +2623,18 @@
 2622	FAIL ch12/12.10/S12.10_A3.9_T1.js (tail -c +2898127 tests/ecmac.db|head -c 1053): [{"message":"not implemented"}]
 2623	FAIL ch12/12.10/S12.10_A3.9_T2.js (tail -c +2899181 tests/ecmac.db|head -c 1069): [{"message":"not implemented"}]
 2624	FAIL ch12/12.10/S12.10_A3.9_T3.js (tail -c +2900251 tests/ecmac.db|head -c 1067): [{"message":"not implemented"}]
-2625	FAIL ch12/12.10/S12.10_A4_T1.js (tail -c +2901319 tests/ecmac.db|head -c 797): [{"stack":"    at cfunc:1\n    at <no filename>:14","message":"not implemented"}]
-2626	FAIL ch12/12.10/S12.10_A4_T2.js (tail -c +2902117 tests/ecmac.db|head -c 797): [{"stack":"    at cfunc:1\n    at <no filename>:14","message":"not implemented"}]
-2627	FAIL ch12/12.10/S12.10_A4_T3.js (tail -c +2902915 tests/ecmac.db|head -c 813): [{"stack":"    at cfunc:1\n    at <no filename>:14","message":"not implemented"}]
-2628	FAIL ch12/12.10/S12.10_A4_T4.js (tail -c +2903729 tests/ecmac.db|head -c 1071): [{"stack":"    at cfunc:1\n    at <no filename>:14","message":"not implemented"}]
-2629	FAIL ch12/12.10/S12.10_A4_T5.js (tail -c +2904801 tests/ecmac.db|head -c 820): [{"stack":"    at cfunc:1\n    at <no filename>:14","message":"not implemented"}]
-2630	FAIL ch12/12.10/S12.10_A4_T6.js (tail -c +2905622 tests/ecmac.db|head -c 841): [{"stack":"    at cfunc:1\n    at <no filename>:14","message":"not implemented"}]
-2631	FAIL ch12/12.10/S12.10_A5_T1.js (tail -c +2906464 tests/ecmac.db|head -c 1331): [{"stack":"    at cfunc:1\n    at <no filename>:15","message":"not implemented"}]
-2632	FAIL ch12/12.10/S12.10_A5_T2.js (tail -c +2907796 tests/ecmac.db|head -c 1367): [{"stack":"    at cfunc:1\n    at <no filename>:15","message":"not implemented"}]
-2633	FAIL ch12/12.10/S12.10_A5_T3.js (tail -c +2909164 tests/ecmac.db|head -c 1347): [{"stack":"    at cfunc:1\n    at <no filename>:16","message":"not implemented"}]
-2634	FAIL ch12/12.10/S12.10_A5_T4.js (tail -c +2910512 tests/ecmac.db|head -c 1448): [{"stack":"    at cfunc:1\n    at <no filename>:15","message":"not implemented"}]
-2635	FAIL ch12/12.10/S12.10_A5_T5.js (tail -c +2911961 tests/ecmac.db|head -c 1433): [{"stack":"    at cfunc:1\n    at <no filename>:15","message":"not implemented"}]
-2636	FAIL ch12/12.10/S12.10_A5_T6.js (tail -c +2913395 tests/ecmac.db|head -c 1448): [{"stack":"    at cfunc:1\n    at <no filename>:15","message":"not implemented"}]
+2625	FAIL ch12/12.10/S12.10_A4_T1.js (tail -c +2901319 tests/ecmac.db|head -c 797): [{"stack":"    at cfunc\n    at <no filename>:14","message":"not implemented"}]
+2626	FAIL ch12/12.10/S12.10_A4_T2.js (tail -c +2902117 tests/ecmac.db|head -c 797): [{"stack":"    at cfunc\n    at <no filename>:14","message":"not implemented"}]
+2627	FAIL ch12/12.10/S12.10_A4_T3.js (tail -c +2902915 tests/ecmac.db|head -c 813): [{"stack":"    at cfunc\n    at <no filename>:14","message":"not implemented"}]
+2628	FAIL ch12/12.10/S12.10_A4_T4.js (tail -c +2903729 tests/ecmac.db|head -c 1071): [{"stack":"    at cfunc\n    at <no filename>:14","message":"not implemented"}]
+2629	FAIL ch12/12.10/S12.10_A4_T5.js (tail -c +2904801 tests/ecmac.db|head -c 820): [{"stack":"    at cfunc\n    at <no filename>:14","message":"not implemented"}]
+2630	FAIL ch12/12.10/S12.10_A4_T6.js (tail -c +2905622 tests/ecmac.db|head -c 841): [{"stack":"    at cfunc\n    at <no filename>:14","message":"not implemented"}]
+2631	FAIL ch12/12.10/S12.10_A5_T1.js (tail -c +2906464 tests/ecmac.db|head -c 1331): [{"stack":"    at cfunc\n    at <no filename>:15","message":"not implemented"}]
+2632	FAIL ch12/12.10/S12.10_A5_T2.js (tail -c +2907796 tests/ecmac.db|head -c 1367): [{"stack":"    at cfunc\n    at <no filename>:15","message":"not implemented"}]
+2633	FAIL ch12/12.10/S12.10_A5_T3.js (tail -c +2909164 tests/ecmac.db|head -c 1347): [{"stack":"    at cfunc\n    at <no filename>:16","message":"not implemented"}]
+2634	FAIL ch12/12.10/S12.10_A5_T4.js (tail -c +2910512 tests/ecmac.db|head -c 1448): [{"stack":"    at cfunc\n    at <no filename>:15","message":"not implemented"}]
+2635	FAIL ch12/12.10/S12.10_A5_T5.js (tail -c +2911961 tests/ecmac.db|head -c 1433): [{"stack":"    at cfunc\n    at <no filename>:15","message":"not implemented"}]
+2636	FAIL ch12/12.10/S12.10_A5_T6.js (tail -c +2913395 tests/ecmac.db|head -c 1448): [{"stack":"    at cfunc\n    at <no filename>:15","message":"not implemented"}]
 2637	PASS ch12/12.10/12.10.1/12.10.1-1-s.js (tail -c +2914844 tests/ecmac.db|head -c 650)
 2638	PASS ch12/12.10/12.10.1/12.10.1-10-s.js (tail -c +2915495 tests/ecmac.db|head -c 689)
 2639	PASS ch12/12.10/12.10.1/12.10.1-11-s.js (tail -c +2916185 tests/ecmac.db|head -c 495)
@@ -2953,7 +2953,7 @@ try
 2942	FAIL ch13/13.0/S13_A15_T3.js (tail -c +3195532 tests/ecmac.db|head -c 1095): [{"message":"#1: typeof __func() === \"undefined\". Actual: typeof __func() ===object"}]
 2943	FAIL ch13/13.0/S13_A15_T4.js (tail -c +3196628 tests/ecmac.db|head -c 734): [{"message":"#1: __func(42,42,42) === \"object\". Actual: __func(42,42,42)===undefined"}]
 2944	PASS ch13/13.0/S13_A15_T5.js (tail -c +3197363 tests/ecmac.db|head -c 944)
-2945	FAIL ch13/13.0/S13_A16.js (tail -c +3198308 tests/ecmac.db|head -c 549): [{"stack":"    at cfunc:1\n    at <no filename>:39","message":"syntax error at line 1 col 9:\nfunction\t w(\f) {\r};\n        ^"}]
+2945	FAIL ch13/13.0/S13_A16.js (tail -c +3198308 tests/ecmac.db|head -c 549): [{"stack":"    at cfunc\n    at <no filename>:39","message":"syntax error at line 1 col 9:\nfunction\t w(\f) {\r};\n        ^"}]
 2946	PASS ch13/13.0/S13_A17_T1.js (tail -c +3198858 tests/ecmac.db|head -c 1337)
 2947	PASS ch13/13.0/S13_A17_T2.js (tail -c +3200196 tests/ecmac.db|head -c 1457)
 2948	PASS ch13/13.0/S13_A18.js (tail -c +3201654 tests/ecmac.db|head -c 946)
@@ -3188,7 +3188,7 @@ function FACTORY()
 3170	PASS ch15/15.1/15.1.1/15.1.1.3/S15.1.1.3_A3.1.js (tail -c +3379043 tests/ecmac.db|head -c 320)
 3171	PASS ch15/15.1/15.1.1/15.1.1.3/S15.1.1.3_A3.2.js (tail -c +3379364 tests/ecmac.db|head -c 306)
 3172	PASS ch15/15.1/15.1.2/15.1.2.1/S15.1.2.1_A1.1_T1.js (tail -c +3379671 tests/ecmac.db|head -c 739)
-3173	FAIL ch15/15.1/15.1.2/15.1.2.1/S15.1.2.1_A1.1_T2.js (tail -c +3380411 tests/ecmac.db|head -c 705): [{"stack":"    at Eval'd code:1\n    at <no filename>:11","message":"[object] is not defined"}]
+3173	FAIL ch15/15.1/15.1.2/15.1.2.1/S15.1.2.1_A1.1_T2.js (tail -c +3380411 tests/ecmac.db|head -c 705): [{"stack":"    at Eval'd code:1\n    at cfunc\n    at <no filename>:11","message":"[object] is not defined"}]
 3174	PASS ch15/15.1/15.1.2/15.1.2.1/S15.1.2.1_A1.2_T1.js (tail -c +3381117 tests/ecmac.db|head -c 390)
 3175	PASS ch15/15.1/15.1.2/15.1.2.1/S15.1.2.1_A2_T1.js (tail -c +3381508 tests/ecmac.db|head -c 618)
 3176	PASS ch15/15.1/15.1.2/15.1.2.1/S15.1.2.1_A3.1_T1.js (tail -c +3382127 tests/ecmac.db|head -c 715)
@@ -3328,38 +3328,38 @@ function FACTORY()
 3310	PASS ch15/15.1/15.1.2/15.1.2.5/S15.1.2.5_A2.5.js (tail -c +3516478 tests/ecmac.db|head -c 658)
 3311	PASS ch15/15.1/15.1.2/15.1.2.5/S15.1.2.5_A2.6.js (tail -c +3517137 tests/ecmac.db|head -c 357)
 3312	PASS ch15/15.1/15.1.2/15.1.2.5/S15.1.2.5_A2.7.js (tail -c +3517495 tests/ecmac.db|head -c 536)
-3313	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.10_T1.js (tail -c +3518032 tests/ecmac.db|head -c 943): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
-3314	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.11_T1.js (tail -c +3518976 tests/ecmac.db|head -c 1093): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
-3315	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.11_T2.js (tail -c +3520070 tests/ecmac.db|head -c 1093): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
-3316	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.12_T1.js (tail -c +3521164 tests/ecmac.db|head -c 1151): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3317	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.12_T2.js (tail -c +3522316 tests/ecmac.db|head -c 1156): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3318	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.12_T3.js (tail -c +3523473 tests/ecmac.db|head -c 1155): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3319	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.13_T1.js (tail -c +3524629 tests/ecmac.db|head -c 2241): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3320	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.13_T2.js (tail -c +3526871 tests/ecmac.db|head -c 2241): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3321	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T1.js (tail -c +3529113 tests/ecmac.db|head -c 2248): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3322	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T2.js (tail -c +3531362 tests/ecmac.db|head -c 2249): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3323	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T3.js (tail -c +3533612 tests/ecmac.db|head -c 2248): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3324	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T4.js (tail -c +3535861 tests/ecmac.db|head -c 2249): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3325	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T1.js (tail -c +3538111 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3326	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T2.js (tail -c +3540364 tests/ecmac.db|head -c 2257): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3327	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T3.js (tail -c +3542622 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3328	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T4.js (tail -c +3544875 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3329	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T5.js (tail -c +3547128 tests/ecmac.db|head -c 2257): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3330	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T6.js (tail -c +3549386 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3331	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.1_T1.js (tail -c +3551639 tests/ecmac.db|head -c 913): [{"stack":"    at <no filename>:16","message":"[URIError] is not defined"}]
-3332	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.2_T1.js (tail -c +3552553 tests/ecmac.db|head -c 841): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
-3333	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.2_T2.js (tail -c +3553395 tests/ecmac.db|head -c 843): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
-3334	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.3_T1.js (tail -c +3554239 tests/ecmac.db|head -c 1942): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3335	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.3_T2.js (tail -c +3556182 tests/ecmac.db|head -c 1942): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3336	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.4_T1.js (tail -c +3558125 tests/ecmac.db|head -c 2152): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3337	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.5_T1.js (tail -c +3560278 tests/ecmac.db|head -c 2152): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3338	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.6_T1.js (tail -c +3562431 tests/ecmac.db|head -c 2152): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3339	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.7_T1.js (tail -c +3564584 tests/ecmac.db|head -c 1964): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3340	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.8_T1.js (tail -c +3566549 tests/ecmac.db|head -c 2031): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3341	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.8_T2.js (tail -c +3568581 tests/ecmac.db|head -c 2031): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3342	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.9_T1.js (tail -c +3570613 tests/ecmac.db|head -c 2057): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3343	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.9_T2.js (tail -c +3572671 tests/ecmac.db|head -c 2057): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3344	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.9_T3.js (tail -c +3574729 tests/ecmac.db|head -c 2057): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3313	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.10_T1.js (tail -c +3518032 tests/ecmac.db|head -c 943): [{"stack":"    at <no filename>:18","message":"[URIError] is not defined"}]
+3314	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.11_T1.js (tail -c +3518976 tests/ecmac.db|head -c 1093): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
+3315	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.11_T2.js (tail -c +3520070 tests/ecmac.db|head -c 1093): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
+3316	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.12_T1.js (tail -c +3521164 tests/ecmac.db|head -c 1151): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3317	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.12_T2.js (tail -c +3522316 tests/ecmac.db|head -c 1156): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3318	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.12_T3.js (tail -c +3523473 tests/ecmac.db|head -c 1155): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3319	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.13_T1.js (tail -c +3524629 tests/ecmac.db|head -c 2241): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3320	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.13_T2.js (tail -c +3526871 tests/ecmac.db|head -c 2241): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3321	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T1.js (tail -c +3529113 tests/ecmac.db|head -c 2248): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3322	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T2.js (tail -c +3531362 tests/ecmac.db|head -c 2249): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3323	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T3.js (tail -c +3533612 tests/ecmac.db|head -c 2248): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3324	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.14_T4.js (tail -c +3535861 tests/ecmac.db|head -c 2249): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3325	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T1.js (tail -c +3538111 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3326	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T2.js (tail -c +3540364 tests/ecmac.db|head -c 2257): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3327	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T3.js (tail -c +3542622 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3328	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T4.js (tail -c +3544875 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3329	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T5.js (tail -c +3547128 tests/ecmac.db|head -c 2257): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3330	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.15_T6.js (tail -c +3549386 tests/ecmac.db|head -c 2252): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3331	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.1_T1.js (tail -c +3551639 tests/ecmac.db|head -c 913): [{"stack":"    at <no filename>:15","message":"[URIError] is not defined"}]
+3332	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.2_T1.js (tail -c +3552553 tests/ecmac.db|head -c 841): [{"stack":"    at <no filename>:18","message":"[URIError] is not defined"}]
+3333	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.2_T2.js (tail -c +3553395 tests/ecmac.db|head -c 843): [{"stack":"    at <no filename>:18","message":"[URIError] is not defined"}]
+3334	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.3_T1.js (tail -c +3554239 tests/ecmac.db|head -c 1942): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3335	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.3_T2.js (tail -c +3556182 tests/ecmac.db|head -c 1942): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3336	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.4_T1.js (tail -c +3558125 tests/ecmac.db|head -c 2152): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3337	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.5_T1.js (tail -c +3560278 tests/ecmac.db|head -c 2152): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3338	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.6_T1.js (tail -c +3562431 tests/ecmac.db|head -c 2152): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3339	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.7_T1.js (tail -c +3564584 tests/ecmac.db|head -c 1964): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3340	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.8_T1.js (tail -c +3566549 tests/ecmac.db|head -c 2031): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3341	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.8_T2.js (tail -c +3568581 tests/ecmac.db|head -c 2031): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3342	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.9_T1.js (tail -c +3570613 tests/ecmac.db|head -c 2057): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3343	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.9_T2.js (tail -c +3572671 tests/ecmac.db|head -c 2057): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3344	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A1.9_T3.js (tail -c +3574729 tests/ecmac.db|head -c 2057): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
 3345	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A2.1_T1.js (tail -c +3576787 tests/ecmac.db|head -c 1299): [{"message":"#0000 "}]
 3346	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A2.2_T1.js (tail -c +3578087 tests/ecmac.db|head -c 2269): [{"message":"not implemented"}]
 3347	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A2.3_T1.js
@@ -3392,38 +3392,38 @@ var
 3362	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A5.6.js (tail -c +3598322 tests/ecmac.db|head -c 363): [{"stack":"    at <no filename>:10","message":"[decodeURI] is not defined"}]
 3363	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A5.7.js (tail -c +3598686 tests/ecmac.db|head -c 541): [{"message":"#1.2: new decodeURI() throw TypeError. Actual: Error: [decodeURI] is not defined"}]
 3364	FAIL ch15/15.1/15.1.3/15.1.3.1/S15.1.3.1_A6_T1.js (tail -c +3599228 tests/ecmac.db|head -c 3265): [{"stack":"    at <no filename>:11","message":"[decodeURI] is not defined"}]
-3365	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.10_T1.js (tail -c +3602494 tests/ecmac.db|head -c 940): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
-3366	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.11_T1.js (tail -c +3603435 tests/ecmac.db|head -c 1090): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
-3367	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.11_T2.js (tail -c +3604526 tests/ecmac.db|head -c 1090): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
-3368	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.12_T1.js (tail -c +3605617 tests/ecmac.db|head -c 1148): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3369	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.12_T2.js (tail -c +3606766 tests/ecmac.db|head -c 1153): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3370	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.12_T3.js (tail -c +3607920 tests/ecmac.db|head -c 1152): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3371	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.13_T1.js (tail -c +3609073 tests/ecmac.db|head -c 2222): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3372	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.13_T2.js (tail -c +3611296 tests/ecmac.db|head -c 2222): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3373	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T1.js (tail -c +3613519 tests/ecmac.db|head -c 2229): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3374	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T2.js (tail -c +3615749 tests/ecmac.db|head -c 2230): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3375	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T3.js (tail -c +3617980 tests/ecmac.db|head -c 2229): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3376	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T4.js (tail -c +3620210 tests/ecmac.db|head -c 2230): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3377	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T1.js (tail -c +3622441 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3378	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T2.js (tail -c +3624675 tests/ecmac.db|head -c 2238): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3379	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T3.js (tail -c +3626914 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3380	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T4.js (tail -c +3629148 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3381	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T5.js (tail -c +3631382 tests/ecmac.db|head -c 2238): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3382	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T6.js (tail -c +3633621 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3383	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.1_T1.js (tail -c +3635855 tests/ecmac.db|head -c 945): [{"stack":"    at <no filename>:16","message":"[URIError] is not defined"}]
-3384	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.2_T1.js (tail -c +3636801 tests/ecmac.db|head -c 838): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
-3385	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.2_T2.js (tail -c +3637640 tests/ecmac.db|head -c 840): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
-3386	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.3_T1.js (tail -c +3638481 tests/ecmac.db|head -c 1935): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3387	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.3_T2.js (tail -c +3640417 tests/ecmac.db|head -c 1935): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3388	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.4_T1.js (tail -c +3642353 tests/ecmac.db|head -c 2133): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3389	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.5_T1.js (tail -c +3644487 tests/ecmac.db|head -c 2133): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3390	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.6_T1.js (tail -c +3646621 tests/ecmac.db|head -c 2133): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
-3391	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.7_T1.js (tail -c +3648755 tests/ecmac.db|head -c 1957): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3392	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.8_T1.js (tail -c +3650713 tests/ecmac.db|head -c 2024): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3393	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.8_T2.js (tail -c +3652738 tests/ecmac.db|head -c 2024): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3394	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.9_T1.js (tail -c +3654763 tests/ecmac.db|head -c 2050): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3395	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.9_T2.js (tail -c +3656814 tests/ecmac.db|head -c 2050): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
-3396	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.9_T3.js (tail -c +3658865 tests/ecmac.db|head -c 2050): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3365	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.10_T1.js (tail -c +3602494 tests/ecmac.db|head -c 940): [{"stack":"    at <no filename>:18","message":"[URIError] is not defined"}]
+3366	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.11_T1.js (tail -c +3603435 tests/ecmac.db|head -c 1090): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
+3367	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.11_T2.js (tail -c +3604526 tests/ecmac.db|head -c 1090): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
+3368	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.12_T1.js (tail -c +3605617 tests/ecmac.db|head -c 1148): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3369	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.12_T2.js (tail -c +3606766 tests/ecmac.db|head -c 1153): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3370	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.12_T3.js (tail -c +3607920 tests/ecmac.db|head -c 1152): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3371	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.13_T1.js (tail -c +3609073 tests/ecmac.db|head -c 2222): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3372	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.13_T2.js (tail -c +3611296 tests/ecmac.db|head -c 2222): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3373	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T1.js (tail -c +3613519 tests/ecmac.db|head -c 2229): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3374	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T2.js (tail -c +3615749 tests/ecmac.db|head -c 2230): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3375	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T3.js (tail -c +3617980 tests/ecmac.db|head -c 2229): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3376	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.14_T4.js (tail -c +3620210 tests/ecmac.db|head -c 2230): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3377	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T1.js (tail -c +3622441 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3378	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T2.js (tail -c +3624675 tests/ecmac.db|head -c 2238): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3379	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T3.js (tail -c +3626914 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3380	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T4.js (tail -c +3629148 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3381	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T5.js (tail -c +3631382 tests/ecmac.db|head -c 2238): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3382	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.15_T6.js (tail -c +3633621 tests/ecmac.db|head -c 2233): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3383	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.1_T1.js (tail -c +3635855 tests/ecmac.db|head -c 945): [{"stack":"    at <no filename>:15","message":"[URIError] is not defined"}]
+3384	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.2_T1.js (tail -c +3636801 tests/ecmac.db|head -c 838): [{"stack":"    at <no filename>:18","message":"[URIError] is not defined"}]
+3385	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.2_T2.js (tail -c +3637640 tests/ecmac.db|head -c 840): [{"stack":"    at <no filename>:18","message":"[URIError] is not defined"}]
+3386	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.3_T1.js (tail -c +3638481 tests/ecmac.db|head -c 1935): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3387	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.3_T2.js (tail -c +3640417 tests/ecmac.db|head -c 1935): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3388	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.4_T1.js (tail -c +3642353 tests/ecmac.db|head -c 2133): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3389	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.5_T1.js (tail -c +3644487 tests/ecmac.db|head -c 2133): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3390	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.6_T1.js (tail -c +3646621 tests/ecmac.db|head -c 2133): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
+3391	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.7_T1.js (tail -c +3648755 tests/ecmac.db|head -c 1957): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3392	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.8_T1.js (tail -c +3650713 tests/ecmac.db|head -c 2024): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3393	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.8_T2.js (tail -c +3652738 tests/ecmac.db|head -c 2024): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3394	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.9_T1.js (tail -c +3654763 tests/ecmac.db|head -c 2050): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3395	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.9_T2.js (tail -c +3656814 tests/ecmac.db|head -c 2050): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
+3396	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A1.9_T3.js (tail -c +3658865 tests/ecmac.db|head -c 2050): [{"stack":"    at <no filename>:21","message":"[URIError] is not defined"}]
 3397	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A2.1_T1.js (tail -c +3660916 tests/ecmac.db|head -c 1292): [{"message":"#0000 "}]
 3398	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A2.2_T1.js
  * @description Complex tests, use RFC 3629
@@ -3460,11 +3460,11 @@ err
 3414	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A5.6.js (tail -c +3682746 tests/ecmac.db|head -c 408): [{"stack":"    at <no filename>:10","message":"[decodeURIComponent] is not defined"}]
 3415	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A5.7.js (tail -c +3683155 tests/ecmac.db|head -c 586): [{"message":"#1.2: new decodeURIComponent() throw TypeError. Actual: Error: [decodeURIComponent] is not defined"}]
 3416	FAIL ch15/15.1/15.1.3/15.1.3.2/S15.1.3.2_A6_T1.js (tail -c +3683742 tests/ecmac.db|head -c 3517): [{"stack":"    at <no filename>:11","message":"[decodeURIComponent] is not defined"}]
-3417	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.1_T1.js (tail -c +3687260 tests/ecmac.db|head -c 1907): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3418	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.1_T2.js (tail -c +3689168 tests/ecmac.db|head -c 1913): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3419	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.2_T1.js (tail -c +3691082 tests/ecmac.db|head -c 1932): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3420	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.2_T2.js (tail -c +3693015 tests/ecmac.db|head -c 1941): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3421	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.3_T1.js (tail -c +3694957 tests/ecmac.db|head -c 2268): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
+3417	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.1_T1.js (tail -c +3687260 tests/ecmac.db|head -c 1907): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3418	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.1_T2.js (tail -c +3689168 tests/ecmac.db|head -c 1913): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3419	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.2_T1.js (tail -c +3691082 tests/ecmac.db|head -c 1932): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3420	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.2_T2.js (tail -c +3693015 tests/ecmac.db|head -c 1941): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3421	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A1.3_T1.js (tail -c +3694957 tests/ecmac.db|head -c 2268): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
 3422	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A2.1_T1.js (tail -c +3697226 tests/ecmac.db|head -c 2684): [{"message":"not implemented"}]
 3423	SKIP ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A2.2_T1.js (tail -c +3699911 tests/ecmac.db|head -c 2078)
 3424	SKIP ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A2.3_T1.js (tail -c +3701990 tests/ecmac.db|head -c 2175)
@@ -3488,11 +3488,11 @@ err
 3442	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A5.6.js (tail -c +3721501 tests/ecmac.db|head -c 363): [{"stack":"    at <no filename>:10","message":"[encodeURI] is not defined"}]
 3443	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A5.7.js (tail -c +3721865 tests/ecmac.db|head -c 541): [{"message":"#1.2: new encodeURI() throw TypeError. Actual: Error: [encodeURI] is not defined"}]
 3444	FAIL ch15/15.1/15.1.3/15.1.3.3/S15.1.3.3_A6_T1.js (tail -c +3722407 tests/ecmac.db|head -c 3263): [{"stack":"    at <no filename>:11","message":"[encodeURI] is not defined"}]
-3445	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.1_T1.js (tail -c +3725671 tests/ecmac.db|head -c 1916): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3446	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.1_T2.js (tail -c +3727588 tests/ecmac.db|head -c 1922): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3447	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.2_T1.js (tail -c +3729511 tests/ecmac.db|head -c 1941): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3448	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.2_T2.js (tail -c +3731453 tests/ecmac.db|head -c 1950): [{"stack":"    at <no filename>:20","message":"[URIError] is not defined"}]
-3449	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.3_T1.js (tail -c +3733404 tests/ecmac.db|head -c 2277): [{"stack":"    at <no filename>:23","message":"[URIError] is not defined"}]
+3445	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.1_T1.js (tail -c +3725671 tests/ecmac.db|head -c 1916): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3446	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.1_T2.js (tail -c +3727588 tests/ecmac.db|head -c 1922): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3447	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.2_T1.js (tail -c +3729511 tests/ecmac.db|head -c 1941): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3448	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.2_T2.js (tail -c +3731453 tests/ecmac.db|head -c 1950): [{"stack":"    at <no filename>:19","message":"[URIError] is not defined"}]
+3449	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A1.3_T1.js (tail -c +3733404 tests/ecmac.db|head -c 2277): [{"stack":"    at <no filename>:22","message":"[URIError] is not defined"}]
 3450	FAIL ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A2.1_T1.js (tail -c +3735682 tests/ecmac.db|head -c 2463): [{"message":"not implemented"}]
 3451	SKIP ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A2.2_T1.js (tail -c +3738146 tests/ecmac.db|head -c 2087)
 3452	SKIP ch15/15.1/15.1.3/15.1.3.4/S15.1.3.4_A2.3_T1.js (tail -c +3740234 tests/ecmac.db|head -c 2184)
@@ -3814,7 +3814,7 @@ err
 3768	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T12.js (tail -c +4242936 tests/ecmac.db|head -c 1616): [{"message":"#3: __executed = /(a(b(c)))(d(e(f)))/.exec(\"xabcdefg\"); __executed.input === xabcdefg. Actual: undefined"}]
 3769	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T13.js (tail -c +4244553 tests/ecmac.db|head -c 1680): [{"message":"#3: __executed = /(a(b(c)))(d(e(f)))\\2\\5/.exec(\"xabcdefbcefg\"); __executed.input === xabcdefbcefg. Actual: undefined"}]
 3770	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T14.js (tail -c +4246234 tests/ecmac.db|head -c 1547): [{"message":"#3: __executed = /a(.?)b\\1c\\1d\\1/.exec(\"abcd\"); __executed.input === abcd. Actual: undefined"}]
-3771	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T15.js (tail -c +4247782 tests/ecmac.db|head -c 1991): [{"stack":"    at cfunc:0\n    at <no filename>:26","message":"Invalid regex"}]
+3771	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T15.js (tail -c +4247782 tests/ecmac.db|head -c 1991): [{"stack":"    at cfunc\n    at <no filename>:26","message":"Invalid regex"}]
 3772	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T16.js (tail -c +4249774 tests/ecmac.db|head -c 1937): [{"message":"#3: __re = new RegExp(__pattern); __executed = __re.exec(__strOriginal); __executed.input === hello. Actual: undefined"}]
 3773	FAIL ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T17.js (tail -c +4251712 tests/ecmac.db|head -c 1935): [{"message":"Invalid regex"}]
 3774	PASS ch15/15.10/15.10.2/15.10.2.8/S15.10.2.8_A3_T18.js (tail -c +4253648 tests/ecmac.db|head -c 1127)
@@ -3858,19 +3858,19 @@ err
 3812	FAIL ch15/15.10/15.10.2/15.10.2.9/S15.10.2.9_A1_T4.js (tail -c +4313418 tests/ecmac.db|head -c 551): [{"message":"Invalid regex"}]
 3813	FAIL ch15/15.10/15.10.2/15.10.2.9/S15.10.2.9_A1_T5.js (tail -c +4313970 tests/ecmac.db|head -c 1297): [{"message":"Invalid regex"}]
 3814	PASS ch15/15.10/15.10.3/S15.10.3.1_A1_T1.js (tail -c +4315268 tests/ecmac.db|head -c 534)
-3815	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T2.js (tail -c +4315803 tests/ecmac.db|head -c 599): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"invalid flags"}]
-3816	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T3.js (tail -c +4316403 tests/ecmac.db|head -c 605): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"invalid flags"}]
-3817	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T4.js (tail -c +4317009 tests/ecmac.db|head -c 574): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"invalid flags"}]
-3818	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T5.js (tail -c +4317584 tests/ecmac.db|head -c 571): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"invalid flags"}]
+3815	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T2.js (tail -c +4315803 tests/ecmac.db|head -c 599): [{"stack":"    at cfunc\n    at <no filename>:10","message":"invalid flags"}]
+3816	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T3.js (tail -c +4316403 tests/ecmac.db|head -c 605): [{"stack":"    at cfunc\n    at <no filename>:10","message":"invalid flags"}]
+3817	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T4.js (tail -c +4317009 tests/ecmac.db|head -c 574): [{"stack":"    at cfunc\n    at <no filename>:10","message":"invalid flags"}]
+3818	FAIL ch15/15.10/15.10.3/S15.10.3.1_A1_T5.js (tail -c +4317584 tests/ecmac.db|head -c 571): [{"stack":"    at cfunc\n    at <no filename>:10","message":"invalid flags"}]
 3819	PASS ch15/15.10/15.10.3/S15.10.3.1_A2_T1.js (tail -c +4318156 tests/ecmac.db|head -c 714)
 3820	PASS ch15/15.10/15.10.3/S15.10.3.1_A2_T2.js (tail -c +4318871 tests/ecmac.db|head -c 736)
 3821	PASS ch15/15.10/15.10.3/S15.10.3.1_A3_T1.js (tail -c +4319608 tests/ecmac.db|head -c 759)
 3822	PASS ch15/15.10/15.10.3/S15.10.3.1_A3_T2.js (tail -c +4320368 tests/ecmac.db|head -c 872)
 3823	PASS ch15/15.10/15.10.4/S15.10.4.1_A1_T1.js (tail -c +4321241 tests/ecmac.db|head -c 1161)
-3824	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T2.js (tail -c +4322403 tests/ecmac.db|head -c 1250): [{"stack":"    at cfunc:0\n    at <no filename>:11","message":"invalid flags"}]
-3825	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T3.js (tail -c +4323654 tests/ecmac.db|head -c 1233): [{"stack":"    at cfunc:0\n    at <no filename>:11","message":"invalid flags"}]
-3826	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T4.js (tail -c +4324888 tests/ecmac.db|head -c 1262): [{"stack":"    at cfunc:0\n    at <no filename>:11","message":"invalid flags"}]
-3827	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T5.js (tail -c +4326151 tests/ecmac.db|head -c 1353): [{"stack":"    at cfunc:0\n    at <no filename>:11","message":"invalid flags"}]
+3824	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T2.js (tail -c +4322403 tests/ecmac.db|head -c 1250): [{"stack":"    at cfunc\n    at <no filename>:11","message":"invalid flags"}]
+3825	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T3.js (tail -c +4323654 tests/ecmac.db|head -c 1233): [{"stack":"    at cfunc\n    at <no filename>:11","message":"invalid flags"}]
+3826	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T4.js (tail -c +4324888 tests/ecmac.db|head -c 1262): [{"stack":"    at cfunc\n    at <no filename>:11","message":"invalid flags"}]
+3827	FAIL ch15/15.10/15.10.4/S15.10.4.1_A1_T5.js (tail -c +4326151 tests/ecmac.db|head -c 1353): [{"stack":"    at cfunc\n    at <no filename>:11","message":"invalid flags"}]
 3828	PASS ch15/15.10/15.10.4/S15.10.4.1_A2_T1.js (tail -c +4327505 tests/ecmac.db|head -c 619)
 3829	PASS ch15/15.10/15.10.4/S15.10.4.1_A2_T2.js (tail -c +4328125 tests/ecmac.db|head -c 614)
 3830	PASS ch15/15.10/15.10.4/S15.10.4.1_A3_T1.js (tail -c +4328740 tests/ecmac.db|head -c 632)
@@ -4852,7 +4852,7 @@ err
 4803	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-2-2.js (tail -c +4985226 tests/ecmac.db|head -c 346)
 4804	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-3-1.js (tail -c +4985573 tests/ecmac.db|head -c 594)
 4805	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-1.js (tail -c +4986168 tests/ecmac.db|head -c 866)
-4806	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-10.js (tail -c +4987035 tests/ecmac.db|head -c 745): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:21)\n    at runTestCase (<no filename>:901)\n    at <no filename>:27","message":"cannot read property 'enumerable' of undefined"}]
+4806	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-10.js (tail -c +4987035 tests/ecmac.db|head -c 745): [{"stack":"    at cfunc\n    at testcase (<no filename>:21)\n    at runTestCase (<no filename>:901)\n    at <no filename>:27","message":"cannot read property 'enumerable' of undefined"}]
 4807	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-100.js (tail -c +4987781 tests/ecmac.db|head -c 639)
 4808	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-101.js (tail -c +4988421 tests/ecmac.db|head -c 642)
 4809	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-102.js (tail -c +4989064 tests/ecmac.db|head -c 816)
@@ -4863,7 +4863,7 @@ err
 4814	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-107.js (tail -c +4993557 tests/ecmac.db|head -c 991)
 4815	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-108.js (tail -c +4994549 tests/ecmac.db|head -c 1100)
 4816	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-109.js (tail -c +4995650 tests/ecmac.db|head -c 756)
-4817	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-11.js (tail -c +4996407 tests/ecmac.db|head -c 664): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+4817	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-11.js (tail -c +4996407 tests/ecmac.db|head -c 664): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 4818	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-110.js (tail -c +4997072 tests/ecmac.db|head -c 1081)
 4819	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-111.js (tail -c +4998154 tests/ecmac.db|head -c 894)
 4820	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-112.js (tail -c +4999049 tests/ecmac.db|head -c 731)
@@ -4874,7 +4874,7 @@ err
 4825	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-117.js (tail -c +5002661 tests/ecmac.db|head -c 792)
 4826	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-118.js (tail -c +5003454 tests/ecmac.db|head -c 716)
 4827	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-119.js (tail -c +5004171 tests/ecmac.db|head -c 718)
-4828	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-12.js (tail -c +5004890 tests/ecmac.db|head -c 670): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+4828	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-12.js (tail -c +5004890 tests/ecmac.db|head -c 670): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 4829	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-120.js (tail -c +5005561 tests/ecmac.db|head -c 793)
 4830	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-121.js (tail -c +5006355 tests/ecmac.db|head -c 719)
 4831	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-122.js (tail -c +5007075 tests/ecmac.db|head -c 749)
@@ -4884,7 +4884,7 @@ err
 4835	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-127.js (tail -c +5009951 tests/ecmac.db|head -c 655)
 4836	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-128.js (tail -c +5010607 tests/ecmac.db|head -c 656)
 4837	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-129.js (tail -c +5011264 tests/ecmac.db|head -c 648)
-4838	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-13.js (tail -c +5011913 tests/ecmac.db|head -c 747): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:28","message":"cannot read property 'enumerable' of undefined"}]
+4838	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-13.js (tail -c +5011913 tests/ecmac.db|head -c 747): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:28","message":"cannot read property 'enumerable' of undefined"}]
 4839	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-130.js (tail -c +5012661 tests/ecmac.db|head -c 650)
 4840	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-131.js (tail -c +5013312 tests/ecmac.db|head -c 650)
 4841	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-132.js (tail -c +5013963 tests/ecmac.db|head -c 652)
@@ -4895,7 +4895,7 @@ err
 4846	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-137.js (tail -c +5017288 tests/ecmac.db|head -c 679)
 4847	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-138.js (tail -c +5017968 tests/ecmac.db|head -c 664)
 4848	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-139.js (tail -c +5018633 tests/ecmac.db|head -c 679)
-4849	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-14.js (tail -c +5019313 tests/ecmac.db|head -c 841): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:24)\n    at runTestCase (<no filename>:901)\n    at <no filename>:27","message":"cannot read property 'enumerable' of undefined"}]
+4849	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-14.js (tail -c +5019313 tests/ecmac.db|head -c 841): [{"stack":"    at cfunc\n    at testcase (<no filename>:24)\n    at runTestCase (<no filename>:901)\n    at <no filename>:27","message":"cannot read property 'enumerable' of undefined"}]
 4850	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-140.js (tail -c +5020155 tests/ecmac.db|head -c 680)
 4851	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-141.js (tail -c +5020836 tests/ecmac.db|head -c 677)
 4852	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-142.js (tail -c +5021514 tests/ecmac.db|head -c 666)
@@ -4905,7 +4905,7 @@ err
 4856	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-146.js (tail -c +5024194 tests/ecmac.db|head -c 673)
 4857	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-147.js (tail -c +5024868 tests/ecmac.db|head -c 735)
 4858	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-149.js (tail -c +5025604 tests/ecmac.db|head -c 680)
-4859	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-15.js (tail -c +5026285 tests/ecmac.db|head -c 747): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+4859	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-15.js (tail -c +5026285 tests/ecmac.db|head -c 747): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
 4860	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-150.js (tail -c +5027033 tests/ecmac.db|head -c 716)
 4861	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-151.js (tail -c +5027750 tests/ecmac.db|head -c 718)
 4862	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-152.js (tail -c +5028469 tests/ecmac.db|head -c 458)
@@ -4948,7 +4948,7 @@ err
 4899	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-187.js (tail -c +5054472 tests/ecmac.db|head -c 1162): [{"message":"Test case returned non-true value!"}]
 4900	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-188.js (tail -c +5055635 tests/ecmac.db|head -c 773)
 4901	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-189.js (tail -c +5056409 tests/ecmac.db|head -c 1144)
-4902	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-19.js (tail -c +5057554 tests/ecmac.db|head -c 604): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:19)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+4902	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-19.js (tail -c +5057554 tests/ecmac.db|head -c 604): [{"stack":"    at cfunc\n    at testcase (<no filename>:19)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 4903	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-190.js (tail -c +5058159 tests/ecmac.db|head -c 911)
 4904	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-191.js (tail -c +5059071 tests/ecmac.db|head -c 850)
 4905	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-192.js (tail -c +5059922 tests/ecmac.db|head -c 770)
@@ -5002,7 +5002,7 @@ err
 4953	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-237.js (tail -c +5092083 tests/ecmac.db|head -c 703): [{"message":"Test case returned non-true value!"}]
 4954	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-238.js (tail -c +5092787 tests/ecmac.db|head -c 851): [{"message":"Test case returned non-true value!"}]
 4955	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-239.js (tail -c +5093639 tests/ecmac.db|head -c 977): [{"message":"Test case returned non-true value!"}]
-4956	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-24.js (tail -c +5094617 tests/ecmac.db|head -c 915): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:28)\n    at runTestCase (<no filename>:901)\n    at <no filename>:32","message":"cannot read property 'enumerable' of undefined"}]
+4956	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-24.js (tail -c +5094617 tests/ecmac.db|head -c 915): [{"stack":"    at cfunc\n    at testcase (<no filename>:28)\n    at runTestCase (<no filename>:901)\n    at <no filename>:32","message":"cannot read property 'enumerable' of undefined"}]
 4957	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-240.js (tail -c +5095533 tests/ecmac.db|head -c 1100): [{"message":"Test case returned non-true value!"}]
 4958	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-241.js (tail -c +5096634 tests/ecmac.db|head -c 634)
 4959	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-242.js (tail -c +5097269 tests/ecmac.db|head -c 1033)
@@ -5013,7 +5013,7 @@ err
 4964	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-247.js (tail -c +5100951 tests/ecmac.db|head -c 630): [{"message":"Test case returned non-true value!"}]
 4965	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-248.js (tail -c +5101582 tests/ecmac.db|head -c 620): [{"message":"Test case returned non-true value!"}]
 4966	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-249.js (tail -c +5102203 tests/ecmac.db|head -c 614): [{"message":"Test case returned non-true value!"}]
-4967	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-25.js (tail -c +5102818 tests/ecmac.db|head -c 1076): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:32)\n    at runTestCase (<no filename>:901)\n    at <no filename>:36","message":"cannot read property 'enumerable' of undefined"}]
+4967	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-25.js (tail -c +5102818 tests/ecmac.db|head -c 1076): [{"stack":"    at cfunc\n    at testcase (<no filename>:32)\n    at runTestCase (<no filename>:901)\n    at <no filename>:36","message":"cannot read property 'enumerable' of undefined"}]
 4968	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-250.js (tail -c +5103895 tests/ecmac.db|head -c 618): [{"message":"Test case returned non-true value!"}]
 4969	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-251.js (tail -c +5104514 tests/ecmac.db|head -c 678): [{"message":"Test case returned non-true value!"}]
 4970	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-252.js (tail -c +5105193 tests/ecmac.db|head -c 666): [{"message":"Test case returned non-true value!"}]
@@ -5091,7 +5091,7 @@ err
 5042	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-37.js (tail -c +5156906 tests/ecmac.db|head -c 737)
 5043	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-38.js (tail -c +5157644 tests/ecmac.db|head -c 607)
 5044	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-39.js (tail -c +5158252 tests/ecmac.db|head -c 921): [{"message":"Test case returned non-true value!"}]
-5045	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-4.js (tail -c +5159174 tests/ecmac.db|head -c 608): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+5045	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-4.js (tail -c +5159174 tests/ecmac.db|head -c 608): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 5046	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-40.js (tail -c +5159783 tests/ecmac.db|head -c 1138): [{"message":"Test case returned non-true value!"}]
 5047	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-41.js (tail -c +5160922 tests/ecmac.db|head -c 496)
 5048	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-42.js (tail -c +5161419 tests/ecmac.db|head -c 488)
@@ -5102,7 +5102,7 @@ err
 5053	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-47.js (tail -c +5164016 tests/ecmac.db|head -c 589)
 5054	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-48.js (tail -c +5164606 tests/ecmac.db|head -c 644)
 5055	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-49.js (tail -c +5165251 tests/ecmac.db|head -c 807)
-5056	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-5.js (tail -c +5166059 tests/ecmac.db|head -c 630): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+5056	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-5.js (tail -c +5166059 tests/ecmac.db|head -c 630): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 5057	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-50.js (tail -c +5166690 tests/ecmac.db|head -c 936)
 5058	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-51.js (tail -c +5167627 tests/ecmac.db|head -c 1046)
 5059	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-52.js (tail -c +5168674 tests/ecmac.db|head -c 779): [{"message":"Test case returned non-true value!"}]
@@ -5113,7 +5113,7 @@ err
 5064	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-57.js (tail -c +5173215 tests/ecmac.db|head -c 1079)
 5065	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-58.js (tail -c +5174295 tests/ecmac.db|head -c 896)
 5066	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-59.js (tail -c +5175192 tests/ecmac.db|head -c 727)
-5067	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-6.js (tail -c +5175920 tests/ecmac.db|head -c 613): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+5067	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-6.js (tail -c +5175920 tests/ecmac.db|head -c 613): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 5068	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-60.js (tail -c +5176534 tests/ecmac.db|head -c 708)
 5069	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-61.js (tail -c +5177243 tests/ecmac.db|head -c 716)
 5070	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-62.js (tail -c +5177960 tests/ecmac.db|head -c 723)
@@ -5124,7 +5124,7 @@ err
 5075	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-67.js (tail -c +5181630 tests/ecmac.db|head -c 796)
 5076	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-68.js (tail -c +5182427 tests/ecmac.db|head -c 714)
 5077	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-69.js (tail -c +5183142 tests/ecmac.db|head -c 755)
-5078	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-7.js (tail -c +5183898 tests/ecmac.db|head -c 623): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+5078	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-7.js (tail -c +5183898 tests/ecmac.db|head -c 623): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 5079	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-71.js (tail -c +5184522 tests/ecmac.db|head -c 834): [{"message":"Test case returned non-true value!"}]
 5080	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-72.js (tail -c +5185357 tests/ecmac.db|head -c 638)
 5081	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-73.js (tail -c +5185996 tests/ecmac.db|head -c 637)
@@ -5134,7 +5134,7 @@ err
 5085	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-77.js (tail -c +5188609 tests/ecmac.db|head -c 657)
 5086	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-78.js (tail -c +5189267 tests/ecmac.db|head -c 665)
 5087	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-79.js (tail -c +5189933 tests/ecmac.db|head -c 667)
-5088	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-8.js (tail -c +5190601 tests/ecmac.db|head -c 661): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+5088	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-8.js (tail -c +5190601 tests/ecmac.db|head -c 661): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 5089	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-80.js (tail -c +5191263 tests/ecmac.db|head -c 648)
 5090	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-81.js (tail -c +5191912 tests/ecmac.db|head -c 656)
 5091	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-82.js (tail -c +5192569 tests/ecmac.db|head -c 670)
@@ -5145,7 +5145,7 @@ err
 5096	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-87.js (tail -c +5195834 tests/ecmac.db|head -c 652)
 5097	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-88.js (tail -c +5196487 tests/ecmac.db|head -c 648)
 5098	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-89.js (tail -c +5197136 tests/ecmac.db|head -c 638)
-5099	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-9.js (tail -c +5197775 tests/ecmac.db|head -c 674): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
+5099	FAIL ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-9.js (tail -c +5197775 tests/ecmac.db|head -c 674): [{"stack":"    at cfunc\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"cannot read property 'enumerable' of undefined"}]
 5100	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-90.js (tail -c +5198450 tests/ecmac.db|head -c 642)
 5101	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-91.js (tail -c +5199093 tests/ecmac.db|head -c 646)
 5102	PASS ch15/15.2/15.2.3/15.2.3.5/15.2.3.5-4-92.js (tail -c +5199740 tests/ecmac.db|head -c 638)
@@ -5746,9 +5746,9 @@ err
 5697	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-291.js (tail -c +5653020 tests/ecmac.db|head -c 1096): [{"message":"Test case returned non-true value!"}]
 5698	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-292-1.js (tail -c +5654117 tests/ecmac.db|head -c 925): [{"message":"Test case returned non-true value!"}]
 5699	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-292.js (tail -c +5655043 tests/ecmac.db|head -c 764)
-5700	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-293-1.js (tail -c +5655808 tests/ecmac.db|head -c 846): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:15)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:20","message":"Cannot redefine read-only property"}]
+5700	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-293-1.js (tail -c +5655808 tests/ecmac.db|head -c 846): [{"stack":"    at cfunc\n    at <anonymous> (<no filename>:15)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:20","message":"Cannot redefine read-only property"}]
 5701	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-293-2.js (tail -c +5656655 tests/ecmac.db|head -c 1214): [{"message":"Test case returned non-true value!"}]
-5702	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-293-3.js (tail -c +5657870 tests/ecmac.db|head -c 980): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:15)\n    at testcase (<no filename>:19)\n    at runTestCase (<no filename>:901)\n    at <no filename>:21","message":"Cannot redefine read-only property"}]
+5702	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-293-3.js (tail -c +5657870 tests/ecmac.db|head -c 980): [{"stack":"    at cfunc\n    at <anonymous> (<no filename>:15)\n    at testcase (<no filename>:19)\n    at runTestCase (<no filename>:901)\n    at <no filename>:21","message":"Cannot redefine read-only property"}]
 5703	PASS ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-293.js (tail -c +5658851 tests/ecmac.db|head -c 1043)
 5704	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-294-1.js (tail -c +5659895 tests/ecmac.db|head -c 1202): [{"message":"Test case returned non-true value!"}]
 5705	FAIL ch15/15.2/15.2.3/15.2.3.6/15.2.3.6-4-294.js (tail -c +5661098 tests/ecmac.db|head -c 1034): [{"message":"Test case returned non-true value!"}]
@@ -6280,30 +6280,30 @@ err
 6231	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-1-4.js (tail -c +6192187 tests/ecmac.db|head -c 437): [{"message":"Test case returned non-true value!"}]
 6232	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-1.js (tail -c +6192625 tests/ecmac.db|head -c 426): [{"message":"Test case returned non-true value!"}]
 6233	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-1.js (tail -c +6193052 tests/ecmac.db|head -c 441)
-6234	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-10.js (tail -c +6193494 tests/ecmac.db|head -c 649): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
-6235	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-11.js (tail -c +6194144 tests/ecmac.db|head -c 766): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:23)\n    at runTestCase (<no filename>:901)\n    at <no filename>:29","message":"cannot read property 'enumerable' of undefined"}]
-6236	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-12.js (tail -c +6194911 tests/ecmac.db|head -c 654): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
-6237	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-13.js (tail -c +6195566 tests/ecmac.db|head -c 659): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
-6238	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-14.js (tail -c +6196226 tests/ecmac.db|head -c 759): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:23)\n    at runTestCase (<no filename>:901)\n    at <no filename>:29","message":"cannot read property 'enumerable' of undefined"}]
-6239	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-15.js (tail -c +6196986 tests/ecmac.db|head -c 816): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:29)\n    at runTestCase (<no filename>:901)\n    at <no filename>:32","message":"cannot read property 'enumerable' of undefined"}]
-6240	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-16.js (tail -c +6197803 tests/ecmac.db|head -c 781): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:26)\n    at runTestCase (<no filename>:901)\n    at <no filename>:29","message":"cannot read property 'enumerable' of undefined"}]
+6234	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-10.js (tail -c +6193494 tests/ecmac.db|head -c 649): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6235	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-11.js (tail -c +6194144 tests/ecmac.db|head -c 766): [{"stack":"    at cfunc\n    at testcase (<no filename>:23)\n    at runTestCase (<no filename>:901)\n    at <no filename>:29","message":"cannot read property 'enumerable' of undefined"}]
+6236	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-12.js (tail -c +6194911 tests/ecmac.db|head -c 654): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6237	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-13.js (tail -c +6195566 tests/ecmac.db|head -c 659): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6238	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-14.js (tail -c +6196226 tests/ecmac.db|head -c 759): [{"stack":"    at cfunc\n    at testcase (<no filename>:23)\n    at runTestCase (<no filename>:901)\n    at <no filename>:29","message":"cannot read property 'enumerable' of undefined"}]
+6239	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-15.js (tail -c +6196986 tests/ecmac.db|head -c 816): [{"stack":"    at cfunc\n    at testcase (<no filename>:29)\n    at runTestCase (<no filename>:901)\n    at <no filename>:32","message":"cannot read property 'enumerable' of undefined"}]
+6240	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-16.js (tail -c +6197803 tests/ecmac.db|head -c 781): [{"stack":"    at cfunc\n    at testcase (<no filename>:26)\n    at runTestCase (<no filename>:901)\n    at <no filename>:29","message":"cannot read property 'enumerable' of undefined"}]
 6241	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-18.js (tail -c +6198585 tests/ecmac.db|head -c 865): [{"message":"Test case returned non-true value!"}]
 6242	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-2.js (tail -c +6199451 tests/ecmac.db|head -c 451)
-6243	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-3.js (tail -c +6199903 tests/ecmac.db|head -c 398): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:11)\n    at runTestCase (<no filename>:901)\n    at <no filename>:14","message":"object expected"}]
-6244	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-4.js (tail -c +6200302 tests/ecmac.db|head -c 688): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
-6245	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-5.js (tail -c +6200991 tests/ecmac.db|head -c 402): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:11)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"object expected"}]
-6246	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-6.js (tail -c +6201394 tests/ecmac.db|head -c 706): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
-6247	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-7.js (tail -c +6202101 tests/ecmac.db|head -c 425): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:11)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"object expected"}]
-6248	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-8.js (tail -c +6202527 tests/ecmac.db|head -c 702): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
-6249	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-9.js (tail -c +6203230 tests/ecmac.db|head -c 664): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6243	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-3.js (tail -c +6199903 tests/ecmac.db|head -c 398): [{"stack":"    at cfunc\n    at testcase (<no filename>:11)\n    at runTestCase (<no filename>:901)\n    at <no filename>:14","message":"object expected"}]
+6244	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-4.js (tail -c +6200302 tests/ecmac.db|head -c 688): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6245	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-5.js (tail -c +6200991 tests/ecmac.db|head -c 402): [{"stack":"    at cfunc\n    at testcase (<no filename>:11)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"object expected"}]
+6246	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-6.js (tail -c +6201394 tests/ecmac.db|head -c 706): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6247	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-7.js (tail -c +6202101 tests/ecmac.db|head -c 425): [{"stack":"    at cfunc\n    at testcase (<no filename>:11)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"object expected"}]
+6248	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-8.js (tail -c +6202527 tests/ecmac.db|head -c 702): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6249	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-2-9.js (tail -c +6203230 tests/ecmac.db|head -c 664): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
 6250	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-1.js (tail -c +6203895 tests/ecmac.db|head -c 559)
 6251	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-2.js (tail -c +6204455 tests/ecmac.db|head -c 574)
 6252	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-3.js (tail -c +6205030 tests/ecmac.db|head -c 670)
-6253	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-4.js (tail -c +6205701 tests/ecmac.db|head -c 613): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:21)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
+6253	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-4.js (tail -c +6205701 tests/ecmac.db|head -c 613): [{"stack":"    at cfunc\n    at testcase (<no filename>:21)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"cannot read property 'enumerable' of undefined"}]
 6254	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-5.js (tail -c +6206315 tests/ecmac.db|head -c 632)
 6255	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-6.js (tail -c +6206948 tests/ecmac.db|head -c 724)
 6256	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-7.js (tail -c +6207673 tests/ecmac.db|head -c 800)
-6257	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-8.js (tail -c +6208474 tests/ecmac.db|head -c 798): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:26)\n    at runTestCase (<no filename>:901)\n    at <no filename>:30","message":"cannot read property 'enumerable' of undefined"}]
+6257	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-3-8.js (tail -c +6208474 tests/ecmac.db|head -c 798): [{"stack":"    at cfunc\n    at testcase (<no filename>:26)\n    at runTestCase (<no filename>:901)\n    at <no filename>:30","message":"cannot read property 'enumerable' of undefined"}]
 6258	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-1.js (tail -c +6209273 tests/ecmac.db|head -c 924)
 6259	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-10.js (tail -c +6210198 tests/ecmac.db|head -c 672)
 6260	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-11.js (tail -c +6210871 tests/ecmac.db|head -c 667)
@@ -6314,10 +6314,10 @@ err
 6265	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-16.js (tail -c +6214125 tests/ecmac.db|head -c 724)
 6266	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-17.js (tail -c +6214850 tests/ecmac.db|head -c 725)
 6267	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-2.js (tail -c +6215576 tests/ecmac.db|head -c 984)
-6268	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-3.js (tail -c +6216561 tests/ecmac.db|head -c 1006): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:33)\n    at runTestCase (<no filename>:901)\n    at <no filename>:37","message":"cannot read property 'enumerable' of undefined"}]
-6269	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-4.js (tail -c +6217568 tests/ecmac.db|head -c 1071): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:35)\n    at runTestCase (<no filename>:901)\n    at <no filename>:39","message":"cannot read property 'enumerable' of undefined"}]
-6270	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-5.js (tail -c +6218640 tests/ecmac.db|head -c 731): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:26","message":"cannot read property 'enumerable' of undefined"}]
-6271	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-6.js (tail -c +6219372 tests/ecmac.db|head -c 1072): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:33)\n    at runTestCase (<no filename>:901)\n    at <no filename>:37","message":"cannot read property 'enumerable' of undefined"}]
+6268	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-3.js (tail -c +6216561 tests/ecmac.db|head -c 1006): [{"stack":"    at cfunc\n    at testcase (<no filename>:33)\n    at runTestCase (<no filename>:901)\n    at <no filename>:37","message":"cannot read property 'enumerable' of undefined"}]
+6269	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-4.js (tail -c +6217568 tests/ecmac.db|head -c 1071): [{"stack":"    at cfunc\n    at testcase (<no filename>:35)\n    at runTestCase (<no filename>:901)\n    at <no filename>:39","message":"cannot read property 'enumerable' of undefined"}]
+6270	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-5.js (tail -c +6218640 tests/ecmac.db|head -c 731): [{"stack":"    at cfunc\n    at testcase (<no filename>:22)\n    at runTestCase (<no filename>:901)\n    at <no filename>:26","message":"cannot read property 'enumerable' of undefined"}]
+6271	FAIL ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-6.js (tail -c +6219372 tests/ecmac.db|head -c 1072): [{"stack":"    at cfunc\n    at testcase (<no filename>:33)\n    at runTestCase (<no filename>:901)\n    at <no filename>:37","message":"cannot read property 'enumerable' of undefined"}]
 6272	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-7.js (tail -c +6220445 tests/ecmac.db|head -c 669)
 6273	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-8.js (tail -c +6221115 tests/ecmac.db|head -c 676)
 6274	PASS ch15/15.2/15.2.3/15.2.3.7/15.2.3.7-5-a-9.js (tail -c +6221792 tests/ecmac.db|head -c 662)
@@ -6985,15 +6985,15 @@ err
 6936	PASS ch15/15.2/15.2.4/S15.2.4_A2.js (tail -c +6746732 tests/ecmac.db|head -c 502)
 6937	PASS ch15/15.2/15.2.4/S15.2.4_A3.js (tail -c +6747235 tests/ecmac.db|head -c 426)
 6938	PASS ch15/15.2/15.2.4/S15.2.4_A4.js (tail -c +6747662 tests/ecmac.db|head -c 436)
-6939	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-1.js (tail -c +6748099 tests/ecmac.db|head -c 385): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:9)\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
-6940	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-2.js (tail -c +6748485 tests/ecmac.db|head -c 390): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
-6941	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-1.js (tail -c +6748876 tests/ecmac.db|head -c 365): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:9)\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of null"}]
-6942	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-2.js (tail -c +6749242 tests/ecmac.db|head -c 370): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of null"}]
+6939	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-1.js (tail -c +6748099 tests/ecmac.db|head -c 385): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:9)\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
+6940	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-2.js (tail -c +6748485 tests/ecmac.db|head -c 390): [{"stack":"    at cfunc\n    at cfunc\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
+6941	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-1.js (tail -c +6748876 tests/ecmac.db|head -c 365): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:9)\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of null"}]
+6942	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-2.js (tail -c +6749242 tests/ecmac.db|head -c 370): [{"stack":"    at cfunc\n    at cfunc\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of null"}]
 6943	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A1.js (tail -c +6749613 tests/ecmac.db|head -c 960)
 6944	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A10.js (tail -c +6750574 tests/ecmac.db|head -c 708)
 6945	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A11.js (tail -c +6751283 tests/ecmac.db|head -c 510)
-6946	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A12.js (tail -c +6751794 tests/ecmac.db|head -c 350): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:7)\n    at <no filename>:7","message":"cannot read property 'constructor' of undefined"}]
-6947	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A13.js (tail -c +6752145 tests/ecmac.db|head -c 320): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:7)\n    at <no filename>:7","message":"cannot read property 'constructor' of null"}]
+6946	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A12.js (tail -c +6751794 tests/ecmac.db|head -c 350): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:7)\n    at <no filename>:7","message":"cannot read property 'constructor' of undefined"}]
+6947	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A13.js (tail -c +6752145 tests/ecmac.db|head -c 320): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:7)\n    at <no filename>:7","message":"cannot read property 'constructor' of null"}]
 6948	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A14.js (tail -c +6752466 tests/ecmac.db|head -c 392): [{"message":"Let O be the result of calling ToObject passing the this value as the argument."}]
 6949	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A15.js (tail -c +6752859 tests/ecmac.db|head -c 395): [{"message":"Let O be the result of calling ToObject passing the this value as the argument."}]
 6950	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A16.js (tail -c +6753255 tests/ecmac.db|head -c 395): [{"message":"Let O be the result of calling ToObject passing the this value as the argument."}]
@@ -7163,8 +7163,8 @@ err
 7114	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T1.js (tail -c +6872829 tests/ecmac.db|head -c 562): [{"message":"#1: If argArray is either an array or an arguments object, the function is passed the..."}]
 7115	PASS ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T10.js (tail -c +6873392 tests/ecmac.db|head -c 840)
 7116	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T2.js (tail -c +6874233 tests/ecmac.db|head -c 576): [{"message":"#1: If argArray is either an array or an arguments object, the function is passed the..."}]
-7117	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T3.js (tail -c +6874810 tests/ecmac.db|head -c 853): [{"stack":"    at cfunc:0\n    at <no filename>:16","message":"Invalid function body"}]
-7118	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T4.js (tail -c +6875664 tests/ecmac.db|head -c 880): [{"stack":"    at <anonymous> (<no filename>:0)\n    at <no filename>:0\n    at <no filename>:16","message":"[a3] is not defined"}]
+7117	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T3.js (tail -c +6874810 tests/ecmac.db|head -c 853): [{"stack":"    at cfunc\n    at <no filename>:16","message":"Invalid function body"}]
+7118	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T4.js (tail -c +6875664 tests/ecmac.db|head -c 880): [{"stack":"    at <anonymous> (<no filename>:16)\n    at <no filename>:16\n    at cfunc\n    at <no filename>:16","message":"[a3] is not defined"}]
 7119	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T5.js (tail -c +6876545 tests/ecmac.db|head -c 825): [{"message":"#1: If argArray is either an array or an arguments object, the function is passed the..."}]
 7120	PASS ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T6.js (tail -c +6877371 tests/ecmac.db|head -c 828)
 7121	FAIL ch15/15.3/15.3.4/15.3.4.3/S15.3.4.3_A7_T7.js (tail -c +6878200 tests/ecmac.db|head -c 658): [{"message":"#1: If argArray is either an array or an arguments object, the function is passed the..."}]
@@ -7209,8 +7209,8 @@ err
 7160	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T1.js (tail -c +6901798 tests/ecmac.db|head -c 1079): [{"stack":"    at <no filename>:13","message":"cannot read property 'constructor' of undefined"}]
 7161	PASS ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T10.js (tail -c +6902878 tests/ecmac.db|head -c 995)
 7162	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T2.js (tail -c +6903874 tests/ecmac.db|head -c 919): [{"stack":"    at <no filename>:13","message":"cannot read property 'length' of undefined"}]
-7163	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T3.js (tail -c +6904794 tests/ecmac.db|head -c 1288): [{"stack":"    at cfunc:0\n    at <no filename>:16","message":"Invalid function body"}]
-7164	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T4.js (tail -c +6906083 tests/ecmac.db|head -c 1053): [{"stack":"    at <anonymous> (<no filename>:0)\n    at <no filename>:0\n    at <anonymous> (<no filename>:16)\n    at <no filename>:16","message":"[a3] is not defined"}]
+7163	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T3.js (tail -c +6904794 tests/ecmac.db|head -c 1288): [{"stack":"    at cfunc\n    at <no filename>:16","message":"Invalid function body"}]
+7164	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T4.js (tail -c +6906083 tests/ecmac.db|head -c 1053): [{"stack":"    at <anonymous> (<no filename>:16)\n    at <no filename>:16\n    at cfunc\n    at <anonymous> (<no filename>:16)\n    at <no filename>:16","message":"[a3] is not defined"}]
 7165	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T5.js (tail -c +6907137 tests/ecmac.db|head -c 981): [{"message":"#1: The call method takes one or more arguments, thisArg and (optionally) arg1, arg2 etc, and performs a function call using the [[Call]] property of the object"}]
 7166	PASS ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T6.js (tail -c +6908119 tests/ecmac.db|head -c 984)
 7167	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A6_T7.js (tail -c +6909104 tests/ecmac.db|head -c 739): [{"message":"#1: The call method takes one or more arguments, thisArg and (optionally) arg1, arg2 etc, and performs a function call using the [[Call]] property of the object"}]
@@ -7344,7 +7344,7 @@ err
 7295	PASS ch15/15.3/15.3.5/S15.3.5.3_A3_T1.js (tail -c +6984140 tests/ecmac.db|head -c 936)
 7296	FAIL ch15/15.3/15.3.5/S15.3.5.3_A3_T2.js (tail -c +6985077 tests/ecmac.db|head -c 1134): [{"stack":"    at <no filename>:20","message":"Expecting a function in instanceof check"}]
 7297	FAIL ch15/15.3/15.3.5/S15.3.5_A1_T1.js (tail -c +6986212 tests/ecmac.db|head -c 385): [{"message":"#1: The value of the [[Class]] property is \"Function\""}]
-7298	FAIL ch15/15.3/15.3.5/S15.3.5_A1_T2.js (tail -c +6986598 tests/ecmac.db|head -c 382): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:11)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
+7298	FAIL ch15/15.3/15.3.5/S15.3.5_A1_T2.js (tail -c +6986598 tests/ecmac.db|head -c 382): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:11)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
 7299	PASS ch15/15.3/15.3.5/S15.3.5_A2_T1.js (tail -c +6986981 tests/ecmac.db|head -c 593)
 7300	PASS ch15/15.3/15.3.5/S15.3.5_A2_T2.js (tail -c +6987575 tests/ecmac.db|head -c 657)
 7301	PASS ch15/15.3/15.3.5/S15.3.5_A3_T1.js (tail -c +6988233 tests/ecmac.db|head -c 664)
@@ -7996,11 +7996,11 @@ err
 7947	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-14.js (tail -c +7473561 tests/ecmac.db|head -c 499)
 7948	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-15.js (tail -c +7474061 tests/ecmac.db|head -c 559): [{"message":"Test case returned non-true value!"}]
 7949	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-2.js (tail -c +7474621 tests/ecmac.db|head -c 472)
-7950	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-3.js (tail -c +7475094 tests/ecmac.db|head -c 721): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:20)\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:26","message":"Array expected"}]
+7950	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-3.js (tail -c +7475094 tests/ecmac.db|head -c 721): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:20)\n    at testcase (<no filename>:20)\n    at runTestCase (<no filename>:901)\n    at <no filename>:26","message":"Array expected"}]
 7951	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-4.js (tail -c +7475816 tests/ecmac.db|head -c 598)
-7952	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-5.js (tail -c +7476415 tests/ecmac.db|head -c 709): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:18)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:24","message":"Array expected"}]
+7952	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-5.js (tail -c +7476415 tests/ecmac.db|head -c 709): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:18)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:24","message":"Array expected"}]
 7953	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-6.js (tail -c +7477125 tests/ecmac.db|head -c 595)
-7954	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-7.js (tail -c +7477721 tests/ecmac.db|head -c 437): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:13)\n    at testcase (<no filename>:13)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"Array expected"}]
+7954	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-7.js (tail -c +7477721 tests/ecmac.db|head -c 437): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:13)\n    at testcase (<no filename>:13)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"Array expected"}]
 7955	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-8.js (tail -c +7478159 tests/ecmac.db|head -c 472): [{"message":"Test case returned non-true value!"}]
 7956	PASS ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-1-9.js (tail -c +7478632 tests/ecmac.db|head -c 545)
 7957	FAIL ch15/15.4/15.4.4/15.4.4.16/15.4.4.16-2-1.js (tail -c +7479178 tests/ecmac.db|head -c 712): [{"message":"Test case returned non-true value!"}]
@@ -8209,11 +8209,11 @@ err
 8160	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-14.js (tail -c +7617492 tests/ecmac.db|head -c 493)
 8161	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-15.js (tail -c +7617986 tests/ecmac.db|head -c 551): [{"message":"Test case returned non-true value!"}]
 8162	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-2.js (tail -c +7618538 tests/ecmac.db|head -c 430)
-8163	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-3.js (tail -c +7618969 tests/ecmac.db|head -c 642): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:16)\n    at testcase (<no filename>:16)\n    at runTestCase (<no filename>:901)\n    at <no filename>:22","message":"Array expected"}]
+8163	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-3.js (tail -c +7618969 tests/ecmac.db|head -c 642): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:16)\n    at testcase (<no filename>:16)\n    at runTestCase (<no filename>:901)\n    at <no filename>:22","message":"Array expected"}]
 8164	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-4.js (tail -c +7619612 tests/ecmac.db|head -c 524)
-8165	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-5.js (tail -c +7620137 tests/ecmac.db|head -c 637): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"Array expected"}]
+8165	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-5.js (tail -c +7620137 tests/ecmac.db|head -c 637): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:23","message":"Array expected"}]
 8166	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-6.js (tail -c +7620775 tests/ecmac.db|head -c 521)
-8167	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-7.js (tail -c +7621297 tests/ecmac.db|head -c 443): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:13)\n    at testcase (<no filename>:13)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"Array expected"}]
+8167	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-7.js (tail -c +7621297 tests/ecmac.db|head -c 443): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:13)\n    at testcase (<no filename>:13)\n    at runTestCase (<no filename>:901)\n    at <no filename>:15","message":"Array expected"}]
 8168	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-8.js (tail -c +7621741 tests/ecmac.db|head -c 465): [{"message":"Test case returned non-true value!"}]
 8169	PASS ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-1-9.js (tail -c +7622207 tests/ecmac.db|head -c 537)
 8170	FAIL ch15/15.4/15.4.4/15.4.4.17/15.4.4.17-2-1.js (tail -c +7622745 tests/ecmac.db|head -c 704): [{"message":"Test case returned non-true value!"}]
@@ -8423,11 +8423,11 @@ err
 8374	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-14.js (tail -c +7758252 tests/ecmac.db|head -c 547)
 8375	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-15.js (tail -c +7758800 tests/ecmac.db|head -c 607): [{"message":"Test case returned non-true value!"}]
 8376	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-2.js (tail -c +7759408 tests/ecmac.db|head -c 457)
-8377	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-3.js (tail -c +7759866 tests/ecmac.db|head -c 709): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:19)\n    at testcase (<no filename>:19)\n    at runTestCase (<no filename>:901)\n    at <no filename>:27","message":"Array expected"}]
+8377	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-3.js (tail -c +7759866 tests/ecmac.db|head -c 709): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:19)\n    at testcase (<no filename>:19)\n    at runTestCase (<no filename>:901)\n    at <no filename>:27","message":"Array expected"}]
 8378	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-4.js (tail -c +7760576 tests/ecmac.db|head -c 579)
-8379	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-5.js (tail -c +7761156 tests/ecmac.db|head -c 694): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:18)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"Array expected"}]
+8379	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-5.js (tail -c +7761156 tests/ecmac.db|head -c 694): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:18)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"Array expected"}]
 8380	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-6.js (tail -c +7761851 tests/ecmac.db|head -c 578)
-8381	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-7.js (tail -c +7762430 tests/ecmac.db|head -c 473): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:14)\n    at testcase (<no filename>:14)\n    at runTestCase (<no filename>:901)\n    at <no filename>:17","message":"Array expected"}]
+8381	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-7.js (tail -c +7762430 tests/ecmac.db|head -c 473): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:14)\n    at testcase (<no filename>:14)\n    at runTestCase (<no filename>:901)\n    at <no filename>:17","message":"Array expected"}]
 8382	FAIL ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-8.js (tail -c +7762904 tests/ecmac.db|head -c 508): [{"message":"Test case returned non-true value!"}]
 8383	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-1-9.js (tail -c +7763413 tests/ecmac.db|head -c 593)
 8384	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-2-1.js (tail -c +7764007 tests/ecmac.db|head -c 613)
@@ -8599,8 +8599,8 @@ err
 8550	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-8-7.js (tail -c +7881100 tests/ecmac.db|head -c 947)
 8551	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-8-8.js (tail -c +7882048 tests/ecmac.db|head -c 1416)
 8552	PASS ch15/15.4/15.4.4/15.4.4.18/15.4.4.18-8-9.js (tail -c +7883465 tests/ecmac.db|head -c 1420)
-8553	FAIL ch15/15.4/15.4.4/15.4.4.18/S15.4.4.18_A1.js (tail -c +7884886 tests/ecmac.db|head -c 320): [{"stack":"    at <anonymous> (<no filename>:0)\n    at <no filename>:0\n    at <no filename>:9","message":"Object.freeze is not a function"}]
-8554	FAIL ch15/15.4/15.4.4/15.4.4.18/S15.4.4.18_A2.js (tail -c +7885207 tests/ecmac.db|head -c 348): [{"stack":"    at <anonymous> (<no filename>:0)\n    at <no filename>:0\n    at foo (<no filename>:10)\n    at <no filename>:12","message":"Object.freeze is not a function"}]
+8553	FAIL ch15/15.4/15.4.4/15.4.4.18/S15.4.4.18_A1.js (tail -c +7884886 tests/ecmac.db|head -c 320): [{"stack":"    at <anonymous> (<no filename>:9)\n    at <no filename>:9\n    at cfunc\n    at <no filename>:9","message":"Object.freeze is not a function"}]
+8554	FAIL ch15/15.4/15.4.4/15.4.4.18/S15.4.4.18_A2.js (tail -c +7885207 tests/ecmac.db|head -c 348): [{"stack":"    at <anonymous> (<no filename>:10)\n    at <no filename>:10\n    at cfunc\n    at foo (<no filename>:10)\n    at <no filename>:12","message":"Object.freeze is not a function"}]
 8555	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-0-1.js (tail -c +7885556 tests/ecmac.db|head -c 338)
 8556	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-0-2.js (tail -c +7885895 tests/ecmac.db|head -c 306)
 8557	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-1.js (tail -c +7886202 tests/ecmac.db|head -c 466)
@@ -8611,11 +8611,11 @@ err
 8562	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-14.js (tail -c +7889124 tests/ecmac.db|head -c 545)
 8563	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-15.js (tail -c +7889670 tests/ecmac.db|head -c 605): [{"message":"Test case returned non-true value!"}]
 8564	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-2.js (tail -c +7890276 tests/ecmac.db|head -c 451)
-8565	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-3.js (tail -c +7890728 tests/ecmac.db|head -c 703): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:18)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"Array expected"}]
+8565	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-3.js (tail -c +7890728 tests/ecmac.db|head -c 703): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:18)\n    at testcase (<no filename>:18)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"Array expected"}]
 8566	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-4.js (tail -c +7891432 tests/ecmac.db|head -c 603)
-8567	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-5.js (tail -c +7892036 tests/ecmac.db|head -c 690): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:24","message":"Array expected"}]
+8567	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-5.js (tail -c +7892036 tests/ecmac.db|head -c 690): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:24","message":"Array expected"}]
 8568	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-6.js (tail -c +7892727 tests/ecmac.db|head -c 600)
-8569	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-7.js (tail -c +7893328 tests/ecmac.db|head -c 523): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:13)\n    at testcase (<no filename>:13)\n    at runTestCase (<no filename>:901)\n    at <no filename>:17","message":"Array expected"}]
+8569	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-7.js (tail -c +7893328 tests/ecmac.db|head -c 523): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:13)\n    at testcase (<no filename>:13)\n    at runTestCase (<no filename>:901)\n    at <no filename>:17","message":"Array expected"}]
 8570	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-8.js (tail -c +7893852 tests/ecmac.db|head -c 556): [{"message":"Test case returned non-true value!"}]
 8571	PASS ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-1-9.js (tail -c +7894409 tests/ecmac.db|head -c 617)
 8572	FAIL ch15/15.4/15.4.4/15.4.4.19/15.4.4.19-2-1.js (tail -c +7895027 tests/ecmac.db|head -c 613): [{"message":"Test case returned non-true value!"}]
@@ -8816,11 +8816,11 @@ err
 8767	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-14.js (tail -c +8040271 tests/ecmac.db|head -c 540)
 8768	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-15.js (tail -c +8040812 tests/ecmac.db|head -c 621): [{"message":"Test case returned non-true value!"}]
 8769	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-2.js (tail -c +8041434 tests/ecmac.db|head -c 434)
-8770	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-3.js (tail -c +8041869 tests/ecmac.db|head -c 699): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"Array expected"}]
+8770	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-3.js (tail -c +8041869 tests/ecmac.db|head -c 699): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:25","message":"Array expected"}]
 8771	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-4.js (tail -c +8042569 tests/ecmac.db|head -c 593)
-8772	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-5.js (tail -c +8043163 tests/ecmac.db|head -c 683): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:24","message":"Array expected"}]
+8772	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-5.js (tail -c +8043163 tests/ecmac.db|head -c 683): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:17)\n    at testcase (<no filename>:17)\n    at runTestCase (<no filename>:901)\n    at <no filename>:24","message":"Array expected"}]
 8773	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-6.js (tail -c +8043847 tests/ecmac.db|head -c 588)
-8774	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-7.js (tail -c +8044436 tests/ecmac.db|head -c 468): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:14)\n    at testcase (<no filename>:14)\n    at runTestCase (<no filename>:901)\n    at <no filename>:18","message":"Array expected"}]
+8774	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-7.js (tail -c +8044436 tests/ecmac.db|head -c 468): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:14)\n    at testcase (<no filename>:14)\n    at runTestCase (<no filename>:901)\n    at <no filename>:18","message":"Array expected"}]
 8775	FAIL ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-8.js (tail -c +8044905 tests/ecmac.db|head -c 499): [{"message":"Test case returned non-true value!"}]
 8776	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-1-9.js (tail -c +8045405 tests/ecmac.db|head -c 606)
 8777	PASS ch15/15.4/15.4.4/15.4.4.20/15.4.4.20-10-1.js (tail -c +8046012 tests/ecmac.db|head -c 557)
@@ -9557,13 +9557,13 @@ err
 9508	FAIL ch15/15.4/15.4.4/15.4.4.3/S15.4.4.3_A4.6.js (tail -c +8589958 tests/ecmac.db|head -c 461): [{"stack":"    at <no filename>:10","message":"cannot read property 'prototype' of undefined"}]
 9509	PASS ch15/15.4/15.4.4/15.4.4.3/S15.4.4.3_A4.7.js (tail -c +8590420 tests/ecmac.db|head -c 639)
 9510	PASS ch15/15.4/15.4.4/15.4.4.4/15.4.4.4-5-b-iii-3-b-1.js (tail -c +8591060 tests/ecmac.db|head -c 1365)
-9511	FAIL ch15/15.4/15.4.4/15.4.4.4/15.4.4.4-5-c-i-1.js (tail -c +8592426 tests/ecmac.db|head -c 1487): [{"stack":"    at cfunc:0\n    at <anonymous> (<no filename>:16)\n    at testcase (<no filename>:16)\n    at runTestCase (<no filename>:901)\n    at <no filename>:47","message":"Array expected"}]
+9511	FAIL ch15/15.4/15.4.4/15.4.4.4/15.4.4.4-5-c-i-1.js (tail -c +8592426 tests/ecmac.db|head -c 1487): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:16)\n    at testcase (<no filename>:16)\n    at runTestCase (<no filename>:901)\n    at <no filename>:47","message":"Array expected"}]
 9512	PASS ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A1_T1.js (tail -c +8593914 tests/ecmac.db|head -c 1877)
 9513	PASS ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A1_T2.js (tail -c +8595792 tests/ecmac.db|head -c 2313)
 9514	PASS ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A1_T3.js (tail -c +8598106 tests/ecmac.db|head -c 1126)
 9515	FAIL ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A1_T4.js (tail -c +8599233 tests/ecmac.db|head -c 1223): [{"message":"#4: var x = [,1]; var arr = x.concat([], [,]); arr.length === 3. Actual: 2"}]
-9516	FAIL ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A2_T1.js (tail -c +8600457 tests/ecmac.db|head -c 2561): [{"stack":"    at cfunc:0\n    at <no filename>:14","message":"Array expected"}]
-9517	FAIL ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A2_T2.js (tail -c +8603019 tests/ecmac.db|head -c 946): [{"stack":"    at cfunc:0\n    at <no filename>:12","message":"Array expected"}]
+9516	FAIL ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A2_T1.js (tail -c +8600457 tests/ecmac.db|head -c 2561): [{"stack":"    at cfunc\n    at <no filename>:14","message":"Array expected"}]
+9517	FAIL ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A2_T2.js (tail -c +8603019 tests/ecmac.db|head -c 946): [{"stack":"    at cfunc\n    at <no filename>:12","message":"Array expected"}]
 9518	FAIL ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A3_T1.js (tail -c +8603966 tests/ecmac.db|head -c 1779): [{"message":"#3: Array.prototype[1] = 1; x = [0]; x.length = 2; var arr = x.concat(); arr.hasOwnProperty('1') === true. Actual: false"}]
 9519	PASS ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A4.1.js (tail -c +8605746 tests/ecmac.db|head -c 731)
 9520	PASS ch15/15.4/15.4.4/15.4.4.4/S15.4.4.4_A4.2.js (tail -c +8606478 tests/ecmac.db|head -c 924)
@@ -9759,7 +9759,7 @@ err
 9709	PASS ch15/15.5/15.5.4/S15.5.4.3_A2_T1.js (tail -c +8859561 tests/ecmac.db|head -c 1227)
 9710	PASS ch15/15.5/15.5.4/S15.5.4.3_A2_T2.js (tail -c +8860789 tests/ecmac.db|head -c 1285)
 9711	FAIL ch15/15.5/15.5.4/S15.5.4_A1.js (tail -c +8862075 tests/ecmac.db|head -c 809): [{"message":"#1: delete String.prototype.toString; String.prototype.toString() === \"[object \"+\"String\"+\"]\". Actual: String.prototype.toString() ===[object Object]"}]
-9712	FAIL ch15/15.5/15.5.4/S15.5.4_A2.js (tail -c +8862885 tests/ecmac.db|head -c 533): [{"stack":"    at <no filename>:11","message":"String.valueOf called on non-string object"}]
+9712	FAIL ch15/15.5/15.5.4/S15.5.4_A2.js (tail -c +8862885 tests/ecmac.db|head -c 533): [{"stack":"    at cfunc\n    at <no filename>:11","message":"String.valueOf called on non-string object"}]
 9713	FAIL ch15/15.5/15.5.4/S15.5.4_A3.js (tail -c +8863419 tests/ecmac.db|head -c 1130): [{"message":"#2: delete String.prototype.toString; String.prototype.toString() == \"[object \"+\"String\"+\"]\". Actual: String.prototype.toString() ==[object Object]"}]
 9714	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A10.js (tail -c +8864550 tests/ecmac.db|head -c 1182): [{"message":"#1: String.prototype.match.hasOwnProperty('length') return true. Actual: false"}]
 9715	FAIL ch15/15.5/15.5.4/15.5.4.10/S15.5.4.10_A11.js (tail -c +8865733 tests/ecmac.db|head -c 908): [{"message":"#1: String.prototype.match.hasOwnProperty(\"length\") return true. Actual: false"}]
@@ -10425,7 +10425,7 @@ err
 10369	PASS ch15/15.6/15.6.3/S15.6.3_A1.js (tail -c +9492703 tests/ecmac.db|head -c 348)
 10370	PASS ch15/15.6/15.6.3/S15.6.3_A2.js (tail -c +9493052 tests/ecmac.db|head -c 482)
 10371	PASS ch15/15.6/15.6.3/S15.6.3_A3.js (tail -c +9493535 tests/ecmac.db|head -c 437)
-10372	FAIL ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A1.js (tail -c +9493973 tests/ecmac.db|head -c 647): [{"stack":"    at <no filename>:16","message":"Boolean.valueOf called on non-boolean object"}]
+10372	FAIL ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A1.js (tail -c +9493973 tests/ecmac.db|head -c 647): [{"stack":"    at cfunc\n    at <no filename>:16","message":"Boolean.valueOf called on non-boolean object"}]
 10373	PASS ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A2.js (tail -c +9494621 tests/ecmac.db|head -c 398)
 10374	PASS ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A3.js (tail -c +9495020 tests/ecmac.db|head -c 368)
 10375	PASS ch15/15.6/15.6.3/15.6.3.1/S15.6.3.1_A4.js (tail -c +9495389 tests/ecmac.db|head -c 490)
@@ -10437,14 +10437,14 @@ err
 10381	PASS ch15/15.6/15.6.4/S15.6.4.2_A2_T3.js (tail -c +9500821 tests/ecmac.db|head -c 1083)
 10382	PASS ch15/15.6/15.6.4/S15.6.4.2_A2_T4.js (tail -c +9501905 tests/ecmac.db|head -c 1089)
 10383	PASS ch15/15.6/15.6.4/S15.6.4.2_A2_T5.js (tail -c +9502995 tests/ecmac.db|head -c 1076)
-10384	FAIL ch15/15.6/15.6.4/S15.6.4.3_A1_T1.js (tail -c +9504072 tests/ecmac.db|head -c 878): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"Boolean.valueOf called on non-boolean object"}]
-10385	FAIL ch15/15.6/15.6.4/S15.6.4.3_A1_T2.js (tail -c +9504951 tests/ecmac.db|head -c 941): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"Boolean.valueOf called on non-boolean object"}]
+10384	FAIL ch15/15.6/15.6.4/S15.6.4.3_A1_T1.js (tail -c +9504072 tests/ecmac.db|head -c 878): [{"stack":"    at cfunc\n    at <no filename>:10","message":"Boolean.valueOf called on non-boolean object"}]
+10385	FAIL ch15/15.6/15.6.4/S15.6.4.3_A1_T2.js (tail -c +9504951 tests/ecmac.db|head -c 941): [{"stack":"    at cfunc\n    at <no filename>:10","message":"Boolean.valueOf called on non-boolean object"}]
 10386	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T1.js (tail -c +9505893 tests/ecmac.db|head -c 1078)
 10387	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T2.js (tail -c +9506972 tests/ecmac.db|head -c 1078)
 10388	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T3.js (tail -c +9508051 tests/ecmac.db|head -c 1072)
 10389	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T4.js (tail -c +9509124 tests/ecmac.db|head -c 1078)
 10390	PASS ch15/15.6/15.6.4/S15.6.4.3_A2_T5.js (tail -c +9510203 tests/ecmac.db|head -c 1065)
-10391	FAIL ch15/15.6/15.6.4/S15.6.4_A1.js (tail -c +9511269 tests/ecmac.db|head -c 680): [{"stack":"    at <no filename>:16","message":"Boolean.valueOf called on non-boolean object"}]
+10391	FAIL ch15/15.6/15.6.4/S15.6.4_A1.js (tail -c +9511269 tests/ecmac.db|head -c 680): [{"stack":"    at cfunc\n    at <no filename>:16","message":"Boolean.valueOf called on non-boolean object"}]
 10392	PASS ch15/15.6/15.6.4/S15.6.4_A2.js (tail -c +9511950 tests/ecmac.db|head -c 463)
 10393	PASS ch15/15.7/15.7.1/S15.7.1.1_A1.js (tail -c +9512414 tests/ecmac.db|head -c 1197)
 10394	PASS ch15/15.7/15.7.1/S15.7.1.1_A2.js (tail -c +9513612 tests/ecmac.db|head -c 519)
@@ -10469,7 +10469,7 @@ err
 10413	PASS ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A1_T3.js (tail -c +9522839 tests/ecmac.db|head -c 532)
 10414	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A2_T1.js (tail -c +9523372 tests/ecmac.db|head -c 580): [{"message":"#3: The [[Class]] property of the Number prototype object is set to \"Number\""}]
 10415	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A2_T2.js (tail -c +9523953 tests/ecmac.db|head -c 607): [{"message":"#3: The [[Class]] property of the Number prototype object is set to \"Number\""}]
-10416	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A3.js (tail -c +9524561 tests/ecmac.db|head -c 398): [{"stack":"    at <no filename>:10","message":"Number.valueOf called on non-number object"}]
+10416	FAIL ch15/15.7/15.7.3/15.7.3.1/S15.7.3.1_A3.js (tail -c +9524561 tests/ecmac.db|head -c 398): [{"stack":"    at cfunc\n    at <no filename>:10","message":"Number.valueOf called on non-number object"}]
 10417	PASS ch15/15.7/15.7.3/15.7.3.2/S15.7.3.2_A1.js (tail -c +9524960 tests/ecmac.db|head -c 445)
 10418	PASS ch15/15.7/15.7.3/15.7.3.2/S15.7.3.2_A2.js (tail -c +9525406 tests/ecmac.db|head -c 391)
 10419	PASS ch15/15.7/15.7.3/15.7.3.2/S15.7.3.2_A3.js (tail -c +9525798 tests/ecmac.db|head -c 337)
@@ -10491,7 +10491,7 @@ err
 10435	PASS ch15/15.7/15.7.3/15.7.3.6/S15.7.3.6_A3.js (tail -c +9532541 tests/ecmac.db|head -c 369)
 10436	PASS ch15/15.7/15.7.3/15.7.3.6/S15.7.3.6_A4.js (tail -c +9532911 tests/ecmac.db|head -c 523)
 10437	FAIL ch15/15.7/15.7.4/15.7.4-1.js (tail -c +9533435 tests/ecmac.db|head -c 393): [{"message":"Test case returned non-true value!"}]
-10438	FAIL ch15/15.7/15.7.4/S15.7.4_A1.js (tail -c +9533829 tests/ecmac.db|head -c 766): [{"stack":"    at <no filename>:16","message":"Number.valueOf called on non-number object"}]
+10438	FAIL ch15/15.7/15.7.4/S15.7.4_A1.js (tail -c +9533829 tests/ecmac.db|head -c 766): [{"stack":"    at cfunc\n    at <no filename>:16","message":"Number.valueOf called on non-number object"}]
 10439	PASS ch15/15.7/15.7.4/S15.7.4_A2.js (tail -c +9534596 tests/ecmac.db|head -c 459)
 10440	PASS ch15/15.7/15.7.4/S15.7.4_A3.1.js (tail -c +9535056 tests/ecmac.db|head -c 378)
 10441	PASS ch15/15.7/15.7.4/S15.7.4_A3.2.js (tail -c +9535435 tests/ecmac.db|head -c 369)
@@ -10547,14 +10547,14 @@ err
 10491	PASS ch15/15.7/15.7.4/15.7.4.2/S15.7.4.2_A4_T03.js (tail -c +9594664 tests/ecmac.db|head -c 1082)
 10492	PASS ch15/15.7/15.7.4/15.7.4.2/S15.7.4.2_A4_T04.js (tail -c +9595747 tests/ecmac.db|head -c 1088)
 10493	PASS ch15/15.7/15.7.4/15.7.4.2/S15.7.4.2_A4_T05.js (tail -c +9596836 tests/ecmac.db|head -c 1075)
-10494	FAIL ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A1_T01.js (tail -c +9597912 tests/ecmac.db|head -c 1193): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"Number.valueOf called on non-number object"}]
-10495	FAIL ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A1_T02.js (tail -c +9599106 tests/ecmac.db|head -c 1353): [{"stack":"    at cfunc:0\n    at <no filename>:10","message":"Number.valueOf called on non-number object"}]
+10494	FAIL ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A1_T01.js (tail -c +9597912 tests/ecmac.db|head -c 1193): [{"stack":"    at cfunc\n    at <no filename>:10","message":"Number.valueOf called on non-number object"}]
+10495	FAIL ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A1_T02.js (tail -c +9599106 tests/ecmac.db|head -c 1353): [{"stack":"    at cfunc\n    at <no filename>:10","message":"Number.valueOf called on non-number object"}]
 10496	PASS ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A2_T01.js (tail -c +9600460 tests/ecmac.db|head -c 1077)
 10497	PASS ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A2_T02.js (tail -c +9601538 tests/ecmac.db|head -c 1080)
 10498	PASS ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A2_T03.js (tail -c +9602619 tests/ecmac.db|head -c 1071)
 10499	PASS ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A2_T04.js (tail -c +9603691 tests/ecmac.db|head -c 1077)
 10500	PASS ch15/15.7/15.7.4/15.7.4.4/S15.7.4.4_A2_T05.js (tail -c +9604769 tests/ecmac.db|head -c 1064)
-10501	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.1_T01.js (tail -c +9605834 tests/ecmac.db|head -c 1660): [{"stack":"    at cfunc:0\n    at <no filename>:11","message":"Number.valueOf called on non-number object"}]
+10501	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.1_T01.js (tail -c +9605834 tests/ecmac.db|head -c 1660): [{"stack":"    at cfunc\n    at cfunc\n    at <no filename>:11","message":"Number.valueOf called on non-number object"}]
 10502	PASS ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.1_T02.js (tail -c +9607495 tests/ecmac.db|head -c 1657)
 10503	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.3_T01.js (tail -c +9609153 tests/ecmac.db|head -c 1821): [{"message":"#1: (new Number(\"a\")).prototype.toFixed() === \"NaN\""}]
 10504	FAIL ch15/15.7/15.7.4/15.7.4.5/S15.7.4.5_A1.3_T02.js (tail -c +9610975 tests/ecmac.db|head -c 1640): [{"message":"#1: Number.NaN.prototype.toFixed() === \"NaN\""}]
@@ -11106,7 +11106,7 @@ $I: [{"message":"#1: Incorrect value of Date"}]
 11035	PASS ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A3_T1.js (tail -c +10060756 tests/ecmac.db|head -c 489)
 11036	FAIL ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A3_T2.js (tail -c +10061246 tests/ecmac.db|head -c 593): [{"message":"#1: The Date.prototype.toTimeString.length property has the attributes DontDelete"}]
 11037	PASS ch15/15.9/15.9.5/15.9.5.4/S15.9.5.4_A3_T3.js (tail -c +10061840 tests/ecmac.db|head -c 591)
-11038	FAIL ch15/15.9/15.9.5/15.9.5.40/15.9.5.40_1.js (tail -c +10062432 tests/ecmac.db|head -c 506): [{"stack":"    at cfunc:0\n    at testcase (<no filename>:14)\n    at runTestCase (<no filename>:901)\n    at <no filename>:17","message":"Date.valueOf called on non-Date object"}]
+11038	FAIL ch15/15.9/15.9.5/15.9.5.40/15.9.5.40_1.js (tail -c +10062432 tests/ecmac.db|head -c 506): [{"stack":"    at cfunc\n    at cfunc\n    at testcase (<no filename>:14)\n    at runTestCase (<no filename>:901)\n    at <no filename>:17","message":"Date.valueOf called on non-Date object"}]
 11039	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A1_T1.js (tail -c +10062939 tests/ecmac.db|head -c 497)
 11040	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A1_T2.js (tail -c +10063437 tests/ecmac.db|head -c 551)
 11041	PASS ch15/15.9/15.9.5/15.9.5.40/S15.9.5.40_A1_T3.js (tail -c +10063989 tests/ecmac.db|head -c 531)

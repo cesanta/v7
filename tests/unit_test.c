@@ -4227,6 +4227,7 @@ static const char *test_exec_generic(void) {
       "'stack':\""
       "    at myFunc (Eval'd code:1)\\n"
       "    at Eval'd code:1\\n"
+      "    at cfunc\\n"
       "    at <anonymous> (test_expr:4)\\n"
       "    at test_expr:3"
       "\"})"
