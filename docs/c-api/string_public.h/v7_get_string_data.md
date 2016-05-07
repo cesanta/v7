@@ -8,7 +8,8 @@ signature: |
 
 Returns a pointer to the string stored in `v7_val_t`.
 
-String length returned in `len`. Returns NULL if the value is not a string.
+String length returned in `len`, which is allowed to be NULL. Returns NULL
+if the value is not a string.
 
 JS strings can contain embedded NUL chars and may or may not be NUL
 terminated.
