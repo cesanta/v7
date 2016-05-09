@@ -114,7 +114,7 @@ static enum v7_err eval(struct v7 *v7, const char *code, v7_val_t *res) {
 }
 
 static enum v7_err parse_js(struct v7 *v7, const char *src, struct ast *a) {
-  enum v7_err parse_result = parse(v7, a, src, 1 /* verbose */, 0);
+  enum v7_err parse_result = parse(v7, a, src, 0);
   if (parse_result != V7_OK) {
     fprintf(stderr, "Parse error. Expression:\n  %s\nMessage:\n  %s\n", src,
             v7->error_msg);
@@ -1250,7 +1250,7 @@ static const char *test_parser(void) {
 #if 0
     printf("-- Parsing \"%s\"\n", invalid[i]);
 #endif
-    ASSERT_EQ(parse(v7, &a, invalid[i], 0, 0), V7_SYNTAX_ERROR);
+    ASSERT_EQ(parse(v7, &a, invalid[i], 0), V7_SYNTAX_ERROR);
   }
 
   ast_free(&a);
@@ -1284,7 +1284,7 @@ static const char *test_parser_large_ast(void) {
   char *script = read_file("large_ast.js", &script_len);
 
   ast_init(&a, 0);
-  ASSERT_EQ(parse(v7, &a, script, 0, 0), V7_AST_TOO_LARGE);
+  ASSERT_EQ(parse(v7, &a, script, 0), V7_AST_TOO_LARGE);
   return NULL;
 }
 #endif
