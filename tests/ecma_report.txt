@@ -6985,18 +6985,18 @@ err
 6936	PASS ch15/15.2/15.2.4/S15.2.4_A2.js (tail -c +6746732 tests/ecmac.db|head -c 502)
 6937	PASS ch15/15.2/15.2.4/S15.2.4_A3.js (tail -c +6747235 tests/ecmac.db|head -c 426)
 6938	PASS ch15/15.2/15.2.4/S15.2.4_A4.js (tail -c +6747662 tests/ecmac.db|head -c 436)
-6939	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-1.js (tail -c +6748099 tests/ecmac.db|head -c 385): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:9)\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
-6940	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-2.js (tail -c +6748485 tests/ecmac.db|head -c 390): [{"stack":"    at cfunc\n    at cfunc\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
-6941	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-1.js (tail -c +6748876 tests/ecmac.db|head -c 365): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:9)\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of null"}]
-6942	FAIL ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-2.js (tail -c +6749242 tests/ecmac.db|head -c 370): [{"stack":"    at cfunc\n    at cfunc\n    at testcase (<no filename>:9)\n    at runTestCase (<no filename>:901)\n    at <no filename>:11","message":"cannot read property 'constructor' of null"}]
+6939	PASS ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-1.js (tail -c +6748099 tests/ecmac.db|head -c 385)
+6940	PASS ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-1-2.js (tail -c +6748485 tests/ecmac.db|head -c 390)
+6941	PASS ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-1.js (tail -c +6748876 tests/ecmac.db|head -c 365)
+6942	PASS ch15/15.2/15.2.4/15.2.4.2/15.2.4.2-2-2.js (tail -c +6749242 tests/ecmac.db|head -c 370)
 6943	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A1.js (tail -c +6749613 tests/ecmac.db|head -c 960)
 6944	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A10.js (tail -c +6750574 tests/ecmac.db|head -c 708)
 6945	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A11.js (tail -c +6751283 tests/ecmac.db|head -c 510)
-6946	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A12.js (tail -c +6751794 tests/ecmac.db|head -c 350): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:7)\n    at <no filename>:7","message":"cannot read property 'constructor' of undefined"}]
-6947	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A13.js (tail -c +6752145 tests/ecmac.db|head -c 320): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:7)\n    at <no filename>:7","message":"cannot read property 'constructor' of null"}]
-6948	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A14.js (tail -c +6752466 tests/ecmac.db|head -c 392): [{"message":"Let O be the result of calling ToObject passing the this value as the argument."}]
-6949	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A15.js (tail -c +6752859 tests/ecmac.db|head -c 395): [{"message":"Let O be the result of calling ToObject passing the this value as the argument."}]
-6950	FAIL ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A16.js (tail -c +6753255 tests/ecmac.db|head -c 395): [{"message":"Let O be the result of calling ToObject passing the this value as the argument."}]
+6946	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A12.js (tail -c +6751794 tests/ecmac.db|head -c 350)
+6947	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A13.js (tail -c +6752145 tests/ecmac.db|head -c 320)
+6948	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A14.js (tail -c +6752466 tests/ecmac.db|head -c 392)
+6949	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A15.js (tail -c +6752859 tests/ecmac.db|head -c 395)
+6950	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A16.js (tail -c +6753255 tests/ecmac.db|head -c 395)
 6951	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A6.js (tail -c +6753651 tests/ecmac.db|head -c 455)
 6952	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A7.js (tail -c +6754107 tests/ecmac.db|head -c 437)
 6953	PASS ch15/15.2/15.2.4/15.2.4.2/S15.2.4.2_A8.js (tail -c +6754545 tests/ecmac.db|head -c 779)
@@ -7225,7 +7225,7 @@ err
 7176	FAIL ch15/15.3/15.3.4/15.3.4.4/S15.3.4.4_A9.js (tail -c +6914716 tests/ecmac.db|head -c 734): [{"message":"#0: the Function.prototype.call has length property"}]
 7177	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-0-1.js (tail -c +6915451 tests/ecmac.db|head -c 346)
 7178	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-0-2.js (tail -c +6915798 tests/ecmac.db|head -c 339)
-7179	FAIL ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-10-1.js (tail -c +6916138 tests/ecmac.db|head -c 435): [{"message":"Test case returned non-true value!"}]
+7179	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-10-1.js (tail -c +6916138 tests/ecmac.db|head -c 435)
 7180	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-11-1.js (tail -c +6916574 tests/ecmac.db|head -c 560)
 7181	FAIL ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-13.b-1.js (tail -c +6917135 tests/ecmac.db|head -c 393): [{"message":"Test case returned non-true value!"}]
 7182	FAIL ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-13.b-2.js (tail -c +6917529 tests/ecmac.db|head -c 398): [{"message":"Test case returned non-true value!"}]
@@ -7280,7 +7280,7 @@ err
 7231	FAIL ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-6-8.js (tail -c +6943274 tests/ecmac.db|head -c 887): [{"message":"Test case returned non-true value!"}]
 7232	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-6-9.js (tail -c +6944162 tests/ecmac.db|head -c 543)
 7233	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-8-1.js (tail -c +6944706 tests/ecmac.db|head -c 394)
-7234	FAIL ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-8-2.js (tail -c +6945101 tests/ecmac.db|head -c 445): [{"message":"Test case returned non-true value!"}]
+7234	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-8-2.js (tail -c +6945101 tests/ecmac.db|head -c 445)
 7235	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-9-1.js (tail -c +6945547 tests/ecmac.db|head -c 398)
 7236	PASS ch15/15.3/15.3.4/15.3.4.5/15.3.4.5-9-2.js (tail -c +6945946 tests/ecmac.db|head -c 433)
 7237	FAIL ch15/15.3/15.3.4/15.3.4.5/S15.3.4.5_A16.js (tail -c +6946380 tests/ecmac.db|head -c 755): [{"message":"#1: TypeError expected. Actual: Test262 Error: #1: If IsCallable(func) is false, then (bind should) throw a TypeError exception"}]
@@ -7344,7 +7344,7 @@ err
 7295	PASS ch15/15.3/15.3.5/S15.3.5.3_A3_T1.js (tail -c +6984140 tests/ecmac.db|head -c 936)
 7296	FAIL ch15/15.3/15.3.5/S15.3.5.3_A3_T2.js (tail -c +6985077 tests/ecmac.db|head -c 1134): [{"stack":"    at <no filename>:20","message":"Expecting a function in instanceof check"}]
 7297	FAIL ch15/15.3/15.3.5/S15.3.5_A1_T1.js (tail -c +6986212 tests/ecmac.db|head -c 385): [{"message":"#1: The value of the [[Class]] property is \"Function\""}]
-7298	FAIL ch15/15.3/15.3.5/S15.3.5_A1_T2.js (tail -c +6986598 tests/ecmac.db|head -c 382): [{"stack":"    at cfunc\n    at cfunc\n    at <anonymous> (<no filename>:11)\n    at <no filename>:11","message":"cannot read property 'constructor' of undefined"}]
+7298	FAIL ch15/15.3/15.3.5/S15.3.5_A1_T2.js (tail -c +6986598 tests/ecmac.db|head -c 382): [{"message":"#1: The value of the [[Class]] property is \"Function\""}]
 7299	PASS ch15/15.3/15.3.5/S15.3.5_A2_T1.js (tail -c +6986981 tests/ecmac.db|head -c 593)
 7300	PASS ch15/15.3/15.3.5/S15.3.5_A2_T2.js (tail -c +6987575 tests/ecmac.db|head -c 657)
 7301	PASS ch15/15.3/15.3.5/S15.3.5_A3_T1.js (tail -c +6988233 tests/ecmac.db|head -c 664)
@@ -7409,7 +7409,7 @@ err
 7360	PASS ch15/15.4/15.4.2/15.4.2.2/S15.4.2.2_A2.3_T4.js (tail -c +7031552 tests/ecmac.db|head -c 1343)
 7361	PASS ch15/15.4/15.4.2/15.4.2.2/S15.4.2.2_A2.3_T5.js (tail -c +7032896 tests/ecmac.db|head -c 1373)
 7362	PASS ch15/15.4/15.4.3/S15.4.3_A1.1_T1.js (tail -c +7034270 tests/ecmac.db|head -c 729)
-7363	FAIL ch15/15.4/15.4.3/S15.4.3_A1.1_T2.js (tail -c +7035000 tests/ecmac.db|head -c 587): [{"message":"#1: Function.prototype.toString = Object.prototype.toString; Array.toString() === \"[object \" + \"Function\" + \"]\". Actual: [object Object]"}]
+7363	PASS ch15/15.4/15.4.3/S15.4.3_A1.1_T2.js (tail -c +7035000 tests/ecmac.db|head -c 587)
 7364	PASS ch15/15.4/15.4.3/S15.4.3_A1.1_T3.js (tail -c +7035588 tests/ecmac.db|head -c 463)
 7365	PASS ch15/15.4/15.4.3/S15.4.3_A2.1.js (tail -c +7036052 tests/ecmac.db|head -c 652)
 7366	PASS ch15/15.4/15.4.3/S15.4.3_A2.2.js (tail -c +7036705 tests/ecmac.db|head -c 712)
