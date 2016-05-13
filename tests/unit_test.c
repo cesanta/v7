@@ -183,23 +183,23 @@ static int check_js_expr(struct v7 *v7, val_t v_actual,
 }
 
 static int check_num(struct v7 *v7, val_t v, double num) {
-  int ret = isnan(num) ? isnan(v7_to_number(v)) : v7_to_number(v) == num;
+  int ret = isnan(num) ? isnan(v7_get_double(v)) : v7_get_double(v) == num;
   (void) v7;
   if (!ret) {
-    printf("Num: want %f got %f\n", num, v7_to_number(v));
+    printf("Num: want %f got %f\n", num, v7_get_double(v));
   }
 
   return ret;
 }
 
 static int check_bool(val_t v, int is_true) {
-  int b = v7_to_boolean(v);
+  int b = v7_get_bool(v);
   return is_true ? b : !b;
 }
 
 static int check_str(struct v7 *v7, val_t v, const char *expected) {
   size_t n1, n2 = strlen(expected);
-  const char *actual = v7_get_string_data(v7, &v, &n1);
+  const char *actual = v7_get_string(v7, &v, &n1);
   int ret = (n1 == n2 && memcmp(actual, expected, n1) == 0);
   if (!ret) {
     _strfail(actual, expected, -1);
@@ -390,7 +390,7 @@ static enum v7_err adder(struct v7 *v7, v7_val_t *res) {
   unsigned long i;
 
   for (i = 0; i < v7_argc(v7); i++) {
-    sum += v7_to_number(v7_arg(v7, i));
+    sum += v7_get_double(v7_arg(v7, i));
   }
   *res = v7_mk_number(sum);
 
@@ -715,16 +715,16 @@ static const char *test_runtime(void) {
 
   v = v7_mk_number(1.0);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_NUMBER);
-  ASSERT_EQ(v7_to_number(v), 1.0);
+  ASSERT_EQ(v7_get_double(v), 1.0);
   ASSERT(check_value(v7, v, "1"));
 
   v = v7_mk_number(1.5);
-  ASSERT_EQ(v7_to_number(v), 1.5);
+  ASSERT_EQ(v7_get_double(v), 1.5);
   ASSERT(check_value(v7, v, "1.5"));
 
   v = v7_mk_boolean(1);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_BOOLEAN);
-  ASSERT_EQ(v7_to_boolean(v), 1);
+  ASSERT_EQ(v7_get_bool(v), 1);
   ASSERT(check_value(v7, v, "true"));
 
   v = v7_mk_boolean(0);
@@ -732,41 +732,41 @@ static const char *test_runtime(void) {
 
   v = v7_mk_string(v7, "foo", 3, 1);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_STRING);
-  v7_get_string_data(v7, &v, &n);
+  v7_get_string(v7, &v, &n);
   ASSERT_EQ(n, 3);
   s = "\"foo\"";
   ASSERT(check_value(v7, v, s));
 
   v = v7_mk_string(v7, "foo", 3, 1);
-  s = v7_to_cstring(v7, &v);
+  s = v7_get_cstring(v7, &v);
   ASSERT(strcmp("foo", s) == 0);
 
   /* short strings are embedded even if unowned */
   v = v7_mk_string(v7, "foobarbaz", 8, 0);
-  s = v7_to_cstring(v7, &v);
+  s = v7_get_cstring(v7, &v);
   /* null because at index 8 there is 'z' instead of a null */
   ASSERT(s == NULL);
 
   v = v7_mk_string(v7, "foo\0bar", 7, 1);
-  s = v7_to_cstring(v7, &v);
+  s = v7_get_cstring(v7, &v);
   ASSERT(s == NULL);
 
   for (i = 1; i < (int) sizeof(test_str); i++) {
     v = v7_mk_string(v7, 0, i, 1);
-    s = v7_get_string_data(v7, &v, &n);
+    s = v7_get_string(v7, &v, &n);
     memcpy((char *) s, test_str, i);
     ASSERT_EQ(val_type(v7, v), V7_TYPE_STRING);
-    s = v7_get_string_data(v7, &v, &n);
+    s = v7_get_string(v7, &v, &n);
     ASSERT(n == (size_t) i);
     ASSERT(memcmp(s, test_str, n) == 0);
   }
 
   v = v7_mk_object(v7);
   ASSERT_EQ(val_type(v7, v), V7_TYPE_GENERIC_OBJECT);
-  ASSERT(v7_to_generic_object(v) != NULL);
-  ASSERT(v7_to_generic_object(v)->prototype != NULL);
-  ASSERT(v7_to_generic_object(
-             v7_object_to_value(v7_to_generic_object(v)->prototype))
+  ASSERT(get_generic_object_struct(v) != NULL);
+  ASSERT(get_generic_object_struct(v)->prototype != NULL);
+  ASSERT(get_generic_object_struct(
+             v7_object_to_value(get_generic_object_struct(v)->prototype))
              ->prototype == NULL);
 
   ASSERT_EQ(v7_set(v7, v, "foo", -1, v7_mk_null()), 0);
@@ -790,7 +790,7 @@ static const char *test_runtime(void) {
   ASSERT(check_value(v7, p->value, s));
 
   ASSERT_EQ(v7_del(v7, v, "foo", ~0), 0);
-  ASSERT(v7_to_object(v)->properties == NULL);
+  ASSERT(get_object_struct(v)->properties == NULL);
   ASSERT_EQ(v7_del(v7, v, "foo", -1), -1);
   ASSERT(v7_set(v7, v, "foo", -1, v7_mk_string(v7, "bar", 3, 1)) == 0);
   ASSERT(v7_set(v7, v, "bar", -1, v7_mk_string(v7, "foo", 3, 1)) == 0);
@@ -821,7 +821,7 @@ static const char *test_runtime(void) {
          0);
   s = "{\"foo\":2}";
   ASSERT(check_value(v7, v, s));
-  ASSERT_EQ(v7_to_number(v7_get(v7, v, "foo", -1)), 2.0);
+  ASSERT_EQ(v7_get_double(v7_get(v7, v, "foo", -1)), 2.0);
   ASSERT(v7_get_property(v7, v, "foo", -1)->attributes &
          V7_PROPERTY_NON_CONFIGURABLE);
 
@@ -837,7 +837,7 @@ static const char *test_runtime(void) {
 
   v = v7_mk_string(v7, "fooakbar", 8, 1);
   for (i = 0; i < 100; i++) {
-    s = v7_get_string_data(v7, &v, &n);
+    s = v7_get_string(v7, &v, &n);
     v7_mk_string(v7, s, 8, 1);
   }
 
@@ -1972,7 +1972,7 @@ static const char *test_interpreter(void) {
   ASSERT_EQ(exec_with(v7, "a=this;a", v7_mk_foreign((void *) "foo"), &v),
             V7_OK);
   ASSERT(v7_is_foreign(v));
-  ASSERT_EQ(strcmp((char *) v7_to_foreign(v), "foo"), 0);
+  ASSERT_EQ(strcmp((char *) v7_get_ptr(v), "foo"), 0);
 
   ASSERT_EVAL_EQ(v7, "a=[1,2,3];a.splice(0,1);a", "[2,3]");
   ASSERT_EVAL_EQ(v7, "a=[1,2,3];a.splice(2,1);a", "[1,2]");
@@ -2050,7 +2050,7 @@ static const char *test_strings(void) {
     size_t l;
     const char *p;
     s = v7_mk_string(v7, lit, ~0, 0);
-    p = v7_get_string_data(v7, &s, &l);
+    p = v7_get_string(v7, &s, &l);
     /* ASSERT_EQ(l, (size_t) 9); */
     ASSERT(p == lit);
 
@@ -2230,7 +2230,7 @@ static const char *test_json_parse(void) {
     size_t len;
 
     eval(v7, "JSON.stringify('\"\\n\"')", &res);
-    s = v7_get_string_data(v7, &res, &len);
+    s = v7_get_string(v7, &res, &len);
 
     c1 = "\"\\\"\\n\\\"\"";
     ASSERT_STREQ(s, c1);
@@ -2264,7 +2264,7 @@ static const char *test_gc_ptr_check(void) {
 
   eval(v7, "o=({})", &v);
   assert(gc_check_val(v7, v));
-  ASSERT(gc_check_ptr(&v7->generic_object_arena, v7_to_generic_object(v)));
+  ASSERT(gc_check_ptr(&v7->generic_object_arena, get_generic_object_struct(v)));
 #ifndef V7_MALLOC_GC
   ASSERT(!gc_check_ptr(&v7->generic_object_arena, "foo"));
 #endif
@@ -2279,35 +2279,35 @@ static const char *test_gc_mark(void) {
 
   eval(v7, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o", &v);
   gc_mark(v7, v);
-  ASSERT(MARKED(v7_to_generic_object(v)));
+  ASSERT(MARKED(get_generic_object_struct(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, "o=({a:{b:1},c:{d:2},e:null});o.e=o;o", &v);
   gc_mark(v7, v7->vals.global_object);
-  ASSERT(MARKED(v7_to_generic_object(v)));
+  ASSERT(MARKED(get_generic_object_struct(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, "function f() {}; o=new f;o", &v);
   gc_mark(v7, v);
-  ASSERT(MARKED(v7_to_generic_object(v)));
+  ASSERT(MARKED(get_generic_object_struct(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, "function f() {}; Object.getPrototypeOf(new f)", &v);
   gc_mark(v7, v7->vals.global_object);
-  ASSERT(MARKED(v7_to_generic_object(v)));
+  ASSERT(MARKED(get_generic_object_struct(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
 
   eval(v7, "({a:1})", &v);
   gc_mark(v7, v7->vals.global_object);
-  ASSERT(!MARKED(v7_to_generic_object(v)));
+  ASSERT(!MARKED(get_generic_object_struct(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
@@ -2316,7 +2316,7 @@ static const char *test_gc_mark(void) {
        &v);
   gc_mark(v7, v7->vals.global_object);
   /* `x` is reachable through `f`'s closure scope */
-  ASSERT(MARKED(v7_to_generic_object(v)));
+  ASSERT(MARKED(get_generic_object_struct(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
   v7 = v7_create();
@@ -2325,7 +2325,7 @@ static const char *test_gc_mark(void) {
        &v);
   gc_mark(v7, v7->vals.global_object);
   /* `f` is unreachable, hence `x` is not marked through the scope */
-  ASSERT(!MARKED(v7_to_generic_object(v)));
+  ASSERT(!MARKED(get_generic_object_struct(v)));
   v7_gc(v7, 0); /* cleanup marks */
   v7_destroy(v7);
 
@@ -2345,7 +2345,7 @@ static const char *test_gc_sweep(void) {
   alive = v7->generic_object_arena.alive;
 #endif
   eval(v7, "x=({a:1})", &v);
-  v7_to_generic_object(v);
+  get_generic_object_struct(v);
   v7_gc(v7, 0);
 #if V7_ENABLE__Memory__stats
   ASSERT(v7->generic_object_arena.alive > alive);
@@ -2391,13 +2391,13 @@ static const char *test_gc_own(void) {
    * area and ASAN will complain.
    */
   v7_gc(v7, 1);
-  s = v7_get_string_data(v7, &v2, &len);
+  s = v7_get_string(v7, &v2, &len);
   ASSERT_STREQ(s, "barfoo");
 
   ASSERT_EQ(v7_disown(v7, &v2), 1);
 
   v7_gc(v7, 1);
-  s = v7_get_string_data(v7, &v1, &len);
+  s = v7_get_string(v7, &v1, &len);
   ASSERT_STREQ(s, "foobar");
 
   ASSERT_EQ(v7_disown(v7, &v2), 0);
@@ -2411,7 +2411,7 @@ static const char *test_gc_own(void) {
 static int check_file(struct v7 *v7, v7_val_t s, const char *file_name) {
   size_t n1, n2;
   char *s1 = read_file(file_name, &n1);
-  const char *s2 = v7_get_string_data(v7, &s, &n2);
+  const char *s2 = v7_get_string(v7, &s, &n2);
   int result = n1 == n2 && memcmp(s1, s2, n1) == 0;
   free(s1);
   if (result == 0) {
@@ -2565,7 +2565,7 @@ static const char *test_user_data(void) {
 
   v7_set(v7, obj, "foo", ~0, v7_mk_number(42.0));
   ASSERT(v7_get_user_data(v7, obj) == ud);
-  ASSERT(v7_to_number(v7_get(v7, obj, "foo", ~0)) == 42.0);
+  ASSERT(v7_get_double(v7_get(v7, obj, "foo", ~0)) == 42.0);
 
   v7_set_user_data(v7, obj, NULL);
   ASSERT(v7_get_user_data(v7, obj) == NULL);
@@ -2582,7 +2582,7 @@ static const char *test_user_data(void) {
   v7_set(v7, obj, "bar", ~0, v7_mk_number(42.0));
   v7_set_user_data(v7, obj, ud);
   ASSERT(v7_get_user_data(v7, obj) == ud);
-  ASSERT(v7_to_number(v7_get(v7, obj, "bar", ~0)) == 42.0);
+  ASSERT(v7_get_double(v7_get(v7, obj, "bar", ~0)) == 42.0);
 
   /* destructor */
   {

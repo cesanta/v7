@@ -31,8 +31,8 @@ static v7_val_t js_sum(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
    * `args` and calls `js_sum()` glue function. Here we extract argument values
    * from the args array.
    */
-  double arg0 = v7_to_number(v7_array_get(v7, args, 0));
-  double arg1 = v7_to_number(v7_array_get(v7, args, 1));
+  double arg0 = v7_get_double(v7_array_get(v7, args, 0));
+  double arg1 = v7_get_double(v7_array_get(v7, args, 1));
 
   /* Call C function `sum()` */
   double result = sum(arg0, arg1);

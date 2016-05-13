@@ -21,7 +21,7 @@ static void call_sum(struct v7 *v7) {
 
   /* Call JavaScript function. Pass `undefined` as `this` */
   result = v7_apply(v7, func, v7_mk_undefined(), args);
-  printf("Result: %g\n", v7_to_number(result));
+  printf("Result: %g\n", v7_get_double(result));
 }
 
 int main(void) {

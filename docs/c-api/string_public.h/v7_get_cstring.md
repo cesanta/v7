@@ -1,9 +1,9 @@
 ---
-title: "v7_to_cstring()"
-decl_name: "v7_to_cstring"
+title: "v7_get_cstring()"
+decl_name: "v7_get_cstring"
 symbol_kind: "func"
 signature: |
-  const char *v7_to_cstring(struct v7 *v7, v7_val_t *v);
+  const char *v7_get_cstring(struct v7 *v7, v7_val_t *v);
 ---
 
 Returns a pointer to the string stored in `v7_val_t`.

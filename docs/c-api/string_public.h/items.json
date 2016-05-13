@@ -14,11 +14,11 @@
         },
         {
             "type": "markdown",
-            "name": "v7_get_string_data.md"
+            "name": "v7_get_string.md"
         },
         {
             "type": "markdown",
-            "name": "v7_to_cstring.md"
+            "name": "v7_get_cstring.md"
         }
     ]
 }

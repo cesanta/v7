@@ -10,7 +10,7 @@
         },
         {
             "type": "markdown",
-            "name": "v7_to_number.md"
+            "name": "v7_get_double.md"
         },
         {
             "type": "markdown",
@@ -22,7 +22,7 @@
         },
         {
             "type": "markdown",
-            "name": "v7_to_boolean.md"
+            "name": "v7_get_bool.md"
         },
         {
             "type": "markdown",
@@ -50,7 +50,7 @@
         },
         {
             "type": "markdown",
-            "name": "v7_to_foreign.md"
+            "name": "v7_get_ptr.md"
         },
         {
             "type": "markdown",

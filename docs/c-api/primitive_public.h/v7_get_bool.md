@@ -1,9 +1,9 @@
 ---
-title: "v7_to_boolean()"
-decl_name: "v7_to_boolean"
+title: "v7_get_bool()"
+decl_name: "v7_get_bool"
 symbol_kind: "func"
 signature: |
-  int v7_to_boolean(v7_val_t v);
+  int v7_get_bool(v7_val_t v);
 ---
 
 Returns boolean stored in `v7_val_t`:

@@ -12,8 +12,8 @@ static double sum(double a, double b) {
 }
 
 static enum v7_err js_sum(struct v7 *v7, v7_val_t *res) {
-  double arg0 = v7_to_number(v7_arg(v7, 0));
-  double arg1 = v7_to_number(v7_arg(v7, 1));
+  double arg0 = v7_get_double(v7_arg(v7, 0));
+  double arg1 = v7_get_double(v7_arg(v7, 1));
   double result = sum(arg0, arg1);
 
   *res = v7_mk_number(result);
