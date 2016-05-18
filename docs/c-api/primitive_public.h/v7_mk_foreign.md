@@ -3,7 +3,7 @@ title: "v7_mk_foreign()"
 decl_name: "v7_mk_foreign"
 symbol_kind: "func"
 signature: |
-  v7_val_t v7_mk_foreign(void *ptr);
+  NOINSTR v7_val_t v7_mk_foreign(struct v7 *v7, void *ptr);
 ---
 
 Make JavaScript value that holds C/C++ `void *` pointer.

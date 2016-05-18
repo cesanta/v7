@@ -41,7 +41,7 @@ int v7_example(void) {
   proto = v7_mk_object(v7);
   ctor_func = v7_mk_function_with_proto(v7, MyThing_ctor, proto);
   v7_def(v7, ctor_func, "MY_CONST", ~0,
-         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)), v7_mk_number(123));
+         (V7_DESC_WRITABLE(0) | V7_DESC_CONFIGURABLE(0)), v7_mk_number(v7, 123));
   v7_set_method(v7, proto, "myMethod", &MyThing_myMethod);
   v7_set(v7, v7_get_global(v7), "MyThing", ~0, ctor_func);
 
