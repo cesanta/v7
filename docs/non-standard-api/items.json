@@ -1,7 +1,0 @@
-{
-  "items": [
-    { "type": "markdown", "name": "intro.md" },
-    { "type": "markdown", "name": "string-prototype-at.md" },
-    { "type": "markdown", "name": "string-prototype-blen.md" }
-  ]
-}

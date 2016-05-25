@@ -1,5 +1,14 @@
 ---
 title: V7 internals
+items:
+  - { type: file, name: nan-packing.md }
+  - { type: file, name: mbufs.md }
+  - { type: file, name: strings.md }
+  - { type: file, name: tokenizer.md }
+  - { type: file, name: parser.md }
+  - { type: file, name: ast.md }
+  - { type: file, name: vm.md }
+  - { type: file, name: gc.md }
 ---
 
 V7 has four loosely coupled layers:

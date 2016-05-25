@@ -1,5 +1,8 @@
 ---
 title: Non-Standard API
+items:
+  - { type: file, name: string-prototype-at.md }
+  - { type: file, name: string-prototype-blen.md }
 ---
 
 V7 has several non-standard extensions for `String.prototype` in order to give

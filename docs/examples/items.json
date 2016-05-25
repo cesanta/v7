@@ -1,8 +1,0 @@
-{
-  "items": [
-    { "type": "markdown", "name": "intro.md" },
-    { "type": "markdown", "name": "c-from-js.md" },
-    { "type": "markdown", "name": "js-from-c.md" },
-    { "type": "markdown", "name": "load-json-config.md" }
-  ]
-}
