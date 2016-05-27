@@ -1,0 +1,16 @@
+---
+items:
+  - { type: dir, name: core_public.h }
+  - { type: dir, name: primitive_public.h }
+  - { type: dir, name: string_public.h }
+  - { type: dir, name: object_public.h }
+  - { type: dir, name: array_public.h }
+  - { type: dir, name: function_public.h }
+  - { type: dir, name: regexp_public.h }
+  - { type: dir, name: conversion_public.h }
+  - { type: dir, name: exec_public.h }
+  - { type: dir, name: exceptions_public.h }
+  - { type: dir, name: gc_public.h }
+  - { type: dir, name: util_public.h }
+  - { type: dir, name: main_public.h }
+---
