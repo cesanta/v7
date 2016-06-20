@@ -30,8 +30,8 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __BOARD_H
-#define __BOARD_H
+#ifndef CS_V7_EXAMPLES_TI_MSP432_BOARD_H_
+#define CS_V7_EXAMPLES_TI_MSP432_BOARD_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,4 +96,4 @@ extern "C" {
 }
 #endif
 
-#endif /* __BOARD_H */
+#endif /* CS_V7_EXAMPLES_TI_MSP432_BOARD_H_ */

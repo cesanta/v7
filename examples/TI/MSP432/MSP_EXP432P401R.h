@@ -42,8 +42,8 @@
  *
  *  ============================================================================
  */
-#ifndef __MSP_EXP432P401R_H
-#define __MSP_EXP432P401R_H
+#ifndef CS_V7_EXAMPLES_TI_MSP432_MSP_EXP432P401R_H_
+#define CS_V7_EXAMPLES_TI_MSP432_MSP_EXP432P401R_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -249,4 +249,4 @@ extern void MSP_EXP432P401R_initWiFi(void);
 }
 #endif
 
-#endif /* __MSP_EXP432P401R_H */
+#endif /* CS_V7_EXAMPLES_TI_MSP432_MSP_EXP432P401R_H_ */
