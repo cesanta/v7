@@ -443,16 +443,10 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23e+5)", 123000);
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23e5)", 123000);
   ASSERT_EVAL_NUM_EQ(v7, "Number(1.23e-5)", 1.23e-5);
-/*
- * TODO(dfrank) : uncomment when we polish `strtod` from `esp_libc.c`
- * and put it to `common/str_util.c` as `cs_strtod`
- */
-#if 0
   ASSERT_EVAL_NUM_EQ(v7, "Number(010)", 8);
   ASSERT_EVAL_NUM_EQ(v7, "Number(0777)", 511);
   ASSERT_EVAL_NUM_EQ(v7, "Number(0778)", 778);
   ASSERT_EVAL_NUM_EQ(v7, "Number(07781.1)", 7781.1);
-#endif
   ASSERT_EVAL_OK(v7, "new Number(21.23)");
 
 /* Cesanta-specific String API */
