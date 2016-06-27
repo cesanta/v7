@@ -114,7 +114,7 @@ static enum v7_err eval(struct v7 *v7, const char *code, v7_val_t *res) {
 }
 
 static enum v7_err parse_js(struct v7 *v7, const char *src, struct ast *a) {
-  enum v7_err parse_result = parse(v7, a, src, 0);
+  enum v7_err parse_result = parse(v7, a, src, strlen(src), 0);
   if (parse_result != V7_OK) {
     fprintf(stderr, "Parse error. Expression:\n  %s\nMessage:\n  %s\n", src,
             v7->error_msg);
@@ -655,30 +655,32 @@ static const char *test_tokenizer(void) {
   enum v7_tok tok = TOK_END_OF_INPUT;
   double num;
   const char *p = str;
+  const char *src_end = str + strlen(str);
   unsigned int i = 1;
 
-  skip_to_next_tok(&p);
+  skip_to_next_tok(&p, src_end);
 
   /* Make sure divisions are parsed correctly - set previous token */
-  while ((tok = get_tok(&p, &num, i > TOK_REGEX_LITERAL ? TOK_NUMBER : tok)) !=
+  while ((tok = get_tok(&p, src_end, &num,
+                        i > TOK_REGEX_LITERAL ? TOK_NUMBER : tok)) !=
          TOK_END_OF_INPUT) {
-    skip_to_next_tok(&p);
+    skip_to_next_tok(&p, src_end);
     ASSERT_EQ(tok, i);
     i++;
   }
   ASSERT_EQ(i, TOK_BREAK);
 
   p = "/foo/";
-  ASSERT_EQ(get_tok(&p, &num, TOK_NUMBER), TOK_DIV);
+  ASSERT_EQ(get_tok(&p, p + strlen(p), &num, TOK_NUMBER), TOK_DIV);
 
   p = "/foo/";
-  ASSERT_EQ(get_tok(&p, &num, TOK_COMMA), TOK_REGEX_LITERAL);
+  ASSERT_EQ(get_tok(&p, p + strlen(p), &num, TOK_COMMA), TOK_REGEX_LITERAL);
 
   p = "/foo";
-  ASSERT_EQ(get_tok(&p, &num, TOK_COMMA), TOK_DIV);
+  ASSERT_EQ(get_tok(&p, p + strlen(p), &num, TOK_COMMA), TOK_DIV);
 
   p = "/fo\\/o";
-  ASSERT_EQ(get_tok(&p, &num, TOK_COMMA), TOK_DIV);
+  ASSERT_EQ(get_tok(&p, p + strlen(p), &num, TOK_COMMA), TOK_DIV);
 
   return NULL;
 }
@@ -1244,7 +1246,8 @@ static const char *test_parser(void) {
 #if 0
     printf("-- Parsing \"%s\"\n", invalid[i]);
 #endif
-    ASSERT_EQ(parse(v7, &a, invalid[i], 0), V7_SYNTAX_ERROR);
+    ASSERT_EQ(parse(v7, &a, invalid[i], strlen(invalid[i]), 0),
+              V7_SYNTAX_ERROR);
   }
 
   ast_free(&a);
@@ -1278,7 +1281,7 @@ static const char *test_parser_large_ast(void) {
   char *script = read_file("large_ast.js", &script_len);
 
   ast_init(&a, 0);
-  ASSERT_EQ(parse(v7, &a, script, 0), V7_AST_TOO_LARGE);
+  ASSERT_EQ(parse(v7, &a, script, strlen(script), 0), V7_AST_TOO_LARGE);
   return NULL;
 }
 #endif
@@ -3153,7 +3156,6 @@ static const char *test_exec_generic(void) {
         ), "1-2-4-a-b-d-f-_3_2|1-2-4-b-d-f-6-"
       );
 
-
   /*
    * Throw should dismiss any pending returns
    */
@@ -3524,7 +3526,6 @@ static const char *test_exec_generic(void) {
         ), "1-2-3-"
       );
 
-
   /* }}} */
 
   /* }}} */
@@ -3717,7 +3718,6 @@ static const char *test_exec_generic(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7,
       "a; function a(){};",
       "function a(){}; a;");
-
 
   /* check several `var`s */
   ASSERT_EVAL_JS_EXPR_EQ(
@@ -4019,7 +4019,6 @@ static const char *test_exec_generic(void) {
       V7_SYNTAX_ERROR
       );
 
-
   v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ( v7, "a=10; delete 'a'; a", "10");
 
@@ -4027,7 +4026,6 @@ static const char *test_exec_generic(void) {
   ASSERT_EVAL_ERR( v7, "a = 5; (function(){ delete a; })(); a;",
       V7_EXEC_EXCEPTION
       );
-
 
   v7_del(v7, v7->vals.global_object, "a", 1);
   ASSERT_EVAL_JS_EXPR_EQ(
@@ -4058,7 +4056,6 @@ static const char *test_exec_generic(void) {
       v7, "a = 5; del = (function(){ b=10; return (function(){ delete b; return b;})(); })(); del + '|' + a",
       V7_EXEC_EXCEPTION
       );
-
 
   v7_del(v7, v7->vals.global_object, "a", 1);
   v7_del(v7, v7->vals.global_object, "f", 1);
