@@ -100,6 +100,49 @@ struct ecma_test_worker_context {
 };
 #endif
 
+#if V7_ENABLE__Proxy
+static enum v7_err proxy_handler_get(struct v7 *v7, v7_val_t *res) {
+  val_t obj = v7_arg(v7, 0);
+  val_t name = v7_arg(v7, 1);
+
+  if (name == v7_mk_string(v7, "two", ~0, 1)) {
+    *res = v7_mk_number(v7, 2);
+  } else {
+    size_t nsize = 0;
+    const char *n = v7_get_string(v7, &name, &nsize);
+    *res = v7_get(v7, obj, n, nsize);
+    if (v7_is_undefined(*res)) {
+      *res = v7_mk_number(v7, 100);
+    }
+  }
+
+  return V7_OK;
+}
+
+static enum v7_err proxy_handler_set(struct v7 *v7, v7_val_t *res) {
+  val_t obj = v7_arg(v7, 0);
+  val_t name = v7_arg(v7, 1);
+  val_t val = v7_arg(v7, 2);
+
+  /*
+   * this test trap accepts only string values, others will be silently ignored
+   */
+  if (v7_is_string(val)) {
+    size_t nsize = 0;
+    const char *n = v7_get_string(v7, &name, &nsize);
+    v7_set(v7, obj, n, nsize, val);
+  }
+
+  /*
+   * the `set` trap should return truthy value; otherwise in strict mode
+   * the assignment will throw a TypeError
+   */
+  *res = v7_mk_boolean(v7, 1);
+
+  return V7_OK;
+}
+#endif
+
 static void our_asprintf(char **out, const char *fmt, ...) {
   char buf[1024];
   va_list ap;
@@ -4225,7 +4268,129 @@ static const char *test_exec_generic(void) {
       );
 #endif
 
-  /* clang-format on */
+#if V7_ENABLE__Proxy
+  /* Proxy {{{ */
+  ASSERT_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        'use strict';
+        var handler = ({
+          set: function(obj, name, value) {
+            if (name !== 'my_validated' || (typeof value === 'number' && value < 200)) {
+              obj[name] = value;
+            }
+            return true;
+          },
+          get: function(obj, name) {
+            return (name in obj) ? obj[name] : 42;
+          }
+        });
+        var target = {my_existing: 100};
+        var p = new Proxy(target, handler);
+        var str = '';
+
+        str += p.my_non_existing + '-';
+        str += p.my_existing + '-';
+
+        p.my_validated = 12;
+        str += p.my_validated + '-';
+
+        p.my_validated = '34';
+        str += p.my_validated + '-';
+
+        p.my_validated = undefined;
+        str += p.my_validated + '-';
+
+        p.my_validated = 199;
+        str += p.my_validated + '-';
+
+        p.my_validated = 200;
+        str += p.my_validated + '-';
+
+        p.my_usual = 'foo';
+        str += p.my_usual + '-';
+
+        target.my_usual = 'foo';
+        str += p.my_usual + '-';
+
+        target.my_new = 123;
+        str += p.my_new + '-';
+
+        Object.defineProperty(p, 'my_validated', {
+          configurable: true,
+          writable: true,
+          enumerable: true,
+          value: 300,
+        });
+        str += p.my_validated + '-';
+
+        ), "42-100-12-12-12-199-199-foo-foo-123-300-"
+      );
+
+  /* In non-strict mode, value returned from `set` does not matter */
+  ASSERT_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var handler = ({
+          set: function(obj, name, value) {
+            if (name !== 'my_validated' || (typeof value === 'number' && value < 200)) {
+              obj[name] = value;
+            }
+          }
+        });
+        var target = {my_existing: 100};
+        var p = new Proxy(target, handler);
+        var str = '';
+
+        p.my_validated = 12;
+        str += p.my_validated + '-';
+        ), "12-"
+      );
+
+  /* In strict mode, falsy returned value causes throw */
+  ASSERT_EVAL_ERR(
+      v7, STRINGIFY(
+        'use strict';
+        var handler = ({
+          set: function(obj, name, value) {
+            if (name !== 'my_validated' || (typeof value === 'number' && value < 200)) {
+              obj[name] = value;
+            }
+          }
+        });
+        var p = new Proxy({}, handler);
+
+        p.my_validated = 12;
+        ), V7_EXEC_EXCEPTION
+      );
+
+  /* test C proxy API */
+
+  {
+    v7_val_t proxy = V7_UNDEFINED;
+    v7_proxy_hnd_t handler;
+
+    v7_own(v7, &proxy);
+
+    memset(&handler, 0x00, sizeof(handler));
+
+    handler.get = proxy_handler_get;
+    handler.set = proxy_handler_set;
+
+    proxy = v7_mk_proxy(v7, V7_UNDEFINED, &handler);
+    v7_def(v7, v7->vals.global_object, "my_proxy", ~0, V7_DESC_ENUMERABLE(0),
+           proxy);
+
+    ASSERT_EVAL_NUM_EQ(v7, "my_proxy.something", 100);
+    ASSERT_EVAL_NUM_EQ(v7, "my_proxy.something_another", 100);
+    ASSERT_EVAL_NUM_EQ(v7, "my_proxy.two", 2);
+
+    ASSERT_EVAL_EQ(v7, "my_proxy.test1 = 12; my_proxy.test1", "100");
+    ASSERT_EVAL_STR_EQ(v7, "my_proxy.test1 = '12'; my_proxy.test1", "12");
+
+    v7_disown(v7, &proxy);
+  }
+
+  /* }}} */
+#endif
 
   v7_destroy(v7);
   return NULL;
@@ -4294,3 +4459,5 @@ int main(int argc, char *argv[]) {
          total_elapsed);
   return fail_msg == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+
+        /* clang-format on */
