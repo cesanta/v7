@@ -2581,7 +2581,8 @@ static const char *test_ubjson(void) {
 
 static int s_global_user_data_destructed = 0;
 
-static void user_data_destructor(void *ud) {
+static void user_data_destructor(struct v7 *v7, void *ud) {
+  (void) v7;
   if (ud == NULL) {
     s_global_user_data_destructed = 1;
   } else {

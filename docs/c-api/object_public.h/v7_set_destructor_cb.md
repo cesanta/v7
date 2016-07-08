@@ -11,8 +11,10 @@ reclaimed by the garbage collector.
 
 The callback will be invoked while garbage collection is still in progress
 and hence the internal state of the JS heap is in an undefined state.
-The callback thus cannot perform any calls to the V7 API and will receive
-only the user data associated with the destructed object.
+
+The only v7 API which is safe to use in this callback is `v7_disown()`,
+that's why `v7` pointer is given to it. *Calls to any other v7 functions are
+illegal here*.
 
 The intended use case is to reclaim resources allocated by C code. 
 
