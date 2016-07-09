@@ -2958,6 +2958,34 @@ static const char *test_exec_generic(void) {
       v7, "try{}", V7_SYNTAX_ERROR
       );
 
+  /*
+   * thrown value should survive if some function is called from the finally
+   * block
+   */
+  ASSERT_EVAL_STR_EQ(
+      v7,
+      "var ret=''; "
+      "function a(){}; "
+      "try{ try { throw 'foo'; } finally { a(); } } catch (e) { ret=e; }; "
+      "ret",
+      "foo"
+      );
+
+  /*
+   * newly thrown exception from the finally block should override the
+   * previously thrown one
+   */
+  ASSERT_EVAL_STR_EQ(
+      v7,
+      "var ret=''; "
+      "function a(){ throw 'bar'; }; "
+      "try{ try { throw 'foo'; } finally { a(); } } catch (e) { ret=e; }; "
+      "ret",
+      "bar"
+      );
+
+  v7_del(v7, v7->vals.global_object, "a", 1);
+
   ASSERT_EVAL_NUM_EQ(
       v7, STRINGIFY(
           var a;
