@@ -12,6 +12,8 @@ items:
   - { type: file, name: v7_set.md }
   - { type: file, name: v7_set_method.md }
   - { type: file, name: v7_del.md }
+  - { type: file, name: v7_init_prop_iter_ctx.md }
+  - { type: file, name: v7_destruct_prop_iter_ctx.md }
   - { type: file, name: v7_next_prop.md }
   - { type: file, name: v7_is_instanceof.md }
   - { type: file, name: v7_is_instanceof_v.md }
@@ -21,6 +23,7 @@ items:
   - { type: file, name: v7_prop_attr_t.md }
   - { type: file, name: v7_prop_attr_desc_t.md }
   - { type: file, name: v7_destructor_cb_t.md }
+  - { type: file, name: struct_prop_iter_ctx.md }
 ---
 
 

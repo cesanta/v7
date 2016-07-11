@@ -141,6 +141,33 @@ static enum v7_err proxy_handler_set(struct v7 *v7, v7_val_t *res) {
 
   return V7_OK;
 }
+
+static enum v7_err proxy_handler_own_keys(struct v7 *v7, v7_val_t *res) {
+  *res = v7_mk_dense_array(v7);
+  v7_array_set(v7, *res, 0, v7_mk_string(v7, "foo", ~0, 1));
+  v7_array_set(v7, *res, 1, v7_mk_string(v7, "bar", ~0, 1));
+  v7_array_set(v7, *res, 2, v7_mk_string(v7, "tic", ~0, 1));
+  v7_array_set(v7, *res, 3, v7_mk_string(v7, "tac", ~0, 1));
+
+  return V7_OK;
+}
+
+static int proxy_handler_get_own_property(struct v7 *v7, v7_val_t name,
+                                          struct v7_property *res_prop) {
+  /*
+   * don't change attributes: by default, the property is writable,
+   * configurable and enumerable
+   */
+  res_prop->value = v7_mk_number(v7, 1000);
+
+  if (name == v7_mk_string(v7, "tic", ~0, 1)) {
+    /* property, like, does not exist */
+    return 0;
+  } else {
+    /* property, like, exists */
+    return 1;
+  }
+}
 #endif
 
 static void our_asprintf(char **out, const char *fmt, ...) {
@@ -4391,6 +4418,85 @@ static const char *test_exec_generic(void) {
         ), V7_EXEC_EXCEPTION
       );
 
+  /* ownKeys without custom getOwnPropertyDescriptor */
+  ASSERT_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var myKeys = ([]);
+        var handler = ({
+          ownKeys: function(obj) {
+            return myKeys;
+          },
+        });
+        var target = ({a: 1, b: 2, c: 3});
+        var p = new Proxy(target, handler);
+        var str = '';
+
+        str += '_';
+        for (var i in p) {
+          str += i + '-';
+        }
+
+        myKeys = (['b']);
+
+        str += '_';
+        for (var i in p) {
+          str += i + '-';
+        }
+
+        myKeys = (['c', 'q', 'a', 'd']);
+
+        str += '_';
+        for (var i in p) {
+          str += i + '-';
+        }
+        ), "__b-_c-a-"
+      );
+
+  /* ownKeys with custom getOwnPropertyDescriptor */
+  ASSERT_EVAL_STR_EQ(
+      v7, STRINGIFY(
+        var myKeys = ([]);
+        var handler = ({
+          ownKeys: function(obj) {
+            return myKeys;
+          },
+          getOwnPropertyDescriptor: function(){
+            return {
+              enumerable: true,
+              configurable: true,
+              writable: true,
+              value: 'hey',
+            };
+          },
+          get: function(obj, prop) {
+            return prop in obj ? obj[prop] : 42;
+          },
+        });
+        var target = ({a: 1, b: 2, c: 3});
+        var p = new Proxy(target, handler);
+        var str = '';
+
+        str += '_';
+        for (var i in p) {
+          str += i + '-';
+        }
+
+        myKeys = (['b']);
+
+        str += '_';
+        for (var i in p) {
+          str += i + ':' + p[i] + '-';
+        }
+
+        myKeys = (['c', 'q', 'a', 'd']);
+
+        str += '_';
+        for (var i in p) {
+          str += i + ':' + p[i] + '-';
+        }
+        ), "__b:2-_c:3-q:42-a:1-d:42-"
+      );
+
   /* test C proxy API */
 
   {
@@ -4403,6 +4509,8 @@ static const char *test_exec_generic(void) {
 
     handler.get = proxy_handler_get;
     handler.set = proxy_handler_set;
+    handler.own_keys = proxy_handler_own_keys;
+    handler.get_own_prop_desc = proxy_handler_get_own_property;
 
     proxy = v7_mk_proxy(v7, V7_UNDEFINED, &handler);
     v7_def(v7, v7->vals.global_object, "my_proxy", ~0, V7_DESC_ENUMERABLE(0),
@@ -4414,6 +4522,31 @@ static const char *test_exec_generic(void) {
 
     ASSERT_EVAL_EQ(v7, "my_proxy.test1 = 12; my_proxy.test1", "100");
     ASSERT_EVAL_STR_EQ(v7, "my_proxy.test1 = '12'; my_proxy.test1", "12");
+
+    /*
+     * NOTE: JSON.stringify() uses the value returned by
+     * getOwnPropertyDescriptor, because JSON.stringify() implemented in C and
+     * uses property structures directly.
+     *
+     * Node.js and major browsers behave differently: they prefer `get`
+     * callback over the value returned by `getOwnPropertyDescriptor`,
+     * but it's not worth to mimic that behaviour, since it's a corner case
+     * anyway.
+     *
+     * Providing callbacks which return consistent data is the way to go in any
+     * real-world usage case.
+     */
+    ASSERT_EVAL_STR_EQ(
+        v7,
+        "my_proxy.bar = 'hey'; "
+        "var str = ''; "
+        "for (var i in my_proxy) { "
+        "  str += i + ':' + my_proxy[i] + '-'; "
+        "} "
+        "str; "
+        ,
+        "foo:100-bar:hey-tac:100-"
+        );
 
     v7_disown(v7, &proxy);
   }
