@@ -3,8 +3,9 @@ title: "v7_get_own_prop_desc_cb_t"
 decl_name: "v7_get_own_prop_desc_cb_t"
 symbol_kind: "typedef"
 signature: |
-  typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t name,
-                                         v7_prop_attr_t *attrs, v7_val_t *value);
+  typedef int(v7_get_own_prop_desc_cb_t)(struct v7 *v7, v7_val_t target,
+                                         v7_val_t name, v7_prop_attr_t *attrs,
+                                         v7_val_t *value);
 ---
 
 C callback, analogue of JS callback `getOwnPropertyDescriptor()`.

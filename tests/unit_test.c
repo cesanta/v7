@@ -152,8 +152,8 @@ static enum v7_err proxy_handler_own_keys(struct v7 *v7, v7_val_t *res) {
   return V7_OK;
 }
 
-static int proxy_handler_get_own_property(struct v7 *v7, v7_val_t name,
-                                          v7_prop_attr_t *attrs,
+static int proxy_handler_get_own_property(struct v7 *v7, v7_val_t target,
+                                          v7_val_t name, v7_prop_attr_t *attrs,
                                           v7_val_t *value) {
   /*
    * don't change attributes: by default, the property is writable,
@@ -161,6 +161,7 @@ static int proxy_handler_get_own_property(struct v7 *v7, v7_val_t name,
    */
   *value = v7_mk_number(v7, 1000);
 
+  (void) target;
   (void) attrs;
 
   if (name == v7_mk_string(v7, "tic", ~0, 1)) {
