@@ -6,6 +6,7 @@ items:
   - { type: file, name: v7_mk_object.md }
   - { type: file, name: v7_is_object.md }
   - { type: file, name: v7_set_proto.md }
+  - { type: file, name: v7_get_proto.md }
   - { type: file, name: v7_get.md }
   - { type: file, name: v7_get_throwing.md }
   - { type: file, name: v7_def.md }
