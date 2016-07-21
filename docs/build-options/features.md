@@ -15,3 +15,9 @@ title: Features
 - `-DV7_EXE` - Export `main()` function, i.e. create V7 executable.
 - `-DV7_NO_FS` - Disable all functions that access filesystem, like
   `v7_exec_file()`, `File`, etc.
+- `-DV7_NO_COMPILER` - Disable JavaScript compiler and all related modules:
+  tokenizer, parser, AST. V7 will only be able to evaluate a precompiled JS
+  bytecode, not a real JS code. NOTE: currently it's only possible to use this
+  option together with `V7_THAW` (see "Freezing" section below), since normal
+  v7 initialization routine currently includes evaluating some real JavaScript
+  code.
