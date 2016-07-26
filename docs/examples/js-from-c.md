@@ -2,7 +2,7 @@
 title: Call JavaScript function from C/C++
 ---
 
-This is the reverse example. Now we have a JavaScript function `sum()` that calculates sum of two numbers. Here is how we call that function from C/C++:
+This is the reverse example. Now, we have a JavaScript function `sum()` that calculates the sum of two numbers. Here is how we call that function from C/C++:
 
 ```c
 #include <stdio.h>

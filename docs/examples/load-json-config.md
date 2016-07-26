@@ -26,6 +26,6 @@ clean:
 v7_destroy(v7);
 ```
 
-Note: JavaScript configuration may contain not only static data, but also some
+Note: The JavaScript configuration may contain not only static data, but also some
 dynamic logic in form of JavaScript function calls. That makes it possible to
 write adaptive configuration and offload configuration logic to JavaScript.

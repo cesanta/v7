@@ -2,11 +2,11 @@
 title: Call C/C++ function from JavaScript
 ---
 
-This example demonstrates how to export existing C/C++ function to
-the JavaScript environment. Here, C function `sum()` that
-calculates a sum of two numbers gets exported to JavaScript. A C application
-`my_app.c` executes JavaScript file `my_js_code.js` which
-call `sum()` that invokes C function `sum()`.
+This example demonstrates how to export existing C/C++ functions to
+the JavaScript environment. Here, the C function `sum()` that
+calculates a sum of two numbers gets exported to JavaScript. The C application
+`my_app.c` executes a JavaScript file `my_js_code.js` which
+calls `sum()` that invokes the C function `sum()`.
 
 ```c
 #include <stdio.h>

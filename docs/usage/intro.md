@@ -2,13 +2,13 @@
 title: Usage
 ---
 
-V7 is deployed in two files `v7.h` and `v7.c`.  `v7.h` defines V7 C/C++
-embedding API. `v7.c` implements JavaScript engine.
+V7 is deployed in two files `v7.h` and `v7.c`.  `v7.h` defines the V7 C/C++
+embedding API. `v7.c` implements the JavaScript engine.
 In order to embed V7 in your program,
 
-- Copy `v7.c` and `v7.h` to your project
+- Copy `v7.c` and `v7.h` in to your project
 - Write code that uses V7 API, e.g. in `my_app.c`
-- Compile application: `$ cc my_app.c mongoose.c`
+- Compile the application: `$ cc my_app.c mongoose.c`
 
 ```c
 /* Include V7 API definitions */
