@@ -4,4 +4,4 @@ signature: |
   socket_obj.close() -> numeric_errno
 ---
 
-Close socket object. Return 0 on success, or system errno on error.
+Closes the socket object. Returns 0 on success or a system errno on error.

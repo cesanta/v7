@@ -4,5 +4,5 @@ signature: |
   socket_obj.recv() -> string
 ---
 
-Read data from socket. Return data string, or empty string if peer has
+Reads data from socket. Returns data string or empty string if peer has
 disconnected, or `null` on error.

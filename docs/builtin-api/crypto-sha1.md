@@ -5,5 +5,5 @@ signature: |
   Crypto.sha1_hex(str)
 ---
 
-Generate SHA1 hash from input string `str`. Return 20-byte hash (`sha1()`), or
+Generates a SHA1 hash from the input string `str`. Returns 20-byte hash (`sha1()`) or a
 stringified hexadecimal representation of the hash (`sha1_hex`).

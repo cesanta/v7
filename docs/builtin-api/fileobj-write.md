@@ -4,4 +4,4 @@ signature: |
   file_obj.write(str) -> num_bytes_written
 ---
 
-Write string `str` to the opened file object. Return number of bytes written.
+Writes a string `str` to the opened file object. Returns the number of bytes written.

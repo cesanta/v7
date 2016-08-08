@@ -2,7 +2,7 @@
 title: Mbufs
 ---
 
-Mbufs are mutable/growing memory buffers, kinda like C++ strings:
+Mbufs are mutable/growing memory buffers, similar to C++ strings:
 
 ```
 struct mbuf {
@@ -12,6 +12,6 @@ struct mbuf {
 };
 ```
 
-Mbuf can append data to the end of a buffer, or insert data into arbitrary
+Mbuf can append data to the end of a buffer or insert data into an arbitrary
 position in the middle of a buffer. The buffer grows automatically when needed.
 Mbuf is used as a backing store for the AST and strings.

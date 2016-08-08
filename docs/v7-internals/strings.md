@@ -3,13 +3,13 @@ title: Strings
 ---
 
 Strings in V7 are stored as UTF8 chunks of memory. They are always
-0-terminated, in order to be suitable for standard C string functions.
+0-terminated in order to be suitable for standard C string functions.
 V7 has four distinct string types:
 
 - `#define V7_TAG_STRING_I ((uint64_t) 0xFFFA << 48)` - this is an inlined
-  string. Inlined string are fully contained in the NaN payload. NaN payload
-  is 6 bytes in total. First byte of the payload specifies string length.
-  Another byte is 0 terminator. Therefore, inlined strings could only be
+  string. Inlined strings are fully contained in the NaN payload. The NaN payload
+  is 6 bytes in total. The first byte of the payload specifies the string length.
+  Another byte is the 0 terminator. Therefore, inlined strings can only be
   4 bytes or less. For example, inlined string `hi!` looks like this:
 
 ```
@@ -28,8 +28,8 @@ V7 has four distinct string types:
 
 - `#define V7_TAG_STRING_O ((uint64_t) 0xFFF8 << 48)` - this is an owned
    string, i.e. string data is owned by V7. This type is for larger strings.
-   NaN payload is a pointer to a memory chunk containing varint-encoded
-   string length followed by string data, 0-terminated. All such memory
+   The NaN payload is a pointer to a memory chunk containing the varint-encoded
+   string length followed by string data, 0-terminated. All these memory
    chunks are stored in `struct v7::owned_strings` mbuf. Example of a string
    `Mukacheve` looks like this:
 
@@ -46,8 +46,8 @@ V7 has four distinct string types:
 
 
 - `#define V7_TAG_STRING_F ((uint64_t) 0xFFF7 << 48)` - this string type is
-   used for long (>5 bytes) strings, whose data is not owned by V7. NaN payload
-   is a pointer to a memory chunk containing varint-encoded string length
+   used for long (>5 bytes) strings, whose data is not owned by V7. The NaN payload
+   is a pointer to a memory chunk containing the varint-encoded string length
    followed by a pointer to string data outside V7. V7 cannot guarantee that
    the foreign string is 0-terminated. Example of a foreign string
    `Marko The Great`:

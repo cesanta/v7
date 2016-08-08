@@ -4,4 +4,4 @@ signature: |
   Crypto.base64_decode(str)
 ---
 
-Base64-decode input string `str` and return decoded string.
+Base64-decode inputs string `str` and returns decoded string.

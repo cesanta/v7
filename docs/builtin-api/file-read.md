@@ -4,7 +4,7 @@ signature: |
   File.read(file_name) -> string or undefined
 ---
 
-Open a file `path`, read until EOF and return. In case of errors
+Opens a file `path`, reads until EOF and returns. In case of errors
 `undefined` is returned.
 
 ```c

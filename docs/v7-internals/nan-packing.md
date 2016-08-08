@@ -13,8 +13,8 @@ seeeeeee|eeeemmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm|mmmmmmmm
 ```
 
 If an exponent is all-1 and mantissa is non-0, then `double` value represents
-NaN (not-a-number). V7 uses first 4 bits of mantissa to store value type,
-and the rest 48 bits of mantissa goes to storing values:
+NaN (not-a-number). V7 uses the first 4 bits of mantissa to store the value type
+and the remaining 48 bits of mantissa goes to storing values:
 
 ```
 11111111|1111tttt|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv|vvvvvvvv

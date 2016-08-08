@@ -4,7 +4,7 @@ signature: |
   sock.send(string) -> num_bytes_sent
 ---
 
-Send string to the socket. Return number of bytes sent, or 0 on error.
+Sends a string to the socket. Returns the number of bytes sent or 0 on error.
 Simple HTTP client example:
 
 ```c

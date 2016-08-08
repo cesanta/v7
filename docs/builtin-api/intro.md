@@ -26,9 +26,9 @@ items:
 
 Builtin API provides additional JavaScript interfaces available for V7 scripts.
 
-File API is a wrapper around standard C calls `fopen()`, `fclose()`, `fread()`,
+The File API is a wrapper around standard C calls `fopen()`, `fclose()`, `fread()`,
 `fwrite()`, `rename()`, `remove()`.
 
-Crypto API provides functions for base64, md5, and sha1 encoding/decoding.
+The Crypto API provides functions for Base64, MD5, and SHA1 encoding/decoding.
 
-Socket API provides low-level socket API.
+The Socket API provides a low-level socket API.
