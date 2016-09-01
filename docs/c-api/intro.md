@@ -1,16 +1,16 @@
 ---
 items:
-  - { type: dir, name: core_public.h }
-  - { type: dir, name: primitive_public.h }
-  - { type: dir, name: string_public.h }
-  - { type: dir, name: object_public.h }
-  - { type: dir, name: array_public.h }
-  - { type: dir, name: function_public.h }
-  - { type: dir, name: regexp_public.h }
-  - { type: dir, name: conversion_public.h }
-  - { type: dir, name: exec_public.h }
-  - { type: dir, name: exceptions_public.h }
-  - { type: dir, name: gc_public.h }
-  - { type: dir, name: util_public.h }
-  - { type: dir, name: main_public.h }
+  - { name: core_public.h }
+  - { name: primitive_public.h }
+  - { name: string_public.h }
+  - { name: object_public.h }
+  - { name: array_public.h }
+  - { name: function_public.h }
+  - { name: regexp_public.h }
+  - { name: conversion_public.h }
+  - { name: exec_public.h }
+  - { name: exceptions_public.h }
+  - { name: gc_public.h }
+  - { name: util_public.h }
+  - { name: main_public.h }
 ---
