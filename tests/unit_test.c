@@ -4315,7 +4315,7 @@ static const char *test_exec_generic(void) {
         });
         var target = {my_existing: 100};
         var p = new Proxy(target, handler);
-        var str = '';
+        var str = "";
 
         str += p.my_non_existing + '-';
         str += p.my_existing + '-';
@@ -4367,7 +4367,7 @@ static const char *test_exec_generic(void) {
         });
         var target = {my_existing: 100};
         var p = new Proxy(target, handler);
-        var str = '';
+        var str = "";
 
         p.my_validated = 12;
         str += p.my_validated + '-';
@@ -4402,7 +4402,7 @@ static const char *test_exec_generic(void) {
         });
         var target = ({a: 1, b: 2, c: 3});
         var p = new Proxy(target, handler);
-        var str = '';
+        var str = "";
 
         str += '_';
         for (var i in p) {
@@ -4447,7 +4447,7 @@ static const char *test_exec_generic(void) {
         });
         var target = ({a: 1, b: 2, c: 3});
         var p = new Proxy(target, handler);
-        var str = '';
+        var str = "";
 
         str += '_';
         for (var i in p) {
