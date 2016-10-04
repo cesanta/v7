@@ -17,7 +17,12 @@ Usage example (here we assume we have some `v7_val_t obj`):
 
     v7_init_prop_iter_ctx(v7, obj, &ctx);
     while (v7_next_prop(v7, &ctx, &name, &val, &attrs)) {
+      if (V7_PROP_ATTR_IS_ENUMERABLE(attrs)) continue;
       ...
     }
-    v7_destruct_prop_iter_ctx(v7, &ctx); 
+    v7_destruct_prop_iter_ctx(v7, &ctx);
+
+As you see, v7_next_prop will iterate through all properties, including
+non-enumerable ones, and it's your responsibility to test the attributes
+with the provided `V7_PROP_ATTR_*` macros and proceed as you see fit. 
 

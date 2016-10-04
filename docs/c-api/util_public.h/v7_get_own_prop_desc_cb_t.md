@@ -16,5 +16,7 @@ Callbacks of this type are used for C API only, see `m7_mk_proxy()`.
 set to 0, and `value` is `V7_UNDEFINED`.
 
 It should return non-zero if the property should be considered existing, or
-zero otherwise. 
+zero otherwise.
+
+You can inspect the property attributes with the `V7_PROP_ATTR_IS_*` macros. 
 
