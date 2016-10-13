@@ -79,6 +79,10 @@ extern long timezone;
 #define MAX_ECMA_REPORT_LINES 100000
 #define ECMA_WORKER_THREADS 4
 
+#ifndef V7_VERBOSE_ECMA
+#define V7_VERBOSE_ECMA 0
+#endif
+
 struct ecma_test {
   int index;
   const char *driver;
@@ -2181,7 +2185,7 @@ static const char *test_to_json(void) {
   eval(v7, "123.45", &v);
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, c);
-#if TODO
+#if 0 /* TODO */
   eval(v7, "({a: new Number(123.45)})", &v);
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, c);
@@ -2194,7 +2198,7 @@ static const char *test_to_json(void) {
   eval(v7, "'foo'", &v);
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, c);
-#if TODO
+#if 0 /* TODO */
   eval(v7, "new String('foo')", &v);
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, c);
@@ -2222,7 +2226,7 @@ static const char *test_to_json(void) {
   eval(v7, "({a: true})", &v);
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, c);
-#if TODO
+#if 0 /* TODO */
   eval(v7, "({a: new Boolean(true)})", &v);
   ASSERT((p = v7_to_json(v7, v, buf, sizeof(buf))) == buf);
   ASSERT_STREQ(p, c);
