@@ -288,7 +288,7 @@ static int test_if_expr(struct v7 *v7, const char *expr, int result) {
   return result == (v7_is_truthy(v7, v) ? 1 : 0);
 }
 
-#if !defined(V7_DISABLE_FILENAMES) || !defined(V7_DISABLE_LINE_NUMBERS)
+#if !V7_DISABLE_FILENAMES || !V7_DISABLE_LINE_NUMBERS
 /*
  * Equivalent to `v7_exec()`, but passes "test_expr" as a filename to be used
  * for stack traces
@@ -524,7 +524,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_OK(v7, "new Number(21.23)");
 
 /* Cesanta-specific String API */
-#ifdef CS_ENABLE_UTF8
+#if CS_ENABLE_UTF8
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.length", 1);
   ASSERT_EVAL_NUM_EQ(v7, "'ы'.charCodeAt(0)", 1099);
 #endif
@@ -548,7 +548,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', false)", 0.0);
   ASSERT_EVAL_NUM_EQ(v7, "'aabb'.indexOf('a', true)", 1.0);
 
-#ifdef CS_ENABLE_UTF8
+#if CS_ENABLE_UTF8
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д')", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 2)", 2.0);
   ASSERT_EVAL_NUM_EQ(v7, "'1234д6 1234д6'.indexOf('34д', 3)", 9.0);
@@ -688,7 +688,7 @@ static const char *test_stdlib(void) {
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('1234');", "['123']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'123'.split('');", "['1','2','3']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'111'.split('1');", "['','','','']");
-#ifdef CS_ENABLE_UTF8
+#if CS_ENABLE_UTF8
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('б');", "['а','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'абв'.split('');", "['а','б','в']");
   ASSERT_EVAL_JS_EXPR_EQ(v7, "'rбв'.split('');", "['r','б','в']");
@@ -710,7 +710,7 @@ static const char *test_stdlib(void) {
 /* Date() tests interact with external object (local date & time), so
     if host have strange date/time setting it won't be work */
 
-#ifdef V7_ENABLE__Date
+#if V7_ENABLE__Date
   ASSERT_EVAL_EQ(v7, "Number(new Date('IncDec 01 2015 00:00:00'))", "NaN");
   ASSERT_EVAL_EQ(v7, "Number(new Date('My Jul 01 2015 00:00:00'))", "NaN");
 #endif
@@ -967,7 +967,7 @@ static const char *test_apply(void) {
   return NULL;
 }
 
-#ifdef V7_ENABLE_DENSE_ARRAYS
+#if V7_ENABLE_DENSE_ARRAYS
 static const char *test_dense_arrays(void) {
   struct v7 *v7 = v7_create();
   val_t a;
@@ -1164,12 +1164,12 @@ static const char *test_parser(void) {
     "undefined",
     "u",
     "{var x=1;2;}",
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
     "({get a() { return 1 }})",
     "({get a() { return 1 }, set b(c) { this.x = c }, d: 0})",
 #endif
     "({get: function() {return 42;}})",
-#ifdef V7_ENABLE_JS_SETTERS
+#if V7_ENABLE_JS_SETTERS
     "({set a(b) { this.x = b }})",
 #endif
     "Object.defineProperty(o, \"foo\", {get: function() {return 42;}});",
@@ -1208,10 +1208,10 @@ static const char *test_parser(void) {
     "for(var i in a) {1}",
     "for(i in a) {1}",
     "!function(){function d(){}var x}();",
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
     "({get a() { function d(){} return 1 }})",
 #endif
-#ifdef V7_ENABLE_JS_SETTERS
+#if V7_ENABLE_JS_SETTERS
     "({set a(v) { function d(a){} d(v) }})",
 #endif
     "({a:1, b() { return 2 }, c(d) {}})",
@@ -1490,7 +1490,7 @@ static const char *test_ecmac(void) {
       continue;
     }
 
-#if !defined(V7_ENABLE_JS_GETTERS) || !defined(V7_ENABLE_JS_SETTERS)
+#if !V7_ENABLE_JS_GETTERS || !V7_ENABLE_JS_SETTERS
     if ((i >= 189 && i <= 204) || (i >= 253 && i <= 268) ||
         (i >= 568 && i <= 573) || (i >= 1066 && i <= 1083) || i == 1855) {
       our_asprintf(&tests[i].report, "%d\tSKIP %s\n", i, tail_cmd);
@@ -1980,19 +1980,19 @@ static const char *test_interpreter(void) {
                  "case 3: o.three=1; break; default: o.def=1};o",
                  c);
 
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
   ASSERT_EVAL_EQ(v7, "o={get x(){return 42}};o.x", "42");
   ASSERT_EVAL_EQ(v7, "o={get x(){return 10},set x(v){}};o.x", "10");
 #endif
-#ifdef V7_ENABLE_JS_SETTERS
+#if V7_ENABLE_JS_SETTERS
   ASSERT_EVAL_EQ(v7, "o={set x(a){this.y=a}};o.x=42;o.y", "42");
   ASSERT_EVAL_EQ(v7, "o={set x(v){},get x(){return 10}};o.x", "10");
 #endif
-#if defined(V7_ENABLE_JS_GETTERS) && defined(V7_ENABLE_JS_SETTERS)
+#if V7_ENABLE_JS_GETTERS && V7_ENABLE_JS_SETTERS
   ASSERT_EVAL_EQ(v7, "r=0;o={get x() {return 10}, set x(v){r=v}};o.x=10;r",
                  "10");
 #endif
-#ifdef V7_ENABLE_JS_GETTERS
+#if V7_ENABLE_JS_GETTERS
   ASSERT_EVAL_EQ(v7,
                  "g=0;function O() {}; O.prototype = {set x(v) {g=v}};o=new "
                  "O;o.x=42;[g,Object.keys(o)]",
@@ -2328,7 +2328,7 @@ static const char *test_unescape(void) {
   return NULL;
 }
 
-#ifndef V7_DISABLE_GC
+#if !V7_DISABLE_GC
 static const char *test_gc_ptr_check(void) {
   struct v7 *v7 = v7_create();
   val_t v;
@@ -2478,7 +2478,7 @@ static const char *test_gc_own(void) {
 }
 #endif
 
-#ifdef V7_ENABLE_FILE
+#if V7_ENABLE_FILE
 static int check_file(struct v7 *v7, v7_val_t s, const char *file_name) {
   size_t n1, n2;
   char *s1 = read_file(file_name, &n1);
@@ -2541,7 +2541,7 @@ static const char *test_file(void) {
 }
 #endif
 
-#ifdef V7_ENABLE_SOCKET
+#if V7_ENABLE_SOCKET
 static const char *test_socket(void) {
   struct v7 *v7 = v7_create();
   const char *c;
@@ -2558,7 +2558,7 @@ static const char *test_socket(void) {
 }
 #endif
 
-#ifdef V7_ENABLE_CRYPTO
+#if V7_ENABLE_CRYPTO
 static const char *test_crypto(void) {
   struct v7 *v7 = v7_create();
   const char *c;
@@ -4194,7 +4194,7 @@ static const char *test_exec_generic(void) {
         ), "true"
       );
 
-#if !defined(V7_DISABLE_FILENAMES) || !defined(V7_DISABLE_LINE_NUMBERS)
+#if !V7_DISABLE_FILENAMES || !V7_DISABLE_LINE_NUMBERS
   ASSERT_EVAL_JS_EXPR_EQ_FN(
       v7,
       "var err;\n"
@@ -4550,19 +4550,19 @@ static const char *run_all_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_interpreter);
   RUN_TEST(test_interp_unescape);
   RUN_TEST(test_strings);
-#ifdef V7_ENABLE_DENSE_ARRAYS
+#if V7_ENABLE_DENSE_ARRAYS
   RUN_TEST(test_dense_arrays);
 #endif
-#ifdef V7_ENABLE_FILE
+#if V7_ENABLE_FILE
   RUN_TEST(test_file);
 #endif
-#ifdef V7_ENABLE_SOCKET
+#if V7_ENABLE_SOCKET
   RUN_TEST(test_socket);
 #endif
-#ifdef V7_ENABLE_CRYPTO
+#if V7_ENABLE_CRYPTO
   RUN_TEST(test_crypto);
 #endif
-#ifndef V7_DISABLE_GC
+#if !V7_DISABLE_GC
   RUN_TEST(test_gc_ptr_check);
   RUN_TEST(test_gc_mark);
 #ifndef V7_MALLOC_GC
