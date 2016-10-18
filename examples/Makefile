@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Cesanta Software
 # All rights reserved
 
-SUBDIRS = $(sort $(dir $(wildcard */)))
+SUBDIRS = $(sort $(dir $(wildcard */Makefile)))
 
 .PHONY: $(SUBDIRS)
 
