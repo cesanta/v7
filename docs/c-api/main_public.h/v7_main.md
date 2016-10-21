@@ -3,7 +3,7 @@ title: "v7_main()"
 decl_name: "v7_main"
 symbol_kind: "func"
 signature: |
-  int v7_main(int argc, char *argv[], void (*pre_freeze_init);
+  int v7_main(int argc, char *argv[], void (*pre_freeze_init)(struct v7 *), void (*pre_init)(struct v7 *), void (*post_init)(struct v7 *));;
 ---
 
 V7 executable main function.
