@@ -338,12 +338,24 @@ typedef struct _stati64 cs_stat_t;
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef __APPLE__
+#include <machine/endian.h>
+#ifndef BYTE_ORDER
+#define LITTLE_ENDIAN __DARWIN_LITTLE_ENDIAN
+#define BIG_ENDIAN __DARWIN_BIG_ENDIAN
+#define PDP_ENDIAN __DARWIN_PDP_ENDIAN
+#define BYTE_ORDER __DARWIN_BYTE_ORDER
+#endif
+#endif
+
 /*
  * osx correctly avoids defining strtoll when compiling in strict ansi mode.
+ * c++ 11 standard defines strtoll as well.
  * We require strtoll, and if your embedded pre-c99 compiler lacks one, please
  * implement a shim.
  */
-#if !(defined(__DARWIN_C_LEVEL) && __DARWIN_C_LEVEL >= 200809L)
+#if !(defined(__cplusplus) && __cplusplus >= 201103L) && \
+    !(defined(__DARWIN_C_LEVEL) && __DARWIN_C_LEVEL >= 200809L)
 long long strtoll(const char *, char **, int);
 #endif
 
@@ -871,6 +883,10 @@ struct timeval {
 
 #if MG_NET_IF == MG_NET_IF_SIMPLELINK
 
+#define MG_SIMPLELINK_NO_OSI 1
+
+#include <simplelink.h>
+
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
 
@@ -907,6 +923,8 @@ int inet_pton(int af, const char *src, void *dst);
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
+
+#define to64(x) strtoll(x, NULL, 10)
 
 #define MG_NET_IF             MG_NET_IF_LWIP_LOW_LEVEL
 #define LWIP_TIMEVAL_PRIVATE  0
@@ -5383,6 +5401,7 @@ extern "C" {
 /*
  * Execute JavaScript `js_code`. The result of evaluation is stored in
  * the `result` variable.
+ * The code can be either a JavaScript source or a precompiled bytecode.
  *
  * Return:
  *
@@ -5422,6 +5441,16 @@ struct v7_exec_opts {
  */
 enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
                         const struct v7_exec_opts *opts, v7_val_t *res);
+
+/*
+ * Like v7_exec but it expects an explicit length instead of treating the code
+ * as a null terminated string.
+ *
+ * The code can be either a JS source or a precompiled bytecode.
+ */
+WARN_UNUSED_RESULT
+enum v7_err v7_exec_buf(struct v7 *v7, const char *js_code, size_t len,
+                        v7_val_t *result);
 
 /*
  * Same as `v7_exec()`, but loads source code from `path` file.
@@ -17577,6 +17606,12 @@ enum v7_err v7_exec_opt(struct v7 *v7, const char *js_code,
                 V7_UNDEFINED,
                 (opts->this_obj == 0 ? V7_UNDEFINED : opts->this_obj),
                 opts->is_json, 0, 0, res);
+}
+
+enum v7_err v7_exec_buf(struct v7 *v7, const char *js_code, size_t len,
+                        v7_val_t *res) {
+  return b_exec(v7, js_code, len, NULL, V7_UNDEFINED, V7_UNDEFINED,
+                V7_UNDEFINED, 0, 0, 0, res);
 }
 
 enum v7_err v7_parse_json(struct v7 *v7, const char *str, v7_val_t *res) {

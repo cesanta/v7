@@ -8,6 +8,7 @@ signature: |
 
 Execute JavaScript `js_code`. The result of evaluation is stored in
 the `result` variable.
+The code can be either a JavaScript source or a precompiled bytecode.
 
 Return:
 
