@@ -20,7 +20,7 @@ V7 is the smallest JavaScript engine written in C. V7 features are:
 
 V7 makes it possible to program Internet of Things (IoT) embedded devices
 in JavaScript. V7 is a part of the full stack
-[Mongoose IoT Platform](https://github.com/cesanta/mongoose-iot).
+[Mongoose OS Platform](https://github.com/cesanta/mongoose-os).
 
 ## Examples & Documentation
 
