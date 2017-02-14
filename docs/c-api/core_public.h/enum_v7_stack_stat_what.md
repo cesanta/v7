@@ -11,6 +11,7 @@ signature: |
   
     V7_STACK_STATS_CNT
   };
+  
 ---
 
 Available if only `V7_ENABLE_STACK_TRACKING` is defined.

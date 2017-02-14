@@ -24,6 +24,7 @@ signature: |
     V7_HEAP_STAT_FUNC_OWNED,
     V7_HEAP_STAT_FUNC_OWNED_MAX
   };
+  
 ---
 
 Heap metric id, see `v7_heap_stat()` 
