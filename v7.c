@@ -1064,6 +1064,10 @@ int gettimeofday(struct timeval *tp, void *tzp);
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
 
+#ifndef EAGAIN
+#define EAGAIN EWOULDBLOCK
+#endif
+
 #ifndef __func__
 #define STRX(x) #x
 #define STR(x) STRX(x)
