@@ -1801,8 +1801,8 @@ void cs_log_printf(const char *fmt, ...);
 
 /* Amalgamated: #include "common/platform.h" */
 
-#ifndef DISABLE_MD5
-#define DISABLE_MD5 0
+#ifndef CS_DISABLE_MD5
+#define CS_DISABLE_MD5 0
 #endif
 
 #ifdef __cplusplus
@@ -1872,11 +1872,11 @@ char *cs_md5(char buf[33], ...);
 #ifndef CS_COMMON_SHA1_H_
 #define CS_COMMON_SHA1_H_
 
-#ifndef DISABLE_SHA1
-#define DISABLE_SHA1 0
+#ifndef CS_DISABLE_SHA1
+#define CS_DISABLE_SHA1 0
 #endif
 
-#if !DISABLE_SHA1
+#if !CS_DISABLE_SHA1
 
 /* Amalgamated: #include "common/platform.h" */
 
@@ -1900,7 +1900,7 @@ void cs_hmac_sha1(const unsigned char *key, size_t key_len,
 }
 #endif /* __cplusplus */
 
-#endif /* DISABLE_SHA1 */
+#endif /* CS_DISABLE_SHA1 */
 
 #endif /* CS_COMMON_SHA1_H_ */
 #ifdef V7_MODULE_LINES
@@ -10606,7 +10606,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst, int *dec_len) {
 /* Amalgamated: #include "common/str_util.h" */
 
 #if !defined(EXCLUDE_COMMON)
-#if !DISABLE_MD5
+#if !CS_DISABLE_MD5
 
 /* Amalgamated: #include "common/cs_endian.h" */
 
@@ -10793,7 +10793,7 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
-#endif /* DISABLE_MD5 */
+#endif /* CS_DISABLE_MD5 */
 
 char *cs_md5(char buf[33], ...) {
   unsigned char hash[16];
@@ -10825,7 +10825,7 @@ char *cs_md5(char buf[33], ...) {
 
 /* Amalgamated: #include "common/sha1.h" */
 
-#if !DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
+#if !CS_DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
 
 /* Amalgamated: #include "common/cs_endian.h" */
 
