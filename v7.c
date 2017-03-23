@@ -1467,6 +1467,34 @@ void mbuf_trim(struct mbuf *);
 
 #endif /* CS_COMMON_MBUF_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/mg_mem.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_MG_MEM_H_
+#define CS_COMMON_MG_MEM_H_
+
+#ifndef MG_MALLOC
+#define MG_MALLOC malloc
+#endif
+
+#ifndef MG_CALLOC
+#define MG_CALLOC calloc
+#endif
+
+#ifndef MG_REALLOC
+#define MG_REALLOC realloc
+#endif
+
+#ifndef MG_FREE
+#define MG_FREE free
+#endif
+
+#endif /* CS_COMMON_MG_MEM_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/str_util.h"
 #endif
 /*
@@ -1580,34 +1608,6 @@ int mg_avprintf(char **buf, size_t size, const char *fmt, va_list ap);
 #endif
 
 #endif /* CS_COMMON_STR_UTIL_H_ */
-#ifdef V7_MODULE_LINES
-#line 1 "common/mg_mem.h"
-#endif
-/*
- * Copyright (c) 2014-2016 Cesanta Software Limited
- * All rights reserved
- */
-
-#ifndef CS_COMMON_MG_MEM_H_
-#define CS_COMMON_MG_MEM_H_
-
-#ifndef MG_MALLOC
-#define MG_MALLOC malloc
-#endif
-
-#ifndef MG_CALLOC
-#define MG_CALLOC calloc
-#endif
-
-#ifndef MG_REALLOC
-#define MG_REALLOC realloc
-#endif
-
-#ifndef MG_FREE
-#define MG_FREE free
-#endif
-
-#endif /* CS_COMMON_MG_MEM_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/utf.h"
 #endif
@@ -8626,6 +8626,7 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
 
 #ifndef EXCLUDE_COMMON
 
+/* Amalgamated: #include "common/mg_mem.h" */
 /* Amalgamated: #include "common/platform.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
