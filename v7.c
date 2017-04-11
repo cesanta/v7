@@ -1818,7 +1818,7 @@ void cs_log_printf(const char *fmt, ...);
 
 #endif /* CS_COMMON_CS_DBG_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "common/md5.h"
+#line 1 "common/cs_md5.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -1838,25 +1838,15 @@ void cs_log_printf(const char *fmt, ...);
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct MD5Context {
+typedef struct {
   uint32_t buf[4];
   uint32_t bits[2];
   unsigned char in[64];
-} MD5_CTX;
+} cs_md5_ctx;
 
-void MD5_Init(MD5_CTX *c);
-void MD5_Update(MD5_CTX *c, const unsigned char *data, size_t len);
-void MD5_Final(unsigned char *md, MD5_CTX *c);
-
-/*
- * Return stringified MD5 hash for NULL terminated list of pointer/length pairs.
- * A length should be specified as size_t variable.
- * Example:
- *
- *    char buf[33];
- *    cs_md5(buf, "foo", (size_t) 3, "bar", (size_t) 3, NULL);
- */
-char *cs_md5(char buf[33], ...);
+void cs_md5_init(cs_md5_ctx *c);
+void cs_md5_update(cs_md5_ctx *c, const unsigned char *data, size_t len);
+void cs_md5_final(unsigned char *md, cs_md5_ctx *c);
 
 #ifdef __cplusplus
 }
@@ -1891,7 +1881,7 @@ char *cs_md5(char buf[33], ...);
 
 #endif /* CS_COMMON_CS_ENDIAN_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "common/sha1.h"
+#line 1 "common/cs_sha1.h"
 #endif
 /*
  * Copyright (c) 2014 Cesanta Software Limited
@@ -10607,7 +10597,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst, int *dec_len) {
 
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 1 "common/md5.c"
+#line 1 "common/cs_md5.c"
 #endif
 /*
  * This code implements the MD5 message-digest algorithm.
@@ -10626,7 +10616,7 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst, int *dec_len) {
  * will fill a supplied 16-byte array with the digest.
  */
 
-/* Amalgamated: #include "common/md5.h" */
+/* Amalgamated: #include "common/cs_md5.h" */
 /* Amalgamated: #include "common/str_util.h" */
 
 #if !defined(EXCLUDE_COMMON)
@@ -10661,7 +10651,7 @@ static void byteReverse(unsigned char *buf, unsigned longs) {
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
  * initialization constants.
  */
-void MD5_Init(MD5_CTX *ctx) {
+void cs_md5_init(cs_md5_ctx *ctx) {
   ctx->buf[0] = 0x67452301;
   ctx->buf[1] = 0xefcdab89;
   ctx->buf[2] = 0x98badcfe;
@@ -10671,7 +10661,7 @@ void MD5_Init(MD5_CTX *ctx) {
   ctx->bits[1] = 0;
 }
 
-static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
+static void cs_md5_transform(uint32_t buf[4], uint32_t const in[16]) {
   register uint32_t a, b, c, d;
 
   a = buf[0];
@@ -10753,7 +10743,7 @@ static void MD5Transform(uint32_t buf[4], uint32_t const in[16]) {
   buf[3] += d;
 }
 
-void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
+void cs_md5_update(cs_md5_ctx *ctx, const unsigned char *buf, size_t len) {
   uint32_t t;
 
   t = ctx->bits[0];
@@ -10772,7 +10762,7 @@ void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
     }
     memcpy(p, buf, t);
     byteReverse(ctx->in, 16);
-    MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
     buf += t;
     len -= t;
   }
@@ -10780,7 +10770,7 @@ void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
   while (len >= 64) {
     memcpy(ctx->in, buf, 64);
     byteReverse(ctx->in, 16);
-    MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
     buf += 64;
     len -= 64;
   }
@@ -10788,7 +10778,7 @@ void MD5_Update(MD5_CTX *ctx, const unsigned char *buf, size_t len) {
   memcpy(ctx->in, buf, len);
 }
 
-void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
+void cs_md5_final(unsigned char digest[16], cs_md5_ctx *ctx) {
   unsigned count;
   unsigned char *p;
   uint32_t *a;
@@ -10801,7 +10791,7 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   if (count < 8) {
     memset(p, 0, count);
     byteReverse(ctx->in, 16);
-    MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+    cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
     memset(ctx->in, 0, 56);
   } else {
     memset(p, 0, count - 8);
@@ -10812,42 +10802,21 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   a[14] = ctx->bits[0];
   a[15] = ctx->bits[1];
 
-  MD5Transform(ctx->buf, (uint32_t *) ctx->in);
+  cs_md5_transform(ctx->buf, (uint32_t *) ctx->in);
   byteReverse((unsigned char *) ctx->buf, 4);
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
 
-char *cs_md5(char buf[33], ...) {
-  unsigned char hash[16];
-  const unsigned char *p;
-  va_list ap;
-  MD5_CTX ctx;
-
-  MD5_Init(&ctx);
-
-  va_start(ap, buf);
-  while ((p = va_arg(ap, const unsigned char *) ) != NULL) {
-    size_t len = va_arg(ap, size_t);
-    MD5_Update(&ctx, p, len);
-  }
-  va_end(ap);
-
-  MD5_Final(hash, &ctx);
-  cs_to_hex(buf, hash, sizeof(hash));
-
-  return buf;
-}
-
 #endif /* CS_DISABLE_MD5 */
 #endif /* EXCLUDE_COMMON */
 #ifdef V7_MODULE_LINES
-#line 1 "common/sha1.c"
+#line 1 "common/cs_sha1.c"
 #endif
 /* Copyright(c) By Steve Reid <steve@edmweb.com> */
 /* 100% Public Domain */
 
-/* Amalgamated: #include "common/sha1.h" */
+/* Amalgamated: #include "common/cs_sha1.h" */
 
 #if !CS_DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
 
@@ -12478,10 +12447,10 @@ V7_PRIVATE enum v7_err Crypto_base64_encode(struct v7 *v7, v7_val_t *res) {
 }
 
 static void v7_md5(const char *data, size_t len, char buf[16]) {
-  MD5_CTX ctx;
-  MD5_Init(&ctx);
-  MD5_Update(&ctx, (unsigned char *) data, len);
-  MD5_Final((unsigned char *) buf, &ctx);
+  cs_md5_ctx ctx;
+  cs_md5_init(&ctx);
+  cs_md5_update(&ctx, (unsigned char *) data, len);
+  cs_md5_final((unsigned char *) buf, &ctx);
 }
 
 static void v7_sha1(const char *data, size_t len, char buf[20]) {
