@@ -9,6 +9,7 @@ calculates a sum of two numbers gets exported to JavaScript. The C application
 calls `sum()` that invokes the C function `sum()`.
 
 ```c
+
 #include <stdio.h>
 #include <string.h>
 #include "v7.h"
@@ -24,21 +25,22 @@ static double sum(double a, double b) {
  * a C function that glues C function `sum()` and JavaScript function `sum()`
  * together
  */
-static v7_val_t js_sum(struct v7 *v7, v7_val_t this_obj, v7_val_t args) {
+static enum v7_err js_sum(struct v7 *v7, v7_val_t *res) {
 
   /*
-   * When JavaScript function `sum()` is called, V7 creates arguments array
-   * `args` and calls `js_sum()` glue function. Here we extract argument values
-   * from the args array.
+   * When JavaScript function `sum()` is called, V7 creates an arguments array 
+   * and then calls the `js_sum()` glue function. Here we extract argument values  
+   * from the args array via `v7_get_arguments()`.
    */
-  double arg0 = v7_get_double(v7_array_get(v7, args, 0));
-  double arg1 = v7_get_double(v7_array_get(v7, args, 1));
+  v7_val_t args = v7_get_arguments(v7);	
+  double arg0 = v7_get_double(v7, v7_array_get(v7, args, 0));
+  double arg1 = v7_get_double(v7, v7_array_get(v7, args, 1));
 
   /* Call C function `sum()` */
-  double result = sum(arg0, arg1);
+  *res = v7_mk_number(v7, sum(arg0, arg1));
 
-  /* Return result to JavaScript */
-  return v7_mk_number(result);
+  /* Return without errors */
+  return V7_OK;
 }
 
 int main(void) {
