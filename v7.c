@@ -534,7 +534,9 @@ typedef struct stat cs_stat_t;
 #define SIZE_T_FMT "u"
 typedef struct stat cs_stat_t;
 #define DIRSEP '/'
+#if !defined(MGOS_VFS_DEFINE_DIRENT)
 #define CS_DEFINE_DIRENT
+#endif
 
 #define to64(x) strtoll(x, NULL, 10)
 #define INT64_FMT PRId64
@@ -754,7 +756,7 @@ struct stat {
 };
 
 int _stat(const char *pathname, struct stat *st);
-#define stat(a, b) _stat(a, b)
+int stat(const char *pathname, struct stat *st);
 
 #define __S_IFMT 0170000
 
@@ -11226,9 +11228,9 @@ char *cs_read_file(const char *path, size_t *size) {
 char *cs_mmap_file(const char *path, size_t *size) WEAK;
 char *cs_mmap_file(const char *path, size_t *size) {
   char *r;
-  int fd = open(path, O_RDONLY);
+  int fd = open(path, O_RDONLY, 0);
   struct stat st;
-  if (fd == -1) return NULL;
+  if (fd < 0) return NULL;
   fstat(fd, &st);
   *size = (size_t) st.st_size;
   r = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
