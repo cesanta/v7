@@ -42,9 +42,10 @@
 #define CS_P_WINDOWS 2
 #define CS_P_ESP32 15
 #define CS_P_ESP8266 3
-#define CS_P_CC3200 4
-#define CS_P_MSP432 5
 #define CS_P_CC3100 6
+#define CS_P_CC3200 4
+#define CS_P_CC3220 17
+#define CS_P_MSP432 5
 #define CS_P_TM4C129 14
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
@@ -54,7 +55,7 @@
 #define CS_P_NRF52 10
 #define CS_P_PIC32 11
 #define CS_P_STM32 16
-/* Next id: 17 */
+/* Next id: 18 */
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -107,8 +108,9 @@
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
 /* Amalgamated: #include "common/platforms/platform_esp32.h" */
 /* Amalgamated: #include "common/platforms/platform_esp8266.h" */
-/* Amalgamated: #include "common/platforms/platform_cc3200.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3100.h" */
+/* Amalgamated: #include "common/platforms/platform_cc3200.h" */
+/* Amalgamated: #include "common/platforms/platform_cc3220.h" */
 /* Amalgamated: #include "common/platforms/platform_mbed.h" */
 /* Amalgamated: #include "common/platforms/platform_nrf51.h" */
 /* Amalgamated: #include "common/platforms/platform_nrf52.h" */
@@ -570,6 +572,55 @@ typedef struct stat cs_stat_t;
 #endif /* CS_PLATFORM == CS_P_ESP8266 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP8266_H_ */
 #ifdef V7_MODULE_LINES
+#line 1 "common/platforms/platform_cc3100.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_
+#if CS_PLATFORM == CS_P_CC3100
+
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#define MG_NET_IF MG_NET_IF_SIMPLELINK
+#define MG_SSL_IF MG_SSL_IF_SIMPLELINK
+
+/*
+ * CC3100 SDK and STM32 SDK include headers w/out path, just like
+ * #include "simplelink.h". As result, we have to add all required directories
+ * into Makefile IPATH and do the same thing (include w/out path)
+ */
+
+#include <simplelink.h>
+#include <netapp.h>
+#undef timeval
+
+typedef int sock_t;
+#define INVALID_SOCKET (-1)
+
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define SIZE_T_FMT "u"
+
+#define SOMAXCONN 8
+
+const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
+char *inet_ntoa(struct in_addr in);
+int inet_pton(int af, const char *src, void *dst);
+
+#endif /* CS_PLATFORM == CS_P_CC3100 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_ */
+#ifdef V7_MODULE_LINES
 #line 1 "common/platforms/simplelink/cs_simplelink.h"
 #endif
 /*
@@ -596,6 +647,11 @@ typedef struct stat cs_stat_t;
 #undef fd_set
 #endif
 
+#if CS_PLATFORM == CS_P_CC3220
+#include <ti/drivers/net/wifi/porting/user.h>
+#include <ti/drivers/net/wifi/simplelink.h>
+#include <ti/drivers/net/wifi/netapp.h>
+#else
 /* We want to disable SL_INC_STD_BSD_API_NAMING, so we include user.h ourselves
  * and undef it. */
 #define PROVISIONING_API_H_
@@ -605,6 +661,7 @@ typedef struct stat cs_stat_t;
 
 #include <simplelink/include/simplelink.h>
 #include <simplelink/include/netapp.h>
+#endif /* CS_PLATFORM == CS_P_CC3220 */
 
 /* Now define only the subset of the BSD API that we use.
  * Notably, close(), read() and write() are not defined. */
@@ -773,8 +830,10 @@ int stat(const char *pathname, struct stat *st);
 #define S_ISDIR(mode) __S_ISTYPE((mode), __S_IFDIR)
 #define S_ISREG(mode) __S_ISTYPE((mode), __S_IFREG)
 
-/* As of 5.2.7, TI compiler does not support va_copy() yet. */
+/* 5.x series compilers don't have va_copy, 16.x do. */
+#if __TI_COMPILER_VERSION__ < 16000000
 #define va_copy(apc, ap) ((apc) = (ap))
+#endif
 
 #endif /* __TI_COMPILER_VERSION__ */
 
@@ -799,16 +858,16 @@ int stat(const char *pathname, struct stat *st);
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
 #ifdef V7_MODULE_LINES
-#line 1 "common/platforms/platform_cc3100.h"
+#line 1 "common/platforms/platform_cc3220.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_
-#if CS_PLATFORM == CS_P_CC3100
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3220_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_CC3220_H_
+#if CS_PLATFORM == CS_P_CC3220
 
 #include <assert.h>
 #include <ctype.h>
@@ -818,35 +877,95 @@ int stat(const char *pathname, struct stat *st);
 #include <string.h>
 #include <time.h>
 
+#ifndef __TI_COMPILER_VERSION__
+#include <fcntl.h>
+#include <sys/time.h>
+#endif
+
 #define MG_NET_IF MG_NET_IF_SIMPLELINK
 #define MG_SSL_IF MG_SSL_IF_SIMPLELINK
 
-/*
- * CC3100 SDK and STM32 SDK include headers w/out path, just like
- * #include "simplelink.h". As result, we have to add all required directories
- * into Makefile IPATH and do the same thing (include w/out path)
- */
+/* Only SPIFFS supports directories, SLFS does not. */
+#if defined(CC3220_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
+#define MG_ENABLE_DIRECTORY_LISTING 1
+#endif
 
-#include <simplelink.h>
-#include <netapp.h>
-#undef timeval
+/* Amalgamated: #include "common/platforms/simplelink/cs_simplelink.h" */
 
 typedef int sock_t;
 #define INVALID_SOCKET (-1)
-
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
 #define to64(x) strtoll(x, NULL, 10)
 #define INT64_FMT PRId64
 #define INT64_X_FMT PRIx64
-#define SIZE_T_FMT "u"
+#define __cdecl
 
-#define SOMAXCONN 8
+#define fileno(x) -1
 
-const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
-char *inet_ntoa(struct in_addr in);
-int inet_pton(int af, const char *src, void *dst);
+/* Some functions we implement for Mongoose. */
 
-#endif /* CS_PLATFORM == CS_P_CC3100 */
-#endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3100_H_ */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __TI_COMPILER_VERSION__
+struct SlTimeval_t;
+#define timeval SlTimeval_t
+int gettimeofday(struct timeval *t, void *tz);
+int settimeofday(const struct timeval *tv, const void *tz);
+
+int asprintf(char **strp, const char *fmt, ...);
+
+#endif
+
+/* TI's libc does not have stat & friends, add them. */
+#ifdef __TI_COMPILER_VERSION__
+
+#include <file.h>
+
+typedef unsigned int mode_t;
+typedef size_t _off_t;
+typedef long ssize_t;
+
+struct stat {
+  int st_ino;
+  mode_t st_mode;
+  int st_nlink;
+  time_t st_mtime;
+  off_t st_size;
+};
+
+int _stat(const char *pathname, struct stat *st);
+int stat(const char *pathname, struct stat *st);
+
+#define __S_IFMT 0170000
+
+#define __S_IFDIR 0040000
+#define __S_IFCHR 0020000
+#define __S_IFREG 0100000
+
+#define __S_ISTYPE(mode, mask) (((mode) &__S_IFMT) == (mask))
+
+#define S_IFDIR __S_IFDIR
+#define S_IFCHR __S_IFCHR
+#define S_IFREG __S_IFREG
+#define S_ISDIR(mode) __S_ISTYPE((mode), __S_IFDIR)
+#define S_ISREG(mode) __S_ISTYPE((mode), __S_IFREG)
+
+#endif /* __TI_COMPILER_VERSION__ */
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* CS_PLATFORM == CS_P_CC3220 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
 #ifdef V7_MODULE_LINES
 #line 1 "common/platforms/platform_mbed.h"
 #endif
