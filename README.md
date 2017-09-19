@@ -1,6 +1,8 @@
 V7: Embedded JavaScript engine
 ==============================
 
+**NOTE: this project is deprecated in favor of https://github.com/cesanta/mjs**
+
 [![License](https://img.shields.io/badge/license-GPL_2-green.svg)](https://github.com/cesanta/v7/blob/master/LICENSE)
 
 V7 is the smallest JavaScript engine written in C. V7 features are:
