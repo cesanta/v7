@@ -4571,7 +4571,7 @@ enum opcode {
   /*
    * Takes 1 value from the stack and a varint argument -- index of the var name
    * in the literals table. Tries to find the variable in the current scope
-   * chain and assign the value to it. If the varialble is not found -- creates
+   * chain and assign the value to it. If the variable is not found -- creates
    * a new one in the global scope. Pushes the value back to the stack.
    *
    * `( a -- a )`
