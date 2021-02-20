@@ -5,23 +5,29 @@ title: Call JavaScript function from C/C++
 This is the reverse example. Now, we have a JavaScript function `sum()` that calculates the sum of two numbers. Here is how we call that function from C/C++:
 
 ```c
+
 #include <stdio.h>
 #include "v7.h"
 
 static void call_sum(struct v7 *v7) {
   v7_val_t func, result, args;
-
+  enum v7_err rcode;
+	
   /* Lookup JavaScript function `sum()` */
   func = v7_get(v7, v7_get_global(v7), "sum", 3);
 
   /* Create arguments array with two numbers */
   args = v7_mk_array(v7);
-  v7_array_push(v7, args, v7_mk_number(123.0));
-  v7_array_push(v7, args, v7_mk_number(456.789));
+  v7_array_push(v7, args, v7_mk_number(v7, 123.0));
+  v7_array_push(v7, args, v7_mk_number(v7, 456.789));
 
   /* Call JavaScript function. Pass `undefined` as `this` */
-  result = v7_apply(v7, func, v7_mk_undefined(), args);
-  printf("Result: %g\n", v7_get_double(result));
+  rcode = v7_apply(v7, func, v7_mk_undefined(), args, &result);
+  if (rcode != V7_OK) {
+    fprintf(stderr, "apply error: %d\n", (int)rcode);
+  } else {
+    printf("Result: %g\n", v7_get_double(v7, result));
+  }	
 }
 
 int main(void) {
